@@ -22,7 +22,7 @@ class Orchestrator:
             analyzer: LLMAnalyzer,
             mqtt: MqttClient,
             opcua: DroneOpcUaServer,
-            video: VideoStream,
+            # video: VideoStream,
             telemetry_repo: TelemetryRepository,
     ):
         self.drone = drone
@@ -30,7 +30,7 @@ class Orchestrator:
         self.analyzer = analyzer
         self.mqtt = mqtt
         self.opcua = opcua
-        self.video = video
+        # self.video = video
         self.repo = telemetry_repo
         self.range_model = SimpleWhPerKmModel()
         self._running = True
@@ -212,7 +212,7 @@ class Orchestrator:
         tasks = [
             asyncio.create_task(self.telemetry_task()),
             asyncio.create_task(self.telemetry_logging_task()),
-            asyncio.create_task(self.vision_task()),
+            # asyncio.create_task(self.vision_task()),
             asyncio.create_task(self._range_guard_task()),
             asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
             asyncio.create_task(self.emergency_monitor_task()),
@@ -263,7 +263,7 @@ class Orchestrator:
             self.drone.stop_dead_mans_switch()
 
             await self.opcua.stop()
-            self.video.close()
+            # self.video.close()
             self.drone.close()
 
             print("✅ Safe shutdown completed")

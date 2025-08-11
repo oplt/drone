@@ -15,7 +15,8 @@ class DroneOpcUaServer:
 
         # DEV: only expose an open endpoint (no certs needed, no warnings)
         self.server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
-        self.server.set_security_IDs(["Anonymous"])  # no username/password
+        self.server.set_identity_tokens([ua.UserTokenPolicy(ua.UserTokenType.Anonymous)])
+
 
         self.idx = await self.server.register_namespace("drone.vision")
         self.objects = self.server.nodes.objects

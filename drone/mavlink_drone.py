@@ -1,11 +1,12 @@
 import time
 import threading
-from dronekit import connect, VehicleMode, LocationGlobalRelative
+from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
+
 from .models import Coordinate, Telemetry
 from .drone_base import DroneClient
 
 class MavlinkDrone(DroneClient):
-    def __init__(self, connection_str: str, heartbeat_timeout: float = 10.0):
+    def __init__(self, connection_str: str, heartbeat_timeout: float):
         self.connection_str = connection_str
         self.vehicle = None
         self.heartbeat_timeout = heartbeat_timeout
@@ -18,15 +19,27 @@ class MavlinkDrone(DroneClient):
     def connect(self) -> None:
         self.vehicle = connect(self.connection_str, wait_ready=True)
 
-        # Store home location when we connect
-        while not self.vehicle.home_location:
+        # Try to obtain a valid LocationGlobal for home
+        start = time.time()
+        timeout_s = 30
+        while not self.vehicle.home_location and (time.time() - start) < timeout_s:
+            # If GPS already has a global_frame, use that
+            try:
+                gf = self.vehicle.location.global_frame
+                if gf and isinstance(gf, LocationGlobal):
+                    self.vehicle.home_location = gf
+            except Exception:
+                pass
             print("Waiting for home location...")
             time.sleep(1)
 
-        self.home_location = self.vehicle.home_location
-        print(f"Home location set: {self.home_location}")
+        if not self.vehicle.home_location or not isinstance(self.vehicle.home_location, LocationGlobal):
+            raise RuntimeError("Failed to set a LocationGlobal home_location (GPS lock / EKF?).")
 
-        # Start the dead man's switch monitoring
+        # Keep a copy on the class for convenience
+        self.home_location = self.vehicle.home_location
+        print(f"Home location set: lat={self.home_location.lat:.6f}, lon={self.home_location.lon:.6f}, alt={getattr(self.home_location,'alt',0)}")
+
         self.start_dead_mans_switch()
 
     def start_dead_mans_switch(self):
