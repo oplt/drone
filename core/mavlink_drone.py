@@ -32,10 +32,14 @@ class MavlinkDrone(DroneClient):
     def get_telemetry(self) -> Telemetry:
         v = self.vehicle
         loc = v.location.global_relative_frame
+        bat = getattr(v, "battery", None)
         return Telemetry(
             lat=loc.lat, lon=loc.lon, alt=loc.alt,
             heading=v.heading, groundspeed=v.groundspeed,
-            armed=v.armed, mode=v.mode.name
+            armed=v.armed, mode=v.mode.name,
+            battery_voltage=getattr(bat, "voltage", None),
+            battery_current=getattr(bat, "current", None),
+            battery_level=getattr(bat, "level", None),
         )
 
     def follow_waypoints(self, path):

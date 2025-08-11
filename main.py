@@ -9,6 +9,8 @@ from core.orchestrator import Orchestrator
 from config import settings
 import os
 from core.stream import VideoStream
+from db.repository import TelemetryRepository
+from db.session import init_db, close_db
 
 cam_source = settings.cam_source
 
@@ -20,6 +22,8 @@ except ValueError:
 
 
 async def main():
+    await init_db()
+
     drone = MavlinkDrone(settings.drone_conn)
     maps = GoogleMapsClient(settings.google_maps_key)
     analyzer = LLMAnalyzer(
@@ -39,11 +43,15 @@ async def main():
         fallback_file=os.getenv("CAM_FALLBACK", ""),  # e.g., "/home/polat/sample.mp4"
         fps_limit=1.0
     )
+    repo = TelemetryRepository()
 
     orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video)
 
     # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
-    await orch.run("Antwerp Central Station", "Grote Markt, Antwerp", alt=35)
+    try:
+        await orch.run("Antwerp Central Station", "Grote Markt, Antwerp", alt=35)
+    finally:
+        await close_db()
 
 if __name__ == "__main__":
     try:

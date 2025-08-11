@@ -28,6 +28,11 @@ class DroneOpcUaServer:
         self.vars["Armed"] = await drone.add_variable(self.idx, "Armed", False)
         self.vars["Mode"] = await drone.add_variable(self.idx, "Mode", "UNKNOWN")
         self.vars["LastDetections"] = await drone.add_variable(self.idx, "LastDetections", "[]")
+        self.vars["EstRangeKm"] = await drone.add_variable(self.idx, "EstRangeKm", 0.0)
+        self.vars["RangeOK"] = await drone.add_variable(self.idx, "RangeOK", False)
+        self.vars["RangeNote"] = await drone.add_variable(self.idx, "RangeNote", "")
+        for v in ("EstRangeKm","RangeOK","RangeNote"):
+            await self.vars[v].set_writable()
         for v in self.vars.values():
             await v.set_writable()  # allow updates
         await self.server.start()
@@ -43,6 +48,11 @@ class DroneOpcUaServer:
 
     async def update_detections(self, det_json: str):
         await self.vars["LastDetections"].write_value(det_json)
+
+    async def update_range(self, est_range_km: float, ok: bool, note: str):
+        await self.vars["EstRangeKm"].write_value(float(est_range_km))
+        await self.vars["RangeOK"].write_value(bool(ok))
+        await self.vars["RangeNote"].write_value(str(note))
 
     async def stop(self):
         await self.server.stop()

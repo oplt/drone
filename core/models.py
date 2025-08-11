@@ -16,6 +16,9 @@ class Telemetry:
     groundspeed: float
     armed: bool
     mode: str
+    battery_voltage: Optional[float] = None     # Volts
+    battery_current: Optional[float] = None     # Amps (+discharge)
+    battery_level: Optional[float] = None       # Percent (0-100)
 
 @dataclass
 class Detection:

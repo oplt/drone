@@ -21,6 +21,15 @@ class Settings:
     # If connecting to a networked drone:
     # "udp:192.168.0.10:14550" (IP/port from your drone's telemetry)
 
+    database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/drone_db")
+    telem_log_interval_sec: float = float(os.getenv("TELEMETRY_LOG_INTERVAL_SEC", "2"))
+
     cam_source = os.getenv("CAM_SOURCE", "0")
+
+
+    battery_capacity_wh: float = float(os.getenv("BATTERY_CAPACITY_WH", "77"))
+    cruise_power_w: float = float(os.getenv("CRUISE_POWER_W", "180"))
+    cruise_speed_mps: float = float(os.getenv("CRUISE_SPEED_MPS", "8"))
+    energy_reserve_frac: float = float(os.getenv("ENERGY_RESERVE_FRAC", "0.2"))
 
 settings = Settings()
