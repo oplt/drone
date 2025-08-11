@@ -19,27 +19,23 @@ class MavlinkDrone(DroneClient):
     def connect(self) -> None:
         self.vehicle = connect(self.connection_str, wait_ready=True)
 
-        # Try to obtain a valid LocationGlobal for home
-        start = time.time()
-        timeout_s = 30
-        while not self.vehicle.home_location and (time.time() - start) < timeout_s:
-            # If GPS already has a global_frame, use that
-            try:
-                gf = self.vehicle.location.global_frame
-                if gf and isinstance(gf, LocationGlobal):
-                    self.vehicle.home_location = gf
-            except Exception:
-                pass
-            print("Waiting for home location...")
+        # Wait until autopilot sets home_location (requires GPS fix; often set after arm, but we try early)
+        print("Waiting for home location...")
+        tries = 0
+        while not getattr(self.vehicle, "home_location", None) and tries < 30:
             time.sleep(1)
+            tries += 1
 
-        if not self.vehicle.home_location or not isinstance(self.vehicle.home_location, LocationGlobal):
-            raise RuntimeError("Failed to set a LocationGlobal home_location (GPS lock / EKF?).")
+        if self.vehicle.home_location:
+            self.home_location = self.vehicle.home_location
+        else:
+            # Fallback: use current global frame as a provisional "home"
+            loc = self.vehicle.location.global_frame
+            self.home_location = loc
 
-        # Keep a copy on the class for convenience
-        self.home_location = self.vehicle.home_location
-        print(f"Home location set: lat={self.home_location.lat:.6f}, lon={self.home_location.lon:.6f}, alt={getattr(self.home_location,'alt',0)}")
+        print(f"Home location set: {self.home_location}")
 
+        # Start the dead man's switch monitoring
         self.start_dead_mans_switch()
 
     def start_dead_mans_switch(self):
@@ -207,6 +203,14 @@ class MavlinkDrone(DroneClient):
     def land(self) -> None:
         self.send_heartbeat()
         self.vehicle.mode = VehicleMode("LAND")
+
+
+    def wait_until_disarmed(self, timeout_s: float = 900):
+        """Block until vehicle.armed == False or timeout."""
+        start = time.time()
+        while self.vehicle and self.vehicle.armed and (time.time() - start) < timeout_s:
+            self.send_heartbeat()
+            time.sleep(1.0)
 
     def stop_dead_mans_switch(self):
         """Safely disable the dead man's switch"""

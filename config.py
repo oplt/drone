@@ -34,4 +34,6 @@ class Settings:
 
     heartbeat_timeout = float = float(os.getenv("HEARTBEAT_TIMEOUT", ""))
 
+    ENFORCE_PREFLIGHT_RANGE = os.getenv("ENFORCE_PREFLIGHT_RANGE", "true").lower() in {"1","true","yes","on"}
+
 settings = Settings()

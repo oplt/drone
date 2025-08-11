@@ -10,7 +10,7 @@ from messaging.opcua import DroneOpcUaServer
 from db.repository import TelemetryRepository
 from config import settings
 from analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
-from utils.geo import haversine_km
+from utils.geo import haversine_km, _coord_from_home, _total_mission_distance_km
 
 
 
@@ -90,15 +90,18 @@ class Orchestrator:
         self.drone.connect()
 
         # Preflight range check (can hard-fail if you want)
-        preflight = await self._preflight_range_check(dest)
-        if not preflight.feasible:
-            # Abort takeoff; still keep services running so user sees the warning
-            raise RuntimeError(f"Preflight failed: {preflight.reason}")
+        home = _coord_from_home(self.drone.home_location)
+
+        preflight = await self._preflight_range_check(home, start, dest)
+        if not preflight.feasible and settings.ENFORCE_PREFLIGHT_RANGE:
+            raise RuntimeError(preflight.reason)
 
         self.drone.arm_and_takeoff(cruise_alt)
         path = list(self.maps.waypoints_between(start, dest, steps=6))
         self.drone.follow_waypoints(path)
-        self.drone.land()
+        # Return to takeoff home using RTL and wait for landing
+        self.drone.set_mode("RTL")
+        self.drone.wait_until_disarmed(timeout_s=900)
 
     def _estimate_range(self, distance_km: float, battery_level_frac: float | None) -> RangeEstimateResult:
         est_range_km = self.range_model.estimate_range_km(
@@ -126,25 +129,58 @@ class Orchestrator:
                 note = f"OK: dist {distance_km:.2f} km ≤ est range {est_range_km:.2f} km."
         return RangeEstimateResult(distance_km, est_range_km, avail_Wh, req_Wh, feasible, note)
 
-    async def _preflight_range_check(self, dest: Coordinate) -> RangeEstimateResult:
-        # assume drone position from telemetry
+
+
+    async def _preflight_range_check(self, home: Coordinate, start: Coordinate, dest: Coordinate) -> RangeEstimateResult:
+        """
+        Uses total route distance: home→start→dest→home.
+        Assumes self.drone.connect() was already called so home_location is set.
+        """
+        # # 1) Build coordinates
+        # home = _coord_from_home(self.drone.home_location)
+
+        # 2) Total mission distance (km)
+        distance_km = _total_mission_distance_km(home, start, dest)
+
+        # 3) Inputs for range model
         t = self.drone.get_telemetry()
-        distance_km = haversine_km(t.lat, t.lon, dest.lat, dest.lon)
-        level = None
-        # battery_level expected 0-100 (DroneKit) → convert to 0..1
-        if t.battery_level is not None:
-            level = max(0.0, min(1.0, float(t.battery_level) / 100.0))
-        res = self._estimate_range(distance_km, level)
-        # Inform MQTT + OPC UA
-        self.mqtt.publish("drone/warnings", {
-            "type": "preflight_range",
-            "distance_km": distance_km,
-            "est_range_km": res.est_range_km,
-            "feasible": res.feasible,
-            "note": res.reason
-        })
-        await self.opcua.update_range(res.est_range_km or 0.0, res.feasible, res.reason)
-        return res
+        level_frac = None if t.battery_level is None else max(0.0, min(1.0, float(t.battery_level) / 100.0))
+
+        capacity_Wh     = settings.battery_capacity_wh
+        cruise_power_W  = settings.cruise_power_w
+        cruise_speed_mps= settings.cruise_speed_mps
+        reserve_frac    = settings.energy_reserve_frac
+
+        model = SimpleWhPerKmModel()
+        est_range_km = model.estimate_range_km(
+            capacity_Wh=capacity_Wh,
+            battery_level_frac=level_frac,
+            cruise_power_W=cruise_power_W,
+            cruise_speed_mps=cruise_speed_mps,
+            reserve_frac=reserve_frac,
+        )
+
+        # 4) Required energy vs. available (for a clear reason message)
+        v_kmh = max(0.1, cruise_speed_mps * 3.6)
+        wh_per_km = cruise_power_W / v_kmh
+        required_Wh = distance_km * wh_per_km
+        available_Wh = None if level_frac is None else max(0.0, capacity_Wh * max(0.0, level_frac - reserve_frac))
+
+        feasible = (est_range_km is not None) and (est_range_km >= distance_km)
+        reason = "OK"
+        if est_range_km is None:
+            reason = "No battery level reading; cannot estimate range"
+        elif not feasible:
+            reason = f"Insufficient range. Need ~{distance_km:.2f} km, est range {est_range_km:.2f} km."
+
+        return RangeEstimateResult(
+            distance_km=distance_km,
+            est_range_km=est_range_km,
+            available_Wh=available_Wh,
+            required_Wh=required_Wh,
+            feasible=feasible,
+            reason=reason,
+        )
 
     async def _range_guard_task(self):
         """Re-evaluate remaining distance periodically and warn if we’re going to run short."""
