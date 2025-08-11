@@ -1,10 +1,10 @@
 import asyncio, json, time
 from typing import Iterable
-from core.models import Coordinate
-from core.drone_base import DroneClient
-from core.google_maps import GoogleMapsClient
-from core.stream import VideoStream
-from core.llm import LLMAnalyzer
+from .models import Coordinate
+from .drone_base import DroneClient
+from map.google_maps import GoogleMapsClient
+from video.stream import VideoStream
+from analysis.llm import LLMAnalyzer
 from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
 from db.repository import TelemetryRepository
@@ -35,6 +35,52 @@ class Orchestrator:
         self.range_model = SimpleWhPerKmModel()
         self._running = True
         self._dest_coord: Coordinate | None = None
+        self._heartbeat_task = None
+
+    async def heartbeat_task(self):
+        """Send regular heartbeats to keep the dead man's switch happy"""
+        print("Starting heartbeat task...")
+        while self._running:
+            try:
+                self.drone.send_heartbeat()
+                # Also publish heartbeat status to MQTT for monitoring
+                self.mqtt.publish("drone/heartbeat", {
+                    "timestamp": time.time(),
+                    "status": "alive"
+                }, qos=1)  # QoS 1 for important heartbeat messages
+                await asyncio.sleep(2.0)  # Send every 2 seconds
+            except Exception as e:
+                print(f"⚠️  Error in heartbeat task: {e}")
+                # Publish error but keep trying
+                self.mqtt.publish("drone/errors", {
+                    "type": "heartbeat_error",
+                    "message": str(e),
+                    "timestamp": time.time()
+                })
+                await asyncio.sleep(1.0)
+
+    async def emergency_monitor_task(self):
+        """Monitor for emergency conditions and handle them"""
+        while self._running:
+            try:
+                # Check if dead man's switch was triggered
+                if hasattr(self.drone, 'dead_mans_switch_active'):
+                    if not self.drone.dead_mans_switch_active and self.drone.vehicle:
+                        # Dead man's switch was triggered!
+                        self.mqtt.publish("drone/emergency", {
+                            "type": "dead_mans_switch_triggered",
+                            "message": "Connection lost - drone executing emergency protocol",
+                            "timestamp": time.time()
+                        }, qos=2)  # QoS 2 for critical emergency messages
+
+                        # Stop all other operations
+                        self._running = False
+                        break
+
+                await asyncio.sleep(1.0)
+            except Exception as e:
+                print(f"Error in emergency monitor: {e}")
+                await asyncio.sleep(1.0)
 
     async def fly_route(self, start_addr: str, end_addr: str, cruise_alt=30.0):
         start = self.maps.geocode(start_addr); start.alt = cruise_alt
@@ -158,18 +204,67 @@ class Orchestrator:
             self.mqtt.publish("drone/events", {"level":"error","msg":str(e)})
 
     async def run(self, start_addr: str, end_addr: str, alt=30.0):
+        print(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
+
         await self.opcua.start()
-        telem = asyncio.create_task(self.telemetry_task())
-        telem_log = asyncio.create_task(self.telemetry_logging_task())
-        vision = asyncio.create_task(self.vision_task())
-        guard = asyncio.create_task(self._range_guard_task())
+
+        # Start all tasks including the critical heartbeat task
+        tasks = [
+            asyncio.create_task(self.telemetry_task()),
+            asyncio.create_task(self.telemetry_logging_task()),
+            asyncio.create_task(self.vision_task()),
+            asyncio.create_task(self._range_guard_task()),
+            asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
+            asyncio.create_task(self.emergency_monitor_task()),
+        ]
+
         try:
+            # Announce flight start
+            self.mqtt.publish("drone/events", {
+                "type": "flight_start",
+                "from": start_addr,
+                "to": end_addr,
+                "altitude": alt,
+                "heartbeat_timeout": self.drone.heartbeat_timeout,
+                "timestamp": time.time()
+            })
+
             await self.fly_route(start_addr, end_addr, cruise_alt=alt)
+
+            # If we get here, flight completed successfully
+            self.mqtt.publish("drone/events", {
+                "type": "flight_completed",
+                "timestamp": time.time()
+            })
+
+        except Exception as e:
+            print(f"❌ Flight error: {e}")
+            self.mqtt.publish("drone/errors", {
+                "type": "flight_error",
+                "message": str(e),
+                "timestamp": time.time()
+            })
+            raise
         finally:
+            print("🛑 Shutting down flight operations...")
             self._running = False
-            await asyncio.sleep(0.1)
-            for task in (telem, telem_log, vision, guard):
-                task.cancel()
+            await asyncio.sleep(0.5)  # Give tasks time to see the flag
+
+            # Cancel all tasks
+            for task in tasks:
+                if task and not task.done():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+
+            # Safely stop the dead man's switch
+            self.drone.stop_dead_mans_switch()
+
             await self.opcua.stop()
             self.video.close()
             self.drone.close()
+
+            print("✅ Safe shutdown completed")
+

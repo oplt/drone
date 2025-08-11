@@ -1,14 +1,14 @@
 import asyncio
 from config import settings
-from core.mavlink_drone import MavlinkDrone
-from core.google_maps import GoogleMapsClient
-from core.llm import LLMAnalyzer
+from drone.mavlink_drone import MavlinkDrone
+from map.google_maps import GoogleMapsClient
+from analysis.llm import LLMAnalyzer
 from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
-from core.orchestrator import Orchestrator
+from drone.orchestrator import Orchestrator
 from config import settings
 import os
-from core.stream import VideoStream
+from video.stream import VideoStream
 from db.repository import TelemetryRepository
 from db.session import init_db, close_db
 
@@ -24,7 +24,7 @@ except ValueError:
 async def main():
     await init_db()
 
-    drone = MavlinkDrone(settings.drone_conn)
+    drone = MavlinkDrone(settings.drone_conn, heartbeat_timeout=10.0 )
     maps = GoogleMapsClient(settings.google_maps_key)
     analyzer = LLMAnalyzer(
         api_base=settings.llm_api_base,
@@ -49,7 +49,13 @@ async def main():
 
     # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
     try:
+        # Test flight - adjust coordinates for your location
         await orch.run("Antwerp Central Station", "Grote Markt, Antwerp", alt=35)
+    except KeyboardInterrupt:
+        print("\n🛑 Manual abort - triggering safe shutdown")
+        orch._running = False
+    except Exception as e:
+        print(f"❌ Flight failed: {e}")
     finally:
         await close_db()
 
@@ -57,4 +63,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        pass
+        print("\n✅ Program terminated safely")

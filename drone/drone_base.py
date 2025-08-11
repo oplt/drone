@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
-from core.models import Coordinate, Telemetry
+from .models import Coordinate, Telemetry
 
 class DroneClient(ABC):
     @abstractmethod

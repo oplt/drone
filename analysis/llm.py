@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 import aiohttp
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from core.models import Detection
+from drone.models import Detection
 
 def encode_jpeg(frame) -> str:
     """

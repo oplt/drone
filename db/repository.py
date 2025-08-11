@@ -2,7 +2,7 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models import Telemetry
+from drone.models import Telemetry
 from .session import Session
 from .models import TelemetryRecord
 

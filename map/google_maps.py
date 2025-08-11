@@ -1,5 +1,5 @@
 import googlemaps
-from core.models import Coordinate
+from drone.models import Coordinate
 
 class GoogleMapsClient:
     def __init__(self, api_key: str):
