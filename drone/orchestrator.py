@@ -280,6 +280,7 @@ class Orchestrator:
         print(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
 
         await self.opcua.start()
+        self.drone.connect()
 
         # Start all tasks including the critical heartbeat task
         tasks = [

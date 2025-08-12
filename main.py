@@ -20,6 +20,16 @@ except ValueError:
     pass
 
 
+'''
+        ###TO DO###
+- telemtery database is not recording
+- test videw streaming and saving to db
+- check flow
+- check calculations
+- find a proper llm for trash detection, agriculture and defense
+- 
+'''
+
 async def main():
     await init_db()
 
@@ -50,7 +60,7 @@ async def main():
     # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
     try:
         # Test flight - adjust coordinates for your location
-        drone.connect()
+
         await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     except KeyboardInterrupt:
         print("\n🛑 Manual abort - triggering safe shutdown")

@@ -1,7 +1,6 @@
 import time
 import threading
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
-
 from .models import Coordinate, Telemetry
 from .drone_base import DroneClient
 
