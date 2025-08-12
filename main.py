@@ -50,6 +50,7 @@ async def main():
     # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
     try:
         # Test flight - adjust coordinates for your location
+        drone.connect()
         await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     except KeyboardInterrupt:
         print("\n🛑 Manual abort - triggering safe shutdown")

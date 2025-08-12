@@ -96,9 +96,11 @@ class Orchestrator:
 
         self._dest_coord = dest
 
-        self.drone.connect()
-        await self.repo.add_event(self._flight_id, "connected", {})
+        # self.drone.connect()
+        await asyncio.sleep(1.0)
+        self._running = True
 
+        await self.repo.add_event(self._flight_id, "connected", {})
 
         # Preflight range check (can hard-fail if you want)
         home = _coord_from_home(self.drone.home_location)

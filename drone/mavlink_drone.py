@@ -152,10 +152,16 @@ class MavlinkDrone(DroneClient):
         self.send_heartbeat()
 
         v = self.vehicle
-        loc = v.location.global_relative_frame
+        if v is None:
+            raise RuntimeError("Vehicle not connected yet")
+
+        loc = getattr(v, "location", None)
+        rel = getattr(loc, "global_relative_frame", None)
+        if rel is None:
+            raise RuntimeError("Vehicle location not ready yet")
         bat = getattr(v, "battery", None)
         return Telemetry(
-            lat=loc.lat, lon=loc.lon, alt=loc.alt,
+            lat=rel.lat, lon=rel.lon, alt=rel.alt,
             heading=v.heading, groundspeed=v.groundspeed,
             armed=v.armed, mode=v.mode.name,
             battery_voltage=getattr(bat, "voltage", None),
