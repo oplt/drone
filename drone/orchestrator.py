@@ -11,6 +11,8 @@ from db.repository import TelemetryRepository
 from config import settings
 from analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from utils.geo import haversine_km, _coord_from_home, _total_mission_distance_km
+import contextlib
+
 
 
 
@@ -85,9 +87,18 @@ class Orchestrator:
     async def fly_route(self, start_addr: str, end_addr: str, cruise_alt=30.0):
         start = self.maps.geocode(start_addr); start.alt = cruise_alt
         dest = self.maps.geocode(end_addr); dest.alt = cruise_alt
+        self._running = True
+        self._flight_id = await self.repo.create_flight(
+            start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
+            dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
+        )
+        await self.repo.add_event(self._flight_id, "mission_created", {"alt": cruise_alt})
+
         self._dest_coord = dest
 
         self.drone.connect()
+        await self.repo.add_event(self._flight_id, "connected", {})
+
 
         # Preflight range check (can hard-fail if you want)
         home = _coord_from_home(self.drone.home_location)
@@ -96,12 +107,36 @@ class Orchestrator:
         if not preflight.feasible and settings.ENFORCE_PREFLIGHT_RANGE:
             raise RuntimeError(preflight.reason)
 
+        async def _telemetry_logger():
+            while self._running:
+                t = self.drone.get_telemetry()
+                await self.repo.add_telemetry(
+                    self._flight_id,
+                    lat=t.lat, lon=t.lon, alt=t.alt,
+                    heading=t.heading, groundspeed=t.groundspeed,
+                    armed=t.armed, mode=t.mode,
+                    battery_voltage=t.battery_voltage,
+                    battery_current=t.battery_current,
+                    battery_level=t.battery_level,
+                )
+                await asyncio.sleep(1.0)
+
+        self._telemetry_task = asyncio.create_task(_telemetry_logger())
+
         self.drone.arm_and_takeoff(cruise_alt)
+        await self.repo.add_event(self._flight_id, "takeoff", {})
+
         path = list(self.maps.waypoints_between(start, dest, steps=6))
         self.drone.follow_waypoints(path)
+        await self.repo.add_event(self._flight_id, "reached_destination", {})
+
         # Return to takeoff home using RTL and wait for landing
         self.drone.set_mode("RTL")
+        await self.repo.add_event(self._flight_id, "rtl_initiated", {})
         self.drone.wait_until_disarmed(timeout_s=900)
+        await self.repo.add_event(self._flight_id, "landed_home", {})
+        await self.repo.finish_flight(self._flight_id, status="completed", note="RTL to home completed")
+
 
     def _estimate_range(self, distance_km: float, battery_level_frac: float | None) -> RangeEstimateResult:
         est_range_km = self.range_model.estimate_range_km(
@@ -285,6 +320,11 @@ class Orchestrator:
             print("🛑 Shutting down flight operations...")
             self._running = False
             await asyncio.sleep(0.5)  # Give tasks time to see the flag
+
+            if getattr(self, "_telemetry_task", None):
+                self._telemetry_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._telemetry_task
 
             # Cancel all tasks
             for task in tasks:

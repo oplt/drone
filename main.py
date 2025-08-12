@@ -8,8 +8,9 @@ from drone.orchestrator import Orchestrator
 from config import settings
 import os
 from video.stream import VideoStream
-from db.repository import TelemetryRepository
 from db.session import init_db, close_db
+from db.repository import TelemetryRepository
+
 
 cam_source = settings.cam_source
 

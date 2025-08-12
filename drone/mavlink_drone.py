@@ -208,9 +208,10 @@ class MavlinkDrone(DroneClient):
     def wait_until_disarmed(self, timeout_s: float = 900):
         """Block until vehicle.armed == False or timeout."""
         start = time.time()
-        while self.vehicle and self.vehicle.armed and (time.time() - start) < timeout_s:
-            self.send_heartbeat()
+        while self.vehicle and getattr(self.vehicle, "armed", False) and (time.time() - start) < timeout_s:
+            self.send_heartbeat()  # keeps dead-man switch happy
             time.sleep(1.0)
+
 
     def stop_dead_mans_switch(self):
         """Safely disable the dead man's switch"""
