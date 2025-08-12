@@ -22,6 +22,7 @@ except ValueError:
 
 '''
         ###TO DO###
+- remove mqtt publishing functions and replace mqtt listening functions
 - telemtery database is not recording
 - test videw streaming and saving to db
 - check flow

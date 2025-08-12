@@ -3,6 +3,8 @@ import paho.mqtt.client as mqtt
 import json
 import time
 from config import settings
+from pymavlink.dialects.v20 import ardupilotmega as mavlink
+
 
 # MQTT Broker Settings
 MQTT_BROKER = settings.mqtt_broker
@@ -19,7 +21,19 @@ mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
 print("Forwarding MAVLink messages to MQTT...")
 
 while True:
-    msg = mav_conn.recv_match(blocking=True) # type=['GLOBAL_POSITION_INT', 'ATTITUDE'],  # <-- Filter specific messages
+    msg = mav_conn.recv_match(blocking=True,
+                              type=['HEARTBEAT',
+                                    'GLOBAL_POSITION_INT',
+                                    'VFR_HUD',
+                                    'BATTERY_STATUS',
+                                    'ATTITUDE',
+                                    'SYS_STATUS',
+                                    'GPS_RAW_INT',
+                                    'SYSTEM_TIME',
+                                    'TIMESYNC',
+                                    'WIND_COV',
+                                    'DISTANCE_SENSOR',
+                                    ]) # ,  # <-- Filter specific messages
     if msg:
         # Convert MAVLink message to JSON
         msg_dict = msg.to_dict()
