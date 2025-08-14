@@ -41,6 +41,12 @@ except ValueError:
 - find a proper LLM for trash detection, agriculture and defense
 - mosquito listener:
 mosquitto_sub -h 127.0.0.1 -p 1883 -t "ardupilot/telemetry" -v
+
+
+RASPBERRY PI SETUP:
+- CHECK IF THE DRONE IS CONNECTED TO THE BROKER AND IF NOT, RECONNECT
+- CHECK HEARTBEATS ON THE BROKER AND ADD self.drone.set_mode("RTL") IN CASE OF NO HEARTBEAT
+
  
 '''
 

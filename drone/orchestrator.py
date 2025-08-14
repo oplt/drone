@@ -55,31 +55,27 @@ class Orchestrator:
     async def heartbeat_task(self):
         """Send regular heartbeats to keep the dead man's switch happy"""
         logging.info("Starting heartbeat task...")
-        # print("Starting heartbeat task...")
 
         while True:
-
             try:
-                # self.drone.send_heartbeat()
-
                 '''
-                CONTROL PUBLISH ENDPOINT BEFORE DRONE TEST CONNECTION !!!
+                MODIFY PUBLISH TOPIC BEFORE DRONE TEST CONNECTION !!!
                 '''
                 # Also publish heartbeat status to MQTT for monitoring
                 self.mqtt.publish("drone/heartbeat", {
-                    "timestamp": time.time(),
-                    "status": "alive"
-                }, qos=1)  # QoS 1 for important heartbeat messages
+                                                                "timestamp": time.time(),
+                                                                "status": "alive"
+                                                            }, qos=1)  # QoS 1 for important heartbeat messages
                 await asyncio.sleep(2.0)  # Send every 2 seconds
             except Exception as e:
                 logging.info(f"⚠️  Error in heartbeat task: {e}")
                 # print(f"⚠️  Error in heartbeat task: {e}")
                 # Publish error but keep trying
                 self.mqtt.publish("drone/errors", {
-                    "type": "heartbeat_error",
-                    "message": str(e),
-                    "timestamp": time.time()
-                })
+                                        "type": "heartbeat_error",
+                                        "message": str(e),
+                                        "timestamp": time.time()
+                                    })
                 await asyncio.sleep(1.0)
 
     async def emergency_monitor_task(self):
@@ -274,8 +270,7 @@ class Orchestrator:
             # Publish to MQTT
             self.publisher.start()
         except Exception as e:
-            print(f"Telemetry publish error: {e}")
-
+            logging.info(f"Telemetry publisher error: {e}")
         await asyncio.sleep(self._telemetry_interval)
 
     async def telemetry_task(self):
@@ -321,12 +316,12 @@ class Orchestrator:
         # Start all tasks including the critical heartbeat task
         tasks = [
             asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
-            # asyncio.create_task(self.telemetry_publish_task()),
-            asyncio.create_task(self.telemetry_task()),
-            asyncio.create_task(self.telemetry_logging_task()),
+            asyncio.create_task(self.telemetry_publish_task()),
+            # asyncio.create_task(self.telemetry_task()),
+            # asyncio.create_task(self.telemetry_logging_task()),
             # asyncio.create_task(self.vision_task()),
-            asyncio.create_task(self._range_guard_task()),
-            asyncio.create_task(self.emergency_monitor_task()),
+            # asyncio.create_task(self._range_guard_task()),
+            # asyncio.create_task(self.emergency_monitor_task()),
         ]
 
         try:

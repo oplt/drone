@@ -54,11 +54,9 @@ class ArduPilotTelemetryPublisher:
         """Establish MAVLink connection"""
         try:
             self.mav_conn = mavutil.mavlink_connection(self.drone_conn_str)
-            # print(f"Connected to MAVLink: {self.drone_conn_str}")
             logging.info(f"Connected to MAVLink: {self.drone_conn_str}")
             return True
         except Exception as e:
-            # print(f"Failed to connect to MAVLink: {e}")
             logging.info(f"Failed to connect to MAVLink: {e}")
             return False
 
@@ -67,17 +65,14 @@ class ArduPilotTelemetryPublisher:
         try:
             self.mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
             self.mqtt_client.connect(self.mqtt_broker, self.mqtt_port)
-            # print(f"Connected to MQTT broker: {self.mqtt_broker}:{self.mqtt_port}")
             logging.info("Connected to MQTT broker: {self.mqtt_broker}:{self.mqtt_port}")
             return True
         except Exception as e:
-            # print(f"Failed to connect to MQTT broker: {e}")
             logging.info(f"Failed to connect to MQTT broker: {e}")
             return False
 
     def _publish_loop(self):
         """Main publishing loop (runs in separate thread)"""
-        # print("Starting MAVLink to MQTT forwarding...")
         logging.info("Starting MAVLink to MQTT forwarding...")
 
         while self.is_running:
@@ -98,19 +93,16 @@ class ArduPilotTelemetryPublisher:
 
                     # Publish to MQTT
                     self.mqtt_client.publish(self.mqtt_topic, json.dumps(msg_dict))
-                    # print(f"Published: {msg.get_type()}")
                     logging.info(f"Published: {msg.get_type()}")
 
             except Exception as e:
                 if self.is_running:  # Only print error if we're supposed to be running
-                    # print(f"Error in publish loop: {e}")
                     logging.info(f"Error in publish loop: {e}")
                     time.sleep(1)  # Brief pause before retrying
 
     def start(self):
         """Start the telemetry publisher"""
         if self.is_running:
-            # print("Publisher is already running")
             logging.info("Publisher is already running")
             return False
 
@@ -126,18 +118,15 @@ class ArduPilotTelemetryPublisher:
         self.publisher_thread = threading.Thread(target=self._publish_loop, daemon=True)
         self.publisher_thread.start()
 
-        # print("ArduPilot Telemetry Publisher started")
         logging.info("ArduPilot Telemetry Publisher started")
         return True
 
     def stop(self):
         """Stop the telemetry publisher"""
         if not self.is_running:
-            # print("Publisher is not running")
             logging.info("Publisher is not running")
             return
 
-        # print("Stopping ArduPilot Telemetry Publisher...")
         logging.info("Stopping ArduPilot Telemetry Publisher...")
         self.is_running = False
 
@@ -152,7 +141,6 @@ class ArduPilotTelemetryPublisher:
         if self.mav_conn:
             self.mav_conn.close()
 
-        # print("ArduPilot Telemetry Publisher stopped")
         logging.info("ArduPilot Telemetry Publisher stopped")
 
     def is_alive(self):
@@ -162,7 +150,6 @@ class ArduPilotTelemetryPublisher:
     def set_message_types(self, message_types):
         """Update the message types to filter"""
         self.message_types = message_types
-        # print(f"Updated message types: {self.message_types}")
         logging.info(f"Updated message types: {self.message_types}")
 
 
