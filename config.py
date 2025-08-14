@@ -32,7 +32,7 @@ class Settings:
     cruise_speed_mps: float = float(os.getenv("CRUISE_SPEED_MPS", "8"))
     energy_reserve_frac: float = float(os.getenv("ENERGY_RESERVE_FRAC", "0.2"))
 
-    heartbeat_timeout = float = float(os.getenv("HEARTBEAT_TIMEOUT", ""))
+    heartbeat_timeout : float = float(os.getenv("HEARTBEAT_TIMEOUT", "5"))
 
     ENFORCE_PREFLIGHT_RANGE = os.getenv("ENFORCE_PREFLIGHT_RANGE", "true").lower() in {"1","true","yes","on"}
 

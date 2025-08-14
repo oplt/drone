@@ -6,6 +6,32 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from drone.models import Detection
 
+
+
+# Optional: use TurboJPEG if available (3-5x faster encode than OpenCV).
+# Fallback to OpenCV if not installed.
+# try:
+#     from turbojpeg import TurboJPEG, TJFLAG_FASTDCT  # type: ignore
+#     _jpeg = TurboJPEG()
+#     _use_turbo = True
+# except Exception:  # pragma: no cover
+#     _jpeg = None
+#     _use_turbo = False
+#
+#
+# def encode_jpeg(frame) -> str:
+#     """NumPy image (H,W,3) BGR -> base64 JPEG string (no prefix)."""
+#     if _use_turbo:
+#         # Assume BGR input; TurboJPEG expects BGR for encode
+#         buf = _jpeg.encode(frame, quality=85, flags=TJFLAG_FASTDCT)
+#         return base64.b64encode(buf).decode()
+#     else:
+#         import cv2  # lazy import
+#         ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+#         if not ok:
+#             raise RuntimeError("JPEG encode failed")
+#         return base64.b64encode(buf.tobytes()).decode()
+
 def encode_jpeg(frame) -> str:
     """
     OpenCV BGR ndarray -> base64 JPEG string (no prefix).

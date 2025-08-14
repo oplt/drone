@@ -1,8 +1,8 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Iterable, Mapping
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from .session import Session
 from .models import TelemetryRecord, Flight, FlightEvent
 from drone.models import Telemetry as TelemetryDTO  # your dataclass
@@ -62,6 +62,28 @@ class TelemetryRepository:
             rec = TelemetryRecord(flight_id=flight_id, **fields)
             s.add(rec)
             await s.commit()
+
+    # ------- Faster bulk ingest APIs -------
+    async def add_telemetry_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
+        """Bulk insert telemetry. Each row is a dict of TelemetryRecord fields *excluding* id.
+        Commits once. Returns number of rows inserted.
+        Example row keys: lat, lon, alt, heading, groundspeed, armed, mode, battery_voltage, battery_current, battery_level
+        created_at and flight_id will be set automatically if omitted.
+        """
+        payload = []
+        for r in rows:
+            d = dict(r)
+            d.setdefault("flight_id", flight_id)
+            payload.append(d)
+
+        if not payload:
+            return 0
+
+        async with self._session_factory() as s:
+            stmt = insert(TelemetryRecord).values(payload)
+            await s.execute(stmt)
+            await s.commit()
+            return len(payload)
 
     async def finish_flight(self, flight_id: int, *, status: str, note: str = "") -> None:
         async with self._session_factory() as s:

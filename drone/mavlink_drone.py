@@ -3,6 +3,17 @@ import threading
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
 from .models import Coordinate, Telemetry
 from .drone_base import DroneClient
+from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("drone.log"),
+        logging.StreamHandler()  # still print to console
+    ])
+
 
 class MavlinkDrone(DroneClient):
     def __init__(self, connection_str: str, heartbeat_timeout: float):
@@ -19,7 +30,8 @@ class MavlinkDrone(DroneClient):
         self.vehicle = connect(self.connection_str, wait_ready=True)
 
         # Wait until autopilot sets home_location (requires GPS fix; often set after arm, but we try early)
-        print("Waiting for home location...")
+        # print("Waiting for home location...")
+        logging.info("Waiting for home location...")
         tries = 0
         while not getattr(self.vehicle, "home_location", None) and tries < 30:
             time.sleep(1)
@@ -32,10 +44,13 @@ class MavlinkDrone(DroneClient):
             loc = self.vehicle.location.global_frame
             self.home_location = loc
 
-        print(f"Home location set: {self.home_location}")
+        # print(f"Home location set: {self.home_location}")
+        logging.info(f"Home location set: {self.home_location}")
 
+        '''this function and heart beat flow should be added on rasperry pi on drone'''
         # Start the dead man's switch monitoring
-        self.start_dead_mans_switch()
+        # self.start_dead_mans_switch()
+
 
     def start_dead_mans_switch(self):
         """Start the dead man's switch monitoring thread"""
@@ -49,12 +64,14 @@ class MavlinkDrone(DroneClient):
             name="DeadMansSwitch"
         )
         self._heartbeat_thread.start()
-        print("Dead man's switch activated")
+        logging.info("Dead man's switch activated")
+        # print("Dead man's switch activated")
 
     def send_heartbeat(self):
         """Call this method regularly from your main application to keep the drone active"""
         if self.dead_mans_switch_active:
             self.last_heartbeat = time.time()
+            logging.info(f"Heartbeat sent at {self.last_heartbeat}")
             # print(f"Heartbeat sent at {self.last_heartbeat}")  # Uncomment for debugging
 
     def _heartbeat_monitor(self):
@@ -64,14 +81,16 @@ class MavlinkDrone(DroneClient):
                 time_since_heartbeat = time.time() - self.last_heartbeat
 
                 if time_since_heartbeat > self.heartbeat_timeout:
-                    print(f"⚠️  DEAD MAN'S SWITCH TRIGGERED! No heartbeat for {time_since_heartbeat:.1f}s")
+                    # print(f"⚠️  DEAD MAN'S SWITCH TRIGGERED! No heartbeat for {time_since_heartbeat:.1f}s")
+                    logging.info(f"⚠️  DEAD MAN'S SWITCH TRIGGERED! No heartbeat for {time_since_heartbeat:.1f}s")
                     self._trigger_emergency_action()
                     break  # Exit the monitoring loop after triggering
 
                 time.sleep(1.0)  # Check every second
 
             except Exception as e:
-                print(f"Error in dead man's switch monitor: {e}")
+                # print(f"Error in dead man's switch monitor: {e}")
+                logging.info(f"Error in dead man's switch monitor: {e}")
                 # If we can't monitor properly, trigger emergency action to be safe
                 self._trigger_emergency_action()
                 break
@@ -82,10 +101,12 @@ class MavlinkDrone(DroneClient):
             if not self.vehicle:
                 return
 
-            print("🚨 EXECUTING EMERGENCY PROTOCOL")
+            # print("🚨 EXECUTING EMERGENCY PROTOCOL")
+            logging.info("🚨 EXECUTING EMERGENCY PROTOCOL")
 
             # Option 1: Return to Launch (RTL) - Recommended
-            print("Setting mode to RTL (Return to Launch)")
+            # print("Setting mode to RTL (Return to Launch)")
+            logging.info("Setting mode to RTL (Return to Launch)")
             self.vehicle.mode = VehicleMode("RTL")
 
             # Option 2: Alternative - Land immediately at current location
@@ -106,7 +127,8 @@ class MavlinkDrone(DroneClient):
             self.dead_mans_switch_active = False  # Disable further monitoring
 
         except Exception as e:
-            print(f"❌ Critical error in emergency action: {e}")
+            # print(f"❌ Critical error in emergency action: {e}")
+            logging.info(f"❌ Critical error in emergency action: {e}")
             # Last resort - try to land
             try:
                 if self.vehicle:
@@ -220,7 +242,8 @@ class MavlinkDrone(DroneClient):
 
     def stop_dead_mans_switch(self):
         """Safely disable the dead man's switch"""
-        print("Stopping dead man's switch...")
+        # print("Stopping dead man's switch...")
+        logging.info("Stopping dead man's switch...")
         self._running = False
         self.dead_mans_switch_active = False
 

@@ -10,7 +10,17 @@ import os
 from video.stream import VideoStream
 from db.session import init_db, close_db
 from db.repository import TelemetryRepository
+from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
+import logging
 
+logging.basicConfig(
+                    level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s",
+                    handlers=[
+                        logging.FileHandler("drone.log"),
+                        logging.StreamHandler()  # still print to console
+                    ]
+                )
 
 cam_source = settings.cam_source
 
@@ -22,13 +32,16 @@ except ValueError:
 
 '''
         ###TO DO###
+        
 - remove mqtt publishing functions and replace mqtt listening functions
 - telemtery database is not recording
-- test videw streaming and saving to db
+- test video streaming and saving to db
 - check flow
 - check calculations
-- find a proper llm for trash detection, agriculture and defense
-- 
+- find a proper LLM for trash detection, agriculture and defense
+- mosquito listener:
+mosquitto_sub -h 127.0.0.1 -p 1883 -t "ardupilot/telemetry" -v
+ 
 '''
 
 async def main():
@@ -54,9 +67,10 @@ async def main():
     #     fps_limit=1.0
     # )
     repo = TelemetryRepository()
+    publisher = ArduPilotTelemetryPublisher()
 
     # orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video)
-    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, repo)
+    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, repo, publisher)
 
     # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
     try:
@@ -64,10 +78,12 @@ async def main():
 
         await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     except KeyboardInterrupt:
-        print("\n🛑 Manual abort - triggering safe shutdown")
+        logging.info("\n🛑 Manual abort - triggering safe shutdown")
+        # print("\n🛑 Manual abort - triggering safe shutdown")
         orch._running = False
     except Exception as e:
-        print(f"❌ Flight failed: {e}")
+        logging.info(f"❌ Flight failed: {e}")
+        # print(f"❌ Flight failed: {e}")
     finally:
         await close_db()
 
@@ -75,4 +91,5 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n✅ Program terminated safely")
+        logging.info("\n✅ Program terminated safely")
+        # print("\n✅ Program terminated safely")
