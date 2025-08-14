@@ -1,6 +1,15 @@
 import json, ssl, time, socket
 from typing import Optional
 import paho.mqtt.client as mqtt
+import logging
+from config import settings
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("drone_subscriber.log"),
+        logging.StreamHandler(),])
 
 class MqttClient:
     def __init__(self, host: str, port: int = 1883, username: str = "", password: str = "",
@@ -8,12 +17,11 @@ class MqttClient:
                  connect_timeout: int = 10, max_retries: int = 20, retry_backoff_s: float = 0.5):
 
         self.client = mqtt.Client(
-            client_id=client_id or "",
-            protocol=mqtt.MQTTv311,
-            transport="tcp",
-            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-        )
-
+                                client_id=client_id or "",
+                                protocol=mqtt.MQTTv311,
+                                transport="tcp",
+                                callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+                            )
 
         if username:
             self.client.username_pw_set(username, password)
@@ -64,13 +72,13 @@ class MqttClient:
     def _on_connect(self, client, userdata, flags, rc, properties=None):
         # In MQTT v3.1.1 rc is an int; 0 = success
         if rc == 0:
-            print("[MQTT] Connected.")
+            logging.info("[MQTT] Connected.")
         else:
-            print(f"[MQTT] Connect failed rc={rc}")
+            logging.info(f"[MQTT] Connect failed rc={rc}")
 
-    def _on_disconnect(self, client, userdata, rc, properties=None):
-        print(f"[MQTT] Disconnected rc={rc}")
+    def _on_disconnect(self, client, userdata, rc, flags, properties=None):
+        logging.info(f"[MQTT] Disconnected rc={rc}")
 
     def _on_log(self, client, userdata, level, buf):
         if level >= mqtt.MQTT_LOG_ERR:
-            print(f"[MQTT] {buf}")
+            logging.info(f"[MQTT] {buf}")

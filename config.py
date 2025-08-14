@@ -18,6 +18,7 @@ class Settings:
     mqtt_pass: str = os.getenv("MQTT_PASS", "")
     opcua_endpoint: str = os.getenv("OPCUA_ENDPOINT", "opc.tcp://0.0.0.0:4840/drone")
     drone_conn: str = os.getenv("DRONE_CONNECTION_STR", "tcp:127.0.0.1:5760")
+    drone_conn_mavproxy: str = os.getenv("DRONE_CONNECTION_STR_MAVPROXY", "tcp:127.0.0.1:5760")
     # If connecting to a networked drone:
     # "udp:192.168.0.10:14550" (IP/port from your drone's telemetry)
 

@@ -51,7 +51,7 @@ class MavlinkDrone(DroneClient):
         # Start the dead man's switch monitoring
         # self.start_dead_mans_switch()
 
-
+    '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
     def start_dead_mans_switch(self):
         """Start the dead man's switch monitoring thread"""
         self.dead_mans_switch_active = True
@@ -67,13 +67,14 @@ class MavlinkDrone(DroneClient):
         logging.info("Dead man's switch activated")
         # print("Dead man's switch activated")
 
-    def send_heartbeat(self):
-        """Call this method regularly from your main application to keep the drone active"""
-        if self.dead_mans_switch_active:
-            self.last_heartbeat = time.time()
-            logging.info(f"Heartbeat sent at {self.last_heartbeat}")
-            # print(f"Heartbeat sent at {self.last_heartbeat}")  # Uncomment for debugging
+    # def send_heartbeat(self):
+    #     """Call this method regularly from your main application to keep the drone active"""
+    #     if self.dead_mans_switch_active:
+    #         self.last_heartbeat = time.time()
+    #         logging.info(f"Heartbeat sent at {self.last_heartbeat}")
+    #         # print(f"Heartbeat sent at {self.last_heartbeat}")  # Uncomment for debugging
 
+    '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
     def _heartbeat_monitor(self):
         """Background thread that monitors heartbeat and triggers emergency actions"""
         while self._running and self.vehicle:
@@ -95,6 +96,7 @@ class MavlinkDrone(DroneClient):
                 self._trigger_emergency_action()
                 break
 
+    '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
     def _trigger_emergency_action(self):
         """Executed when dead man's switch is triggered"""
         try:
@@ -150,7 +152,7 @@ class MavlinkDrone(DroneClient):
 
         while True:
             # Send heartbeat during takeoff
-            self.send_heartbeat()
+            # self.send_heartbeat()
 
             current_alt = self.vehicle.location.global_relative_frame.alt
             if current_alt >= alt * 0.95:
@@ -159,18 +161,18 @@ class MavlinkDrone(DroneClient):
 
     def goto(self, coord: Coordinate) -> None:
         # Send heartbeat before major operations
-        self.send_heartbeat()
+        # self.send_heartbeat()
 
         target = LocationGlobalRelative(coord.lat, coord.lon, coord.alt)
         self.vehicle.simple_goto(target)
 
     def set_mode(self, mode: str) -> None:
-        self.send_heartbeat()
+        # self.send_heartbeat()
         self.vehicle.mode = VehicleMode(mode)
 
     def get_telemetry(self) -> Telemetry:
         # Send heartbeat when getting telemetry (this happens regularly)
-        self.send_heartbeat()
+        # self.send_heartbeat()
 
         v = self.vehicle
         if v is None:
@@ -192,13 +194,13 @@ class MavlinkDrone(DroneClient):
 
     def follow_waypoints(self, path):
         for wp in path:
-            self.send_heartbeat()  # Heartbeat before each waypoint
+            # self.send_heartbeat()  # Heartbeat before each waypoint
             self.goto(wp)
 
             # Wait for waypoint with heartbeat
             start_time = time.time()
             while time.time() - start_time < 30:  # 30 second timeout per waypoint
-                self.send_heartbeat()
+                # self.send_heartbeat()
 
                 # Check if we're close enough to the waypoint
                 current = self.vehicle.location.global_relative_frame
@@ -228,7 +230,7 @@ class MavlinkDrone(DroneClient):
         return R * c
 
     def land(self) -> None:
-        self.send_heartbeat()
+        # self.send_heartbeat()
         self.vehicle.mode = VehicleMode("LAND")
 
 
@@ -236,7 +238,7 @@ class MavlinkDrone(DroneClient):
         """Block until vehicle.armed == False or timeout."""
         start = time.time()
         while self.vehicle and getattr(self.vehicle, "armed", False) and (time.time() - start) < timeout_s:
-            self.send_heartbeat()  # keeps dead-man switch happy
+            # self.send_heartbeat()  # keeps dead-man switch happy
             time.sleep(1.0)
 
 

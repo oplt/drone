@@ -24,7 +24,6 @@ logging.basicConfig(
                     ]
                 )
 
-
 class Orchestrator:
     def __init__(
             self,
@@ -50,7 +49,6 @@ class Orchestrator:
         # self._heartbeat_task = None
         self.publisher = publisher
         self._telemetry_interval = settings.telem_log_interval_sec
-
 
     async def heartbeat_task(self):
         """Send regular heartbeats to keep the dead man's switch happy"""
@@ -78,6 +76,54 @@ class Orchestrator:
                                     })
                 await asyncio.sleep(1.0)
 
+    # async def telemetry_publish_task(self):
+    #     """Continuously publish telemetry while drone is active"""
+    #     # while self._running:
+    #
+    #     try:
+    #         # Publish to MQTT
+    #         self.publisher.start()
+    #         await asyncio.sleep(2.0)
+    #     except Exception as e:
+    #         logging.info(f"Telemetry publisher error: {e}")
+    #         await asyncio.sleep(1.0)
+
+
+    async def telemetry_publish_task(self):
+        """Manage the telemetry publisher lifecycle"""
+        try:
+            # Start publisher in a thread (non-blocking)
+            if not await asyncio.to_thread(self.publisher.start):
+                logging.error("Failed to start telemetry publisher")
+                return
+
+            # Just keep this task alive while publisher runs
+            while self._running and self.publisher.is_alive():
+                await asyncio.sleep(1)
+
+        except Exception as e:
+            logging.error(f"Telemetry publisher error: {e}")
+        finally:
+            if self.publisher.is_running:
+                await asyncio.to_thread(self.publisher.stop)
+
+
+    async def mqtt_listener_task(self):
+        """Listen for MQTT messages and handle them"""
+        try:
+            # Start the MQTT client loop in a separate thread
+            self.mqtt.client.loop_start()
+
+            while self._running:
+                # Just keep this task alive while MQTT client is running
+                await asyncio.sleep(1.0)
+
+        except Exception as e:
+            logging.info(f"MQTT listener error: {e}")
+        finally:
+            self.mqtt.client.loop_stop()
+            self.mqtt.close()
+
     async def emergency_monitor_task(self):
         """Monitor for emergency conditions and handle them"""
         while self._running:
@@ -95,7 +141,6 @@ class Orchestrator:
                         # Stop all other operations
                         self._running = False
                         break
-
                 await asyncio.sleep(1.0)
             except Exception as e:
                 logging.info(f"Error in emergency monitor: {e}")
@@ -125,21 +170,21 @@ class Orchestrator:
         if not preflight.feasible and settings.ENFORCE_PREFLIGHT_RANGE:
             raise RuntimeError(preflight.reason)
 
-        async def _telemetry_logger():
-            while self._running:
-                t = self.drone.get_telemetry()
-                await self.repo.add_telemetry(
-                    self._flight_id,
-                    lat=t.lat, lon=t.lon, alt=t.alt,
-                    heading=t.heading, groundspeed=t.groundspeed,
-                    armed=t.armed, mode=t.mode,
-                    battery_voltage=t.battery_voltage,
-                    battery_current=t.battery_current,
-                    battery_level=t.battery_level,
-                )
-                await asyncio.sleep(1.0)
+        # async def _telemetry_logger():
+        #     while self._running:
+        #         t = self.drone.get_telemetry()
+        #         await self.repo.add_telemetry(
+        #             self._flight_id,
+        #             lat=t.lat, lon=t.lon, alt=t.alt,
+        #             heading=t.heading, groundspeed=t.groundspeed,
+        #             armed=t.armed, mode=t.mode,
+        #             battery_voltage=t.battery_voltage,
+        #             battery_current=t.battery_current,
+        #             battery_level=t.battery_level,
+        #         )
+        #         await asyncio.sleep(1.0)
 
-        self._telemetry_task = asyncio.create_task(_telemetry_logger())
+        # self._telemetry_task = asyncio.create_task(_telemetry_logger())
 
         await asyncio.to_thread(self.drone.arm_and_takeoff, cruise_alt)
         await self.repo.add_event(self._flight_id, "takeoff", {})
@@ -262,16 +307,7 @@ class Orchestrator:
             await asyncio.sleep(2.0)  # evaluation interval
 
 
-    async def telemetry_publish_task(self):
-        """Continuously publish telemetry while drone is active"""
-        # while self._running:
 
-        try:
-            # Publish to MQTT
-            self.publisher.start()
-        except Exception as e:
-            logging.info(f"Telemetry publisher error: {e}")
-        await asyncio.sleep(self._telemetry_interval)
 
     async def telemetry_task(self):
         while self._running:
@@ -311,12 +347,13 @@ class Orchestrator:
         # print(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
 
         await self.opcua.start()
-        self.drone.connect()
+        # self.drone.connect()
+        await asyncio.to_thread(self.drone.connect)
 
         # Start all tasks including the critical heartbeat task
         tasks = [
             asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
-            asyncio.create_task(self.telemetry_publish_task()),
+            asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
             # asyncio.create_task(self.telemetry_task()),
             # asyncio.create_task(self.telemetry_logging_task()),
             # asyncio.create_task(self.vision_task()),
@@ -325,32 +362,13 @@ class Orchestrator:
         ]
 
         try:
-            # Announce flight start
-            # self.mqtt.publish("drone/events", {
-            #     "type": "flight_start",
-            #     "from": start_addr,
-            #     "to": end_addr,
-            #     "altitude": alt,
-            #     "heartbeat_timeout": self.drone.heartbeat_timeout,
-            #     "timestamp": time.time()
-            # })
 
+
+            logging.info("Background tasks started, beginning flight...")
             await self.fly_route(start_addr, end_addr, cruise_alt=alt)
-
-            # If we get here, flight completed successfully
-            # self.mqtt.publish("drone/events", {
-            #     "type": "flight_completed",
-            #     "timestamp": time.time()
-            # })
 
         except Exception as e:
             logging.info(f"❌ Flight error: {e}")
-            # print(f"❌ Flight error: {e}")
-            # self.mqtt.publish("drone/errors", {
-            #     "type": "flight_error",
-            #     "message": str(e),
-            #     "timestamp": time.time()
-            # })
             raise
         finally:
             logging.info("🛑 Shutting down flight operations...")
@@ -358,10 +376,7 @@ class Orchestrator:
             self._running = False
             await asyncio.sleep(0.5)  # Give tasks time to see the flag
 
-            if getattr(self, "_telemetry_task", None):
-                self._telemetry_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await self._telemetry_task
+
 
             # Cancel all tasks
             for task in tasks:

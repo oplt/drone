@@ -73,7 +73,7 @@ async def main():
     #     fps_limit=1.0
     # )
     repo = TelemetryRepository()
-    publisher = ArduPilotTelemetryPublisher()
+    publisher = ArduPilotTelemetryPublisher(mqtt)
 
     # orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video)
     orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, repo, publisher)

@@ -10,26 +10,26 @@ from config import settings
 import logging
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("drone.log"),
-        logging.StreamHandler()  # still print to console
-    ]
-)
+                    level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s",
+                    handlers=[
+                        logging.FileHandler("drone.log"),
+                        logging.StreamHandler()  # still print to console
+                    ])
 
 
 class ArduPilotTelemetryPublisher:
-    def __init__(self, mqtt_broker=None, mqtt_port=None, mqtt_topic=None, drone_connection=None):
+    def __init__(self, mqtt_client=None, mqtt_topic=None, drone_connection=None):
         # MQTT Broker Settings
-        self.mqtt_broker = mqtt_broker or settings.mqtt_broker
-        self.mqtt_port = mqtt_port or settings.mqtt_port
+        # self.mqtt_broker = mqtt_broker or settings.mqtt_broker
+        # self.mqtt_port = mqtt_port or settings.mqtt_port
         self.mqtt_topic = mqtt_topic or "ardupilot/telemetry"
 
         # Drone connection
-        self.drone_conn_str = drone_connection or settings.drone_conn
+        self.drone_conn_str = settings.drone_conn_mavproxy
+        # self.drone_conn_str = settings.drone_conn
         self.mav_conn = None
-        self.mqtt_client = None
+        self.mqtt_client = mqtt_client
 
         # Control flags
         self.is_running = False
@@ -60,45 +60,7 @@ class ArduPilotTelemetryPublisher:
             logging.info(f"Failed to connect to MAVLink: {e}")
             return False
 
-    def connect_mqtt(self):
-        """Establish MQTT connection"""
-        try:
-            self.mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-            self.mqtt_client.connect(self.mqtt_broker, self.mqtt_port)
-            logging.info("Connected to MQTT broker: {self.mqtt_broker}:{self.mqtt_port}")
-            return True
-        except Exception as e:
-            logging.info(f"Failed to connect to MQTT broker: {e}")
-            return False
 
-    def _publish_loop(self):
-        """Main publishing loop (runs in separate thread)"""
-        logging.info("Starting MAVLink to MQTT forwarding...")
-
-        while self.is_running:
-            try:
-                msg = self.mav_conn.recv_match(
-                    blocking=True,
-                    timeout=1.0,  # Add timeout to allow checking is_running flag
-                    type=self.message_types
-                )
-
-                if msg and self.is_running:
-                    # Convert MAVLink message to JSON
-                    msg_dict = msg.to_dict()
-
-                    # Add timestamp if not present
-                    if 'timestamp' not in msg_dict:
-                        msg_dict['timestamp'] = time.time()
-
-                    # Publish to MQTT
-                    self.mqtt_client.publish(self.mqtt_topic, json.dumps(msg_dict))
-                    logging.info(f"Published: {msg.get_type()}")
-
-            except Exception as e:
-                if self.is_running:  # Only print error if we're supposed to be running
-                    logging.info(f"Error in publish loop: {e}")
-                    time.sleep(1)  # Brief pause before retrying
 
     def start(self):
         """Start the telemetry publisher"""
@@ -108,9 +70,6 @@ class ArduPilotTelemetryPublisher:
 
         # Connect to MAVLink and MQTT
         if not self.connect_mavlink():
-            return False
-
-        if not self.connect_mqtt():
             return False
 
         # Start publishing in a separate thread
@@ -136,12 +95,41 @@ class ArduPilotTelemetryPublisher:
 
         # Close connections
         if self.mqtt_client:
-            self.mqtt_client.disconnect()
+            self.mqtt_client.close()
 
         if self.mav_conn:
             self.mav_conn.close()
 
         logging.info("ArduPilot Telemetry Publisher stopped")
+
+    def _publish_loop(self):
+        """Main publishing loop (runs in separate thread)"""
+        logging.info("Starting MAVLink to MQTT forwarding...")
+
+        while self.is_running:
+            try:
+                msg = self.mav_conn.recv_match(
+                    blocking=False,
+                    timeout=1.0,  # Add timeout to allow checking is_running flag
+                    type=self.message_types
+                )
+
+                if msg and self.is_running:
+                    # Convert MAVLink message to JSON
+                    msg_dict = msg.to_dict()
+
+                    # Add timestamp if not present
+                    if 'timestamp' not in msg_dict:
+                        msg_dict['timestamp'] = time.time()
+
+                    # Publish to MQTT
+                    self.mqtt_client.publish(self.mqtt_topic, json.dumps(msg_dict))
+                    # logging.info(f"Published: {msg.get_type()}") # Uncomment for debugging
+
+            except Exception as e:
+                if self.is_running:  # Only print error if we're supposed to be running
+                    logging.info(f"Error in publish loop: {e}")
+                    time.sleep(1)  # Brief pause before retrying
 
     def is_alive(self):
         """Check if the publisher is running"""
@@ -151,58 +139,3 @@ class ArduPilotTelemetryPublisher:
         """Update the message types to filter"""
         self.message_types = message_types
         logging.info(f"Updated message types: {self.message_types}")
-
-
-# Example usage
-# if __name__ == "__main__":
-#     publisher = ArduPilotTelemetryPublisher()
-#
-#     try:
-#         if publisher.start():
-#             # Keep the main thread alive
-#             while True:
-#                 time.sleep(1)
-#                 if not publisher.is_alive():
-#                     print("Publisher thread died, restarting...")
-#                     publisher.stop()
-#                     time.sleep(2)
-#                     publisher.start()
-#     except KeyboardInterrupt:
-#         print("\nShutting down...")
-#         publisher.stop()
-
-
-# # MQTT Broker Settings
-# MQTT_BROKER = settings.mqtt_broker
-# MQTT_PORT = settings.mqtt_port
-# MQTT_TOPIC = "ardupilot/telemetry"
-#
-# # Connect to MAVProxy (SITL)
-# mav_conn = mavutil.mavlink_connection(settings.drone_conn)
-#
-# # MQTT Client Setup
-# mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)  # <-- Fixes the deprecation warning
-# mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
-#
-# print("Forwarding MAVLink messages to MQTT...")
-#
-# while True:
-#     msg = mav_conn.recv_match(blocking=True,
-#                               type=['HEARTBEAT',
-#                                     'GLOBAL_POSITION_INT',
-#                                     'VFR_HUD',
-#                                     'BATTERY_STATUS',
-#                                     'ATTITUDE',
-#                                     'SYS_STATUS',
-#                                     'GPS_RAW_INT',
-#                                     'SYSTEM_TIME',
-#                                     'TIMESYNC',
-#                                     'WIND_COV',
-#                                     'DISTANCE_SENSOR',
-#                                     ]) # ,  # <-- Filter specific messages
-#     if msg:
-#         # Convert MAVLink message to JSON
-#         msg_dict = msg.to_dict()
-#         mqtt_client.publish(MQTT_TOPIC, json.dumps(msg_dict))
-#         print(f"Published: {msg.get_type()}")
-#     # time.sleep(5)
