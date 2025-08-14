@@ -8,11 +8,12 @@ class MqttClient:
                  connect_timeout: int = 10, max_retries: int = 20, retry_backoff_s: float = 0.5):
 
         self.client = mqtt.Client(
-            mqtt.CallbackAPIVersion.VERSION2,
             client_id=client_id or "",
-            protocol=mqtt.MQTTv311,          # << force MQTT 3.1.1
+            protocol=mqtt.MQTTv311,
             transport="tcp",
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         )
+
 
         if username:
             self.client.username_pw_set(username, password)

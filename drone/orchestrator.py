@@ -56,7 +56,9 @@ class Orchestrator:
         """Send regular heartbeats to keep the dead man's switch happy"""
         logging.info("Starting heartbeat task...")
         # print("Starting heartbeat task...")
-        while self._running:
+
+        while True:
+
             try:
                 # self.drone.send_heartbeat()
 
@@ -318,12 +320,12 @@ class Orchestrator:
 
         # Start all tasks including the critical heartbeat task
         tasks = [
+            asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
             # asyncio.create_task(self.telemetry_publish_task()),
             asyncio.create_task(self.telemetry_task()),
             asyncio.create_task(self.telemetry_logging_task()),
             # asyncio.create_task(self.vision_task()),
             asyncio.create_task(self._range_guard_task()),
-            asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
             asyncio.create_task(self.emergency_monitor_task()),
         ]
 
