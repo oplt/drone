@@ -129,10 +129,13 @@ class Orchestrator:
         BATCH_SIZE = 500
         INTERVAL_S = 0.25
         buffer = []
+        logging.info("Starting _raw_event_ingest_worker")
+        
         # while self._running:
         while True:
             try:
                 item = await asyncio.wait_for(self._raw_event_queue.get(), timeout=INTERVAL_S)
+                logging.debug(f"Received item from queue: {item.get('msg_type', 'UNKNOWN')}")
                 buffer.append(item)
                 # coalesce quickly
                 for _ in range(BATCH_SIZE-1):
@@ -141,23 +144,53 @@ class Orchestrator:
                     except asyncio.QueueEmpty:
                         break
                 if buffer:
-                    await self.repo.add_mavlink_events_many(self._flight_id, buffer)
+                    if self._flight_id is None:
+                        logging.warning("Flight ID is None, cannot save MavlinkEvent data")
+                        buffer.clear()
+                        continue
+                    
+                    logging.info(f"Processing batch of {len(buffer)} events for flight {self._flight_id}")
+                    try:
+                        inserted_count = await self.repo.add_mavlink_events_many(self._flight_id, buffer)
+                        logging.info(f"Inserted {inserted_count} MavlinkEvent records")
+                    except Exception as e:
+                        logging.error(f"Failed to insert MavlinkEvent data: {e}")
+                    
                     for _ in buffer:
                         self._raw_event_queue.task_done()
                     buffer.clear()
             except asyncio.TimeoutError:
                 if buffer:
-                    await self.repo.add_mavlink_events_many(self._flight_id, buffer)
+                    if self._flight_id is None:
+                        logging.warning("Flight ID is None, cannot save MavlinkEvent data")
+                        buffer.clear()
+                        continue
+                    
+                    logging.info(f"Timeout flush: processing {len(buffer)} events for flight {self._flight_id}")
+                    try:
+                        inserted_count = await self.repo.add_mavlink_events_many(self._flight_id, buffer)
+                        logging.info(f"Inserted {inserted_count} MavlinkEvent records (timeout flush)")
+                    except Exception as e:
+                        logging.error(f"Failed to insert MavlinkEvent data (timeout flush): {e}")
+                    
                     for _ in buffer:
                         self._raw_event_queue.task_done()
                     buffer.clear()
             except Exception as e:
+                logging.error(f"Error in _raw_event_ingest_worker: {e}")
                 buffer.clear()
 
 
     async def mqtt_subscriber_task(self):
         """Listen for MQTT messages and handle them"""
         try:
+            # Wait for flight_id to be set
+            while self._flight_id is None:
+                logging.info("Waiting for flight_id to be set before starting MQTT subscriber...")
+                await asyncio.sleep(0.5)
+            
+            logging.info(f"Starting MQTT subscriber with flight_id: {self._flight_id}")
+            
             # Attach queue so mqtt client can enqueue complete frames
             # self.mqtt.attach_ingest_queue(self._ingest_queue)
             self.mqtt.attach_raw_event_queue(self._raw_event_queue)
@@ -202,10 +235,15 @@ class Orchestrator:
         # start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = cruise_alt
         # dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = cruise_alt
         self._running = True
-        # self._flight_id = await self.repo.create_flight(
-        #     start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
-        #     dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
-        # )
+        
+        # Create flight record if not already created
+        if self._flight_id is None:
+            self._flight_id = await self.repo.create_flight(
+                start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
+                dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
+            )
+            logging.info(f"Created flight with ID: {self._flight_id}")
+        
         await self.repo.add_event(self._flight_id, "mission_created", {"alt": cruise_alt})
 
         self._dest_coord = dest

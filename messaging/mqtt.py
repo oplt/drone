@@ -109,8 +109,11 @@ class MqttClient:
         """Subscribe to the ardupilot telemetry topic"""
 
         self._current_flight_id = flight_id
+        logging.info(f"MQTT client: Setting flight_id to {flight_id}")
         self.client.subscribe(self.topic, qos=1)
         self.client.on_message = self._on_message
+        logging.info(f"MQTT client: Subscribed to topic {self.topic} with flight_id {flight_id}")
+
 
     def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
         logging.info(f"[MQTT] Subscribed mid={mid} qos={granted_qos}")
@@ -121,7 +124,9 @@ class MqttClient:
         """Handle incoming MQTT messages from ardupilot"""
         try:
             if msg.topic == settings.telemetry_topic:
+                logging.debug(f"Received MQTT message on topic {msg.topic}")
                 payload = json.loads(msg.payload.decode())
+                logging.debug(f"Message payload type: {payload.get('mavpackettype', 'UNKNOWN')}")
                 # self._process_telemetry_messages(payload)
                 self._process_raw_event(payload)
         except Exception as e:
@@ -135,9 +140,9 @@ class MqttClient:
         self._raw_event_queue = q
 
 
-
     def _process_raw_event(self, payload: Dict[str, Any]):
         if not self._raw_event_queue:
+            logging.warning("Raw event queue not attached, cannot process events")
             return
         try:
             time_unix_usec = payload.get("time_unix_usec")
@@ -154,8 +159,14 @@ class MqttClient:
                 "timestamp": timestamp,
                 "payload": payload,
             }
+            
+            logging.debug(f"Processing raw event: msg_type={item['msg_type']}, flight_id={self._current_flight_id}")
+            
             self._raw_event_queue.put_nowait(item)
+            logging.debug(f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}")
+            
         except asyncio.QueueFull:
+            logging.warning("Raw event queue is full, dropping oldest event")
             # drop oldest to maintain recency
             try:
                 _ = self._raw_event_queue.get_nowait()
@@ -163,8 +174,8 @@ class MqttClient:
             except Exception:
                 pass
             self._raw_event_queue.put_nowait(item)
-
-
+        except Exception as e:
+            logging.error(f"Error processing raw event: {e}")
 
 
     #
@@ -228,15 +239,3 @@ class MqttClient:
     #                     self._emitted_frame_ids.append(fid)
     #     except Exception as e:
     #         logging.error(f"Error processing {mav_type}: {e}")
-    #
-    #
-
-
-
-
-
-
-
-
-
-
