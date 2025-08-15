@@ -1,4 +1,5 @@
 import asyncio
+import os
 from drone.mavlink_drone import MavlinkDrone
 from map.google_maps import GoogleMapsClient
 from analysis.llm import LLMAnalyzer
@@ -6,26 +7,18 @@ from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
 from drone.orchestrator import Orchestrator
 from config import settings, setup_logging
-from video.stream import VideoStream
+from video.stream import DroneVideoStream
 from db.session import init_db, close_db
 from db.repository import TelemetryRepository
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
 
 
 
-cam_source = settings.cam_source
-
-try:
-    cam_source = int(cam_source)
-except ValueError:
-    pass
-
-
 '''
         ###TO DO###
         
 - remove mqtt publishing functions and replace mqtt listening functions
-- telemtery database is not recording
+- telemetry raw data recording is ok. Add a group of message in a row !!! Necessary??
 - test video streaming and saving to db
 - check flow
 - check calculations
@@ -56,25 +49,53 @@ async def main():
     )
     mqtt = MqttClient(settings.mqtt_broker, settings.mqtt_port, settings.mqtt_user, settings.mqtt_pass,use_tls=False, client_id="drone-1")
     opcua = DroneOpcUaServer(settings.opcua_endpoint)
-    # video = VideoStream(
-    #     source=cam_source,                 # e.g., 0 or "rtsp://<ip>/stream"
-    #     width=640,
-    #     height=480,
-    #     open_timeout_s=5.0,
-    #     probe_indices=5,                   # try /dev/video0..5 if 0 fails
-    #     fallback_file=os.getenv("CAM_FALLBACK", ""),  # e.g., "/home/polat/sample.mp4"
-    #     fps_limit=1.0
-    # )
+    
+    # Initialize drone video stream with enhanced configuration
+    video = None
+    if settings.drone_video_enabled:
+        try:
+            # Parse camera source (could be int for USB camera or string for RTSP/network)
+            cam_source = settings.drone_video_source
+            try:
+                cam_source = int(cam_source)
+            except ValueError:
+                pass  # Keep as string if it's not an integer
+            
+            video = DroneVideoStream(
+                source=cam_source,
+                width=settings.drone_video_width,
+                height=settings.drone_video_height,
+                fps=settings.drone_video_fps,
+                open_timeout_s=settings.drone_video_timeout,
+                probe_indices=5,  # Try /dev/video0..5 if USB camera fails
+                fallback_file=settings.drone_video_fallback if settings.drone_video_fallback else None,
+                fps_limit=None,  # No FPS limit for real-time drone video
+                enable_recording=settings.drone_video_save_stream,
+                recording_path=settings.drone_video_save_path,
+                recording_format="mp4"
+            )
+            print(f"✅ Drone video stream initialized successfully")
+            print(f"   Source: {cam_source}")
+            print(f"   Resolution: {settings.drone_video_width}x{settings.drone_video_height}")
+            print(f"   FPS: {settings.drone_video_fps}")
+            print(f"   Recording: {'Enabled' if settings.drone_video_save_stream else 'Disabled'}")
+            
+        except Exception as e:
+            print(f"❌ Failed to initialize drone video stream: {e}")
+            print("   Continuing without video streaming...")
+            video = None
+    else:
+        print("ℹ️  Drone video streaming disabled in configuration")
+    
     repo = TelemetryRepository()
     publisher = ArduPilotTelemetryPublisher(mqtt)
 
-    # orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video)
-    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, repo, publisher)
+    # Initialize orchestrator with video stream
+    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher)
 
     # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
     try:
         # Test flight - adjust coordinates for your location
-
         await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     except KeyboardInterrupt:
         logging.info("\n🛑 Manual abort - triggering safe shutdown")

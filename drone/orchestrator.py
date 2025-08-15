@@ -2,7 +2,7 @@ import asyncio, json, time
 from .models import Coordinate
 from .drone_base import DroneClient
 from map.google_maps import GoogleMapsClient
-from video.stream import VideoStream
+from video.stream import DroneVideoStream
 from analysis.llm import LLMAnalyzer
 from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
@@ -23,7 +23,7 @@ class Orchestrator:
             analyzer: LLMAnalyzer,
             mqtt: MqttClient,
             opcua: DroneOpcUaServer,
-            # video: VideoStream,
+            video: DroneVideoStream,
             telemetry_repo: TelemetryRepository,
             publisher: ArduPilotTelemetryPublisher
     ):
@@ -32,7 +32,7 @@ class Orchestrator:
         self.analyzer = analyzer
         self.mqtt = mqtt
         self.opcua = opcua
-        # self.video = video
+        self.video = video
         self.repo = telemetry_repo
         self.range_model = SimpleWhPerKmModel()
         self._running = True
@@ -43,6 +43,7 @@ class Orchestrator:
         self._flight_id = None
         self._ingest_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
         self._raw_event_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
+        self._video_health_interval = 5.0  # Check video health every 5 seconds
 
 
     async def heartbeat_task(self):
@@ -91,6 +92,49 @@ class Orchestrator:
                 await asyncio.to_thread(self.publisher.stop)
 
 
+    async def video_health_monitor_task(self):
+        """Monitor video stream health and publish status"""
+        logging.info("Starting video health monitor task...")
+        
+        while self._running:
+            try:
+                if self.video:
+                    # Get video connection status
+                    status = self.video.get_connection_status()
+                    
+                    # Publish video health status to MQTT
+                    self.mqtt.publish("drone/video/status", {
+                        "timestamp": time.time(),
+                        "healthy": status["healthy"],
+                        "frame_count": status["frame_count"],
+                        "fps": status["fps"],
+                        "resolution": status["resolution"],
+                        "recording": status["recording"],
+                        "recording_file": status["recording_file"]
+                    }, qos=1)
+                    
+                    # Update OPC UA with video status
+                    await self.opcua.update_video_status(
+                        healthy=status["healthy"],
+                        fps=status["fps"],
+                        recording=status["recording"]
+                    )
+                    
+                    # Log warnings if video is unhealthy
+                    if not status["healthy"]:
+                        logging.warning("Video stream is unhealthy")
+                        self.mqtt.publish("drone/warnings", {
+                            "type": "video_stream_unhealthy",
+                            "message": "Video stream connection issues detected",
+                            "timestamp": time.time()
+                        }, qos=1)
+                
+                await asyncio.sleep(self._video_health_interval)
+                
+            except Exception as e:
+                logging.error(f"Error in video health monitor: {e}")
+                await asyncio.sleep(1.0)
+
 
     # async def _telemetry_ingest_worker(self):
     #     """Drain MQTT-parsed rows and bulk-insert. Small batches, frequent commits."""
@@ -123,6 +167,7 @@ class Orchestrator:
     #             # log and continue
     #             buffer.clear()
     #
+
 
     async def _raw_event_ingest_worker(self):
         """Drain raw MAVLink events from MQTT and bulk-insert into MavlinkEvent."""
@@ -353,7 +398,7 @@ class Orchestrator:
         )
 
     async def _range_guard_task(self):
-        """Re-evaluate remaining distance periodically and warn if we’re going to run short."""
+        """Re-evaluate remaining distance periodically and warn if we're going to run short."""
         while self._running:
             try:
                 if self._dest_coord:
@@ -380,16 +425,50 @@ class Orchestrator:
 
 
     async def vision_task(self):
+        """Process video frames for object detection and analysis"""
+        logging.info("Starting vision task for drone video analysis...")
+        
         try:
             for _, frame in self.video.frames():
+                if not self._running:
+                    break
+                    
+                # Process frame for object detection
                 dets = await self.analyzer.detect_objects(frame)
                 payload = [d.__dict__ for d in dets]
+                
+                # Publish detections to MQTT
                 self.mqtt.publish("drone/detections", payload, qos=0)
+                
+                # Update OPC UA with detection data
                 await self.opcua.update_detections(json.dumps(payload))
-                await asyncio.sleep(0)  # yield
+                
+                # Log detection events if significant objects found
+                if dets:
+                    logging.info(f"Detected {len(dets)} objects in video frame")
+                    await self.repo.add_event(self._flight_id, "object_detected", {
+                        "count": len(dets),
+                        "objects": [d.__dict__ for d in dets]
+                    })
+                
+                await asyncio.sleep(0)  # yield control
+                
         except RuntimeError as e:
-            self.mqtt.publish("drone/events", {"level":"error","msg":str(e)})
-
+            error_msg = f"Video processing error: {str(e)}"
+            logging.error(error_msg)
+            self.mqtt.publish("drone/events", {
+                "level": "error",
+                "msg": error_msg,
+                "timestamp": time.time()
+            }, qos=1)
+        except Exception as e:
+            error_msg = f"Unexpected error in vision task: {str(e)}"
+            logging.error(error_msg)
+            self.mqtt.publish("drone/events", {
+                "level": "error", 
+                "msg": error_msg,
+                "timestamp": time.time()
+            }, qos=1)
 
     async def run(self, start_addr: str, end_addr: str, alt=30.0):
         logging.info(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
@@ -412,7 +491,8 @@ class Orchestrator:
             asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
             asyncio.create_task(self._raw_event_ingest_worker()),
             # asyncio.create_task(self._telemetry_ingest_worker()),
-            # asyncio.create_task(self.vision_task()),
+            asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
+            asyncio.create_task(self.vision_task()),  # Process video for object detection
             # asyncio.create_task(self._range_guard_task()),
             # asyncio.create_task(self.emergency_monitor_task()),
         ]
@@ -445,7 +525,9 @@ class Orchestrator:
             self.drone.stop_dead_mans_switch()
 
             await self.opcua.stop()
-            # self.video.close()
+            # Close video stream properly
+            if self.video:
+                self.video.close()
             self.drone.close()
 
             if self.publisher.is_running:
