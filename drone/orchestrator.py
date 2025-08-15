@@ -52,6 +52,7 @@ class Orchestrator:
         self._telemetry_interval = settings.telem_log_interval_sec
         self._flight_id = None
         self._ingest_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
+        self._raw_event_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
 
 
     async def heartbeat_task(self):
@@ -101,46 +102,80 @@ class Orchestrator:
 
 
 
-    async def _telemetry_ingest_worker(self):
-        """Drain MQTT-parsed rows and bulk-insert. Small batches, frequent commits."""
-        BATCH_SIZE = 200
+    # async def _telemetry_ingest_worker(self):
+    #     """Drain MQTT-parsed rows and bulk-insert. Small batches, frequent commits."""
+    #     BATCH_SIZE = 200
+    #     INTERVAL_S = 0.25
+    #     buffer = []
+    #     while self._running:
+    #         try:
+    #             item = await asyncio.wait_for(self._ingest_queue.get(), timeout=INTERVAL_S)
+    #             buffer.append(item)
+    #             # try to coalesce up to BATCH_SIZE quickly
+    #             for _ in range(BATCH_SIZE-1):
+    #                 try:
+    #                     buffer.append(self._ingest_queue.get_nowait())
+    #                 except asyncio.QueueEmpty:
+    #                     break
+    #             if buffer:
+    #                 # strip flight_id from rows; repo will set it if you prefer
+    #                 await self.repo.add_telemetry_many(self._flight_id, buffer)
+    #                 for _ in buffer:
+    #                     self._ingest_queue.task_done()
+    #                 buffer.clear()
+    #         except asyncio.TimeoutError:
+    #             if buffer:
+    #                 await self.repo.add_telemetry_many(self._flight_id, buffer)
+    #                 for _ in buffer:
+    #                     self._ingest_queue.task_done()
+    #                 buffer.clear()
+    #         except Exception as e:
+    #             # log and continue
+    #             buffer.clear()
+    #
+
+    async def _raw_event_ingest_worker(self):
+        """Drain raw MAVLink events from MQTT and bulk-insert into MavlinkEvent."""
+        BATCH_SIZE = 500
         INTERVAL_S = 0.25
         buffer = []
-        while self._running:
+        # while self._running:
+        while True:
             try:
-                item = await asyncio.wait_for(self._ingest_queue.get(), timeout=INTERVAL_S)
+                item = await asyncio.wait_for(self._raw_event_queue.get(), timeout=INTERVAL_S)
                 buffer.append(item)
-                # try to coalesce up to BATCH_SIZE quickly
+                # coalesce quickly
                 for _ in range(BATCH_SIZE-1):
                     try:
-                        buffer.append(self._ingest_queue.get_nowait())
+                        buffer.append(self._raw_event_queue.get_nowait())
                     except asyncio.QueueEmpty:
                         break
                 if buffer:
-                    # strip flight_id from rows; repo will set it if you prefer
-                    await self.repo.add_telemetry_many(self._flight_id, buffer)
+                    await self.repo.add_mavlink_events_many(self._flight_id, buffer)
                     for _ in buffer:
-                        self._ingest_queue.task_done()
+                        self._raw_event_queue.task_done()
                     buffer.clear()
             except asyncio.TimeoutError:
                 if buffer:
-                    await self.repo.add_telemetry_many(self._flight_id, buffer)
+                    await self.repo.add_mavlink_events_many(self._flight_id, buffer)
                     for _ in buffer:
-                        self._ingest_queue.task_done()
+                        self._raw_event_queue.task_done()
                     buffer.clear()
             except Exception as e:
-                # log and continue
                 buffer.clear()
+
 
     async def mqtt_subscriber_task(self):
         """Listen for MQTT messages and handle them"""
         try:
             # Attach queue so mqtt client can enqueue complete frames
-            self.mqtt.attach_ingest_queue(self._ingest_queue)   # NEW
+            # self.mqtt.attach_ingest_queue(self._ingest_queue)
+            self.mqtt.attach_raw_event_queue(self._raw_event_queue)
 
             if not await asyncio.to_thread(self.mqtt.subscribe_to_topics, self._flight_id):
                 logging.error("Failed to start MQTT subscriber")
-                return
+                while self._running:
+                    await asyncio.sleep(1)
 
             logging.info("MQTT subscriber started and listening for messages")
             # Keep alive
@@ -347,7 +382,8 @@ class Orchestrator:
             asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
             asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
             asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
-            asyncio.create_task(self._telemetry_ingest_worker()),
+            asyncio.create_task(self._raw_event_ingest_worker()),
+            # asyncio.create_task(self._telemetry_ingest_worker()),
             # asyncio.create_task(self.vision_task()),
             # asyncio.create_task(self._range_guard_task()),
             # asyncio.create_task(self.emergency_monitor_task()),

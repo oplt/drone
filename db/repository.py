@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any, Iterable, Mapping
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert
 from .session import Session
-from .models import TelemetryRecord, Flight, FlightEvent
+from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
 from drone.models import Telemetry as TelemetryDTO  # your dataclass
 
 class TelemetryRepository:
@@ -94,3 +94,51 @@ class TelemetryRepository:
             f.note = note
             f.ended_at = datetime.now(timezone.utc)
             await s.commit()
+
+
+    async def add_mavlink_events_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
+        """
+        rows: dicts with keys:
+          - msg_type (str)
+          - time_boot_ms (int|None)
+          - ts_event (datetime|None)
+          - payload (dict)
+          - flight_id will be set if missing
+        """
+        payload = []
+        for r in rows:
+            d = dict(r)
+            d.setdefault("flight_id", flight_id)
+            # enforce minimal required fields
+            d.setdefault("msg_type", d.get("payload", {}).get("mavpackettype", "UNKNOWN"))
+            payload.append({
+                "flight_id":    d["flight_id"],
+                "msg_type":     d["msg_type"],
+                "time_boot_ms": d.get("time_boot_ms"),
+                "ts_event":     d.get("ts_event"),
+                "payload":      d.get("payload", {}),
+            })
+
+        if not payload:
+            return 0
+
+        async with self._session_factory() as s:
+            stmt = insert(MavlinkEvent).values(payload)
+            await s.execute(stmt)
+            try:
+                await s.commit()
+            except Exception:
+                # If uniques collide (replays), it's fine to ignore
+                await s.rollback()
+                # try per-row upsert-ish insert (optional: skip for now)
+                inserted = 0
+                for d in payload:
+                    try:
+                        await s.execute(insert(MavlinkEvent).values(d))
+                        await s.commit()
+                        inserted += 1
+                    except Exception:
+                        await s.rollback()
+                return inserted
+            return len(payload)
+
