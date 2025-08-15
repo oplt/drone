@@ -1,8 +1,22 @@
 from dataclasses import dataclass
 from dotenv import load_dotenv
 import os
+import logging
 
 load_dotenv()
+
+def setup_logging():
+    """Centralized logging configuration with environment variable support"""
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+
+    logging.basicConfig(
+        level=getattr(logging, log_level, logging.INFO),
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",  # Added module name
+        handlers=[
+            logging.FileHandler("drone.log"),
+            logging.StreamHandler()
+        ]
+    )
 
 @dataclass
 class Settings:

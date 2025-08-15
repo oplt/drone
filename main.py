@@ -5,22 +5,13 @@ from analysis.llm import LLMAnalyzer
 from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
 from drone.orchestrator import Orchestrator
-from config import settings
-import os
+from config import settings, setup_logging
 from video.stream import VideoStream
 from db.session import init_db, close_db
 from db.repository import TelemetryRepository
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
-import logging
 
-logging.basicConfig(
-                    level=logging.INFO,
-                    format="%(asctime)s [%(levelname)s] %(message)s",
-                    handlers=[
-                        logging.FileHandler("drone.log"),
-                        logging.StreamHandler()  # still print to console
-                    ]
-                )
+
 
 cam_source = settings.cam_source
 
@@ -51,6 +42,8 @@ RASPBERRY PI SETUP:
 '''
 
 async def main():
+    setup_logging()
+
     await init_db()
 
     drone = MavlinkDrone(settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout)

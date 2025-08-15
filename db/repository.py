@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert
 from .session import Session
 from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
-from drone.models import Telemetry as TelemetryDTO  # your dataclass
+from drone.models import Telemetry as TelemetryDTO
 
 class TelemetryRepository:
     def __init__(self, session_factory: type[Session] = Session):
@@ -96,49 +96,61 @@ class TelemetryRepository:
             await s.commit()
 
 
-    async def add_mavlink_events_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
-        """
-        rows: dicts with keys:
-          - msg_type (str)
-          - time_boot_ms (int|None)
-          - ts_event (datetime|None)
-          - payload (dict)
-          - flight_id will be set if missing
-        """
-        payload = []
-        for r in rows:
-            d = dict(r)
-            d.setdefault("flight_id", flight_id)
-            # enforce minimal required fields
-            d.setdefault("msg_type", d.get("payload", {}).get("mavpackettype", "UNKNOWN"))
-            payload.append({
-                "flight_id":    d["flight_id"],
-                "msg_type":     d["msg_type"],
-                "time_boot_ms": d.get("time_boot_ms"),
-                "ts_event":     d.get("ts_event"),
-                "payload":      d.get("payload", {}),
-            })
+    # repository.py
+async def add_mavlink_events_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
+    """
+    rows dict keys expected:
+      - msg_type (str)               -> defaults to payload['mavpackettype'] or 'UNKNOWN'
+      - time_boot_ms (int|None)
+      - time_unix_usec (datetime|None)  # already converted in mqtt.py
+      - timestamp (datetime|None)       # we'll also accept raw numeric and convert here
+      - payload (dict)
+      - flight_id is set here if missing
+    """
+    payload = []
+    for r in rows:
+        d = dict(r)
+        d.setdefault("flight_id", flight_id)
+        # derive msg_type if missing
+        msg_type = d.get("msg_type") or d.get("payload", {}).get("mavpackettype") or "UNKNOWN"
 
-        if not payload:
-            return 0
-
-        async with self._session_factory() as s:
-            stmt = insert(MavlinkEvent).values(payload)
-            await s.execute(stmt)
+        # normalize timestamp if someone passed numeric seconds
+        ts = d.get("timestamp")
+        if ts is not None and not isinstance(ts, datetime):
             try:
-                await s.commit()
+                # handle int/float epoch seconds
+                ts = datetime.fromtimestamp(float(ts), tz=timezone.utc)
             except Exception:
-                # If uniques collide (replays), it's fine to ignore
-                await s.rollback()
-                # try per-row upsert-ish insert (optional: skip for now)
-                inserted = 0
-                for d in payload:
-                    try:
-                        await s.execute(insert(MavlinkEvent).values(d))
-                        await s.commit()
-                        inserted += 1
-                    except Exception:
-                        await s.rollback()
-                return inserted
+                ts = None
+
+        payload.append({
+            "flight_id":     d["flight_id"],
+            "msg_type":      msg_type,
+            "time_boot_ms":  d.get("time_boot_ms"),
+            "time_unix_usec": d.get("time_unix_usec"),
+            "timestamp":     ts,
+            "payload":       d.get("payload", {}),
+        })
+
+    if not payload:
+        return 0
+
+    async with self._session_factory() as s:
+        stmt = insert(MavlinkEvent).values(payload)
+        await s.execute(stmt)
+        try:
+            await s.commit()
             return len(payload)
+        except Exception:
+            await s.rollback()
+            inserted = 0
+            for d in payload:
+                try:
+                    await s.execute(insert(MavlinkEvent).values(d))
+                    await s.commit()
+                    inserted += 1
+                except Exception:
+                    await s.rollback()
+            return inserted
+
 

@@ -77,9 +77,9 @@ class MavlinkEvent(Base):
     # compid: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON)
-    time_boot_ms: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    time_unix_usec: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    time_boot_ms: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    time_unix_usec: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("idx_evt_flt_time", "flight_id", "created_at"),

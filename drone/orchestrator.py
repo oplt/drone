@@ -1,5 +1,4 @@
 import asyncio, json, time
-from typing import Iterable
 from .models import Coordinate
 from .drone_base import DroneClient
 from map.google_maps import GoogleMapsClient
@@ -8,22 +7,13 @@ from analysis.llm import LLMAnalyzer
 from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
 from db.repository import TelemetryRepository
-from config import settings
+from config import settings, setup_logging
 from analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from utils.geo import haversine_km, _coord_from_home, _total_mission_distance_km
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
 import logging
-from collections import deque
 
 
-logging.basicConfig(
-                    level=logging.INFO,
-                    format="%(asctime)s [%(levelname)s] %(message)s",
-                    handlers=[
-                        logging.FileHandler("drone.log"),
-                        logging.StreamHandler()  # still print to console
-                    ]
-                )
 
 class Orchestrator:
     def __init__(

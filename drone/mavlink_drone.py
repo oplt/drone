@@ -4,15 +4,10 @@ from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelativ
 from .models import Coordinate, Telemetry
 from .drone_base import DroneClient
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
+from config import setup_logging
 import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("drone.log"),
-        logging.StreamHandler()  # still print to console
-    ])
+setup_logging()
 
 
 class MavlinkDrone(DroneClient):

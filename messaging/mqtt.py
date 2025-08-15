@@ -1,22 +1,26 @@
 import json, ssl, time, socket
 import paho.mqtt.client as mqtt
-import logging
-from config import settings
+from config import settings, setup_logging
 from db.repository import TelemetryRepository
-from datetime import datetime
 from typing import Dict, Any, Optional
-import math
 import asyncio
 from datetime import datetime, timezone
 from collections import deque
+import logging
 
+def _parse_ts(ts_raw):
+    if ts_raw is None:
+        return None
+    if isinstance(ts_raw, (int, float)):
+        return datetime.fromtimestamp(float(ts_raw), tz=timezone.utc)
+    if isinstance(ts_raw, str):
+        try:
+            # handle ISO8601-ish strings
+            return datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+        except Exception:
+            return None
+    return None
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("drone.log"),
-        logging.StreamHandler(),])
 
 class MqttClient:
     def __init__(self, host: str, port: int = 1883, username: str = "", password: str = "",
@@ -130,6 +134,8 @@ class MqttClient:
     def attach_raw_event_queue(self, q: "asyncio.Queue[dict]"):
         self._raw_event_queue = q
 
+
+
     def _process_raw_event(self, payload: Dict[str, Any]):
         if not self._raw_event_queue:
             return
@@ -138,12 +144,14 @@ class MqttClient:
             if time_unix_usec:
                 time_unix_usec = datetime.fromtimestamp(time_unix_usec/1_000_000, tz=timezone.utc)
 
+            timestamp = _parse_ts(payload.get("timestamp"))
+
             item = {
                 "flight_id": self._current_flight_id,
                 "msg_type": payload.get("mavpackettype"),
                 "time_boot_ms": payload.get("time_boot_ms", None),
                 "time_unix_usec": time_unix_usec,
-                "timestamp": payload.get("timestamp", None),
+                "timestamp": timestamp,
                 "payload": payload,
             }
             self._raw_event_queue.put_nowait(item)

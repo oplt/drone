@@ -5,17 +5,9 @@ import paho.mqtt.client as mqtt
 import json
 import time
 import threading
-from config import settings
+from config import settings, setup_logging
 # from pymavlink.dialects.v20 import ardupilotmega as mavlink
 import logging
-
-logging.basicConfig(
-                    level=logging.INFO,
-                    format="%(asctime)s [%(levelname)s] %(message)s",
-                    handlers=[
-                        logging.FileHandler("drone.log"),
-                        logging.StreamHandler()  # still print to console
-                    ])
 
 
 class ArduPilotTelemetryPublisher:
