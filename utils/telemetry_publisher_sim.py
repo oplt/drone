@@ -23,7 +23,7 @@ class ArduPilotTelemetryPublisher:
         # MQTT Broker Settings
         # self.mqtt_broker = mqtt_broker or settings.mqtt_broker
         # self.mqtt_port = mqtt_port or settings.mqtt_port
-        self.mqtt_topic = mqtt_topic or "ardupilot/telemetry"
+        self.mqtt_topic = settings.telemetry_topic
 
         # Drone connection
         self.drone_conn_str = settings.drone_conn_mavproxy
@@ -37,17 +37,12 @@ class ArduPilotTelemetryPublisher:
 
         # Message types to filter
         self.message_types = [
-            'HEARTBEAT',
             'GLOBAL_POSITION_INT',
             'VFR_HUD',
+            'PLANE_MODE',
             'BATTERY_STATUS',
-            'ATTITUDE',
             'SYS_STATUS',
-            'GPS_RAW_INT',
-            'SYSTEM_TIME',
-            'TIMESYNC',
-            'WIND_COV',
-            'DISTANCE_SENSOR',
+
         ]
 
     def connect_mavlink(self):

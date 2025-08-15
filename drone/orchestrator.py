@@ -12,8 +12,9 @@ from config import settings
 from analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from utils.geo import haversine_km, _coord_from_home, _total_mission_distance_km
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
-import contextlib
 import logging
+from collections import deque
+
 
 logging.basicConfig(
                     level=logging.INFO,
@@ -49,6 +50,9 @@ class Orchestrator:
         # self._heartbeat_task = None
         self.publisher = publisher
         self._telemetry_interval = settings.telem_log_interval_sec
+        self._flight_id = None
+        self._ingest_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
+
 
     async def heartbeat_task(self):
         """Send regular heartbeats to keep the dead man's switch happy"""
@@ -76,18 +80,6 @@ class Orchestrator:
                                     })
                 await asyncio.sleep(1.0)
 
-    # async def telemetry_publish_task(self):
-    #     """Continuously publish telemetry while drone is active"""
-    #     # while self._running:
-    #
-    #     try:
-    #         # Publish to MQTT
-    #         self.publisher.start()
-    #         await asyncio.sleep(2.0)
-    #     except Exception as e:
-    #         logging.info(f"Telemetry publisher error: {e}")
-    #         await asyncio.sleep(1.0)
-
 
     async def telemetry_publish_task(self):
         """Manage the telemetry publisher lifecycle"""
@@ -108,21 +100,55 @@ class Orchestrator:
                 await asyncio.to_thread(self.publisher.stop)
 
 
-    async def mqtt_listener_task(self):
+
+    async def _telemetry_ingest_worker(self):
+        """Drain MQTT-parsed rows and bulk-insert. Small batches, frequent commits."""
+        BATCH_SIZE = 200
+        INTERVAL_S = 0.25
+        buffer = []
+        while self._running:
+            try:
+                item = await asyncio.wait_for(self._ingest_queue.get(), timeout=INTERVAL_S)
+                buffer.append(item)
+                # try to coalesce up to BATCH_SIZE quickly
+                for _ in range(BATCH_SIZE-1):
+                    try:
+                        buffer.append(self._ingest_queue.get_nowait())
+                    except asyncio.QueueEmpty:
+                        break
+                if buffer:
+                    # strip flight_id from rows; repo will set it if you prefer
+                    await self.repo.add_telemetry_many(self._flight_id, buffer)
+                    for _ in buffer:
+                        self._ingest_queue.task_done()
+                    buffer.clear()
+            except asyncio.TimeoutError:
+                if buffer:
+                    await self.repo.add_telemetry_many(self._flight_id, buffer)
+                    for _ in buffer:
+                        self._ingest_queue.task_done()
+                    buffer.clear()
+            except Exception as e:
+                # log and continue
+                buffer.clear()
+
+    async def mqtt_subscriber_task(self):
         """Listen for MQTT messages and handle them"""
         try:
-            # Start the MQTT client loop in a separate thread
-            self.mqtt.client.loop_start()
+            # Attach queue so mqtt client can enqueue complete frames
+            self.mqtt.attach_ingest_queue(self._ingest_queue)   # NEW
 
+            if not await asyncio.to_thread(self.mqtt.subscribe_to_topics, self._flight_id):
+                logging.error("Failed to start MQTT subscriber")
+                return
+
+            logging.info("MQTT subscriber started and listening for messages")
+            # Keep alive
             while self._running:
-                # Just keep this task alive while MQTT client is running
-                await asyncio.sleep(1.0)
-
+                await asyncio.sleep(1)
         except Exception as e:
-            logging.info(f"MQTT listener error: {e}")
-        finally:
-            self.mqtt.client.loop_stop()
-            self.mqtt.close()
+            logging.error(f"Mqtt broker subscribe error: {e}")
+
 
     async def emergency_monitor_task(self):
         """Monitor for emergency conditions and handle them"""
@@ -147,14 +173,14 @@ class Orchestrator:
                 # print(f"Error in emergency monitor: {e}")
                 await asyncio.sleep(1.0)
 
-    async def fly_route(self, start_addr: str, end_addr: str, cruise_alt=30.0):
-        start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = cruise_alt
-        dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = cruise_alt
+    async def fly_route(self, start, dest, cruise_alt=30.0):
+        # start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = cruise_alt
+        # dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = cruise_alt
         self._running = True
-        self._flight_id = await self.repo.create_flight(
-            start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
-            dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
-        )
+        # self._flight_id = await self.repo.create_flight(
+        #     start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
+        #     dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
+        # )
         await self.repo.add_event(self._flight_id, "mission_created", {"alt": cruise_alt})
 
         self._dest_coord = dest
@@ -169,23 +195,6 @@ class Orchestrator:
         preflight = await self._preflight_range_check(home, start, dest)
         if not preflight.feasible and settings.ENFORCE_PREFLIGHT_RANGE:
             raise RuntimeError(preflight.reason)
-
-        # async def _telemetry_logger():
-        #     while self._running:
-        #         t = self.drone.get_telemetry()
-        #         await self.repo.add_telemetry(
-        #             self._flight_id,
-        #             lat=t.lat, lon=t.lon, alt=t.alt,
-        #             heading=t.heading, groundspeed=t.groundspeed,
-        #             armed=t.armed, mode=t.mode,
-        #             battery_voltage=t.battery_voltage,
-        #             battery_current=t.battery_current,
-        #             battery_level=t.battery_level,
-        #         )
-        #         await asyncio.sleep(1.0)
-
-        # self._telemetry_task = asyncio.create_task(_telemetry_logger())
-
         await asyncio.to_thread(self.drone.arm_and_takeoff, cruise_alt)
         await self.repo.add_event(self._flight_id, "takeoff", {})
 
@@ -242,7 +251,7 @@ class Orchestrator:
 
         # 3) Inputs for range model
         t = self.drone.get_telemetry()
-        level_frac = None if t.battery_level is None else max(0.0, min(1.0, float(t.battery_level) / 100.0))
+        level_frac = None if t.battery_remaining is None else max(0.0, min(1.0, float(t.battery_remaining) / 100.0))
 
         capacity_Wh     = settings.battery_capacity_wh
         cruise_power_W  = settings.cruise_power_w
@@ -288,8 +297,8 @@ class Orchestrator:
                     t = self.drone.get_telemetry()
                     remain_km = haversine_km(t.lat, t.lon, self._dest_coord.lat, self._dest_coord.lon)
                     level = None
-                    if t.battery_level is not None:
-                        level = max(0.0, min(1.0, float(t.battery_level) / 100.0))
+                    if t.battery_current is not None:
+                        level = max(0.0, min(1.0, float(t.battery_current) / 100.0))
                     res = self._estimate_range(remain_km, level)
                     await self.opcua.update_range(res.est_range_km or 0.0, res.feasible, res.reason)
                     if not res.feasible:
@@ -307,29 +316,6 @@ class Orchestrator:
             await asyncio.sleep(2.0)  # evaluation interval
 
 
-
-
-    async def telemetry_task(self):
-        while self._running:
-            t = self.drone.get_telemetry()
-            # Publish to MQTT
-            self.mqtt.publish("drone/telemetry", t.__dict__, qos=0)
-            # Update OPC UA
-            await self.opcua.update_telemetry(t)
-            await asyncio.sleep(1.0)
-
-    async def telemetry_logging_task(self):
-        # Persist at a slower, configurable cadence
-        interval = max(0.5, settings.telem_log_interval_sec)
-        while self._running:
-            t = self.drone.get_telemetry()
-            try:
-                await self.repo.save(t)
-            except Exception as e:
-                # You can add proper logging here
-                pass
-            await asyncio.sleep(interval)
-
     async def vision_task(self):
         try:
             for _, frame in self.video.frames():
@@ -344,7 +330,13 @@ class Orchestrator:
 
     async def run(self, start_addr: str, end_addr: str, alt=30.0):
         logging.info(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
-        # print(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
+        start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = alt
+        dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = alt
+
+        self._flight_id = await self.repo.create_flight(
+            start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
+            dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
+        )
 
         await self.opcua.start()
         # self.drone.connect()
@@ -354,18 +346,16 @@ class Orchestrator:
         tasks = [
             asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
             asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
-            # asyncio.create_task(self.telemetry_task()),
-            # asyncio.create_task(self.telemetry_logging_task()),
+            asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
+            asyncio.create_task(self._telemetry_ingest_worker()),
             # asyncio.create_task(self.vision_task()),
             # asyncio.create_task(self._range_guard_task()),
             # asyncio.create_task(self.emergency_monitor_task()),
         ]
 
         try:
-
-
             logging.info("Background tasks started, beginning flight...")
-            await self.fly_route(start_addr, end_addr, cruise_alt=alt)
+            await self.fly_route(start, dest, cruise_alt=alt)
 
         except Exception as e:
             logging.info(f"❌ Flight error: {e}")

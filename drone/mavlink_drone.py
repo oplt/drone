@@ -189,7 +189,7 @@ class MavlinkDrone(DroneClient):
             armed=v.armed, mode=v.mode.name,
             battery_voltage=getattr(bat, "voltage", None),
             battery_current=getattr(bat, "current", None),
-            battery_level=getattr(bat, "level", None),
+            battery_remaining=getattr(bat, "level", None),
         )
 
     def follow_waypoints(self, path):

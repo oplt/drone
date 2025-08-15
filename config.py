@@ -24,6 +24,7 @@ class Settings:
 
     database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/drone_db")
     telem_log_interval_sec: float = float(os.getenv("TELEMETRY_LOG_INTERVAL_SEC", "2"))
+    telemetry_topic: str = "ardupilot/telemetry"
 
     cam_source = os.getenv("CAM_SOURCE", "0")
 

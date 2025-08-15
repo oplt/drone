@@ -17,10 +17,11 @@ class TelemetryRepository:
             rec = TelemetryRecord(
                 lat=t.lat, lon=t.lon, alt=t.alt,
                 heading=t.heading, groundspeed=t.groundspeed,
-                armed=t.armed, mode=t.mode,
+                # armed=t.armed,
+                mode=t.mode,
                 battery_voltage=t.battery_voltage,
                 battery_current=t.battery_current,
-                battery_level=t.battery_level,
+                battery_remaining=t.battery_remaining,
             )
             s.add(rec)
             await s.commit()

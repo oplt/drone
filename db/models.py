@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, func
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, func, UniqueConstraint
 
 class Base(DeclarativeBase):
     pass
@@ -41,6 +41,7 @@ class FlightEvent(Base):
 
 class TelemetryRecord(Base):
     __tablename__ = "telemetry"
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     flight_id: Mapped[Optional[int]] = mapped_column(ForeignKey("flights.id", ondelete="SET NULL"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -50,10 +51,18 @@ class TelemetryRecord(Base):
     alt: Mapped[float] = mapped_column(Float, nullable=False)
     heading: Mapped[float] = mapped_column(Float, nullable=False)
     groundspeed: Mapped[float] = mapped_column(Float, nullable=False)
-    armed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    # armed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     mode: Mapped[str] = mapped_column(String(32), nullable=False)
     battery_voltage: Mapped[Optional[float]] = mapped_column(Float)
     battery_current: Mapped[Optional[float]] = mapped_column(Float)
-    battery_level: Mapped[Optional[float]] = mapped_column(Float)
+    battery_remaining: Mapped[Optional[float]] = mapped_column(Float)
+    system_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), )
+
 
     flight: Mapped[Optional["Flight"]] = relationship(back_populates="telemetry")
+    frame_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+
+    __table_args__ = (
+        # NEW: idempotency per flight/frame
+        UniqueConstraint("flight_id", "frame_id", name="uq_telemetry_flight_frame_id"),
+    )
