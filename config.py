@@ -30,7 +30,7 @@ class Settings:
     mqtt_port: int = int(os.getenv("MQTT_PORT", "1883"))
     mqtt_user: str = os.getenv("MQTT_USER", "")
     mqtt_pass: str = os.getenv("MQTT_PASS", "")
-    opcua_endpoint: str = os.getenv("OPCUA_ENDPOINT", "opc.tcp://0.0.0.0:4840/drone")
+    opcua_endpoint: str = os.getenv("OPCUA_ENDPOINT", "opc.tcp://0.0.0.0:4840/freeopcua/server/")
     drone_conn: str = os.getenv("DRONE_CONNECTION_STR", "tcp:127.0.0.1:5760")
     drone_conn_mavproxy: str = os.getenv("DRONE_CONNECTION_STR_MAVPROXY", "tcp:127.0.0.1:5760")
     # If connecting to a networked drone:
@@ -41,7 +41,7 @@ class Settings:
     telemetry_topic: str = "ardupilot/telemetry"
 
     # Video streaming configuration for wireless drone connection
-    cam_source: str = "rtsp://192.168.4.1:8554/stream"  # Wireless RTSP stream from drone
+    drone_video_source: str = "rtsp://192.168.4.1:8554/stream"  # Wireless RTSP stream from drone
     drone_video_enabled: bool = True  # Enable video streaming by default
     drone_video_width: int = 640  # Standard VGA resolution
     drone_video_height: int = 480  # Standard VGA resolution

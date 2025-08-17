@@ -25,7 +25,7 @@ class Orchestrator:
             opcua: DroneOpcUaServer,
             video: DroneVideoStream,
             telemetry_repo: TelemetryRepository,
-            publisher: ArduPilotTelemetryPublisher
+            publisher: ArduPilotTelemetryPublisher,
     ):
         self.drone = drone
         self.maps = maps
@@ -95,7 +95,7 @@ class Orchestrator:
     async def video_health_monitor_task(self):
         """Monitor video stream health and publish status"""
         logging.info("Starting video health monitor task...")
-        
+
         while self._running:
             try:
                 if self.video:
@@ -427,7 +427,7 @@ class Orchestrator:
     async def vision_task(self):
         """Process video frames for object detection and analysis"""
         logging.info("Starting vision task for drone video analysis...")
-        
+
         try:
             for _, frame in self.video.frames():
                 if not self._running:

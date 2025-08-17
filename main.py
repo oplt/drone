@@ -11,6 +11,7 @@ from video.stream import DroneVideoStream
 from db.session import init_db, close_db
 from db.repository import TelemetryRepository
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
+import logging
 
 
 
@@ -48,7 +49,7 @@ async def main():
         provider=settings.llm_provider,   # NEW
     )
     mqtt = MqttClient(settings.mqtt_broker, settings.mqtt_port, settings.mqtt_user, settings.mqtt_pass,use_tls=False, client_id="drone-1")
-    opcua = DroneOpcUaServer(settings.opcua_endpoint)
+    opcua = DroneOpcUaServer()
     
     # Initialize drone video stream with enhanced configuration
     video = None
@@ -74,18 +75,18 @@ async def main():
                 recording_path=settings.drone_video_save_path,
                 recording_format="mp4"
             )
-            print(f"✅ Drone video stream initialized successfully")
-            print(f"   Source: {cam_source}")
-            print(f"   Resolution: {settings.drone_video_width}x{settings.drone_video_height}")
-            print(f"   FPS: {settings.drone_video_fps}")
-            print(f"   Recording: {'Enabled' if settings.drone_video_save_stream else 'Disabled'}")
+            logging.info(f"✅ Drone video stream initialized successfully")
+            logging.info(f"   Source: {cam_source}")
+            logging.info(f"   Resolution: {settings.drone_video_width}x{settings.drone_video_height}")
+            logging.info(f"   FPS: {settings.drone_video_fps}")
+            logging.info(f"   Recording: {'Enabled' if settings.drone_video_save_stream else 'Disabled'}")
             
         except Exception as e:
-            print(f"❌ Failed to initialize drone video stream: {e}")
-            print("   Continuing without video streaming...")
+            logging.info(f"❌ Failed to initialize drone video stream: {e}")
+            logging.info("   Continuing without video streaming...")
             video = None
     else:
-        print("ℹ️  Drone video streaming disabled in configuration")
+        logging.info("ℹ️  Drone video streaming disabled in configuration")
     
     repo = TelemetryRepository()
     publisher = ArduPilotTelemetryPublisher(mqtt)
@@ -99,11 +100,9 @@ async def main():
         await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     except KeyboardInterrupt:
         logging.info("\n🛑 Manual abort - triggering safe shutdown")
-        # print("\n🛑 Manual abort - triggering safe shutdown")
         orch._running = False
     except Exception as e:
         logging.info(f"❌ Flight failed: {e}")
-        # print(f"❌ Flight failed: {e}")
     finally:
         await close_db()
 
@@ -112,4 +111,11 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         logging.info("\n✅ Program terminated safely")
-        # print("\n✅ Program terminated safely")
+
+
+        '''
+        # kill opc ua server ports
+        sudo lsof -i :4840
+        sudo kill -9 <PID>
+        '''
+
