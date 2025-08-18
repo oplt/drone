@@ -12,7 +12,7 @@ class DroneOpcUaServer:
 
     async def start(self):
         await self.server.init()
-        self.server.set_endpoint(self.endpoint)
+        # self.server.set_endpoint(self.endpoint)
 
         # DEV: only expose an open endpoint (no certs needed, no warnings)
         self.server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
@@ -28,11 +28,12 @@ class DroneOpcUaServer:
         self.vars["heading"] = await drone.add_variable(self.idx, "Heading", 0.0)
         self.vars["groundspeed"] = await drone.add_variable(self.idx, "Groundspeed", 0.0)
         # self.vars["Armed"] = await drone.add_variable(self.idx, "Armed", False)
-        self.vars["battery_voltage"] = await drone.add_variable(self.idx, "battery_voltage", None)  # Volts
-        self.vars["battery_current"] = await drone.add_variable(self.idx, "battery_current",   None)
-        self.vars["battery_remaining"] = await drone.add_variable(self.idx, "battery_remaining", None)  # Percent (0-100)
+        # Initialize with concrete types to avoid VariantType.Null mismatches
+        self.vars["battery_voltage"] = await drone.add_variable(self.idx, "battery_voltage", 0.0)  # Volts (Double)
+        self.vars["battery_current"] = await drone.add_variable(self.idx, "battery_current", 0.0)  # Amps (Double)
+        self.vars["battery_remaining"] = await drone.add_variable(self.idx, "battery_remaining", -1)  # Percent (Int)
         self.vars["mode"] = await drone.add_variable(self.idx, "Mode", "UNKNOWN")
-        self.vars["system_time"] = await drone.add_variable(self.idx, "system_time", None)  # UTC timestamp
+        self.vars["system_time"] = await drone.add_variable(self.idx, "system_time", 0.0)  # UTC timestamp (Double seconds)
 
 
         for v in self.vars.values():

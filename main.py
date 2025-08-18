@@ -89,7 +89,12 @@ async def main():
         logging.info("ℹ️  Drone video streaming disabled in configuration")
     
     repo = TelemetryRepository()
-    publisher = ArduPilotTelemetryPublisher(mqtt)
+    # Reuse the OPC UA server started by the orchestrator; schedule updates on this event loop
+    publisher = ArduPilotTelemetryPublisher(
+        mqtt_client=mqtt,
+        opcua_server=opcua,
+        opcua_event_loop=asyncio.get_running_loop()
+    )
 
     # Initialize orchestrator with video stream
     orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher)
@@ -113,9 +118,9 @@ if __name__ == "__main__":
         logging.info("\n✅ Program terminated safely")
 
 
-        '''
+    '''
         # kill opc ua server ports
         sudo lsof -i :4840
         sudo kill -9 <PID>
-        '''
+    '''
 
