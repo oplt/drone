@@ -488,11 +488,11 @@ class Orchestrator:
         tasks = [
             asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
             asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
-            # asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
-            # # asyncio.create_task(self._raw_event_ingest_worker()),
-            # # asyncio.create_task(self._telemetry_ingest_worker()),
-            # asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
-            # asyncio.create_task(self.vision_task()),  # Process video for object detection
+            asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
+            asyncio.create_task(self._raw_event_ingest_worker()),
+            # asyncio.create_task(self._telemetry_ingest_worker()),
+            asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
+            asyncio.create_task(self.vision_task()),  # Process video for object detection
             # asyncio.create_task(self._range_guard_task()),
             # asyncio.create_task(self.emergency_monitor_task()),
         ]

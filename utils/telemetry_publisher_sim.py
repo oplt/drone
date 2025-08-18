@@ -221,8 +221,8 @@ class ArduPilotTelemetryPublisher:
                     msg_dict['timestamp'] = time.time()
 
                     # Publish to MQTT
-                    # if self.mqtt_client:
-                    #     self.mqtt_client.publish(self.mqtt_topic, json.dumps(msg_dict))
+                    if self.mqtt_client:
+                        self.mqtt_client.publish(self.mqtt_topic, json.dumps(msg_dict))
 
                     # Update OPC UA variables
                     if self.opcua_server_loop:
