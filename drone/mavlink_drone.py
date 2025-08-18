@@ -179,9 +179,12 @@ class MavlinkDrone(DroneClient):
             raise RuntimeError("Vehicle location not ready yet")
         bat = getattr(v, "battery", None)
         return Telemetry(
-            lat=rel.lat, lon=rel.lon, alt=rel.alt,
-            heading=v.heading, groundspeed=v.groundspeed,
-            armed=v.armed, mode=v.mode.name,
+            lat=rel.lat,
+            lon=rel.lon,
+            alt=rel.alt,
+            heading=v.heading,
+            groundspeed=v.groundspeed,
+            mode=v.mode.name,
             battery_voltage=getattr(bat, "voltage", None),
             battery_current=getattr(bat, "current", None),
             battery_remaining=getattr(bat, "level", None),

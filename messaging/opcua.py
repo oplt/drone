@@ -22,15 +22,18 @@ class DroneOpcUaServer:
         # self.objects = self.server.nodes.objects
         self.objects = self.server.get_objects_node()
         drone = await self.objects.add_object(self.idx, "Telemetry")
-        self.vars["Lat"] = await drone.add_variable(self.idx, "Lat", 0.0)
-        self.vars["Lon"] = await drone.add_variable(self.idx, "Lon", 0.0)
-        self.vars["Alt"] = await drone.add_variable(self.idx, "Alt", 0.0)
-        self.vars["Heading"] = await drone.add_variable(self.idx, "Heading", 0.0)
-        self.vars["Groundspeed"] = await drone.add_variable(self.idx, "Groundspeed", 0.0)
-        self.vars["Armed"] = await drone.add_variable(self.idx, "Armed", False)
+        self.vars["lat"] = await drone.add_variable(self.idx, "Lat", 0.0)
+        self.vars["lon"] = await drone.add_variable(self.idx, "Lon", 0.0)
+        self.vars["alt"] = await drone.add_variable(self.idx, "Alt", 0.0)
+        self.vars["heading"] = await drone.add_variable(self.idx, "Heading", 0.0)
+        self.vars["groundspeed"] = await drone.add_variable(self.idx, "Groundspeed", 0.0)
+        # self.vars["Armed"] = await drone.add_variable(self.idx, "Armed", False)
         self.vars["battery_voltage"] = await drone.add_variable(self.idx, "battery_voltage", None)  # Volts
         self.vars["battery_current"] = await drone.add_variable(self.idx, "battery_current",   None)
         self.vars["battery_remaining"] = await drone.add_variable(self.idx, "battery_remaining", None)  # Percent (0-100)
+        self.vars["mode"] = await drone.add_variable(self.idx, "Mode", "UNKNOWN")
+        self.vars["system_time"] = await drone.add_variable(self.idx, "system_time", None)  # UTC timestamp
+
 
         for v in self.vars.values():
             await v.set_writable()  # allow updates

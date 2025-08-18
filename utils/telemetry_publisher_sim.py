@@ -32,9 +32,9 @@ class ArduPilotTelemetryPublisher:
             'GLOBAL_POSITION_INT',
             'VFR_HUD',
             'BATTERY_STATUS',
-            'SYS_STATUS',
+            'SYSTEM_TIME',
             'GPS_RAW_INT',
-            'ATTITUDE'
+            'HEARTBEAT',
         ]
 
     def connect_mavlink(self):
@@ -66,19 +66,7 @@ class ArduPilotTelemetryPublisher:
                 lat = msg_dict.get('lat', 0) / 1e7  # Convert to degrees
                 lon = msg_dict.get('lon', 0) / 1e7  # Convert to degrees
                 alt = msg_dict.get('alt', 0) / 1e3  # Convert to meters
-                relative_alt = msg_dict.get('relative_alt', 0) / 1e3  # Convert to meters
-                hdg = msg_dict.get('hdg', 0) / 100  # Convert to degrees
-
-                await self.opcua_server.vars["Lat"].write_value(lat)
-                await self.opcua_server.vars["Lon"].write_value(lon)
-                await self.opcua_server.vars["Alt"].write_value(alt)
-                await self.opcua_server.vars["Heading"].write_value(hdg)
-
-            elif msg_type == 'GPS_RAW_INT':
-                # Use GPS_RAW_INT as fallback if GLOBAL_POSITION_INT not available
-                lat = msg_dict.get('lat', 0) / 1e7  # Convert to degrees
-                lon = msg_dict.get('lon', 0) / 1e7  # Convert to degrees
-                alt = msg_dict.get('alt', 0) / 1e3  # Convert to meters
+                # hdg = msg_dict.get('hdg', 0) / 100  # Convert to degrees
 
                 await self.opcua_server.vars["Lat"].write_value(lat)
                 await self.opcua_server.vars["Lon"].write_value(lon)
@@ -87,26 +75,28 @@ class ArduPilotTelemetryPublisher:
             elif msg_type == 'VFR_HUD':
                 groundspeed = msg_dict.get('groundspeed', 0)
                 heading = msg_dict.get('heading', 0)
-                alt = msg_dict.get('alt', 0)
 
-                await self.opcua_server.vars["Groundspeed"].write_value(groundspeed)
-                await self.opcua_server.vars["Heading"].write_value(heading)
-                await self.opcua_server.vars["Alt"].write_value(alt)
+                await self.opcua_server.vars["groundspeed"].write_value(groundspeed)
+                await self.opcua_server.vars["heading"].write_value(heading)
 
-            elif msg_type in ['BATTERY_STATUS', 'SYS_STATUS']:
-                # Handle both battery message types
-                if msg_type == 'BATTERY_STATUS':
-                    voltage = msg_dict.get('voltages', [0])[0] / 1000  # mV to V
-                    current = msg_dict.get('current_battery', 0) / 100  # cA to A
-                    remaining = msg_dict.get('battery_remaining', -1)
-                else:  # SYS_STATUS
-                    voltage = msg_dict.get('voltage_battery', 0) / 1000  # mV to V
-                    current = msg_dict.get('current_battery', 0) / 100  # cA to A
-                    remaining = msg_dict.get('battery_remaining', -1)
+            elif msg_type == 'BATTERY_STATUS':
+                voltage = msg_dict.get('voltages', [0])[0] / 1000  # mV to V
+                current = msg_dict.get('current_battery', 0) / 100  # cA to A
+                remaining = msg_dict.get('battery_remaining', -1)
 
                 await self.opcua_server.vars["battery_voltage"].write_value(voltage)
                 await self.opcua_server.vars["battery_current"].write_value(current)
                 await self.opcua_server.vars["battery_remaining"].write_value(remaining)
+
+            elif msg_type == 'SYSTEM_TIME':
+                system_time = msg_dict.get('time_unix_usec', 0) / 1e6  # Convert microseconds to seconds
+
+                await self.opcua_server.vars["system_time"].write_value(system_time)
+
+            elif msg_type == 'HEARTBEAT':
+                mode = msg_dict.get('custom_mode', 0)
+
+                await self.opcua_server.vars["mode"].write_value(mode)
 
         except Exception as e:
             logging.error(f"Error updating OPC UA variables: {e}")

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
+from datetime import datetime
 
 @dataclass
 class Coordinate:
@@ -14,11 +15,12 @@ class Telemetry:
     alt: float
     heading: float
     groundspeed: float
-    armed: bool
+    # armed: bool
     mode: str
     battery_voltage: Optional[float] = None     # Volts
     battery_current: Optional[float] = None     # Amps (+discharge)
     battery_remaining: Optional[float] = None       # Percent (0-100)
+    system_time: Optional[datetime] = None  # UTC timestamp
 
 @dataclass
 class Detection:
