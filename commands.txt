@@ -6,3 +6,7 @@ opcua-client opc.tcp://127.0.0.1:4840 --subscribe "ns=2;s=Drone/Lat"
 
  sudo lsof -i :4840
  sudo kill -9 <PID>
+
+ timescale db
+
+ telegraph
