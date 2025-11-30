@@ -31,11 +31,12 @@ class Settings:
     mqtt_user: str = os.getenv("MQTT_USER", "")
     mqtt_pass: str = os.getenv("MQTT_PASS", "")
     opcua_endpoint: str = os.getenv("OPCUA_ENDPOINT", "opc.tcp://0.0.0.0:4840/freeopcua/server/")
+
     # drone_conn: str = os.getenv("DRONE_CONNECTION_SITL", "tcp:127.0.0.1:5760")
     drone_conn: str = os.getenv("DRONE_CONNECTION_RASPI", "tcp:127.0.0.1:5760")
+
     drone_conn_mavproxy: str = os.getenv("DRONE_CONNECTION_STR_MAVPROXY", "tcp:127.0.0.1:5760")
-    # If connecting to a networked drone:
-    # "udp:192.168.0.10:14550" (IP/port from your drone's telemetry)
+
 
     database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/drone_db")
     telem_log_interval_sec: float = float(os.getenv("TELEMETRY_LOG_INTERVAL_SEC", "2"))
@@ -71,9 +72,35 @@ class Settings:
 
     rasperry_ip: str = os.getenv("RASPERRY_PI_IP")
     rasperry_user: str = os.getenv("RASPERRY_PI_USER", "pi")
-    rasperry_host: str = "raspberrypi.local"
+    rasperry_port: int = int(os.getenv("RASPERRY_PI_PORT", "5000"))
     rasperry_password: str = os.getenv("RASPERRY_PI_PASSWORD")
     rasperry_streaming_script_path: str = "/home/polat/drone_cam/pi_camera_server.py"
     ssh_key_path: str = os.getenv("SSH_KEY_PATH")
+
+# analysis/config.py
+from dataclasses import dataclass
+
+@dataclass
+class VideoAnalysisConfig:
+    # Process only every Nth frame (1 = every frame)
+    frame_stride: int = 10
+    # Filter out weak detections
+    min_confidence: float = 0.5
+    # Where / whether to publish detections
+    publish_mqtt: bool = True
+    publish_opcua: bool = True
+    log_events: bool = True
+    # MQTT topics (so you don’t hardcode strings in tasks)
+    mqtt_detection_topic: str = "drone/detections"
+    mqtt_warning_topic: str = "drone/warnings"
+    # Optional: max number of detections per frame (for UI sanity)
+    max_detections_per_frame: int = 50
+
+    enable_prefilter: bool = True
+    # How big a change vs. moving average to consider "interesting"
+    prefilter_delta_mean: float = 5.0          # brightness
+    prefilter_delta_std: float = 5.0           # contrast / texture
+    prefilter_delta_edge_density: float = 0.03 # edges / structures
+
 
 settings = Settings()

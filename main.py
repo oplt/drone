@@ -6,18 +6,15 @@ from analysis.llm import LLMAnalyzer
 from messaging.mqtt import MqttClient
 from messaging.opcua import DroneOpcUaServer
 from drone.orchestrator import Orchestrator
-from config import settings, setup_logging
-from video.stream import DroneVideoStream
+from config import settings, setup_logging, VideoAnalysisConfig
 from db.session import init_db, close_db
 from db.repository import TelemetryRepository
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
 import logging
+import cv2
+from video.stream import RaspberryClient
 
-
-
-'''
-        ###TO DO###
-        
+'''        ###TO DO###        
 - remove mqtt publishing functions and replace mqtt listening functions
 - telemetry raw data recording is ok. Add a group of message in a row !!! Necessary??
 - test video streaming and saving to db
@@ -27,12 +24,9 @@ import logging
 - mosquito listener:
 mosquitto_sub -h 127.0.0.1 -p 1883 -t "ardupilot/telemetry" -v
 
-
 RASPBERRY PI SETUP:
 - CHECK IF THE DRONE IS CONNECTED TO THE BROKER AND IF NOT, RECONNECT
-- CHECK HEARTBEATS ON THE BROKER AND ADD self.drone.set_mode("RTL") IN CASE OF NO HEARTBEAT
-
- 
+- CHECK HEARTBEATS ON THE BROKER AND ADD self.drone.set_mode("RTL") IN CASE OF NO HEARTBEAT 
 '''
 
 async def main():
@@ -46,62 +40,33 @@ async def main():
         api_base=settings.llm_api_base,
         api_key=settings.llm_api_key,
         model=settings.llm_model,
-        provider=settings.llm_provider,   # NEW
+        provider=settings.llm_provider,
     )
     mqtt = MqttClient(settings.mqtt_broker, settings.mqtt_port, settings.mqtt_user, settings.mqtt_pass,use_tls=False, client_id="drone-1")
     opcua = DroneOpcUaServer()
-    
-    # Initialize drone video stream with enhanced configuration
+    repo = TelemetryRepository()
+    publisher = ArduPilotTelemetryPublisher(
+        mqtt_client=mqtt,
+        opcua_server=opcua,
+        opcua_event_loop=asyncio.get_running_loop()
+    )
+    video_cfg = VideoAnalysisConfig()
     video = None
+
     if settings.drone_video_enabled:
         try:
-            # Parse camera source (could be int for USB camera or string for RTSP/network)
-            cam_source = settings.drone_video_source
-            try:
-                cam_source = int(cam_source)
-            except ValueError:
-                pass  # Keep as string if it's not an integer
-            
-            video = DroneVideoStream(
-                source=cam_source,
-                width=settings.drone_video_width,
-                height=settings.drone_video_height,
-                fps=settings.drone_video_fps,
-                open_timeout_s=settings.drone_video_timeout,
-                probe_indices=5,  # Try /dev/video0..5 if USB camera fails
-                fallback_file=settings.drone_video_fallback if settings.drone_video_fallback else None,
-                fps_limit=None,  # No FPS limit for real-time drone video
-                enable_recording=settings.drone_video_save_stream,
-                recording_path=settings.drone_video_save_path,
-                recording_format="mp4"
-            )
+            video = RaspberryClient()
             logging.info(f"✅ Drone video stream initialized successfully")
-            logging.info(f"   Source: {cam_source}")
-            logging.info(f"   Resolution: {settings.drone_video_width}x{settings.drone_video_height}")
-            logging.info(f"   FPS: {settings.drone_video_fps}")
-            logging.info(f"   Recording: {'Enabled' if settings.drone_video_save_stream else 'Disabled'}")
-            
         except Exception as e:
             logging.info(f"❌ Failed to initialize drone video stream: {e}")
             logging.info("   Continuing without video streaming...")
             video = None
     else:
         logging.info("ℹ️  Drone video streaming disabled in configuration")
-    
-    repo = TelemetryRepository()
-    # Reuse the OPC UA server started by the orchestrator; schedule updates on this event loop
-    publisher = ArduPilotTelemetryPublisher(
-        mqtt_client=mqtt,
-        opcua_server=opcua,
-        opcua_event_loop=asyncio.get_running_loop()
-    )
 
-    # Initialize orchestrator with video stream
-    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher)
+    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher, video_cfg=video_cfg,)
 
-    # EXAMPLE: go from Antwerp Central Station to Grote Markt (Belgium examples)
     try:
-        # Test flight - adjust coordinates for your location
         await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     except KeyboardInterrupt:
         logging.info("\n🛑 Manual abort - triggering safe shutdown")

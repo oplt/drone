@@ -5,12 +5,15 @@ import cv2
 import numpy as np
 from config import settings
 
+
+''' that program connects rasperry pi via ssh and  starts the camera server there first '''
+
 # ---------- CONFIGURATION ----------
 PI_HOST = settings.rasperry_ip
 PI_USER = settings.rasperry_user
 SSH_KEY_PATH = settings.ssh_key_path
 REMOTE_PY_SCRIPT = settings.rasperry_streaming_script_path
-PI_PORT = 5000
+PI_PORT = settings.rasperry_port
 STREAM_URL = f"http://{PI_HOST}:{PI_PORT}/video_feed"
 
 # ---------- SSH PART: START SERVER ON PI ----------

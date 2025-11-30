@@ -9,7 +9,7 @@ CONNECTION_STRING = "/dev/ttyUSB0"
 BAUD_RATE = 57600
 
 THROTTLE_TYPE = 0   # 0 = percentage, 1 = PWM
-THROTTLE_PERCENT = 30  # 50% like your QGC test
+THROTTLE_PERCENT = 20  # 50% like your QGC test
 DURATION = 3        # seconds per motor
 
 def send_motor_test(vehicle, motor, throttle_percent, duration):
