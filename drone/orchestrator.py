@@ -1,18 +1,17 @@
-import asyncio, json, time
+import asyncio, json, time, os
 from .models import Coordinate
 from .drone_base import DroneClient
 from map.google_maps import GoogleMapsClient
 from video.stream import DroneVideoStream
 from analysis.llm import LLMAnalyzer
-from messaging.mqtt import MqttClient
-from messaging.opcua import DroneOpcUaServer
+from telemetry.mqtt import MqttClient
+from telemetry.opcua import DroneOpcUaServer
 from db.repository import TelemetryRepository
 from config import settings, setup_logging
 from analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from utils.geo import haversine_km, _coord_from_home, _total_mission_distance_km
 from utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
 import logging
-
 
 
 class Orchestrator:
@@ -43,33 +42,56 @@ class Orchestrator:
         self._flight_id = None
         self._ingest_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
         self._raw_event_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=2000)
+        self._video_frame_queue: asyncio.Queue = asyncio.Queue(maxsize=10)  # Buffer only recent frames
         self._video_health_interval = 5.0  # Check video health every 5 seconds
+        self.raspberry_camera = None
+        self._frame_skip_count = 0  # Counter for frame skipping
+        self._frames_to_skip = int(os.getenv("LLM_FRAME_SKIP", "2"))  # Process every Nth frame (default: every 3rd)
+
+        if settings.raspberry_camera_enabled:
+            try:
+                from video.raspberry_camera import RaspberryCameraController
+                self.raspberry_camera = RaspberryCameraController(
+                    host=settings.rasperry_ip,
+                    user=settings.rasperry_user,
+                    key_path=settings.ssh_key_path,
+                    script_path=settings.rasperry_streaming_script_path,
+                    streaming_port=settings.rasperry_streaming_port  # ← Streaming port
+                )
+                logging.info("✅ Raspberry Pi camera controller initialized")
+            except ImportError as e:
+                logging.warning(f"⚠️ Could not import RaspberryCameraController: {e}")
+            except Exception as e:
+                logging.error(f"❌ Failed to initialize Raspberry Pi camera: {e}")
 
 
     async def heartbeat_task(self):
         """Send regular heartbeats to keep the dead man's switch happy"""
         logging.info("Starting heartbeat task...")
 
-        while True:
+        while self._running:
             try:
-                '''
-                MODIFY PUBLISH TOPIC BEFORE DRONE TEST CONNECTION !!!
-                '''
+                # CRITICAL: Always update heartbeat timestamp if dead man's switch exists
+                # This must happen BEFORE any conditions to ensure timestamp is always updated
+                if hasattr(self.drone, 'last_heartbeat'):
+                    self.drone.last_heartbeat = time.time()
+                    logging.debug(f"Heartbeat timestamp updated: {self.drone.last_heartbeat}")
+                
                 # Also publish heartbeat status to MQTT for monitoring
                 self.mqtt.publish("drone/heartbeat", {
-                                                                "timestamp": time.time(),
-                                                                "status": "alive"
-                                                            }, qos=1)  # QoS 1 for important heartbeat messages
+                    "timestamp": time.time(),
+                    "status": "alive"
+                }, qos=1)  # QoS 1 for important heartbeat messages
+                
                 await asyncio.sleep(2.0)  # Send every 2 seconds
             except Exception as e:
-                logging.info(f"⚠️  Error in heartbeat task: {e}")
-                # print(f"⚠️  Error in heartbeat task: {e}")
+                logging.error(f"⚠️  Error in heartbeat task: {e}")
                 # Publish error but keep trying
                 self.mqtt.publish("drone/errors", {
-                                        "type": "heartbeat_error",
-                                        "message": str(e),
-                                        "timestamp": time.time()
-                                    })
+                    "type": "heartbeat_error",
+                    "message": str(e),
+                    "timestamp": time.time()
+                })
                 await asyncio.sleep(1.0)
 
 
@@ -169,88 +191,134 @@ class Orchestrator:
     #
 
 
+    # In orchestrator.py, modify the ingest workers:
     async def _raw_event_ingest_worker(self):
-        """Drain raw MAVLink events from MQTT and bulk-insert into MavlinkEvent."""
-        BATCH_SIZE = 500
-        INTERVAL_S = 0.25
-        buffer = []
-        logging.info("Starting _raw_event_ingest_worker")
-        
-        # while self._running:
-        while True:
-            try:
-                item = await asyncio.wait_for(self._raw_event_queue.get(), timeout=INTERVAL_S)
-                logging.debug(f"Received item from queue: {item.get('msg_type', 'UNKNOWN')}")
-                buffer.append(item)
-                # coalesce quickly
-                for _ in range(BATCH_SIZE-1):
-                    try:
-                        buffer.append(self._raw_event_queue.get_nowait())
-                    except asyncio.QueueEmpty:
-                        break
-                if buffer:
-                    if self._flight_id is None:
-                        logging.warning("Flight ID is None, cannot save MavlinkEvent data")
-                        buffer.clear()
-                        continue
-                    
-                    logging.info(f"Processing batch of {len(buffer)} events for flight {self._flight_id}")
-                    try:
-                        inserted_count = await self.repo.add_mavlink_events_many(self._flight_id, buffer)
-                        logging.info(f"Inserted {inserted_count} MavlinkEvent records")
-                    except Exception as e:
-                        logging.error(f"Failed to insert MavlinkEvent data: {e}")
-                    
-                    for _ in buffer:
-                        self._raw_event_queue.task_done()
-                    buffer.clear()
-            except asyncio.TimeoutError:
-                if buffer:
-                    if self._flight_id is None:
-                        logging.warning("Flight ID is None, cannot save MavlinkEvent data")
-                        buffer.clear()
-                        continue
-                    
-                    logging.info(f"Timeout flush: processing {len(buffer)} events for flight {self._flight_id}")
-                    try:
-                        inserted_count = await self.repo.add_mavlink_events_many(self._flight_id, buffer)
-                        logging.info(f"Inserted {inserted_count} MavlinkEvent records (timeout flush)")
-                    except Exception as e:
-                        logging.error(f"Failed to insert MavlinkEvent data (timeout flush): {e}")
-                    
-                    for _ in buffer:
-                        self._raw_event_queue.task_done()
-                    buffer.clear()
-            except Exception as e:
-                logging.error(f"Error in _raw_event_ingest_worker: {e}")
-                buffer.clear()
+        """OPTIMIZED: Process Mavlink events in larger batches"""
+        BATCH_SIZE = 1000  # Increased from 500
+        FLUSH_INTERVAL = 0.5  # Half second
 
+        buffer = []
+        last_flush = time.time()
+
+        while self._running:
+            try:
+                # Try to get item with timeout
+                try:
+                    item = await asyncio.wait_for(
+                        self._raw_event_queue.get(),
+                        timeout=FLUSH_INTERVAL
+                    )
+                    buffer.append(item)
+
+                    # Fill buffer quickly
+                    for _ in range(BATCH_SIZE - 1):
+                        try:
+                            buffer.append(self._raw_event_queue.get_nowait())
+                        except asyncio.QueueEmpty:
+                            break
+
+                except asyncio.TimeoutError:
+                    pass  # Time to flush buffer
+
+                # Flush if buffer is full or timeout reached
+                if buffer and (len(buffer) >= BATCH_SIZE or
+                               (time.time() - last_flush) > FLUSH_INTERVAL):
+
+                    if self._flight_id:
+                        inserted = await self.repo.add_mavlink_events_many(
+                            self._flight_id, buffer
+                        )
+                        logging.debug(f"Inserted {inserted} events")
+
+                    # Clear buffer
+                    for _ in range(len(buffer)):
+                        self._raw_event_queue.task_done()
+                    buffer.clear()
+                    last_flush = time.time()
+
+            except Exception as e:
+                logging.error(f"Error in event worker: {e}")
+                buffer.clear()
 
     async def mqtt_subscriber_task(self):
         """Listen for MQTT messages and handle them"""
         try:
-            # Wait for flight_id to be set
-            while self._flight_id is None:
-                logging.info("Waiting for flight_id to be set before starting MQTT subscriber...")
+            max_wait_time = 30.0  # Maximum seconds to wait for flight_id
+            start_time = time.time()
+
+            # Wait for flight_id with timeout
+            while self._flight_id is None and self._running:
+                elapsed = time.time() - start_time
+                if elapsed > max_wait_time:
+                    logging.error("Timeout waiting for flight_id in MQTT subscriber task")
+                    return
+
+                if elapsed > 5.0:  # Log warning after 5 seconds
+                    logging.warning(f"Still waiting for flight_id... ({elapsed:.1f}s)")
+
                 await asyncio.sleep(0.5)
-            
+
+            # Check exit conditions
+            if not self._running:
+                logging.info("MQTT subscriber task cancelled")
+                return
+
+            if self._flight_id is None:
+                logging.error("Flight_id never set, MQTT subscriber exiting")
+                return
+
             logging.info(f"Starting MQTT subscriber with flight_id: {self._flight_id}")
-            
+
             # Attach queue so mqtt client can enqueue complete frames
-            # self.mqtt.attach_ingest_queue(self._ingest_queue)
             self.mqtt.attach_raw_event_queue(self._raw_event_queue)
 
-            if not await asyncio.to_thread(self.mqtt.subscribe_to_topics, self._flight_id):
-                logging.error("Failed to start MQTT subscriber")
-                while self._running:
-                    await asyncio.sleep(1)
+            # Subscribe with retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                if not self._running:
+                    return
 
-            logging.info("MQTT subscriber started and listening for messages")
-            # Keep alive
+                try:
+                    if await asyncio.to_thread(self.mqtt.subscribe_to_topics, self._flight_id):
+                        break
+                    else:
+                        if attempt < max_retries - 1:
+                            logging.warning(f"MQTT subscribe failed, retry {attempt + 1}/{max_retries}")
+                            await asyncio.sleep(1.0)
+                        else:
+                            logging.error("All MQTT subscribe attempts failed")
+                            return
+                except Exception as e:
+                    logging.error(f"MQTT subscribe error on attempt {attempt + 1}: {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2.0)
+
+            # Main loop with health checks
+            last_activity = time.time()
             while self._running:
-                await asyncio.sleep(1)
+                # Check if MQTT connection is still alive
+                if hasattr(self.mqtt, 'is_connected'):
+                    if not await asyncio.to_thread(self.mqtt.is_connected):
+                        logging.error("MQTT connection lost, attempting to reconnect...")
+                        # Try to reconnect
+                        if not await asyncio.to_thread(self.mqtt.reconnect):
+                            logging.error("MQTT reconnection failed")
+                            break
+
+                # Sleep but check _running more frequently
+                for _ in range(10):  # Check every 0.1 seconds instead of 1
+                    if not self._running:
+                        break
+                    await asyncio.sleep(0.1)
+
+        except asyncio.CancelledError:
+            logging.info("MQTT subscriber task cancelled")
+            raise
         except Exception as e:
             logging.error(f"Mqtt broker subscribe error: {e}")
+        finally:
+            logging.info("MQTT subscriber task cleaning up")
+            # Cleanup code if needed
 
 
     async def emergency_monitor_task(self):
@@ -261,26 +329,32 @@ class Orchestrator:
                 if hasattr(self.drone, 'dead_mans_switch_active'):
                     if not self.drone.dead_mans_switch_active and self.drone.vehicle:
                         # Dead man's switch was triggered!
+                        logging.critical("🚨 DEAD MAN'S SWITCH TRIGGERED - Emergency RTL initiated")
                         self.mqtt.publish("drone/emergency", {
                             "type": "dead_mans_switch_triggered",
                             "message": "Connection lost - drone executing emergency protocol",
                             "timestamp": time.time()
                         }, qos=2)  # QoS 2 for critical emergency messages
 
+                        # Log emergency event
+                        if self._flight_id:
+                            await self.repo.add_event(self._flight_id, "emergency_rtl", {
+                                "reason": "dead_mans_switch_triggered"
+                            })
+
                         # Stop all other operations
                         self._running = False
                         break
                 await asyncio.sleep(1.0)
             except Exception as e:
-                logging.info(f"Error in emergency monitor: {e}")
-                # print(f"Error in emergency monitor: {e}")
+                logging.error(f"Error in emergency monitor: {e}")
                 await asyncio.sleep(1.0)
 
     async def fly_route(self, start, dest, cruise_alt=30.0):
         # start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = cruise_alt
         # dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = cruise_alt
         self._running = True
-        
+
         # Create flight record if not already created
         if self._flight_id is None:
             self._flight_id = await self.repo.create_flight(
@@ -288,7 +362,7 @@ class Orchestrator:
                 dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
             )
             logging.info(f"Created flight with ID: {self._flight_id}")
-        
+
         await self.repo.add_event(self._flight_id, "mission_created", {"alt": cruise_alt})
 
         self._dest_coord = dest
@@ -424,35 +498,132 @@ class Orchestrator:
             await asyncio.sleep(2.0)  # evaluation interval
 
 
-    async def vision_task(self):
-        """Process video frames for object detection and analysis"""
-        logging.info("Starting vision task for drone video analysis...")
-
+    async def _video_frame_reader_task(self):
+        """Async frame reader that reads frames one at a time and queues them"""
+        logging.info("Starting async video frame reader...")
+        
+        if not self.video:
+            logging.warning("No video stream available for frame reading")
+            return
+        
         try:
+            # Read frames one at a time asynchronously
             for _, frame in self.video.frames():
                 if not self._running:
                     break
+                
+                # Non-blocking queue put - drop oldest frame if queue is full
+                try:
+                    self._video_frame_queue.put_nowait(frame)
+                except asyncio.QueueFull:
+                    # Drop oldest frame to maintain recency
+                    try:
+                        dropped_frame = self._video_frame_queue.get_nowait()
+                        self._video_frame_queue.task_done()
+                        logging.debug("Dropped old frame to maintain real-time processing")
+                    except asyncio.QueueEmpty:
+                        pass
+                    # Try again to add new frame
+                    try:
+                        self._video_frame_queue.put_nowait(frame)
+                    except asyncio.QueueFull:
+                        logging.warning("Frame queue still full after dropping oldest frame")
+                
+                # Small sleep to yield control and prevent tight loop
+                await asyncio.sleep(0.001)  # 1ms yield
+                
+        except Exception as e:
+            logging.error(f"Error in video frame reader: {e}")
+            self.mqtt.publish("drone/events", {
+                "level": "error",
+                "msg": f"Video frame reader error: {str(e)}",
+                "timestamp": time.time()
+            }, qos=1)
+
+    async def vision_task(self):
+        """Process video frames for object detection and analysis (non-blocking)"""
+        logging.info("Starting vision task for drone video analysis...")
+
+        if not self.video:
+            logging.warning("No video stream available, skipping vision task")
+            return
+
+        try:
+            # Start frame reader task
+            frame_reader_task = asyncio.create_task(
+                self._video_frame_reader_task(),
+                name="video_frame_reader"
+            )
+            
+            # Process frames from queue with skipping
+            while self._running:
+                try:
+                    # Get frame with timeout to allow periodic checks
+                    frame = await asyncio.wait_for(
+                        self._video_frame_queue.get(),
+                        timeout=1.0
+                    )
                     
-                # Process frame for object detection
-                dets = await self.analyzer.detect_objects(frame)
-                payload = [d.__dict__ for d in dets]
-                
-                # Publish detections to MQTT
-                self.mqtt.publish("drone/detections", payload, qos=0)
-                
-                # Update OPC UA with detection data
-                await self.opcua.update_detections(json.dumps(payload))
-                
-                # Log detection events if significant objects found
-                if dets:
-                    logging.info(f"Detected {len(dets)} objects in video frame")
-                    await self.repo.add_event(self._flight_id, "object_detected", {
-                        "count": len(dets),
-                        "objects": [d.__dict__ for d in dets]
-                    })
-                
-                await asyncio.sleep(0)  # yield control
-                
+                    # Frame skipping: only process every Nth frame to reduce LLM API calls
+                    self._frame_skip_count += 1
+                    if self._frame_skip_count < self._frames_to_skip:
+                        # Skip this frame, mark as done and continue
+                        self._video_frame_queue.task_done()
+                        continue
+                    
+                    # Reset counter and process this frame
+                    self._frame_skip_count = 0
+                    
+                    # Process frame for object detection (with circuit breaker protection)
+                    # detect_objects now returns [] on error instead of raising, so no try/except needed
+                    dets = await self.analyzer.detect_objects(frame)
+                    payload = [d.__dict__ for d in dets]
+
+                    # Publish detections to MQTT (skip empty detections when circuit breaker is open)
+                    # Only publish if we have detections or circuit breaker is closed
+                    if payload or not hasattr(self.analyzer, '_circuit_open') or not self.analyzer._circuit_open:
+                        self.mqtt.publish("drone/detections", payload, qos=0)
+                    # Skip publishing empty arrays when circuit breaker is open to reduce spam
+
+                    # Update OPC UA with detection data (if available)
+                    if self.opcua and payload:  # Only update if we have detections
+                        try:
+                            await self.opcua.update_detections(json.dumps(payload))
+                        except Exception as e:
+                            logging.debug(f"OPC UA update failed: {e}")
+
+                    # Log detection events if significant objects found
+                    if dets:
+                        logging.info(f"Detected {len(dets)} objects in video frame")
+                        if self._flight_id:
+                            await self.repo.add_event(self._flight_id, "object_detected", {
+                                "count": len(dets),
+                                "objects": [d.__dict__ for d in dets]
+                            })
+                    
+                    # Mark frame as processed
+                    self._video_frame_queue.task_done()
+                    
+                except asyncio.TimeoutError:
+                    # No frame available, continue loop to check _running
+                    continue
+                except Exception as e:
+                    logging.error(f"Error processing frame: {e}")
+                    # Mark task as done even on error to prevent queue blocking
+                    try:
+                        self._video_frame_queue.task_done()
+                    except ValueError:
+                        pass  # Already done or not in queue
+                    continue
+            
+            # Cancel frame reader when vision task stops
+            if not frame_reader_task.done():
+                frame_reader_task.cancel()
+                try:
+                    await frame_reader_task
+                except asyncio.CancelledError:
+                    pass
+
         except RuntimeError as e:
             error_msg = f"Video processing error: {str(e)}"
             logging.error(error_msg)
@@ -465,37 +636,156 @@ class Orchestrator:
             error_msg = f"Unexpected error in vision task: {str(e)}"
             logging.error(error_msg)
             self.mqtt.publish("drone/events", {
-                "level": "error", 
+                "level": "error",
                 "msg": error_msg,
                 "timestamp": time.time()
             }, qos=1)
 
+    async def raspberry_camera_task(self):
+        """Main task to manage Raspberry Pi camera lifecycle"""
+        logging.info("🎥 Starting Raspberry Pi camera manager...")
+
+        last_connection_state = False
+        camera_start_attempted = False
+
+        while self._running:
+            try:
+                # Check if drone is connected
+                is_connected = await asyncio.to_thread(self.drone.is_connected)
+
+                # Connection state changed
+                if is_connected != last_connection_state:
+                    if is_connected:
+                        logging.info("🚀 Drone connected, checking Raspberry Pi camera...")
+                    else:
+                        logging.info("📴 Drone disconnected")
+                        camera_start_attempted = False
+                    last_connection_state = is_connected
+
+                if is_connected and self.raspberry_camera:
+                    # Start camera if not already streaming and not attempted yet
+                    if not self.raspberry_camera.is_streaming and not camera_start_attempted:
+                        logging.info("🎬 Starting Raspberry Pi camera...")
+
+                        # Start camera streaming
+                        success = await self.raspberry_camera.start_streaming()
+                        camera_start_attempted = True
+
+                        if success:
+                            # Update video source to use Raspberry Pi stream
+                            stream_url = await self.raspberry_camera.get_stream_url()
+
+                            # Reinitialize video with Raspberry Pi stream
+                            if self.video:
+                                try:
+                                    self.video.close()
+                                except Exception as e:
+                                    logging.debug(f"Error closing old video stream: {e}")
+
+                            # Create new video stream with retry logic
+                            max_retries = 3
+                            retry_delay = 2.0
+                            video_initialized = False
+                            
+                            for attempt in range(max_retries):
+                                try:
+                                    logging.info(f"Initializing video stream (attempt {attempt + 1}/{max_retries})...")
+                                    self.video = DroneVideoStream(
+                                        source=stream_url,
+                                        width=settings.drone_video_width,
+                                        height=settings.drone_video_height,
+                                        fps=settings.drone_video_fps,
+                                        open_timeout_s=10.0,  # Longer timeout for network stream
+                                        enable_recording=settings.drone_video_save_stream,
+                                        recording_path=settings.drone_video_save_path
+                                    )
+                                    video_initialized = True
+                                    break
+                                except Exception as e:
+                                    logging.warning(f"Video stream initialization attempt {attempt + 1} failed: {e}")
+                                    if attempt < max_retries - 1:
+                                        logging.info(f"Retrying in {retry_delay} seconds...")
+                                        await asyncio.sleep(retry_delay)
+                            
+                            if not video_initialized:
+                                logging.error("Failed to initialize video stream after all retries")
+                                continue
+
+                            logging.info(f"📹 Switched to Raspberry Pi camera stream: {stream_url}")
+
+                            # Start vision task
+                            asyncio.create_task(self.vision_task(), name='vision_task')
+                        else:
+                            logging.error("❌ Failed to start Raspberry Pi camera")
+                            # Retry after delay
+                            await asyncio.sleep(10)
+                            camera_start_attempted = False
+                    else:
+                        # Camera is already streaming or we attempted, check health periodically
+                        if self.raspberry_camera.is_streaming:
+                            # Check health every 10 seconds
+                            if await self.raspberry_camera.check_health():
+                                # Camera is healthy, nothing to do
+                                pass
+                            else:
+                                logging.warning("⚠️ Raspberry Pi camera stream unhealthy")
+                                # Try to restart
+                                await self.raspberry_camera.stop_streaming()
+                                camera_start_attempted = False
+                elif not is_connected and self.raspberry_camera:
+                    # Drone disconnected, ensure camera is stopped
+                    if self.raspberry_camera.is_streaming:
+                        logging.info("📴 Drone disconnected, stopping Raspberry Pi camera...")
+                        await self.raspberry_camera.stop_streaming()
+                        camera_start_attempted = False
+
+                await asyncio.sleep(2)  # Check every 2 seconds
+
+            except Exception as e:
+                logging.error(f"Raspberry camera task error: {e}")
+                camera_start_attempted = False
+                await asyncio.sleep(5)  # Longer delay on error
+
+
     async def run(self, start_addr: str, end_addr: str, alt=30.0):
+
         logging.info(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
+        
+        # Set event loop for MQTT client early to enable message buffering
+        self.mqtt.set_event_loop(asyncio.get_running_loop())
+        
         start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = alt
         dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = alt
 
+        # Create flight record early to set flight_id before connecting
         self._flight_id = await self.repo.create_flight(
             start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
             dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
         )
 
-        await self.opcua.start()
-        # self.drone.connect()
+        logging.info(f"✅ Created flight with ID: {self._flight_id}")
+        await self.repo.add_event(self._flight_id, "flight_created",
+                              {"alt": alt, "start": start_addr, "end": end_addr})
+
+        # await self.opcua.start()
         await asyncio.to_thread(self.drone.connect)
 
         # Start all tasks including the critical heartbeat task
         tasks = [
-            asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
-            asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
-            asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
-            asyncio.create_task(self._raw_event_ingest_worker()),
+            asyncio.create_task(self.heartbeat_task(), name="heartbeat_task"),  # CRITICAL SAFETY TASK
+            # asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
+            # asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
+            # asyncio.create_task(self._raw_event_ingest_worker()),
             # asyncio.create_task(self._telemetry_ingest_worker()),
-            asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
-            asyncio.create_task(self.vision_task()),  # Process video for object detection
+            # asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
+            # asyncio.create_task(self.vision_task()),  # Process video for object detection - started by raspberry_camera_task
             # asyncio.create_task(self._range_guard_task()),
-            # asyncio.create_task(self.emergency_monitor_task()),
+            asyncio.create_task(self.emergency_monitor_task(), name="emergency_monitor_task"),
         ]
+
+        # Add Raspberry Pi camera task if enabled
+        if self.raspberry_camera:
+            tasks.append(asyncio.create_task(self.raspberry_camera_task(), name='raspberry_camera_task'))
 
         try:
             logging.info("Background tasks started, beginning flight...")
@@ -508,23 +798,34 @@ class Orchestrator:
             logging.info("🛑 Shutting down flight operations...")
             # print("🛑 Shutting down flight operations...")
             self._running = False
-            await asyncio.sleep(0.5)  # Give tasks time to see the flag
 
-
+            # Stop Raspberry Pi camera
+            if self.raspberry_camera and self.raspberry_camera.is_streaming:
+                await self.raspberry_camera.stop_streaming()
 
             # Cancel all tasks
-            for task in tasks:
-                if task and not task.done():
+            # for task in tasks:
+            #     if task and not task.done():
+            #         task.cancel()
+            #         try:
+            #             await task
+            #         except asyncio.CancelledError:
+            #             pass
+
+            if tasks:
+                for task in tasks:
                     task.cancel()
-                    try:
-                        await task
-                    except asyncio.CancelledError:
-                        pass
+                await asyncio.gather(*tasks, return_exceptions=True)
 
             # Safely stop the dead man's switch
             self.drone.stop_dead_mans_switch()
 
-            await self.opcua.stop()
+            # Stop OPC UA server if available
+            if self.opcua:
+                try:
+                    await self.opcua.stop()
+                except Exception as e:
+                    logging.error(f"Error stopping OPC UA server: {e}")
             # Close video stream properly
             if self.video:
                 self.video.close()

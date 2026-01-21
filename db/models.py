@@ -36,8 +36,12 @@ class FlightEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     type: Mapped[str] = mapped_column(String(64), nullable=False)
     data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-
     flight: Mapped["Flight"] = relationship(back_populates="events")
+
+    __table_args__ = (
+        Index("idx_flight_events_flight_type", "flight_id", "type"),  # Fast event lookups
+        Index("idx_flight_events_time", "created_at"),  # Time-based queries
+    )
 
 class TelemetryRecord(Base):
     __tablename__ = "telemetry"
@@ -63,8 +67,10 @@ class TelemetryRecord(Base):
     frame_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
 
     __table_args__ = (
-        #idempotency per flight/frame
         UniqueConstraint("flight_id", "frame_id", name="uq_telemetry_flight_frame_id"),
+        Index("idx_telemetry_flight_created", "flight_id", "created_at"),  # Add this
+        Index("idx_telemetry_created_at", "created_at"),
+        Index("idx_telemetry_coords", "lat", "lon"),
     )
 
 class MavlinkEvent(Base):
@@ -82,7 +88,9 @@ class MavlinkEvent(Base):
     timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        Index("idx_evt_flt_time", "flight_id", "created_at"),
+        Index("idx_mavlink_flight_msg_time", "flight_id", "msg_type", "created_at"),
+        Index("idx_mavlink_timestamp", "timestamp"),  # Add this!
+        Index("idx_mavlink_type_time", "msg_type", "created_at"),  # Add this!
         UniqueConstraint("flight_id", "msg_type", "time_boot_ms",
                          name="uq_evt_flt_type_frame"),
     )

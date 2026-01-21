@@ -7,7 +7,7 @@ import time
 import threading
 from config import settings, setup_logging
 import logging
-from messaging.opcua import DroneOpcUaServer
+from telemetry.opcua import DroneOpcUaServer
 import asyncio
 
 class ArduPilotTelemetryPublisher:

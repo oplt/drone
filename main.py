@@ -3,8 +3,8 @@ import os
 from drone.mavlink_drone import MavlinkDrone
 from map.google_maps import GoogleMapsClient
 from analysis.llm import LLMAnalyzer
-from messaging.mqtt import MqttClient
-from messaging.opcua import DroneOpcUaServer
+from telemetry.mqtt import MqttClient
+from telemetry.opcua import DroneOpcUaServer
 from drone.orchestrator import Orchestrator
 from config import settings, setup_logging
 from video.stream import DroneVideoStream
@@ -37,8 +37,23 @@ RASPBERRY PI SETUP:
 
 async def main():
     setup_logging()
+    logging.info("🚀 Starting drone control system...")
 
     await init_db()
+    logging.info("✅ Database initialized")
+
+    # Simple optimizer - always enable
+    from db.optimizer import DatabaseOptimizer
+    optimizer = DatabaseOptimizer(
+        check_interval=settings.DB_OPTIMIZE_INTERVAL or 3600,  # 1 hour (reduced frequency)
+        optimize_threshold=1000
+    )
+
+    optimizer_task = asyncio.create_task(
+        optimizer.start_monitoring(),
+        name="db_optimizer"
+    )
+
 
     drone = MavlinkDrone(settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout)
     maps = GoogleMapsClient(settings.google_maps_key)
@@ -46,48 +61,64 @@ async def main():
         api_base=settings.llm_api_base,
         api_key=settings.llm_api_key,
         model=settings.llm_model,
-        provider=settings.llm_provider,   # NEW
+        provider=settings.llm_provider,
     )
+    
+    # Log LLM configuration status
+    if not (settings.llm_api_base and settings.llm_model):
+        logging.info("ℹ️  LLM API not configured - object detection will be disabled")
+        logging.info("   Set LLM_API_BASE and LLM_MODEL environment variables to enable")
+    else:
+        logging.info(f"✅ LLM API configured: {settings.llm_provider} at {settings.llm_api_base}")
     mqtt = MqttClient(settings.mqtt_broker, settings.mqtt_port, settings.mqtt_user, settings.mqtt_pass,use_tls=False, client_id="drone-1")
     opcua = DroneOpcUaServer()
-    
+
     # Initialize drone video stream with enhanced configuration
+    # NOTE: If using Raspberry Pi camera, video stream will be initialized later
+    # by raspberry_camera_task after the camera server is confirmed running
     video = None
     if settings.drone_video_enabled:
-        try:
-            # Parse camera source (could be int for USB camera or string for RTSP/network)
-            cam_source = settings.drone_video_source
+        # Only initialize video stream here if NOT using Raspberry Pi camera
+        # Raspberry Pi camera stream will be initialized later in orchestrator
+        if not settings.raspberry_camera_enabled:
             try:
-                cam_source = int(cam_source)
-            except ValueError:
-                pass  # Keep as string if it's not an integer
-            
-            video = DroneVideoStream(
-                source=cam_source,
-                width=settings.drone_video_width,
-                height=settings.drone_video_height,
-                fps=settings.drone_video_fps,
-                open_timeout_s=settings.drone_video_timeout,
-                probe_indices=5,  # Try /dev/video0..5 if USB camera fails
-                fallback_file=settings.drone_video_fallback if settings.drone_video_fallback else None,
-                fps_limit=None,  # No FPS limit for real-time drone video
-                enable_recording=settings.drone_video_save_stream,
-                recording_path=settings.drone_video_save_path,
-                recording_format="mp4"
-            )
-            logging.info(f"✅ Drone video stream initialized successfully")
-            logging.info(f"   Source: {cam_source}")
-            logging.info(f"   Resolution: {settings.drone_video_width}x{settings.drone_video_height}")
-            logging.info(f"   FPS: {settings.drone_video_fps}")
-            logging.info(f"   Recording: {'Enabled' if settings.drone_video_save_stream else 'Disabled'}")
-            
-        except Exception as e:
-            logging.info(f"❌ Failed to initialize drone video stream: {e}")
-            logging.info("   Continuing without video streaming...")
-            video = None
+                # For USB cameras or other direct sources
+                cam_source = 0  # Default to /dev/video0
+                try:
+                    # Try to parse as int for USB camera index
+                    cam_source = int(settings.drone_video_source) if hasattr(settings, 'drone_video_source') else 0
+                except (ValueError, AttributeError):
+                    # If it's a string URL, use it directly
+                    cam_source = getattr(settings, 'drone_video_source', 0)
+
+                video = DroneVideoStream(
+                    source=cam_source,
+                    width=settings.drone_video_width,
+                    height=settings.drone_video_height,
+                    fps=settings.drone_video_fps,
+                    open_timeout_s=settings.drone_video_timeout,
+                    probe_indices=5,  # Try /dev/video0..5 if USB camera fails
+                    fallback_file=settings.drone_video_fallback if settings.drone_video_fallback else None,
+                    fps_limit=None,  # No FPS limit for real-time drone video
+                    enable_recording=settings.drone_video_save_stream,
+                    recording_path=settings.drone_video_save_path,
+                    recording_format="mp4"
+                )
+                logging.info(f"✅ Drone video stream initialized successfully")
+                logging.info(f"   Source: {cam_source}")
+                logging.info(f"   Resolution: {settings.drone_video_width}x{settings.drone_video_height}")
+                logging.info(f"   FPS: {settings.drone_video_fps}")
+                logging.info(f"   Recording: {'Enabled' if settings.drone_video_save_stream else 'Disabled'}")
+
+            except Exception as e:
+                logging.info(f"❌ Failed to initialize drone video stream: {e}")
+                logging.info("   Continuing without video streaming...")
+                video = None
+        else:
+            logging.info("ℹ️  Using Raspberry Pi camera - video stream will be initialized after camera server starts")
     else:
         logging.info("ℹ️  Drone video streaming disabled in configuration")
-    
+
     repo = TelemetryRepository()
     # Reuse the OPC UA server started by the orchestrator; schedule updates on this event loop
     publisher = ArduPilotTelemetryPublisher(

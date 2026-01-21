@@ -40,6 +40,9 @@ class MqttClient:
         self._raw_event_queue: "asyncio.Queue[dict]" = None
         self._emitted_frame_ids = deque(maxlen=200)        # de-dupe recent frames
         self._last_telemetry: Dict[str, Any] = {}
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = None  # For thread-safe async operations
+        self._early_message_buffer: list = []  # Buffer messages received before flight_id is set
+        self._max_buffer_size = 1000  # Max messages to buffer
 
         if username:
             self.client.username_pw_set(username, password)
@@ -113,6 +116,19 @@ class MqttClient:
         self.client.subscribe(self.topic, qos=1)
         self.client.on_message = self._on_message
         logging.info(f"MQTT client: Subscribed to topic {self.topic} with flight_id {flight_id}")
+        
+        # Process buffered early messages if any
+        if self._early_message_buffer and self._event_loop:
+            logging.info(f"Processing {len(self._early_message_buffer)} buffered early messages")
+            for payload in self._early_message_buffer:
+                try:
+                    future = asyncio.run_coroutine_threadsafe(
+                        self._async_enqueue_event(self._create_event_item(payload)),
+                        self._event_loop
+                    )
+                except Exception as e:
+                    logging.error(f"Error processing buffered message: {e}")
+            self._early_message_buffer.clear()
 
 
     def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
@@ -121,14 +137,14 @@ class MqttClient:
 
 
     def _on_message(self, client, userdata, msg):
-        """Handle incoming MQTT messages from ardupilot"""
+        """Handle incoming MQTT messages from ardupilot (runs in paho-mqtt thread)"""
         try:
             if msg.topic == settings.telemetry_topic:
                 logging.debug(f"Received MQTT message on topic {msg.topic}")
                 payload = json.loads(msg.payload.decode())
                 logging.debug(f"Message payload type: {payload.get('mavpackettype', 'UNKNOWN')}")
-                # self._process_telemetry_messages(payload)
-                self._process_raw_event(payload)
+                # Bridge from sync callback to async queue safely
+                self._process_raw_event_threadsafe(payload)
         except Exception as e:
             logging.error(f"Error processing MQTT message: {e}")
 
@@ -139,43 +155,108 @@ class MqttClient:
     def attach_raw_event_queue(self, q: "asyncio.Queue[dict]"):
         self._raw_event_queue = q
 
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop):
+        """Set the event loop for thread-safe async operations from MQTT callbacks"""
+        self._event_loop = loop
 
-    def _process_raw_event(self, payload: Dict[str, Any]):
+
+    def _process_raw_event_threadsafe(self, payload: Dict[str, Any]):
+        """
+        Thread-safe bridge from MQTT callback (sync) to async queue.
+        This method runs in paho-mqtt's thread and schedules async work.
+        """
+        # If flight_id is not set yet, buffer the message
+        if self._current_flight_id is None:
+            if len(self._early_message_buffer) < self._max_buffer_size:
+                self._early_message_buffer.append(payload)
+                logging.debug(f"Buffered early message (buffer size: {len(self._early_message_buffer)})")
+            else:
+                logging.warning("Early message buffer full, dropping message")
+            return
+        
         if not self._raw_event_queue:
             logging.warning("Raw event queue not attached, cannot process events")
             return
-        try:
-            time_unix_usec = payload.get("time_unix_usec")
-            if time_unix_usec:
-                time_unix_usec = datetime.fromtimestamp(time_unix_usec/1_000_000, tz=timezone.utc)
-
-            timestamp = _parse_ts(payload.get("timestamp"))
-
-            item = {
-                "flight_id": self._current_flight_id,
-                "msg_type": payload.get("mavpackettype"),
-                "time_boot_ms": payload.get("time_boot_ms", None),
-                "time_unix_usec": time_unix_usec,
-                "timestamp": timestamp,
-                "payload": payload,
-            }
-            
-            logging.debug(f"Processing raw event: msg_type={item['msg_type']}, flight_id={self._current_flight_id}")
-            
-            self._raw_event_queue.put_nowait(item)
-            logging.debug(f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}")
-            
-        except asyncio.QueueFull:
-            logging.warning("Raw event queue is full, dropping oldest event")
-            # drop oldest to maintain recency
+        
+        if not self._event_loop:
+            logging.warning("Event loop not set, cannot safely enqueue events. Using fallback.")
+            # Fallback: try direct put_nowait (not ideal but better than nothing)
             try:
-                _ = self._raw_event_queue.get_nowait()
-                self._raw_event_queue.task_done()
-            except Exception:
-                pass
-            self._raw_event_queue.put_nowait(item)
+                item = self._create_event_item(payload)
+                self._raw_event_queue.put_nowait(item)
+            except Exception as e:
+                logging.error(f"Fallback event processing failed: {e}")
+            return
+        
+        # Schedule async processing in the event loop
+        try:
+            # Create the item in the sync context
+            item = self._create_event_item(payload)
+            
+            # Schedule async enqueue operation
+            future = asyncio.run_coroutine_threadsafe(
+                self._async_enqueue_event(item),
+                self._event_loop
+            )
+            # Don't wait for result to avoid blocking MQTT callback thread
+            # Errors will be logged in the async coroutine
         except Exception as e:
-            logging.error(f"Error processing raw event: {e}")
+            logging.error(f"Error scheduling async event processing: {e}")
+
+    def _create_event_item(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create event item from payload (thread-safe, no async operations)"""
+        time_unix_usec = payload.get("time_unix_usec")
+        if time_unix_usec:
+            time_unix_usec = datetime.fromtimestamp(time_unix_usec/1_000_000, tz=timezone.utc)
+
+        timestamp = _parse_ts(payload.get("timestamp"))
+
+        return {
+            "flight_id": self._current_flight_id,
+            "msg_type": payload.get("mavpackettype"),
+            "time_boot_ms": payload.get("time_boot_ms", None),
+            "time_unix_usec": time_unix_usec,
+            "timestamp": timestamp,
+            "payload": payload,
+        }
+
+    async def _async_enqueue_event(self, item: Dict[str, Any]):
+        """
+        Async coroutine to safely enqueue events with proper error handling.
+        This runs in the async event loop.
+        """
+        if not self._raw_event_queue:
+            logging.warning("Raw event queue not attached")
+            return
+        
+        try:
+            logging.debug(f"Processing raw event: msg_type={item['msg_type']}, flight_id={item['flight_id']}")
+            
+            # Try to put item in queue
+            try:
+                self._raw_event_queue.put_nowait(item)
+                logging.debug(f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}")
+            except asyncio.QueueFull:
+                logging.warning("Raw event queue is full, dropping oldest event")
+                # Drop oldest to maintain recency
+                try:
+                    dropped_item = self._raw_event_queue.get_nowait()
+                    self._raw_event_queue.task_done()
+                    logging.debug(f"Dropped message type: {dropped_item.get('msg_type', 'UNKNOWN')}")
+                except asyncio.QueueEmpty:
+                    pass
+                except Exception as e:
+                    logging.error(f"Error dropping oldest event: {e}")
+                
+                # Try again to add new event
+                try:
+                    self._raw_event_queue.put_nowait(item)
+                    logging.debug(f"Enqueued event after dropping oldest")
+                except asyncio.QueueFull:
+                    logging.error("Queue still full after dropping oldest event - message lost")
+                    
+        except Exception as e:
+            logging.error(f"Error in async event enqueue: {e}", exc_info=True)
 
 
     #

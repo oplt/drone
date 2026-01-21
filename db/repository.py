@@ -65,27 +65,52 @@ class TelemetryRepository:
             s.add(rec)
             await s.commit()
 
-    # ------- Faster bulk ingest APIs -------
-    async def add_telemetry_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
-        """Bulk insert telemetry. Each row is a dict of TelemetryRecord fields *excluding* id.
-        Commits once. Returns number of rows inserted.
-        Example row keys: lat, lon, alt, heading, groundspeed, armed, mode, battery_voltage, battery_current, battery_level
-        created_at and flight_id will be set automatically if omitted.
-        """
-        payload = []
-        for r in rows:
-            d = dict(r)
-            d.setdefault("flight_id", flight_id)
-            payload.append(d)
 
-        if not payload:
+
+    async def add_telemetry_many_optimized(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
+        """Optimized bulk insert with single session"""
+        rows_list = list(rows)
+        if not rows_list:
             return 0
 
-        async with self._session_factory() as s:
-            stmt = insert(TelemetryRecord).values(payload)
-            await s.execute(stmt)
-            await s.commit()
-            return len(payload)
+        BATCH_SIZE = 2000  # Optimized batch size to balance memory and performance
+        total_inserted = 0
+
+        async with self._session_factory() as session:
+            for i in range(0, len(rows_list), BATCH_SIZE):
+                batch = rows_list[i:i + BATCH_SIZE]
+                payload = [
+                    {**dict(r), "flight_id": flight_id,
+                     "created_at": datetime.now(timezone.utc)}
+                    for r in batch
+                ]
+
+                if payload:
+                    await session.execute(
+                        insert(TelemetryRecord).values(payload)
+                    )
+                    total_inserted += len(payload)
+
+            await session.commit()  # SINGLE COMMIT
+
+        return total_inserted
+
+    async def _fallback_single_inserts(self, flight_id: int, batch: list, session) -> int:
+        """Fallback to single inserts if batch fails"""
+        inserted = 0
+        for row in batch:
+            try:
+                d = dict(row)
+                d.setdefault("flight_id", flight_id)
+                stmt = insert(TelemetryRecord).values(d)
+                await session.execute(stmt)
+                inserted += 1
+            except Exception as e:
+                logging.debug(f"Single insert failed: {e}")
+                continue
+        return inserted
+
+
 
     async def finish_flight(self, flight_id: int, *, status: str, note: str = "") -> None:
         async with self._session_factory() as s:
@@ -97,80 +122,86 @@ class TelemetryRepository:
             await s.commit()
 
 
-    # repository.py
+
+
     async def add_mavlink_events_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
-        """
-        rows dict keys expected:
-          - msg_type (str)               -> defaults to payload['mavpackettype'] or 'UNKNOWN'
-          - time_boot_ms (int|None)      -> converted to datetime if provided
-          - time_unix_usec (datetime|None)  # already converted in mqtt.py
-          - timestamp (datetime|None)       # we'll also accept raw numeric and convert here
-          - payload (dict)
-          - flight_id is set here if missing
-        """
-        payload = []
+        """OPTIMIZED version with batch processing"""
+        # Convert to list and pre-process
+        rows_list = []
+        now = datetime.now(timezone.utc)
+
         for r in rows:
             d = dict(r)
             d.setdefault("flight_id", flight_id)
-            # derive msg_type if missing
-            msg_type = d.get("msg_type") or d.get("payload", {}).get("mavpackettype") or "UNKNOWN"
+            d.setdefault("msg_type", d.get("payload", {}).get("mavpackettype", "UNKNOWN"))
 
-            # Convert time_boot_ms from milliseconds to datetime if provided
-            time_boot_ms = d.get("time_boot_ms")
-            if time_boot_ms is not None and isinstance(time_boot_ms, (int, float)):
-                try:
-                    # Convert milliseconds to datetime (assuming boot time is relative to epoch)
-                    # This is a rough approximation - in practice you might want to use system time
-                    time_boot_ms = datetime.fromtimestamp(time_boot_ms / 1000.0, tz=timezone.utc)
-                except Exception:
-                    time_boot_ms = datetime.now(timezone.utc)
-            elif time_boot_ms is None:
-                # Set default timestamp if not provided
-                time_boot_ms = datetime.now(timezone.utc)
-
-            # normalize timestamp if someone passed numeric seconds
+            # Optimize timestamp parsing
             ts = d.get("timestamp")
-            if ts is not None and not isinstance(ts, datetime):
+            if not isinstance(ts, datetime):
                 try:
-                    # handle int/float epoch seconds
                     ts = datetime.fromtimestamp(float(ts), tz=timezone.utc)
-                except Exception:
-                    ts = datetime.now(timezone.utc)
-            elif ts is None:
-                ts = datetime.now(timezone.utc)
+                except (ValueError, TypeError):
+                    ts = now
+            d["timestamp"] = ts
 
-            payload.append({
-                "flight_id":     d["flight_id"],
-                "msg_type":      msg_type,
-                "time_boot_ms":  time_boot_ms,
-                "time_unix_usec": d.get("time_unix_usec"),
-                "timestamp":     ts,
-                "payload":       d.get("payload", {}),
-            })
+            rows_list.append(d)
 
-        if not payload:
+        if not rows_list:
             return 0
 
-        async with self._session_factory() as s:
-            stmt = insert(MavlinkEvent).values(payload)
-            try:
-                await s.execute(stmt)
-                await s.commit()
-                logging.info(f"Successfully inserted {len(payload)} MavlinkEvent records for flight {flight_id}")
-                return len(payload)
-            except Exception as e:
-                logging.error(f"Bulk insert failed for flight {flight_id}: {e}")
-                await s.rollback()
-                inserted = 0
-                for d in payload:
-                    try:
-                        await s.execute(insert(MavlinkEvent).values(d))
-                        await s.commit()
-                        inserted += 1
-                    except Exception as single_e:
-                        logging.error(f"Single insert failed for flight {flight_id}: {single_e}")
-                        await s.rollback()
-                logging.info(f"Fallback single inserts completed: {inserted}/{len(payload)} records inserted")
-                return inserted
+        # Batch process for performance
+        BATCH_SIZE = 500  # Mavlink events can be smaller
+        total_inserted = 0
 
+        for i in range(0, len(rows_list), BATCH_SIZE):
+            batch = rows_list[i:i + BATCH_SIZE]
+            payload = []
+
+            for d in batch:
+                payload.append({
+                    "flight_id": d["flight_id"],
+                    "msg_type": d["msg_type"],
+                    "timestamp": d["timestamp"],
+                    "payload": d.get("payload", {}),
+                    "time_boot_ms": d.get("time_boot_ms"),
+                    "time_unix_usec": d.get("time_unix_usec"),
+                })
+
+            try:
+                async with self._session_factory() as session:
+                    # Use ON CONFLICT DO NOTHING for duplicates
+                    stmt = insert(MavlinkEvent).values(payload)
+
+                    # PostgreSQL optimization
+                    if "postgresql" in str(session.bind.url):
+                        stmt = stmt.on_conflict_do_nothing(
+                            index_elements=["flight_id", "msg_type", "time_boot_ms"]
+                        )
+
+                    result = await session.execute(stmt)
+                    await session.commit()
+                    total_inserted += len(payload)
+
+            except Exception as e:
+                logging.error(f"Mavlink batch insert failed: {e}")
+                # Fallback to individual inserts with single session to avoid pool exhaustion
+                inserted_in_batch = 0
+                try:
+                    async with self._session_factory() as session:
+                        for item in payload:
+                            try:
+                                stmt = insert(MavlinkEvent).values(item)
+                                await session.execute(stmt)
+                                inserted_in_batch += 1
+                            except Exception as item_err:
+                                logging.debug(f"Single item insert failed: {item_err}")
+                                continue
+                        # Single commit for all successful inserts
+                        await session.commit()
+                except Exception as fallback_err:
+                    logging.error(f"Fallback insert session failed: {fallback_err}")
+                    # If even fallback fails, log and continue
+                total_inserted += inserted_in_batch
+
+        return total_inserted
 

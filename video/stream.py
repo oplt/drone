@@ -31,7 +31,9 @@ class DroneVideoStream:
             fps_limit: float | None = None,  # throttle frame rate to save CPU/LLM cost (None = no limit)
             enable_recording: bool = False,
             recording_path: str = "./recordings/",
-            recording_format: str = "mp4"
+            recording_format: str = "mp4",
+            use_raspberry_pi: bool = False,
+            pi_host: str = None,
     ):
         self.fps_limit = fps_limit
         self._last_ts = 0.0
@@ -48,6 +50,11 @@ class DroneVideoStream:
         self.connection_healthy = False
         self.last_frame_time = 0
         self.frame_count = 0
+        self.use_raspberry_pi = use_raspberry_pi
+        self.pi_host = pi_host
+
+        if use_raspberry_pi and pi_host:
+            source = f"http://{pi_host}:5000/video_feed"
         
         # Ensure recording directory exists
         if self.enable_recording:
@@ -117,12 +124,15 @@ class DroneVideoStream:
         return cap
 
     def _start_recording(self):
-        """Start video recording with timestamp"""
+        """Start video recording with timestamp (or resume with existing filename)"""
         if not self.enable_recording or self.cap is None:
             return
-            
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.recording_filename = f"drone_video_{timestamp}.{self.recording_format}"
+        
+        # Use existing filename if resuming recording, otherwise create new one
+        if not self.recording_filename:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.recording_filename = f"drone_video_{timestamp}.{self.recording_format}"
+        
         full_path = os.path.join(self.recording_path, self.recording_filename)
         
         # Get actual video properties from camera
@@ -160,51 +170,77 @@ class DroneVideoStream:
                 logging.info(f"Stopped video recording: {self.recording_filename}")
 
     def _check_connection_health(self):
-        """Monitor connection health for drone applications"""
+        """Monitor connection health for drone applications without consuming frames"""
         if self.cap is None:
             self.connection_healthy = False
             return False
-            
-        # Check if we can read frames
-        ok, _ = self.cap.read()
-        if not ok:
+        
+        # Check if capture is opened without reading a frame
+        if not self.cap.isOpened():
             self.connection_healthy = False
-            logging.warning("Video stream connection lost")
+            logging.warning("Video stream capture not opened")
             return False
-            
-        # Check frame rate health
+        
+        # Check frame rate health based on last frame time (non-intrusive)
         now = time.time()
         if self.last_frame_time > 0:
             frame_interval = now - self.last_frame_time
-            expected_interval = 1.0 / self.fps
-            if frame_interval > expected_interval * 2:  # Allow some tolerance
-                logging.warning(f"Video stream frame rate degraded: {1.0/frame_interval:.1f} fps")
-                
-        self.last_frame_time = now
+            expected_interval = 1.0 / self.fps if self.fps > 0 else 0.033  # Default to ~30fps
+            if frame_interval > expected_interval * 3:  # Allow tolerance for occasional slow frames
+                logging.warning(f"Video stream frame rate degraded: {1.0/frame_interval:.1f} fps (expected: {self.fps})")
+                # Don't mark as unhealthy for occasional slow frames, only if consistently slow
+                if frame_interval > expected_interval * 5:
+                    self.connection_healthy = False
+                    return False
+        
+        # If we haven't received frames in a while, mark as potentially unhealthy
+        if self.last_frame_time > 0 and (now - self.last_frame_time) > 5.0:  # 5 seconds without frames
+            self.connection_healthy = False
+            logging.warning("No frames received for 5+ seconds")
+            return False
+        
         self.connection_healthy = True
         return True
 
     def frames(self) -> Iterator[tuple[int, any]]:
         """Generate video frames with health monitoring"""
+        consecutive_failures = 0
+        max_consecutive_failures = 10  # Allow up to 10 consecutive failures before giving up
+        
         while True:
-            # Check connection health periodically
-            if self.frame_count % 30 == 0:  # Check every 30 frames
+            # Check connection health periodically (non-intrusive, doesn't consume frames)
+            if self.frame_count % 60 == 0:  # Check every 60 frames (less frequent)
                 if not self._check_connection_health():
-                    logging.error("Video stream connection unhealthy, attempting to reconnect...")
+                    logging.warning("Video stream connection unhealthy, attempting to reconnect...")
                     # Try to reconnect
                     self._reconnect()
                     if self.cap is None:
                         break
-                    continue
+                    # Continue to next iteration to try reading frame
             
             ok, frame = self.cap.read()
             if not ok:
+                consecutive_failures += 1
+                
                 # For files, try to loop from start
-                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ok, frame = self.cap.read()
+                if isinstance(self.source, str) and not _is_rtsp(self.source):
+                    # Only try to loop if it's a file source, not network stream
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ok, frame = self.cap.read()
+                
                 if not ok:
-                    logging.error("Failed to read frame from video source")
-                    break
+                    consecutive_failures += 1
+                    if consecutive_failures >= max_consecutive_failures:
+                        logging.error(f"Failed to read frame from video source after {consecutive_failures} consecutive attempts - stopping video stream")
+                        break
+                    # Log warning only occasionally to reduce spam
+                    if consecutive_failures % 5 == 0:
+                        logging.warning(f"Failed to read frame ({consecutive_failures}/{max_consecutive_failures} consecutive failures)")
+                    time.sleep(0.1)  # Small delay before retry
+                    continue  # Try reading next frame instead of breaking
+            
+            # Reset failure counter on success
+            consecutive_failures = 0
 
             # Record frame if recording is enabled
             if self.video_writer and self.video_writer.isOpened():
@@ -223,10 +259,18 @@ class DroneVideoStream:
             yield frame.shape[1], frame  # (width, frame)
 
     def _reconnect(self):
-        """Attempt to reconnect to video source"""
+        """Attempt to reconnect to video source while preserving recording"""
         try:
+            # Preserve recording state and filename before reconnecting
+            was_recording = self.video_writer is not None and self.video_writer.isOpened()
+            preserved_filename = self.recording_filename
+            
             if self.cap:
                 self.cap.release()
+            
+            # Stop recording temporarily (will restart with same filename)
+            if was_recording:
+                self._stop_recording()
             
             # Wait a bit before reconnecting
             time.sleep(1.0)
@@ -235,14 +279,24 @@ class DroneVideoStream:
             self.cap = self._open_source(self.source, self.width, self.height, self.fps, 5.0)
             if self.cap and self.cap.isOpened():
                 logging.info("Successfully reconnected to video source")
-                # Restart recording if it was active
-                if self.enable_recording:
+                # Restart recording with preserved filename if it was active
+                if was_recording:
+                    # Restore the filename to continue recording
+                    self.recording_filename = preserved_filename
                     self._start_recording()
+                    logging.info(f"Resumed recording to existing file: {preserved_filename}")
             else:
                 logging.error("Failed to reconnect to video source")
+                # If reconnection failed but we were recording, try to restart recording
+                if was_recording and self.enable_recording:
+                    self.recording_filename = preserved_filename
+                    logging.warning("Reconnection failed, will retry recording when connection restored")
                 
         except Exception as e:
             logging.error(f"Error during video reconnection: {e}")
+            # Try to preserve recording state even on error
+            if was_recording and self.enable_recording:
+                self.recording_filename = preserved_filename
 
     def get_connection_status(self) -> dict:
         """Get current connection status and statistics"""

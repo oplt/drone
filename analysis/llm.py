@@ -1,10 +1,13 @@
 import base64
 import json
+import time
+import asyncio
 from typing import List, Optional, Dict, Any
 import aiohttp
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from drone.models import Detection
+import logging
 
 
 
@@ -55,13 +58,145 @@ class LLMAnalyzer:
     If not pure JSON, we try to extract JSON via a naive fallback.
     """
     def __init__(self, api_base: str, api_key: str, model: str, provider: str = "ollama"):
-        self.api_base = api_base.rstrip("/")
+        # Clean up API base URL - remove any existing /api/... paths
+        if api_base:
+            api_base = api_base.rstrip("/")
+            # Remove /api/generate, /api/chat, /chat/completions if present (we'll add the correct one)
+            for path in ["/api/generate", "/api/chat", "/chat/completions", "/v1/chat/completions"]:
+                if api_base.endswith(path):
+                    api_base = api_base[:-len(path)].rstrip("/")
+                    break
+        self.api_base = api_base if api_base else ""
         self.api_key = api_key or ""
-        self.model = model
+        self.model = model or ""
         self.provider = provider
+        
+        # Check if LLM is properly configured
+        self._is_configured = bool(self.api_base and self.model)
+        if not self._is_configured:
+            logging.warning("LLM API not configured: missing api_base or model. Object detection will be disabled.")
+        
+        # Circuit breaker state
+        self._circuit_open = False
+        self._failure_count = 0
+        self._last_failure_time = 0.0
+        self._circuit_open_time = 0.0
+        self._max_failures = 5  # Open circuit after 5 consecutive failures
+        self._circuit_timeout = 60.0  # Keep circuit open for 60 seconds
+        self._success_count = 0
+        self._min_successes = 2  # Need 2 successes to close circuit
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+    def _check_circuit_breaker(self) -> bool:
+        """Check if circuit breaker allows request"""
+        current_time = time.time()
+        
+        # If circuit is open, check if timeout has passed
+        if self._circuit_open:
+            if current_time - self._circuit_open_time >= self._circuit_timeout:
+                logging.info(f"Circuit breaker: Attempting to close circuit after {self._circuit_timeout}s timeout")
+                self._circuit_open = False
+                self._failure_count = 0
+                return True
+            else:
+                logging.debug(f"Circuit breaker: Circuit is OPEN (opened {current_time - self._circuit_open_time:.1f}s ago)")
+                return False
+        
+        return True
+    
+    def _record_success(self):
+        """Record successful API call"""
+        self._success_count += 1
+        self._failure_count = 0
+        
+        # If we have enough successes and circuit was open, close it
+        if self._circuit_open and self._success_count >= self._min_successes:
+            logging.info("Circuit breaker: Circuit CLOSED after successful recovery")
+            self._circuit_open = False
+            self._failure_count = 0
+            self._success_count = 0
+    
+    def _record_failure(self):
+        """Record failed API call and check if circuit should open"""
+        self._failure_count += 1
+        self._last_failure_time = time.time()
+        self._success_count = 0
+        
+        if self._failure_count >= self._max_failures:
+            if not self._circuit_open:
+                self._circuit_open = True
+                self._circuit_open_time = time.time()
+                # Logging is handled in detect_objects() to avoid duplicate messages
+
     async def detect_objects(self, frame) -> List[Detection]:
+        """Detect objects in frame with circuit breaker protection"""
+        # Check if LLM is configured
+        if not self._is_configured:
+            return []  # Return empty list if not configured (no error logging)
+        
+        # Check circuit breaker before making request
+        if not self._check_circuit_breaker():
+            # Circuit is open - silently return empty list (no logging to reduce spam)
+            return []  # Return empty list when circuit is open
+        
+        try:
+            result = await self._detect_objects_impl(frame)
+            self._record_success()
+            return result
+        except aiohttp.ClientResponseError as e:
+            was_open = self._circuit_open
+            self._record_failure()
+            # Only log when circuit just opened (not on first failure to reduce spam)
+            if not was_open and self._circuit_open:
+                # Circuit just opened - log helpful message once
+                error_msg = f"Circuit breaker opened: Ollama server at {self.api_base} is not responding"
+                if e.status == 404:
+                    error_msg += " (endpoint not found - check API URL)"
+                elif e.status == 401:
+                    error_msg += " (authentication failed - check API key)"
+                elif e.status == 0:
+                    error_msg += " (connection refused)"
+                error_msg += f". Start Ollama with 'ollama serve'. API calls will be blocked for {self._circuit_timeout}s."
+                logging.warning(error_msg)
+            # Don't log on first failure or if circuit was already open
+            return []  # Return empty list instead of raising
+        except aiohttp.ClientConnectorError as e:
+            was_open = self._circuit_open
+            self._record_failure()
+            # Only log when circuit just opened (not on first failure to reduce spam)
+            if not was_open and self._circuit_open:
+                logging.warning(f"Circuit breaker opened: Cannot connect to Ollama at {self.api_base}. "
+                             f"Start Ollama server with 'ollama serve'. "
+                             f"API calls will be blocked for {self._circuit_timeout}s.")
+            # Don't log on first failure or if circuit was already open
+            return []  # Return empty list instead of raising
+        except asyncio.TimeoutError:
+            was_open = self._circuit_open
+            self._record_failure()
+            # Only log when circuit just opened (not on first failure to reduce spam)
+            if not was_open and self._circuit_open:
+                logging.warning(f"Circuit breaker opened: Ollama at {self.api_base} is timing out. "
+                             f"API calls will be blocked for {self._circuit_timeout}s.")
+            # Don't log on first failure or if circuit was already open
+            return []  # Return empty list instead of raising
+        except Exception as e:
+            was_open = self._circuit_open
+            self._record_failure()
+            # Only log when circuit just opened (not on first failure to reduce spam)
+            if not was_open and self._circuit_open:
+                # Circuit just opened - log once with helpful message
+                error_detail = str(e)
+                if hasattr(e, '__cause__') and e.__cause__:
+                    error_detail = str(e.__cause__)
+                logging.warning(f"Circuit breaker: Opening circuit after {self._failure_count} consecutive failures. "
+                             f"LLM API at {self.api_base} is not responding ({type(e).__name__}). "
+                             f"API calls will be blocked for {self._circuit_timeout}s. "
+                             f"Check if Ollama server is running: 'ollama serve'")
+            # Don't log anything on first failure or if circuit was already open
+            return []  # Return empty list instead of raising
+
+    @retry(stop=stop_after_attempt(2), wait=wait_fixed(1))  # Reduced retries since we have circuit breaker
+    async def _detect_objects_impl(self, frame) -> List[Detection]:
+        """Internal implementation of object detection"""
         img_b64 = encode_jpeg(frame)
         system_prompt = (
             "You are a precise vision detector for urban cleanliness. "
@@ -91,6 +226,7 @@ class LLMAnalyzer:
                 ]
             }
             headers = {"Content-Type": "application/json"}
+            # Ollama uses /api/chat endpoint (not /api/generate for chat)
             url = f"{self.api_base}/api/chat"
             parser = self._parse_ollama
 
@@ -116,8 +252,9 @@ class LLMAnalyzer:
         else:
             raise ValueError(f"Unsupported LLM provider: {self.provider}")
 
+        # Reduced timeout from 120s to 15s for faster failure detection
         async with aiohttp.ClientSession() as s:
-            async with s.post(url, headers=headers, json=payload, timeout=120) as r:
+            async with s.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=15)) as r:
                 r.raise_for_status()
                 data = await r.json()
 

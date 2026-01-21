@@ -25,11 +25,10 @@ class MavlinkDrone(DroneClient):
         self.vehicle = connect(self.connection_str, wait_ready=True)
 
         # Wait until autopilot sets home_location (requires GPS fix; often set after arm, but we try early)
-        # print("Waiting for home location...")
         logging.info("Waiting for home location...")
         tries = 0
         while not getattr(self.vehicle, "home_location", None) and tries < 30:
-            time.sleep(1)
+            time.sleep(0.5)  # Reduced sleep time for faster response
             tries += 1
 
         if self.vehicle.home_location:
@@ -42,9 +41,8 @@ class MavlinkDrone(DroneClient):
         # print(f"Home location set: {self.home_location}")
         logging.info(f"Home location set: {self.home_location}")
 
-        '''this function and heart beat flow should be added on rasperry pi on drone'''
-        # Start the dead man's switch monitoring
-        # self.start_dead_mans_switch()
+        # Start the dead man's switch monitoring for safety
+        self.start_dead_mans_switch()
 
     '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
     def start_dead_mans_switch(self):
@@ -135,24 +133,21 @@ class MavlinkDrone(DroneClient):
 
     def arm_and_takeoff(self, alt: float) -> None:
         while not self.vehicle.is_armable:
-            time.sleep(1)
+            time.sleep(0.5)  # Reduced sleep for faster response
 
         self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.armed = True
 
         while not self.vehicle.armed:
-            time.sleep(1)
+            time.sleep(0.5)  # Reduced sleep for faster response
 
         self.vehicle.simple_takeoff(alt)
 
         while True:
-            # Send heartbeat during takeoff
-            # self.send_heartbeat()
-
             current_alt = self.vehicle.location.global_relative_frame.alt
             if current_alt >= alt * 0.95:
                 break
-            time.sleep(1)
+            time.sleep(0.5)  # Reduced sleep for faster response and better cancellation support
 
     def goto(self, coord: Coordinate) -> None:
         # Send heartbeat before major operations
@@ -192,14 +187,11 @@ class MavlinkDrone(DroneClient):
 
     def follow_waypoints(self, path):
         for wp in path:
-            # self.send_heartbeat()  # Heartbeat before each waypoint
             self.goto(wp)
 
-            # Wait for waypoint with heartbeat
+            # Wait for waypoint with reduced sleep for better responsiveness
             start_time = time.time()
             while time.time() - start_time < 30:  # 30 second timeout per waypoint
-                # self.send_heartbeat()
-
                 # Check if we're close enough to the waypoint
                 current = self.vehicle.location.global_relative_frame
                 distance = self._distance_to_target(current, wp)
@@ -207,7 +199,7 @@ class MavlinkDrone(DroneClient):
                 if distance < 2.0:  # Within 2 meters
                     break
 
-                time.sleep(1)
+                time.sleep(0.5)  # Reduced sleep for faster waypoint detection
 
     def _distance_to_target(self, current_loc, target_coord):
         """Calculate distance to target coordinate"""
@@ -236,8 +228,7 @@ class MavlinkDrone(DroneClient):
         """Block until vehicle.armed == False or timeout."""
         start = time.time()
         while self.vehicle and getattr(self.vehicle, "armed", False) and (time.time() - start) < timeout_s:
-            # self.send_heartbeat()  # keeps dead-man switch happy
-            time.sleep(1.0)
+            time.sleep(0.5)  # Reduced sleep for faster response
 
 
     def stop_dead_mans_switch(self):
@@ -254,5 +245,32 @@ class MavlinkDrone(DroneClient):
         self.stop_dead_mans_switch()
         if self.vehicle:
             self.vehicle.close()
+
+
+    def is_connected(self) -> bool:
+        """Check if drone is connected and ready"""
+        if not self.vehicle:
+            return False
+
+        try:
+            # Check if vehicle object is still valid
+            # Check basic attributes to ensure connection is alive
+            if hasattr(self.vehicle, 'location'):
+                # Try to get location as a test
+                _ = self.vehicle.location.global_frame
+                return True
+            return False
+        except:
+            return False
+
+    def get_connection_status(self) -> dict:
+        """Get detailed connection status"""
+        return {
+            "connected": self.is_connected(),
+            "vehicle_ready": self.vehicle is not None,
+            "home_location_set": self.home_location is not None,
+            "mode": self.vehicle.mode.name if self.vehicle else None,
+            "armed": self.vehicle.armed if self.vehicle else False
+        }
 
 
