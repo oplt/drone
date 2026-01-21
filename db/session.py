@@ -26,10 +26,20 @@ def create_engine_with_pool():
         "future": True,
     }
 
+    # Ensure a default schema is selected for Postgres (common failure after dropping `public`)
+    # asyncpg supports setting server_settings (applied per connection).
+    if "postgresql" in settings.database_url.lower():
+        pool_config["connect_args"] = {
+            "server_settings": {
+                "search_path": "public",
+            }
+        }
+
     # For SQLite, use NullPool
     if "sqlite" in settings.database_url.lower():
         pool_config["poolclass"] = NullPool
         logging.info("Using NullPool for SQLite (no connection pooling)")
+        pool_config.pop("connect_args", None)
 
     engine = create_async_engine(
         settings.database_url,
@@ -73,7 +83,7 @@ async def check_pool_health() -> dict:
                 # Fallback if method calls fail
                 logging.debug(f"Could not get pool stats: {pool_err}")
                 pool_size = checked_in = checked_out = overflow = None
-            
+
             stats = {
                 "status": "healthy",
                 "checked": health[0] if health else 0,
@@ -122,6 +132,15 @@ async def init_db() -> None:
     try:
         # Create tables
         async with engine.begin() as conn:
+            # Make sure schema exists and is selected (Postgres)
+            if "postgresql" in settings.database_url.lower():
+                await conn.execute(text("CREATE SCHEMA IF NOT EXISTS public"))
+                await conn.execute(text("SET search_path TO public"))
+                # Be explicit: qualify tables with `public.` so CREATE TABLE never depends on search_path.
+                # This also fixes cases where the DB role has an empty/invalid search_path.
+                for table in Base.metadata.tables.values():
+                    if table.schema is None:
+                        table.schema = "public"
             await conn.run_sync(Base.metadata.create_all)
 
         # Warm up connection pool by acquiring and releasing connections

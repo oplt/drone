@@ -2,7 +2,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Iterable, Mapping
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert
+from sqlalchemy import select, insert as sa_insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from .session import Session
 from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
 from drone.models import Telemetry as TelemetryDTO
@@ -87,7 +88,7 @@ class TelemetryRepository:
 
                 if payload:
                     await session.execute(
-                        insert(TelemetryRecord).values(payload)
+                        sa_insert(TelemetryRecord).values(payload)
                     )
                     total_inserted += len(payload)
 
@@ -102,7 +103,7 @@ class TelemetryRepository:
             try:
                 d = dict(row)
                 d.setdefault("flight_id", flight_id)
-                stmt = insert(TelemetryRecord).values(d)
+                stmt = sa_insert(TelemetryRecord).values(d)
                 await session.execute(stmt)
                 inserted += 1
             except Exception as e:
@@ -170,13 +171,18 @@ class TelemetryRepository:
             try:
                 async with self._session_factory() as session:
                     # Use ON CONFLICT DO NOTHING for duplicates
-                    stmt = insert(MavlinkEvent).values(payload)
+                    bind_url = None
+                    try:
+                        bind_url = str(session.bind.url)  # type: ignore[union-attr]
+                    except Exception:
+                        bind_url = None
 
-                    # PostgreSQL optimization
-                    if "postgresql" in str(session.bind.url):
-                        stmt = stmt.on_conflict_do_nothing(
+                    if bind_url and "postgresql" in bind_url:
+                        stmt = pg_insert(MavlinkEvent).values(payload).on_conflict_do_nothing(
                             index_elements=["flight_id", "msg_type", "time_boot_ms"]
                         )
+                    else:
+                        stmt = sa_insert(MavlinkEvent).values(payload)
 
                     result = await session.execute(stmt)
                     await session.commit()
@@ -190,7 +196,7 @@ class TelemetryRepository:
                     async with self._session_factory() as session:
                         for item in payload:
                             try:
-                                stmt = insert(MavlinkEvent).values(item)
+                                stmt = sa_insert(MavlinkEvent).values(item)
                                 await session.execute(stmt)
                                 inserted_in_batch += 1
                             except Exception as item_err:

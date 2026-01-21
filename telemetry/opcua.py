@@ -9,8 +9,11 @@ class DroneOpcUaServer:
         self.idx = None
         self.objects = None
         self.vars = {}
+        self._started = False
 
     async def start(self):
+        if self._started:
+            return
         await self.server.init()
         # self.server.set_endpoint(self.endpoint)
 
@@ -39,6 +42,7 @@ class DroneOpcUaServer:
         for v in self.vars.values():
             await v.set_writable()  # allow updates
         await self.server.start()
+        self._started = True
 
 
     # async def update_telemetry(self, t):
@@ -115,6 +119,7 @@ class DroneOpcUaServer:
         try:
             if self.server and hasattr(self.server, 'stop'):
                 await self.server.stop()
+            self._started = False
         except Exception as e:
             import logging
             logging.debug(f"Error stopping OPC UA server: {e}")

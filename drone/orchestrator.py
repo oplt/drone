@@ -158,37 +158,40 @@ class Orchestrator:
                 await asyncio.sleep(1.0)
 
 
-    # async def _telemetry_ingest_worker(self):
-    #     """Drain MQTT-parsed rows and bulk-insert. Small batches, frequent commits."""
-    #     BATCH_SIZE = 200
-    #     INTERVAL_S = 0.25
-    #     buffer = []
-    #     while self._running:
-    #         try:
-    #             item = await asyncio.wait_for(self._ingest_queue.get(), timeout=INTERVAL_S)
-    #             buffer.append(item)
-    #             # try to coalesce up to BATCH_SIZE quickly
-    #             for _ in range(BATCH_SIZE-1):
-    #                 try:
-    #                     buffer.append(self._ingest_queue.get_nowait())
-    #                 except asyncio.QueueEmpty:
-    #                     break
-    #             if buffer:
-    #                 # strip flight_id from rows; repo will set it if you prefer
-    #                 await self.repo.add_telemetry_many(self._flight_id, buffer)
-    #                 for _ in buffer:
-    #                     self._ingest_queue.task_done()
-    #                 buffer.clear()
-    #         except asyncio.TimeoutError:
-    #             if buffer:
-    #                 await self.repo.add_telemetry_many(self._flight_id, buffer)
-    #                 for _ in buffer:
-    #                     self._ingest_queue.task_done()
-    #                 buffer.clear()
-    #         except Exception as e:
-    #             # log and continue
-    #             buffer.clear()
-    #
+    async def _telemetry_ingest_worker(self):
+        """Persist compact telemetry frames derived from incoming MQTT mavlink messages."""
+        BATCH_SIZE = 500
+        FLUSH_INTERVAL = 0.5
+        buffer = []
+        last_flush = time.time()
+
+        while self._running:
+            try:
+                try:
+                    item = await asyncio.wait_for(self._ingest_queue.get(), timeout=FLUSH_INTERVAL)
+                    buffer.append(item)
+                    for _ in range(BATCH_SIZE - 1):
+                        try:
+                            buffer.append(self._ingest_queue.get_nowait())
+                        except asyncio.QueueEmpty:
+                            break
+                except asyncio.TimeoutError:
+                    pass
+
+                if buffer and (len(buffer) >= BATCH_SIZE or (time.time() - last_flush) > FLUSH_INTERVAL):
+                    if self._flight_id:
+                        inserted = await self.repo.add_telemetry_many_optimized(self._flight_id, buffer)
+                        logging.debug(f"Inserted {inserted} telemetry rows")
+
+                    for _ in range(len(buffer)):
+                        self._ingest_queue.task_done()
+                    buffer.clear()
+                    last_flush = time.time()
+
+            except Exception as e:
+                logging.error(f"Error in telemetry ingest worker: {e}")
+                buffer.clear()
+
 
 
     # In orchestrator.py, modify the ingest workers:
@@ -271,6 +274,7 @@ class Orchestrator:
 
             # Attach queue so mqtt client can enqueue complete frames
             self.mqtt.attach_raw_event_queue(self._raw_event_queue)
+            self.mqtt.attach_ingest_queue(self._ingest_queue)
 
             # Subscribe with retry logic
             max_retries = 3
@@ -767,16 +771,21 @@ class Orchestrator:
         await self.repo.add_event(self._flight_id, "flight_created",
                               {"alt": alt, "start": start_addr, "end": end_addr})
 
-        # await self.opcua.start()
+        # Start OPC UA server so publisher updates have variables to write to
+        try:
+            await self.opcua.start()
+        except Exception as e:
+            logging.error(f"Failed to start OPC UA server: {e}")
+
         await asyncio.to_thread(self.drone.connect)
 
         # Start all tasks including the critical heartbeat task
         tasks = [
             asyncio.create_task(self.heartbeat_task(), name="heartbeat_task"),  # CRITICAL SAFETY TASK
-            # asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
-            # asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
-            # asyncio.create_task(self._raw_event_ingest_worker()),
-            # asyncio.create_task(self._telemetry_ingest_worker()),
+            asyncio.create_task(self.telemetry_publish_task(), name="telemetry_publish_task"),  # MAVLink -> MQTT forwarder (SITL/MAVProxy)
+            asyncio.create_task(self.mqtt_subscriber_task(), name="mqtt_subscriber_task"),  # subscribes to mqtt broker and saves to db
+            asyncio.create_task(self._raw_event_ingest_worker(), name="raw_event_ingest_worker"),
+            asyncio.create_task(self._telemetry_ingest_worker(), name="telemetry_ingest_worker"),
             # asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
             # asyncio.create_task(self.vision_task()),  # Process video for object detection - started by raspberry_camera_task
             # asyncio.create_task(self._range_guard_task()),
