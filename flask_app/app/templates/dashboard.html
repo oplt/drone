@@ -1,0 +1,583 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="dashboard-container">
+    <!-- Left Sidebar Navigation -->
+    <nav class="dashboard-sidebar">
+        <div class="sidebar-header">
+            <h4><i class="fas fa-drone"></i> Drone Control</h4>
+        </div>
+        <ul class="sidebar-nav">
+            <li class="nav-item nav-group">
+                <a class="nav-link nav-group-toggle" href="#" id="tasksToggle">
+                    <i class="fas fa-tasks"></i> Tasks
+                    <i class="fas fa-chevron-down nav-chevron"></i>
+                </a>
+                <ul class="nav-submenu" id="tasksSubmenu">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-tab="overview">
+                            <i class="fas fa-plane"></i> Flight Task
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="mission">
+                            <i class="fas fa-route"></i> Mission Planning
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('users.settings') }}">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <button id="darkModeToggle" class="btn btn-sm btn-outline-light">
+                <i class="fas fa-moon"></i> Dark Mode
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="dashboard-content">
+        <!-- Real-Time Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">Vehicle:</span>
+                <span id="vehicleStatus" class="status-value status-disarmed">
+                    <i class="fas fa-circle"></i> Disarmed
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Mode:</span>
+                <span id="flightMode" class="status-value">N/A</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">GPS:</span>
+                <span id="gpsStatus" class="status-value">
+                    <i class="fas fa-satellite"></i> <span id="gpsSatCount">0</span> sats
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Battery:</span>
+                <span id="batteryStatus" class="status-value">
+                    <i class="fas fa-battery-three-quarters"></i> <span id="batteryPercent">0</span>%
+                    <div class="battery-progress-bar">
+                        <div id="batteryProgress" class="battery-progress-fill"></div>
+                    </div>
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Signal:</span>
+                <span id="signalStatus" class="status-value">
+                    <i class="fas fa-wifi"></i> <span id="signalStrength">--</span>
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">RC:</span>
+                <span id="rcStatus" class="status-value">
+                    <i class="fas fa-gamepad"></i> <span id="rcSignal">--</span>
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Flight Time:</span>
+                <span id="flightTimeStatus" class="status-value">
+                    <i class="fas fa-clock"></i> <span id="flightTimeCounter">00:00:00</span>
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Distance:</span>
+                <span id="distanceStatus" class="status-value">
+                    <i class="fas fa-ruler"></i> <span id="distanceFromHome">0.0</span> m
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">System:</span>
+                <span id="systemHealth" class="status-value status-healthy">
+                    <i class="fas fa-check-circle"></i> Healthy
+                </span>
+            </div>
+        </div>
+
+        <!-- Alert Panel -->
+        <div id="alertPanel" class="alert-panel" style="display: none;">
+            <div class="alert-header">
+                <h5><i class="fas fa-exclamation-triangle"></i> Alerts</h5>
+                <button class="btn btn-sm btn-link" onclick="clearAlerts()">Clear All</button>
+            </div>
+            <div id="alertList" class="alert-list"></div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Overview Tab -->
+            <div id="overview-tab" class="tab-pane active" style="display: block;">
+                <div class="content-header">
+                    <h2>Dashboard Overview</h2>
+                    <div class="header-actions">
+                        <button id="fullscreenMapBtn" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-expand"></i> Fullscreen Map
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Flight Task Control -->
+                <div class="flight-task-control">
+                    <h4>Flight Task</h4>
+                    <div class="task-controls">
+
+                        <form id="startFlightTaskForm" method="POST" action="{{ url_for('dashboard.start_flight_task_form') }}" style="display:inline;">
+                            <input type="hidden" name="start_lat" id="form_start_lat">
+                            <input type="hidden" name="start_lon" id="form_start_lon">
+                            <input type="hidden" name="start_alt" id="form_start_alt" value="35.0">
+                            <input type="hidden" name="dest_lat" id="form_dest_lat">
+                            <input type="hidden" name="dest_lon" id="form_dest_lon">
+                            <input type="hidden" name="dest_alt" id="form_dest_alt" value="35.0">
+
+                            <button id="startFlightTaskBtn" class="btn btn-success btn-lg" type="submit" disabled>
+                                <i class="fas fa-play"></i> Start Flight Task
+                            </button>
+                        </form>
+
+                        <form id="stopFlightTaskForm" method="POST" action="{{ url_for('dashboard.stop_flight_task_form') }}" style="display:inline;">
+                            <button id="stopFlightTaskBtn" class="btn btn-danger btn-lg" type="submit" disabled>
+                                <i class="fas fa-stop"></i> Stop Flight Task
+                            </button>
+                        </form>
+
+                        <div class="task-status" id="taskStatus">
+                            <span class="status-indicator status-disconnected">Not Running</span>
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="task-info" id="taskInfo" style="display: none;">
+                        <div class="info-item">
+                            <strong>Start:</strong> <span id="taskStartInfo">Not set</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>End:</strong> <span id="taskEndInfo">Not set</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Altitude:</strong> <span id="taskAltInfo">35 m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Panel -->
+                <div class="quick-actions-panel">
+                    <h4>Quick Actions</h4>
+                    <div class="action-buttons">
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="ARM">
+                            <button id="armBtn" class="btn btn-success action-btn" type="submit" disabled>
+                                <i class="fas fa-power-off"></i> Arm
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="DISARM">
+                            <button id="disarmBtn" class="btn btn-danger action-btn" disabled>
+                                <i class="fas fa-power-off"></i> Disarm
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="TAKEOFF">
+                            <button id="takeoffBtn" class="btn btn-primary action-btn" disabled>
+                                <i class="fas fa-arrow-up"></i> Takeoff
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="LAND">
+                            <button id="landBtn" class="btn btn-warning action-btn" disabled>
+                                <i class="fas fa-arrow-down"></i> Land
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="RTL">
+                            <button id="rtlBtn" class="btn btn-info action-btn" disabled>
+                                <i class="fas fa-home"></i> RTL
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="HOLD">
+                            <button id="holdBtn" class="btn btn-secondary action-btn" disabled>
+                                <i class="fas fa-pause"></i> Hold
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('dashboard.command_form') }}" style="display:inline;">
+                            <input type="hidden" name="command" value="EMERGENCY_STOP">
+                            <button id="emergencyStopBtn" class="btn btn-danger emergency-btn" disabled>
+                                <i class="fas fa-stop-circle"></i> EMERGENCY STOP
+                            </button>
+                        </form>>
+                    </div>
+                </div>
+
+                <!-- Enhanced Telemetry Panel -->
+                <div class="telemetry-panel">
+                    <h4>Real-Time Telemetry</h4>
+                    <div class="telemetry-grid">
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Airspeed</div>
+                            <div class="telemetry-value" id="airspeedValue">0.0</div>
+                            <div class="telemetry-unit">m/s</div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Groundspeed</div>
+                            <div class="telemetry-value" id="groundspeedValue">0.0</div>
+                            <div class="telemetry-unit">m/s</div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Altitude</div>
+                            <div class="telemetry-value" id="altitudeValue">0.0</div>
+                            <div class="telemetry-unit">m</div>
+                            <div class="telemetry-trend" id="altitudeTrend">
+                                <i class="fas fa-arrow-up"></i> +0.0 m/s
+                            </div>
+                        </div>
+                        <div class="telemetry-card compass-card">
+                            <div class="telemetry-label">Heading</div>
+                            <div class="compass-container">
+                                <canvas id="compassCanvas" width="100" height="100"></canvas>
+                                <div class="compass-value" id="headingValue">0°</div>
+                            </div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Distance to Waypoint</div>
+                            <div class="telemetry-value" id="waypointDistance">0.0</div>
+                            <div class="telemetry-unit">m</div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Distance from Home</div>
+                            <div class="telemetry-value" id="homeDistance">0.0</div>
+                            <div class="telemetry-unit">m</div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Flight Time</div>
+                            <div class="telemetry-value" id="flightTime">00:00:00</div>
+                        </div>
+                        <div class="telemetry-card battery-card">
+                            <div class="telemetry-label">Battery</div>
+                            <div class="battery-visual">
+                                <div class="battery-icon-container">
+                                    <i class="fas fa-battery-full" id="batteryIcon"></i>
+                                </div>
+                                <div class="battery-details">
+                                    <div class="telemetry-value" id="batteryPercentValue">0%</div>
+                                    <div class="telemetry-unit" id="batteryVoltageValue">0.0V</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Battery Current</div>
+                            <div class="telemetry-value" id="batteryCurrent">0.0</div>
+                            <div class="telemetry-unit">A</div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">Estimated Flight Time</div>
+                            <div class="telemetry-value" id="estimatedFlightTime">00:00</div>
+                        </div>
+                        <div class="telemetry-card">
+                            <div class="telemetry-label">GPS Satellites</div>
+                            <div class="telemetry-value" id="gpsSatCountValue">0</div>
+                            <div class="telemetry-unit">sats</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flight Route Planning Map -->
+                <div class="map-container">
+                    <div class="map-header">
+                        <h3>Flight Map</h3>
+                        {% if google_javascript_api_key %}
+                        <div class="map-controls">
+                            <button id="setStartBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-map-marker-alt"></i> Start
+                            </button>
+                            <button id="setEndBtn" class="btn btn-success btn-sm">
+                                <i class="fas fa-flag"></i> End
+                            </button>
+                            <button id="addWaypointBtn" class="btn btn-info btn-sm">
+                                <i class="fas fa-plus"></i> Waypoint
+                            </button>
+                            <button id="clearRouteBtn" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-redo"></i> Clear
+                            </button>
+                            <button id="saveMissionBtn" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-save"></i> Save Mission
+                            </button>
+                            <button id="loadMissionBtn" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-folder-open"></i> Load Mission
+                            </button>
+                            <button id="missionPreviewBtn" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-eye"></i> Preview
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if google_javascript_api_key %}
+                    <div id="flightMap" class="map-window"></div>
+                    <div class="map-info">
+                        <div id="startInfo" class="route-info">
+                            <strong>Start:</strong> <span id="startLocation">Not set</span>
+                        </div>
+                        <div id="endInfo" class="route-info">
+                            <strong>End:</strong> <span id="endLocation">Not set</span>
+                        </div>
+                        <div id="waypointInfo" class="route-info">
+                            <strong>Waypoints:</strong> <span id="waypointCount">0</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="map-window" style="display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                        <div class="alert alert-warning" style="margin: 0;">
+                            <i class="fas fa-exclamation-triangle"></i> Google Maps API key is not configured.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Video Feed Window -->
+                <div class="video-feed-container">
+                    <div class="video-header">
+                        <h3>Video Feed</h3>
+                        <div class="video-controls">
+                            <button id="startRecordingBtn" class="btn btn-danger btn-sm">
+                                <i class="fas fa-circle"></i> Record
+                            </button>
+                            <button id="stopRecordingBtn" class="btn btn-secondary btn-sm" disabled>
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <button id="takeSnapshotBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-camera"></i> Snapshot
+                            </button>
+                            <button id="pipModeBtn" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-compress"></i> PIP
+                            </button>
+                            <select id="videoQualitySelect" class="form-control form-control-sm">
+                                <option value="high">High</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                            <span id="recordingStatus" class="recording-indicator" style="display: none;">
+                                <i class="fas fa-circle text-danger"></i> Recording
+                            </span>
+                        </div>
+                    </div>
+                    <div class="video-feed-window">
+                        <div id="videoFeed" class="video-feed">
+                            <div class="video-placeholder">
+                                <i class="fas fa-video fa-3x"></i>
+                                <p>Loading video feed...</p>
+                            </div>
+                        </div>
+                        <div id="snapshotGallery" class="snapshot-gallery" style="display: none;">
+                            <h5>Snapshots</h5>
+                            <div id="snapshotList" class="snapshot-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flight Analytics Statistics -->
+                <div class="analytics-container">
+                    <div class="analytics-header">
+                        <h3>Flight Analytics</h3>
+                        <div class="analytics-actions">
+                            <button id="exportLogsBtn" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Export Logs
+                            </button>
+                            <button id="exportKmlBtn" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-file-export"></i> Export KML
+                            </button>
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Flights</div>
+                            <div class="stat-value" id="totalFlights">{{ total_flights }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Flight Time</div>
+                            <div class="stat-value" id="totalFlightTime">0h 0m</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Distance</div>
+                            <div class="stat-value" id="totalDistance">0 km</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Max Altitude</div>
+                            <div class="stat-value" id="maxAltitude">0 m</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Max Speed</div>
+                            <div class="stat-value" id="maxSpeed">0 m/s</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg Flight Duration</div>
+                            <div class="stat-value" id="avgDuration">0 min</div>
+                        </div>
+                    </div>
+                    <div class="recent-flights">
+                        <div class="flights-header">
+                            <h4>Recent Flights</h4>
+                            <button id="replayFlightBtn" class="btn btn-sm btn-outline-info" disabled>
+                                <i class="fas fa-play"></i> Replay Selected
+                            </button>
+                        </div>
+                        <div id="recentFlightsList" class="flights-list">
+                            {% for flight in flights %}
+                            <div class="flight-item" data-flight-id="{{ flight.id }}">
+                                <div class="flight-info">
+                                    <div class="flight-date">{{ flight.started_at.strftime('%Y-%m-%d %H:%M') if flight.started_at else 'N/A' }}</div>
+                                    <div class="flight-status flight-status-{{ flight.status }}">{{ flight.status }}</div>
+                                </div>
+                                <div class="flight-actions">
+                                    <button class="btn btn-sm btn-outline-primary view-flight-btn" data-flight-id="{{ flight.id }}">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telemetry Graphs -->
+                <div class="telemetry-graphs-container">
+                    <div class="graphs-header">
+                        <h3>Telemetry Graphs</h3>
+                        <div class="graph-controls">
+                            <select id="timeRangeSelector" class="form-control form-control-sm">
+                                <option value="1">Last 1 min</option>
+                                <option value="5" selected>Last 5 min</option>
+                                <option value="15">Last 15 min</option>
+                                <option value="60">Last 1 hour</option>
+                                <option value="all">All Data</option>
+                            </select>
+                            <button id="exportGraphsBtn" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="graphs-grid">
+                        <div class="graph-card">
+                            <div class="graph-title">Altitude (m)</div>
+                            <canvas id="altitudeChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Latitude</div>
+                            <canvas id="latitudeChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Longitude</div>
+                            <canvas id="longitudeChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Battery Percentage (%)</div>
+                            <canvas id="batteryChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Battery Voltage (V)</div>
+                            <canvas id="batteryVoltageChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Battery Current (A)</div>
+                            <canvas id="batteryCurrentChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Speed (m/s)</div>
+                            <canvas id="speedChart"></canvas>
+                        </div>
+                        <div class="graph-card">
+                            <div class="graph-title">Heading (°)</div>
+                            <canvas id="headingChart"></canvas>
+                        </div>
+                        <div class="graph-card graph-card-large">
+                            <div class="graph-title">Combined Overview</div>
+                            <canvas id="combinedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mission Planning Tab -->
+            <div id="mission-tab" class="tab-pane">
+                <div class="content-header">
+                    <h2>Mission Planning</h2>
+                </div>
+                <div class="mission-planning-container">
+                    <div class="waypoint-editor">
+                        <h4>Waypoints</h4>
+                        <div id="waypointList" class="waypoint-list"></div>
+                        <div class="waypoint-actions">
+                            <button id="addWaypointEditorBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Add Waypoint
+                            </button>
+                            <button id="clearWaypointsBtn" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-trash"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mission-preview">
+                        <h4>Mission Preview</h4>
+                        <div class="preview-stats">
+                            <div class="preview-stat">
+                                <strong>Total Waypoints:</strong> <span id="previewWaypointCount">0</span>
+                            </div>
+                            <div class="preview-stat">
+                                <strong>Total Distance:</strong> <span id="previewDistance">0.0</span> m
+                            </div>
+                            <div class="preview-stat">
+                                <strong>Estimated Time:</strong> <span id="previewTime">0:00</span>
+                            </div>
+                            <div class="preview-stat">
+                                <strong>Estimated Battery:</strong> <span id="previewBattery">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-pane">
+                <div class="content-header">
+                    <h2>Settings</h2>
+                </div>
+                <div class="settings-container">
+                    <h4>Dashboard Settings</h4>
+                    <div class="setting-item">
+                        <label>Update Frequency (ms)</label>
+                        <input type="number" id="updateFrequency" class="form-control" value="1000" min="100" max="5000">
+                    </div>
+                    <div class="setting-item">
+                        <label>Graph Data Points</label>
+                        <input type="number" id="maxDataPoints" class="form-control" value="50" min="10" max="200">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+<!-- Socket.IO -->
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<!-- Google Maps API -->
+{% if google_javascript_api_key %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_javascript_api_key }}&libraries=places,geometry&callback=initMap" async defer></script>
+{% endif %}
+
+<!-- Main Dashboard Script -->
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
+{% endblock content %}

@@ -1,5 +1,6 @@
-mosquitto_sub -h 127.0.0.1 -p 1883 -t "drone/heartbeat" -v
 mosquitto_sub -h 127.0.0.1 -p 1883 -t "ardupilot/telemetry" -v
+mosquitto_sub -h 127.0.0.1 -p 1883 -t "drone/detections" -v
+mosquitto_sub -h 127.0.0.1 -p 1883 -t "drone/heartbeat" -v
 
 
 opcua-client opc.tcp://127.0.0.1:4840 --subscribe "ns=2;s=Drone/Lat"
@@ -9,4 +10,4 @@ opcua-client opc.tcp://127.0.0.1:4840 --subscribe "ns=2;s=Drone/Lat"
 
  timescale db
 
- telegraph
+ pre-commit run --all-files

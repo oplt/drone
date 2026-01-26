@@ -10,17 +10,20 @@ import logging
 from config import settings
 from .models import Base
 
+
 # ==================== CONNECTION POOL CONFIGURATION ====================
 def create_engine_with_pool():
     """Create SQLAlchemy engine with optimized connection pooling"""
 
     # Pool configuration
+    # Note: pool_pre_ping ensures connections are validated before use
+    # This helps when connections are used across different event loops (Flask + asgiref)
     pool_config = {
         "pool_size": settings.DB_POOL_SIZE,
         "max_overflow": settings.DB_MAX_OVERFLOW,
         "pool_recycle": settings.DB_POOL_RECYCLE,
         "pool_timeout": settings.DB_POOL_TIMEOUT,
-        "pool_pre_ping": settings.DB_POOL_PRE_PING,
+        "pool_pre_ping": True,  # Always ping to validate connections work in current event loop
         "poolclass": AsyncAdaptedQueuePool,
         "echo": settings.DB_ECHO,
         "future": True,
@@ -32,8 +35,12 @@ def create_engine_with_pool():
         pool_config["connect_args"] = {
             "server_settings": {
                 "search_path": "public",
-            }
+            },
+            # Command timeout for asyncpg
+            "command_timeout": 60,
         }
+        # Ensure pool doesn't cache event loops - connections created per request
+        # pool_pre_ping already set above ensures connections are validated
 
     # For SQLite, use NullPool
     if "sqlite" in settings.database_url.lower():
@@ -41,10 +48,12 @@ def create_engine_with_pool():
         logging.info("Using NullPool for SQLite (no connection pooling)")
         pool_config.pop("connect_args", None)
 
-    engine = create_async_engine(
-        settings.database_url,
-        **pool_config
-    )
+    engine = create_async_engine(settings.database_url, **pool_config)
+
+    # Configure engine to work across different event loops
+    # This is important when Flask's asgiref creates new event loops per request
+    # The pool will create connections in the current event loop when needed
+    logging.debug("Async engine created with cross-event-loop support")
 
     return engine
 
@@ -52,14 +61,17 @@ def create_engine_with_pool():
 # Create engine with pooling
 engine = create_engine_with_pool()
 
-# Session factory
+# Session factory - configured to work across different event loops
+# Each session will create connections in the current event loop
 Session = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
     autocommit=False,
     autoflush=True,
+    # Don't bind to a specific event loop - let each session use current loop
 )
+
 
 # ==================== HEALTH CHECK FUNCTIONS ====================
 async def check_pool_health() -> dict:
@@ -75,10 +87,29 @@ async def check_pool_health() -> dict:
             pool = engine.pool
             # Call methods to get actual values, not method objects
             try:
-                pool_size = pool.size() if hasattr(pool, 'size') and callable(getattr(pool, 'size', None)) else None
-                checked_in = pool.checkedin() if hasattr(pool, 'checkedin') and callable(getattr(pool, 'checkedin', None)) else None
-                checked_out = pool.checkedout() if hasattr(pool, 'checkedout') and callable(getattr(pool, 'checkedout', None)) else None
-                overflow = pool.overflow() if hasattr(pool, 'overflow') and callable(getattr(pool, 'overflow', None)) else None
+                pool_size = (
+                    pool.size()
+                    if hasattr(pool, "size") and callable(getattr(pool, "size", None))
+                    else None
+                )
+                checked_in = (
+                    pool.checkedin()
+                    if hasattr(pool, "checkedin")
+                    and callable(getattr(pool, "checkedin", None))
+                    else None
+                )
+                checked_out = (
+                    pool.checkedout()
+                    if hasattr(pool, "checkedout")
+                    and callable(getattr(pool, "checkedout", None))
+                    else None
+                )
+                overflow = (
+                    pool.overflow()
+                    if hasattr(pool, "overflow")
+                    and callable(getattr(pool, "overflow", None))
+                    else None
+                )
             except Exception as pool_err:
                 # Fallback if method calls fail
                 logging.debug(f"Could not get pool stats: {pool_err}")
@@ -148,9 +179,7 @@ async def init_db() -> None:
         warmup_tasks = []
 
         for i in range(min(3, settings.DB_POOL_SIZE)):
-            warmup_tasks.append(
-                asyncio.create_task(warmup_connection(i))
-            )
+            warmup_tasks.append(asyncio.create_task(warmup_connection(i)))
 
         await asyncio.gather(*warmup_tasks)
 

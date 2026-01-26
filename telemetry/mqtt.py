@@ -1,12 +1,16 @@
-import json, ssl, time, socket
+import json
+import ssl
+import time
+import socket
 import paho.mqtt.client as mqtt
-from config import settings, setup_logging
+from config import settings
 from db.repository import TelemetryRepository
 from typing import Dict, Any, Optional
 import asyncio
 from datetime import datetime, timezone
 from collections import deque
 import logging
+
 
 def _parse_ts(ts_raw):
     if ts_raw is None:
@@ -23,25 +27,38 @@ def _parse_ts(ts_raw):
 
 
 class MqttClient:
-    def __init__(self, host: str, port: int = 1883, username: str = "", password: str = "",
-                 use_tls: bool = False, ca_certs: Optional[str] = None, client_id: Optional[str] = None,
-                 connect_timeout: int = 10, max_retries: int = 20, retry_backoff_s: float = 0.5):
-
+    def __init__(
+        self,
+        host: str,
+        port: int = 1883,
+        username: str = "",
+        password: str = "",
+        use_tls: bool = False,
+        ca_certs: Optional[str] = None,
+        client_id: Optional[str] = None,
+        connect_timeout: int = 10,
+        max_retries: int = 20,
+        retry_backoff_s: float = 0.5,
+    ):
         self.client = mqtt.Client(
-                                client_id=client_id or "",
-                                protocol=mqtt.MQTTv311,
-                                transport="tcp",
-                                callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-                            )
+            client_id=client_id or "",
+            protocol=mqtt.MQTTv311,
+            transport="tcp",
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+        )
 
         self.repo = TelemetryRepository()
         self._current_flight_id: Optional[int] = None
-        self._ingest_queue: "asyncio.Queue[dict]" = None
-        self._raw_event_queue: "asyncio.Queue[dict]" = None
-        self._emitted_frame_ids = deque(maxlen=200)        # de-dupe recent frames
+        self._ingest_queue: Optional["asyncio.Queue[dict]"] = None
+        self._raw_event_queue: Optional["asyncio.Queue[dict]"] = None
+        self._emitted_frame_ids: deque[int] = deque(maxlen=200)  # de-dupe recent frames
         self._last_telemetry: Dict[str, Any] = {}
-        self._event_loop: Optional[asyncio.AbstractEventLoop] = None  # For thread-safe async operations
-        self._early_message_buffer: list = []  # Buffer messages received before flight_id is set
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = (
+            None  # For thread-safe async operations
+        )
+        self._early_message_buffer: list = (
+            []
+        )  # Buffer messages received before flight_id is set
         self._max_buffer_size = 1000  # Max messages to buffer
 
         if username:
@@ -49,7 +66,9 @@ class MqttClient:
 
         if use_tls:
             if ca_certs:
-                self.client.tls_set(ca_certs=ca_certs, tls_version=ssl.PROTOCOL_TLS_CLIENT)
+                self.client.tls_set(
+                    ca_certs=ca_certs, tls_version=ssl.PROTOCOL_TLS_CLIENT
+                )
             else:
                 self.client.tls_set(tls_version=ssl.PROTOCOL_TLS_CLIENT)
             self.client.tls_insecure_set(False)
@@ -73,7 +92,9 @@ class MqttClient:
                 delay = min(delay * 2, 8.0)  # exponential backoff capped
                 attempt += 1
         else:
-            raise RuntimeError(f"MQTT connect failed to {host}:{port} after {max_retries} attempts: {last_err}")
+            raise RuntimeError(
+                f"MQTT connect failed to {host}:{port} after {max_retries} attempts: {last_err}"
+            )
 
         self.client.loop_start()
 
@@ -96,7 +117,6 @@ class MqttClient:
             payload = json.dumps(payload)
         self.client.publish(topic, payload, qos=qos, retain=retain)
 
-
     def close(self):
         try:
             self.client.loop_stop()
@@ -107,17 +127,17 @@ class MqttClient:
                 pass
 
     # ---- callbacks ----
-    def _on_connect(self, client, userdata, flags, rc, properties=None):
+    def _on_connect(self, client, _userdata, _flags, rc, _properties=None):
         # In MQTT v3.1.1 rc is an int; 0 = success
         if rc == 0:
             logging.info("[MQTT] Connected.")
         else:
             logging.info(f"[MQTT] Connect failed rc={rc}")
 
-    def _on_disconnect(self, client, userdata, rc, flags, properties=None):
+    def _on_disconnect(self, client, _userdata, rc, _flags, _properties=None):
         logging.info(f"[MQTT] Disconnected rc={rc}")
 
-    def _on_log(self, client, userdata, level, buf):
+    def _on_log(self, _client, _userdata, level, buf):
         if level >= mqtt.MQTT_LOG_ERR:
             logging.info(f"[MQTT] {buf}")
 
@@ -131,43 +151,57 @@ class MqttClient:
             logging.info(f"MQTT client: Setting flight_id to {flight_id}")
             self.client.subscribe(self.topic, qos=1)
             self.client.on_message = self._on_message
-            logging.info(f"MQTT client: Subscribed to topic {self.topic} with flight_id {flight_id}")
+            logging.info(
+                f"MQTT client: Subscribed to topic {self.topic} with flight_id {flight_id}"
+            )
         except Exception as e:
             logging.error(f"MQTT client: Subscribe failed: {e}")
             return False
-        
+
         # Process buffered early messages if any
         if self._early_message_buffer and self._event_loop:
-            logging.info(f"Processing {len(self._early_message_buffer)} buffered early messages")
+            logging.info(
+                f"Processing {len(self._early_message_buffer)} buffered early messages"
+            )
             for payload in self._early_message_buffer:
                 try:
-                    future = asyncio.run_coroutine_threadsafe(
+                    asyncio.run_coroutine_threadsafe(
                         self._async_enqueue_event(self._create_event_item(payload)),
-                        self._event_loop
+                        self._event_loop,
                     )
                 except Exception as e:
                     logging.error(f"Error processing buffered message: {e}")
             self._early_message_buffer.clear()
         return True
 
-
-    def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
+    def _on_subscribe(self, _client, _userdata, mid, granted_qos, _properties=None):
         logging.info(f"[MQTT] Subscribed mid={mid} qos={granted_qos}")
 
-
-    def _on_message(self, client, userdata, msg):
+    def _on_message(self, _client, _userdata, msg):
         """Handle incoming MQTT messages from ardupilot (runs in paho-mqtt thread)"""
         try:
             if msg.topic == settings.telemetry_topic:
                 logging.debug(f"Received MQTT message on topic {msg.topic}")
                 payload = json.loads(msg.payload.decode())
-                logging.debug(f"Message payload type: {payload.get('mavpackettype', 'UNKNOWN')}")
+                logging.debug(
+                    f"Message payload type: {payload.get('mavpackettype', 'UNKNOWN')}"
+                )
                 # Bridge from sync callback to async queue safely
                 self._process_raw_event_threadsafe(payload)
                 self._process_telemetry_threadsafe(payload)
+            elif msg.topic.startswith("drone/commands/"):
+                # Handle command messages
+                logging.info(f"Received command on topic {msg.topic}")
+                payload = json.loads(msg.payload.decode())
+                # Store command for processing by orchestrator
+                if hasattr(self, "_command_callback") and self._command_callback:
+                    self._command_callback(payload)
         except Exception as e:
             logging.error(f"Error processing MQTT message: {e}")
 
+    def set_command_callback(self, callback):
+        """Set callback for command messages"""
+        self._command_callback = callback
 
     def attach_ingest_queue(self, q: "asyncio.Queue[dict]"):
         self._ingest_queue = q
@@ -179,7 +213,6 @@ class MqttClient:
         """Set the event loop for thread-safe async operations from MQTT callbacks"""
         self._event_loop = loop
 
-
     def _process_raw_event_threadsafe(self, payload: Dict[str, Any]):
         """
         Thread-safe bridge from MQTT callback (sync) to async queue.
@@ -189,17 +222,21 @@ class MqttClient:
         if self._current_flight_id is None:
             if len(self._early_message_buffer) < self._max_buffer_size:
                 self._early_message_buffer.append(payload)
-                logging.debug(f"Buffered early message (buffer size: {len(self._early_message_buffer)})")
+                logging.debug(
+                    f"Buffered early message (buffer size: {len(self._early_message_buffer)})"
+                )
             else:
                 logging.warning("Early message buffer full, dropping message")
             return
-        
+
         if not self._raw_event_queue:
             logging.warning("Raw event queue not attached, cannot process events")
             return
-        
+
         if not self._event_loop:
-            logging.warning("Event loop not set, cannot safely enqueue events. Using fallback.")
+            logging.warning(
+                "Event loop not set, cannot safely enqueue events. Using fallback."
+            )
             # Fallback: try direct put_nowait (not ideal but better than nothing)
             try:
                 item = self._create_event_item(payload)
@@ -207,16 +244,15 @@ class MqttClient:
             except Exception as e:
                 logging.error(f"Fallback event processing failed: {e}")
             return
-        
+
         # Schedule async processing in the event loop
         try:
             # Create the item in the sync context
             item = self._create_event_item(payload)
-            
+
             # Schedule async enqueue operation
-            future = asyncio.run_coroutine_threadsafe(
-                self._async_enqueue_event(item),
-                self._event_loop
+            asyncio.run_coroutine_threadsafe(
+                self._async_enqueue_event(item), self._event_loop
             )
             # Don't wait for result to avoid blocking MQTT callback thread
             # Errors will be logged in the async coroutine
@@ -237,17 +273,21 @@ class MqttClient:
 
         try:
             if mav_type == "GLOBAL_POSITION_INT":
-                self._last_telemetry.update({
-                    "lat": payload.get("lat", 0) / 1e7,
-                    "lon": payload.get("lon", 0) / 1e7,
-                    "alt": payload.get("alt", 0) / 1e3,
-                    "frame_id": payload.get("time_boot_ms"),
-                })
+                self._last_telemetry.update(
+                    {
+                        "lat": payload.get("lat", 0) / 1e7,
+                        "lon": payload.get("lon", 0) / 1e7,
+                        "alt": payload.get("alt", 0) / 1e3,
+                        "frame_id": payload.get("time_boot_ms"),
+                    }
+                )
             elif mav_type == "VFR_HUD":
-                self._last_telemetry.update({
-                    "groundspeed": payload.get("groundspeed", 0.0),
-                    "heading": payload.get("heading", 0.0),
-                })
+                self._last_telemetry.update(
+                    {
+                        "groundspeed": payload.get("groundspeed", 0.0),
+                        "heading": payload.get("heading", 0.0),
+                    }
+                )
             elif mav_type == "HEARTBEAT":
                 # Use any explicit mode name if provided; otherwise store custom_mode as string
                 mode = payload.get("mode") or payload.get("name")
@@ -263,7 +303,9 @@ class MqttClient:
                 if cur_cA is not None:
                     self._last_telemetry["battery_current"] = float(cur_cA) / 100.0
                 if "battery_remaining" in payload:
-                    self._last_telemetry["battery_remaining"] = payload.get("battery_remaining")
+                    self._last_telemetry["battery_remaining"] = payload.get(
+                        "battery_remaining"
+                    )
             elif mav_type == "SYS_STATUS":
                 v_mv = payload.get("voltage_battery")
                 if v_mv is not None:
@@ -272,12 +314,16 @@ class MqttClient:
                 if i_cA is not None and i_cA >= 0:
                     self._last_telemetry["battery_current"] = float(i_cA) / 100.0
                 if "battery_remaining" in payload:
-                    self._last_telemetry["battery_remaining"] = payload.get("battery_remaining")
+                    self._last_telemetry["battery_remaining"] = payload.get(
+                        "battery_remaining"
+                    )
             elif mav_type == "SYSTEM_TIME":
                 ts = payload.get("time_unix_usec")
                 if ts:
                     try:
-                        self._last_telemetry["system_time"] = datetime.fromtimestamp(float(ts) / 1_000_000, tz=timezone.utc)
+                        self._last_telemetry["system_time"] = datetime.fromtimestamp(
+                            float(ts) / 1_000_000, tz=timezone.utc
+                        )
                     except Exception:
                         pass
 
@@ -304,7 +350,9 @@ class MqttClient:
             }
 
             if self._event_loop:
-                asyncio.run_coroutine_threadsafe(self._async_enqueue_ingest(row), self._event_loop)
+                asyncio.run_coroutine_threadsafe(
+                    self._async_enqueue_ingest(row), self._event_loop
+                )
             else:
                 # Fallback (may be unsafe if called from non-loop thread, but keeps data flowing)
                 self._ingest_queue.put_nowait(row)
@@ -336,7 +384,9 @@ class MqttClient:
         """Create event item from payload (thread-safe, no async operations)"""
         time_unix_usec = payload.get("time_unix_usec")
         if time_unix_usec:
-            time_unix_usec = datetime.fromtimestamp(time_unix_usec/1_000_000, tz=timezone.utc)
+            time_unix_usec = datetime.fromtimestamp(
+                time_unix_usec / 1_000_000, tz=timezone.utc
+            )
 
         timestamp = _parse_ts(payload.get("timestamp"))
 
@@ -357,95 +407,40 @@ class MqttClient:
         if not self._raw_event_queue:
             logging.warning("Raw event queue not attached")
             return
-        
+
         try:
-            logging.debug(f"Processing raw event: msg_type={item['msg_type']}, flight_id={item['flight_id']}")
-            
+            logging.debug(
+                f"Processing raw event: msg_type={item['msg_type']}, flight_id={item['flight_id']}"
+            )
+
             # Try to put item in queue
             try:
                 self._raw_event_queue.put_nowait(item)
-                logging.debug(f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}")
+                logging.debug(
+                    f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}"
+                )
             except asyncio.QueueFull:
                 logging.warning("Raw event queue is full, dropping oldest event")
                 # Drop oldest to maintain recency
                 try:
                     dropped_item = self._raw_event_queue.get_nowait()
                     self._raw_event_queue.task_done()
-                    logging.debug(f"Dropped message type: {dropped_item.get('msg_type', 'UNKNOWN')}")
+                    logging.debug(
+                        f"Dropped message type: {dropped_item.get('msg_type', 'UNKNOWN')}"
+                    )
                 except asyncio.QueueEmpty:
                     pass
                 except Exception as e:
                     logging.error(f"Error dropping oldest event: {e}")
-                
+
                 # Try again to add new event
                 try:
                     self._raw_event_queue.put_nowait(item)
-                    logging.debug(f"Enqueued event after dropping oldest")
+                    logging.debug("Enqueued event after dropping oldest")
                 except asyncio.QueueFull:
-                    logging.error("Queue still full after dropping oldest event - message lost")
-                    
+                    logging.error(
+                        "Queue still full after dropping oldest event - message lost"
+                    )
+
         except Exception as e:
             logging.error(f"Error in async event enqueue: {e}", exc_info=True)
-
-
-    #
-    # def _process_telemetry_messages(self, payload: Dict[str, Any]):
-    #     mav_type  = payload.get("mavpackettype")
-    #     if not mav_type:
-    #         return
-    #     try:
-    #         if mav_type == "GLOBAL_POSITION_INT":
-    #             self._last_telemetry.update({
-    #                 'lat': payload.get('lat', 0) / 1e7,
-    #                 'lon': payload.get('lon', 0) / 1e7,
-    #                 'alt': payload.get('alt', 0) / 1e3,
-    #                 'frame_id': payload.get('time_boot_ms')  # used for de-dupe
-    #             })
-    #         elif mav_type == "VFR_HUD":
-    #             self._last_telemetry.update({
-    #                 'groundspeed': payload.get('groundspeed', 0.0),
-    #                 'heading': payload.get('heading', 0.0),
-    #             })
-    #         elif mav_type == "PLANE_MODE":
-    #             self._last_telemetry.update({'mode': payload.get('name') or payload.get('mode', 'UNKNOWN')})
-    #         elif mav_type == "BATTERY_STATUS":
-    #             # Prefer % from BATTERY_STATUS if provided
-    #             if 'battery_remaining' in payload:
-    #                 self._last_telemetry.update({'battery_remaining': payload.get('battery_remaining')})
-    #         elif mav_type == "SYS_STATUS":
-    #             # SYS_STATUS also includes voltage_battery (mV), current_battery (cA), battery_remaining (%)
-    #             v_mv = payload.get('voltage_battery')
-    #             if v_mv is not None:
-    #                 self._last_telemetry['battery_voltage'] = v_mv / 1000.0
-    #             i_cA = payload.get('current_battery')
-    #             if i_cA is not None and i_cA >= 0:
-    #                 self._last_telemetry['battery_current'] = i_cA / 100.0
-    #             if 'battery_remaining' in payload:
-    #                 self._last_telemetry['battery_remaining'] = payload['battery_remaining']
-    #         elif mav_type == "SYSTEM_TIME":
-    #             ts = payload.get('time_unix_usec')
-    #             if ts:
-    #                 self._last_telemetry['system_time'] = datetime.fromtimestamp(ts/1_000_000, tz=timezone.utc)
-    #
-    #         # ----- When we have a complete "frame", enqueue it -----
-    #         required = ('lat','lon','alt','heading','groundspeed','mode')
-    #         if all(k in self._last_telemetry for k in required):
-    #             fid = self._last_telemetry.get('frame_id')
-    #             if fid is None or fid not in self._emitted_frame_ids:
-    #                 row = dict(self._last_telemetry)
-    #                 row['flight_id'] = self._current_flight_id
-    #                 if self._ingest_queue is not None:
-    #                     try:
-    #                         # Non-blocking: if full, drop oldest to keep up
-    #                         self._ingest_queue.put_nowait(row)
-    #                     except asyncio.QueueFull:
-    #                         try:
-    #                             _ = self._ingest_queue.get_nowait()
-    #                             self._ingest_queue.task_done()
-    #                         except Exception:
-    #                             pass
-    #                         self._ingest_queue.put_nowait(row)
-    #                 if fid is not None:
-    #                     self._emitted_frame_ids.append(fid)
-    #     except Exception as e:
-    #         logging.error(f"Error processing {mav_type}: {e}")

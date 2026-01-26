@@ -1,0 +1,839 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="content-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="border-bottom mb-3">Settings</h2>
+        <a href="{{ url_for('users.dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        
+        <!-- Google Maps Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#googleMapsCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-map"></i> Google Maps Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="googleMapsCollapse" class="collapse show">
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.google_maps_key.label(class="form-control-label") }}
+                        {% if form.google_maps_key.errors %}
+                        {{ form.google_maps_key(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.google_maps_key.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.google_maps_key(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.google_javascript_api_key.label(class="form-control-label") }}
+                        {% if form.google_javascript_api_key.errors %}
+                        {{ form.google_javascript_api_key(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.google_javascript_api_key.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.google_javascript_api_key(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LLM Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#llmCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain"></i> LLM Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="llmCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.llm_provider.label(class="form-control-label") }}
+                        {% if form.llm_provider.errors %}
+                        {{ form.llm_provider(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.llm_provider.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.llm_provider(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.llm_api_base.label(class="form-control-label") }}
+                        {% if form.llm_api_base.errors %}
+                        {{ form.llm_api_base(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.llm_api_base.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.llm_api_base(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.llm_api_key.label(class="form-control-label") }}
+                        {% if form.llm_api_key.errors %}
+                        {{ form.llm_api_key(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.llm_api_key.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.llm_api_key(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.llm_model.label(class="form-control-label") }}
+                        {% if form.llm_model.errors %}
+                        {{ form.llm_model(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.llm_model.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.llm_model(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MQTT Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#mqttCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-network-wired"></i> MQTT Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="mqttCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group col-md-8">
+                            {{ form.mqtt_broker.label(class="form-control-label") }}
+                            {% if form.mqtt_broker.errors %}
+                            {{ form.mqtt_broker(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mqtt_broker.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mqtt_broker(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-4">
+                            {{ form.mqtt_port.label(class="form-control-label") }}
+                            {% if form.mqtt_port.errors %}
+                            {{ form.mqtt_port(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mqtt_port.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mqtt_port(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.mqtt_user.label(class="form-control-label") }}
+                            {% if form.mqtt_user.errors %}
+                            {{ form.mqtt_user(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mqtt_user.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mqtt_user(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.mqtt_pass.label(class="form-control-label") }}
+                            {% if form.mqtt_pass.errors %}
+                            {{ form.mqtt_pass(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mqtt_pass.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mqtt_pass(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.opcua_endpoint.label(class="form-control-label") }}
+                        {% if form.opcua_endpoint.errors %}
+                        {{ form.opcua_endpoint(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.opcua_endpoint.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.opcua_endpoint(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drone Connection Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#droneCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-plane"></i> Drone Connection Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="droneCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.drone_conn.label(class="form-control-label") }}
+                        {% if form.drone_conn.errors %}
+                        {{ form.drone_conn(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.drone_conn.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.drone_conn(class="form-control form-control-lg") }}
+                        {% endif %}
+                        <small class="form-text text-muted">e.g., tcp:127.0.0.1:5760 or /dev/ttyUSB0</small>
+                    </div>
+                    <div class="form-group">
+                        {{ form.drone_conn_mavproxy.label(class="form-control-label") }}
+                        {% if form.drone_conn_mavproxy.errors %}
+                        {{ form.drone_conn_mavproxy(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.drone_conn_mavproxy.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.drone_conn_mavproxy(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.drone_baud_rate.label(class="form-control-label") }}
+                        {% if form.drone_baud_rate.errors %}
+                        {{ form.drone_baud_rate(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.drone_baud_rate.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.drone_baud_rate(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.heartbeat_timeout.label(class="form-control-label") }}
+                        {% if form.heartbeat_timeout.errors %}
+                        {{ form.heartbeat_timeout(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.heartbeat_timeout.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.heartbeat_timeout(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#telemetryCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line"></i> Telemetry Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="telemetryCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.telem_log_interval_sec.label(class="form-control-label") }}
+                        {% if form.telem_log_interval_sec.errors %}
+                        {{ form.telem_log_interval_sec(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.telem_log_interval_sec.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.telem_log_interval_sec(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.telemetry_topic.label(class="form-control-label") }}
+                        {% if form.telemetry_topic.errors %}
+                        {{ form.telemetry_topic(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.telemetry_topic.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.telemetry_topic(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#videoCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-video"></i> Video Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="videoCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.drone_video_enabled(class="form-check-input") }}
+                            {{ form.drone_video_enabled.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            {{ form.drone_video_width.label(class="form-control-label") }}
+                            {% if form.drone_video_width.errors %}
+                            {{ form.drone_video_width(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.drone_video_width.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.drone_video_width(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-4">
+                            {{ form.drone_video_height.label(class="form-control-label") }}
+                            {% if form.drone_video_height.errors %}
+                            {{ form.drone_video_height(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.drone_video_height.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.drone_video_height(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-4">
+                            {{ form.drone_video_fps.label(class="form-control-label") }}
+                            {% if form.drone_video_fps.errors %}
+                            {{ form.drone_video_fps(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.drone_video_fps.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.drone_video_fps(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.drone_video_timeout.label(class="form-control-label") }}
+                        {% if form.drone_video_timeout.errors %}
+                        {{ form.drone_video_timeout(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.drone_video_timeout.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.drone_video_timeout(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.drone_video_fallback.label(class="form-control-label") }}
+                        {% if form.drone_video_fallback.errors %}
+                        {{ form.drone_video_fallback(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.drone_video_fallback.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.drone_video_fallback(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.drone_video_save_stream(class="form-check-input") }}
+                            {{ form.drone_video_save_stream.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.drone_video_save_path.label(class="form-control-label") }}
+                        {% if form.drone_video_save_path.errors %}
+                        {{ form.drone_video_save_path(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.drone_video_save_path.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.drone_video_save_path(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battery & Flight Parameters -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#batteryCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-battery-half"></i> Battery & Flight Parameters
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="batteryCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.battery_capacity_wh.label(class="form-control-label") }}
+                            {% if form.battery_capacity_wh.errors %}
+                            {{ form.battery_capacity_wh(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.battery_capacity_wh.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.battery_capacity_wh(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.cruise_power_w.label(class="form-control-label") }}
+                            {% if form.cruise_power_w.errors %}
+                            {{ form.cruise_power_w(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.cruise_power_w.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.cruise_power_w(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.cruise_speed_mps.label(class="form-control-label") }}
+                            {% if form.cruise_speed_mps.errors %}
+                            {{ form.cruise_speed_mps(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.cruise_speed_mps.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.cruise_speed_mps(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.energy_reserve_frac.label(class="form-control-label") }}
+                            {% if form.energy_reserve_frac.errors %}
+                            {{ form.energy_reserve_frac(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.energy_reserve_frac.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.energy_reserve_frac(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.enforce_preflight_range(class="form-check-input") }}
+                            {{ form.enforce_preflight_range.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raspberry Pi Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#raspberryCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-microchip"></i> Raspberry Pi Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="raspberryCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.raspberry_camera_enabled(class="form-check-input") }}
+                            {{ form.raspberry_camera_enabled.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.rasperry_ip.label(class="form-control-label") }}
+                            {% if form.rasperry_ip.errors %}
+                            {{ form.rasperry_ip(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.rasperry_ip.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.rasperry_ip(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.rasperry_streaming_port.label(class="form-control-label") }}
+                            {% if form.rasperry_streaming_port.errors %}
+                            {{ form.rasperry_streaming_port(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.rasperry_streaming_port.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.rasperry_streaming_port(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.rasperry_user.label(class="form-control-label") }}
+                            {% if form.rasperry_user.errors %}
+                            {{ form.rasperry_user(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.rasperry_user.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.rasperry_user(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.rasperry_host.label(class="form-control-label") }}
+                            {% if form.rasperry_host.errors %}
+                            {{ form.rasperry_host(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.rasperry_host.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.rasperry_host(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.rasperry_password.label(class="form-control-label") }}
+                        {% if form.rasperry_password.errors %}
+                        {{ form.rasperry_password(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.rasperry_password.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.rasperry_password(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.rasperry_streaming_script_path.label(class="form-control-label") }}
+                        {% if form.rasperry_streaming_script_path.errors %}
+                        {{ form.rasperry_streaming_script_path(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.rasperry_streaming_script_path.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.rasperry_streaming_script_path(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.ssh_key_path.label(class="form-control-label") }}
+                        {% if form.ssh_key_path.errors %}
+                        {{ form.ssh_key_path(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.ssh_key_path.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.ssh_key_path(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#databaseCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-database"></i> Database Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="databaseCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.database_url.label(class="form-control-label") }}
+                        {% if form.database_url.errors %}
+                        {{ form.database_url(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.database_url.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.database_url(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.db_pool_size.label(class="form-control-label") }}
+                            {% if form.db_pool_size.errors %}
+                            {{ form.db_pool_size(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.db_pool_size.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.db_pool_size(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.db_max_overflow.label(class="form-control-label") }}
+                            {% if form.db_max_overflow.errors %}
+                            {{ form.db_max_overflow(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.db_max_overflow.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.db_max_overflow(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.db_pool_recycle.label(class="form-control-label") }}
+                            {% if form.db_pool_recycle.errors %}
+                            {{ form.db_pool_recycle(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.db_pool_recycle.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.db_pool_recycle(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.db_pool_timeout.label(class="form-control-label") }}
+                            {% if form.db_pool_timeout.errors %}
+                            {{ form.db_pool_timeout(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.db_pool_timeout.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.db_pool_timeout(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.db_optimize_interval.label(class="form-control-label") }}
+                        {% if form.db_optimize_interval.errors %}
+                        {{ form.db_optimize_interval(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.db_optimize_interval.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.db_optimize_interval(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.db_pool_pre_ping(class="form-check-input") }}
+                            {{ form.db_pool_pre_ping.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.db_echo(class="form-check-input") }}
+                            {{ form.db_echo.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flask & Mail Settings -->
+        <div class="card mb-3">
+            <div class="card-header" data-toggle="collapse" data-target="#flaskCollapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="fas fa-envelope"></i> Flask & Mail Settings
+                    <i class="fas fa-chevron-down float-right"></i>
+                </h5>
+            </div>
+            <div id="flaskCollapse" class="collapse">
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.flask_secret_key.label(class="form-control-label") }}
+                        {% if form.flask_secret_key.errors %}
+                        {{ form.flask_secret_key(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.flask_secret_key.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.flask_secret_key(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-8">
+                            {{ form.mail_server.label(class="form-control-label") }}
+                            {% if form.mail_server.errors %}
+                            {{ form.mail_server(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mail_server.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mail_server(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-4">
+                            {{ form.mail_port.label(class="form-control-label") }}
+                            {% if form.mail_port.errors %}
+                            {{ form.mail_port(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mail_port.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mail_port(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.mail_use_tls(class="form-check-input") }}
+                            {{ form.mail_use_tls.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.mail_username.label(class="form-control-label") }}
+                            {% if form.mail_username.errors %}
+                            {{ form.mail_username(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mail_username.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mail_username(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            {{ form.mail_password.label(class="form-control-label") }}
+                            {% if form.mail_password.errors %}
+                            {{ form.mail_password(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.mail_password.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            {{ form.mail_password(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mt-4">
+            {{ form.submit(class="btn btn-success btn-lg btn-block") }}
+        </div>
+    </form>
+</div>
+
+<script>
+// Toggle chevron icon on collapse
+document.addEventListener('DOMContentLoaded', function() {
+    const collapseElements = document.querySelectorAll('[data-toggle="collapse"]');
+    collapseElements.forEach(function(element) {
+        element.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const target = document.querySelector(targetId);
+            const chevron = this.querySelector('.fa-chevron-down, .fa-chevron-up');
+            
+            if (target) {
+                target.addEventListener('shown.bs.collapse', function() {
+                    if (chevron) {
+                        chevron.classList.remove('fa-chevron-down');
+                        chevron.classList.add('fa-chevron-up');
+                    }
+                });
+                
+                target.addEventListener('hidden.bs.collapse', function() {
+                    if (chevron) {
+                        chevron.classList.remove('fa-chevron-up');
+                        chevron.classList.add('fa-chevron-down');
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock content %}

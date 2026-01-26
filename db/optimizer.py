@@ -2,22 +2,25 @@
 import asyncio
 import logging
 import time
-from typing import Dict, Any
+from typing import Any
 from sqlalchemy import text
 from .session import engine, check_pool_health
+
 
 class DatabaseOptimizer:
     def __init__(self, check_interval: int = 60, optimize_threshold: int = 1000):
         self.check_interval = check_interval
         self.optimize_threshold = optimize_threshold
         self.running = False
-        self.connection_stats = []
+        self.connection_stats: list[dict[str, Any]] = []
         self.max_stats_history = 100
 
     async def start_monitoring(self):
         """Start comprehensive database monitoring"""
         self.running = True
-        logging.info("📊 Starting database performance monitor with connection pooling...")
+        logging.info(
+            "📊 Starting database performance monitor with connection pooling..."
+        )
 
         while self.running:
             try:
@@ -40,7 +43,9 @@ class DatabaseOptimizer:
             # 3. Analyze tables for query optimization
             await self._analyze_tables()
 
-            logging.debug(f"✅ Database performance check complete. Pool: {pool_health}")
+            logging.debug(
+                f"✅ Database performance check complete. Pool: {pool_health}"
+            )
 
         except Exception as e:
             logging.error(f"❌ Performance check failed: {e}")
@@ -62,13 +67,15 @@ class DatabaseOptimizer:
 
                 stats = result.fetchone()
                 if stats:
-                    self.connection_stats.append({
-                        "timestamp": time.time(),
-                        "total": stats[0],
-                        "active": stats[1],
-                        "idle": stats[2],
-                        "waiting": stats[3]
-                    })
+                    self.connection_stats.append(
+                        {
+                            "timestamp": time.time(),
+                            "total": stats[0],
+                            "active": stats[1],
+                            "idle": stats[2],
+                            "waiting": stats[3],
+                        }
+                    )
 
                     # Keep only recent history
                     if len(self.connection_stats) > self.max_stats_history:
@@ -101,10 +108,12 @@ class DatabaseOptimizer:
                 bloat_info = await result.fetchall()
                 for row in bloat_info:
                     if row.dead_percentage > 20:  # 20% dead tuples threshold
-                        logging.info(f"Table {row.schemaname}.{row.tablename} has {row.dead_percentage}% dead tuples "
-                                     f"({row.dead_tuples} dead, {row.live_tuples} live)")
+                        logging.info(
+                            f"Table {row.schemaname}.{row.tablename} has {row.dead_percentage}% dead tuples "
+                            f"({row.dead_tuples} dead, {row.live_tuples} live)"
+                        )
 
-        except Exception as e:
+        except Exception:
             # This might fail on SQLite, ignore
             pass
 
@@ -124,10 +133,14 @@ class DatabaseOptimizer:
 
                 tables_to_analyze = await result.fetchall()
                 for table in tables_to_analyze:
-                    logging.info(f"Running ANALYZE on {table.schemaname}.{table.tablename}")
-                    await conn.execute(text(f'ANALYZE {table.schemaname}."{table.tablename}"'))
+                    logging.info(
+                        f"Running ANALYZE on {table.schemaname}.{table.tablename}"
+                    )
+                    await conn.execute(
+                        text(f'ANALYZE {table.schemaname}."{table.tablename}"')
+                    )
                     await conn.commit()
 
-        except Exception as e:
+        except Exception:
             # This might fail on SQLite, ignore
             pass

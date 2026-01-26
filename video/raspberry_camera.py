@@ -1,20 +1,22 @@
 # video/raspberry_camera.py
 import asyncio
-import paramiko
+import paramiko  # type: ignore
 import logging
 from config import settings
-import time
-import requests
+import requests  # type: ignore
+
 
 class RaspberryCameraController:
     """Controls Raspberry Pi camera remotely via SSH with process management"""
 
-    def __init__(self,
-                 host=settings.rasperry_ip,
-                 user=settings.rasperry_user,
-                 key_path=settings.ssh_key_path,
-                 script_path=settings.rasperry_streaming_script_path,
-                 streaming_port=settings.rasperry_streaming_port):  # ← Streaming port for Flask
+    def __init__(
+        self,
+        host=settings.rasperry_ip,
+        user=settings.rasperry_user,
+        key_path=settings.ssh_key_path,
+        script_path=settings.rasperry_streaming_script_path,
+        streaming_port=settings.rasperry_streaming_port,
+    ):  # ← Streaming port for Flask
         self.host = host
         self.user = user
         self.key_path = key_path
@@ -28,7 +30,11 @@ class RaspberryCameraController:
     async def _execute_ssh_command(self, command):
         """Execute SSH command and return result"""
         try:
-            if not self.ssh_client or not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active():
+            if (
+                not self.ssh_client
+                or not self.ssh_client.get_transport()
+                or not self.ssh_client.get_transport().is_active()
+            ):
                 # Reconnect if needed
                 self.ssh_client = paramiko.SSHClient()
                 self.ssh_client.load_system_host_keys()
@@ -54,7 +60,7 @@ class RaspberryCameraController:
     async def _find_running_camera_process(self):
         """Find if camera stream is already running on Raspberry Pi"""
         # Check for python processes running camera_stream.py
-        command = f"ps aux | grep '[p]i_camera_server.py' | awk '{{print $2}}'"  # Updated to match actual script name
+        command = "ps aux | grep '[p]i_camera_server.py' | awk '{print $2}'"  # Updated to match actual script name
         success, output, error = await self._execute_ssh_command(command)
 
         if success and output:
@@ -74,7 +80,7 @@ class RaspberryCameraController:
     async def _kill_existing_stream(self):
         """Kill any existing camera stream process"""
         # Find and kill by process name
-        command = f"pkill -f 'pi_camera_server.py'"
+        command = "pkill -f 'pi_camera_server.py'"
         await self._execute_ssh_command(command)
 
         # Kill by port if still running
@@ -88,7 +94,7 @@ class RaspberryCameraController:
         """Verify the Flask server is actually running with multiple checks"""
         try:
             # Check 1: Process exists
-            command = f"ps aux | grep '[p]i_camera_server.py'"
+            command = "ps aux | grep '[p]i_camera_server.py'"
             success, output, error = await self._execute_ssh_command(command)
 
             if not success or not output:
@@ -102,7 +108,9 @@ class RaspberryCameraController:
             success, output, error = await self._execute_ssh_command(command)
 
             if success and output:
-                logging.info(f"✅ Port {self.streaming_port} is listening: {output[:100]}...")
+                logging.info(
+                    f"✅ Port {self.streaming_port} is listening: {output[:100]}..."
+                )
             else:
                 logging.error(f"❌ Port {self.streaming_port} is not listening")
                 return False
@@ -137,7 +145,9 @@ class RaspberryCameraController:
             await self._kill_existing_stream()
 
             # 3. Start new camera stream
-            script_dir = self.script_path.rsplit('/', 1)[0] if '/' in self.script_path else "."
+            script_dir = (
+                self.script_path.rsplit("/", 1)[0] if "/" in self.script_path else "."
+            )
             command = f"""
             cd {script_dir}
             nohup python3 pi_camera_server.py > /tmp/drone_camera.log 2>&1 &
@@ -164,7 +174,9 @@ class RaspberryCameraController:
                         # Now try health check with retries
                         max_retries = 3
                         for attempt in range(max_retries):
-                            logging.info(f"🔍 Health check attempt {attempt + 1}/{max_retries}")
+                            logging.info(
+                                f"🔍 Health check attempt {attempt + 1}/{max_retries}"
+                            )
                             if await self.check_stream_health():
                                 logging.info("✅ Camera stream fully healthy")
                                 return True
@@ -186,7 +198,6 @@ class RaspberryCameraController:
         except Exception as e:
             logging.error(f"❌ SSH connection failed: {e}")
             return False
-
 
     async def stop_streaming(self):
         """Stop camera streaming on Raspberry Pi"""
@@ -211,7 +222,7 @@ class RaspberryCameraController:
             endpoints = [
                 f"{self.stream_url}/video_feed",
                 f"{self.stream_url}/",  # Root endpoint
-                f"http://{self.host}:{self.streaming_port}"  # Basic connection
+                f"http://{self.host}:{self.streaming_port}",  # Basic connection
             ]
 
             for endpoint in endpoints:
@@ -219,14 +230,16 @@ class RaspberryCameraController:
                     logging.debug(f"Trying health check on: {endpoint}")
                     response = await asyncio.wait_for(
                         asyncio.to_thread(requests.get, endpoint, timeout=2),
-                        timeout=timeout
+                        timeout=timeout,
                     )
 
                     if response.status_code == 200:
                         logging.info(f"✅ Camera stream healthy at {endpoint}")
                         return True
 
-                    logging.debug(f"Endpoint {endpoint} returned status {response.status_code}")
+                    logging.debug(
+                        f"Endpoint {endpoint} returned status {response.status_code}"
+                    )
 
                 except requests.RequestException as e:
                     logging.debug(f"Request to {endpoint} failed: {e}")

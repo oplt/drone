@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional
+from typing import Iterable
 from .models import Coordinate, Telemetry
+
 
 class DroneClient(ABC):
     @abstractmethod
     def connect(self) -> None:
         pass
+
     @abstractmethod
     def is_connected(self) -> bool:
         pass
+
     @abstractmethod
     def arm_and_takeoff(self, alt: float) -> None: ...
     @abstractmethod
