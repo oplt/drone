@@ -1,5 +1,4 @@
 import asyncio
-import json
 import time
 import os
 from .models import Coordinate
@@ -8,7 +7,6 @@ from map.google_maps import GoogleMapsClient
 from video.stream import DroneVideoStream
 from analysis.llm import LLMAnalyzer
 from telemetry.mqtt import MqttClient
-from telemetry.opcua import DroneOpcUaServer
 from db.repository import TelemetryRepository
 from config import settings
 from analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
@@ -27,7 +25,6 @@ class Orchestrator:
         maps: GoogleMapsClient,
         analyzer: LLMAnalyzer,
         mqtt: MqttClient,
-        opcua: DroneOpcUaServer,
         video: DroneVideoStream,
         telemetry_repo: TelemetryRepository,
         publisher: TelemetryPublisher,
@@ -36,7 +33,6 @@ class Orchestrator:
         self.maps = maps
         self.analyzer = analyzer
         self.mqtt = mqtt
-        self.opcua = opcua
         self.video = video
         self.repo = telemetry_repo
         self.range_model = SimpleWhPerKmModel()
@@ -150,13 +146,6 @@ class Orchestrator:
                             "recording_file": status["recording_file"],
                         },
                         qos=1,
-                    )
-
-                    # Update OPC UA with video status
-                    await self.opcua.update_video_status(
-                        healthy=status["healthy"],
-                        fps=status["fps"],
-                        recording=status["recording"],
                     )
 
                     # Log warnings if video is unhealthy
@@ -686,9 +675,7 @@ class Orchestrator:
                     if t.battery_current is not None:
                         level = max(0.0, min(1.0, float(t.battery_current) / 100.0))
                     res = self._estimate_range(remain_km, level)
-                    await self.opcua.update_range(
-                        res.est_range_km or 0.0, res.feasible, res.reason
-                    )
+
                     if not res.feasible:
                         self.mqtt.publish(
                             "drone/warnings",
@@ -799,14 +786,6 @@ class Orchestrator:
                         or not self.analyzer._circuit_open
                     ):
                         self.mqtt.publish("drone/detections", payload, qos=0)
-                    # Skip publishing empty arrays when circuit breaker is open to reduce spam
-
-                    # Update OPC UA with detection data (if available)
-                    if self.opcua and payload:  # Only update if we have detections
-                        try:
-                            await self.opcua.update_detections(json.dumps(payload))
-                        except Exception as e:
-                            logging.debug(f"OPC UA update failed: {e}")
 
                     # Log detection events if significant objects found
                     if dets:
@@ -1034,12 +1013,6 @@ class Orchestrator:
                 },
             )
 
-        # Start OPC UA server so publisher updates have variables to write to
-        try:
-            await self.opcua.start()
-        except Exception as e:
-            logging.error(f"Failed to start OPC UA server: {e}")
-
         # Connect to drone with error handling
         try:
             connection_str = (
@@ -1122,12 +1095,6 @@ class Orchestrator:
             if isinstance(self.drone, MavlinkDrone):
                 self.drone.stop_dead_mans_switch()
 
-            # Stop OPC UA server if available
-            if self.opcua:
-                try:
-                    await self.opcua.stop()
-                except Exception as e:
-                    logging.error(f"Error stopping OPC UA server: {e}")
             # Close video stream properly
             if self.video:
                 self.video.close()

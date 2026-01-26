@@ -718,8 +718,6 @@ def settings():
                 config_data["mqtt_user"] = form.mqtt_user.data
             if form.mqtt_pass.data:
                 config_data["mqtt_pass"] = form.mqtt_pass.data
-            if form.opcua_endpoint.data:
-                config_data["opcua_endpoint"] = form.opcua_endpoint.data
 
             # Drone Connection
             if form.drone_conn.data:
@@ -849,7 +847,6 @@ def settings():
             form.mqtt_port.data = config.mqtt_port
             form.mqtt_user.data = config.mqtt_user
             form.mqtt_pass.data = config.mqtt_pass
-            form.opcua_endpoint.data = config.opcua_endpoint
             form.drone_conn.data = config.drone_conn
             form.drone_conn_mavproxy.data = config.drone_conn_mavproxy
             form.drone_baud_rate.data = config.drone_baud_rate

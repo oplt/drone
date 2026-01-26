@@ -275,7 +275,6 @@ class Settings(Base):
     mqtt_port: Mapped[Optional[int]] = mapped_column(Integer)
     mqtt_user: Mapped[Optional[str]] = mapped_column(String(128))
     mqtt_pass: Mapped[Optional[str]] = mapped_column(String(256))
-    opcua_endpoint: Mapped[Optional[str]] = mapped_column(String(512))
 
     # Drone Connection
     drone_conn: Mapped[Optional[str]] = mapped_column(String(256))

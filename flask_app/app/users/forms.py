@@ -161,7 +161,6 @@ class SettingsForm(FlaskForm):
     )
     mqtt_user = StringField("MQTT Username", validators=[Optional()])
     mqtt_pass = PasswordField("MQTT Password", validators=[Optional()])
-    opcua_endpoint = StringField("OPCUA Endpoint", validators=[Optional()])
 
     # Drone Connection
     drone_conn = StringField("Drone Connection String", validators=[Optional()])

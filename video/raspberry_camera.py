@@ -1,9 +1,9 @@
 # video/raspberry_camera.py
 import asyncio
-import paramiko  # type: ignore
+import paramiko
 import logging
 from config import settings
-import requests  # type: ignore
+import requests
 
 
 class RaspberryCameraController:

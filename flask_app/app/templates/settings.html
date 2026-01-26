@@ -183,19 +183,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="form-group">
-                        {{ form.opcua_endpoint.label(class="form-control-label") }}
-                        {% if form.opcua_endpoint.errors %}
-                        {{ form.opcua_endpoint(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.opcua_endpoint.errors %}
-                            <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        {{ form.opcua_endpoint(class="form-control form-control-lg") }}
-                        {% endif %}
-                    </div>
+
                 </div>
             </div>
         </div>

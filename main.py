@@ -5,7 +5,6 @@ from drone.mavlink_drone import MavlinkDrone
 from map.google_maps import GoogleMapsClient
 from analysis.llm import LLMAnalyzer
 from telemetry.mqtt import MqttClient
-from telemetry.opcua import DroneOpcUaServer
 from drone.orchestrator import Orchestrator
 from config import settings, setup_logging
 from video.stream import DroneVideoStream
@@ -23,7 +22,6 @@ import logging
 - when anomaly is detected by llm save images and add show detections on dashboard
 - show video stream on dashboard
 - cursor on map is not moving during flight
-- seperate opcua telemetry process and deactivate
 - get config variables from db
 - check calculations
 
@@ -97,7 +95,6 @@ async def main(
         use_tls=False,
         client_id="drone-1",
     )
-    opcua = DroneOpcUaServer()
 
     # Initialize drone video stream with enhanced configuration
     # NOTE: If using Raspberry Pi camera, video stream will be initialized later
@@ -160,15 +157,12 @@ async def main(
         logging.info("ℹ️  Drone video streaming disabled in configuration")
 
     repo = TelemetryRepository()
-    # Reuse the OPC UA server started by the orchestrator; schedule updates on this event loop
     publisher = TelemetryPublisher(
         mqtt_client=mqtt,
-        opcua_server=opcua,
-        opcua_event_loop=asyncio.get_running_loop(),
     )
 
     # Initialize orchestrator with video stream
-    orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher)
+    orch = Orchestrator(drone, maps, analyzer, mqtt, video, repo, publisher)
 
     try:
         if start_lat and start_lon and dest_lat and dest_lon:
@@ -244,9 +238,3 @@ if __name__ == "__main__":
         )
     except KeyboardInterrupt:
         logging.info("\n✅ Program terminated safely")
-
-    """
-        # kill opc ua server ports
-        sudo lsof -i :4840
-        sudo kill -9 <PID>
-    """

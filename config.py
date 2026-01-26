@@ -103,9 +103,9 @@ class Settings:
     mqtt_port: int = int(os.getenv("MQTT_PORT", "1883"))
     mqtt_user: str = os.getenv("MQTT_USER", "")
     mqtt_pass: str = os.getenv("MQTT_PASS", "")
-    opcua_endpoint: str = os.getenv(
-        "OPCUA_ENDPOINT", "opc.tcp://0.0.0.0:4840/freeopcua/server/"
-    )
+    # opcua_endpoint: str = os.getenv(
+    #     "OPCUA_ENDPOINT", "opc.tcp://0.0.0.0:4840/freeopcua/server/"
+    # )
     # Drone connection string - can be set via environment variable
     # Options:
     # - SITL (simulator): "tcp:127.0.0.1:5760" (default for development)
