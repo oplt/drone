@@ -12,6 +12,8 @@ from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateRe
 from backend.utils.geo import haversine_km, _coord_from_home, _total_mission_distance_km
 from backend.utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
 import logging
+from backend.utils.geo import haversine_km, _coord_from_home
+from backend.analysis.range_estimator import RangeEstimateResult
 
 
 
@@ -57,19 +59,19 @@ class Orchestrator:
                 '''
                 # Also publish heartbeat status to MQTT for monitoring
                 self.mqtt.publish("drone/heartbeat", {
-                                                                "timestamp": time.time(),
-                                                                "status": "alive"
-                                                            }, qos=1)  # QoS 1 for important heartbeat messages
+                    "timestamp": time.time(),
+                    "status": "alive"
+                }, qos=1)  # QoS 1 for important heartbeat messages
                 await asyncio.sleep(2.0)  # Send every 2 seconds
             except Exception as e:
                 logging.info(f"⚠️  Error in heartbeat task: {e}")
                 # print(f"⚠️  Error in heartbeat task: {e}")
                 # Publish error but keep trying
                 self.mqtt.publish("drone/errors", {
-                                        "type": "heartbeat_error",
-                                        "message": str(e),
-                                        "timestamp": time.time()
-                                    })
+                    "type": "heartbeat_error",
+                    "message": str(e),
+                    "timestamp": time.time()
+                })
                 await asyncio.sleep(1.0)
 
 
@@ -101,7 +103,7 @@ class Orchestrator:
                 if self.video:
                     # Get video connection status
                     status = self.video.get_connection_status()
-                    
+
                     # Publish video health status to MQTT
                     self.mqtt.publish("drone/video/status", {
                         "timestamp": time.time(),
@@ -112,14 +114,14 @@ class Orchestrator:
                         "recording": status["recording"],
                         "recording_file": status["recording_file"]
                     }, qos=1)
-                    
+
                     # Update OPC UA with video status
                     await self.opcua.update_video_status(
                         healthy=status["healthy"],
                         fps=status["fps"],
                         recording=status["recording"]
                     )
-                    
+
                     # Log warnings if video is unhealthy
                     if not status["healthy"]:
                         logging.warning("Video stream is unhealthy")
@@ -128,9 +130,9 @@ class Orchestrator:
                             "message": "Video stream connection issues detected",
                             "timestamp": time.time()
                         }, qos=1)
-                
+
                 await asyncio.sleep(self._video_health_interval)
-                
+
             except Exception as e:
                 logging.error(f"Error in video health monitor: {e}")
                 await asyncio.sleep(1.0)
@@ -175,7 +177,7 @@ class Orchestrator:
         INTERVAL_S = 0.25
         buffer = []
         logging.info("Starting _raw_event_ingest_worker")
-        
+
         # while self._running:
         while True:
             try:
@@ -193,14 +195,14 @@ class Orchestrator:
                         logging.warning("Flight ID is None, cannot save MavlinkEvent data")
                         buffer.clear()
                         continue
-                    
+
                     logging.info(f"Processing batch of {len(buffer)} events for flight {self._flight_id}")
                     try:
                         inserted_count = await self.repo.add_mavlink_events_many(self._flight_id, buffer)
                         logging.info(f"Inserted {inserted_count} MavlinkEvent records")
                     except Exception as e:
                         logging.error(f"Failed to insert MavlinkEvent data: {e}")
-                    
+
                     for _ in buffer:
                         self._raw_event_queue.task_done()
                     buffer.clear()
@@ -210,14 +212,14 @@ class Orchestrator:
                         logging.warning("Flight ID is None, cannot save MavlinkEvent data")
                         buffer.clear()
                         continue
-                    
+
                     logging.info(f"Timeout flush: processing {len(buffer)} events for flight {self._flight_id}")
                     try:
                         inserted_count = await self.repo.add_mavlink_events_many(self._flight_id, buffer)
                         logging.info(f"Inserted {inserted_count} MavlinkEvent records (timeout flush)")
                     except Exception as e:
                         logging.error(f"Failed to insert MavlinkEvent data (timeout flush): {e}")
-                    
+
                     for _ in buffer:
                         self._raw_event_queue.task_done()
                     buffer.clear()
@@ -233,9 +235,9 @@ class Orchestrator:
             while self._flight_id is None:
                 logging.info("Waiting for flight_id to be set before starting MQTT subscriber...")
                 await asyncio.sleep(0.5)
-            
+
             logging.info(f"Starting MQTT subscriber with flight_id: {self._flight_id}")
-            
+
             # Attach queue so mqtt client can enqueue complete frames
             # self.mqtt.attach_ingest_queue(self._ingest_queue)
             self.mqtt.attach_raw_event_queue(self._raw_event_queue)
@@ -280,7 +282,7 @@ class Orchestrator:
         # start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = cruise_alt
         # dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = cruise_alt
         self._running = True
-        
+
         # Create flight record if not already created
         if self._flight_id is None:
             self._flight_id = await self.repo.create_flight(
@@ -288,7 +290,7 @@ class Orchestrator:
                 dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
             )
             logging.info(f"Created flight with ID: {self._flight_id}")
-        
+
         await self.repo.add_event(self._flight_id, "mission_created", {"alt": cruise_alt})
 
         self._dest_coord = dest
@@ -318,68 +320,40 @@ class Orchestrator:
         await self.repo.finish_flight(self._flight_id, status="completed", note="RTL to home completed")
 
 
-    def _estimate_range(self, distance_km: float, battery_level_frac: float | None) -> RangeEstimateResult:
+
+    def _total_route_distance_km(self, home: Coordinate, route: list[Coordinate]) -> float:
+        """Total mission distance (km): home→route[0]→...→route[-1]→home."""
+        if not route:
+            return 0.0
+        total = haversine_km(home.lat, home.lon, route[0].lat, route[0].lon)
+        for a, b in zip(route, route[1:]):
+            total += haversine_km(a.lat, a.lon, b.lat, b.lon)
+        total += haversine_km(route[-1].lat, route[-1].lon, home.lat, home.lon)
+        return total
+
+
+    async def _preflight_range_check_route(self, home: Coordinate, route: list[Coordinate]) -> RangeEstimateResult:
+        """Range check over the full clicked route."""
+        distance_km = self._total_route_distance_km(home, route)
+
+        t = self.drone.get_telemetry()
+        level_frac = None if t.battery_remaining is None else max(0.0, min(1.0, float(t.battery_remaining) / 100.0))
+
+        v_kmh = max(0.1, self.settings.cruise_speed_mps * 3.6) if hasattr(self, "settings") else max(0.1,  self.drone.cruise_speed_mps * 3.6)  # optional
+        # Prefer your existing settings usage:
+        from backend.config import settings
+        v_kmh = max(0.1, settings.cruise_speed_mps * 3.6)
+        wh_per_km = settings.cruise_power_w / v_kmh
+        required_Wh = distance_km * wh_per_km
+        available_Wh = None if level_frac is None else max(0.0, settings.battery_capacity_wh * max(0.0, level_frac - settings.energy_reserve_frac))
+
         est_range_km = self.range_model.estimate_range_km(
             capacity_Wh=settings.battery_capacity_wh,
-            battery_level_frac=battery_level_frac,
+            battery_level_frac=level_frac,
             cruise_power_W=settings.cruise_power_w,
             cruise_speed_mps=settings.cruise_speed_mps,
             reserve_frac=settings.energy_reserve_frac
         )
-        note = ""
-        feasible = False
-        req_Wh = None
-        avail_Wh = None
-        if est_range_km is None:
-            note = "No battery level reading; cannot estimate range (fail safe)."
-        else:
-            feasible = est_range_km >= distance_km
-            v_kmh = settings.cruise_speed_mps * 3.6
-            wh_per_km = settings.cruise_power_w / v_kmh
-            req_Wh = wh_per_km * distance_km
-            avail_Wh = settings.battery_capacity_wh * max(0.0, (battery_level_frac or 0.0) - settings.energy_reserve_frac)
-            if not feasible:
-                note = f"Insufficient range. Need ~{distance_km:.2f} km, est range {est_range_km:.2f} km."
-            else:
-                note = f"OK: dist {distance_km:.2f} km ≤ est range {est_range_km:.2f} km."
-        return RangeEstimateResult(distance_km, est_range_km, avail_Wh, req_Wh, feasible, note)
-
-
-
-    async def _preflight_range_check(self, home: Coordinate, start: Coordinate, dest: Coordinate) -> RangeEstimateResult:
-        """
-        Uses total route distance: home→start→dest→home.
-        Assumes self.drone.connect() was already called so home_location is set.
-        """
-        # # 1) Build coordinates
-        # home = _coord_from_home(self.drone.home_location)
-
-        # 2) Total mission distance (km)
-        distance_km = _total_mission_distance_km(home, start, dest)
-
-        # 3) Inputs for range model
-        t = self.drone.get_telemetry()
-        level_frac = None if t.battery_remaining is None else max(0.0, min(1.0, float(t.battery_remaining) / 100.0))
-
-        capacity_Wh     = settings.battery_capacity_wh
-        cruise_power_W  = settings.cruise_power_w
-        cruise_speed_mps= settings.cruise_speed_mps
-        reserve_frac    = settings.energy_reserve_frac
-
-        model = SimpleWhPerKmModel()
-        est_range_km = model.estimate_range_km(
-            capacity_Wh=capacity_Wh,
-            battery_level_frac=level_frac,
-            cruise_power_W=cruise_power_W,
-            cruise_speed_mps=cruise_speed_mps,
-            reserve_frac=reserve_frac,
-        )
-
-        # 4) Required energy vs. available (for a clear reason message)
-        v_kmh = max(0.1, cruise_speed_mps * 3.6)
-        wh_per_km = cruise_power_W / v_kmh
-        required_Wh = distance_km * wh_per_km
-        available_Wh = None if level_frac is None else max(0.0, capacity_Wh * max(0.0, level_frac - reserve_frac))
 
         feasible = (est_range_km is not None) and (est_range_km >= distance_km)
         reason = "OK"
@@ -397,144 +371,111 @@ class Orchestrator:
             reason=reason,
         )
 
-    async def _range_guard_task(self):
-        """Re-evaluate remaining distance periodically and warn if we're going to run short."""
-        while self._running:
-            try:
-                if self._dest_coord:
-                    t = self.drone.get_telemetry()
-                    remain_km = haversine_km(t.lat, t.lon, self._dest_coord.lat, self._dest_coord.lon)
-                    level = None
-                    if t.battery_current is not None:
-                        level = max(0.0, min(1.0, float(t.battery_current) / 100.0))
-                    res = self._estimate_range(remain_km, level)
-                    await self.opcua.update_range(res.est_range_km or 0.0, res.feasible, res.reason)
-                    if not res.feasible:
-                        self.mqtt.publish("drone/warnings", {
-                            "type": "inflight_range_warning",
-                            "remaining_distance_km": remain_km,
-                            "est_range_km": res.est_range_km,
-                            "note": res.reason
-                        })
-                        # Optional: trigger RTL or hold
-                        # self.drone.set_mode("RTL")
-            except Exception:
-                logging.info(f"CANNOT APPLY _range_guard_task")
 
-            await asyncio.sleep(2.0)  # evaluation interval
+    async def fly_route_waypoints(self, waypoints: list[Coordinate], cruise_alt: float = 30.0, interpolate_steps: int = 6):
+        """
+        Fly a route defined by clicked map waypoints.
+        - start = waypoints[0]
+        - dest  = waypoints[-1]
+        - if >2 points are provided, all intermediate points are included.
+        """
+        if len(waypoints) < 2:
+            raise ValueError("Need at least 2 waypoints (start & destination).")
+
+        # normalize altitude
+        route: list[Coordinate] = []
+        for w in waypoints:
+            if getattr(w, "alt", None) is None:
+                w.alt = cruise_alt
+            route.append(w)
+
+        start, dest = route[0], route[-1]
+        self._running = True
+
+        # flight record
+        if self._flight_id is None:
+            self._flight_id = await self.repo.create_flight(
+                start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
+                dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
+            )
+
+        await self.repo.add_event(self._flight_id, "mission_created", {"alt": cruise_alt, "waypoints": len(route)})
+
+        self._dest_coord = dest
+        await asyncio.sleep(1.0)
+
+        await self.repo.add_event(self._flight_id, "connected", {})
+
+        # range check over full route
+        from backend.config import settings
+        home = _coord_from_home(self.drone.home_location)
+        preflight = await self._preflight_range_check_route(home, route)
+        if not preflight.feasible and settings.ENFORCE_PREFLIGHT_RANGE:
+            raise RuntimeError(preflight.reason)
+
+        await asyncio.to_thread(self.drone.arm_and_takeoff, cruise_alt)
+        await self.repo.add_event(self._flight_id, "takeoff", {})
+
+        # stitch segments; keep all clicked anchors
+        path: list[Coordinate] = []
+        for a, b in zip(route, route[1:]):
+            seg = list(self.maps.waypoints_between(a, b, steps=interpolate_steps)) if interpolate_steps else [a, b]
+            if path and seg:
+                seg = seg[1:]  # avoid duplicates
+            path.extend(seg)
+
+        await asyncio.to_thread(self.drone.follow_waypoints, path)
+        await self.repo.add_event(self._flight_id, "reached_destination", {})
+
+        # RTL home
+        self.drone.set_mode("RTL")
+        await self.repo.add_event(self._flight_id, "rtl_initiated", {})
+        await asyncio.to_thread(self.drone.wait_until_disarmed, 900)
+        await self.repo.add_event(self._flight_id, "landed_home", {})
+        await self.repo.finish_flight(self._flight_id, status="completed", note="RTL to home completed")
 
 
-    async def vision_task(self):
-        """Process video frames for object detection and analysis"""
-        logging.info("Starting vision task for drone video analysis...")
+    async def run_waypoints(self, waypoints: list[Coordinate], alt: float = 30.0):
+        """Run a full mission using clicked map waypoints (no geocoding)."""
+        import logging
+        logging.info(f"🚁 Starting mission from {len(waypoints)} clicked waypoint(s)")
+        if len(waypoints) < 2:
+            raise ValueError("Need at least 2 waypoints (start & destination).")
 
-        try:
-            for _, frame in self.video.frames():
-                if not self._running:
-                    break
-                    
-                # Process frame for object detection
-                dets = await self.analyzer.detect_objects(frame)
-                payload = [d.__dict__ for d in dets]
-                
-                # Publish detections to MQTT
-                self.mqtt.publish("drone/detections", payload, qos=0)
-                
-                # Update OPC UA with detection data
-                await self.opcua.update_detections(json.dumps(payload))
-                
-                # Log detection events if significant objects found
-                if dets:
-                    logging.info(f"Detected {len(dets)} objects in video frame")
-                    await self.repo.add_event(self._flight_id, "object_detected", {
-                        "count": len(dets),
-                        "objects": [d.__dict__ for d in dets]
-                    })
-                
-                await asyncio.sleep(0)  # yield control
-                
-        except RuntimeError as e:
-            error_msg = f"Video processing error: {str(e)}"
-            logging.error(error_msg)
-            self.mqtt.publish("drone/events", {
-                "level": "error",
-                "msg": error_msg,
-                "timestamp": time.time()
-            }, qos=1)
-        except Exception as e:
-            error_msg = f"Unexpected error in vision task: {str(e)}"
-            logging.error(error_msg)
-            self.mqtt.publish("drone/events", {
-                "level": "error", 
-                "msg": error_msg,
-                "timestamp": time.time()
-            }, qos=1)
-
-    async def run(self, start_addr: str, end_addr: str, alt=30.0):
-        logging.info(f"🚁 Starting safe flight from {start_addr} to {end_addr}")
-        start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = alt
-        dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = alt
-
-        self._flight_id = await self.repo.create_flight(
-            start_lat=start.lat, start_lon=start.lon, start_alt=start.alt,
-            dest_lat=dest.lat,   dest_lon=dest.lon,   dest_alt=dest.alt,
-        )
+        # Reset mission state
+        self._flight_id = None
+        self._running = True
 
         await self.opcua.start()
-        # self.drone.connect()
         await asyncio.to_thread(self.drone.connect)
 
-        # Start all tasks including the critical heartbeat task
         tasks = [
-            asyncio.create_task(self.heartbeat_task()),  # CRITICAL SAFETY TASK
-            asyncio.create_task(self.telemetry_publish_task()), # Publish telemetry to MQTT and should be deleted before drone connection
-            asyncio.create_task(self.mqtt_subscriber_task()), # subscribes to mqtt broker and saves to db
+            asyncio.create_task(self.heartbeat_task()),
+            asyncio.create_task(self.telemetry_publish_task()),
+            asyncio.create_task(self.mqtt_subscriber_task()),
             asyncio.create_task(self._raw_event_ingest_worker()),
-            # asyncio.create_task(self._telemetry_ingest_worker()),
-            asyncio.create_task(self.video_health_monitor_task()),  # Monitor video stream health
-            asyncio.create_task(self.vision_task()),  # Process video for object detection
-            # asyncio.create_task(self._range_guard_task()),
-            # asyncio.create_task(self.emergency_monitor_task()),
+            asyncio.create_task(self.video_health_monitor_task()),
+            asyncio.create_task(self.vision_task()),
         ]
 
         try:
-            logging.info("Background tasks started, beginning flight...")
-            await self.fly_route(start, dest, cruise_alt=alt)
-
-        except Exception as e:
-            logging.info(f"❌ Flight error: {e}")
-            raise
+            await self.fly_route_waypoints(waypoints, cruise_alt=alt)
         finally:
-            logging.info("🛑 Shutting down flight operations...")
-            # print("🛑 Shutting down flight operations...")
             self._running = False
-            await asyncio.sleep(0.5)  # Give tasks time to see the flag
-
-
-
-            # Cancel all tasks
-            for task in tasks:
-                if task and not task.done():
-                    task.cancel()
+            await asyncio.sleep(0.5)
+            for t in tasks:
+                if t and not t.done():
+                    t.cancel()
                     try:
-                        await task
+                        await t
                     except asyncio.CancelledError:
                         pass
 
-            # Safely stop the dead man's switch
             self.drone.stop_dead_mans_switch()
-
             await self.opcua.stop()
-            # Close video stream properly
             if self.video:
                 self.video.close()
             self.drone.close()
-
             if self.publisher.is_running:
-                # print("Stopping telemetry publisher...")
-                logging.info("Stopping telemetry publisher...")
                 self.publisher.stop()
-
-            # print("✅ Safe shutdown completed")
-            logging.info("✅ Safe shutdown completed")
 

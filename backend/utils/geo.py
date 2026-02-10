@@ -1,5 +1,5 @@
 import math
-from backend.drone import Coordinate
+from backend.drone.models import Coordinate
 
 
 EARTH_RADIUS_KM = 6371.0088

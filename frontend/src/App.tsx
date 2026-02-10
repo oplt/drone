@@ -25,6 +25,7 @@ export default function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="tasks" element={<TasksPage />} />
+
         </Route>
       </Routes>
     </BrowserRouter>

@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import init_db, close_db
 from backend.api.routes_auth import router as auth_router
+from backend.api.routes_missions import router as missions_router
+
 
 app = FastAPI()
 
@@ -28,3 +30,5 @@ async def shutdown():
     await close_db()
 
 app.include_router(auth_router)
+app.include_router(missions_router)
+

@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 import aiohttp
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from backend.drone import Detection
+from backend.drone.models import Detection
 
 
 

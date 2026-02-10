@@ -1,10 +1,17 @@
+import collections
+import collections.abc
+
+for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
+    if not hasattr(collections, _name):
+        setattr(collections, _name, getattr(collections.abc, _name))
 import time
 import threading
-from dronekit import connect, VehicleMode, LocationGlobalRelative
 from .models import Coordinate, Telemetry
 from .drone_base import DroneClient
 from backend.config import setup_logging
 import logging
+from dronekit import connect, VehicleMode, LocationGlobalRelative
+
 
 setup_logging()
 

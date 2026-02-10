@@ -19,6 +19,7 @@
     "@mui/x-data-grid": "^8.27.0",
     "@mui/x-date-pickers": "^8.27.0",
     "@mui/x-tree-view": "^8.27.0",
+    "@react-google-maps/api": "^2.20.8",
     "@react-spring/web": "^10.0.3",
     "dayjs": "^1.11.19",
     "react": "^19.2.0",

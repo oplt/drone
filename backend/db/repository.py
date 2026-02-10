@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert
 from .session import Session
 from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
-from backend.drone import Telemetry as TelemetryDTO
+from backend.drone.models import Telemetry as TelemetryDTO
 import logging
 
 class TelemetryRepository:
