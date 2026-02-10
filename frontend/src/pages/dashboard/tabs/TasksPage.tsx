@@ -1,10 +1,13 @@
-import React, { useEffect } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Box, Button, Paper, Stack, Typography, Divider, TextField } from "@mui/material";
 import Header from "../components/Header";
-import { GoogleMap, LoadScript, Marker, Polyline } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker, Polyline, OverlayView } from "@react-google-maps/api";
 import { getToken } from "../../../auth"; // adjust path if needed
+import FlightIcon from "@mui/icons-material/Flight";
+import RoomIcon from "@mui/icons-material/Room";   // optional for user marker
 
-type Waypoint = { lat: number; lon: number; alt?: number };
+type LatLng = { lat: number; lng: number };
+type Waypoint = { lat: number; lon: number; alt: number };
 
 const containerStyle = { width: "100%", height: "400px" };
 
@@ -12,14 +15,26 @@ const containerStyle = { width: "100%", height: "400px" };
 const defaultCenter = { lat: 50.8503, lng: 4.3517 }; // Brussels
 
 export default function TasksPage() {
-  const [waypoints, setWaypoints] = React.useState<Waypoint[]>([]);
-  const [alt, setAlt] = React.useState<number>(30);
-  const [name, setName] = React.useState<string>("mission-1");
-  const [sending, setSending] = React.useState(false);
-  const [center, setCenter] = React.useState<{ lat: number; lng: number }>(defaultCenter);
-  const [loadingLocation, setLoadingLocation] = React.useState(true);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const [userCenter, setUserCenter] = useState<LatLng | null>(null);
+  const [droneCenter, setDroneCenter] = useState<LatLng | null>(null);
+  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [alt, setAlt] = useState<number>(30);
+  const [name, setName] = useState<string>("mission-1");
+  const [sending, setSending] = useState(false);
+  const [center, setCenter] = useState<LatLng>(defaultCenter);
+  const [loadingLocation, setLoadingLocation] = useState(true);
+  const [droneConnected, setDroneConnected] = useState(false);
 
+  // Only need one API key variable
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
+  const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
+
+  // Initialize map reference callback
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
 
   // Get user's location on component mount
   useEffect(() => {
@@ -35,6 +50,7 @@ export default function TasksPage() {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
+        setUserCenter(userLocation);
         setCenter(userLocation);
         setLoadingLocation(false);
       },
@@ -51,7 +67,62 @@ export default function TasksPage() {
     );
   }, []);
 
-  const onMapClick = React.useCallback((e: google.maps.MapMouseEvent) => {
+  /* Poll for drone connection status */
+  useEffect(() => {
+    let mounted = true;
+
+    const checkDroneConnection = async () => {
+      try {
+        const res = await fetch("/tasks/home_location");
+        if (!res.ok) {
+          // If response is not OK, drone is not connected
+          if (mounted) {
+            setDroneConnected(false);
+            setDroneCenter(null);
+          }
+          return;
+        }
+
+        const data = await res.json();
+
+        if (mounted) {
+          setDroneConnected(data.connected || false);
+          if (data.connected && data.lat !== 0 && data.lon !== 0) {
+            setDroneCenter({ lat: data.lat, lng: data.lon });
+          } else {
+            setDroneCenter(null);
+          }
+        }
+      } catch (error) {
+        console.log("Drone not connected yet");
+        if (mounted) {
+          setDroneConnected(false);
+          setDroneCenter(null);
+        }
+      }
+    };
+
+    // Check immediately
+    checkDroneConnection();
+
+    // Poll every 3 seconds to check if drone connected
+    const interval = setInterval(checkDroneConnection, 3000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  /* Zoom to drone when available */
+  useEffect(() => {
+    if (!mapRef.current || !droneCenter) return;
+
+    mapRef.current.panTo(droneCenter);
+    mapRef.current.setZoom(18);
+  }, [droneCenter]);
+
+  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
@@ -79,7 +150,7 @@ export default function TasksPage() {
 
     setSending(true);
     try {
-      const res = await fetch("http://localhost:8000/tasks/missions", {
+      const res = await fetch(`${API_BASE}/tasks/missions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -109,6 +180,11 @@ export default function TasksPage() {
   };
 
   const polylinePath = waypoints.map((p) => ({ lat: p.lat, lng: p.lon }));
+
+  // Determine what to use as map center
+  const mapCenter = waypoints.length > 0
+    ? { lat: waypoints[0].lat, lng: waypoints[0].lon }
+    : (droneCenter || userCenter || center);
 
   return (
     <>
@@ -142,15 +218,40 @@ export default function TasksPage() {
                   <LoadScript googleMapsApiKey={apiKey}>
                     <GoogleMap
                       mapContainerStyle={containerStyle}
-                      center={waypoints.length ? { lat: waypoints[0].lat, lng: waypoints[0].lon } : center}
+                      center={mapCenter}
                       zoom={waypoints.length ? 16 : 12}
                       onClick={onMapClick}
+                      onLoad={onMapLoad}
                       options={{
                         streetViewControl: false,
                         mapTypeControl: false,
                         fullscreenControl: true,
                       }}
                     >
+                      {/* Drone icon - only show when connected */}
+                      {droneConnected && droneCenter && (
+                        <OverlayView
+                          position={droneCenter}
+                          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                        >
+                          <div style={{ transform: "translate(-50%, -50%)", color: "#1976d2" }}>
+                            <FlightIcon fontSize="large" />
+                          </div>
+                        </OverlayView>
+                      )}
+
+                      {/* User location icon (optional) */}
+                      {userCenter && (
+                        <OverlayView
+                          position={userCenter}
+                          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                        >
+                          <div style={{ transform: "translate(-50%, -50%)", color: "#4caf50" }}>
+                            <RoomIcon fontSize="large" />
+                          </div>
+                        </OverlayView>
+                      )}
+
                       {waypoints.map((p, idx) => (
                         <Marker
                           key={`${p.lat}-${p.lon}-${idx}`}
@@ -174,6 +275,9 @@ export default function TasksPage() {
                 )}
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Click on the map to add waypoints. Markers are ordered (1..N).
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Drone Status: {droneConnected ? "Connected" : "Disconnected"}
                 </Typography>
               </Box>
 

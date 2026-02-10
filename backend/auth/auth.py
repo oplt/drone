@@ -1,9 +1,9 @@
-# backend/auth/auth.py
+# backend/auth/auth.py (add this function)
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Dict, Any
 
 ph = PasswordHasher()
 
@@ -31,5 +31,14 @@ def decode_token(token: str) -> Optional[int]:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
         sub = payload.get("sub")
         return int(sub) if sub is not None else None
+    except (JWTError, ValueError):
+        return None
+
+# Add this function if you want verify_token that returns the full payload
+def verify_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify token and return full payload if valid"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+        return payload
     except (JWTError, ValueError):
         return None

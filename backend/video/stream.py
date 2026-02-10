@@ -5,6 +5,9 @@ import cv2
 from datetime import datetime
 import logging
 
+logger = logging.getLogger(__name__)
+
+
 def _is_rtsp(s: str) -> bool:
     return isinstance(s, str) and s.lower().startswith(("rtsp://", "rtsps://", "udp://", "tcp://", "http://", "https://"))
 
@@ -62,7 +65,7 @@ class DroneVideoStream:
             for idx in range(0, probe_indices + 1):
                 try:
                     self.cap = self._open_source(idx, width, height, fps, open_timeout_s)
-                    logging.info(f"[Video] Probed working camera at index {idx}")
+                    logger.info(f"[Video] Probed working camera at index {idx}")
                     break
                 except RuntimeError:
                     continue
@@ -71,7 +74,7 @@ class DroneVideoStream:
         if self.cap is None and fallback_file and os.path.exists(fallback_file):
             try:
                 self.cap = self._open_source(fallback_file, width, height, fps, open_timeout_s)
-                logging.info(f"[Video] Using fallback file: {fallback_file}")
+                logger.info(f"[Video] Using fallback file: {fallback_file}")
             except RuntimeError:
                 pass
 
@@ -146,10 +149,10 @@ class DroneVideoStream:
         )
         
         if not self.video_writer.isOpened():
-            logging.error(f"Failed to open video writer for {full_path}")
+            logger.error(f"Failed to open video writer for {full_path}")
             self.video_writer = None
         else:
-            logging.info(f"Started video recording: {full_path}")
+            logger.info(f"Started video recording: {full_path}")
 
     def _stop_recording(self):
         """Stop video recording"""
@@ -157,7 +160,7 @@ class DroneVideoStream:
             self.video_writer.release()
             self.video_writer = None
             if self.recording_filename:
-                logging.info(f"Stopped video recording: {self.recording_filename}")
+                logger.info(f"Stopped video recording: {self.recording_filename}")
 
     def _check_connection_health(self):
         """Monitor connection health for drone applications"""
@@ -190,7 +193,7 @@ class DroneVideoStream:
             # Check connection health periodically
             if self.frame_count % 30 == 0:  # Check every 30 frames
                 if not self._check_connection_health():
-                    logging.error("Video stream connection unhealthy, attempting to reconnect...")
+                    logger.error("Video stream connection unhealthy, attempting to reconnect...")
                     # Try to reconnect
                     self._reconnect()
                     if self.cap is None:
@@ -203,7 +206,7 @@ class DroneVideoStream:
                 self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 ok, frame = self.cap.read()
                 if not ok:
-                    logging.error("Failed to read frame from video source")
+                    logger.error("Failed to read frame from video source")
                     break
 
             # Record frame if recording is enabled
@@ -234,15 +237,15 @@ class DroneVideoStream:
             # Try to reconnect
             self.cap = self._open_source(self.source, self.width, self.height, self.fps, 5.0)
             if self.cap and self.cap.isOpened():
-                logging.info("Successfully reconnected to video source")
+                logger.info("Successfully reconnected to video source")
                 # Restart recording if it was active
                 if self.enable_recording:
                     self._start_recording()
             else:
-                logging.error("Failed to reconnect to video source")
+                logger.error("Failed to reconnect to video source")
                 
         except Exception as e:
-            logging.error(f"Error during video reconnection: {e}")
+            logger.error(f"Error during video reconnection: {e}")
 
     def get_connection_status(self) -> dict:
         """Get current connection status and statistics"""
@@ -262,7 +265,7 @@ class DroneVideoStream:
             if self.cap:
                 self.cap.release()
         except Exception as e:
-            logging.error(f"Error closing video stream: {e}")
+            logger.error(f"Error closing video stream: {e}")
 
 # Backward compatibility alias
 VideoStream = DroneVideoStream

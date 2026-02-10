@@ -9,6 +9,9 @@ import logging
 from backend.messaging.opcua import DroneOpcUaServer
 import asyncio
 
+logger = logging.getLogger(__name__)
+
+
 class ArduPilotTelemetryPublisher:
     def __init__(self, mqtt_client=None, mqtt_topic=None, drone_connection=None, opcua_server=None, opcua_event_loop=None):
         self.mqtt_topic = settings.telemetry_topic
@@ -45,10 +48,10 @@ class ArduPilotTelemetryPublisher:
         """Establish MAVLink connection"""
         try:
             self.mav_conn = mavutil.mavlink_connection(self.drone_conn_str)
-            logging.info(f"Connected to MAVLink: {self.drone_conn_str}")
+            logger.info(f"Connected to MAVLink: {self.drone_conn_str}")
             return True
         except Exception as e:
-            logging.info(f"Failed to connect to MAVLink: {e}")
+            logger.info(f"Failed to connect to MAVLink: {e}")
             return False
 
     def start_opcua_server(self):
@@ -66,12 +69,12 @@ class ArduPilotTelemetryPublisher:
             self.opcua_server_thread = threading.current_thread()
 
         threading.Thread(target=run_server, daemon=True).start()
-        logging.info("OPC UA Server thread launched")
+        logger.info("OPC UA Server thread launched")
 
     async def update_opcua_variables(self, msg_dict):
         """Update OPC UA variables based on MAVLink message"""
         msg_type = msg_dict.get('mavpackettype')
-        logging.info(f"Processing MAVLink message type: {msg_type}")
+        logger.info(f"Processing MAVLink message type: {msg_type}")
         logging.debug(f"Full message content: {msg_dict}")
 
         try:
@@ -80,7 +83,7 @@ class ArduPilotTelemetryPublisher:
                 lon = float(msg_dict.get('lon', 0) / 1e7)  # Convert to degrees
                 alt = float(msg_dict.get('alt', 0) / 1e3)  # Convert to meters
 
-                logging.info(f"Updating position - Lat: {lat}, Lon: {lon}, Alt: {alt}")
+                logger.info(f"Updating position - Lat: {lat}, Lon: {lon}, Alt: {alt}")
                 await self.opcua_server.vars["lat"].write_value(lat)
                 await self.opcua_server.vars["lon"].write_value(lon)
                 await self.opcua_server.vars["alt"].write_value(alt)
@@ -89,7 +92,7 @@ class ArduPilotTelemetryPublisher:
                 groundspeed = float(msg_dict.get('groundspeed', 0))
                 heading = float(msg_dict.get('heading', 0))
 
-                logging.info(f"Updating HUD - Speed: {groundspeed}, Heading: {heading}")
+                logger.info(f"Updating HUD - Speed: {groundspeed}, Heading: {heading}")
                 await self.opcua_server.vars["groundspeed"].write_value(groundspeed)
                 await self.opcua_server.vars["heading"].write_value(heading)
 
@@ -99,14 +102,14 @@ class ArduPilotTelemetryPublisher:
                 current = float(msg_dict.get('current_battery', 0) / 100)  # cA to A
                 remaining = int(msg_dict.get('battery_remaining', -1))
 
-                logging.info(f"Updating Battery - Voltage: {voltage}, Current: {current}, Remaining: {remaining}%")
+                logger.info(f"Updating Battery - Voltage: {voltage}, Current: {current}, Remaining: {remaining}%")
                 await self.opcua_server.vars["battery_voltage"].write_value(voltage)
                 await self.opcua_server.vars["battery_current"].write_value(current)
                 await self.opcua_server.vars["battery_remaining"].write_value(remaining)
 
             elif msg_type == 'SYSTEM_TIME':
                 system_time = float(msg_dict.get('time_unix_usec', 0) / 1e6)  # Convert microseconds to seconds
-                logging.info(f"Updating System Time: {system_time}")
+                logger.info(f"Updating System Time: {system_time}")
                 await self.opcua_server.vars["system_time"].write_value(system_time)
 
             elif msg_type == 'HEARTBEAT':
@@ -137,16 +140,16 @@ class ArduPilotTelemetryPublisher:
                 custom_mode = msg_dict.get('custom_mode', 0)
                 mode = mode_mapping.get(custom_mode, 'UNKNOWN')
 
-                logging.info(f"Updating Mode: {mode}")
+                logger.info(f"Updating Mode: {mode}")
                 await self.opcua_server.vars["mode"].write_value(mode)
 
         except Exception as e:
-            logging.error(f"Error updating OPC UA variables for {msg_type}: {e}", exc_info=True)
+            logger.error(f"Error updating OPC UA variables for {msg_type}: {e}", exc_info=True)
 
     def start(self):
         """Start the telemetry publisher"""
         if self.is_running:
-            logging.info("Publisher is already running")
+            logger.info("Publisher is already running")
             return False
 
         # Connect to MAVLink and MQTT
@@ -159,7 +162,7 @@ class ArduPilotTelemetryPublisher:
         else:
             # Validate that an event loop was provided for scheduling updates
             if self.opcua_server_loop is None:
-                logging.error("Shared OPC UA server provided without an event loop. Cannot schedule updates.")
+                logger.error("Shared OPC UA server provided without an event loop. Cannot schedule updates.")
                 return False
 
         # Start publishing in a separate thread
@@ -167,16 +170,16 @@ class ArduPilotTelemetryPublisher:
         self.publisher_thread = threading.Thread(target=self._publish_loop, daemon=True)
         self.publisher_thread.start()
 
-        logging.info("ArduPilot Telemetry Publisher started")
+        logger.info("ArduPilot Telemetry Publisher started")
         return True
 
     def stop(self):
         """Stop the telemetry publisher"""
         if not self.is_running:
-            logging.info("Publisher is not running")
+            logger.info("Publisher is not running")
             return
 
-        logging.info("Stopping ArduPilot Telemetry Publisher...")
+        logger.info("Stopping ArduPilot Telemetry Publisher...")
         self.is_running = False
 
         # Wait for threads to finish
@@ -188,7 +191,7 @@ class ArduPilotTelemetryPublisher:
             try:
                 asyncio.run_coroutine_threadsafe(self.opcua_server.stop(), self.opcua_server_loop).result()
             except Exception as e:
-                logging.error(f"Error stopping OPC UA server: {e}")
+                logger.error(f"Error stopping OPC UA server: {e}")
             finally:
                 self.opcua_server_loop.call_soon_threadsafe(self.opcua_server_loop.stop)
 
@@ -200,11 +203,11 @@ class ArduPilotTelemetryPublisher:
         if self.mav_conn:
             self.mav_conn.close()
 
-        logging.info("ArduPilot Telemetry Publisher stopped")
+        logger.info("ArduPilot Telemetry Publisher stopped")
 
     def _publish_loop(self):
         """Main publishing loop (runs in separate thread)"""
-        logging.info("Starting MAVLink to MQTT and OPC UA forwarding...")
+        logger.info("Starting MAVLink to MQTT and OPC UA forwarding...")
 
         while self.is_running:
             try:
@@ -231,11 +234,11 @@ class ArduPilotTelemetryPublisher:
                                 self.opcua_server_loop
                             )
                         except Exception as e:
-                            logging.error(f"Failed to schedule OPC UA update: {e}")
+                            logger.error(f"Failed to schedule OPC UA update: {e}")
 
             except Exception as e:
                 if self.is_running:
-                    logging.error(f"Error in publish loop: {e}")
+                    logger.error(f"Error in publish loop: {e}")
                     time.sleep(1)
 
     def is_alive(self):
@@ -245,4 +248,4 @@ class ArduPilotTelemetryPublisher:
     def set_message_types(self, message_types):
         """Update the message types to filter"""
         self.message_types = message_types
-        logging.info(f"Updated message types: {self.message_types}")
+        logger.info(f"Updated message types: {self.message_types}")

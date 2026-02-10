@@ -8,6 +8,9 @@ from datetime import datetime, timezone
 from collections import deque
 import logging
 
+logger = logging.getLogger(__name__)
+
+
 def _parse_ts(ts_raw):
     if ts_raw is None:
         return None
@@ -40,6 +43,8 @@ class MqttClient:
         self._raw_event_queue: "asyncio.Queue[dict]" = None
         self._emitted_frame_ids = deque(maxlen=200)        # de-dupe recent frames
         self._last_telemetry: Dict[str, Any] = {}
+        self.client.on_subscribe = self._on_subscribe
+
 
         if username:
             self.client.username_pw_set(username, password)
@@ -92,32 +97,35 @@ class MqttClient:
     def _on_connect(self, client, userdata, flags, rc, properties=None):
         # In MQTT v3.1.1 rc is an int; 0 = success
         if rc == 0:
-            logging.info("[MQTT] Connected.")
+            logger.info("[MQTT] Connected.")
         else:
-            logging.info(f"[MQTT] Connect failed rc={rc}")
+            logger.info(f"[MQTT] Connect failed rc={rc}")
 
     def _on_disconnect(self, client, userdata, rc, flags, properties=None):
-        logging.info(f"[MQTT] Disconnected rc={rc}")
+        logger.info(f"[MQTT] Disconnected rc={rc}")
 
     def _on_log(self, client, userdata, level, buf):
         if level >= mqtt.MQTT_LOG_ERR:
-            logging.info(f"[MQTT] {buf}")
+            logger.info(f"[MQTT] {buf}")
 
-    # subscribe to broker
 
-    def subscribe_to_topics(self, flight_id: int):
-        """Subscribe to the ardupilot telemetry topic"""
-
+    def subscribe_to_topics(self, flight_id: int) -> bool:
         self._current_flight_id = flight_id
-        logging.info(f"MQTT client: Setting flight_id to {flight_id}")
-        self.client.subscribe(self.topic, qos=1)
+        logger.info("MQTT client: Setting flight_id to %s", flight_id)
+
+        result, mid = self.client.subscribe(self.topic, qos=1)
+        if result != mqtt.MQTT_ERR_SUCCESS:
+            logger.error("MQTT subscribe failed: result=%s mid=%s", result, mid)
+            return False
+
         self.client.on_message = self._on_message
-        logging.info(f"MQTT client: Subscribed to topic {self.topic} with flight_id {flight_id}")
+        logger.info("MQTT client: Subscribed to topic %s with flight_id %s", self.topic, flight_id)
+        return True
+
 
 
     def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
-        logging.info(f"[MQTT] Subscribed mid={mid} qos={granted_qos}")
-        self.client.on_subscribe = self._on_subscribe
+        logger.info(f"[MQTT] Subscribed mid={mid} qos={granted_qos}")
 
 
     def _on_message(self, client, userdata, msg):
@@ -130,7 +138,7 @@ class MqttClient:
                 # self._process_telemetry_messages(payload)
                 self._process_raw_event(payload)
         except Exception as e:
-            logging.error(f"Error processing MQTT message: {e}")
+            logger.error(f"Error processing MQTT message: {e}")
 
 
     def attach_ingest_queue(self, q: "asyncio.Queue[dict]"):
@@ -175,7 +183,7 @@ class MqttClient:
                 pass
             self._raw_event_queue.put_nowait(item)
         except Exception as e:
-            logging.error(f"Error processing raw event: {e}")
+            logger.error(f"Error processing raw event: {e}")
 
 
     #
@@ -238,4 +246,4 @@ class MqttClient:
     #                 if fid is not None:
     #                     self._emitted_frame_ids.append(fid)
     #     except Exception as e:
-    #         logging.error(f"Error processing {mav_type}: {e}")
+    #         logger.error(f"Error processing {mav_type}: {e}")

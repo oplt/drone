@@ -32,6 +32,8 @@ const xThemeComponents = {
 export default function Dashboard(props: { disableCustomTheme?: boolean }) {
   const [user, setUser] = React.useState<User | null>(null);
   const navigate = useNavigate();
+  const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
 
   React.useEffect(() => {
     const token = getToken();
@@ -40,7 +42,7 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
       return;
     }
 
-    fetch("http://localhost:8000/auth/me", {
+    fetch(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (r) => {

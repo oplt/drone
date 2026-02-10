@@ -8,6 +8,9 @@ from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
 from backend.drone.models import Telemetry as TelemetryDTO
 import logging
 
+logger = logging.getLogger(__name__)
+
+
 class TelemetryRepository:
     def __init__(self, session_factory: type[Session] = Session):
         self._session_factory = session_factory
@@ -156,10 +159,10 @@ class TelemetryRepository:
             try:
                 await s.execute(stmt)
                 await s.commit()
-                logging.info(f"Successfully inserted {len(payload)} MavlinkEvent records for flight {flight_id}")
+                logger.info(f"Successfully inserted {len(payload)} MavlinkEvent records for flight {flight_id}")
                 return len(payload)
             except Exception as e:
-                logging.error(f"Bulk insert failed for flight {flight_id}: {e}")
+                logger.error(f"Bulk insert failed for flight {flight_id}: {e}")
                 await s.rollback()
                 inserted = 0
                 for d in payload:
@@ -168,9 +171,9 @@ class TelemetryRepository:
                         await s.commit()
                         inserted += 1
                     except Exception as single_e:
-                        logging.error(f"Single insert failed for flight {flight_id}: {single_e}")
+                        logger.error(f"Single insert failed for flight {flight_id}: {single_e}")
                         await s.rollback()
-                logging.info(f"Fallback single inserts completed: {inserted}/{len(payload)} records inserted")
+                logger.info(f"Fallback single inserts completed: {inserted}/{len(payload)} records inserted")
                 return inserted
 
 

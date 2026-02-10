@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from backend.db.session import Session
 
 from backend.drone.models import Coordinate
 from backend.main import _build_orchestrator  # re-use your existing builder
@@ -70,3 +71,19 @@ async def create_mission(payload: MissionCreateIn):
         mission_name=payload.name,
         waypoints_count=len(coords),
     )
+
+@router.get("/drone_home_location")
+async def get_drone_home():
+    orch = await get_orchestrator()
+    drone = orch.drone
+    hl = getattr(drone, "home_location", None)
+
+    if not hl:
+        raise HTTPException(status_code=404, detail="Drone not connected")
+
+    return {
+        "connected": True,
+        "lat": float(hl.lat),
+        "lon": float(hl.lon),
+        "alt": float(getattr(hl, "alt", 0.0)),
+    }

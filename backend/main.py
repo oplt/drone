@@ -1,6 +1,5 @@
 import asyncio
 import logging
-
 from backend.drone.mavlink_drone import MavlinkDrone
 from backend.drone.orchestrator import Orchestrator
 from backend.map.google_maps import GoogleMapsClient
@@ -12,6 +11,9 @@ from backend.video.stream import DroneVideoStream
 from backend.db.session import init_db, close_db
 from backend.db.repository import TelemetryRepository
 from backend.utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
+
+logger = logging.getLogger(__name__)
+
 
 _orch: Orchestrator | None = None
 _orch_lock = asyncio.Lock()
@@ -27,7 +29,7 @@ async def _build_orchestrator() -> Orchestrator:
             return _orch
 
         drone = MavlinkDrone(settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout)
-        maps = GoogleMapsClient(settings.google_maps_key)
+        maps = GoogleMapsClient(settings.google_maps_api_key)
         analyzer = LLMAnalyzer(
             api_base=settings.llm_api_base,
             api_key=settings.llm_api_key,
@@ -66,12 +68,12 @@ async def _build_orchestrator() -> Orchestrator:
                     recording_path=settings.drone_video_save_path,
                     recording_format="mp4",
                 )
-                logging.info("✅ Drone video stream initialized successfully")
+                logger.info("✅ Drone video stream initialized successfully")
             except Exception as e:
-                logging.info(f"❌ Failed to initialize drone video stream: {e}")
+                logger.info(f"❌ Failed to initialize drone video stream: {e}")
                 video = None
         else:
-            logging.info("ℹ️  Drone video streaming disabled in configuration")
+            logger.info("ℹ️  Drone video streaming disabled in configuration")
 
         repo = TelemetryRepository()
         publisher = ArduPilotTelemetryPublisher(
@@ -95,4 +97,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info("\n✅ Program terminated safely")
+        logger.info("\n✅ Program terminated safely")
