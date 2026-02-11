@@ -2,10 +2,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Iterable, Mapping
 from sqlalchemy import select, insert
-from .session import Session
-from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
+from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent, SettingsRow
 from backend.drone.models import Telemetry as TelemetryDTO
 import logging
+
+
+from .session import Session
+from .models import SettingsRow
 
 logger = logging.getLogger(__name__)
 
@@ -206,3 +211,32 @@ class TelemetryRepository:
                     f"Fallback single inserts completed: {inserted}/{len(payload)} records inserted"
                 )
                 return inserted
+
+
+
+
+class SettingsRepository:
+    def __init__(self) -> None:
+        self._session_factory = Session
+
+    async def get_settings(self) -> Dict[str, Any]:
+        async with self._session_factory() as db:
+            res = await db.execute(select(SettingsRow).where(SettingsRow.id == 1))
+            row = res.scalar_one_or_none()
+            return row.data if row else {}
+
+    async def upsert_settings(self, data: Dict[str, Any]) -> None:
+        async with self._session_factory() as db:
+            stmt = (
+                pg_insert(SettingsRow)
+                .values(id=1, data=data)
+                .on_conflict_do_update(
+                    index_elements=[SettingsRow.id],
+                    set_={"data": data},
+                )
+            )
+            await db.execute(stmt)
+            await db.commit()
+
+
+

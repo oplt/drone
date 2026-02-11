@@ -7,6 +7,7 @@ import { ProtectedRoute } from "./ProtectedRoute";
 
 import DashboardHome from "./pages/dashboard/tabs/HomePage";
 import TasksPage from "./pages/dashboard/tabs/TasksPage";
+import SettingsPage from "./pages/dashboard/tabs/SettingsPage";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="settings" element={<SettingsPage />} />
 
         </Route>
       </Routes>

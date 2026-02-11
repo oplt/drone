@@ -7,6 +7,9 @@ from backend.api.routes_flights import router as missions_router
 from backend.api.routes_websocket import router as websockets_router
 from backend.api.routes_telemetry_control import router as telemetry_control_router
 from backend.api.routes_video import router as video_router
+from backend.api.routes_settings import router as settings_router
+from backend.utils.config_runtime import get_runtime_settings
+from backend.db.repository import SettingsRepository
 
 from contextlib import asynccontextmanager
 import logging
@@ -20,6 +23,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting application...")
     await init_db()
+
+    # Load settings from DB once
+    app.state.settings = await get_runtime_settings(SettingsRepository())
 
     # Initialize WebSocket manager
     from backend.messaging.websocket import telemetry_manager
@@ -62,6 +68,8 @@ app.include_router(missions_router)
 app.include_router(websockets_router)
 app.include_router(telemetry_control_router)
 app.include_router(video_router)
+app.include_router(settings_router)
+
 
 
 @app.get("/health")
