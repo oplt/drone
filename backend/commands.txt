@@ -12,4 +12,6 @@ opcua-client opc.tcp://127.0.0.1:4840 --subscribe "ns=2;s=Drone/Lat"
  telegraph
 
 
- uvicorn backend.api.api_main:app --reload --port 8000
+uvicorn backend.api.api_main:app --reload --port 8000
+
+ruff check --fix . && ruff format .

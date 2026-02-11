@@ -15,6 +15,7 @@ STREAM_URL = f"http://{PI_HOST}:{PI_PORT}/video_feed"
 
 # ---------- SSH PART: START SERVER ON PI ----------
 
+
 def start_streaming_server_via_ssh():
     """
     Connect to the Raspberry Pi via SSH and start the camera server in the background.
@@ -22,10 +23,7 @@ def start_streaming_server_via_ssh():
     """
 
     # Command that starts the server and keeps it running after SSH returns
-    command = (
-        f"nohup python3 {REMOTE_PY_SCRIPT} "
-        "> /tmp/pi_cam_server.log 2>&1 &"
-    )
+    command = f"nohup python3 {REMOTE_PY_SCRIPT} > /tmp/pi_cam_server.log 2>&1 &"
 
     print(f"[INFO] Connecting to {PI_HOST} via SSH as {PI_USER}...")
     ssh = paramiko.SSHClient()
@@ -71,6 +69,7 @@ def wait_for_stream(url, timeout=30):
 
 # ---------- MJPEG CLIENT PART (similar to your original) ----------
 
+
 def mjpeg_stream(url):
     """
     Generator that yields individual JPEG frames from an MJPEG HTTP stream.
@@ -83,11 +82,11 @@ def mjpeg_stream(url):
             continue
         bytes_buf += chunk
 
-        a = bytes_buf.find(b'\xff\xd8')  # JPEG start
-        b = bytes_buf.find(b'\xff\xd9')  # JPEG end
+        a = bytes_buf.find(b"\xff\xd8")  # JPEG start
+        b = bytes_buf.find(b"\xff\xd9")  # JPEG end
         if a != -1 and b != -1 and b > a:
-            jpg = bytes_buf[a:b+2]
-            bytes_buf = bytes_buf[b+2:]
+            jpg = bytes_buf[a : b + 2]
+            bytes_buf = bytes_buf[b + 2 :]
 
             img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
             if img is not None:
@@ -108,7 +107,7 @@ if __name__ == "__main__":
         for frame in mjpeg_stream(STREAM_URL):
             cv2.imshow("Raspberry Pi Camera", frame)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     finally:
         cv2.destroyAllWindows()

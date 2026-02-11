@@ -11,8 +11,10 @@ JWT_SECRET = "CHANGE_ME_USE_ENV"
 JWT_ALG = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24
 
+
 def hash_password(password: str) -> str:
     return ph.hash(password)
+
 
 def verify_password(password: str, hashed_password: str) -> bool:
     try:
@@ -20,11 +22,17 @@ def verify_password(password: str, hashed_password: str) -> bool:
     except VerifyMismatchError:
         return False
 
+
 def create_access_token(user_id: int) -> str:
     now = datetime.now(timezone.utc)
     exp = now + timedelta(minutes=JWT_EXPIRE_MINUTES)
-    payload = {"sub": str(user_id), "iat": int(now.timestamp()), "exp": int(exp.timestamp())}
+    payload = {
+        "sub": str(user_id),
+        "iat": int(now.timestamp()),
+        "exp": int(exp.timestamp()),
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
 
 def decode_token(token: str) -> Optional[int]:
     try:
@@ -33,6 +41,7 @@ def decode_token(token: str) -> Optional[int]:
         return int(sub) if sub is not None else None
     except (JWTError, ValueError):
         return None
+
 
 # Add this function if you want verify_token that returns the full payload
 def verify_token(token: str) -> Optional[Dict[str, Any]]:

@@ -1,5 +1,6 @@
 import time
 
+
 class RateLimitLogger:
     def __init__(self, interval_sec: float):
         self.interval = interval_sec

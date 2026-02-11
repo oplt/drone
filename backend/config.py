@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
+
 def setup_logging():
     """Centralized logging configuration with environment variable support"""
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -13,10 +14,7 @@ def setup_logging():
     logging.basicConfig(
         level=getattr(logging, log_level, logging.INFO),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",  # Added module name
-        handlers=[
-            logging.FileHandler("drone.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("drone.log"), logging.StreamHandler()],
     )
 
 
@@ -64,7 +62,9 @@ class Settings(BaseSettings):
     energy_reserve_frac: float = 0.2
 
     # Video streaming configuration for wireless drone connection
-    drone_video_source: str = "rtsp://192.168.4.1:8554/stream"  # Wireless RTSP stream from drone
+    drone_video_source: str = (
+        "rtsp://192.168.4.1:8554/stream"  # Wireless RTSP stream from drone
+    )
     drone_video_enabled: bool = True  # Enable video streaming by default
     drone_video_width: int = 640  # Standard VGA resolution
     drone_video_height: int = 480  # Standard VGA resolution
@@ -75,13 +75,14 @@ class Settings(BaseSettings):
     drone_video_save_path: str = "./recordings/"  # Local recordings directory
 
     # Wireless streaming network configuration
-    drone_video_network_mode: str = "rtsp"  # Streaming protocol: "rtsp", "http", "webrtc"
+    drone_video_network_mode: str = (
+        "rtsp"  # Streaming protocol: "rtsp", "http", "webrtc"
+    )
     drone_video_network_ip: str = "192.168.4.1"  # Drone's WiFi IP address
     drone_video_network_port: int = 8080  # HTTP web interface port
     drone_video_rtsp_port: int = 8554  # RTSP streaming port
     drone_video_wifi_ssid: str = "Drone_Network"  # Drone's WiFi network name
     drone_video_wifi_password: str = "drone123"  # Drone's WiFi password
-
 
 
 settings = Settings()

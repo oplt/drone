@@ -16,4 +16,6 @@ class GoogleMapsClient:
         dlat = (end.lat - start.lat) / steps
         dlon = (end.lon - start.lon) / steps
         for i in range(1, steps + 1):
-            yield Coordinate(lat=start.lat + dlat*i, lon=start.lon + dlon*i, alt=end.alt)
+            yield Coordinate(
+                lat=start.lat + dlat * i, lon=start.lon + dlon * i, alt=end.alt
+            )

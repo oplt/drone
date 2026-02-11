@@ -1,127 +1,217 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
-export interface TelemetryData {
-  position: {
-    lat: number;
-    lon: number;
-    alt: number;
-    relative_alt: number;
-  };
-  attitude?: {
-    roll: number;
-    pitch: number;
-    yaw: number;
-    rollspeed: number;
-    pitchspeed: number;
-    yawspeed: number;
-  };
-  battery: {
-    voltage: number;
-    current: number;
-    remaining: number;
-    temperature?: number;
-  };
-  status: {
-    groundspeed: number;
-    airspeed?: number;
-    heading: number;
-    throttle?: number;
-    alt?: number;
-    climb?: number;
-  };
-  gps?: {
-    fix_type: number;
-    satellites_visible: number;
-    hdop: number;
-    vdop: number;
-  };
-  system?: {
-    voltage_battery: number;
-    current_battery: number;
-    battery_remaining: number;
-    load: number;
-  };
-  mode: string;
-  armed: boolean;
-  timestamp: number;
-}
+type TelemetryWebSocketOptions = {
+	/**
+	 * When false, the hook will NOT open a WebSocket and will actively disconnect
+	 * any existing connection. This prevents background connections when a page/tab
+	 * mounts without an active mission/drone session.
+	 */
+	enabled?: boolean;
+};
 
-// ALSO MAKE SURE THE HOOK IS EXPORTED
-export const useTelemetryWebSocket = () => {
-  const [telemetry, setTelemetry] = useState<any | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const useTelemetryWebSocket = (
+	options: TelemetryWebSocketOptions = {},
+) => {
+	const enabled = options.enabled ?? false;
+	const [telemetry, setTelemetry] = useState<any | null>(null);
+	const [isConnected, setIsConnected] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const shouldReconnectRef = useRef(true);
-  const reconnectTimerRef = useRef<number | null>(null);
+	const wsRef = useRef<WebSocket | null>(null);
+	const shouldReconnectRef = useRef(true);
+	const reconnectTimerRef = useRef<number | null>(null);
+	const maxReconnectAttemptsRef = useRef(10); // Max 10 reconnection attempts
 
-  const latestRef = useRef<any | null>(null);
-  const rafRef = useRef<number | null>(null);
+	const latestRef = useRef<any | null>(null);
+	const rafRef = useRef<number | null>(null);
 
-  const connectWebSocket = useCallback(() => {
-      shouldReconnectRef.current = true;
-      if (wsRef.current) wsRef.current.close();
+	// useTelemetryWebsocket.ts (update connectWebSocket function)
+	const connectWebSocket = useCallback(
+		(attempt = 1) => {
+			if (!enabled) return;
+			shouldReconnectRef.current = true;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//localhost:8000/ws/telemetry/public`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+			// Close existing connection
+			if (wsRef.current) {
+				try {
+					wsRef.current.close(1000, "Reconnecting");
+				} catch (e) {
+					// Ignore errors
+				}
+			}
 
-    ws.onopen = () => {
-        setIsConnected(true);
-        setError(null);
-    };
+			const apiBaseRaw = (
+				import.meta.env.VITE_API_BASE_URL as string | undefined
+			)?.trim();
+			const apiBase =
+				apiBaseRaw && apiBaseRaw.includes("://")
+					? apiBaseRaw
+					: "http://localhost:8000";
 
-    const rafRef = useRef<number | null>(null);
+			const u = new URL(apiBase);
+			u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+			u.pathname = "/ws/telemetry/public";
+			u.search = "";
 
-    ws.onmessage = (event) => {
-          try {
-            // backend patch sends TEXT JSON
-            const msg = JSON.parse(event.data);
-            if (msg?.type === "telemetry") {
-              latestRef.current = msg.data;
+			console.log(
+				`🔗 Connecting to WebSocket: ${u.toString()} (attempt ${attempt})`,
+			);
 
-              if (rafRef.current == null) {
-                rafRef.current = requestAnimationFrame(() => {
-                  rafRef.current = null;
-                  setTelemetry(latestRef.current);
-                });
-              }
+			try {
+				const ws = new WebSocket(u.toString());
+				ws.binaryType = "arraybuffer";
+				wsRef.current = ws;
+
+				ws.onopen = () => {
+					console.log(`✅ WebSocket connected (attempt ${attempt})`);
+					setIsConnected(true);
+					setError(null);
+					setReconnectAttempt(0);
+
+					// Send initial ping to confirm connection
+					setTimeout(() => {
+						if (ws.readyState === WebSocket.OPEN) {
+							ws.send("ping");
+						}
+					}, 1000);
+				};
+
+				ws.onmessage = async (event) => {
+					// Telemetry server sends JSON text frames
+					try {
+          const readText = async (data: any): Promise<string> => {
+            if (typeof data === "string") return data;
+            // Some browsers deliver text frames as Blob
+            if (typeof Blob !== "undefined" && data instanceof Blob) {
+              return await data.text();
             }
-          } catch (e) {
-            // optional: console.warn("Bad WS message", e);
-          }
-        };
-
-      ws.onerror = () => {
-          setError("WebSocket connection error");
-          setIsConnected(false);
-      };
-
-      ws.onclose = () => {
-            setIsConnected(false);
-            if (!shouldReconnectRef.current) return;
-
-            if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
-            reconnectTimerRef.current = window.setTimeout(connectWebSocket, 1000);
+            // Or as ArrayBuffer when binaryType is set
+            if (data instanceof ArrayBuffer) {
+              return new TextDecoder("utf-8").decode(new Uint8Array(data));
+            }
+            return "";
           };
-        }, []);
 
-        const disconnectWebSocket = useCallback(() => {
-          shouldReconnectRef.current = false;
-          if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = null;
-          wsRef.current?.close();
-          wsRef.current = null;
-        }, []);
+          const raw = await readText(event.data);
+						if (!raw) return;
 
-  useEffect(() => {
-      connectWebSocket();
-      return () => disconnectWebSocket();
-    }, [connectWebSocket, disconnectWebSocket]);
+						// Some servers may send plain "pong"
+						if (raw === "pong") return;
 
-    return { telemetry, isConnected, error, reconnect: connectWebSocket, disconnect: disconnectWebSocket };
-  };
+						const msg = JSON.parse(raw);
+						if (!msg) return;
 
-  export default useTelemetryWebSocket;
+						if (msg.type === "telemetry" && msg.data) {
+							latestRef.current = msg.data;
+
+							// Batch UI updates to reduce flicker / rerender storms
+							if (rafRef.current == null) {
+								rafRef.current = window.requestAnimationFrame(() => {
+									rafRef.current = null;
+									setTelemetry(latestRef.current);
+								});
+							}
+						}
+					} catch (e) {
+						// Ignore non-JSON frames
+					}
+				};
+
+				ws.onerror = () => {
+					console.error(`❌ WebSocket connection error (attempt ${attempt})`);
+					setError("WebSocket connection error");
+					setIsConnected(false);
+				};
+
+				ws.onclose = (ev) => {
+					console.log(
+						`🔌 WebSocket closed (attempt ${attempt}, code: ${ev.code}, reason: ${ev.reason})`,
+					);
+					setIsConnected(false);
+
+					// Don't reconnect on normal closes
+					if (!shouldReconnectRef.current) return;
+					if (ev.code === 1000) return;
+
+					// Exponential backoff reconnect, bounded + capped attempts
+					if (attempt >= maxReconnectAttemptsRef.current) {
+						setError(`WebSocket disconnected (max retries reached)`);
+						return;
+					}
+
+					const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+					setReconnectAttempt(attempt);
+					reconnectTimerRef.current = window.setTimeout(() => {
+						connectWebSocket(attempt + 1);
+					}, delay);
+				};
+			} catch (error) {
+				console.error(`❌ Failed to create WebSocket: ${error}`);
+				// Retry with backoff
+				const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+				reconnectTimerRef.current = window.setTimeout(() => {
+					connectWebSocket(attempt + 1);
+				}, delay);
+			}
+		},
+		[enabled],
+	);
+
+	const disconnectWebSocket = useCallback(() => {
+		console.log("🛑 Disconnecting WebSocket...");
+		shouldReconnectRef.current = false;
+
+		// Clear any pending reconnect timer
+		if (reconnectTimerRef.current) {
+			window.clearTimeout(reconnectTimerRef.current);
+			reconnectTimerRef.current = null;
+		}
+
+		// Close WebSocket connection
+		if (wsRef.current) {
+			wsRef.current.close(1000, "Manual disconnect"); // Normal closure
+			wsRef.current = null;
+		}
+
+		setIsConnected(false);
+		setReconnectAttempt(0);
+	}, []);
+
+	// Manual reconnect function (for external calls)
+	const manualReconnect = useCallback(() => {
+		if (!enabled) return;
+		console.log("🔄 Manual reconnect requested");
+		disconnectWebSocket(); // Clean up first
+		setTimeout(() => {
+			connectWebSocket(1);
+		}, 500);
+	}, [enabled, connectWebSocket, disconnectWebSocket]);
+
+	// Initial connection
+	useEffect(() => {
+		if (!enabled) {
+			disconnectWebSocket();
+			return;
+		}
+
+		console.log("🔗 Initializing WebSocket connection...");
+		connectWebSocket(1);
+
+		return () => {
+			console.log("🧹 Cleaning up WebSocket hook");
+			disconnectWebSocket();
+		};
+	}, [enabled, connectWebSocket, disconnectWebSocket]);
+
+	return {
+		telemetry,
+		isConnected,
+		error,
+		reconnect: manualReconnect,
+		disconnect: disconnectWebSocket,
+		reconnectAttempt,
+	};
+};
+
+export default useTelemetryWebSocket;

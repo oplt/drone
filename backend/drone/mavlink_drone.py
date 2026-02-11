@@ -1,4 +1,5 @@
 import collections.abc
+
 for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
     if not hasattr(collections, _name):
         setattr(collections, _name, getattr(collections.abc, _name))
@@ -10,6 +11,7 @@ import logging
 from dronekit import connect, VehicleMode, LocationGlobalRelative
 
 logger = logging.getLogger(__name__)
+
 
 class MavlinkDrone(DroneClient):
     def __init__(self, connection_str: str, heartbeat_timeout: float):
@@ -23,7 +25,11 @@ class MavlinkDrone(DroneClient):
         self._running = False
 
     def connect(self) -> None:
-        self.vehicle = connect(self.connection_str, wait_ready=True, heartbeat_timeout=self.heartbeat_timeout,)
+        self.vehicle = connect(
+            self.connection_str,
+            wait_ready=True,
+            heartbeat_timeout=self.heartbeat_timeout,
+        )
 
         # Wait until autopilot sets home_location (requires GPS fix; often set after arm, but we try early)
         # print("Waiting for home location...")
@@ -43,11 +49,12 @@ class MavlinkDrone(DroneClient):
         # print(f"Home location set: {self.home_location}")
         logger.info(f"Home location set: {self.home_location}")
 
-        '''this function and heart beat flow should be added on rasperry pi on drone'''
+        """this function and heart beat flow should be added on rasperry pi on drone"""
         # Start the dead man's switch monitoring
         # self.start_dead_mans_switch()
 
-    '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
+    """SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE"""
+
     def start_dead_mans_switch(self):
         """Start the dead man's switch monitoring thread"""
         self.dead_mans_switch_active = True
@@ -55,9 +62,7 @@ class MavlinkDrone(DroneClient):
         self.last_heartbeat = time.time()  # Reset heartbeat
 
         self._heartbeat_thread = threading.Thread(
-            target=self._heartbeat_monitor,
-            daemon=True,
-            name="DeadMansSwitch"
+            target=self._heartbeat_monitor, daemon=True, name="DeadMansSwitch"
         )
         self._heartbeat_thread.start()
         logger.info("Dead man's switch activated")
@@ -70,7 +75,8 @@ class MavlinkDrone(DroneClient):
     #         logger.info(f"Heartbeat sent at {self.last_heartbeat}")
     #         # print(f"Heartbeat sent at {self.last_heartbeat}")  # Uncomment for debugging
 
-    '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
+    """SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE"""
+
     def _heartbeat_monitor(self):
         """Background thread that monitors heartbeat and triggers emergency actions"""
         while self._running and self.vehicle:
@@ -79,7 +85,9 @@ class MavlinkDrone(DroneClient):
 
                 if time_since_heartbeat > self.heartbeat_timeout:
                     # print(f"⚠️  DEAD MAN'S SWITCH TRIGGERED! No heartbeat for {time_since_heartbeat:.1f}s")
-                    logger.info(f"⚠️  DEAD MAN'S SWITCH TRIGGERED! No heartbeat for {time_since_heartbeat:.1f}s")
+                    logger.info(
+                        f"⚠️  DEAD MAN'S SWITCH TRIGGERED! No heartbeat for {time_since_heartbeat:.1f}s"
+                    )
                     self._trigger_emergency_action()
                     break  # Exit the monitoring loop after triggering
 
@@ -92,7 +100,8 @@ class MavlinkDrone(DroneClient):
                 self._trigger_emergency_action()
                 break
 
-    '''SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE'''
+    """SHOULD BE MODIFIED AND ADDED TO RASPBERRY PI ON DRONE"""
+
     def _trigger_emergency_action(self):
         """Executed when dead man's switch is triggered"""
         try:
@@ -114,8 +123,8 @@ class MavlinkDrone(DroneClient):
             # Option 3: Advanced - Go to a specific safe location first, then land
             # if self.home_location:
             #     safe_location = LocationGlobalRelative(
-            #         self.home_location.lat, 
-            #         self.home_location.lon, 
+            #         self.home_location.lat,
+            #         self.home_location.lon,
             #         30  # 30m altitude
             #     )
             #     self.vehicle.simple_goto(safe_location)
@@ -223,8 +232,8 @@ class MavlinkDrone(DroneClient):
         dlat = lat2 - lat1
         dlon = lon2 - lon1
 
-        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-        c = 2 * atan2(sqrt(a), sqrt(1-a))
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
         return R * c
 
@@ -232,14 +241,16 @@ class MavlinkDrone(DroneClient):
         # self.send_heartbeat()
         self.vehicle.mode = VehicleMode("LAND")
 
-
     def wait_until_disarmed(self, timeout_s: float = 900):
         """Block until vehicle.armed == False or timeout."""
         start = time.time()
-        while self.vehicle and getattr(self.vehicle, "armed", False) and (time.time() - start) < timeout_s:
+        while (
+            self.vehicle
+            and getattr(self.vehicle, "armed", False)
+            and (time.time() - start) < timeout_s
+        ):
             # self.send_heartbeat()  # keeps dead-man switch happy
             time.sleep(1.0)
-
 
     def stop_dead_mans_switch(self):
         """Safely disable the dead man's switch"""
@@ -255,5 +266,3 @@ class MavlinkDrone(DroneClient):
         self.stop_dead_mans_switch()
         if self.vehicle:
             self.vehicle.close()
-
-

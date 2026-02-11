@@ -7,7 +7,6 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from backend.drone.models import Detection
 
 
-
 # Optional: use TurboJPEG if available (3-5x faster encode than OpenCV).
 # Fallback to OpenCV if not installed.
 # try:
@@ -32,15 +31,18 @@ from backend.drone.models import Detection
 #             raise RuntimeError("JPEG encode failed")
 #         return base64.b64encode(buf.tobytes()).decode()
 
+
 def encode_jpeg(frame) -> str:
     """
     OpenCV BGR ndarray -> base64 JPEG string (no prefix).
     """
     import cv2
+
     ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     if not ok:
         raise RuntimeError("JPEG encode failed")
     return base64.b64encode(buf.tobytes()).decode()
+
 
 class LLMAnalyzer:
     """
@@ -54,7 +56,10 @@ class LLMAnalyzer:
       [{"label":"trash","confidence":0.92,"bbox":[x1,y1,x2,y2]}, ...]
     If not pure JSON, we try to extract JSON via a naive fallback.
     """
-    def __init__(self, api_base: str, api_key: str, model: str, provider: str = "ollama"):
+
+    def __init__(
+        self, api_base: str, api_key: str, model: str, provider: str = "ollama"
+    ):
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key or ""
         self.model = model
@@ -78,17 +83,14 @@ class LLMAnalyzer:
                 "model": self.model,
                 "stream": False,
                 "messages": [
-                    {
-                        "role": "system",
-                        "content": system_prompt
-                    },
+                    {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
                         "content": user_prompt,
                         # Ollama vision models accept base64 images via 'images'
-                        "images": [img_b64]
-                    }
-                ]
+                        "images": [img_b64],
+                    },
+                ],
             }
             headers = {"Content-Type": "application/json"}
             url = f"{self.api_base}/api/chat"
@@ -97,18 +99,26 @@ class LLMAnalyzer:
         elif self.provider == "openai_compat":
             payload = {
                 "model": self.model,
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": system_prompt + "\n\n" + user_prompt},
-                        {"type": "image_url", "image_url": f"data:image/jpeg;base64,{img_b64}"}
-                    ]
-                }],
-                "temperature": 0.0
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": system_prompt + "\n\n" + user_prompt,
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": f"data:image/jpeg;base64,{img_b64}",
+                            },
+                        ],
+                    }
+                ],
+                "temperature": 0.0,
             }
             headers = {
                 "Authorization": f"Bearer {self.api_key}" if self.api_key else "",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
             url = f"{self.api_base}/chat/completions"
             parser = self._parse_openai_compat
@@ -152,7 +162,7 @@ class LLMAnalyzer:
             end = text.rfind("]")
             if start != -1 and end != -1 and end > start:
                 try:
-                    return json.loads(text[start:end+1])
+                    return json.loads(text[start : end + 1])
                 except Exception:
                     return []
             return []
@@ -161,5 +171,7 @@ class LLMAnalyzer:
         label = str(it.get("label", "object"))
         confidence = float(it.get("confidence", 0.0))
         bbox = it.get("bbox")
-        bbox_t = tuple(bbox) if isinstance(bbox, (list, tuple)) and len(bbox) == 4 else None
+        bbox_t = (
+            tuple(bbox) if isinstance(bbox, (list, tuple)) and len(bbox) == 4 else None
+        )
         return Detection(label=label, confidence=confidence, bbox=bbox_t, extra=it)

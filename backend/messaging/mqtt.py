@@ -1,4 +1,7 @@
-import json, ssl, time, socket
+import json
+import ssl
+import time
+import socket
 import paho.mqtt.client as mqtt
 from backend.config import settings
 from backend.db.repository import TelemetryRepository
@@ -26,32 +29,43 @@ def _parse_ts(ts_raw):
 
 
 class MqttClient:
-    def __init__(self, host: str, port: int = 1883, username: str = "", password: str = "",
-                 use_tls: bool = False, ca_certs: Optional[str] = None, client_id: Optional[str] = None,
-                 connect_timeout: int = 10, max_retries: int = 20, retry_backoff_s: float = 0.5):
+    def __init__(
+        self,
+        host: str,
+        port: int = 1883,
+        username: str = "",
+        password: str = "",
+        use_tls: bool = False,
+        ca_certs: Optional[str] = None,
+        client_id: Optional[str] = None,
+        connect_timeout: int = 10,
+        max_retries: int = 20,
+        retry_backoff_s: float = 0.5,
+    ):
 
         self.client = mqtt.Client(
-                                client_id=client_id or "",
-                                protocol=mqtt.MQTTv311,
-                                transport="tcp",
-                                callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-                            )
+            client_id=client_id or "",
+            protocol=mqtt.MQTTv311,
+            transport="tcp",
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+        )
 
         self.repo = TelemetryRepository()
         self._current_flight_id: Optional[int] = None
         self._ingest_queue: "asyncio.Queue[dict]" = None
         self._raw_event_queue: "asyncio.Queue[dict]" = None
-        self._emitted_frame_ids = deque(maxlen=200)        # de-dupe recent frames
+        self._emitted_frame_ids = deque(maxlen=200)  # de-dupe recent frames
         self._last_telemetry: Dict[str, Any] = {}
         self.client.on_subscribe = self._on_subscribe
-
 
         if username:
             self.client.username_pw_set(username, password)
 
         if use_tls:
             if ca_certs:
-                self.client.tls_set(ca_certs=ca_certs, tls_version=ssl.PROTOCOL_TLS_CLIENT)
+                self.client.tls_set(
+                    ca_certs=ca_certs, tls_version=ssl.PROTOCOL_TLS_CLIENT
+                )
             else:
                 self.client.tls_set(tls_version=ssl.PROTOCOL_TLS_CLIENT)
             self.client.tls_insecure_set(False)
@@ -74,7 +88,9 @@ class MqttClient:
                 delay = min(delay * 2, 8.0)  # exponential backoff capped
                 attempt += 1
         else:
-            raise RuntimeError(f"MQTT connect failed to {host}:{port} after {max_retries} attempts: {last_err}")
+            raise RuntimeError(
+                f"MQTT connect failed to {host}:{port} after {max_retries} attempts: {last_err}"
+            )
 
         self.client.loop_start()
 
@@ -82,7 +98,6 @@ class MqttClient:
         if not isinstance(payload, (str, bytes)):
             payload = json.dumps(payload)
         self.client.publish(topic, payload, qos=qos, retain=retain)
-
 
     def close(self):
         try:
@@ -108,7 +123,6 @@ class MqttClient:
         if level >= mqtt.MQTT_LOG_ERR:
             logger.info(f"[MQTT] {buf}")
 
-
     def subscribe_to_topics(self, flight_id: int) -> bool:
         self._current_flight_id = flight_id
         logger.info("MQTT client: Setting flight_id to %s", flight_id)
@@ -119,14 +133,15 @@ class MqttClient:
             return False
 
         self.client.on_message = self._on_message
-        logger.info("MQTT client: Subscribed to topic %s with flight_id %s", self.topic, flight_id)
+        logger.info(
+            "MQTT client: Subscribed to topic %s with flight_id %s",
+            self.topic,
+            flight_id,
+        )
         return True
-
-
 
     def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
         logger.info(f"[MQTT] Subscribed mid={mid} qos={granted_qos}")
-
 
     def _on_message(self, client, userdata, msg):
         """Handle incoming MQTT messages from ardupilot"""
@@ -134,19 +149,19 @@ class MqttClient:
             if msg.topic == settings.telemetry_topic:
                 logging.debug(f"Received MQTT message on topic {msg.topic}")
                 payload = json.loads(msg.payload.decode())
-                logging.debug(f"Message payload type: {payload.get('mavpackettype', 'UNKNOWN')}")
+                logging.debug(
+                    f"Message payload type: {payload.get('mavpackettype', 'UNKNOWN')}"
+                )
                 # self._process_telemetry_messages(payload)
                 self._process_raw_event(payload)
         except Exception as e:
             logger.error(f"Error processing MQTT message: {e}")
-
 
     def attach_ingest_queue(self, q: "asyncio.Queue[dict]"):
         self._ingest_queue = q
 
     def attach_raw_event_queue(self, q: "asyncio.Queue[dict]"):
         self._raw_event_queue = q
-
 
     def _process_raw_event(self, payload: Dict[str, Any]):
         if not self._raw_event_queue:
@@ -155,7 +170,9 @@ class MqttClient:
         try:
             time_unix_usec = payload.get("time_unix_usec")
             if time_unix_usec:
-                time_unix_usec = datetime.fromtimestamp(time_unix_usec/1_000_000, tz=timezone.utc)
+                time_unix_usec = datetime.fromtimestamp(
+                    time_unix_usec / 1_000_000, tz=timezone.utc
+                )
 
             timestamp = _parse_ts(payload.get("timestamp"))
 
@@ -167,12 +184,16 @@ class MqttClient:
                 "timestamp": timestamp,
                 "payload": payload,
             }
-            
-            logging.debug(f"Processing raw event: msg_type={item['msg_type']}, flight_id={self._current_flight_id}")
-            
+
+            logging.debug(
+                f"Processing raw event: msg_type={item['msg_type']}, flight_id={self._current_flight_id}"
+            )
+
             self._raw_event_queue.put_nowait(item)
-            logging.debug(f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}")
-            
+            logging.debug(
+                f"Enqueued event to raw_event_queue, queue size: {self._raw_event_queue.qsize()}"
+            )
+
         except asyncio.QueueFull:
             logging.warning("Raw event queue is full, dropping oldest event")
             # drop oldest to maintain recency
@@ -184,7 +205,6 @@ class MqttClient:
             self._raw_event_queue.put_nowait(item)
         except Exception as e:
             logger.error(f"Error processing raw event: {e}")
-
 
     #
     # def _process_telemetry_messages(self, payload: Dict[str, Any]):

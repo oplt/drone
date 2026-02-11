@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 _orch: Orchestrator | None = None
 _orch_lock = asyncio.Lock()
 
+
 async def _build_orchestrator() -> Orchestrator:
     """Create the orchestrator and all its dependencies (single instance)."""
     global _orch
@@ -28,7 +29,9 @@ async def _build_orchestrator() -> Orchestrator:
         if _orch is not None:
             return _orch
 
-        drone = MavlinkDrone(settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout)
+        drone = MavlinkDrone(
+            settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout
+        )
         maps = GoogleMapsClient(settings.google_maps_api_key)
         analyzer = LLMAnalyzer(
             api_base=settings.llm_api_base,
@@ -62,7 +65,9 @@ async def _build_orchestrator() -> Orchestrator:
                     fps=settings.drone_video_fps,
                     open_timeout_s=settings.drone_video_timeout,
                     probe_indices=5,
-                    fallback_file=settings.drone_video_fallback if settings.drone_video_fallback else None,
+                    fallback_file=settings.drone_video_fallback
+                    if settings.drone_video_fallback
+                    else None,
                     fps_limit=None,
                     enable_recording=settings.drone_video_save_stream,
                     recording_path=settings.drone_video_save_path,
@@ -85,13 +90,17 @@ async def _build_orchestrator() -> Orchestrator:
         _orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher)
         return _orch
 
+
 # Optional CLI entrypoint
 async def main():
     setup_logging()
     await init_db()
     orch = await _build_orchestrator()
-    await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
+    await orch.run(
+        "Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35
+    )
     await close_db()
+
 
 if __name__ == "__main__":
     try:

@@ -7,14 +7,21 @@ from typing import Optional
 
 from backend.db.session import Session
 from backend.db.models import User
-from backend.auth.auth import hash_password, verify_password, create_access_token, decode_token
+from backend.auth.auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    decode_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 # ---- DB dependency (matches your session.py) ----
 async def get_db() -> AsyncSession:
     async with Session() as s:
         yield s
+
 
 # ---- Schemas ----
 class SignUpIn(BaseModel):
@@ -22,9 +29,11 @@ class SignUpIn(BaseModel):
     password: str
     full_name: Optional[str] = None
 
+
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserOut(BaseModel):
     id: int
@@ -32,14 +41,16 @@ class UserOut(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
+
 class AuthOut(BaseModel):
     access_token: str
     user: UserOut
 
+
 # ---- Helpers ----
 async def get_current_user(
-        db: AsyncSession,
-        authorization: Optional[str],
+    db: AsyncSession,
+    authorization: Optional[str],
 ) -> User:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
@@ -54,6 +65,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
+
 # ---- Routes ----
 @router.post("/signup", response_model=AuthOut)
 async def signup(payload: SignUpIn, db: AsyncSession = Depends(get_db)):
@@ -66,10 +78,8 @@ async def signup(payload: SignUpIn, db: AsyncSession = Depends(get_db)):
     if len(payload.password) < 8:
         raise HTTPException(status_code=400, detail="Password too short (min 8 chars).")
 
-
     if len(payload.password.encode("utf-8")) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 bytes).")
-
 
     user = User(
         email=email,
@@ -77,11 +87,12 @@ async def signup(payload: SignUpIn, db: AsyncSession = Depends(get_db)):
         full_name=payload.full_name,
     )
     db.add(user)
-    await db.flush()   # so user.id exists
+    await db.flush()  # so user.id exists
     await db.commit()
 
     token = create_access_token(user.id)
     return {"access_token": token, "user": user}
+
 
 @router.post("/login", response_model=AuthOut)
 async def login(payload: LoginIn, db: AsyncSession = Depends(get_db)):
@@ -95,10 +106,11 @@ async def login(payload: LoginIn, db: AsyncSession = Depends(get_db)):
     token = create_access_token(user.id)
     return {"access_token": token, "user": user}
 
+
 @router.get("/me", response_model=UserOut)
 async def me(
-        authorization: Optional[str] = Header(default=None),
-        db: AsyncSession = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await get_current_user(db, authorization)
     return user

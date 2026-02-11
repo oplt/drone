@@ -2,11 +2,13 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from datetime import datetime
 
+
 @dataclass
 class Coordinate:
     lat: float
     lon: float
     alt: float = 30.0  # default altitude meters
+
 
 @dataclass
 class Telemetry:
@@ -17,10 +19,11 @@ class Telemetry:
     groundspeed: float
     # armed: bool
     mode: str
-    battery_voltage: Optional[float] = None     # Volts
-    battery_current: Optional[float] = None     # Amps (+discharge)
-    battery_remaining: Optional[float] = None       # Percent (0-100)
+    battery_voltage: Optional[float] = None  # Volts
+    battery_current: Optional[float] = None  # Amps (+discharge)
+    battery_remaining: Optional[float] = None  # Percent (0-100)
     system_time: Optional[datetime] = None  # UTC timestamp
+
 
 @dataclass
 class Detection:

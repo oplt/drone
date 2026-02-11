@@ -1,42 +1,157 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Box, Button, Paper, Stack, Typography, Divider, TextField } from "@mui/material";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import {
+  Box,
+  Button,
+  Paper,
+  Stack,
+  Typography,
+  Divider,
+  TextField,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
 import Header from "../components/Header";
-import { GoogleMap, LoadScript, Marker, Polyline, OverlayView } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  Marker,
+  Polyline,
+  OverlayView,
+  useJsApiLoader,
+} from "@react-google-maps/api";
 import { getToken } from "../../../auth"; // adjust path if needed
-import FlightIcon from "@mui/icons-material/Flight";
-import RoomIcon from "@mui/icons-material/Room";   // optional for user marker
+import DroneSvg from "../../../assets/Drone.svg?React";
+import SvgIcon from "@mui/material/SvgIcon";
+import RoomIcon from "@mui/icons-material/Room";
+import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
 
-const containerStyle = { width: "100%", height: "400px" };
+interface MissionStatus {
+  flight_id?: string;
+  mission_name?: string;
+  telemetry?: {
+    running: boolean;
+    active_connections?: number;
+  };
+  orchestrator?: {
+    drone_connected: boolean;
+  };
+}
 
-// Default to Brussels as fallback
-const defaultCenter = { lat: 50.8503, lng: 4.3517 }; // Brussels
+// Try to safely extract lat/lon from whatever the backend publishes
+function extractLatLng(value: any): LatLng | null {
+  if (!value) return null;
+
+  const lat =
+    value.lat ??
+    value.latitude ??
+    value.Lat ??
+    value.Latitude ??
+    (value.position ? value.position.lat ?? value.position.latitude : undefined);
+
+  const lon =
+    value.lon ??
+    value.lng ??
+    value.longitude ??
+    value.Lon ??
+    value.Lng ??
+    value.Longitude ??
+    (value.position
+      ? value.position.lon ?? value.position.lng ?? value.position.longitude
+      : undefined);
+
+  if (typeof lat !== "number" || typeof lon !== "number") return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < -90 || lat > 90) return null;
+  if (lon < -180 || lon > 180) return null;
+
+  return { lat, lng: lon };
+}
+
+const containerStyle = { width: "100%", height: "400px" };
+const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
 export default function TasksPage() {
   const mapRef = useRef<google.maps.Map | null>(null);
+
+  // IMPORTANT: refs for cleanup to avoid “cleanup runs on dependency change” bug
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeFlightIdRef = useRef<string | null>(null);
+
+  // animation + panning control
+  const rafRef = useRef<number | null>(null);
+  const lastPanRef = useRef<number>(0);
+  const snappedToDroneRef = useRef(false);
+
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
   const [droneCenter, setDroneCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+
+  // altitude: keep input string to avoid error spam while typing
   const [alt, setAlt] = useState<number>(30);
+  const [altInput, setAltInput] = useState<string>("30");
+
   const [name, setName] = useState<string>("mission-1");
   const [sending, setSending] = useState(false);
   const [center, setCenter] = useState<LatLng>(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
+
   const [droneConnected, setDroneConnected] = useState(false);
+  const [droneReady, setDroneReady] = useState(false);
+  const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
+  const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(null);
 
-  // Only need one API key variable
+  const [mapZoom, setMapZoom] = useState<number>(12);
+
+  const [streamKey, setStreamKey] = useState<number>(Date.now());
+  const [startingVideo, setStartingVideo] = useState<boolean>(false);
+  const [errors, setErrors] = useState<string[]>([]);
+
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
-  const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+  const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
+  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
 
+  // Removes LoadScript + prevents repeated script injection
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: "google-maps-script",
+    googleMapsApiKey: apiKey || "MISSING_KEY",
+  });
 
-  // Initialize map reference callback
+  // Keep latest activeFlightId in a ref for unmount cleanup
+  useEffect(() => {
+    activeFlightIdRef.current = activeFlightId;
+  }, [activeFlightId]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
 
-  // Get user's location on component mount
+  const addError = useCallback((error: string) => {
+    setErrors((prev) => [...prev.slice(-4), error]); // keep last 5
+  }, []);
+
+  const clearErrors = useCallback(() => {
+    setErrors([]);
+  }, []);
+
+  /**
+   * Telemetry WS enabling:
+   * - If your backend sends telemetry even without an active mission, you likely want:
+   *     const wsEnabled = true;
+   * - If your backend only sends telemetry during a mission, keep this gating.
+   */
+  const wsEnabled = Boolean(
+    activeFlightId &&
+      missionStatus?.telemetry?.running &&
+      missionStatus?.orchestrator?.drone_connected,
+  );
+
+  const { telemetry, isConnected: wsConnected, disconnect } = useTelemetryWebSocket({
+    enabled: wsEnabled,
+  });
+
+  // Get user location on mount
   useEffect(() => {
     if (!navigator.geolocation) {
       console.warn("Geolocation is not supported by this browser.");
@@ -56,101 +171,261 @@ export default function TasksPage() {
       },
       (error) => {
         console.error("Error getting location:", error);
-        // Fallback to default center if user denies location or error occurs
+        addError(`Failed to get location: ${error.message}`);
         setLoadingLocation(false);
       },
       {
         enableHighAccuracy: true,
         timeout: 5000,
         maximumAge: 0,
-      }
+      },
     );
-  }, []);
+  }, [addError]);
 
-  /* Poll for drone connection status */
+  // Extract drone position from telemetry (handles multiple possible shapes)
   useEffect(() => {
-    let mounted = true;
+    const next =
+      extractLatLng(telemetry?.position) ||
+      extractLatLng(telemetry?.gps) ||
+      extractLatLng(telemetry?.home) ||
+      extractLatLng(telemetry);
 
-    const checkDroneConnection = async () => {
-      try {
-        const res = await fetch("/tasks/home_location");
-        if (!res.ok) {
-          // If response is not OK, drone is not connected
-          if (mounted) {
-            setDroneConnected(false);
-            setDroneCenter(null);
-          }
-          return;
-        }
+    if (!next) return;
 
-        const data = await res.json();
-
-        if (mounted) {
-          setDroneConnected(data.connected || false);
-          if (data.connected && data.lat !== 0 && data.lon !== 0) {
-            setDroneCenter({ lat: data.lat, lng: data.lon });
-          } else {
-            setDroneCenter(null);
-          }
-        }
-      } catch (error) {
-        console.log("Drone not connected yet");
-        if (mounted) {
-          setDroneConnected(false);
-          setDroneCenter(null);
-        }
-      }
-    };
-
-    // Check immediately
-    checkDroneConnection();
-
-    // Poll every 3 seconds to check if drone connected
-    const interval = setInterval(checkDroneConnection, 3000);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => setDroneCenter(next));
 
     return () => {
-      mounted = false;
-      clearInterval(interval);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, []);
+  }, [telemetry]);
 
-  /* Zoom to drone when available */
+  // Connection status (boolean). We treat “ready” as “WS connected + we have a valid position”.
   useEffect(() => {
-    if (!mapRef.current || !droneCenter) return;
+    const hasPosition = Boolean(droneCenter);
+    setDroneReady(Boolean(wsConnected && hasPosition));
+    setDroneConnected(Boolean(wsConnected && hasPosition));
+  }, [wsConnected, droneCenter]);
+
+  // Start Pi camera streaming when drone becomes ready (best effort)
+  useEffect(() => {
+    const token = getToken();
+    if (!droneReady || !token) return;
+
+    const timer = setTimeout(() => {
+      setStartingVideo(true);
+      fetch(`${API_BASE_CLEAN}/video/start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            let detail = `HTTP ${res.status}`;
+            try {
+              const data = (await res.json()) as { detail?: string };
+              if (data?.detail) detail = data.detail;
+            } catch {
+              // ignore
+            }
+            throw new Error(detail);
+          }
+          setStreamKey(Date.now());
+        })
+        .catch((error) => {
+          addError(`Failed to start video: ${error.message}`);
+        })
+        .finally(() => {
+          setStartingVideo(false);
+        });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [droneReady, API_BASE_CLEAN, addError]);
+
+  // Poll flight status when mission is active (use ref for interval)
+  useEffect(() => {
+    if (!activeFlightId) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    const pollFlightStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE_CLEAN}/tasks/flight/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const status = (await res.json()) as MissionStatus;
+        setMissionStatus(status);
+
+        if (!status.flight_id) {
+          // backend reports no active flight => clear local state
+          setActiveFlightId(null);
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to poll flight status:", error);
+        addError(
+          `Flight status polling failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        );
+      }
+    };
+
+    pollFlightStatus();
+
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = setInterval(pollFlightStatus, 5000);
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [activeFlightId, API_BASE_CLEAN, addError]);
+
+  // Cleanup on unmount ONLY (stop telemetry, clear polling, disconnect WS)
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+
+      const flightId = activeFlightIdRef.current;
+      const token = getToken();
+
+      if (flightId) {
+        fetch(`${API_BASE_CLEAN}/tasks/telemetry/stop`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+          .catch((error) => addError(`Failed to stop telemetry: ${error.message}`))
+          .finally(() => disconnect());
+      } else {
+        disconnect();
+      }
+    };
+  }, [API_BASE_CLEAN, disconnect, addError]);
+
+  // Focus map on drone once (as soon as we get a valid position after WS connects)
+  useEffect(() => {
+    if (!mapRef.current || !droneCenter || !wsConnected) return;
+
+    if (!snappedToDroneRef.current) {
+      snappedToDroneRef.current = true;
+      mapRef.current.panTo(droneCenter);
+      mapRef.current.setZoom(18);
+      setMapZoom(18);
+    }
+  }, [wsConnected, droneCenter]);
+
+  useEffect(() => {
+    if (!wsConnected) snappedToDroneRef.current = false;
+  }, [wsConnected]);
+
+  // During flight, keep following in a non-invasive way (only when zoomed-in already)
+  useEffect(() => {
+    if (!mapRef.current || !droneCenter || !wsConnected) return;
+
+    const now = Date.now();
+    if (now - lastPanRef.current < 500) return; // max 2x/sec
+    lastPanRef.current = now;
+
+    const currentZoom = mapRef.current.getZoom() ?? 0;
+    if (currentZoom < 16) return;
 
     mapRef.current.panTo(droneCenter);
-    mapRef.current.setZoom(18);
-  }, [droneCenter]);
+  }, [droneCenter, wsConnected]);
 
-  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-
-    setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
-  }, [alt]);
+  const onMapClick = useCallback(
+    (e: google.maps.MapMouseEvent) => {
+      if (!e.latLng) return;
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
+    },
+    [alt],
+  );
 
   const undo = () => setWaypoints((prev) => prev.slice(0, -1));
   const clear = () => setWaypoints([]);
 
+  const handleAltitudeInputChange = (value: string) => {
+    if (value === "") {
+      setAltInput("");
+      return;
+    }
+    if (!/^\d+$/.test(value)) return;
+    setAltInput(value);
+  };
+
+  const normalizeAltitude = () => {
+    if (altInput === "") {
+      setAltInput(String(alt));
+      return;
+    }
+    const num = Number(altInput);
+    if (!Number.isFinite(num)) {
+      setAltInput(String(alt));
+      return;
+    }
+    if (num < 1 || num > 500) {
+      addError("Altitude must be between 1 and 500 meters");
+      return;
+    }
+    setAlt(num);
+  };
+
   const sendMission = async () => {
     const token = getToken();
     if (!token) {
+      addError("Not authenticated");
       alert("Not authenticated");
       return;
     }
     if (waypoints.length < 2) {
+      addError("Select at least 2 waypoints");
       alert("Select at least 2 points.");
       return;
     }
     if (!name.trim()) {
+      addError("Please enter a mission name");
       alert("Please enter a mission name.");
       return;
     }
 
+    const altToUse = altInput === "" ? NaN : Number(altInput);
+    if (!Number.isFinite(altToUse) || altToUse < 1 || altToUse > 500) {
+      addError("Altitude must be between 1 and 500 meters");
+      alert("Altitude must be between 1 and 500 meters.");
+      return;
+    }
+
     setSending(true);
+    clearErrors();
+
     try {
-      const res = await fetch(`${API_BASE}/tasks/missions`, {
+      // 1) Start telemetry first
+      const telemetryRes = await fetch(`${API_BASE_CLEAN}/tasks/telemetry/start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!telemetryRes.ok) {
+        const errorText = await telemetryRes.text();
+        throw new Error(`Failed to start telemetry: ${errorText}`);
+      }
+
+      // 2) Create and start mission
+      const missionRes = await fetch(`${API_BASE_CLEAN}/tasks/missions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,49 +433,152 @@ export default function TasksPage() {
         },
         body: JSON.stringify({
           name: name.trim(),
-          cruise_alt: alt,
+          cruise_alt: altToUse,
           waypoints,
         }),
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
+      if (!missionRes.ok) {
+        const txt = await missionRes.text();
         throw new Error(txt || "Failed to create mission");
       }
 
-      const data = await res.json();
-      alert(`Mission created: ${data.id}`);
-      // Optionally clear the mission after successful creation
-      // clear();
-    } catch (err: any) {
-      alert(err?.message ?? "Error");
+      const data = (await missionRes.json()) as { flight_id: string; mission_name: string };
+      alert(`Mission "${data.mission_name}" started! Tracking flight...`);
+
+      setActiveFlightId(data.flight_id);
+
+      setAlt(altToUse);
+      setAltInput(String(altToUse));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error creating mission";
+      addError(message);
+      alert(message);
     } finally {
       setSending(false);
     }
   };
 
-  const polylinePath = waypoints.map((p) => ({ lat: p.lat, lng: p.lon }));
+  const polylinePath = useMemo(
+    () => waypoints.map((p) => ({ lat: p.lat, lng: p.lon })),
+    [waypoints],
+  );
 
-  // Determine what to use as map center
-  const mapCenter = waypoints.length > 0
-    ? { lat: waypoints[0].lat, lng: waypoints[0].lon }
-    : (droneCenter || userCenter || center);
+  // If drone exists, keep map centered near it initially
+  const mapCenter =
+    droneCenter ||
+    (waypoints.length > 0
+      ? { lat: waypoints[0].lat, lng: waypoints[0].lon }
+      : userCenter || center);
+
+  const mapOptions = useMemo(
+    () => ({
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: true,
+      clickableIcons: false,
+      keyboardShortcuts: false,
+      gestureHandling: "greedy" as const,
+      maxZoom: 20,
+      minZoom: 3,
+    }),
+    [],
+  );
+
+  // --- Telemetry overlay values (best-effort extraction) ---
+  const batteryPct =
+    telemetry?.battery?.percent ??
+    telemetry?.battery?.percentage ??
+    telemetry?.battery_remaining ??
+    telemetry?.batteryPercent ??
+    null;
+
+  const groundSpeed =
+    telemetry?.velocity?.ground ??
+    telemetry?.ground_speed ??
+    telemetry?.groundSpeed ??
+    telemetry?.speed ??
+    null;
+
+  const relAlt =
+    telemetry?.position?.rel_alt_m ??
+    telemetry?.position?.relative_altitude ??
+    telemetry?.altitude ??
+    telemetry?.relativeAltitude ??
+    null;
+
+  const heading =
+    telemetry?.status?.heading ?? telemetry?.heading ?? telemetry?.yaw ?? null;
+
+  const mode =
+    telemetry?.status?.mode ?? telemetry?.mode ?? telemetry?.flight_mode ?? null;
+
+  const sats = telemetry?.gps?.satellites ?? telemetry?.satellites ?? null;
+
+  const armed = Boolean(telemetry?.armed ?? telemetry?.status?.armed);
+
+  const formatMaybeNumber = (v: any, digits = 1) =>
+    typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
+
+  const TelemetryBox = ({ label, value }: { label: string; value: string }) => (
+    <Box
+      sx={{
+        px: 1,
+        py: 0.5,
+        borderRadius: 1,
+        bgcolor: "rgba(0,0,0,0.65)",
+        color: "white",
+        fontSize: 12,
+        lineHeight: 1.2,
+        minWidth: 88,
+      }}
+    >
+      <div style={{ opacity: 0.85, fontSize: 10 }}>{label}</div>
+      <div style={{ fontWeight: 600 }}>{value}</div>
+    </Box>
+  );
 
   return (
     <>
       <Header />
       <Paper sx={{ width: "100%", p: 2 }}>
-        <Typography variant="h4" sx={{ mb: 2 }}>Tasks</Typography>
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Tasks
+        </Typography>
+
+        {/* Error display */}
+        {errors.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            {errors.map((error, idx) => (
+              <Alert
+                key={`${idx}-${error}`}
+                severity="error"
+                sx={{ mb: 1 }}
+                onClose={() => setErrors((prev) => prev.filter((_, i) => i !== idx))}
+              >
+                {error}
+              </Alert>
+            ))}
+            <Button size="small" onClick={clearErrors} sx={{ mt: 1 }}>
+              Clear All Errors
+            </Button>
+          </Box>
+        )}
 
         {!apiKey ? (
-          <Typography color="error" sx={{ mb: 2 }}>
-            Missing Google Maps API Key. Please set VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY in your .env file.
-          </Typography>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Missing Google Maps API Key. Please set VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY
+            in your .env file.
+          </Alert>
+        ) : loadError ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Failed to load Google Maps.
+          </Alert>
         ) : (
           <>
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
-              {/* Left side: Map */}
-              <Box sx={{ flex: 1, minHeight: 200 }}>
+              {/* Left side: Map & Camera */}
+              <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
                 {loadingLocation ? (
                   <Box
                     sx={{
@@ -212,74 +590,241 @@ export default function TasksPage() {
                       bgcolor: "#f5f5f5",
                     }}
                   >
-                    <Typography>Loading your location...</Typography>
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>Loading your location...</Typography>
+                  </Box>
+                ) : !isLoaded ? (
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: 400,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: "#f5f5f5",
+                    }}
+                  >
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>Loading map...</Typography>
                   </Box>
                 ) : (
-                  <LoadScript googleMapsApiKey={apiKey}>
-                    <GoogleMap
-                      mapContainerStyle={containerStyle}
-                      center={mapCenter}
-                      zoom={waypoints.length ? 16 : 12}
-                      onClick={onMapClick}
-                      onLoad={onMapLoad}
-                      options={{
-                        streetViewControl: false,
-                        mapTypeControl: false,
-                        fullscreenControl: true,
-                      }}
-                    >
-                      {/* Drone icon - only show when connected */}
-                      {droneConnected && droneCenter && (
-                        <OverlayView
-                          position={droneCenter}
-                          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                        >
-                          <div style={{ transform: "translate(-50%, -50%)", color: "#1976d2" }}>
-                            <FlightIcon fontSize="large" />
-                          </div>
-                        </OverlayView>
-                      )}
-
-                      {/* User location icon (optional) */}
-                      {userCenter && (
-                        <OverlayView
-                          position={userCenter}
-                          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                        >
-                          <div style={{ transform: "translate(-50%, -50%)", color: "#4caf50" }}>
-                            <RoomIcon fontSize="large" />
-                          </div>
-                        </OverlayView>
-                      )}
-
-                      {waypoints.map((p, idx) => (
-                        <Marker
-                          key={`${p.lat}-${p.lon}-${idx}`}
-                          position={{ lat: p.lat, lng: p.lon }}
-                          label={`${idx + 1}`}
-                        />
-                      ))}
-
-                      {waypoints.length >= 2 && (
-                        <Polyline
-                          path={polylinePath}
-                          options={{
-                            strokeColor: "#1976d2",
-                            strokeOpacity: 0.8,
-                            strokeWeight: 3,
+                  <GoogleMap
+                    mapContainerStyle={containerStyle}
+                    center={mapCenter}
+                    zoom={droneCenter ? 18 : waypoints.length ? 16 : mapZoom}
+                    onClick={onMapClick}
+                    onLoad={onMapLoad}
+                    options={mapOptions}
+                  >
+                    {/* Drone icon (now always visible whenever we have droneCenter) */}
+                    {droneCenter && (
+                      <OverlayView
+                        position={droneCenter}
+                        mapPaneName={OverlayView.OVERLAY_LAYER}
+                      >
+                        <div
+                          style={{
+                            transform: `translate(-50%, -50%) rotate(${
+                              typeof heading === "number" ? heading : 0
+                            }deg)`,
+                            transformOrigin: "center",
+                            color: armed ? "#1976d2" : "#9aa0a6",
+                            zIndex: 9999,
                           }}
-                        />
-                      )}
-                    </GoogleMap>
-                  </LoadScript>
+                        >
+                          <SvgIcon
+                            component={DroneSvg}
+                            inheritViewBox
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
+                            }}
+                          />
+                          {activeFlightId && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "-28px",
+                                left: "50%",
+                                transform: "translateX(-50%)",
+                                background: "white",
+                                padding: "2px 6px",
+                                borderRadius: "3px",
+                                fontSize: "10px",
+                                whiteSpace: "nowrap",
+                                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                              }}
+                            >
+                              Flight: {activeFlightId.substring(0, 8)}...
+                            </div>
+                          )}
+                        </div>
+                      </OverlayView>
+                    )}
+
+                    {/* User location icon */}
+                    {userCenter && (
+                      <OverlayView
+                        position={userCenter}
+                        mapPaneName={OverlayView.OVERLAY_LAYER}
+                      >
+                        <div
+                          style={{
+                            transform: "translate(-50%, -50%)",
+                            color: "#4caf50",
+                          }}
+                        >
+                          <RoomIcon fontSize="large" />
+                        </div>
+                      </OverlayView>
+                    )}
+
+                    {/* Waypoint markers */}
+                    {waypoints.map((p, idx) => (
+                      <Marker
+                        key={`${p.lat}-${p.lon}-${idx}`}
+                        position={{ lat: p.lat, lng: p.lon }}
+                        label={`${idx + 1}`}
+                      />
+                    ))}
+
+                    {/* Mission path */}
+                    {waypoints.length >= 2 && (
+                      <Polyline
+                        path={polylinePath}
+                        options={{
+                          strokeColor: "#1976d2",
+                          strokeOpacity: 0.8,
+                          strokeWeight: 3,
+                        }}
+                      />
+                    )}
+                  </GoogleMap>
                 )}
+
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Click on the map to add waypoints. Markers are ordered (1..N).
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Drone Status: {droneConnected ? "Connected" : "Disconnected"}
+                  {activeFlightId && ` | Active Flight: ${activeFlightId.substring(0, 8)}...`}
+                  {wsConnected && ` | WS: Connected`}
                 </Typography>
-              </Box>
+
+                {/* Camera stream panel under the map */}
+                <Paper variant="outlined" sx={{ p: 1 }}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography variant="subtitle1">Drone Camera</Typography>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      {startingVideo && <CircularProgress size={16} />}
+                      <Typography variant="caption" color="text.secondary">
+                        {startingVideo
+                          ? "Starting video…"
+                          : droneConnected
+                            ? "Live"
+                            : "Disconnected"}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: 240,
+                      bgcolor: "#000",
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position: "relative",
+                    }}
+                  >
+                    {droneConnected ? (
+                      <>
+                        <Box
+                          component="img"
+                          src={`${API_BASE_CLEAN}/video/mjpeg?key=${streamKey}`}
+                          alt="Drone camera stream"
+                          onError={() => addError("Failed to load video stream")}
+                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+
+                        {/* Telemetry overlay boxes (like your screenshot) */}
+                        <Box sx={{ position: "absolute", top: 8, left: 8 }}>
+                          <Stack spacing={0.75}>
+                            <TelemetryBox
+                              label="Battery"
+                              value={
+                                batteryPct === null
+                                  ? "--"
+                                  : `${formatMaybeNumber(Number(batteryPct), 0)}%`
+                              }
+                            />
+                            <TelemetryBox
+                              label="GND SPD"
+                              value={`${formatMaybeNumber(Number(groundSpeed), 1)} m/s`}
+                            />
+                            <TelemetryBox
+                              label="ALT"
+                              value={`${formatMaybeNumber(Number(relAlt), 1)} m`}
+                            />
+                          </Stack>
+                        </Box>
+
+                        <Box sx={{ position: "absolute", top: 8, right: 8 }}>
+                          <Stack spacing={0.75} alignItems="flex-end">
+                            <TelemetryBox
+                              label="MODE"
+                              value={typeof mode === "string" ? mode : "--"}
+                            />
+                            <TelemetryBox
+                              label="HDG"
+                              value={
+                                typeof heading === "number" && Number.isFinite(heading)
+                                  ? `${Math.round(heading)}°`
+                                  : "--"
+                              }
+                            />
+                            <TelemetryBox
+                              label="GPS"
+                              value={sats === null || sats === undefined ? "--" : `${sats} sats`}
+                            />
+                          </Stack>
+                        </Box>
+
+                        {startingVideo && (
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              backgroundColor: "rgba(0,0,0,0.7)",
+                            }}
+                          >
+                            <CircularProgress />
+                          </Box>
+                        )}
+                      </>
+                    ) : (
+                      <Typography sx={{ color: "white" }}>
+                        Connect the drone to view the camera stream.
+                      </Typography>
+                    )}
+                  </Box>
+                </Paper>
+              </Stack>
 
               {/* Right side: Controls */}
               <Box sx={{ width: { xs: "100%", md: 300 } }}>
@@ -290,20 +835,29 @@ export default function TasksPage() {
                     onChange={(e) => setName(e.target.value)}
                     size="small"
                     fullWidth
-                  />
-                  <TextField
-                    label="Cruise altitude (m)"
-                    type="number"
-                    value={alt}
-                    onChange={(e) => setAlt(Number(e.target.value))}
-                    size="small"
-                    fullWidth
-                    inputProps={{ min: 1, max: 500 }}
+                    required
+                    error={!name.trim()}
+                    helperText={!name.trim() ? "Mission name is required" : ""}
                   />
 
-                  <Typography variant="subtitle2">
-                    Waypoints: {waypoints.length}
-                  </Typography>
+                  <TextField
+                    label="Cruise altitude (m)"
+                    type="text"
+                    value={altInput}
+                    onChange={(e) => handleAltitudeInputChange(e.target.value)}
+                    onBlur={normalizeAltitude}
+                    size="small"
+                    fullWidth
+                    inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
+                    error={altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)}
+                    helperText={
+                      altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
+                        ? "Must be between 1–500m"
+                        : ""
+                    }
+                  />
+
+                  <Typography variant="subtitle2">Waypoints: {waypoints.length}</Typography>
 
                   <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                     <Button
@@ -328,12 +882,32 @@ export default function TasksPage() {
                   <Button
                     variant="contained"
                     onClick={sendMission}
-                    disabled={sending || waypoints.length < 2 || !name.trim()}
+                    disabled={
+                      sending ||
+                      waypoints.length < 2 ||
+                      !name.trim() ||
+                      altInput === "" ||
+                      Number(altInput) < 1 ||
+                      Number(altInput) > 500
+                    }
                     fullWidth
                     sx={{ mt: 2 }}
                   >
-                    {sending ? "Sending..." : "Create Mission"}
+                    {sending ? (
+                      <>
+                        <CircularProgress size={20} sx={{ mr: 1 }} />
+                        Sending...
+                      </>
+                    ) : (
+                      "Create Mission"
+                    )}
                   </Button>
+
+                  {activeFlightId && (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      Active mission: {missionStatus?.mission_name || "Loading..."}
+                    </Alert>
+                  )}
                 </Stack>
               </Box>
             </Stack>
@@ -343,13 +917,58 @@ export default function TasksPage() {
             {/* Display waypoints list */}
             {waypoints.length > 0 && (
               <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>Waypoints</Typography>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Waypoints
+                </Typography>
                 <Stack spacing={1}>
                   {waypoints.map((wp, idx) => (
                     <Typography key={idx} variant="body2">
-                      {idx + 1}. Lat: {wp.lat.toFixed(6)}, Lon: {wp.lon.toFixed(6)}, Alt: {wp.alt || alt}m
+                      {idx + 1}. Lat: {wp.lat.toFixed(6)}, Lon: {wp.lon.toFixed(6)}, Alt:{" "}
+                      {wp.alt ?? alt}m
                     </Typography>
                   ))}
+                </Stack>
+              </Box>
+            )}
+
+            {/* Status display panel */}
+            {missionStatus && (activeFlightId || waypoints.length > 0) && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: "#e8f5e8", borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                  Mission Status
+                </Typography>
+                <Stack spacing={0.5}>
+                  {missionStatus.flight_id && (
+                    <Typography variant="caption" component="div">
+                      Flight ID: {missionStatus.flight_id}
+                    </Typography>
+                  )}
+                  {missionStatus.mission_name && (
+                    <Typography variant="caption" component="div">
+                      Mission: {missionStatus.mission_name}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" component="div">
+                    Telemetry:{" "}
+                    {missionStatus.telemetry?.running ? (
+                      <span style={{ color: "green" }}>Running</span>
+                    ) : (
+                      <span style={{ color: "red" }}>Stopped</span>
+                    )}
+                  </Typography>
+                  {missionStatus.telemetry?.active_connections !== undefined && (
+                    <Typography variant="caption" component="div">
+                      WS Connections: {missionStatus.telemetry.active_connections}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" component="div">
+                    Drone Connected:{" "}
+                    {missionStatus.orchestrator?.drone_connected ? (
+                      <span style={{ color: "green" }}>Yes</span>
+                    ) : (
+                      <span style={{ color: "red" }}>No</span>
+                    )}
+                  </Typography>
                 </Stack>
               </Box>
             )}

@@ -1,6 +1,6 @@
 import time
 import os
-from typing import Iterator, Union, Optional
+from typing import Iterator, Union
 import cv2
 from datetime import datetime
 import logging
@@ -9,7 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 def _is_rtsp(s: str) -> bool:
-    return isinstance(s, str) and s.lower().startswith(("rtsp://", "rtsps://", "udp://", "tcp://", "http://", "https://"))
+    return isinstance(s, str) and s.lower().startswith(
+        ("rtsp://", "rtsps://", "udp://", "tcp://", "http://", "https://")
+    )
+
 
 class DroneVideoStream:
     """
@@ -22,19 +25,21 @@ class DroneVideoStream:
       - Fallback file support when live source is unavailable
       - Connection health monitoring for drone applications
     """
+
     def __init__(
-            self,
-            source: Union[int, str, None] = 0,
-            width: int = 640,
-            height: int = 480,
-            fps: int = 30,
-            open_timeout_s: float = 5.0,
-            probe_indices: int = 5,
-            fallback_file: str | None = None,
-            fps_limit: float | None = None,  # throttle frame rate to save CPU/LLM cost (None = no limit)
-            enable_recording: bool = False,
-            recording_path: str = "./recordings/",
-            recording_format: str = "mp4"
+        self,
+        source: Union[int, str, None] = 0,
+        width: int = 640,
+        height: int = 480,
+        fps: int = 30,
+        open_timeout_s: float = 5.0,
+        probe_indices: int = 5,
+        fallback_file: str | None = None,
+        fps_limit: float
+        | None = None,  # throttle frame rate to save CPU/LLM cost (None = no limit)
+        enable_recording: bool = False,
+        recording_path: str = "./recordings/",
+        recording_format: str = "mp4",
     ):
         self.fps_limit = fps_limit
         self._last_ts = 0.0
@@ -51,7 +56,7 @@ class DroneVideoStream:
         self.connection_healthy = False
         self.last_frame_time = 0
         self.frame_count = 0
-        
+
         # Ensure recording directory exists
         if self.enable_recording:
             os.makedirs(self.recording_path, exist_ok=True)
@@ -64,7 +69,9 @@ class DroneVideoStream:
         if self.cap is None and (source is None or isinstance(source, int)):
             for idx in range(0, probe_indices + 1):
                 try:
-                    self.cap = self._open_source(idx, width, height, fps, open_timeout_s)
+                    self.cap = self._open_source(
+                        idx, width, height, fps, open_timeout_s
+                    )
                     logger.info(f"[Video] Probed working camera at index {idx}")
                     break
                 except RuntimeError:
@@ -73,14 +80,16 @@ class DroneVideoStream:
         # 3) If still no live source, try fallback file if provided
         if self.cap is None and fallback_file and os.path.exists(fallback_file):
             try:
-                self.cap = self._open_source(fallback_file, width, height, fps, open_timeout_s)
+                self.cap = self._open_source(
+                    fallback_file, width, height, fps, open_timeout_s
+                )
                 logger.info(f"[Video] Using fallback file: {fallback_file}")
             except RuntimeError:
                 pass
 
         if self.cap is None:
             raise RuntimeError(f"Camera not ready: source={source}")
-        
+
         # Start recording if enabled
         if self.enable_recording:
             self._start_recording()
@@ -115,7 +124,7 @@ class DroneVideoStream:
         if not ok:
             cap.release()
             raise RuntimeError(f"OpenCV source failed: {source}")
-        
+
         self.connection_healthy = True
         return cap
 
@@ -123,31 +132,31 @@ class DroneVideoStream:
         """Start video recording with timestamp"""
         if not self.enable_recording or self.cap is None:
             return
-            
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.recording_filename = f"drone_video_{timestamp}.{self.recording_format}"
         full_path = os.path.join(self.recording_path, self.recording_filename)
-        
+
         # Get actual video properties from camera
         actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
-        
+
         if actual_fps <= 0:
             actual_fps = self.fps
-            
+
         # Define codec based on format
         if self.recording_format == "mp4":
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         elif self.recording_format == "avi":
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            fourcc = cv2.VideoWriter_fourcc(*"XVID")
         else:
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
         self.video_writer = cv2.VideoWriter(
             full_path, fourcc, actual_fps, (actual_width, actual_height)
         )
-        
+
         if not self.video_writer.isOpened():
             logger.error(f"Failed to open video writer for {full_path}")
             self.video_writer = None
@@ -167,22 +176,24 @@ class DroneVideoStream:
         if self.cap is None:
             self.connection_healthy = False
             return False
-            
+
         # Check if we can read frames
         ok, _ = self.cap.read()
         if not ok:
             self.connection_healthy = False
             logging.warning("Video stream connection lost")
             return False
-            
+
         # Check frame rate health
         now = time.time()
         if self.last_frame_time > 0:
             frame_interval = now - self.last_frame_time
             expected_interval = 1.0 / self.fps
             if frame_interval > expected_interval * 2:  # Allow some tolerance
-                logging.warning(f"Video stream frame rate degraded: {1.0/frame_interval:.1f} fps")
-                
+                logging.warning(
+                    f"Video stream frame rate degraded: {1.0 / frame_interval:.1f} fps"
+                )
+
         self.last_frame_time = now
         self.connection_healthy = True
         return True
@@ -193,13 +204,15 @@ class DroneVideoStream:
             # Check connection health periodically
             if self.frame_count % 30 == 0:  # Check every 30 frames
                 if not self._check_connection_health():
-                    logger.error("Video stream connection unhealthy, attempting to reconnect...")
+                    logger.error(
+                        "Video stream connection unhealthy, attempting to reconnect..."
+                    )
                     # Try to reconnect
                     self._reconnect()
                     if self.cap is None:
                         break
                     continue
-            
+
             ok, frame = self.cap.read()
             if not ok:
                 # For files, try to loop from start
@@ -230,12 +243,14 @@ class DroneVideoStream:
         try:
             if self.cap:
                 self.cap.release()
-            
+
             # Wait a bit before reconnecting
             time.sleep(1.0)
-            
+
             # Try to reconnect
-            self.cap = self._open_source(self.source, self.width, self.height, self.fps, 5.0)
+            self.cap = self._open_source(
+                self.source, self.width, self.height, self.fps, 5.0
+            )
             if self.cap and self.cap.isOpened():
                 logger.info("Successfully reconnected to video source")
                 # Restart recording if it was active
@@ -243,7 +258,7 @@ class DroneVideoStream:
                     self._start_recording()
             else:
                 logger.error("Failed to reconnect to video source")
-                
+
         except Exception as e:
             logger.error(f"Error during video reconnection: {e}")
 
@@ -255,7 +270,7 @@ class DroneVideoStream:
             "fps": self.fps,
             "resolution": f"{self.width}x{self.height}",
             "recording": self.video_writer is not None and self.video_writer.isOpened(),
-            "recording_file": self.recording_filename
+            "recording_file": self.recording_filename,
         }
 
     def close(self):
@@ -266,6 +281,7 @@ class DroneVideoStream:
                 self.cap.release()
         except Exception as e:
             logger.error(f"Error closing video stream: {e}")
+
 
 # Backward compatibility alias
 VideoStream = DroneVideoStream
