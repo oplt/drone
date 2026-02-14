@@ -106,8 +106,7 @@ export default function TasksPage() {
   const [center, setCenter] = useState<LatLng>(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
 
-  const [droneConnected, setDroneConnected] = useState(false);
-  const [droneReady, setDroneReady] = useState(false);
+  const videoStartedRef = useRef(false);
   const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
   const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(null);
 
@@ -120,37 +119,27 @@ export default function TasksPage() {
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
 
-  const apiKey =import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
   const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
   const libraries = useMemo(() => ["marker"] as any, []);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoRetryCount, setVideoRetryCount] = useState(0);
-  const [telemetry, setTelemetry] = useState<any>(null);
-  const statusDroneConnected = Boolean(missionStatus?.orchestrator?.drone_connected);
-  const statusTelemetryRunning = Boolean(missionStatus?.telemetry?.running);
-   const wsEnabled = Boolean(
-      missionStatus?.orchestrator?.drone_connected &&
+  const wsEnabled = Boolean(
+    missionStatus?.orchestrator?.drone_connected &&
       missionStatus?.telemetry?.running &&
-      activeFlightId
-    );
-    const { isConnected: wsConnected, disconnect } = useTelemetryWebSocket({
+      activeFlightId,
+  );
+  const { telemetry, isConnected: wsConnected, disconnect } = useTelemetryWebSocket(
+    {
       enabled: wsEnabled,
-      onTelemetry: (data) => setTelemetry(data),
-    });
-
-
-
-
-  useTelemetryWebSocket({
-    enabled: wsEnabled,
-    onTelemetry: (data) => {
-      setTelemetry(data);
     },
-  });
-
-
+  );
+  const droneConnected = Boolean(
+    missionStatus?.orchestrator?.drone_connected || wsConnected,
+  );
+  const droneReady = Boolean(wsConnected && droneCenter);
   // Removes LoadScript + prevents repeated script injection
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-maps-script",
@@ -166,6 +155,14 @@ export default function TasksPage() {
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     setMapReady(true);
+  }, []);
+
+  const onMapZoomChanged = useCallback(() => {
+    if (!mapRef.current) return;
+    const zoom = mapRef.current.getZoom();
+    if (typeof zoom === "number" && Number.isFinite(zoom)) {
+      setMapZoom(zoom);
+    }
   }, []);
 
   const addError = useCallback((error: string) => {
@@ -339,18 +336,16 @@ export default function TasksPage() {
     };
   }, [isLoaded, mapReady, waypoints]);
 
-  // Connection status (boolean). We treat “ready” as “WS connected + we have a valid position”.
   useEffect(() => {
-    const hasPosition = Boolean(droneCenter);
-    setDroneReady(Boolean(wsConnected && hasPosition));
-    //setDroneConnected(Boolean(wsConnected && hasPosition));
-    setDroneConnected(Boolean(wsConnected));
-  }, [wsConnected, droneCenter]);
+    if (!activeFlightId) {
+      videoStartedRef.current = false;
+    }
+  }, [activeFlightId]);
 
   // Start Pi camera streaming when drone becomes ready (best effort)
   useEffect(() => {
     const token = getToken();
-    if (!droneReady || !token) return;
+    if (!droneReady || !token || videoStartedRef.current) return;
 
     const timer = setTimeout(() => {
       setStartingVideo(true);
@@ -370,6 +365,7 @@ export default function TasksPage() {
             throw new Error(detail);
           }
           setStreamKey(Date.now());
+          videoStartedRef.current = true;
         })
         .catch((error) => {
           addError(`Failed to start video: ${error.message}`);
@@ -444,21 +440,9 @@ export default function TasksPage() {
         pollIntervalRef.current = null;
       }
 
-      const flightId = activeFlightIdRef.current;
-      const token = getToken();
-
-      if (flightId) {
-        fetch(`${API_BASE_CLEAN}/tasks/telemetry/stop`, {
-          method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-          .catch((error) => addError(`Failed to stop telemetry: ${error.message}`))
-          .finally(() => disconnect());
-      } else {
-        disconnect();
-      }
+      disconnect();
     };
-  }, [API_BASE_CLEAN, disconnect, addError]);
+  }, [disconnect]);
 
   // Focus map on drone once (as soon as we get a valid position)
   useEffect(() => {
@@ -606,11 +590,12 @@ export default function TasksPage() {
   );
 
   // If drone exists, keep map centered near it initially
-  const mapCenter =
-    droneCenter ||
-    (waypoints.length > 0
-      ? { lat: waypoints[0].lat, lng: waypoints[0].lon }
-      : userCenter || center);
+  const mapCenter = useMemo(() => {
+    if (waypoints.length > 0) {
+      return { lat: waypoints[0].lat, lng: waypoints[0].lon };
+    }
+    return userCenter || center;
+  }, [waypoints, userCenter, center]);
 
   const mapOptions = useMemo(
     () => ({
@@ -916,9 +901,10 @@ export default function TasksPage() {
                     <GoogleMap
                       mapContainerStyle={containerStyle}
                       center={mapCenter}
-                      zoom={droneCenter ? 18 : waypoints.length ? 16 : mapZoom}
+                      zoom={mapZoom}
                       onClick={onMapClick}
                       onLoad={onMapLoad}
+                      onZoomChanged={onMapZoomChanged}
                       options={mapOptions}
                     >
                     {/* Drone icon (now always visible whenever we have droneCenter) */}

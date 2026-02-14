@@ -20,6 +20,13 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
   const pingIntervalRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
   const connectionAttemptRef = useRef(0);
+  const onTelemetryRef = useRef<TelemetryWebSocketOptions["onTelemetry"]>(
+    options.onTelemetry,
+  );
+
+  useEffect(() => {
+    onTelemetryRef.current = options.onTelemetry;
+  }, [options.onTelemetry]);
 
   // Helper to parse incoming messages
   const parseMessage = async (data: any): Promise<any> => {
@@ -41,50 +48,61 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
     }
   };
 
+  const cleanupWebSocket = useCallback(
+    (opts?: { clearTelemetry?: boolean; disableReconnect?: boolean }) => {
+      const clearTelemetry = opts?.clearTelemetry ?? true;
+      const disableReconnect = opts?.disableReconnect ?? true;
+
+      if (disableReconnect) {
+        shouldReconnectRef.current = false;
+      }
+
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+
+      if (wsRef.current) {
+        // Remove all event listeners to prevent memory leaks
+        wsRef.current.onopen = null;
+        wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
+        wsRef.current.onmessage = null;
+
+        if (
+          wsRef.current.readyState === WebSocket.OPEN ||
+          wsRef.current.readyState === WebSocket.CONNECTING
+        ) {
+          wsRef.current.close(1000, "Manual disconnect");
+        }
+        wsRef.current = null;
+      }
+
+      setIsConnected(false);
+      if (clearTelemetry) {
+        setTelemetry(null);
+        setError(null);
+      }
+      setReconnectAttempt(0);
+    },
+    [],
+  );
+
   const disconnectWebSocket = useCallback(() => {
     console.log("🛑 Disconnecting WebSocket...");
-    shouldReconnectRef.current = false;
-
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = null;
-    }
-
-    if (wsRef.current) {
-      // Remove all event listeners to prevent memory leaks
-      wsRef.current.onopen = null;
-      wsRef.current.onclose = null;
-      wsRef.current.onerror = null;
-      wsRef.current.onmessage = null;
-
-      if (wsRef.current.readyState === WebSocket.OPEN ||
-          wsRef.current.readyState === WebSocket.CONNECTING) {
-        wsRef.current.close(1000, "Manual disconnect");
-      }
-      wsRef.current = null;
-    }
-
-    setIsConnected(false);
-    setTelemetry(null);
-    setError(null);
-    setReconnectAttempt(0);
-  }, []);
+    cleanupWebSocket();
+  }, [cleanupWebSocket]);
 
   const connectWebSocket = useCallback(() => {
     if (!enabled || !mountedRef.current) return;
 
-    // Clear existing connection first
-      // IMPORTANT: do not permanently set shouldReconnect=false here
-      if (wsRef.current) {
-        // inline close without changing shouldReconnectRef
-        try { wsRef.current.close(1000, "Reconnecting"); } catch {}
-        wsRef.current = null;
-      }
+    // Clear existing connection/timers but keep telemetry visible during reconnects
+    cleanupWebSocket({ clearTelemetry: false, disableReconnect: false });
 
     shouldReconnectRef.current = true;
     connectionAttemptRef.current += 1;
@@ -95,9 +113,6 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
       setError("Not authenticated");
       return;
     }
-
-    // Clear any existing connection
-    disconnectWebSocket();
 
     const apiBaseRaw = import.meta.env.VITE_API_BASE_URL as string | undefined;
     const apiBase = (apiBaseRaw?.trim() || "http://localhost:8000").replace(/\/$/, "");
@@ -147,8 +162,8 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
 
           if (telemetryData) {
             setTelemetry(telemetryData);
-            if (options.onTelemetry) {
-              options.onTelemetry(telemetryData);
+            if (onTelemetryRef.current) {
+              onTelemetryRef.current(telemetryData);
             }
           }
         } catch (e) {
@@ -202,7 +217,7 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
     } catch (error) {
       console.error(`❌ Failed to create WebSocket: ${error}`);
     }
-  }, [enabled, disconnectWebSocket, options.onTelemetry]);
+  }, [enabled, cleanupWebSocket]);
 
 
 

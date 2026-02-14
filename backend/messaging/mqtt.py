@@ -216,7 +216,6 @@ class MqttPublisher:
     def __init__(self, mqtt_client: MqttClient = None, mqtt_topic: str = None):
         self.mqtt_topic = mqtt_topic or settings.telemetry_topic
         self.mqtt_client = mqtt_client
-        self._owns_mqtt_client = mqtt_client is None
 
         self.drone_conn_str = settings.drone_conn_mavproxy
         self.mav_conn = None
@@ -235,16 +234,6 @@ class MqttPublisher:
             "HEARTBEAT",
         ]
 
-        # Create MQTT client if not provided
-        if self._owns_mqtt_client:
-            self.mqtt_client = MqttClient(
-                host=settings.mqtt_broker_host,
-                port=settings.mqtt_broker_port,
-                username=settings.mqtt_username,
-                password=settings.mqtt_password,
-                use_tls=settings.mqtt_use_tls,
-                ca_certs=settings.mqtt_ca_certs,
-            )
 
     def connect_mavlink(self):
         """Establish MAVLink connection"""
@@ -292,7 +281,7 @@ class MqttPublisher:
             self.publisher_thread.join(timeout=5)
 
         # Close connections
-        if self._owns_mqtt_client and self.mqtt_client:
+        if self.mqtt_client:
             self.mqtt_client.close()
 
         if self.mav_conn:
