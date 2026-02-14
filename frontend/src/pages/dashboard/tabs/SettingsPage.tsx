@@ -11,6 +11,8 @@ import {
   Switch,
   FormControlLabel,
   Alert,
+  Grid,
+  Chip,
 } from "@mui/material";
 import { getToken } from "../../../auth";
 
@@ -45,9 +47,19 @@ const FIELD_SPECS: { title: string; fields: FieldSpec[] }[] = [
     ],
   },
   {
-    title: "Drone / OPCUA",
+    title: "Operations Security",
     fields: [
-      { key: "opcua_endpoint", label: "OPCUA Endpoint", type: "string" },
+      { key: "mqtt_use_tls", label: "MQTT TLS Enabled", type: "boolean" },
+      { key: "mqtt_ca_certs", label: "MQTT CA Cert Path", type: "string" },
+      { key: "opcua_security_policy", label: "OPC UA Policy", type: "string" },
+      { key: "opcua_cert_path", label: "OPC UA Cert Path", type: "string" },
+      { key: "opcua_key_path", label: "OPC UA Key Path", type: "string" },
+    ],
+  },
+  {
+    title: "Drone / Field Ops",
+    fields: [
+      { key: "opcua_endpoint", label: "OPC UA Endpoint", type: "string" },
       { key: "drone_conn", label: "Drone Connection", type: "string" },
       { key: "drone_conn_mavproxy", label: "Drone Conn (MAVProxy)", type: "string" },
       { key: "heartbeat_timeout", label: "Heartbeat Timeout (sec)", type: "number" },
@@ -64,7 +76,7 @@ const FIELD_SPECS: { title: string; fields: FieldSpec[] }[] = [
     ],
   },
   {
-    title: "Raspberry / SSH",
+    title: "Edge / SSH",
     fields: [
       { key: "rasperry_ip", label: "Raspberry IP", type: "string" },
       { key: "rasperry_user", label: "Raspberry User", type: "string" },
@@ -75,7 +87,7 @@ const FIELD_SPECS: { title: string; fields: FieldSpec[] }[] = [
     ],
   },
   {
-    title: "Energy Model",
+    title: "Battery Model",
     fields: [
       { key: "battery_capacity_wh", label: "Battery Capacity (Wh)", type: "number" },
       { key: "cruise_power_w", label: "Cruise Power (W)", type: "number" },
@@ -84,7 +96,7 @@ const FIELD_SPECS: { title: string; fields: FieldSpec[] }[] = [
     ],
   },
   {
-    title: "Video Streaming",
+    title: "Imagery Streaming",
     fields: [
       { key: "drone_video_enabled", label: "Video Enabled", type: "boolean" },
       { key: "drone_video_source", label: "Video Source", type: "string" },
@@ -169,124 +181,79 @@ export default function SettingsPage() {
   return (
     <Box sx={{ width: "100%", maxWidth: 1400, p: 2 }}>
       <Stack spacing={3}>
-        <Typography variant="h4">Settings</Typography>
+        <Stack spacing={1}>
+          <Typography variant="h4">Settings</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Administrative configuration for agronomy systems. Changes apply immediately.
+          </Typography>
+        </Stack>
+
+        <Alert severity="warning">
+          Settings are restricted to administrative users. Coordinate changes with farm operations.
+        </Alert>
 
         {error && <Alert severity="error">{error}</Alert>}
         {ok && <Alert severity="success">{ok}</Alert>}
 
-        {/* Custom grid layout with 7 cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* First 6 cards in 3x2 layout */}
-          <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {FIELD_SPECS.slice(0, 6).map((section) => (
-                <Card key={section.title} sx={{ height: '100%' }}>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      {section.title}
-                    </Typography>
-                    <Divider sx={{ mb: 2 }} />
+        <Grid container spacing={3}>
+          {FIELD_SPECS.map((section) => (
+            <Grid key={section.title} size={{ xs: 12, md: 6, lg: 4 }}>
+              <Card sx={{ height: "100%" }}>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                    <Typography variant="h6">{section.title}</Typography>
+                    {section.title === "Operations Security" && (
+                      <Chip size="small" color="warning" label="Critical" />
+                    )}
+                  </Stack>
+                  <Divider sx={{ mb: 2 }} />
+                  <Stack spacing={2}>
+                    {section.fields.map((f) => {
+                      const value = data[f.key];
 
-                    <Stack spacing={2}>
-                      {section.fields.map((f) => {
-                        const value = data[f.key];
-
-                        if (f.type === "boolean") {
-                          return (
-                            <FormControlLabel
-                              key={f.key}
-                              control={
-                                <Switch
-                                  checked={Boolean(value)}
-                                  onChange={(e) => setValue(f.key, e.target.checked)}
-                                />
-                              }
-                              label={f.label}
-                            />
-                          );
-                        }
-
-                        const isNumber = f.type === "number";
-                        const inputType =
-                          f.type === "password" ? "password" : isNumber ? "number" : "text";
-
+                      if (f.type === "boolean") {
                         return (
-                          <TextField
+                          <FormControlLabel
                             key={f.key}
+                            control={
+                              <Switch
+                                checked={Boolean(value)}
+                                onChange={(e) => setValue(f.key, e.target.checked)}
+                              />
+                            }
                             label={f.label}
-                            type={inputType}
-                            value={value ?? ""}
-                            helperText={f.helperText}
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              setValue(f.key, isNumber ? (raw === "" ? "" : Number(raw)) : raw);
-                            }}
-                            fullWidth
                           />
                         );
-                      })}
-                    </Stack>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+                      }
 
-          {/* Last card (Video Streaming) - positioned to the right */}
-          <div className="lg:row-span-2">
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  {FIELD_SPECS[6].title}
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
+                      const isNumber = f.type === "number";
+                      const inputType =
+                        f.type === "password" ? "password" : isNumber ? "number" : "text";
 
-                <Stack spacing={2}>
-                  {FIELD_SPECS[6].fields.map((f) => {
-                    const value = data[f.key];
-
-                    if (f.type === "boolean") {
                       return (
-                        <FormControlLabel
+                        <TextField
                           key={f.key}
-                          control={
-                            <Switch
-                              checked={Boolean(value)}
-                              onChange={(e) => setValue(f.key, e.target.checked)}
-                            />
-                          }
                           label={f.label}
+                          type={inputType}
+                          value={value ?? ""}
+                          helperText={f.helperText}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            setValue(f.key, isNumber ? (raw === "" ? "" : Number(raw)) : raw);
+                          }}
+                          fullWidth
                         />
                       );
-                    }
-
-                    const isNumber = f.type === "number";
-                    const inputType =
-                      f.type === "password" ? "password" : isNumber ? "number" : "text";
-
-                    return (
-                      <TextField
-                        key={f.key}
-                        label={f.label}
-                        type={inputType}
-                        value={value ?? ""}
-                        helperText={f.helperText}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          setValue(f.key, isNumber ? (raw === "" ? "" : Number(raw)) : raw);
-                        }}
-                        fullWidth
-                      />
-                    );
-                  })}
-                </Stack>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                    })}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
 
         <Stack direction="row" justifyContent="center">
-          <Button variant="contained" onClick={onSave} disabled={saving} sx={{ width: '200px' }}>
+          <Button variant="contained" onClick={onSave} disabled={saving} sx={{ width: "200px" }}>
             {saving ? "Saving..." : "Save"}
           </Button>
         </Stack>

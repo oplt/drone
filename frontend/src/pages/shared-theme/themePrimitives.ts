@@ -33,68 +33,68 @@ const defaultTheme = createTheme();
 const customShadows: Shadows = [...defaultTheme.shadows];
 
 export const brand = {
-  50: 'hsl(210, 100%, 95%)',
-  100: 'hsl(210, 100%, 92%)',
-  200: 'hsl(210, 100%, 80%)',
-  300: 'hsl(210, 100%, 65%)',
-  400: 'hsl(210, 98%, 48%)',
-  500: 'hsl(210, 98%, 42%)',
-  600: 'hsl(210, 98%, 55%)',
-  700: 'hsl(210, 100%, 35%)',
-  800: 'hsl(210, 100%, 16%)',
-  900: 'hsl(210, 100%, 21%)',
+  50: 'hsl(174, 52%, 96%)',
+  100: 'hsl(174, 45%, 90%)',
+  200: 'hsl(174, 40%, 80%)',
+  300: 'hsl(174, 38%, 66%)',
+  400: 'hsl(174, 45%, 50%)',
+  500: 'hsl(174, 55%, 38%)',
+  600: 'hsl(174, 62%, 30%)',
+  700: 'hsl(174, 68%, 24%)',
+  800: 'hsl(174, 72%, 16%)',
+  900: 'hsl(174, 75%, 11%)',
 };
 
 export const gray = {
-  50: 'hsl(220, 35%, 97%)',
-  100: 'hsl(220, 30%, 94%)',
-  200: 'hsl(220, 20%, 88%)',
-  300: 'hsl(220, 20%, 80%)',
-  400: 'hsl(220, 20%, 65%)',
-  500: 'hsl(220, 20%, 42%)',
-  600: 'hsl(220, 20%, 35%)',
-  700: 'hsl(220, 20%, 25%)',
-  800: 'hsl(220, 30%, 6%)',
-  900: 'hsl(220, 35%, 3%)',
+  50: 'hsl(36, 33%, 97%)',
+  100: 'hsl(34, 20%, 93%)',
+  200: 'hsl(32, 18%, 85%)',
+  300: 'hsl(30, 14%, 72%)',
+  400: 'hsl(28, 10%, 58%)',
+  500: 'hsl(26, 9%, 45%)',
+  600: 'hsl(24, 12%, 32%)',
+  700: 'hsl(22, 16%, 22%)',
+  800: 'hsl(20, 20%, 14%)',
+  900: 'hsl(20, 25%, 8%)',
 };
 
 export const green = {
-  50: 'hsl(120, 80%, 98%)',
-  100: 'hsl(120, 75%, 94%)',
-  200: 'hsl(120, 75%, 87%)',
-  300: 'hsl(120, 61%, 77%)',
-  400: 'hsl(120, 44%, 53%)',
-  500: 'hsl(120, 59%, 30%)',
-  600: 'hsl(120, 70%, 25%)',
-  700: 'hsl(120, 75%, 16%)',
-  800: 'hsl(120, 84%, 10%)',
-  900: 'hsl(120, 87%, 6%)',
+  50: 'hsl(145, 60%, 96%)',
+  100: 'hsl(145, 55%, 90%)',
+  200: 'hsl(145, 45%, 80%)',
+  300: 'hsl(145, 40%, 66%)',
+  400: 'hsl(145, 45%, 46%)',
+  500: 'hsl(145, 55%, 34%)',
+  600: 'hsl(145, 60%, 26%)',
+  700: 'hsl(145, 65%, 20%)',
+  800: 'hsl(145, 70%, 14%)',
+  900: 'hsl(145, 75%, 10%)',
 };
 
 export const orange = {
-  50: 'hsl(45, 100%, 97%)',
-  100: 'hsl(45, 92%, 90%)',
-  200: 'hsl(45, 94%, 80%)',
-  300: 'hsl(45, 90%, 65%)',
-  400: 'hsl(45, 90%, 40%)',
-  500: 'hsl(45, 90%, 35%)',
-  600: 'hsl(45, 91%, 25%)',
-  700: 'hsl(45, 94%, 20%)',
-  800: 'hsl(45, 95%, 16%)',
-  900: 'hsl(45, 93%, 12%)',
+  50: 'hsl(40, 100%, 97%)',
+  100: 'hsl(38, 95%, 92%)',
+  200: 'hsl(36, 85%, 82%)',
+  300: 'hsl(34, 75%, 68%)',
+  400: 'hsl(32, 70%, 52%)',
+  500: 'hsl(30, 80%, 38%)',
+  600: 'hsl(28, 85%, 28%)',
+  700: 'hsl(26, 85%, 22%)',
+  800: 'hsl(24, 90%, 16%)',
+  900: 'hsl(22, 90%, 12%)',
 };
 
 export const red = {
-  50: 'hsl(0, 100%, 97%)',
-  100: 'hsl(0, 92%, 90%)',
-  200: 'hsl(0, 94%, 80%)',
-  300: 'hsl(0, 90%, 65%)',
-  400: 'hsl(0, 90%, 40%)',
-  500: 'hsl(0, 90%, 30%)',
-  600: 'hsl(0, 91%, 25%)',
-  700: 'hsl(0, 94%, 18%)',
-  800: 'hsl(0, 95%, 12%)',
-  900: 'hsl(0, 93%, 6%)',
+  50: 'hsl(8, 85%, 96%)',
+  100: 'hsl(8, 80%, 90%)',
+  200: 'hsl(8, 75%, 80%)',
+  300: 'hsl(8, 70%, 66%)',
+  400: 'hsl(8, 70%, 52%)',
+  500: 'hsl(8, 75%, 40%)',
+  600: 'hsl(8, 80%, 30%)',
+  700: 'hsl(8, 85%, 22%)',
+  800: 'hsl(8, 88%, 16%)',
+  900: 'hsl(8, 90%, 12%)',
 };
 
 export const getDesignTokens = (mode: PaletteMode) => {
@@ -163,54 +163,66 @@ export const getDesignTokens = (mode: PaletteMode) => {
       grey: {
         ...gray,
       },
-      divider: mode === 'dark' ? alpha(gray[700], 0.6) : alpha(gray[300], 0.4),
+      divider: mode === 'dark' ? alpha(gray[700], 0.7) : alpha(gray[300], 0.55),
       background: {
-        default: 'hsl(0, 0%, 99%)',
-        paper: 'hsl(220, 35%, 97%)',
-        ...(mode === 'dark' && { default: gray[900], paper: 'hsl(220, 30%, 7%)' }),
+        default: 'hsl(36, 33%, 97%)',
+        paper: 'hsl(34, 24%, 95%)',
+        ...(mode === 'dark' && {
+          default: 'hsl(22, 28%, 6%)',
+          paper: 'hsl(22, 24%, 8%)',
+        }),
       },
       text: {
         primary: gray[800],
         secondary: gray[600],
         warning: orange[400],
-        ...(mode === 'dark' && { primary: 'hsl(0, 0%, 100%)', secondary: gray[400] }),
+        ...(mode === 'dark' && {
+          primary: 'hsl(0, 0%, 100%)',
+          secondary: gray[300],
+        }),
       },
       action: {
-        hover: alpha(gray[200], 0.2),
-        selected: `${alpha(gray[200], 0.3)}`,
+        hover: alpha(gray[200], 0.25),
+        selected: `${alpha(gray[200], 0.35)}`,
         ...(mode === 'dark' && {
-          hover: alpha(gray[600], 0.2),
-          selected: alpha(gray[600], 0.3),
+          hover: alpha(gray[700], 0.25),
+          selected: alpha(gray[700], 0.35),
         }),
       },
     },
     typography: {
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: '"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
       h1: {
+        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(48),
         fontWeight: 600,
-        lineHeight: 1.2,
-        letterSpacing: -0.5,
+        lineHeight: 1.1,
+        letterSpacing: -0.8,
       },
       h2: {
+        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(36),
         fontWeight: 600,
-        lineHeight: 1.2,
+        lineHeight: 1.15,
       },
       h3: {
+        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(30),
         lineHeight: 1.2,
       },
       h4: {
+        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(24),
         fontWeight: 600,
-        lineHeight: 1.5,
+        lineHeight: 1.25,
       },
       h5: {
+        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(20),
         fontWeight: 600,
       },
       h6: {
+        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(18),
         fontWeight: 600,
       },
@@ -222,15 +234,18 @@ export const getDesignTokens = (mode: PaletteMode) => {
         fontWeight: 500,
       },
       body1: {
-        fontSize: defaultTheme.typography.pxToRem(14),
+        fontSize: defaultTheme.typography.pxToRem(15),
+        lineHeight: 1.6,
       },
       body2: {
         fontSize: defaultTheme.typography.pxToRem(14),
         fontWeight: 400,
+        lineHeight: 1.6,
       },
       caption: {
         fontSize: defaultTheme.typography.pxToRem(12),
-        fontWeight: 400,
+        fontWeight: 500,
+        letterSpacing: 0.2,
       },
     },
     shape: {
@@ -275,8 +290,8 @@ export const colorSchemes = {
       },
       divider: alpha(gray[300], 0.4),
       background: {
-        default: 'hsl(0, 0%, 99%)',
-        paper: 'hsl(220, 35%, 97%)',
+        default: 'hsl(36, 33%, 97%)',
+        paper: 'hsl(34, 24%, 95%)',
       },
       text: {
         primary: gray[800],
@@ -288,7 +303,7 @@ export const colorSchemes = {
         selected: `${alpha(gray[200], 0.3)}`,
       },
       baseShadow:
-        'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px',
+        'hsla(26, 25%, 10%, 0.08) 0px 6px 18px 0px, hsla(22, 20%, 12%, 0.12) 0px 14px 26px -12px',
     },
   },
   dark: {
@@ -325,8 +340,8 @@ export const colorSchemes = {
       },
       divider: alpha(gray[700], 0.6),
       background: {
-        default: gray[900],
-        paper: 'hsl(220, 30%, 7%)',
+        default: 'hsl(22, 28%, 6%)',
+        paper: 'hsl(22, 24%, 8%)',
       },
       text: {
         primary: 'hsl(0, 0%, 100%)',
@@ -337,38 +352,44 @@ export const colorSchemes = {
         selected: alpha(gray[600], 0.3),
       },
       baseShadow:
-        'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px',
+        'hsla(20, 40%, 4%, 0.7) 0px 6px 18px 0px, hsla(20, 35%, 6%, 0.85) 0px 18px 32px -14px',
     },
   },
 };
 
 export const typography = {
-  fontFamily: 'Inter, sans-serif',
+  fontFamily: '"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
   h1: {
+    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(48),
     fontWeight: 600,
-    lineHeight: 1.2,
-    letterSpacing: -0.5,
+    lineHeight: 1.1,
+    letterSpacing: -0.8,
   },
   h2: {
+    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(36),
     fontWeight: 600,
-    lineHeight: 1.2,
+    lineHeight: 1.15,
   },
   h3: {
+    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(30),
     lineHeight: 1.2,
   },
   h4: {
+    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(24),
     fontWeight: 600,
-    lineHeight: 1.5,
+    lineHeight: 1.25,
   },
   h5: {
+    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(20),
     fontWeight: 600,
   },
   h6: {
+    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(18),
     fontWeight: 600,
   },
@@ -380,15 +401,18 @@ export const typography = {
     fontWeight: 500,
   },
   body1: {
-    fontSize: defaultTheme.typography.pxToRem(14),
+    fontSize: defaultTheme.typography.pxToRem(15),
+    lineHeight: 1.6,
   },
   body2: {
     fontSize: defaultTheme.typography.pxToRem(14),
     fontWeight: 400,
+    lineHeight: 1.6,
   },
   caption: {
     fontSize: defaultTheme.typography.pxToRem(12),
-    fontWeight: 400,
+    fontWeight: 500,
+    letterSpacing: 0.2,
   },
 };
 

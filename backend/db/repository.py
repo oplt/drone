@@ -127,7 +127,7 @@ class TelemetryRepository:
         """
         rows dict keys expected:
           - msg_type (str)               -> defaults to payload['mavpackettype'] or 'UNKNOWN'
-          - time_boot_ms (int|None)      -> converted to datetime if provided
+          - time_boot_ms (int|None)      -> stored as ms since boot
           - time_unix_usec (datetime|None)  # already converted in mqtt.py
           - timestamp (datetime|None)       # we'll also accept raw numeric and convert here
           - payload (dict)
@@ -144,20 +144,15 @@ class TelemetryRepository:
                 or "UNKNOWN"
             )
 
-            # Convert time_boot_ms from milliseconds to datetime if provided
+            # Normalize time_boot_ms (ms since boot)
             time_boot_ms = d.get("time_boot_ms")
-            if time_boot_ms is not None and isinstance(time_boot_ms, (int, float)):
+            if isinstance(time_boot_ms, (int, float)):
                 try:
-                    # Convert milliseconds to datetime (assuming boot time is relative to epoch)
-                    # This is a rough approximation - in practice you might want to use system time
-                    time_boot_ms = datetime.fromtimestamp(
-                        time_boot_ms / 1000.0, tz=timezone.utc
-                    )
+                    time_boot_ms = int(time_boot_ms)
                 except Exception:
-                    time_boot_ms = datetime.now(timezone.utc)
-            elif time_boot_ms is None:
-                # Set default timestamp if not provided
-                time_boot_ms = datetime.now(timezone.utc)
+                    time_boot_ms = None
+            else:
+                time_boot_ms = None
 
             # normalize timestamp if someone passed numeric seconds
             ts = d.get("timestamp")
@@ -237,6 +232,5 @@ class SettingsRepository:
             )
             await db.execute(stmt)
             await db.commit()
-
 
 

@@ -1,5 +1,10 @@
 from asyncua import ua, Server
 from backend.config import settings
+import os
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class DroneOpcUaServer:
@@ -12,10 +17,46 @@ class DroneOpcUaServer:
 
     async def start(self):
         await self.server.init()
-        # self.server.set_endpoint(self.endpoint)
+        self.server.set_endpoint(self.endpoint)
 
-        # DEV: only expose an open endpoint (no certs needed, no warnings)
-        self.server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
+        policy_name = (settings.opcua_security_policy or "None").strip().lower()
+        policy_map = {
+            "none": ua.SecurityPolicyType.NoSecurity,
+            "nosecurity": ua.SecurityPolicyType.NoSecurity,
+        }
+        basic256 = getattr(ua.SecurityPolicyType, "Basic256", None)
+        if basic256 is not None:
+            policy_map["basic256"] = basic256
+        basic256sha256 = getattr(ua.SecurityPolicyType, "Basic256Sha256", None)
+        if basic256sha256 is not None:
+            policy_map["basic256sha256"] = basic256sha256
+
+        policy = policy_map.get(policy_name)
+        if policy is None:
+            logger.warning(
+                "OPC UA security policy %s is not supported by asyncua. Falling back to NoSecurity.",
+                settings.opcua_security_policy,
+            )
+            policy = ua.SecurityPolicyType.NoSecurity
+
+        if policy != ua.SecurityPolicyType.NoSecurity:
+            cert_path = settings.opcua_cert_path
+            key_path = settings.opcua_key_path
+            if not cert_path or not key_path:
+                logger.warning(
+                    "OPC UA security policy requires opcua_cert_path and opcua_key_path. Falling back to NoSecurity."
+                )
+                policy = ua.SecurityPolicyType.NoSecurity
+            elif not os.path.exists(cert_path) or not os.path.exists(key_path):
+                logger.warning(
+                    "OPC UA cert/key not found at configured paths. Falling back to NoSecurity."
+                )
+                policy = ua.SecurityPolicyType.NoSecurity
+            else:
+                self.server.load_certificate(cert_path)
+                self.server.load_private_key(key_path)
+
+        self.server.set_security_policy([policy])
 
         self.idx = await self.server.register_namespace("drone.vision")
         # self.objects = self.server.nodes.objects

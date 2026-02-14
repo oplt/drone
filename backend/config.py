@@ -1,25 +1,55 @@
-from dotenv import load_dotenv
-import os
+from pathlib import Path
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BASE_DIR = Path(__file__).resolve().parent
 
-load_dotenv()
 
 
-def setup_logging():
+def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -> None:
     """Centralized logging configuration with environment variable support"""
-    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = (
+        log_level
+        if isinstance(log_level, int)
+        else getattr(logging, log_level, logging.INFO)
+    )
+    log_path = (log_file or (BASE_DIR.parent / "drone.log")).resolve()
 
-    logging.basicConfig(
-        level=getattr(logging, log_level, logging.INFO),
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",  # Added module name
-        handlers=[logging.FileHandler("drone.log"), logging.StreamHandler()],
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     )
 
+    has_file_handler = False
+    has_stream_handler = False
+
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            existing_path = Path(getattr(handler, "baseFilename", "")).resolve()
+            if existing_path == log_path:
+                has_file_handler = True
+        elif isinstance(handler, logging.StreamHandler):
+            has_stream_handler = True
+
+    if not has_file_handler:
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+
+    if not has_stream_handler:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        root_logger.addHandler(stream_handler)
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,  # This helps with case-insensitive env vars
+    )
 
     google_maps_api_key: str
     llm_provider: str = "ollama"
@@ -31,24 +61,32 @@ class Settings(BaseSettings):
     mqtt_port: int = 1883
     mqtt_user: str = ""
     mqtt_pass: str = ""
+    mqtt_use_tls: bool = True
+    mqtt_ca_certs: str = ""
 
     opcua_endpoint: str = "opc.tcp://0.0.0.0:4840/freeopcua/server/"
-    drone_conn: str = "tcp:127.0.0.1:5760"
-    drone_conn_mavproxy: str = "tcp:127.0.0.1:5760"
+    opcua_security_policy: str = "Basic256Sha256"
+    opcua_cert_path: str = ""
+    opcua_key_path: str = ""
+    drone_conn: str
+    drone_conn_mavproxy: str
 
-    database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/drone_db"
+    database_url: str
 
     telem_log_interval_sec: float = 2.0
     telemetry_topic: str = "ardupilot/telemetry"
 
-    heartbeat_timeout: float = 5.0
+    heartbeat_timeout: float
 
     enforce_preflight_range: bool = False
 
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_exp_minutes: int = 60
+    admin_emails: str = ""
+    admin_domains: str = ""
 
+    # Note: These have typos - 'rasperry' instead of 'raspberry'
     rasperry_ip: str
     rasperry_user: str
     rasperry_host: str
@@ -61,28 +99,23 @@ class Settings(BaseSettings):
     cruise_speed_mps: float = 8
     energy_reserve_frac: float = 0.2
 
-    # Video streaming configuration for wireless drone connection
-    drone_video_source: str = (
-        "rtsp://192.168.4.1:8554/stream"  # Wireless RTSP stream from drone
-    )
-    drone_video_enabled: bool = True  # Enable video streaming by default
-    drone_video_width: int = 640  # Standard VGA resolution
-    drone_video_height: int = 480  # Standard VGA resolution
-    drone_video_fps: int = 30  # 30 FPS for smooth video
-    drone_video_timeout: float = 10.0  # 10 second timeout for wireless connection
-    drone_video_fallback: str = ""  # No fallback file by default
-    drone_video_save_stream: bool = False  # Disable recording by default
-    drone_video_save_path: str = "./recordings/"  # Local recordings directory
+    # Video streaming configuration
+    drone_video_source: str = "rtsp://192.168.4.1:8554/stream"
+    drone_video_enabled: bool = True
+    drone_video_width: int = 640
+    drone_video_height: int = 480
+    drone_video_fps: int = 30
+    drone_video_timeout: float = 10.0
+    drone_video_fallback: str = ""
+    drone_video_save_stream: bool = False
+    drone_video_save_path: str = "./recordings/"
 
     # Wireless streaming network configuration
-    drone_video_network_mode: str = (
-        "rtsp"  # Streaming protocol: "rtsp", "http", "webrtc"
-    )
-    drone_video_network_ip: str = "192.168.4.1"  # Drone's WiFi IP address
-    drone_video_network_port: int = 8080  # HTTP web interface port
-    drone_video_rtsp_port: int = 8554  # RTSP streaming port
-    drone_video_wifi_ssid: str = "Drone_Network"  # Drone's WiFi network name
-    drone_video_wifi_password: str = "drone123"  # Drone's WiFi password
-
+    drone_video_network_mode: str = "rtsp"
+    drone_video_network_ip: str = "192.168.4.1"
+    drone_video_network_port: int = 8080
+    drone_video_rtsp_port: int = 8554
+    drone_video_wifi_ssid: str = "Drone_Network"
+    drone_video_wifi_password: str = "drone123"
 
 settings = Settings()

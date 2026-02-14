@@ -9,46 +9,9 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
 
-import {
-  IndiaFlag,
-  UsaFlag,
-  BrazilFlag,
-  GlobeFlag,
-} from '../internals/components/CustomIcons';
+import { GlobeFlag } from '../internals/components/CustomIcons';
 
-const data = [
-  { label: 'India', value: 50000 },
-  { label: 'USA', value: 35000 },
-  { label: 'Brazil', value: 10000 },
-  { label: 'Other', value: 5000 },
-];
-
-const countries = [
-  {
-    name: 'India',
-    value: 50,
-    flag: <IndiaFlag />,
-    color: 'hsl(220, 25%, 65%)',
-  },
-  {
-    name: 'USA',
-    value: 35,
-    flag: <UsaFlag />,
-    color: 'hsl(220, 25%, 45%)',
-  },
-  {
-    name: 'Brazil',
-    value: 10,
-    flag: <BrazilFlag />,
-    color: 'hsl(220, 25%, 30%)',
-  },
-  {
-    name: 'Other',
-    value: 5,
-    flag: <GlobeFlag />,
-    color: 'hsl(220, 25%, 20%)',
-  },
-];
+type CoverageSegment = { label: string; value: number; color?: string };
 
 interface StyledTextProps {
   variant: 'primary' | 'secondary';
@@ -115,13 +78,27 @@ function PieCenterLabel({ primaryText, secondaryText }: PieCenterLabelProps) {
 }
 
 const colors = [
-  'hsl(220, 20%, 65%)',
-  'hsl(220, 20%, 42%)',
-  'hsl(220, 20%, 35%)',
-  'hsl(220, 20%, 25%)',
+  'hsla(174, 45%, 40%, 0.8)',
+  'hsla(174, 40%, 35%, 0.75)',
+  'hsla(174, 35%, 30%, 0.7)',
+  'hsla(174, 30%, 24%, 0.65)',
 ];
 
-export default function ChartUserByCountry() {
+type CoverageChartProps = {
+  segments?: CoverageSegment[];
+  totalLabel?: string;
+};
+
+export default function ChartUserByCountry({
+  segments,
+  totalLabel = 'Active fields',
+}: CoverageChartProps) {
+  const effectiveSegments = segments ?? [];
+  const hasSegments = effectiveSegments.length > 0;
+  const chartData = effectiveSegments.map((seg) => ({ label: seg.label, value: seg.value }));
+  const chartColors = effectiveSegments.map((seg, idx) => seg.color || colors[idx % colors.length]);
+  const total = effectiveSegments.reduce((acc, seg) => acc + seg.value, 0);
+
   return (
     <Card
       variant="outlined"
@@ -129,69 +106,83 @@ export default function ChartUserByCountry() {
     >
       <CardContent>
         <Typography component="h2" variant="subtitle2">
-          Users by country
+          Regional coverage
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <PieChart
-            colors={colors}
-            margin={{
-              left: 80,
-              right: 80,
-              top: 80,
-              bottom: 80,
-            }}
-            series={[
-              {
-                data,
-                innerRadius: 75,
-                outerRadius: 100,
-                paddingAngle: 0,
-                highlightScope: { fade: 'global', highlight: 'item' },
-              },
-            ]}
-            height={260}
-            width={260}
-            hideLegend
-          >
-            <PieCenterLabel primaryText="98.5K" secondaryText="Total" />
-          </PieChart>
-        </Box>
-        {countries.map((country, index) => (
-          <Stack
-            key={index}
-            direction="row"
-            sx={{ alignItems: 'center', gap: 2, pb: 2 }}
-          >
-            {country.flag}
-            <Stack sx={{ gap: 1, flexGrow: 1 }}>
-              <Stack
-                direction="row"
-                sx={{
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 2,
+        {hasSegments ? (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <PieChart
+                colors={chartColors}
+                margin={{
+                  left: 80,
+                  right: 80,
+                  top: 80,
+                  bottom: 80,
                 }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: '500' }}>
-                  {country.name}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {country.value}%
-                </Typography>
-              </Stack>
-              <LinearProgress
-                variant="determinate"
-                aria-label="Number of users by country"
-                value={country.value}
-                sx={{
-                  [`& .${linearProgressClasses.bar}`]: {
-                    backgroundColor: country.color,
+                series={[
+                  {
+                    data: chartData,
+                    innerRadius: 75,
+                    outerRadius: 100,
+                    paddingAngle: 0,
+                    highlightScope: { fade: 'global', highlight: 'item' },
                   },
-                }}
-              />
-            </Stack>
-          </Stack>
-        ))}
+                ]}
+                height={260}
+                width={260}
+                hideLegend
+              >
+                <PieCenterLabel
+                  primaryText={`${Math.round(total)}`}
+                  secondaryText={totalLabel}
+                />
+              </PieChart>
+            </Box>
+            {effectiveSegments.map((region, index) => (
+              <Stack
+                key={region.label}
+                direction="row"
+                sx={{ alignItems: 'center', gap: 2, pb: 2 }}
+              >
+                <GlobeFlag />
+                <Stack sx={{ gap: 1, flexGrow: 1 }}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 2,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: '500' }}>
+                      {region.label}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {region.value}%
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    aria-label="Regional field coverage"
+                    value={region.value}
+                    sx={{
+                      [`& .${linearProgressClasses.bar}`]: {
+                        backgroundColor:
+                          region.color || chartColors[index % chartColors.length],
+                      },
+                    }}
+                  />
+                </Stack>
+              </Stack>
+            ))}
+          </>
+        ) : (
+          <Box sx={{ py: 6, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              No coverage data yet.
+            </Typography>
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

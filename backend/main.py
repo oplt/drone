@@ -4,13 +4,12 @@ from backend.drone.mavlink_drone import MavlinkDrone
 from backend.drone.orchestrator import Orchestrator
 from backend.map.google_maps import GoogleMapsClient
 from backend.analysis.llm import LLMAnalyzer
-from backend.messaging.mqtt import MqttClient
-from backend.messaging.opcua import DroneOpcUaServer
+from backend.messaging.mqtt import MqttClient, MqttPublisher
+# from backend.messaging.opcua import DroneOpcUaServer
 from backend.config import settings, setup_logging
 from backend.video.stream import DroneVideoStream
 from backend.db.session import init_db, close_db
 from backend.db.repository import TelemetryRepository
-from backend.utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +38,24 @@ async def _build_orchestrator() -> Orchestrator:
             model=settings.llm_model,
             provider=settings.llm_provider,
         )
-        mqtt = MqttClient(
-            settings.mqtt_broker,
-            settings.mqtt_port,
-            settings.mqtt_user,
-            settings.mqtt_pass,
-            use_tls=False,
-            client_id="drone-1",
-        )
-        opcua = DroneOpcUaServer()
+        try:
+            mqtt = MqttClient(
+                settings.mqtt_broker,
+                settings.mqtt_port,
+                settings.mqtt_user,
+                settings.mqtt_pass,
+                # use_tls=settings.mqtt_use_tls,
+                # ca_certs=settings.mqtt_ca_certs or None,
+                client_id="drone-1",
+            )
+        except Exception as e:
+            logger.warning(
+                "MQTT broker unavailable (%s:%s). Continuing without MQTT. Error: %s",
+                settings.mqtt_broker,
+                settings.mqtt_port,
+                e,
+            )
+        # opcua = DroneOpcUaServer()
 
         video = None
         if settings.drone_video_enabled:
@@ -81,13 +89,12 @@ async def _build_orchestrator() -> Orchestrator:
             logger.info("ℹ️  Drone video streaming disabled in configuration")
 
         repo = TelemetryRepository()
-        publisher = ArduPilotTelemetryPublisher(
+        publisher = MqttPublisher(
             mqtt_client=mqtt,
-            opcua_server=opcua,
-            opcua_event_loop=asyncio.get_running_loop(),
+            mqtt_topic=settings.telemetry_topic,
         )
 
-        _orch = Orchestrator(drone, maps, analyzer, mqtt, opcua, video, repo, publisher)
+        _orch = Orchestrator(drone, maps, analyzer, mqtt, video, repo, publisher)
         return _orch
 
 

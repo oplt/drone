@@ -1,18 +1,18 @@
 from __future__ import annotations
 import time
-
-import asyncio
+import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from backend.db.session import get_db, Session
 from backend.drone.models import Coordinate
 from backend.main import _build_orchestrator
+from backend.auth.deps import require_user
+import asyncio
 from backend.messaging.websocket import telemetry_manager
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
-
 
 # --------------------
 # Schemas
@@ -22,27 +22,22 @@ class WaypointIn(BaseModel):
     lon: float
     alt: Optional[float] = None
 
-
 class MissionCreateIn(BaseModel):
     name: str = Field(default="mission", min_length=1)
     cruise_alt: float = 30.0
     waypoints: List[WaypointIn]
 
-
 class MissionCreateOut(BaseModel):
-    flight_id: Optional[str] = None  # Return flight_id if available
+    flight_id: str
     status: str
     mission_name: str
     waypoints_count: int
-    telemetry_started: bool
-
 
 # --------------------
 # Orchestrator singleton
 # --------------------
 _orch_lock = asyncio.Lock()
 _orch = None
-
 
 async def get_orchestrator():
     global _orch
@@ -53,12 +48,15 @@ async def get_orchestrator():
             _orch = await _build_orchestrator()
         return _orch
 
-
 # --------------------
 # Endpoint
 # --------------------
 @router.post("/missions", response_model=MissionCreateOut)
-async def create_mission(payload: MissionCreateIn, db: Session = Depends(get_db)):
+async def create_mission(
+        payload: MissionCreateIn,
+        db: Session = Depends(get_db),
+        user = Depends(require_user),
+):
     """Create and execute a mission - returns flight_id for tracking"""
     if len(payload.waypoints) < 2:
         raise HTTPException(status_code=400, detail="Select at least 2 coordinates.")
@@ -68,96 +66,58 @@ async def create_mission(payload: MissionCreateIn, db: Session = Depends(get_db)
     for w in payload.waypoints:
         coords.append(
             Coordinate(
-                lat=w.lat, lon=w.lon, alt=payload.cruise_alt if w.alt is None else w.alt
+                lat=w.lat,
+                lon=w.lon,
+                alt=payload.cruise_alt if w.alt is None else w.alt
             )
         )
 
-    # Start telemetry stream if not already running
-    telemetry_was_running = telemetry_manager._running
-    telemetry_started = False
-    if not telemetry_was_running:
-        try:
-            # Use settings from your config
-            from backend.config import settings
-
-            telemetry_started = telemetry_manager.start_telemetry_stream(
-                settings.drone_conn_mavproxy
-            )
-
-            if telemetry_started:
-                print(f"✅ Telemetry stream started for new mission: {payload.name}")
-                # Wait a moment for telemetry to initialize
-                await asyncio.sleep(1)
-            else:
-                print("❌ Failed to start telemetry stream")
-                # Don't fail the mission, just continue without telemetry
-        except Exception as e:
-            print(f"⚠️ Could not start telemetry stream: {e}")
-            telemetry_started = False
-    else:
-        telemetry_started = True
-        print("ℹ️ Telemetry stream already running")
+    # Generate a client-facing flight ID
+    client_flight_id = f"flight_{int(time.time())}_{uuid.uuid4().hex[:8]}"
 
     # Get orchestrator
     orch = await get_orchestrator()
 
-    # Store mission name in orchestrator for reference
+    # Store mission metadata
     orch.current_mission_name = payload.name
+    orch.current_client_flight_id = client_flight_id
 
-    # Start mission execution (non-blocking)
-    flight_id = f"flight_{int(time.time())}_{payload.name}"  # Generate temporary ID
+    # Start mission execution in background
     asyncio.create_task(
-        execute_mission_and_return_flight_id(
+        execute_mission(
             orch,
             coords,
             payload.cruise_alt,
             payload.name,
-            flight_id=flight_id,
-            stop_telemetry_on_finish=not telemetry_was_running,
         )
     )
 
     return MissionCreateOut(
-        flight_id=flight_id,
+        flight_id=client_flight_id,
         status="executing",
         mission_name=payload.name,
         waypoints_count=len(coords),
-        telemetry_started=telemetry_started,
     )
 
-
-async def execute_mission_and_return_flight_id(
-    orch,
-    coords: list[Coordinate],
-    cruise_alt: float,
-    mission_name: str,
-    flight_id: str | None = None,
-    stop_telemetry_on_finish: bool = False,
+async def execute_mission(
+        orch,
+        coords: list[Coordinate],
+        cruise_alt: float,
+        mission_name: str,
 ):
-    """Execute mission in background.
-
-    Note: `flight_id` here is currently a client-facing tracking id (string) generated
-    by the API. The orchestrator will create the real DB flight id internally.
-    """
+    """Execute mission in background - orchestrator handles all initialization"""
     try:
-        # Best-effort: keep the client-facing id available for debugging/UX
-        if flight_id is not None:
-            setattr(orch, "current_client_flight_id", flight_id)
-
-        # Execute the mission - this creates flight record
+        # The orchestrator's run_waypoints handles:
+        # - Drone connection
+        # - Flight record creation
+        # - Telemetry streaming (via telemetry_manager)
+        # - Background tasks (heartbeat, MQTT, etc.)
         await orch.run_waypoints(coords, alt=cruise_alt)
-        print(f"✅ Mission '{mission_name}' completed")
-
+        print(f"✅ Mission '{mission_name}' completed successfully")
     except Exception as e:
         print(f"❌ Mission '{mission_name}' failed: {e}")
-    finally:
-        # If this request started telemetry, stop it when mission finishes.
-        # This prevents telemetry (and WS connections) from staying alive forever.
-        if stop_telemetry_on_finish:
-            try:
-                telemetry_manager.stop_telemetry_stream()
-            except Exception:
-                pass
+        # Log the error but don't re-raise
+
 
 
 @router.get("/flight/status")
@@ -196,8 +156,8 @@ async def get_flight_status():
                 "ready": orch is not None,
                 "has_drone": hasattr(orch, "drone") and orch.drone is not None,
                 "drone_connected": hasattr(orch, "drone")
-                and hasattr(orch.drone, "vehicle")
-                and orch.drone.vehicle is not None,
+                                   and hasattr(orch.drone, "vehicle")
+                                   and orch.drone.vehicle is not None,
             },
         }
     except Exception as e:

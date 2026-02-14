@@ -1,123 +1,113 @@
-# routes_websocket.py (SIMPLIFIED VERSION)
+# routes_websocket.py (FIXED VERSION)
 import time
 import asyncio
 import logging
-from fastapi import WebSocket, WebSocketDisconnect, APIRouter
+from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
+from fastapi import APIRouter, Depends
 from backend.messaging.websocket import telemetry_manager
+from backend.auth.deps import get_user_from_token
+from backend.db.session import Session
+from jose import jwt, JWTError
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
 
-@router.websocket("/telemetry/public")
-async def websocket_telemetry_public(websocket: WebSocket):
+async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
     """
-    Public WebSocket endpoint for telemetry (no authentication required).
+    Enforce auth for WebSocket connections.
+    Returns (is_authorized, user_id_or_error_message)
+    """
+    # Get token from query parameters or headers
+    token = websocket.query_params.get("token")
+
+    if not token:
+        auth = websocket.headers.get("authorization")
+        if auth and auth.startswith("Bearer "):
+            token = auth.split(" ", 1)[1].strip()
+
+    if not token:
+        return False, "Missing authentication token"
+
+    try:
+        async with Session() as db:
+            user = await get_user_from_token(token, db)
+            if not user:
+                return False, "Invalid authentication token"
+            return True, user.id
+    except jwt.ExpiredSignatureError:
+        return False, "Token expired"
+    except JWTError as e:
+        logger.warning(f"JWT validation error: {e}")
+        return False, "Invalid token"
+    except Exception as e:
+        logger.error(f"Authorization error: {e}")
+        return False, "Authorization failed"
+
+
+@router.websocket("/telemetry")
+async def websocket_telemetry(websocket: WebSocket):
+    """
+    Protected WebSocket endpoint for telemetry.
     """
     writer_task = None
-    try:
-        # Accept the connection
-        await websocket.accept()
-        logger.info("✅ New public WebSocket connection accepted")
 
-        # Let the manager handle the connection setup
+    # First, validate token BEFORE accepting connection
+    is_authorized, user_id_or_error = await _authorize_websocket(websocket)
+
+    if not is_authorized:
+        logger.warning(f"Rejecting WebSocket connection: {user_id_or_error}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=user_id_or_error)
+        return
+
+    # Now accept the connection
+    try:
+        await websocket.accept()
+        logger.info(f"✅ WebSocket connection accepted for user {user_id_or_error}")
+    except Exception as e:
+        logger.error(f"Failed to accept WebSocket: {e}")
+        return
+
+    try:
+        # Register with telemetry manager
         writer_task = await telemetry_manager.connect(websocket)
 
-        # Keep the connection alive
-        try:
-            while True:
-                # Try to receive a message (with timeout)
-                try:
-                    data = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=30.0
-                    )
+        # Keep connection alive and handle messages
+        while True:
+            try:
+                # Wait for messages with timeout
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
 
-                    # Handle ping messages
-                    if data.strip() == "ping":
-                        await websocket.send_text("pong")
-
-                except asyncio.TimeoutError:
-                    # Send keep-alive
+                # Handle ping/pong
+                if message == "ping" or (isinstance(message, str) and '"type":"ping"' in message):
                     try:
-                        await websocket.send_json(
-                            {"type": "keepalive", "timestamp": time.time()}
-                        )
+                        await websocket.send_text("pong")
                     except:
-                        break  # Connection closed
+                        break
 
-        except WebSocketDisconnect:
-            logger.info("WebSocket client disconnected normally")
+            except asyncio.TimeoutError:
+                # Send keepalive
+                try:
+                    await websocket.send_json({"type": "keepalive", "timestamp": time.time()})
+                except:
+                    break
+
+            except WebSocketDisconnect:
+                logger.info(f"WebSocket client disconnected for user {user_id_or_error}")
+                break
+
+            except Exception as e:
+                logger.error(f"WebSocket message error: {e}")
+                break
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
-        # Ensure cleanup
+        # Cleanup
         try:
             if writer_task and not writer_task.done():
                 writer_task.cancel()
             telemetry_manager.disconnect(websocket)
-        except:
-            pass
-
-
-@router.get("/telemetry/status")
-async def get_telemetry_status():
-    """Get WebSocket telemetry server status"""
-    return {
-        "status": "running" if telemetry_manager._running else "stopped",
-        "active_connections": len(telemetry_manager.active_connections),
-        "telemetry_enabled": telemetry_manager._running,
-        "last_update": telemetry_manager.last_telemetry.get("timestamp", 0),
-    }
-
-
-@router.get("/debug/connections")
-async def debug_websocket_connections():
-    """
-    Debug endpoint to monitor WebSocket connections.
-    """
-    from backend.messaging.websocket import telemetry_manager
-
-    client_info = []
-    try:
-        with telemetry_manager._lock:
-            for websocket, client in telemetry_manager._clients.items():
-                client_info.append(
-                    {
-                        "websocket_id": str(id(websocket)),
-                        "client": {
-                            "host": getattr(client, "client_host", None),
-                            "port": getattr(client, "client_port", None),
-                            "user_agent": getattr(client, "user_agent", None),
-                        },
-                        "connected_time": getattr(client, "connected_time", 0),
-                        "connection_duration": time.time()
-                        - getattr(client, "connected_time", time.time()),
-                        "queue_size": client.q.qsize() if hasattr(client, "q") else 0,
-                        "task_running": not client.task.done()
-                        if hasattr(client, "task") and client.task
-                        else False,
-                    }
-                )
-    except Exception as e:
-        logger.error(f"Error getting client info: {e}")
-
-    return {
-        "active_connections": len(telemetry_manager.active_connections),
-        "telemetry_running": telemetry_manager._running,
-        "telemetry_thread_alive": telemetry_manager._telemetry_thread.is_alive()
-        if telemetry_manager._telemetry_thread
-        else False,
-        "clients": client_info,
-        "mavlink_connected": telemetry_manager.mav_conn is not None,
-        "last_telemetry": {
-            "timestamp": telemetry_manager.last_telemetry.get("timestamp", 0),
-            "age": time.time() - telemetry_manager.last_telemetry.get("timestamp", 0),
-            "has_position": bool(
-                telemetry_manager.last_telemetry.get("position", {}).get("lat", 0)
-                or telemetry_manager.last_telemetry.get("position", {}).get("lon", 0)
-            ),
-            "position": telemetry_manager.last_telemetry.get("position", {}),
-        },
-    }
+        except Exception as e:
+            logger.error(f"Cleanup error: {e}")

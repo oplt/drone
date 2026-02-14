@@ -108,8 +108,9 @@ class MavlinkEvent(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     payload: Mapped[dict] = mapped_column(JSON)
-    time_boot_ms: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=False
+    # Boot time in milliseconds since vehicle boot (not a UTC timestamp).
+    time_boot_ms: Mapped[Optional[int]] = mapped_column(
+        BigInteger, nullable=True
     )
     time_unix_usec: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True

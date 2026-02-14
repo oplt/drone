@@ -362,3 +362,8 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+/commands.txt
+
+/backend/certs
+

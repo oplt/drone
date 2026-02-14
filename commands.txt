@@ -1,0 +1,35 @@
+mosquitto_sub -h 127.0.0.1 -p 1883 -t "drone/heartbeat" -v
+mosquitto_sub -h 127.0.0.1 -p 1883 -t "ardupilot/telemetry" -v
+
+opcua-client opc.tcp://127.0.0.1:4840 --subscribe "ns=2;s=Drone/Lat"
+
+ruff check --fix . &&
+
+Port 1883: Standard MQTT (unencrypted communication)
+Port 8883: MQTT over SSL/TLS (encrypted communication)
+
+
+alembic -c backend/alembic.ini revision --autogenerate -m "generate tables"
+alembic -c backend/alembic.ini upgrade head
+alembic -c backend/alembic.ini downgrade base
+
+GRANT ALL ON SCHEMA public TO drone;
+
+
+uvicorn backend.api.api_main:app --reload --port 8000
+
+curl http://localhost:5173/ws/debug/
+
+# Login to get fresh token
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "polatozgur111@gmail.com",
+    "password": "12345678"
+  }
+
+websocat "ws://localhost:8000/ws/telemetry?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzcxMDgxOTcyLCJleHAiOjE3NzEwODU1NzJ9.uGX_CDVYDeiHBWMTN2vp1GPuIwJ6k6qXXXBypC5CYUE"
+wscat -c ws://localhost:8080
+
+
+

@@ -1,4 +1,3 @@
-# api_main.py (updated)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import init_db, close_db
@@ -8,11 +7,13 @@ from backend.api.routes_websocket import router as websockets_router
 from backend.api.routes_telemetry_control import router as telemetry_control_router
 from backend.api.routes_video import router as video_router
 from backend.api.routes_settings import router as settings_router
+from backend.api.routes_analytics import router as analytics_router
 from backend.utils.config_runtime import get_runtime_settings
 from backend.db.repository import SettingsRepository
-
 from contextlib import asynccontextmanager
 import logging
+from backend.config import setup_logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
+    setup_logging()
     # Startup
     logger.info("Starting application...")
     await init_db()
@@ -31,6 +33,7 @@ async def lifespan(app: FastAPI):
     from backend.messaging.websocket import telemetry_manager
 
     await telemetry_manager.initialize()
+    telemetry_manager._event_loop = asyncio.get_running_loop()
     logger.info("WebSocket manager initialized")
 
     yield
@@ -69,6 +72,7 @@ app.include_router(websockets_router)
 app.include_router(telemetry_control_router)
 app.include_router(video_router)
 app.include_router(settings_router)
+app.include_router(analytics_router)
 
 
 
@@ -82,3 +86,16 @@ async def health_check():
         "websocket_active": telemetry_manager._running,
         "active_connections": len(telemetry_manager.active_connections),
     }
+
+
+@app.get("/debug/routes")
+async def debug_routes():
+    """List all registered routes (debug only)"""
+    routes = []
+    for route in app.routes:
+        routes.append({
+            "path": route.path,
+            "name": route.name,
+            "methods": list(route.methods) if hasattr(route, "methods") else None
+        })
+    return {"routes": routes}

@@ -17,6 +17,15 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 }));
 
 function toTitle(segment: string) {
+  const overrides: Record<string, string> = {
+    tasks: "Field Plans",
+    insights: "Insights",
+    fleet: "Fleet",
+    settings: "Settings",
+  };
+
+  if (overrides[segment]) return overrides[segment];
+
   // "tasks" -> "Tasks", "user-settings" -> "User Settings"
   return segment
     .split("-")
@@ -41,7 +50,7 @@ export default function NavbarBreadcrumbs() {
   // If no sub route, it's Home
   const current = subSegments.length === 0 ? "home" : subSegments[subSegments.length - 1];
 
-  const currentLabel = current === "home" ? "Home" : toTitle(current);
+  const currentLabel = current === "home" ? "Overview" : toTitle(current);
 
   return (
     <StyledBreadcrumbs
@@ -56,7 +65,7 @@ export default function NavbarBreadcrumbs() {
         color="inherit"
         variant="body1"
       >
-        Dashboard
+        Operations Hub
       </Link>
 
       <Typography variant="body1" sx={{ color: "text.primary", fontWeight: 600 }}>

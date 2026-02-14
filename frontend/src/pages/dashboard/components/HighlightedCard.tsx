@@ -21,10 +21,10 @@ export default function HighlightedCard() {
           gutterBottom
           sx={{ fontWeight: '600' }}
         >
-          Explore your data
+          Generate field report
         </Typography>
         <Typography sx={{ color: 'text.secondary', mb: '8px' }}>
-          Uncover performance and visitor insights with our data wizardry.
+          Export NDVI, irrigation insights, and coverage maps in one click.
         </Typography>
         <Button
           variant="contained"
@@ -33,7 +33,7 @@ export default function HighlightedCard() {
           endIcon={<ChevronRightRoundedIcon />}
           fullWidth={isSmallScreen}
         >
-          Get insights
+          Generate report
         </Button>
       </CardContent>
     </Card>

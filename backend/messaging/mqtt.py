@@ -10,6 +10,8 @@ import asyncio
 from datetime import datetime, timezone
 from collections import deque
 import logging
+from pymavlink import mavutil
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +32,17 @@ def _parse_ts(ts_raw):
 
 class MqttClient:
     def __init__(
-        self,
-        host: str,
-        port: int = 1883,
-        username: str = "",
-        password: str = "",
-        use_tls: bool = False,
-        ca_certs: Optional[str] = None,
-        client_id: Optional[str] = None,
-        connect_timeout: int = 10,
-        max_retries: int = 20,
-        retry_backoff_s: float = 0.5,
+            self,
+            host: str,
+            port: int = 1883,
+            username: str = "",
+            password: str = "",
+            use_tls: bool = False,
+            ca_certs: Optional[str] = None,
+            client_id: Optional[str] = None,
+            connect_timeout: int = 10,
+            max_retries: int = 10,
+            retry_backoff_s: float = 0.5,
     ):
 
         self.client = mqtt.Client(
@@ -206,64 +208,135 @@ class MqttClient:
         except Exception as e:
             logger.error(f"Error processing raw event: {e}")
 
-    #
-    # def _process_telemetry_messages(self, payload: Dict[str, Any]):
-    #     mav_type  = payload.get("mavpackettype")
-    #     if not mav_type:
-    #         return
-    #     try:
-    #         if mav_type == "GLOBAL_POSITION_INT":
-    #             self._last_telemetry.update({
-    #                 'lat': payload.get('lat', 0) / 1e7,
-    #                 'lon': payload.get('lon', 0) / 1e7,
-    #                 'alt': payload.get('alt', 0) / 1e3,
-    #                 'frame_id': payload.get('time_boot_ms')  # used for de-dupe
-    #             })
-    #         elif mav_type == "VFR_HUD":
-    #             self._last_telemetry.update({
-    #                 'groundspeed': payload.get('groundspeed', 0.0),
-    #                 'heading': payload.get('heading', 0.0),
-    #             })
-    #         elif mav_type == "PLANE_MODE":
-    #             self._last_telemetry.update({'mode': payload.get('name') or payload.get('mode', 'UNKNOWN')})
-    #         elif mav_type == "BATTERY_STATUS":
-    #             # Prefer % from BATTERY_STATUS if provided
-    #             if 'battery_remaining' in payload:
-    #                 self._last_telemetry.update({'battery_remaining': payload.get('battery_remaining')})
-    #         elif mav_type == "SYS_STATUS":
-    #             # SYS_STATUS also includes voltage_battery (mV), current_battery (cA), battery_remaining (%)
-    #             v_mv = payload.get('voltage_battery')
-    #             if v_mv is not None:
-    #                 self._last_telemetry['battery_voltage'] = v_mv / 1000.0
-    #             i_cA = payload.get('current_battery')
-    #             if i_cA is not None and i_cA >= 0:
-    #                 self._last_telemetry['battery_current'] = i_cA / 100.0
-    #             if 'battery_remaining' in payload:
-    #                 self._last_telemetry['battery_remaining'] = payload['battery_remaining']
-    #         elif mav_type == "SYSTEM_TIME":
-    #             ts = payload.get('time_unix_usec')
-    #             if ts:
-    #                 self._last_telemetry['system_time'] = datetime.fromtimestamp(ts/1_000_000, tz=timezone.utc)
-    #
-    #         # ----- When we have a complete "frame", enqueue it -----
-    #         required = ('lat','lon','alt','heading','groundspeed','mode')
-    #         if all(k in self._last_telemetry for k in required):
-    #             fid = self._last_telemetry.get('frame_id')
-    #             if fid is None or fid not in self._emitted_frame_ids:
-    #                 row = dict(self._last_telemetry)
-    #                 row['flight_id'] = self._current_flight_id
-    #                 if self._ingest_queue is not None:
-    #                     try:
-    #                         # Non-blocking: if full, drop oldest to keep up
-    #                         self._ingest_queue.put_nowait(row)
-    #                     except asyncio.QueueFull:
-    #                         try:
-    #                             _ = self._ingest_queue.get_nowait()
-    #                             self._ingest_queue.task_done()
-    #                         except Exception:
-    #                             pass
-    #                         self._ingest_queue.put_nowait(row)
-    #                 if fid is not None:
-    #                     self._emitted_frame_ids.append(fid)
-    #     except Exception as e:
-    #         logger.error(f"Error processing {mav_type}: {e}")
+
+class MqttPublisher:
+    """
+    MQTT Publisher that reads from MAVLink and publishes to MQTT broker
+    """
+    def __init__(self, mqtt_client: MqttClient = None, mqtt_topic: str = None):
+        self.mqtt_topic = mqtt_topic or settings.telemetry_topic
+        self.mqtt_client = mqtt_client
+        self._owns_mqtt_client = mqtt_client is None
+
+        self.drone_conn_str = settings.drone_conn_mavproxy
+        self.mav_conn = None
+
+        # Control flags
+        self.is_running = False
+        self.publisher_thread = None
+
+        # Message types to filter
+        self.message_types = [
+            "GLOBAL_POSITION_INT",
+            "VFR_HUD",
+            "BATTERY_STATUS",
+            "SYSTEM_TIME",
+            "GPS_RAW_INT",
+            "HEARTBEAT",
+        ]
+
+        # Create MQTT client if not provided
+        if self._owns_mqtt_client:
+            self.mqtt_client = MqttClient(
+                host=settings.mqtt_broker_host,
+                port=settings.mqtt_broker_port,
+                username=settings.mqtt_username,
+                password=settings.mqtt_password,
+                use_tls=settings.mqtt_use_tls,
+                ca_certs=settings.mqtt_ca_certs,
+            )
+
+    def connect_mavlink(self):
+        """Establish MAVLink connection"""
+        try:
+            self.mav_conn = mavutil.mavlink_connection(self.drone_conn_str)
+            logger.info(f"[MQTT Publisher] Connected to MAVLink: {self.drone_conn_str}")
+            return True
+        except Exception as e:
+            logger.error(f"[MQTT Publisher] Failed to connect to MAVLink: {e}")
+            return False
+
+    def start(self):
+        """Start the MQTT publisher"""
+        if self.is_running:
+            logger.info("[MQTT Publisher] Already running")
+            return False
+
+        # Connect to MAVLink
+        if not self.connect_mavlink():
+            return False
+
+        # Start publishing in a separate thread
+        self.is_running = True
+        self.publisher_thread = threading.Thread(
+            target=self._publish_loop,
+            name="MQTTPublisher",
+            daemon=True
+        )
+        self.publisher_thread.start()
+
+        logger.info("[MQTT Publisher] Started")
+        return True
+
+    def stop(self):
+        """Stop the MQTT publisher"""
+        if not self.is_running:
+            logger.info("[MQTT Publisher] Not running")
+            return
+
+        logger.info("[MQTT Publisher] Stopping...")
+        self.is_running = False
+
+        # Wait for thread to finish
+        if self.publisher_thread and self.publisher_thread.is_alive():
+            self.publisher_thread.join(timeout=5)
+
+        # Close connections
+        if self._owns_mqtt_client and self.mqtt_client:
+            self.mqtt_client.close()
+
+        if self.mav_conn:
+            self.mav_conn.close()
+
+        logger.info("[MQTT Publisher] Stopped")
+
+    def _publish_loop(self):
+        """Main publishing loop (runs in separate thread)"""
+        logger.info("[MQTT Publisher] Starting MAVLink to MQTT forwarding...")
+
+        while self.is_running:
+            try:
+                msg = self.mav_conn.recv_match(
+                    blocking=False,
+                    timeout=1.0,
+                    type=self.message_types
+                )
+
+                if msg and self.is_running:
+                    # Convert MAVLink message to JSON
+                    msg_dict = msg.to_dict()
+                    msg_dict["timestamp"] = time.time()
+
+                    # Publish to MQTT
+                    if self.mqtt_client:
+                        self.mqtt_client.publish(
+                            self.mqtt_topic,
+                            json.dumps(msg_dict)
+                        )
+                        logger.debug(f"[MQTT Publisher] Published {msg_dict.get('mavpackettype')} to {self.mqtt_topic}")
+
+            except Exception as e:
+                if self.is_running:
+                    logger.error(f"[MQTT Publisher] Error in publish loop: {e}")
+                    time.sleep(1)
+
+    def is_alive(self):
+        """Check if the publisher is running"""
+        return self.is_running and (
+                self.publisher_thread and self.publisher_thread.is_alive()
+        )
+
+    def set_message_types(self, message_types):
+        """Update the message types to filter"""
+        self.message_types = message_types
+        logger.info(f"[MQTT Publisher] Updated message types: {self.message_types}")

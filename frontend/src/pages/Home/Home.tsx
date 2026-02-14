@@ -6,7 +6,7 @@ import MainContent from './components/MainContent';
 import Latest from './components/Latest';
 import Footer from './components/Footer';
 
-export default function Blog(props: { disableCustomTheme?: boolean }) {
+export default function Home(props: { disableCustomTheme?: boolean }) {
   return (
     <AppTheme {...props}>
       <CssBaseline enableColorScheme />
@@ -15,7 +15,13 @@ export default function Blog(props: { disableCustomTheme?: boolean }) {
       <Container
         maxWidth="lg"
         component="main"
-        sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 4 }}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          pt: { xs: 10, md: 14 },
+          pb: { xs: 6, md: 10 },
+          gap: 6,
+        }}
       >
         <MainContent />
         <Latest />

@@ -1,12 +1,19 @@
-import { DataGrid } from '@mui/x-data-grid';
-import { columns, rows } from '../internals/data/gridData';
+import { DataGrid, type GridRowsProp } from '@mui/x-data-grid';
+import { columns } from '../internals/data/gridData';
 
-export default function CustomizedDataGrid() {
+type CustomizedDataGridProps = {
+  rows?: GridRowsProp;
+  loading?: boolean;
+};
+
+export default function CustomizedDataGrid({ rows, loading }: CustomizedDataGridProps) {
   return (
     <DataGrid
       checkboxSelection
-      rows={rows}
+      rows={rows ?? []}
       columns={columns}
+      loading={loading}
+      autoHeight
       getRowClassName={(params) =>
         params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
       }

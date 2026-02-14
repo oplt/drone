@@ -43,6 +43,11 @@ class TelemetryWebSocketManager:
             "position": {"lat": 0, "lon": 0, "alt": 0, "relative_alt": 0},
             "attitude": {"roll": 0, "pitch": 0, "yaw": 0},
             "battery": {"voltage": 0, "current": 0, "remaining": 0, "temperature": 0},
+            "gps": {"satellites": 0, "hdop": None},
+            "link": {"rc": None, "lte": None, "telemetry": None},
+            "wind": {"speed": 0, "direction": 0},
+            "failsafe": {"state": "Normal"},
+            "system": {"status": "UNKNOWN"},
             "status": {
                 "groundspeed": 0,
                 "airspeed": 0,
@@ -273,12 +278,12 @@ class TelemetryWebSocketManager:
             logger.warning("Telemetry stream already running")
             return True
 
-        try:
-            self._event_loop = asyncio.get_event_loop()
-        except RuntimeError:
-            # Create new event loop if needed
-            self._event_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._event_loop)
+        # try:
+        #     self._event_loop = asyncio.get_event_loop()
+        # except RuntimeError:
+        #     # Create new event loop if needed
+        #     self._event_loop = asyncio.new_event_loop()
+        #     asyncio.set_event_loop(self._event_loop)
 
         conn_str = mavlink_connection_str or settings.drone_conn_mavproxy
 
@@ -365,6 +370,10 @@ class TelemetryWebSocketManager:
                                 "HEARTBEAT",
                                 "GPS_RAW_INT",
                                 "SYS_STATUS",
+                                "RADIO_STATUS",
+                                "RC_CHANNELS",
+                                "WIND",
+                                "STATUSTEXT",
                             ],
                         )
 
@@ -463,7 +472,7 @@ class TelemetryWebSocketManager:
         try:
             # Try to read a message with short timeout
             msg = mav_conn.recv_match(blocking=False, timeout=0.1)
-            return True
+            return msg is not None
         except:
             return False
 
@@ -472,6 +481,11 @@ class TelemetryWebSocketManager:
         # ... (keep your existing _process_mavlink_message method unchanged) ...
         msg_type = msg_dict.get("mavpackettype", "")
         processed = {}
+
+        def merge(section: str, updates: dict):
+            current = dict(self.last_telemetry.get(section, {}))
+            current.update(updates)
+            processed[section] = current
 
         try:
             if msg_type == "GLOBAL_POSITION_INT":
@@ -499,6 +513,23 @@ class TelemetryWebSocketManager:
                         "alt": float(msg_dict.get("alt", 0)) / 1e3,
                         # relative_alt not available here; keep previous if any
                     }
+                satellites = msg_dict.get("satellites_visible")
+                hdop_raw = msg_dict.get("eph")
+                hdop = None
+                if hdop_raw not in (None, 65535):
+                    try:
+                        hdop = float(hdop_raw) / 100.0
+                    except Exception:
+                        hdop = None
+                merge(
+                    "gps",
+                    {
+                        "satellites": int(satellites)
+                        if satellites is not None
+                        else self.last_telemetry.get("gps", {}).get("satellites", 0),
+                        "hdop": hdop,
+                    },
+                )
 
             elif msg_type == "VFR_HUD":
                 processed["status"] = {
@@ -516,12 +547,13 @@ class TelemetryWebSocketManager:
                     float(voltages[0]) / 1000 if voltages and voltages[0] > 0 else 0.0
                 )
 
-                processed["battery"] = {
+                battery_updates = {
                     "voltage": voltage,
                     "current": float(msg_dict.get("current_battery", 0)) / 100,
                     "remaining": int(msg_dict.get("battery_remaining", -1)),
                     "temperature": float(msg_dict.get("temperature", 0)),
                 }
+                merge("battery", battery_updates)
 
             elif msg_type == "ATTITUDE":
                 processed["attitude"] = {
@@ -560,6 +592,74 @@ class TelemetryWebSocketManager:
                 custom_mode = msg_dict.get("custom_mode", 0)
                 processed["mode"] = mode_mapping.get(custom_mode, "UNKNOWN")
                 processed["armed"] = bool(msg_dict.get("base_mode", 0) & 0x80)
+                system_status = msg_dict.get("system_status")
+                status_map = {
+                    0: "UNINIT",
+                    1: "BOOT",
+                    2: "CALIBRATING",
+                    3: "STANDBY",
+                    4: "ACTIVE",
+                    5: "CRITICAL",
+                    6: "EMERGENCY",
+                    7: "POWEROFF",
+                    8: "FLIGHT_TERMINATION",
+                }
+                if system_status is not None:
+                    status_label = status_map.get(int(system_status), "UNKNOWN")
+                    merge("system", {"status": status_label})
+                    if status_label in {"CRITICAL", "EMERGENCY", "FLIGHT_TERMINATION"}:
+                        merge("failsafe", {"state": status_label})
+
+            elif msg_type == "SYS_STATUS":
+                drop_rate = msg_dict.get("drop_rate_comm")
+                if drop_rate is not None:
+                    try:
+                        telemetry_quality = max(0, 100 - int(drop_rate))
+                    except Exception:
+                        telemetry_quality = None
+                    merge("link", {"telemetry": telemetry_quality})
+
+                battery_remaining = msg_dict.get("battery_remaining")
+                if battery_remaining is not None:
+                    merge("battery", {"remaining": int(battery_remaining)})
+
+            elif msg_type == "RADIO_STATUS":
+                rssi = msg_dict.get("rssi")
+                remrssi = msg_dict.get("remrssi")
+                rc_quality = None
+                telem_quality = None
+                if rssi is not None:
+                    rc_quality = min(100, round((int(rssi) / 255) * 100))
+                if remrssi is not None:
+                    telem_quality = min(100, round((int(remrssi) / 255) * 100))
+                merge("link", {"rc": rc_quality, "telemetry": telem_quality})
+
+            elif msg_type == "RC_CHANNELS":
+                rssi = msg_dict.get("rssi")
+                if rssi is not None:
+                    rc_quality = min(100, round((int(rssi) / 255) * 100))
+                    merge("link", {"rc": rc_quality})
+
+            elif msg_type == "WIND":
+                speed = msg_dict.get("speed")
+                direction = msg_dict.get("direction")
+                if speed is not None or direction is not None:
+                    merge(
+                        "wind",
+                        {
+                            "speed": float(speed) if speed is not None else 0,
+                            "direction": float(direction)
+                            if direction is not None
+                            else 0,
+                        },
+                    )
+
+            elif msg_type == "STATUSTEXT":
+                text = str(msg_dict.get("text", "")).strip()
+                if text:
+                    lowered = text.lower()
+                    if "failsafe" in lowered or "emergency" in lowered:
+                        merge("failsafe", {"state": text[:64]})
 
         except Exception as e:
             logger.error(f"Error processing {msg_type} message: {e}")

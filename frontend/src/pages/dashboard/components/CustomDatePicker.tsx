@@ -24,16 +24,27 @@ function ButtonField(props: ButtonFieldProps) {
     pickerContext.value == null
       ? parsedFormat
       : pickerContext.value.format(pickerContext.fieldFormat);
+  const {
+    inputRef,
+    slotProps,
+    onClick: forwardedOnClick,
+    ...buttonProps
+  } = forwardedProps as Record<string, unknown>;
 
   return (
     <Button
-      {...forwardedProps}
+      {...buttonProps}
       variant="outlined"
       ref={handleRef}
       size="small"
       startIcon={<CalendarTodayRoundedIcon fontSize="small" />}
       sx={{ minWidth: 'fit-content' }}
-      onClick={() => pickerContext.setOpen((prev) => !prev)}
+      onClick={(event) => {
+        if (typeof forwardedOnClick === 'function') {
+          forwardedOnClick(event);
+        }
+        pickerContext.setOpen((prev) => !prev);
+      }}
     >
       {pickerContext.label ?? valueStr}
     </Button>

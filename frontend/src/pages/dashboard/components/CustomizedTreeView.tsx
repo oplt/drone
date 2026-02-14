@@ -29,47 +29,40 @@ type ExtendedTreeItemProps = {
   label: string;
 };
 
-const ITEMS: TreeViewBaseItem<ExtendedTreeItemProps>[] = [
-  {
-    id: '1',
-    label: 'Website',
-    children: [
-      { id: '1.1', label: 'Home', color: 'green' },
-      { id: '1.2', label: 'Pricing', color: 'green' },
-      { id: '1.3', label: 'About us', color: 'green' },
-      {
-        id: '1.4',
-        label: 'Blog',
-        children: [
-          { id: '1.1.1', label: 'Announcements', color: 'blue' },
-          { id: '1.1.2', label: 'April lookahead', color: 'blue' },
-          { id: '1.1.3', label: "What's new", color: 'blue' },
-          { id: '1.1.4', label: 'Meet the team', color: 'blue' },
-        ],
-      },
-    ],
-  },
-  {
-    id: '2',
-    label: 'Store',
-    children: [
-      { id: '2.1', label: 'All products', color: 'green' },
-      {
-        id: '2.2',
-        label: 'Categories',
-        children: [
-          { id: '2.2.1', label: 'Gadgets', color: 'blue' },
-          { id: '2.2.2', label: 'Phones', color: 'blue' },
-          { id: '2.2.3', label: 'Wearables', color: 'blue' },
-        ],
-      },
-      { id: '2.3', label: 'Bestsellers', color: 'green' },
-      { id: '2.4', label: 'Sales', color: 'green' },
-    ],
-  },
-  { id: '4', label: 'Contact', color: 'blue' },
-  { id: '5', label: 'Help', color: 'blue' },
-];
+type SummarySnapshot = {
+  active_flights?: number | null;
+  flights_24h?: number | null;
+  telemetry_24h?: number | null;
+  flight_hours_7d?: number | null;
+  avg_battery_24h?: number | null;
+};
+
+type SystemSnapshot = {
+  telemetry_running?: boolean;
+  mavlink_connected?: boolean;
+  active_connections?: number | null;
+};
+
+type CoverageSegment = {
+  label: string;
+  value: number;
+};
+
+type CustomizedTreeViewProps = {
+  summary?: SummarySnapshot;
+  system?: SystemSnapshot;
+  coverage?: CoverageSegment[];
+};
+
+const formatNumber = (value: number | null | undefined, suffix = '') => {
+  if (value === null || value === undefined || Number.isNaN(value)) return 'No data';
+  return `${value.toLocaleString()}${suffix}`;
+};
+
+const formatHours = (value: number | null | undefined) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return 'No data';
+  return `${value.toFixed(1)}h`;
+};
 
 function DotIcon({ color }: { color: string }) {
   return (
@@ -176,7 +169,118 @@ const CustomTreeItem = React.forwardRef(function CustomTreeItem(
   );
 });
 
-export default function CustomizedTreeView() {
+export default function CustomizedTreeView({
+  summary,
+  system,
+  coverage,
+}: CustomizedTreeViewProps) {
+  const items = React.useMemo<TreeViewBaseItem<ExtendedTreeItemProps>[]>(() => {
+    const statusColor = (value: number | null | undefined) => {
+      if (value === null || value === undefined || Number.isNaN(value)) return undefined;
+      return value > 0 ? 'green' : 'blue';
+    };
+
+    const boolColor = (value: boolean | undefined) => {
+      if (value === undefined) return undefined;
+      return value ? 'green' : 'blue';
+    };
+
+    const formatBool = (value: boolean | undefined, onLabel: string, offLabel: string) => {
+      if (value === undefined) return 'No data';
+      return value ? onLabel : offLabel;
+    };
+
+    const coverageItems =
+      coverage && coverage.length > 0
+        ? coverage.map((segment, index) => ({
+            id: `coverage-${index}`,
+            label: `${segment.label}: ${
+              Number.isFinite(segment.value) ? segment.value.toFixed(1) : '0'
+            }%`,
+            color: segment.value >= 25 ? 'green' : 'blue',
+          }))
+        : [{ id: 'coverage-empty', label: 'Coverage data unavailable', color: 'blue' }];
+
+    return [
+      {
+        id: 'field-ops',
+        label: 'Field ops',
+        children: [
+          {
+            id: 'field-ops-active',
+            label: `Active flights: ${formatNumber(summary?.active_flights)}`,
+            color: statusColor(summary?.active_flights),
+          },
+          {
+            id: 'field-ops-24h',
+            label: `Flights (24h): ${formatNumber(summary?.flights_24h)}`,
+            color: statusColor(summary?.flights_24h),
+          },
+          {
+            id: 'field-ops-hours',
+            label: `Survey hours (7d): ${formatHours(summary?.flight_hours_7d)}`,
+            color: statusColor(summary?.flight_hours_7d),
+          },
+        ],
+      },
+      {
+        id: 'telemetry',
+        label: 'Telemetry',
+        children: [
+          {
+            id: 'telemetry-frames',
+            label: `Telemetry frames (24h): ${formatNumber(summary?.telemetry_24h)}`,
+            color: statusColor(summary?.telemetry_24h),
+          },
+          {
+            id: 'telemetry-battery',
+            label: `Avg battery health (24h): ${formatNumber(
+              summary?.avg_battery_24h,
+              '%',
+            )}`,
+            color:
+              summary?.avg_battery_24h !== null &&
+              summary?.avg_battery_24h !== undefined
+                ? summary.avg_battery_24h >= 50
+                  ? 'green'
+                  : 'blue'
+                : undefined,
+          },
+        ],
+      },
+      {
+        id: 'system',
+        label: 'Systems',
+        children: [
+          {
+            id: 'system-telemetry',
+            label: `Telemetry service: ${formatBool(
+              system?.telemetry_running,
+              'Running',
+              'Stopped',
+            )}`,
+            color: boolColor(system?.telemetry_running),
+          },
+          {
+            id: 'system-mavlink',
+            label: `MAVLink: ${formatBool(system?.mavlink_connected, 'Connected', 'Idle')}`,
+            color: boolColor(system?.mavlink_connected),
+          },
+          {
+            id: 'system-clients',
+            label: `Active clients: ${formatNumber(system?.active_connections)}`,
+            color: statusColor(system?.active_connections),
+          },
+        ],
+      },
+      {
+        id: 'coverage',
+        label: 'Coverage',
+        children: coverageItems,
+      },
+    ];
+  }, [summary, system, coverage]);
+
   return (
     <Card
       variant="outlined"
@@ -184,14 +288,14 @@ export default function CustomizedTreeView() {
     >
       <CardContent>
         <Typography component="h2" variant="subtitle2">
-          Product tree
+          System map
         </Typography>
         <RichTreeView
-          items={ITEMS}
+          items={items}
           aria-label="pages"
           multiSelect
-          defaultExpandedItems={['1', '1.1']}
-          defaultSelectedItems={['1.1', '1.1.1']}
+          defaultExpandedItems={['field-ops', 'telemetry', 'system']}
+          defaultSelectedItems={['field-ops-active']}
           sx={{
             m: '0 -8px',
             pb: '8px',

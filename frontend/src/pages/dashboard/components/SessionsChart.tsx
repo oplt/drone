@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -17,36 +18,53 @@ function AreaGradient({ color, id }: { color: string; id: string }) {
   );
 }
 
-function getDaysInMonth(month: number, year: number) {
-  const date = new Date(year, month, 0);
-  const monthName = date.toLocaleDateString('en-US', {
-    month: 'short',
-  });
-  const daysInMonth = date.getDate();
-  const days = [];
-  let i = 1;
-  while (days.length < daysInMonth) {
-    days.push(`${monthName} ${i}`);
-    i += 1;
-  }
-  return days;
-}
+type SeriesDatum = {
+  id: string;
+  label: string;
+  data: number[];
+};
 
-export default function SessionsChart() {
+type SessionsChartProps = {
+  title?: string;
+  totalValue?: string;
+  deltaLabel?: string;
+  subtitle?: string;
+  labels?: string[];
+  series?: SeriesDatum[];
+};
+
+export default function SessionsChart({
+  title = 'Survey hours',
+  totalValue = '--',
+  deltaLabel,
+  subtitle = 'Survey hours per day for the last 30 days',
+  labels,
+  series,
+}: SessionsChartProps) {
   const theme = useTheme();
-  const data = getDaysInMonth(4, 2024);
+  const finalSeries = series ?? [];
+  const hasSeries = finalSeries.length > 0 && finalSeries.some((item) => item.data.length > 0);
+  const maxLen = hasSeries
+    ? Math.max(...finalSeries.map((item) => item.data.length))
+    : 0;
+  const fallbackLabels = maxLen > 0 ? Array.from({ length: maxLen }, (_, i) => `${i + 1}`) : [];
+  const xLabels =
+    labels && labels.length === maxLen ? labels : fallbackLabels;
 
-  const colorPalette = [
-    theme.palette.primary.light,
-    theme.palette.primary.main,
-    theme.palette.primary.dark,
-  ];
+  const colorPalette = useMemo(
+    () => [
+      theme.palette.primary.light,
+      theme.palette.primary.main,
+      theme.palette.primary.dark,
+    ],
+    [theme.palette.primary.dark, theme.palette.primary.light, theme.palette.primary.main],
+  );
 
   return (
     <Card variant="outlined" sx={{ width: '100%' }}>
       <CardContent>
         <Typography component="h2" variant="subtitle2" gutterBottom>
-          Sessions
+          {title}
         </Typography>
         <Stack sx={{ justifyContent: 'space-between' }}>
           <Stack
@@ -58,89 +76,63 @@ export default function SessionsChart() {
             }}
           >
             <Typography variant="h4" component="p">
-              13,277
+              {totalValue}
             </Typography>
-            <Chip size="small" color="success" label="+35%" />
+            {deltaLabel && <Chip size="small" color="success" label={deltaLabel} />}
           </Stack>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Sessions per day for the last 30 days
+            {subtitle}
           </Typography>
         </Stack>
-        <LineChart
-          colors={colorPalette}
-          xAxis={[
-            {
-              scaleType: 'point',
-              data,
-              tickInterval: (index, i) => (i + 1) % 5 === 0,
-              height: 24,
-            },
-          ]}
-          yAxis={[{ width: 50 }]}
-          series={[
-            {
-              id: 'direct',
-              label: 'Direct',
+        {hasSeries ? (
+          <LineChart
+            colors={colorPalette}
+            xAxis={[
+              {
+                scaleType: 'point',
+                data: xLabels,
+                tickInterval: (value, index) =>
+                  (index + 1) % 5 === 0 && value !== undefined,
+                height: 24,
+              },
+            ]}
+            yAxis={[{ width: 50 }]}
+            series={finalSeries.map((serie) => ({
+              id: serie.id,
+              label: serie.label,
               showMark: false,
               curve: 'linear',
               stack: 'total',
               area: true,
               stackOrder: 'ascending',
-              data: [
-                300, 900, 600, 1200, 1500, 1800, 2400, 2100, 2700, 3000, 1800, 3300,
-                3600, 3900, 4200, 4500, 3900, 4800, 5100, 5400, 4800, 5700, 6000,
-                6300, 6600, 6900, 7200, 7500, 7800, 8100,
-              ],
-            },
-            {
-              id: 'referral',
-              label: 'Referral',
-              showMark: false,
-              curve: 'linear',
-              stack: 'total',
-              area: true,
-              stackOrder: 'ascending',
-              data: [
-                500, 900, 700, 1400, 1100, 1700, 2300, 2000, 2600, 2900, 2300, 3200,
-                3500, 3800, 4100, 4400, 2900, 4700, 5000, 5300, 5600, 5900, 6200,
-                6500, 5600, 6800, 7100, 7400, 7700, 8000,
-              ],
-            },
-            {
-              id: 'organic',
-              label: 'Organic',
-              showMark: false,
-              curve: 'linear',
-              stack: 'total',
-              stackOrder: 'ascending',
-              data: [
-                1000, 1500, 1200, 1700, 1300, 2000, 2400, 2200, 2600, 2800, 2500,
-                3000, 3400, 3700, 3200, 3900, 4100, 3500, 4300, 4500, 4000, 4700,
-                5000, 5200, 4800, 5400, 5600, 5900, 6100, 6300,
-              ],
-              area: true,
-            },
-          ]}
-          height={250}
-          margin={{ left: 0, right: 20, top: 20, bottom: 0 }}
-          grid={{ horizontal: true }}
-          sx={{
-            '& .MuiAreaElement-series-organic': {
-              fill: "url('#organic')",
-            },
-            '& .MuiAreaElement-series-referral': {
-              fill: "url('#referral')",
-            },
-            '& .MuiAreaElement-series-direct': {
-              fill: "url('#direct')",
-            },
-          }}
-          hideLegend
-        >
-          <AreaGradient color={theme.palette.primary.dark} id="organic" />
-          <AreaGradient color={theme.palette.primary.main} id="referral" />
-          <AreaGradient color={theme.palette.primary.light} id="direct" />
-        </LineChart>
+              data: serie.data,
+            }))}
+            height={250}
+            margin={{ left: 0, right: 20, top: 20, bottom: 0 }}
+            grid={{ horizontal: true }}
+            sx={{
+              ...finalSeries.reduce<Record<string, any>>((acc, serie) => {
+                acc[`& .MuiAreaElement-series-${serie.id}`] = {
+                  fill: `url('#area-${serie.id}')`,
+                };
+                return acc;
+              }, {}),
+            }}
+            hideLegend
+          >
+            {finalSeries.map((serie, idx) => (
+              <AreaGradient
+                key={serie.id}
+                color={colorPalette[idx % colorPalette.length]}
+                id={`area-${serie.id}`}
+              />
+            ))}
+          </LineChart>
+        ) : (
+          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+            No data yet
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );

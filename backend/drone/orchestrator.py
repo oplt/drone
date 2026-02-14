@@ -6,13 +6,12 @@ from .drone_base import DroneClient
 from backend.map.google_maps import GoogleMapsClient
 from backend.video.stream import DroneVideoStream
 from backend.analysis.llm import LLMAnalyzer
-from backend.messaging.mqtt import MqttClient
-from backend.messaging.opcua import DroneOpcUaServer
+from backend.messaging.mqtt import MqttClient, MqttPublisher
+# from backend.messaging.opcua import DroneOpcUaServer
 from backend.db.repository import TelemetryRepository
 from backend.config import settings
 from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
-from backend.utils.geo import haversine_km, _coord_from_home
-from backend.utils.telemetry_publisher_sim import ArduPilotTelemetryPublisher
+from backend.utils.geo import haversine_km, coord_from_home
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +23,16 @@ class Orchestrator:
         maps: GoogleMapsClient,
         analyzer: LLMAnalyzer,
         mqtt: MqttClient,
-        opcua: DroneOpcUaServer,
+        # opcua: DroneOpcUaServer,
         video: DroneVideoStream,
         telemetry_repo: TelemetryRepository,
-        publisher: ArduPilotTelemetryPublisher,
+        publisher: MqttPublisher,
     ):
         self.drone = drone
         self.maps = maps
         self.analyzer = analyzer
         self.mqtt = mqtt
-        self.opcua = opcua
+        # self.opcua = opcua
         self.video = video
         self.repo = telemetry_repo
         self.range_model = SimpleWhPerKmModel()
@@ -110,11 +109,11 @@ class Orchestrator:
                     )
 
                     # Update OPC UA with video status
-                    await self.opcua.update_video_status(
-                        healthy=status["healthy"],
-                        fps=status["fps"],
-                        recording=status["recording"],
-                    )
+                    # await self.opcua.update_video_status(
+                    #     healthy=status["healthy"],
+                    #     fps=status["fps"],
+                    #     recording=status["recording"],
+                    # )
 
                     # Log warnings if video is unhealthy
                     if not status["healthy"]:
@@ -224,23 +223,26 @@ class Orchestrator:
         """Monitor for emergency conditions and handle them"""
         while self._running:
             try:
-                # Check if dead man's switch was triggered
-                if hasattr(self.drone, "dead_mans_switch_active"):
-                    if not self.drone.dead_mans_switch_active and self.drone.vehicle:
-                        # Dead man's switch was triggered!
-                        self.mqtt.publish(
-                            "drone/emergency",
-                            {
-                                "type": "dead_mans_switch_triggered",
-                                "message": "Connection lost - drone executing emergency protocol",
-                                "timestamp": time.time(),
-                            },
-                            qos=2,
-                        )  # QoS 2 for critical emergency messages
+                # Only act if the drone explicitly flagged an emergency trigger.
+                if getattr(self.drone, "dead_mans_switch_triggered", False):
+                    self.mqtt.publish(
+                        "drone/emergency",
+                        {
+                            "type": "dead_mans_switch_triggered",
+                            "message": "Connection lost - drone executing emergency protocol",
+                            "timestamp": time.time(),
+                        },
+                        qos=2,
+                    )  # QoS 2 for critical emergency messages
 
-                        # Stop all other operations
-                        self._running = False
-                        break
+                    # Stop all other operations
+                    self._running = False
+                    # Reset to avoid repeated notifications
+                    try:
+                        self.drone.dead_mans_switch_triggered = False
+                    except Exception:
+                        pass
+                    break
                 await asyncio.sleep(1.0)
             except Exception as e:
                 logger.info(f"Error in emergency monitor: {e}")
@@ -283,7 +285,7 @@ class Orchestrator:
         await self.repo.add_event(self._flight_id, "connected", {})
 
         # Preflight range check (can hard-fail if you want)
-        home = _coord_from_home(self.drone.home_location)
+        home = coord_from_home(self.drone.home_location)
 
         preflight = await self._preflight_range_check(home, start, dest)
         if not preflight.feasible and settings.enforce_preflight_range:
@@ -389,9 +391,9 @@ class Orchestrator:
             raise RuntimeError("Drone not connected or home location not available")
 
         # Get drone's home/current location
-        from backend.utils.geo import _coord_from_home
+        from backend.utils.geo import coord_from_home
 
-        home_coord = _coord_from_home(self.drone.home_location)
+        home_coord = coord_from_home(self.drone.home_location)
         home_coord.alt = cruise_alt  # Set altitude for takeoff
 
         # normalize altitude for all waypoints
@@ -466,102 +468,121 @@ class Orchestrator:
             note="Mission completed and returned home",
         )
 
-    # In the run_waypoints method, ensure flight_id is set before starting tasks
+
     async def run_waypoints(self, waypoints: list[Coordinate], alt: float = 30.0):
-
-        logger.info(f"🚁 Starting mission from {len(waypoints)} clicked waypoint(s)")
-
-        # Start telemetry stream when mission begins
-        try:
-            from backend.messaging.websocket import telemetry_manager
-
-            if not telemetry_manager._running:
-                telemetry_manager.start_telemetry_stream()
-                logger.info("Telemetry stream started for mission")
-        except Exception as e:
-            logger.warning(f"Could not start telemetry stream: {e}")
+        """Run a mission with the given waypoints"""
+        logger.info(f"🚁 Starting mission from {len(waypoints)} waypoint(s)")
 
         if len(waypoints) < 2:
             raise ValueError("Need at least 2 waypoints (start & destination).")
 
         self._flight_id = None
         self._running = True
-
-        # Store flight_id in instance variable for API access
-        self._current_flight_data = {
-            "waypoints": waypoints,
-            "altitude": alt,
-            "start_time": time.time(),
-            "status": "initializing",
-        }
-
         tasks: list[asyncio.Task] = []
 
         try:
-            await self.opcua.start()
+            # STEP 1: Connect to drone FIRST
+            logger.info("🔌 Connecting to drone...")
             await asyncio.to_thread(self.drone.connect)
+            logger.info("✅ Drone connected successfully")
 
-            # Create flight record early so flight_id is available
-            if self._flight_id is None:
-                # Use first waypoint as start, last as destination
-                start = waypoints[0]
-                dest = waypoints[-1]
-                self._flight_id = await self.repo.create_flight(
-                    start_lat=start.lat,
-                    start_lon=start.lon,
-                    start_alt=alt,
-                    dest_lat=dest.lat,
-                    dest_lon=dest.lon,
-                    dest_alt=alt,
+            # STEP 2: Start OPC UA server
+            # await self.opcua.start()
+
+            # STEP 3: Create flight record
+            start = waypoints[0]
+            dest = waypoints[-1]
+            self._flight_id = await self.repo.create_flight(
+                start_lat=start.lat,
+                start_lon=start.lon,
+                start_alt=alt,
+                dest_lat=dest.lat,
+                dest_lon=dest.lon,
+                dest_alt=alt,
+            )
+            logger.info(f"✅ Created flight record with ID: {self._flight_id}")
+
+            # STEP 4: Start telemetry stream (if not already running)
+            from backend.config import settings
+            from backend.messaging.websocket import telemetry_manager
+
+            if not telemetry_manager._running:
+                logger.info("Starting telemetry stream...")
+                success = await asyncio.to_thread(
+                    telemetry_manager.start_telemetry_stream,
+                    settings.drone_conn_mavproxy
                 )
-                logger.info(f"Created flight with ID: {self._flight_id}")
+                if success:
+                    logger.info("✅ Telemetry stream started")
+                    # Give telemetry a moment to initialize
+                    await asyncio.sleep(1)
+                else:
+                    logger.warning("⚠️ Failed to start telemetry stream")
 
-                # Update current flight data
-                self._current_flight_data["flight_id"] = self._flight_id
-                self._current_flight_data["status"] = "flight_created"
-
+            # STEP 5: Start background tasks
             tasks = [
                 asyncio.create_task(self.heartbeat_task()),
                 asyncio.create_task(self.telemetry_publish_task()),
                 asyncio.create_task(self.mqtt_subscriber_task()),
                 asyncio.create_task(self._raw_event_ingest_worker()),
                 asyncio.create_task(self.video_health_monitor_task()),
+                asyncio.create_task(self.emergency_monitor_task()),
             ]
 
-            if self.video and hasattr(self, "vision_task"):
-                tasks.append(asyncio.create_task(self.vision_task()))
-
+            # Give tasks time to initialize
             await asyncio.sleep(0.5)
 
-            # Update status
-            self._current_flight_data["status"] = "executing"
+            # STEP 6: Execute the mission
             await self.fly_route_waypoints(waypoints, cruise_alt=alt)
+            logger.info("✅ Mission execution completed")
 
-        except Exception:
-            logger.exception("Mission failed in run_waypoints")
-            self._current_flight_data["status"] = "failed"
+        except Exception as e:
+            logger.exception(f"❌ Mission failed in run_waypoints: {e}")
             raise
-
         finally:
+            # Cleanup
             self._running = False
-            self._current_flight_data["status"] = "completed"
-            await asyncio.sleep(0.5)
 
-            for t in tasks:
-                if t and not t.done():
-                    t.cancel()
-                    try:
-                        await t
-                    except asyncio.CancelledError:
-                        pass
+            # Cancel background tasks
+            for task in tasks:
+                if task and not task.done():
+                    task.cancel()
 
-            # Don't stop telemetry automatically - let API manage it
-            # telemetry_manager.stop_telemetry_stream()
+            # Wait for tasks to cancel
+            if tasks:
+                await asyncio.gather(*[t for t in tasks if not t.done()], return_exceptions=True)
 
+            # Clean up other resources
+            await self._cleanup()
+
+
+
+    async def _cleanup(self):
+        """Clean up orchestrator resources"""
+        try:
             self.drone.stop_dead_mans_switch()
-            await self.opcua.stop()
-            if self.video:
+        except Exception as e:
+            logger.warning(f"Failed to stop dead man's switch: {e}")
+
+        # if self.opcua:
+        #     try:
+        #         await self.opcua.stop()
+        #     except Exception as e:
+        #         logger.warning(f"Failed to stop OPC UA server: {e}")
+
+        if self.video:
+            try:
                 self.video.close()
+            except Exception as e:
+                logger.warning(f"Failed to close video stream: {e}")
+
+        try:
             self.drone.close()
-            if self.publisher.is_running:
+        except Exception as e:
+            logger.warning(f"Failed to close drone connection: {e}")
+
+        if self.publisher and getattr(self.publisher, "is_running", False):
+            try:
                 self.publisher.stop()
+            except Exception as e:
+                logger.warning(f"Failed to stop telemetry publisher: {e}")

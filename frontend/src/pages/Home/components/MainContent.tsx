@@ -1,484 +1,286 @@
-import * as React from 'react';
-import Avatar from '@mui/material/Avatar';
-import AvatarGroup from '@mui/material/AvatarGroup';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import CardMedia from '@mui/material/CardMedia';
+import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
-import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import FormControl from '@mui/material/FormControl';
-import InputAdornment from '@mui/material/InputAdornment';
-import OutlinedInput from '@mui/material/OutlinedInput';
-import { styled } from '@mui/material/styles';
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import RssFeedRoundedIcon from '@mui/icons-material/RssFeedRounded';
+import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
+import TrackChangesRoundedIcon from '@mui/icons-material/TrackChangesRounded';
+import HubRoundedIcon from '@mui/icons-material/HubRounded';
+import RadarRoundedIcon from '@mui/icons-material/RadarRounded';
+import SatelliteAltRoundedIcon from '@mui/icons-material/SatelliteAltRounded';
+import MemoryRoundedIcon from '@mui/icons-material/MemoryRounded';
 
-const cardData = [
+const capabilities = [
   {
-    img: 'https://picsum.photos/800/450?random=1',
-    tag: 'Engineering',
-    title: 'Revolutionizing software development with cutting-edge tools',
+    title: 'Field flight planning',
     description:
-      'Our latest engineering tools are designed to streamline workflows and boost productivity. Discover how these innovations are transforming the software development landscape.',
-    authors: [
-      { name: 'Remy Sharp', avatar: '/static/images/avatar/1.jpg' },
-      { name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' },
-    ],
+      'Plan scouting, stand-count, and canopy passes with boundary-aware routing and automatic return paths.',
+    icon: <TrackChangesRoundedIcon fontSize="small" />,
+    meta: 'Fields + buffers + RTH',
   },
   {
-    img: 'https://picsum.photos/800/450?random=2',
-    tag: 'Product',
-    title: 'Innovative product features that drive success',
+    title: 'Crop health analytics',
     description:
-      'Explore the key features of our latest product release that are helping businesses achieve their goals. From user-friendly interfaces to robust functionality, learn why our product stands out.',
-    authors: [{ name: 'Erica Johns', avatar: '/static/images/avatar/6.jpg' }],
+      'NDVI, thermal, and RGB pipelines tuned for early stress detection and prescription-ready outputs.',
+    icon: <ShieldRoundedIcon fontSize="small" />,
+    meta: 'NDVI + thermal + RGB',
   },
   {
-    img: 'https://picsum.photos/800/450?random=3',
-    tag: 'Design',
-    title: 'Designing for the future: trends and insights',
+    title: 'Farm system integration',
     description:
-      'Stay ahead of the curve with the latest design trends and insights. Our design team shares their expertise on creating intuitive and visually stunning user experiences.',
-    authors: [{ name: 'Kate Morrison', avatar: '/static/images/avatar/7.jpg' }],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=4',
-    tag: 'Company',
-    title: "Our company's journey: milestones and achievements",
-    description:
-      "Take a look at our company's journey and the milestones we've achieved along the way. From humble beginnings to industry leader, discover our story of growth and success.",
-    authors: [{ name: 'Cindy Baker', avatar: '/static/images/avatar/3.jpg' }],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=45',
-    tag: 'Engineering',
-    title: 'Pioneering sustainable engineering solutions',
-    description:
-      "Learn about our commitment to sustainability and the innovative engineering solutions we're implementing to create a greener future. Discover the impact of our eco-friendly initiatives.",
-    authors: [
-      { name: 'Agnes Walker', avatar: '/static/images/avatar/4.jpg' },
-      { name: 'Trevor Henderson', avatar: '/static/images/avatar/5.jpg' },
-    ],
-  },
-  {
-    img: 'https://picsum.photos/800/450?random=6',
-    tag: 'Product',
-    title: 'Maximizing efficiency with our latest product updates',
-    description:
-      'Our recent product updates are designed to help you maximize efficiency and achieve more. Get a detailed overview of the new features and improvements that can elevate your workflow.',
-    authors: [{ name: 'Travis Howard', avatar: '/static/images/avatar/2.jpg' }],
+      'Open APIs that connect to farm management systems, irrigation controllers, and field sensors.',
+    icon: <HubRoundedIcon fontSize="small" />,
+    meta: 'APIs + GIS + IoT',
   },
 ];
 
-const StyledCard = styled(Card)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  padding: 0,
-  height: '100%',
-  backgroundColor: (theme.vars || theme).palette.background.paper,
-  '&:hover': {
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
+const safeguards = [
+  {
+    title: 'Weather-aware autonomy',
+    description: 'Wind, humidity, and temperature thresholds that pause flights and protect crops.',
   },
-  '&:focus-visible': {
-    outline: '3px solid',
-    outlineColor: 'hsla(210, 98%, 48%, 0.5)',
-    outlineOffset: '2px',
+  {
+    title: 'Reliable field comms',
+    description: 'Graceful handoffs across rural networks with offline-safe route caching.',
   },
-}));
-
-const StyledCardContent = styled(CardContent)({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-  padding: 16,
-  flexGrow: 1,
-  '&:last-child': {
-    paddingBottom: 16,
+  {
+    title: 'Traceable fieldwork',
+    description: 'Audit-ready records for every flight, image set, and agronomy recommendation.',
   },
-});
-
-const StyledTypography = styled(Typography)({
-  display: '-webkit-box',
-  WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: 2,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-});
-
-function Author({ authors }: { authors: { name: string; avatar: string }[] }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'row',
-        gap: 2,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px',
-      }}
-    >
-      <Box
-        sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}
-      >
-        <AvatarGroup max={3}>
-          {authors.map((author, index) => (
-            <Avatar
-              key={index}
-              alt={author.name}
-              src={author.avatar}
-              sx={{ width: 24, height: 24 }}
-            />
-          ))}
-        </AvatarGroup>
-        <Typography variant="caption">
-          {authors.map((author) => author.name).join(', ')}
-        </Typography>
-      </Box>
-      <Typography variant="caption">July 14, 2021</Typography>
-    </Box>
-  );
-}
-
-export function Search() {
-  return (
-    <FormControl sx={{ width: { xs: '100%', md: '25ch' } }} variant="outlined">
-      <OutlinedInput
-        size="small"
-        id="search"
-        placeholder="Search…"
-        sx={{ flexGrow: 1 }}
-        startAdornment={
-          <InputAdornment position="start" sx={{ color: 'text.primary' }}>
-            <SearchRoundedIcon fontSize="small" />
-          </InputAdornment>
-        }
-        inputProps={{
-          'aria-label': 'search',
-        }}
-      />
-    </FormControl>
-  );
-}
+];
 
 export default function MainContent() {
-  const [focusedCardIndex, setFocusedCardIndex] = React.useState<number | null>(
-    null,
-  );
-
-  const handleFocus = (index: number) => {
-    setFocusedCardIndex(index);
-  };
-
-  const handleBlur = () => {
-    setFocusedCardIndex(null);
-  };
-
-  const handleClick = () => {
-    console.info('You clicked the filter chip.');
-  };
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div>
-        <Typography variant="h1" gutterBottom>
-          Blog
-        </Typography>
-        <Typography>Stay in the loop with the latest about our products</Typography>
-      </div>
-      <Box
-        sx={{
-          display: { xs: 'flex', sm: 'none' },
-          flexDirection: 'row',
-          gap: 1,
-          width: { xs: '100%', md: 'fit-content' },
-          overflow: 'auto',
-        }}
-      >
-        <Search />
-        <IconButton size="small" aria-label="RSS feed">
-          <RssFeedRoundedIcon />
-        </IconButton>
-      </Box>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column-reverse', md: 'row' },
-          width: '100%',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'start', md: 'center' },
-          gap: 4,
-          overflow: 'auto',
-        }}
-      >
-        <Box
-          sx={{
-            display: 'inline-flex',
-            flexDirection: 'row',
-            gap: 3,
-            overflow: 'auto',
-          }}
-        >
-          <Chip onClick={handleClick} size="medium" label="All categories" />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Company"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Product"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Design"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-          <Chip
-            onClick={handleClick}
-            size="medium"
-            label="Engineering"
-            sx={{
-              backgroundColor: 'transparent',
-              border: 'none',
-            }}
-          />
-        </Box>
-        <Box
-          sx={{
-            display: { xs: 'none', sm: 'flex' },
-            flexDirection: 'row',
-            gap: 1,
-            width: { xs: '100%', md: 'fit-content' },
-            overflow: 'auto',
-          }}
-        >
-          <Search />
-          <IconButton size="small" aria-label="RSS feed">
-            <RssFeedRoundedIcon />
-          </IconButton>
-        </Box>
-      </Box>
-      <Grid container spacing={2} columns={12}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Grid container spacing={4} alignItems="center">
         <Grid size={{ xs: 12, md: 6 }}>
-          <StyledCard
-            variant="outlined"
-            onFocus={() => handleFocus(0)}
-            onBlur={handleBlur}
-            tabIndex={0}
-            className={focusedCardIndex === 0 ? 'Mui-focused' : ''}
-          >
-            <CardMedia
-              component="img"
-              alt="green iguana"
-              image={cardData[0].img}
-              sx={{
-                aspectRatio: '16 / 9',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              }}
-            />
-            <StyledCardContent>
-              <Typography gutterBottom variant="caption" component="div">
-                {cardData[0].tag}
-              </Typography>
-              <Typography gutterBottom variant="h6" component="div">
-                {cardData[0].title}
-              </Typography>
-              <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[0].description}
-              </StyledTypography>
-            </StyledCardContent>
-            <Author authors={cardData[0].authors} />
-          </StyledCard>
+          <Stack spacing={3} sx={{ animation: 'riseIn 0.6s ease both' }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip
+                label="Agronomy-ready autonomy"
+                size="small"
+                sx={{
+                  bgcolor: 'hsla(174, 60%, 35%, 0.15)',
+                  color: 'text.primary',
+                  fontWeight: 600,
+                }}
+              />
+              <Chip
+                label="Field-secure"
+                size="small"
+                variant="outlined"
+                sx={{ borderColor: 'hsla(174, 40%, 40%, 0.4)' }}
+              />
+            </Stack>
+            <Typography variant="h1">
+              Agronomy drone operations for healthier, higher-yield fields.
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 520 }}>
+              A unified platform for scouting, telemetry, and imagery with agronomy-grade safety
+              controls. Built to operate across large acreage, remote blocks, and mixed connectivity.
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Button variant="contained" size="large" href="/signup">
+                Request onboarding
+              </Button>
+              <Button variant="outlined" size="large" href="/signin">
+                Enter farm console
+              </Button>
+            </Stack>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ pt: 2 }}
+            >
+              <Box>
+                <Typography variant="h4">420k</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Acres mapped
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="h4">18 min</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Scout turnaround
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="h4">4.8x</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Faster scouting
+                </Typography>
+              </Box>
+            </Stack>
+          </Stack>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <StyledCard
+          <Paper
             variant="outlined"
-            onFocus={() => handleFocus(1)}
-            onBlur={handleBlur}
-            tabIndex={0}
-            className={focusedCardIndex === 1 ? 'Mui-focused' : ''}
+            sx={{
+              p: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              background:
+                'linear-gradient(145deg, hsla(174, 50%, 94%, 0.9), hsla(36, 40%, 96%, 0.9))',
+              borderColor: 'hsla(174, 30%, 40%, 0.25)',
+              animation: 'riseIn 0.8s ease both',
+            }}
           >
-            <CardMedia
-              component="img"
-              alt="green iguana"
-              image={cardData[1].img}
-              aspect-ratio="16 / 9"
+            <Box
               sx={{
-                borderBottom: '1px solid',
-                borderColor: 'divider',
+                position: 'absolute',
+                inset: 0,
+                opacity: 0.4,
+                backgroundImage:
+                  'repeating-linear-gradient(0deg, transparent, transparent 18px, hsla(174, 20%, 40%, 0.15) 19px), repeating-linear-gradient(90deg, transparent, transparent 18px, hsla(174, 20%, 40%, 0.15) 19px)',
               }}
             />
-            <StyledCardContent>
-              <Typography gutterBottom variant="caption" component="div">
-                {cardData[1].tag}
-              </Typography>
-              <Typography gutterBottom variant="h6" component="div">
-                {cardData[1].title}
-              </Typography>
-              <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[1].description}
-              </StyledTypography>
-            </StyledCardContent>
-            <Author authors={cardData[1].authors} />
-          </StyledCard>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <StyledCard
-            variant="outlined"
-            onFocus={() => handleFocus(2)}
-            onBlur={handleBlur}
-            tabIndex={0}
-            className={focusedCardIndex === 2 ? 'Mui-focused' : ''}
-            sx={{ height: '100%' }}
-          >
-            <CardMedia
-              component="img"
-              alt="green iguana"
-              image={cardData[2].img}
-              sx={{
-                height: { sm: 'auto', md: '50%' },
-                aspectRatio: { sm: '16 / 9', md: '' },
-              }}
-            />
-            <StyledCardContent>
-              <Typography gutterBottom variant="caption" component="div">
-                {cardData[2].tag}
-              </Typography>
-              <Typography gutterBottom variant="h6" component="div">
-                {cardData[2].title}
-              </Typography>
-              <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[2].description}
-              </StyledTypography>
-            </StyledCardContent>
-            <Author authors={cardData[2].authors} />
-          </StyledCard>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Box
-            sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}
-          >
-            <StyledCard
-              variant="outlined"
-              onFocus={() => handleFocus(3)}
-              onBlur={handleBlur}
-              tabIndex={0}
-              className={focusedCardIndex === 3 ? 'Mui-focused' : ''}
-              sx={{ height: '100%' }}
-            >
-              <StyledCardContent
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  height: '100%',
-                }}
-              >
-                <div>
-                  <Typography gutterBottom variant="caption" component="div">
-                    {cardData[3].tag}
-                  </Typography>
-                  <Typography gutterBottom variant="h6" component="div">
-                    {cardData[3].title}
-                  </Typography>
-                  <StyledTypography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
+            <Stack spacing={3} sx={{ position: 'relative' }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
+                  Field ops snapshot
+                </Typography>
+                <Chip label="Field link" size="small" color="success" />
+              </Stack>
+              <Stack spacing={2}>
+                {[
+                  { label: 'Field uplink', value: 'ACTIVE', icon: <SatelliteAltRoundedIcon /> },
+                  { label: 'Crop models', value: 'READY', icon: <RadarRoundedIcon /> },
+                  { label: 'Flight controller', value: 'ARMED', icon: <MemoryRoundedIcon /> },
+                ].map((item) => (
+                  <Stack
+                    key={item.label}
+                    direction="row"
+                    alignItems="center"
+                    spacing={2}
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: 'hsla(0, 0%, 100%, 0.7)',
+                      backdropFilter: 'blur(6px)',
+                      border: '1px solid hsla(174, 30%, 40%, 0.2)',
+                    }}
                   >
-                    {cardData[3].description}
-                  </StyledTypography>
-                </div>
-              </StyledCardContent>
-              <Author authors={cardData[3].authors} />
-            </StyledCard>
-            <StyledCard
-              variant="outlined"
-              onFocus={() => handleFocus(4)}
-              onBlur={handleBlur}
-              tabIndex={0}
-              className={focusedCardIndex === 4 ? 'Mui-focused' : ''}
-              sx={{ height: '100%' }}
-            >
-              <StyledCardContent
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  height: '100%',
-                }}
-              >
-                <div>
-                  <Typography gutterBottom variant="caption" component="div">
-                    {cardData[4].tag}
-                  </Typography>
-                  <Typography gutterBottom variant="h6" component="div">
-                    {cardData[4].title}
-                  </Typography>
-                  <StyledTypography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    {cardData[4].description}
-                  </StyledTypography>
-                </div>
-              </StyledCardContent>
-              <Author authors={cardData[4].authors} />
-            </StyledCard>
-          </Box>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <StyledCard
-            variant="outlined"
-            onFocus={() => handleFocus(5)}
-            onBlur={handleBlur}
-            tabIndex={0}
-            className={focusedCardIndex === 5 ? 'Mui-focused' : ''}
-            sx={{ height: '100%' }}
-          >
-            <CardMedia
-              component="img"
-              alt="green iguana"
-              image={cardData[5].img}
-              sx={{
-                height: { sm: 'auto', md: '50%' },
-                aspectRatio: { sm: '16 / 9', md: '' },
-              }}
-            />
-            <StyledCardContent>
-              <Typography gutterBottom variant="caption" component="div">
-                {cardData[5].tag}
-              </Typography>
-              <Typography gutterBottom variant="h6" component="div">
-                {cardData[5].title}
-              </Typography>
-              <StyledTypography variant="body2" color="text.secondary" gutterBottom>
-                {cardData[5].description}
-              </StyledTypography>
-            </StyledCardContent>
-            <Author authors={cardData[5].authors} />
-          </StyledCard>
+                    <Box
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: '12px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: 'hsla(174, 50%, 30%, 0.12)',
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2">{item.label}</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {item.value}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                ))}
+              </Stack>
+            </Stack>
+          </Paper>
         </Grid>
       </Grid>
+
+      <Box id="platform" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Stack spacing={1}>
+          <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
+            Platform
+          </Typography>
+          <Typography variant="h2">Integrated scouting, telemetry, and imagery</Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
+            Coordinate field flights across fleets with reliable telemetry and agronomy-grade
+            imagery workflows. Every flight, image set, and report is traceable and export-ready.
+          </Typography>
+        </Stack>
+        <Grid container spacing={3}>
+          {capabilities.map((capability, index) => (
+            <Grid key={capability.title} size={{ xs: 12, md: 4 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  animation: 'riseIn 0.6s ease both',
+                  animationDelay: `${index * 0.12}s`,
+                }}
+              >
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '12px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: 'hsla(174, 50%, 30%, 0.12)',
+                      }}
+                    >
+                      {capability.icon}
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+                      {capability.meta}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="h6">{capability.title}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {capability.description}
+                  </Typography>
+                </Stack>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      <Box id="safety" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Stack spacing={1}>
+          <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
+            Safety architecture
+          </Typography>
+          <Typography variant="h2">Controls that keep growers in command</Typography>
+        </Stack>
+        <Divider />
+        <Grid container spacing={3}>
+          {safeguards.map((item, index) => (
+            <Grid key={item.title} size={{ xs: 12, md: 4 }}>
+              <Box
+                sx={{
+                  p: 2,
+                  borderLeft: '2px solid hsla(174, 45%, 35%, 0.6)',
+                  animation: 'riseIn 0.6s ease both',
+                  animationDelay: `${index * 0.1}s`,
+                }}
+              >
+                <Typography variant="h6">{item.title}</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {item.description}
+                </Typography>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      <Box id="integration" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
+          Integration
+        </Typography>
+        <Typography variant="h2">Drop into existing farm stacks</Typography>
+        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
+          Compatible with GIS layers, weather feeds, and on-prem agronomy tools. Deployable as a
+          single site or a distributed command mesh across farms and regions.
+        </Typography>
+      </Box>
     </Box>
   );
 }

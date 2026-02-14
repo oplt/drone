@@ -4,12 +4,9 @@ from argon2.exceptions import VerifyMismatchError
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
+from backend.config import settings
 
 ph = PasswordHasher()
-
-JWT_SECRET = "CHANGE_ME_USE_ENV"
-JWT_ALG = "HS256"
-JWT_EXPIRE_MINUTES = 60 * 24
 
 
 def hash_password(password: str) -> str:
@@ -25,18 +22,18 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 def create_access_token(user_id: int) -> str:
     now = datetime.now(timezone.utc)
-    exp = now + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    exp = now + timedelta(minutes=settings.jwt_exp_minutes)
     payload = {
         "sub": str(user_id),
         "iat": int(now.timestamp()),
         "exp": int(exp.timestamp()),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def decode_token(token: str) -> Optional[int]:
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         sub = payload.get("sub")
         return int(sub) if sub is not None else None
     except (JWTError, ValueError):
@@ -47,7 +44,7 @@ def decode_token(token: str) -> Optional[int]:
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """Verify token and return full payload if valid"""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return payload
     except (JWTError, ValueError):
         return None

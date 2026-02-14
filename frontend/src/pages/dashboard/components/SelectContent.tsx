@@ -57,46 +57,46 @@ export default function SelectContent() {
         },
       }}
     >
-      <ListSubheader sx={{ pt: 0 }}>Production</ListSubheader>
+      <ListSubheader sx={{ pt: 0 }}>Active farms</ListSubheader>
       <MenuItem value="">
         <ListItemAvatar>
-          <Avatar alt="Sitemark web">
+          <Avatar alt="North Orchard">
             <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
           </Avatar>
         </ListItemAvatar>
-        <ListItemText primary="Sitemark-web" secondary="Web app" />
+        <ListItemText primary="North Orchard" secondary="Apple blocks" />
       </MenuItem>
       <MenuItem value={10}>
         <ListItemAvatar>
-          <Avatar alt="Sitemark App">
+          <Avatar alt="East Row Crops">
             <SmartphoneRoundedIcon sx={{ fontSize: '1rem' }} />
           </Avatar>
         </ListItemAvatar>
-        <ListItemText primary="Sitemark-app" secondary="Mobile application" />
+        <ListItemText primary="East Row Crops" secondary="Corn + soy" />
       </MenuItem>
       <MenuItem value={20}>
         <ListItemAvatar>
-          <Avatar alt="Sitemark Store">
+          <Avatar alt="South Vineyards">
             <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
           </Avatar>
         </ListItemAvatar>
-        <ListItemText primary="Sitemark-Store" secondary="Web app" />
+        <ListItemText primary="South Vineyards" secondary="Irrigation check" />
       </MenuItem>
-      <ListSubheader>Development</ListSubheader>
+      <ListSubheader>Staging</ListSubheader>
       <MenuItem value={30}>
         <ListItemAvatar>
-          <Avatar alt="Sitemark Store">
+          <Avatar alt="Demo Fields">
             <ConstructionRoundedIcon sx={{ fontSize: '1rem' }} />
           </Avatar>
         </ListItemAvatar>
-        <ListItemText primary="Sitemark-Admin" secondary="Web app" />
+        <ListItemText primary="Demo Fields" secondary="Trial plots" />
       </MenuItem>
       <Divider sx={{ mx: -1 }} />
       <MenuItem value={40}>
         <ListItemIcon>
           <AddRoundedIcon />
         </ListItemIcon>
-        <ListItemText primary="Add product" secondary="Web app" />
+        <ListItemText primary="Register new farm" secondary="Onboarding workflow" />
       </MenuItem>
     </Select>
   );

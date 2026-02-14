@@ -1,14 +1,15 @@
 # backend/api/routes_telemetry_control.py
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from backend.messaging.websocket import telemetry_manager
+from backend.auth.deps import require_admin, require_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
 
 @router.post("/start")
-async def start_telemetry_stream():
+async def start_telemetry_stream(user=Depends(require_admin)):
     """
     Start the WebSocket telemetry stream.
     This should be called when a mission starts.
@@ -34,7 +35,7 @@ async def start_telemetry_stream():
 
 
 @router.post("/stop")
-async def stop_telemetry_stream():
+async def stop_telemetry_stream(user=Depends(require_admin)):
     """
     Stop the WebSocket telemetry stream.
     This should be called when a mission ends.
@@ -60,7 +61,7 @@ async def stop_telemetry_stream():
 
 
 @router.get("/status")
-async def get_telemetry_status():
+async def get_telemetry_status(user=Depends(require_user)):
     """Get current telemetry status"""
     return {
         "running": telemetry_manager._running,

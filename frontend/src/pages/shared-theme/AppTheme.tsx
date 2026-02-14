@@ -33,6 +33,32 @@ export default function AppTheme(props: AppThemeProps) {
           shadows,
           shape,
           components: {
+            MuiCssBaseline: {
+              styleOverrides: {
+                '*': { boxSizing: 'border-box' },
+                body: {
+                  backgroundImage:
+                    'radial-gradient(circle at 12% 10%, hsla(174, 50%, 90%, 0.35), transparent 45%), radial-gradient(circle at 86% 14%, hsla(38, 80%, 85%, 0.35), transparent 40%), linear-gradient(135deg, hsla(34, 40%, 96%, 0.8), hsla(30, 30%, 94%, 0.8))',
+                  backgroundAttachment: 'fixed',
+                },
+                '[data-mui-color-scheme="dark"] body': {
+                  backgroundImage:
+                    'radial-gradient(circle at 12% 10%, hsla(174, 60%, 30%, 0.18), transparent 45%), radial-gradient(circle at 86% 14%, hsla(38, 70%, 35%, 0.15), transparent 40%), linear-gradient(135deg, hsla(22, 28%, 8%, 0.9), hsla(22, 22%, 10%, 0.9))',
+                },
+                '::selection': {
+                  backgroundColor: 'hsla(174, 60%, 35%, 0.25)',
+                },
+                '@keyframes riseIn': {
+                  '0%': { opacity: 0, transform: 'translateY(12px)' },
+                  '100%': { opacity: 1, transform: 'translateY(0px)' },
+                },
+                '@keyframes softPulse': {
+                  '0%': { opacity: 0.55 },
+                  '50%': { opacity: 0.9 },
+                  '100%': { opacity: 0.55 },
+                },
+              },
+            },
             ...inputsCustomizations,
             ...dataDisplayCustomizations,
             ...feedbackCustomizations,

@@ -54,23 +54,17 @@ export default function AppAppBar() {
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', px: 0 }}>
             <Sitemark />
             <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-              <Button variant="text" color="info" size="small">
-                Features
+              <Button variant="text" color="primary" size="small" href="#platform">
+                Platform
               </Button>
-              <Button variant="text" color="info" size="small">
-                Testimonials
+              <Button variant="text" color="primary" size="small" href="#safety">
+                Field Safety
               </Button>
-              <Button variant="text" color="info" size="small">
-                Highlights
+              <Button variant="text" color="primary" size="small" href="#integration">
+                Integrations
               </Button>
-              <Button variant="text" color="info" size="small">
-                Pricing
-              </Button>
-              <Button variant="text" color="info" size="small" sx={{ minWidth: 0 }}>
-                FAQ
-              </Button>
-              <Button variant="text" color="info" size="small" sx={{ minWidth: 0 }}>
-                Blog
+              <Button variant="text" color="primary" size="small" href="#contact">
+                Contact
               </Button>
             </Box>
           </Box>
@@ -82,10 +76,10 @@ export default function AppAppBar() {
             }}
           >
             <Button color="primary" variant="text" size="small" component={RouterLink} to="/signin">
-              Sign in
+              Grower sign in
             </Button>
             <Button color="primary" variant="contained" size="small" component={RouterLink} to="/signup">
-              Sign up
+              Request onboarding
             </Button>
             <ColorModeIconDropdown />
           </Box>
@@ -115,21 +109,19 @@ export default function AppAppBar() {
                     <CloseRoundedIcon />
                   </IconButton>
                 </Box>
-                <MenuItem>Features</MenuItem>
-                <MenuItem>Testimonials</MenuItem>
-                <MenuItem>Highlights</MenuItem>
-                <MenuItem>Pricing</MenuItem>
-                <MenuItem>FAQ</MenuItem>
-                <MenuItem>Blog</MenuItem>
+                <MenuItem component="a" href="#platform">Platform</MenuItem>
+                <MenuItem component="a" href="#safety">Field Safety</MenuItem>
+                <MenuItem component="a" href="#integration">Integrations</MenuItem>
+                <MenuItem component="a" href="#contact">Contact</MenuItem>
                 <Divider sx={{ my: 3 }} />
                 <MenuItem>
                   <Button color="primary" variant="contained" component={RouterLink} to="/signup" fullWidth>
-                    Sign up
+                    Request onboarding
                   </Button>
                 </MenuItem>
                 <MenuItem>
                   <Button color="primary" variant="outlined" component={RouterLink} to="/signin" fullWidth>
-                    Sign in
+                    Grower sign in
                   </Button>
                 </MenuItem>
               </Box>

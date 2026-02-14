@@ -20,6 +20,7 @@ class MavlinkDrone(DroneClient):
         self.heartbeat_timeout = heartbeat_timeout
         self.last_heartbeat = time.time()
         self.dead_mans_switch_active = False
+        self.dead_mans_switch_triggered = False
         self.home_location = None
         self._heartbeat_thread = None
         self._running = False
@@ -58,6 +59,7 @@ class MavlinkDrone(DroneClient):
     def start_dead_mans_switch(self):
         """Start the dead man's switch monitoring thread"""
         self.dead_mans_switch_active = True
+        self.dead_mans_switch_triggered = False
         self._running = True
         self.last_heartbeat = time.time()  # Reset heartbeat
 
@@ -132,6 +134,7 @@ class MavlinkDrone(DroneClient):
             #     self.vehicle.mode = VehicleMode("LAND")
 
             self.dead_mans_switch_active = False  # Disable further monitoring
+            self.dead_mans_switch_triggered = True
 
         except Exception as e:
             # print(f"❌ Critical error in emergency action: {e}")

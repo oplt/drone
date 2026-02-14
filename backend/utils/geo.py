@@ -18,7 +18,7 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return EARTH_RADIUS_KM * c
 
 
-def _coord_from_home(home) -> Coordinate:
+def coord_from_home(home) -> Coordinate:
     # Accepts dronekit LocationGlobal/Relative or our Coordinate
     lat = float(getattr(home, "lat", home.lat if isinstance(home, Coordinate) else 0.0))
     lon = float(getattr(home, "lon", home.lon if isinstance(home, Coordinate) else 0.0))
