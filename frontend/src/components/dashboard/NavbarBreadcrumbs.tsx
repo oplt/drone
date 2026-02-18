@@ -22,6 +22,7 @@ function toTitle(segment: string) {
     insights: "Insights",
     fleet: "Fleet",
     settings: "Settings",
+
   };
 
   if (overrides[segment]) return overrides[segment];

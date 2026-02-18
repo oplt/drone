@@ -4,16 +4,16 @@ import { alpha } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
-import AppNavbar from "./components/AppNavbar";
-import SideMenu from "./components/SideMenu";
-import AppTheme from "../shared-theme/AppTheme";
+import AppNavbar from "../../components/dashboard/AppNavbar";
+import SideMenu from "../../components/dashboard/SideMenu";
+import AppTheme from "../../components/shared-theme/AppTheme";
+import { getToken, clearToken } from "../../auth";
 import {
   chartsCustomizations,
   dataGridCustomizations,
   datePickersCustomizations,
   treeViewCustomizations,
-} from "./theme/customizations";
-import { getToken, clearToken } from "../../auth";
+} from "../../components/theme/customizations";
 
 type User = {
   id: number;
@@ -26,8 +26,9 @@ const xThemeComponents = {
   ...chartsCustomizations,
   ...dataGridCustomizations,
   ...datePickersCustomizations,
-  ...treeViewCustomizations,
 };
+
+
 
 export default function Dashboard(props: { disableCustomTheme?: boolean }) {
   const [user, setUser] = React.useState<User | null>(null);

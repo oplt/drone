@@ -22,11 +22,11 @@ class Orchestrator:
         drone: DroneClient,
         maps: GoogleMapsClient,
         analyzer: LLMAnalyzer,
-        mqtt: MqttClient,
+        mqtt: MqttClient | None,
         # opcua: DroneOpcUaServer,
-        video: DroneVideoStream,
+        video: DroneVideoStream | None,
         telemetry_repo: TelemetryRepository,
-        publisher: MqttPublisher,
+        publisher: MqttPublisher | None,
     ):
         self.drone = drone
         self.maps = maps
@@ -54,11 +54,12 @@ class Orchestrator:
         logger.info("Starting heartbeat task...")
         try:
             while self._running:
-                self.mqtt.publish(
-                    "drone/heartbeat",
-                    {"timestamp": time.time(), "status": "alive"},
-                    qos=1,
-                )
+                if self.mqtt:
+                    self.mqtt.publish(
+                        "drone/heartbeat",
+                        {"timestamp": time.time(), "status": "alive"},
+                        qos=1,
+                    )
                 await asyncio.sleep(2.0)
         except asyncio.CancelledError:
             raise
@@ -69,6 +70,8 @@ class Orchestrator:
         """Manage the telemetry publisher lifecycle"""
         try:
             # Start publisher in a thread (non-blocking)
+            if not self.publisher:
+                return
             if not await asyncio.to_thread(self.publisher.start):
                 logger.error("Failed to start telemetry publisher")
                 return
@@ -80,7 +83,7 @@ class Orchestrator:
         except Exception as e:
             logger.error(f"Telemetry publisher error: {e}")
         finally:
-            if self.publisher.is_running:
+            if self.publisher and self.publisher.is_running:
                 await asyncio.to_thread(self.publisher.stop)
 
     async def video_health_monitor_task(self):
@@ -94,19 +97,20 @@ class Orchestrator:
                     status = self.video.get_connection_status()
 
                     # Publish video health status to MQTT
-                    self.mqtt.publish(
-                        "drone/video/status",
-                        {
-                            "timestamp": time.time(),
-                            "healthy": status["healthy"],
-                            "frame_count": status["frame_count"],
-                            "fps": status["fps"],
-                            "resolution": status["resolution"],
-                            "recording": status["recording"],
-                            "recording_file": status["recording_file"],
-                        },
-                        qos=1,
-                    )
+                    if self.mqtt:
+                        self.mqtt.publish(
+                            "drone/video/status",
+                            {
+                                "timestamp": time.time(),
+                                "healthy": status["healthy"],
+                                "frame_count": status["frame_count"],
+                                "fps": status["fps"],
+                                "resolution": status["resolution"],
+                                "recording": status["recording"],
+                                "recording_file": status["recording_file"],
+                            },
+                            qos=1,
+                        )
 
                     # Update OPC UA with video status
                     # await self.opcua.update_video_status(
@@ -118,15 +122,16 @@ class Orchestrator:
                     # Log warnings if video is unhealthy
                     if not status["healthy"]:
                         logging.warning("Video stream is unhealthy")
-                        self.mqtt.publish(
-                            "drone/warnings",
-                            {
-                                "type": "video_stream_unhealthy",
-                                "message": "Video stream connection issues detected",
-                                "timestamp": time.time(),
-                            },
-                            qos=1,
-                        )
+                        if self.mqtt:
+                            self.mqtt.publish(
+                                "drone/warnings",
+                                {
+                                    "type": "video_stream_unhealthy",
+                                    "message": "Video stream connection issues detected",
+                                    "timestamp": time.time(),
+                                },
+                                qos=1,
+                            )
 
                 await asyncio.sleep(self._video_health_interval)
 
@@ -194,6 +199,9 @@ class Orchestrator:
 
             logger.info(f"Starting MQTT subscriber with flight_id: {self._flight_id}")
 
+            if not self.mqtt:
+                return
+
             self.mqtt.attach_raw_event_queue(self._raw_event_queue)
 
             try:
@@ -225,15 +233,16 @@ class Orchestrator:
             try:
                 # Only act if the drone explicitly flagged an emergency trigger.
                 if getattr(self.drone, "dead_mans_switch_triggered", False):
-                    self.mqtt.publish(
-                        "drone/emergency",
-                        {
-                            "type": "dead_mans_switch_triggered",
-                            "message": "Connection lost - drone executing emergency protocol",
-                            "timestamp": time.time(),
-                        },
-                        qos=2,
-                    )  # QoS 2 for critical emergency messages
+                    if self.mqtt:
+                        self.mqtt.publish(
+                            "drone/emergency",
+                            {
+                                "type": "dead_mans_switch_triggered",
+                                "message": "Connection lost - drone executing emergency protocol",
+                                "timestamp": time.time(),
+                            },
+                            qos=2,
+                        )  # QoS 2 for critical emergency messages
 
                     # Stop all other operations
                     self._running = False

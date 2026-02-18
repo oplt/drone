@@ -38,6 +38,7 @@ async def _build_orchestrator() -> Orchestrator:
             model=settings.llm_model,
             provider=settings.llm_provider,
         )
+        mqtt = None
         try:
             mqtt = MqttClient(
                 settings.mqtt_broker,
@@ -89,9 +90,13 @@ async def _build_orchestrator() -> Orchestrator:
             logger.info("ℹ️  Drone video streaming disabled in configuration")
 
         repo = TelemetryRepository()
-        publisher = MqttPublisher(
-            mqtt_client=mqtt,
-            mqtt_topic=settings.telemetry_topic,
+        publisher = (
+            MqttPublisher(
+                mqtt_client=mqtt,
+                mqtt_topic=settings.telemetry_topic,
+            )
+            if mqtt is not None
+            else None
         )
 
         _orch = Orchestrator(drone, maps, analyzer, mqtt, video, repo, publisher)

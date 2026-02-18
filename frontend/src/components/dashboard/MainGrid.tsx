@@ -10,7 +10,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
 
-import Copyright from '../internals/components/Copyright';
+import Copyright from '../Copyright';
 import ChartUserByCountry from './ChartUserByCountry';
 import CustomizedTreeView from './CustomizedTreeView';
 import CustomizedDataGrid from './CustomizedDataGrid';
@@ -18,8 +18,8 @@ import HighlightedCard from './HighlightedCard';
 import PageViewsBarChart from './PageViewsBarChart';
 import SessionsChart from './SessionsChart';
 import StatCard, { type StatCardProps } from './StatCard';
-import useAnalyticsOverview from '../../../hooks/useAnalyticsOverview';
-import useTelemetryWebSocket from '../../../hooks/useTelemetryWebsocket';
+import useAnalyticsOverview from '../../hooks/useAnalyticsOverview';
+import useTelemetryWebSocket from '../../hooks/useTelemetryWebsocket';
 
 const formatNumber = (value: number | null | undefined, suffix = '') => {
   if (value === null || value === undefined || Number.isNaN(value)) return '--';

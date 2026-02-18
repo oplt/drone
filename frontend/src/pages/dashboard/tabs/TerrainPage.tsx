@@ -18,14 +18,25 @@ import {
   OverlayView,
   useJsApiLoader,
 } from "@react-google-maps/api";
-import { getToken } from "../../../auth"; // adjust path if needed
+import { getToken } from "../../../auth";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
 import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import CesiumMap from "../../../utils/CesiumMap";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+
+
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
+type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
+
+
+
 
 interface MissionStatus {
   flight_id?: string;
@@ -118,6 +129,9 @@ export default function TasksPage() {
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
+  const [useCesium, setUseCesium] = useState(false);
+  const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
+
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
@@ -131,6 +145,12 @@ export default function TasksPage() {
       missionStatus?.telemetry?.running &&
       activeFlightId,
   );
+
+    const handleCesiumPick = useCallback((p: { lat: number; lng: number }) => {
+      setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
+    }, [alt]);
+
+
   const { telemetry, isConnected: wsConnected, disconnect } = useTelemetryWebSocket(
     {
       enabled: wsEnabled,
@@ -245,30 +265,6 @@ export default function TasksPage() {
     };
   }, [telemetry]);
 
-
-/*
-  // Fallback: use last known position from flight status when WS is not yet streaming
-  useEffect(() => {
-    const statusPosition = missionStatus?.telemetry?.position;
-    const hasPosition = Boolean(missionStatus?.telemetry?.has_position_data);
-    if (!statusPosition || !hasPosition) return;
-    if (wsConnected && droneCenter) return;
-
-    const next = extractLatLng(statusPosition);
-    if (!next) return;
-
-    if (
-      droneCenter &&
-      Math.abs(droneCenter.lat - next.lat) < 1e-7 &&
-      Math.abs(droneCenter.lng - next.lng) < 1e-7
-    ) {
-      return;
-    }
-
-    setDroneCenter(next);
-  }, [missionStatus, wsConnected, droneCenter]);
-
-*/
 
   // AdvancedMarkerElement for waypoint markers (avoids deprecated google.maps.Marker).
   useEffect(() => {
@@ -861,6 +857,8 @@ export default function TasksPage() {
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
               {/* Left side: Map & Camera */}
               <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
+
+
                 <Box
                   sx={{
                     borderRadius: 2,
@@ -897,6 +895,16 @@ export default function TasksPage() {
                       <CircularProgress />
                       <Typography sx={{ ml: 2 }}>Loading map...</Typography>
                     </Box>
+                  ) : useCesium ? (
+                    <CesiumMap
+                      center={mapCenter}
+                      zoom={mapZoom}
+                      viewMode={cesiumViewMode}
+                      waypoints={waypoints}
+                      droneCenter={droneCenter}
+                      headingDeg={typeof heading === "number" ? heading : null}
+                      onPickLatLng={handleCesiumPick}
+                    />
                   ) : (
                     <GoogleMap
                       mapContainerStyle={containerStyle}
@@ -987,6 +995,55 @@ export default function TasksPage() {
                     </GoogleMap>
                   )}
                 </Box>
+
+                <Box
+                  sx={{
+                    mt: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 2,
+                  }}
+                >
+                  {/* Left cluster: 3D toggle + view selector (visible only when 3D enabled) */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={useCesium}
+                          onChange={(e) => setUseCesium(e.target.checked)}
+                        />
+                      }
+                      label={useCesium ? "3D (Cesium)" : "2D (Google)"}
+                    />
+
+                    {useCesium && (
+                      <ToggleButtonGroup
+                        value={cesiumViewMode}
+                        exclusive
+                        size="small"
+                        onChange={(_, v) => {
+                          if (!v) return; // keep current if user clicks selected
+                          setCesiumViewMode(v);
+                        }}
+                        aria-label="Cesium view mode"
+                      >
+                        <ToggleButton value="top" aria-label="Top view">Top</ToggleButton>
+                        <ToggleButton value="tilted" aria-label="Tilted view">Tilted</ToggleButton>
+                        <ToggleButton value="follow" aria-label="Follow drone">Follow</ToggleButton>
+                        <ToggleButton value="fpv" aria-label="FPV view">FPV</ToggleButton>
+                        <ToggleButton value="orbit" aria-label="Orbit view">Orbit</ToggleButton>
+                      </ToggleButtonGroup>
+                    )}
+                  </Box>
+
+                  {/* Right cluster: your mission controls (keep your existing buttons here) */}
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {/* ... your existing mission control buttons ... */}
+                  </Box>
+                </Box>
+
 
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Click on the map to add waypoints. Markers are ordered (1..N).

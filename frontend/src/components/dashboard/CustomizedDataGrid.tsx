@@ -1,5 +1,5 @@
 import { DataGrid, type GridRowsProp } from '@mui/x-data-grid';
-import { columns } from '../internals/data/gridData';
+import { columns } from './gridData';
 
 type CustomizedDataGridProps = {
   rows?: GridRowsProp;
@@ -11,8 +11,8 @@ export default function CustomizedDataGrid({ rows, loading }: CustomizedDataGrid
     <DataGrid
       checkboxSelection
       rows={rows ?? []}
-      columns={columns}
       loading={loading}
+      columns={columns}
       autoHeight
       getRowClassName={(params) =>
         params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'

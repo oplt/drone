@@ -4,7 +4,7 @@ import CustomDatePicker from './CustomDatePicker';
 import NavbarBreadcrumbs from './NavbarBreadcrumbs';
 import MenuButton from './MenuButton';
 import Chip from '@mui/material/Chip';
-import ColorModeIconDropdown from '../../shared-theme/ColorModeIconDropdown';
+import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
 
 import Search from './Search';
 

@@ -9,12 +9,12 @@ import {
   Divider,
   Alert,
 } from "@mui/material";
-import Header from "../components/Header";
+import Header from "../../../components/dashboard/Header";
 import useAnalyticsOverview from "../../../hooks/useAnalyticsOverview";
 import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
-import SessionsChart from "../components/SessionsChart";
-import PageViewsBarChart from "../components/PageViewsBarChart";
-import ChartUserByCountry from "../components/ChartUserByCountry";
+import SessionsChart from "../../../components/dashboard/SessionsChart";
+import PageViewsBarChart from "../../../components/dashboard/PageViewsBarChart";
+import ChartUserByCountry from "../../../components/dashboard/ChartUserByCountry";
 
 const formatDateLabel = (iso: string) => {
   const dt = new Date(iso);

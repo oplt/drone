@@ -9,8 +9,8 @@ import {
   Divider,
   LinearProgress,
 } from "@mui/material";
-import Header from "../components/Header";
-import CustomizedDataGrid from "../components/CustomizedDataGrid";
+import Header from "../../../components/dashboard/Header";
+import CustomizedDataGrid from "../../../components/dashboard/CustomizedDataGrid";
 import useAnalyticsOverview from "../../../hooks/useAnalyticsOverview";
 import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
 

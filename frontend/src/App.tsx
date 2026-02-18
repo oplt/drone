@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home/Home";
-import SignIn from "./pages/SignIn/SignIn";
-import SignUp from "./pages/SignUp/SignUp";
+import Home from "./pages/Home";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/dashboard/Dashboard";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -10,6 +10,9 @@ import TasksPage from "./pages/dashboard/tabs/TasksPage";
 import SettingsPage from "./pages/dashboard/tabs/SettingsPage";
 import InsightsPage from "./pages/dashboard/tabs/InsightsPage";
 import FleetPage from "./pages/dashboard/tabs/FleetPage";
+import TerrainPage from "./pages/dashboard/tabs/TerrainPage";
+import "cesium/Build/Cesium/Widgets/widgets.css";
+
 
 export default function App() {
   return (
@@ -33,6 +36,7 @@ export default function App() {
           <Route path="insights" element={<InsightsPage />} />
           <Route path="fleet" element={<FleetPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="terrain" element={<TerrainPage />} />
 
         </Route>
       </Routes>
