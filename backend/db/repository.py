@@ -3,14 +3,12 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Iterable, Mapping
 from sqlalchemy import select, insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
 from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent, SettingsRow
 from backend.drone.models import Telemetry as TelemetryDTO
 import logging
 
 
 from .session import Session
-from .models import SettingsRow
 
 logger = logging.getLogger(__name__)
 

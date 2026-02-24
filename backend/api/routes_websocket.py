@@ -2,8 +2,8 @@
 import time
 import asyncio
 import logging
-from fastapi import WebSocket, WebSocketDisconnect, WebSocketException, status
-from fastapi import APIRouter, Depends
+from fastapi import WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter
 from backend.messaging.websocket import telemetry_manager
 from backend.auth.deps import get_user_from_token
 from backend.db.session import Session

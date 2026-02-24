@@ -5,7 +5,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parent
 
 
-
 def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -> None:
     """Centralized logging configuration with environment variable support"""
     level = (
@@ -30,7 +29,10 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
             existing_path = Path(getattr(handler, "baseFilename", "")).resolve()
             if existing_path == log_path:
                 has_file_handler = True
-        elif isinstance(handler, logging.StreamHandler):
+        # BUG FIX: use type() instead of isinstance() because FileHandler is a
+        # subclass of StreamHandler — isinstance would match FileHandlers here
+        # and incorrectly suppress adding a console StreamHandler.
+        elif type(handler) is logging.StreamHandler:
             has_stream_handler = True
 
     if not has_file_handler:
@@ -43,12 +45,13 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
         stream_handler.setFormatter(formatter)
         root_logger.addHandler(stream_handler)
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
-        case_sensitive=False,  # This helps with case-insensitive env vars
+        case_sensitive=False,
     )
 
     google_maps_api_key: str
@@ -61,7 +64,10 @@ class Settings(BaseSettings):
     mqtt_port: int = 1883
     mqtt_user: str = ""
     mqtt_pass: str = ""
-    mqtt_use_tls: bool = True
+    # BUG FIX: was True by default but mqtt_ca_certs defaults to "" — TLS with
+    # no CA cert path causes a connection failure at runtime. Safe default is False;
+    # operators who need TLS must explicitly set MQTT_USE_TLS=true and MQTT_CA_CERTS.
+    mqtt_use_tls: bool = False
     mqtt_ca_certs: str = ""
 
     opcua_endpoint: str = "opc.tcp://0.0.0.0:4840/freeopcua/server/"
@@ -86,12 +92,13 @@ class Settings(BaseSettings):
     admin_emails: str = ""
     admin_domains: str = ""
 
-    # Note: These have typos - 'rasperry' instead of 'raspberry'
-    rasperry_ip: str
-    rasperry_user: str
-    rasperry_host: str
-    rasperry_password: str
-    rasperry_streaming_script_path: str = "/home/polat/drone_cam/pi_camera_server.py"
+    # BUG FIX: corrected 'rasperry' typo to 'raspberry' throughout.
+    # UPDATE YOUR .env FILE: rename RASPERRY_* keys to RASPBERRY_* accordingly.
+    raspberry_ip: str
+    raspberry_user: str
+    raspberry_host: str
+    raspberry_password: str
+    raspberry_streaming_script_path: str = "/home/polat/drone_cam/pi_camera_server.py"
     ssh_key_path: str
 
     battery_capacity_wh: float = 77
@@ -117,5 +124,6 @@ class Settings(BaseSettings):
     drone_video_rtsp_port: int = 8554
     drone_video_wifi_ssid: str = "Drone_Network"
     drone_video_wifi_password: str = "drone123"
+
 
 settings = Settings()

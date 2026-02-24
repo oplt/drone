@@ -9,6 +9,9 @@ from .models import Coordinate, Telemetry
 from .drone_base import DroneClient
 import logging
 from dronekit import connect, VehicleMode, LocationGlobalRelative
+from dronekit import Command
+from pymavlink import mavutil
+
 
 logger = logging.getLogger(__name__)
 
@@ -269,3 +272,43 @@ class MavlinkDrone(DroneClient):
         self.stop_dead_mans_switch()
         if self.vehicle:
             self.vehicle.close()
+
+
+
+    # def upload_mission(self, waypoints, clear_existing: bool = True) -> None:
+    #     """
+    #     Upload a MAVLink mission to ArduPilot using DroneKit vehicle.commands.
+    #     waypoints: list[Coordinate] with .lat .lon .alt (relative altitude meters)
+    #     """
+    #     if not self.vehicle:
+    #         raise RuntimeError("Vehicle not connected")
+    #
+    #     cmds = self.vehicle.commands
+    #     cmds.download()
+    #     cmds.wait_ready()
+    #
+    #     if clear_existing:
+    #         cmds.clear()
+    #
+    #     # IMPORTANT:
+    #     # Use MAV_FRAME_GLOBAL_RELATIVE_ALT for alt relative to home (what your app uses already)
+    #     frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
+    #
+    #     for i, wp in enumerate(waypoints):
+    #         cmd = Command(
+    #             0, 0, 0,
+    #             frame,
+    #             mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+    #             0, 1,      # current, autocontinue
+    #             0, 2.0, 0, 0,   # param1 hold, param2 acceptance radius, param3 pass, param4 yaw
+    #             wp.lat, wp.lon, wp.alt
+    #         )
+    #         cmds.add(cmd)
+    #
+    #     cmds.upload()
+    #
+    # def start_mission_auto(self) -> None:
+    #     if not self.vehicle:
+    #         raise RuntimeError("Vehicle not connected")
+    #     self.vehicle.mode = VehicleMode("AUTO")
+

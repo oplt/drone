@@ -12,6 +12,8 @@ from backend.db.repository import TelemetryRepository
 from backend.config import settings
 from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from backend.utils.geo import haversine_km, coord_from_home
+from backend.flight.preflight_check.preflight_check import PreflightOrchestrator
+from backend.flight.preflight_check.schemas import CheckStatus
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from typing import AsyncIterator
 
 import httpx
 import paramiko
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from backend.config import settings
