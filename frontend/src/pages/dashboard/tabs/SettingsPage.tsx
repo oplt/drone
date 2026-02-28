@@ -4,685 +4,422 @@ import Header from "../../../components/dashboard/Header";
 import {
   Alert,
   Box,
+  Button,
   Container,
   Divider,
-  Grid,
+  FormControlLabel,
   Paper,
+  Stack,
+  Switch,
   Tab,
   Tabs,
   TextField,
   Typography,
-  FormControlLabel,
-  Switch,
-  Stack,
-  CircularProgress,
 } from "@mui/material";
-import LoadingButton from "@mui/lab/LoadingButton";
+import Grid from "@mui/material/Grid";
 
-type GeneralSettings = {
-  llm_provider: string;
-  llm_api_base: string;
-  llm_model: string;
 
+type TelemetrySettings = {
   mqtt_broker: string;
   mqtt_port: number;
   mqtt_user: string;
-
+  mqtt_pass?: string;
+  mqtt_use_tls: boolean;
+  mqtt_ca_certs: string;
+  opcua_endpoint: string;
+  opcua_security_policy: string;
+  opcua_cert_path: string;
+  opcua_key_path: string;
   telem_log_interval_sec: number;
   telemetry_topic: string;
+};
 
-  enforce_preflight_range: boolean;
-  heartbeat_timeout: number;
+type AISettings = {
+    llm_provider: string;
+    llm_api_base: string;
+    llm_model: string;
+    llm_api_key?: string;
+};
 
-  // secrets are masked server-side; send a new value only if user edits
-  llm_api_key?: string; // secret
-  mqtt_pass?: string; // secret
+type CredentialsSettings = {
+    google_maps_api_key: string;
+    drone_conn: string;
+    admin_emails: string;
+    admin_domains: string;
+};
+
+type HardwareSettings = {
+      battery_capacity_wh: number;
+      energy_reserve_frac: number;
+      cruise_speed_mps: number;
+      cruise_power_w: number;
+      heartbeat_timeout: number;
+      enforce_preflight_range: boolean;
 };
 
 type PreflightSettings = {
   HDOP_MAX: number;
   SAT_MIN: number;
   HOME_MAX_DIST: number;
-
+  GPS_FIX_TYPE_MIN: number;
+  EKF_THRESHOLD: number;
+  COMPASS_HEALTH_REQUIRED: boolean;
+  BATTERY_MIN_V: number;
+  BATTERY_MIN_PERCENT: number;
   HEARTBEAT_MAX_AGE: number;
   MSG_RATE_MIN_HZ: number;
-
   RTL_MIN_ALT: number;
   MIN_CLEARANCE: number;
-
-  NFZ_BUFFER_M: number;
-  COMPASS_HEALTH_REQUIRED: boolean;
-};
-
-type MissionSettings = {
-  cruise_speed_mps: number;
-  cruise_power_w: number;
-  battery_capacity_wh: number;
-  energy_reserve_frac: number;
-
   AGL_MIN: number;
   AGL_MAX: number;
   MAX_RANGE_M: number;
   MAX_WAYPOINTS: number;
+  NFZ_BUFFER_M: number;
+  A_LAT_MAX: number;
+  BANK_MAX_DEG: number;
+  TURN_PENALTY_S: number;
+  WP_RADIUS_M: number;
+};
+
+type RaspberrySettings = {
+    raspberry_ip: string;
+    raspberry_user: string;
+    raspberry_host: string;
+    raspberry_password?: string;
+    ssh_key_path: string;
+};
+
+type CameraSettings=  {
+  drone_video_source: string;
+  drone_video_width: number;
+  drone_video_height: number;
+  drone_video_fps: number;
+  drone_video_timeout: number;
+  drone_video_save_path: string;
+  drone_video_fallback: string;
+  drone_video_enabled: boolean;
+  drone_video_save_stream: boolean;
 };
 
 type SettingsDoc = {
-  general: GeneralSettings;
+  telemetry: TelemetrySettings;
+  ai: AISettings;
+  credentials: CredentialsSettings;
+  hardware: HardwareSettings;
   preflight: PreflightSettings;
-  mission: MissionSettings;
+  raspberry: RaspberrySettings;
+  camera: CameraSettings;
   updated_at?: string;
 };
 
 const MASK = "********";
 
 const DEFAULTS: SettingsDoc = {
-  general: {
-    llm_provider: "ollama",
-    llm_api_base: "",
-    llm_model: "",
-    mqtt_broker: "localhost",
-    mqtt_port: 1883,
-    mqtt_user: "",
-    telem_log_interval_sec: 2.0,
-    telemetry_topic: "ardupilot/telemetry",
-    enforce_preflight_range: false,
-    heartbeat_timeout: 5,
-    llm_api_key: "",
-    mqtt_pass: "",
-  },
-  preflight: {
-    HDOP_MAX: 2.5,
-    SAT_MIN: 6,
-    HOME_MAX_DIST: 100,
-    HEARTBEAT_MAX_AGE: 3.0,
-    MSG_RATE_MIN_HZ: 5.0,
-    RTL_MIN_ALT: 30,
-    MIN_CLEARANCE: 5,
-    NFZ_BUFFER_M: 50,
-    COMPASS_HEALTH_REQUIRED: true,
-  },
-  mission: {
-    cruise_speed_mps: 8,
-    cruise_power_w: 180,
-    battery_capacity_wh: 77,
-    energy_reserve_frac: 0.2,
-    AGL_MIN: 10,
-    AGL_MAX: 120,
-    MAX_RANGE_M: 5000,
-    MAX_WAYPOINTS: 700,
-  },
+    telemetry: {},
+    ai: {},
+    credentials: { },
+    hardware: { },
+    preflight: {},
+    raspberry: {},
+    camera: {},
+    updated_at: new Date().toISOString(),
 };
 
-type TabKey = "general" | "preflight" | "mission";
-
-function safeNum(v: unknown, fallback = 0): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
 export default function SettingsPage() {
-  const [tab, setTab] = useState<TabKey>("general");
+  const [tab, setTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
   const [doc, setDoc] = useState<SettingsDoc>(DEFAULTS);
   const [lastLoaded, setLastLoaded] = useState<SettingsDoc>(DEFAULTS);
 
-  const dirty = useMemo(
-    () => JSON.stringify(doc) !== JSON.stringify(lastLoaded),
-    [doc, lastLoaded]
-  );
+  const dirty = useMemo(() => JSON.stringify(doc) !== JSON.stringify(lastLoaded), [doc, lastLoaded]);
+
+  const validateSettings = (): string | null => {
+    if (doc.preflight.BATTERY_MIN_PERCENT < 10 || doc.preflight.BATTERY_MIN_PERCENT > 50) return "Battery Min (%) must be 10-50%.";
+    if (doc.preflight.BANK_MAX_DEG > 45) return "Bank angle exceeds 45° safe limit.";
+    return null;
+  };
 
   async function fetchSettings() {
-    setLoading(true);
-    setErr(null);
+    setLoading(true); setErr(null);
     try {
-      const res = await fetch("/api/settings", { credentials: "include" });
-      if (!res.ok) throw new Error(`GET /api/settings failed: ${res.status}`);
-      const data = (await res.json()) as Partial<SettingsDoc>;
-
-      // merge for forward/backward compatibility
-      const merged: SettingsDoc = {
-        general: { ...DEFAULTS.general, ...(data.general || {}) },
-        preflight: { ...DEFAULTS.preflight, ...(data.preflight || {}) },
-        mission: { ...DEFAULTS.mission, ...(data.mission || {}) },
-        updated_at: data.updated_at,
-      };
-
-      setDoc(merged);
-      setLastLoaded(merged);
-    } catch (e: any) {
-      setErr(e?.message ?? "Failed to load settings");
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch("/api/settings");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setDoc(data); setLastLoaded(data);
+    } catch (e: any) { setErr(e.message); } finally { setLoading(false); }
   }
 
   async function saveSettings() {
+    const vErr = validateSettings();
+    if (vErr) { setErr(vErr); return; }
     setSaving(true);
-    setErr(null);
     try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(doc),
-      });
+      await fetch("/api/settings", { method: "PUT", body: JSON.stringify(doc), headers: { "Content-Type": "application/json" } });
+      await fetchSettings();
+    } catch (e: any) { setErr(e.message); } finally { setSaving(false); }
+  }
 
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`PUT /api/settings failed: ${res.status} ${t}`);
-      }
+  useEffect(() => { void fetchSettings(); }, []);
 
-      const saved = (await res.json()) as Partial<SettingsDoc>;
-      const merged: SettingsDoc = {
-        general: { ...DEFAULTS.general, ...(saved.general || {}) },
-        preflight: { ...DEFAULTS.preflight, ...(saved.preflight || {}) },
-        mission: { ...DEFAULTS.mission, ...(saved.mission || {}) },
-        updated_at: saved.updated_at,
+  const update = (section: keyof SettingsDoc, field: string, value: any) => {
+    setDoc(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
+    if (err) setErr(null);
+  };
+
+  const handleFileUpload = (section: keyof SettingsDoc, field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        update(section, field, content);
       };
-
-      setDoc(merged);
-      setLastLoaded(merged);
-    } catch (e: any) {
-      setErr(e?.message ?? "Failed to save settings");
-    } finally {
-      setSaving(false);
+      reader.readAsText(file);
     }
-  }
+  };
 
-  useEffect(() => {
-    void fetchSettings();
-  }, []);
-
-  function setGeneral<K extends keyof GeneralSettings>(k: K, v: GeneralSettings[K]) {
-    setDoc((d) => ({ ...d, general: { ...d.general, [k]: v } }));
-  }
-  function setPreflight<K extends keyof PreflightSettings>(k: K, v: PreflightSettings[K]) {
-    setDoc((d) => ({ ...d, preflight: { ...d.preflight, [k]: v } }));
-  }
-  function setMission<K extends keyof MissionSettings>(k: K, v: MissionSettings[K]) {
-    setDoc((d) => ({ ...d, mission: { ...d.mission, [k]: v } }));
-  }
+  // Helper function to split array into chunks for column layout
+  const chunkArray = (array: any[], chunkSize: number) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  };
 
   return (
     <>
-      {/* Match HomePage: shared dashboard header */}
       <Header />
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper variant="outlined" sx={{ p: 0 }}>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
+            <Tab label="Telemetry" />
+            <Tab label="AI" />
+            <Tab label="Credentials" />
+            <Tab label="Hardware" />
+            <Tab label="Preflight Check Params" />
+            <Tab label="Raspberry" />
+            <Tab label="Camera" />
+          </Tabs>
+          <Divider />
 
-      <Container maxWidth="md" sx={{ py: 3 }}>
-        <Stack spacing={2}>
-          <Box>
-            <Typography variant="h5" fontWeight={700}>
-              Settings
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Update system configuration and mission/preflight thresholds.
-            </Typography>
-          </Box>
+          <Box sx={{ p: 3 }}>
+            {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
 
-          <Paper variant="outlined" sx={{ overflow: "hidden" }}>
-            <Tabs
-              value={tab}
-              onChange={(_, v) => setTab(v)}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab value="general" label="General" />
-              <Tab value="preflight" label="Preflight Parameters" />
-              <Tab value="mission" label="Mission Parameters" />
-            </Tabs>
+            {/* TELEMETRY TAB */}
+            {tab === 0 && (
+              <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 4 }} >
+                  <Typography variant="h6" gutterBottom>MQTT Broker</Typography>
+                  <Stack spacing={3}>
+                    <TextField fullWidth label="Broker" value={doc.telemetry?.mqtt_broker} onChange={e => update("telemetry", "mqtt_broker", e.target.value)} />
+                    <TextField fullWidth label="Port" type="number" value={doc.telemetry?.mqtt_port} onChange={e => update("telemetry", "mqtt_port", Number(e.target.value))} />
+                    <TextField fullWidth label="User" value={doc.telemetry?.mqtt_user} onChange={e => update("telemetry", "mqtt_user", e.target.value)} />
+                    <TextField fullWidth label="Password" type="password" placeholder={MASK} value={doc.telemetry?.mqtt_pass} onChange={e => update("telemetry", "mqtt_pass", e.target.value)} />
+                    <FormControlLabel control={<Switch checked={doc.telemetry?.mqtt_use_tls} onChange={e => update("telemetry", "mqtt_use_tls", e.target.checked)} />} label="Use TLS" />
 
-            <Divider />
+                      <Button variant="outlined" component="label" fullWidth>
+                        Upload CA Certificate
+                        <input type="file" hidden accept=".pem,.crt,.ca" onChange={handleFileUpload("telemetry", "mqtt_ca_certs")} />
+                      </Button>
+                      {doc.telemetry?.mqtt_ca_certs && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ CA certificate uploaded</Typography>}
+                    </Stack>
+                </Grid>
+                <Grid item size={{ xs: 12, md: 4 }}>
+                  <Typography variant="h6" gutterBottom>OPC UA</Typography>
+                  <Stack spacing={3}>
+                    <TextField fullWidth label="Endpoint" value={doc.telemetry?.opcua_endpoint} onChange={e => update("telemetry", "opcua_endpoint", e.target.value)} />
+                    <TextField fullWidth label="Security Policy" value={doc.telemetry?.opcua_security_policy} onChange={e => update("telemetry", "opcua_security_policy", e.target.value)} />
 
-            <Box sx={{ p: 2 }}>
-              {err ? <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert> : null}
+                      <Button variant="outlined" component="label" fullWidth>
+                        Upload OPC UA Certificate
+                        <input type="file" hidden accept=".pem,.crt,.cert" onChange={handleFileUpload("telemetry", "opcua_cert_path")} />
+                      </Button>
+                      {doc.telemetry?.opcua_cert_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ Certificate uploaded</Typography>}
 
-              {loading ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 2 }}>
-                  <CircularProgress size={18} />
-                  <Typography variant="body2" color="text.secondary">
-                    Loading…
-                  </Typography>
-                </Box>
-              ) : null}
+                      <Button variant="outlined" component="label" fullWidth>
+                        Upload OPC UA Key
+                        <input type="file" hidden accept=".pem,.key" onChange={handleFileUpload("telemetry", "opcua_key_path")} />
+                      </Button>
+                      {doc.telemetry?.opcua_key_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ Key uploaded</Typography>}
+                  </Stack>
+                </Grid>
+                <Grid item size={{ xs: 12, md: 4 }}>
+                  <Typography variant="h6" gutterBottom>Logging & Topics</Typography>
+                  <Stack spacing={3}>
+                    <TextField fullWidth label="Log Interval (sec)" type="number" value={doc.telemetry?.telem_log_interval_sec} onChange={e => update("telemetry", "telem_log_interval_sec", Number(e.target.value))} />
+                    <TextField fullWidth label="Telemetry Topic" value={doc.telemetry?.telemetry_topic} onChange={e => update("telemetry", "telemetry_topic", e.target.value)} />
+                  </Stack>
+              </Grid>
+              </Grid>
+            )}
 
-              {!loading && tab === "general" ? (
-                <Stack spacing={2}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    LLM
-                  </Typography>
+            {/* AI TAB */}
+            {tab === 1 && (
+              <Grid container spacing={4}>
+                <Grid item size={{ xs: 12, md: 6 }} >
+                  <Typography variant="h6" gutterBottom>LLM Provider</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="Provider" value={doc.ai?.llm_provider} onChange={e => update("ai", "llm_provider", e.target.value)} />
+                    <TextField fullWidth label="Model" value={doc.ai?.llm_model} onChange={e => update("ai", "llm_model", e.target.value)} />
+                    <TextField fullWidth label="API Base" value={doc.ai?.llm_api_base} onChange={e => update("ai", "llm_api_base", e.target.value)} />
+                    <TextField fullWidth label="API Key" type="password" placeholder={MASK} value={doc.ai?.llm_api_key} onChange={e => update("ai", "llm_api_key", e.target.value)} />
+                  </Stack>
+                </Grid>
 
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="LLM Provider"
-                        value={doc.general.llm_provider ?? ""}
-                        onChange={(e) => setGeneral("llm_provider", e.target.value)}
-                      />
-                    </Grid>
+              </Grid>
+            )}
 
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="LLM Model"
-                        value={doc.general.llm_model ?? ""}
-                        onChange={(e) => setGeneral("llm_model", e.target.value)}
-                      />
-                    </Grid>
+            {/* CREDENTIALS TAB */}
+            {tab === 2 && (
+              <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 6 }} >
+                  <Typography variant="h6" gutterBottom>External APIs</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="Google Maps API Key" type="password" value={doc.credentials?.google_maps_api_key} onChange={e => update("credentials", "google_maps_api_key", e.target.value)} />
+                    <TextField fullWidth label="Drone Connection String" value={doc.credentials?.drone_conn} onChange={e => update("credentials", "drone_conn", e.target.value)} />
+                  </Stack>
+                </Grid>
+                <Grid item size={{ xs: 12, md: 6 }} >
+                  <Typography variant="h6" gutterBottom>Administration</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="Admin Emails" value={doc.credentials?.admin_emails} onChange={e => update("credentials", "admin_emails", e.target.value)} />
+                    <TextField fullWidth label="Admin Domains" value={doc.credentials?.admin_domains} onChange={e => update("credentials", "admin_domains", e.target.value)} />
+                  </Stack>
+                </Grid>
+              </Grid>
+            )}
 
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="LLM API Base"
-                        value={doc.general.llm_api_base ?? ""}
-                        onChange={(e) => setGeneral("llm_api_base", e.target.value)}
-                        placeholder="http://localhost:11434"
-                      />
-                    </Grid>
+            {/* HARDWARE TAB */}
+            {tab === 3 && (
+              <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 6 }} >
+                  <Typography variant="h6" gutterBottom>Drone</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="Battery Capacity (Wh)" type="number" value={doc.hardware?.battery_capacity_wh} onChange={e => update("hardware", "battery_capacity_wh", Number(e.target.value))} />
+                    <TextField fullWidth label="Energy Reserve Fraction" type="number" inputProps={{ step: 0.1, min: 0, max: 1 }} value={doc.hardware?.energy_reserve_frac} onChange={e => update("hardware", "energy_reserve_frac", Number(e.target.value))} />
+                    <TextField fullWidth label="Cruise Power (W)" type="number" value={doc.hardware?.cruise_power_w} onChange={e => update("hardware", "cruise_power_w", Number(e.target.value))} />
+                    <TextField fullWidth label="Cruise Speed (mps)" type="number" value={doc.hardware?.cruise_speed_mps} onChange={e => update("hardware", "cruise_speed_mps", Number(e.target.value))} />
+                    <TextField fullWidth label="Heartbeat Timeout" type="number" value={doc.hardware?.heartbeat_timeout} onChange={e => update("hardware", "heartbeat_timeout", Number(e.target.value))} />
+                    <FormControlLabel control={<Switch checked={doc.hardware?.enforce_preflight_range} onChange={e => update("hardware", "enforce_preflight_range", e.target.checked)} />} label="Enforce Preflight Range" />
+                  </Stack>
+                </Grid>
 
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="LLM API Key (secret)"
-                        type="password"
-                        helperText={`Stored encrypted. Leave as ${MASK} to keep current value.`}
-                        value={doc.general.llm_api_key ?? ""}
-                        onChange={(e) => setGeneral("llm_api_key", e.target.value)}
-                        placeholder={MASK}
-                        autoComplete="off"
-                      />
-                    </Grid>
-                  </Grid>
+              </Grid>
+            )}
 
-                  <Divider />
+            {/* PREFLIGHT CHECK TAB */}
+            {tab === 4 && (
+              <Grid container spacing={4}>
+                <Grid item size={{ xs: 12, md: 3 }} >
+                  <Typography variant="h6" gutterBottom>GPS & Navigation</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="HDOP Max" type="number" value={doc.preflight?.HDOP_MAX} onChange={e => update("preflight", "HDOP_MAX", Number(e.target.value))} />
+                    <TextField fullWidth label="Satellites Min" type="number" value={doc.preflight?.SAT_MIN} onChange={e => update("preflight", "SAT_MIN", Number(e.target.value))} />
+                    <TextField fullWidth label="Home Max Dist (m)" type="number" value={doc.preflight?.HOME_MAX_DIST} onChange={e => update("preflight", "HOME_MAX_DIST", Number(e.target.value))} />
+                    <TextField fullWidth label="GPS Fix Type Min" type="number" value={doc.preflight?.GPS_FIX_TYPE_MIN} onChange={e => update("preflight", "GPS_FIX_TYPE_MIN", Number(e.target.value))} />
+                    <TextField fullWidth label="EKF Threshold" type="number" value={doc.preflight?.EKF_THRESHOLD} onChange={e => update("preflight", "EKF_THRESHOLD", Number(e.target.value))} />
+                    <FormControlLabel control={<Switch checked={doc.preflight?.COMPASS_HEALTH_REQUIRED} onChange={e => update("preflight", "COMPASS_HEALTH_REQUIRED", e.target.checked)} />} label="Compass Health Required" />
+                  </Stack>
+                </Grid>
+                <Grid item size={{ xs: 12, md: 3 }} >
+                  <Typography variant="h6" gutterBottom>Battery & Heartbeat</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="Battery Min (V)" type="number" value={doc.preflight?.BATTERY_MIN_V} onChange={e => update("preflight", "BATTERY_MIN_V", Number(e.target.value))} />
+                    <TextField fullWidth label="Battery Min %" type="number" value={doc.preflight?.BATTERY_MIN_PERCENT} onChange={e => update("preflight", "BATTERY_MIN_PERCENT", Number(e.target.value))} />
+                    <TextField fullWidth label="Heartbeat Max Age" type="number" value={doc.preflight?.HEARTBEAT_MAX_AGE} onChange={e => update("preflight", "HEARTBEAT_MAX_AGE", Number(e.target.value))} />
+                    <TextField fullWidth label="Msg Rate Min (Hz)" type="number" value={doc.preflight?.MSG_RATE_MIN_HZ} onChange={e => update("preflight", "MSG_RATE_MIN_HZ", Number(e.target.value))} />
+                    <TextField fullWidth label="RTL Min Alt (m)" type="number" value={doc.preflight?.RTL_MIN_ALT} onChange={e => update("preflight", "RTL_MIN_ALT", Number(e.target.value))} />
+                    <TextField fullWidth label="Min Clearance (m)" type="number" value={doc.preflight?.MIN_CLEARANCE} onChange={e => update("preflight", "MIN_CLEARANCE", Number(e.target.value))} />
+                  </Stack>
+                </Grid>
 
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    MQTT
-                  </Typography>
+                <Grid item size={{ xs: 12, md: 3 }} >
+                  <Typography variant="h6" gutterBottom>Altitude & Range</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="AGL Min (m)" type="number" value={doc.preflight?.AGL_MIN} onChange={e => update("preflight", "AGL_MIN", Number(e.target.value))} />
+                    <TextField fullWidth label="AGL Max (m)" type="number" value={doc.preflight?.AGL_MAX} onChange={e => update("preflight", "AGL_MAX", Number(e.target.value))} />
+                    <TextField fullWidth label="Max Range (m)" type="number" value={doc.preflight?.MAX_RANGE_M} onChange={e => update("preflight", "MAX_RANGE_M", Number(e.target.value))} />
+                    <TextField fullWidth label="Max Waypoints" type="number" value={doc.preflight?.MAX_WAYPOINTS} onChange={e => update("preflight", "MAX_WAYPOINTS", Number(e.target.value))} />
+                    <TextField fullWidth label="NFZ Buffer (m)" type="number" value={doc.preflight?.NFZ_BUFFER_M} onChange={e => update("preflight", "NFZ_BUFFER_M", Number(e.target.value))} />
+                  </Stack>
+                </Grid>
+                <Grid item size={{ xs: 12, md: 3 }} >
+                  <Typography variant="h6" gutterBottom>Performance</Typography>
+                  <Stack spacing={3}>
+                    <TextField fullWidth label="A Lat Max" type="number" value={doc.preflight?.A_LAT_MAX} onChange={e => update("preflight", "A_LAT_MAX", Number(e.target.value))} />
+                    <TextField fullWidth label="Bank Max (deg)" type="number" value={doc.preflight?.BANK_MAX_DEG} onChange={e => update("preflight", "BANK_MAX_DEG", Number(e.target.value))} />
+                    <TextField fullWidth label="Turn Penalty (s)" type="number" value={doc.preflight?.TURN_PENALTY_S} onChange={e => update("preflight", "TURN_PENALTY_S", Number(e.target.value))} />
+                    <TextField fullWidth label="WP Radius (m)" type="number" value={doc.preflight?.WP_RADIUS_M} onChange={e => update("preflight", "WP_RADIUS_M", Number(e.target.value))} />
+                  </Stack>
+                </Grid>
+              </Grid>
+            )}
 
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="MQTT Broker"
-                        value={doc.general.mqtt_broker ?? ""}
-                        onChange={(e) => setGeneral("mqtt_broker", e.target.value)}
-                      />
-                    </Grid>
+            {/* RASPBERRY TAB */}
+            {tab === 5 && (
+                <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 6 }} >
+                  <Typography variant="h6" gutterBottom>Raspberry Pi Connection</Typography>
+                   <Stack spacing={3}>
+                    <TextField fullWidth label="IP Address" value={doc.raspberry?.raspberry_ip} onChange={e => update("raspberry", "raspberry_ip", e.target.value)} />
+                    <TextField fullWidth label="Hostname" value={doc.raspberry?.raspberry_host} onChange={e => update("raspberry", "raspberry_host", e.target.value)} />
+                    <TextField fullWidth label="Username" value={doc.raspberry?.raspberry_user} onChange={e => update("raspberry", "raspberry_user", e.target.value)} />
+                    <TextField fullWidth label="Password" type="password" placeholder={MASK} value={doc.raspberry?.raspberry_password} onChange={e => update("raspberry", "raspberry_password", e.target.value)} />
+                    <TextField fullWidth label="Streaming Script Path" value={doc.raspberry?.raspberry_streaming_script_path} onChange={e => update("raspberry", "raspberry_streaming_script_path", e.target.value)} />
 
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="MQTT Port"
-                        type="number"
-                        inputProps={{ step: 1, min: 1 }}
-                        value={safeNum(doc.general.mqtt_port, 1883)}
-                        onChange={(e) => setGeneral("mqtt_port", safeNum(e.target.value, 1883))}
-                      />
-                    </Grid>
+                      <Button variant="outlined" component="label" fullWidth>
+                        Upload SSH Key
+                        <input type="file" hidden accept=".pem,.key,.pub" onChange={handleFileUpload("raspberry", "ssh_key_path")} />
+                      </Button>
+                      {doc.raspberry?.ssh_key_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ SSH key uploaded</Typography>}
 
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="MQTT User"
-                        value={doc.general.mqtt_user ?? ""}
-                        onChange={(e) => setGeneral("mqtt_user", e.target.value)}
-                      />
-                    </Grid>
+                  </Stack>
+                </Grid>
+                </Grid>
+            )}
 
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="MQTT Password (secret)"
-                        type="password"
-                        helperText={`Stored encrypted. Leave as ${MASK} to keep current value.`}
-                        value={doc.general.mqtt_pass ?? ""}
-                        onChange={(e) => setGeneral("mqtt_pass", e.target.value)}
-                        placeholder={MASK}
-                        autoComplete="off"
-                      />
-                    </Grid>
-                  </Grid>
 
-                  <Divider />
+            {/* CAMERA TAB */}
+            {tab === 6 && (
+              <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 6 }}>
+                  <Typography variant="h6" gutterBottom>Drone Camera Parameters</Typography>
+                  <Stack spacing={3}>
+                    <TextField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
+                    <TextField fullWidth label="Width" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", e.target.value)} />
+                    <TextField fullWidth label="Height" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", e.target.value)} />
+                    <TextField fullWidth label="FPS" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", e.target.value)} />
+                    <TextField fullWidth label="Timeout" value={doc.camera?.drone_video_timeout} onChange={e => update("camera", "drone_video_timeout", e.target.value)} />
+                    <TextField fullWidth label="Fallback" value={doc.camera?.drone_video_fallback} onChange={e => update("camera", "drone_video_fallback", e.target.value)} />
 
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Telemetry & Safety
-                  </Typography>
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Telemetry Topic"
-                        value={doc.general.telemetry_topic ?? ""}
-                        onChange={(e) => setGeneral("telemetry_topic", e.target.value)}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Telemetry Log Interval (sec)"
-                        type="number"
-                        inputProps={{ step: 0.1, min: 0 }}
-                        value={safeNum(doc.general.telem_log_interval_sec, 2.0)}
-                        onChange={(e) =>
-                          setGeneral("telem_log_interval_sec", safeNum(e.target.value, 2.0))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Heartbeat Timeout (sec)"
-                        type="number"
-                        inputProps={{ step: 0.5, min: 0 }}
-                        value={safeNum(doc.general.heartbeat_timeout, 5)}
-                        onChange={(e) =>
-                          setGeneral("heartbeat_timeout", safeNum(e.target.value, 5))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6} sx={{ display: "flex", alignItems: "center" }}>
+                    <Stack direction="row" spacing={25}>
                       <FormControlLabel
-                        control={
-                          <Switch
-                            checked={!!doc.general.enforce_preflight_range}
-                            onChange={(e) =>
-                              setGeneral("enforce_preflight_range", e.target.checked)
-                            }
-                          />
-                        }
-                        label="Enforce Preflight Range"
+                        control={<Switch checked={doc.camera?.drone_video_enabled} onChange={e => update("camera", "drone_video_enabled", e.target.checked)} />}
+                        label="Enable Stream"
                       />
-                    </Grid>
-                  </Grid>
-                </Stack>
-              ) : null}
-
-              {!loading && tab === "preflight" ? (
-                <Stack spacing={2}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Preflight thresholds
-                  </Typography>
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="HDOP_MAX"
-                        type="number"
-                        inputProps={{ step: 0.1, min: 0 }}
-                        value={safeNum(doc.preflight.HDOP_MAX, 2.5)}
-                        onChange={(e) => setPreflight("HDOP_MAX", safeNum(e.target.value, 2.5))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="SAT_MIN"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.preflight.SAT_MIN, 6)}
-                        onChange={(e) => setPreflight("SAT_MIN", safeNum(e.target.value, 6))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="HOME_MAX_DIST (m)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.preflight.HOME_MAX_DIST, 100)}
-                        onChange={(e) =>
-                          setPreflight("HOME_MAX_DIST", safeNum(e.target.value, 100))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="HEARTBEAT_MAX_AGE (s)"
-                        type="number"
-                        inputProps={{ step: 0.1, min: 0 }}
-                        value={safeNum(doc.preflight.HEARTBEAT_MAX_AGE, 3.0)}
-                        onChange={(e) =>
-                          setPreflight("HEARTBEAT_MAX_AGE", safeNum(e.target.value, 3.0))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="MSG_RATE_MIN_HZ"
-                        type="number"
-                        inputProps={{ step: 0.1, min: 0 }}
-                        value={safeNum(doc.preflight.MSG_RATE_MIN_HZ, 5.0)}
-                        onChange={(e) =>
-                          setPreflight("MSG_RATE_MIN_HZ", safeNum(e.target.value, 5.0))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="RTL_MIN_ALT (m)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.preflight.RTL_MIN_ALT, 30)}
-                        onChange={(e) => setPreflight("RTL_MIN_ALT", safeNum(e.target.value, 30))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="MIN_CLEARANCE (m)"
-                        type="number"
-                        inputProps={{ step: 0.5, min: 0 }}
-                        value={safeNum(doc.preflight.MIN_CLEARANCE, 5)}
-                        onChange={(e) =>
-                          setPreflight("MIN_CLEARANCE", safeNum(e.target.value, 5))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="NFZ_BUFFER_M (m)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.preflight.NFZ_BUFFER_M, 50)}
-                        onChange={(e) => setPreflight("NFZ_BUFFER_M", safeNum(e.target.value, 50))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
                       <FormControlLabel
-                        control={
-                          <Switch
-                            checked={!!doc.preflight.COMPASS_HEALTH_REQUIRED}
-                            onChange={(e) =>
-                              setPreflight("COMPASS_HEALTH_REQUIRED", e.target.checked)
-                            }
-                          />
-                        }
-                        label="COMPASS_HEALTH_REQUIRED"
+                        control={<Switch checked={doc.camera?.drone_video_save_stream} onChange={e => update("camera", "drone_video_save_stream", e.target.checked)} />}
+                        label="Save Stream"
                       />
-                    </Grid>
-                  </Grid>
-                </Stack>
-              ) : null}
+                    </Stack>
+                  </Stack>
+                </Grid>
+              </Grid>
+            )}
 
-              {!loading && tab === "mission" ? (
-                <Stack spacing={2}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Mission & energy model
-                  </Typography>
 
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Cruise Speed (m/s)"
-                        type="number"
-                        inputProps={{ step: 0.1, min: 0 }}
-                        value={safeNum(doc.mission.cruise_speed_mps, 8)}
-                        onChange={(e) =>
-                          setMission("cruise_speed_mps", safeNum(e.target.value, 8))
-                        }
-                      />
-                    </Grid>
 
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Cruise Power (W)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.mission.cruise_power_w, 180)}
-                        onChange={(e) => setMission("cruise_power_w", safeNum(e.target.value, 180))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Battery Capacity (Wh)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.mission.battery_capacity_wh, 77)}
-                        onChange={(e) =>
-                          setMission("battery_capacity_wh", safeNum(e.target.value, 77))
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Energy Reserve Fraction"
-                        type="number"
-                        inputProps={{ step: 0.01, min: 0, max: 1 }}
-                        value={safeNum(doc.mission.energy_reserve_frac, 0.2)}
-                        onChange={(e) =>
-                          setMission("energy_reserve_frac", safeNum(e.target.value, 0.2))
-                        }
-                      />
-                    </Grid>
-                  </Grid>
-
-                  <Divider />
-
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Mission limits
-                  </Typography>
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        label="AGL_MIN (m)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.mission.AGL_MIN, 10)}
-                        onChange={(e) => setMission("AGL_MIN", safeNum(e.target.value, 10))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        label="AGL_MAX (m)"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.mission.AGL_MAX, 120)}
-                        onChange={(e) => setMission("AGL_MAX", safeNum(e.target.value, 120))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        label="MAX_RANGE_M (m)"
-                        type="number"
-                        inputProps={{ step: 10, min: 0 }}
-                        value={safeNum(doc.mission.MAX_RANGE_M, 5000)}
-                        onChange={(e) => setMission("MAX_RANGE_M", safeNum(e.target.value, 5000))}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        label="MAX_WAYPOINTS"
-                        type="number"
-                        inputProps={{ step: 1, min: 0 }}
-                        value={safeNum(doc.mission.MAX_WAYPOINTS, 700)}
-                        onChange={(e) =>
-                          setMission("MAX_WAYPOINTS", safeNum(e.target.value, 700))
-                        }
-                      />
-                    </Grid>
-                  </Grid>
-                </Stack>
-              ) : null}
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 2,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  {doc.updated_at ? `Last saved: ${doc.updated_at}` : "Not saved yet"}
-                  {dirty ? (
-                    <Typography component="span" sx={{ ml: 1, color: "warning.main" }}>
-                      • Unsaved changes
-                    </Typography>
-                  ) : null}
-                </Typography>
-
-                <Stack direction="row" spacing={1}>
-                  <LoadingButton
-                    variant="outlined"
-                    loading={loading}
-                    disabled={saving}
-                    onClick={() => void fetchSettings()}
-                  >
-                    Update
-                  </LoadingButton>
-
-                  <LoadingButton
-                    variant="contained"
-                    loading={saving}
-                    disabled={loading || saving || !dirty}
-                    onClick={() => void saveSettings()}
-                  >
-                    Save
-                  </LoadingButton>
-                </Stack>
-              </Box>
+            <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 2 }}>
+              <Button onClick={fetchSettings} variant="outlined">Reset</Button>
+              <Button disabled={!dirty || saving} onClick={saveSettings} variant="contained">
+                {saving ? "Saving..." : "Save All Changes"}
+              </Button>
             </Box>
-          </Paper>
-        </Stack>
+          </Box>
+        </Paper>
       </Container>
     </>
   );

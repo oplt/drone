@@ -280,6 +280,9 @@ class SettingsRepository:
             #variables save with Vault
             await upsert_secret("llm_api_key", general.get("llm_api_key"))
             await upsert_secret("mqtt_pass", general.get("mqtt_pass"))
+            await upsert_secret("raspberry_ip", general.get("raspberry_ip"))
+            await upsert_secret("raspberry_password", general.get("raspberry_password"))
+            await upsert_secret("raspberry_password", general.get("raspberry_password"))
 
             # never store plaintext secrets in settings JSON
             general.pop("llm_api_key", None)

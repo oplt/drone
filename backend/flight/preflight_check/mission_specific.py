@@ -779,17 +779,10 @@ def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
 
     mission_classes = {
         'grid': GridMissionPreflight,
-        'survey': GridMissionPreflight,
         'terrain_follow': TerrainFollowMissionPreflight,
         'orbit': OrbitMissionPreflight,
-        'circle': OrbitMissionPreflight,
-        'poi': OrbitMissionPreflight,
         'perimeter_patrol': PerimeterPatrolMissionPreflight,
-        'polygon': PerimeterPatrolMissionPreflight,
-        'patrol': PerimeterPatrolMissionPreflight,
         'adaptive_altitude': AdaptiveAltitudeMissionPreflight,
-        'waypoints': WaypointMissionPreflight,
-        'waypoint': WaypointMissionPreflight,
         'route': WaypointMissionPreflight,
     }
 

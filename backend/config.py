@@ -51,6 +51,8 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    database_url: str
+
     google_maps_api_key: str
     llm_provider: str = "ollama"
     llm_api_base: str = ""
@@ -68,24 +70,19 @@ class Settings(BaseSettings):
     opcua_security_policy: str = "Basic256Sha256"
     opcua_cert_path: str = ""
     opcua_key_path: str = ""
-    drone_conn: str
-    drone_conn_mavproxy: str
-
-    database_url: str
 
     telem_log_interval_sec: float = 2.0
     telemetry_topic: str = "ardupilot/telemetry"
 
-    heartbeat_timeout: float
+    drone_conn: str
+    drone_conn_mavproxy: str
 
-    enforce_preflight_range: bool = False
 
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_exp_minutes: int = 60
     admin_emails: str = ""
     admin_domains: str = ""
-
 
     raspberry_ip: str
     raspberry_user: str
@@ -98,6 +95,8 @@ class Settings(BaseSettings):
     cruise_power_w: float = 180
     cruise_speed_mps: float = 8
     energy_reserve_frac: float = 0.2
+    heartbeat_timeout: float
+    enforce_preflight_range: bool = False
 
     # Video streaming configuration
     drone_video_source: str = "rtsp://192.168.4.1:8554/stream"
@@ -111,10 +110,6 @@ class Settings(BaseSettings):
     drone_video_save_path: str = "./recordings/"
 
     # Wireless streaming network configuration
-    drone_video_network_mode: str = "rtsp"
-    drone_video_network_ip: str = "192.168.4.1"
-    drone_video_network_port: int = 8080
-    drone_video_rtsp_port: int = 8554
     drone_video_wifi_ssid: str = "Drone_Network"
     drone_video_wifi_password: str = "drone123"
 
