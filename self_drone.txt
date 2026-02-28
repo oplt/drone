@@ -1,0 +1,44 @@
+result = {MavlinkDrone} <backend.drone.mavlink_drone.MavlinkDrone object at 0x7615b290b820>
+ connection_str = {str} 'udp:127.0.0.1:14550'
+ dead_mans_switch_active = {bool} False
+ dead_mans_switch_triggered = {bool} False
+ heartbeat_timeout = {float} 5.0
+ home_location = {LocationGlobal} LocationGlobal:lat=50.9285011,lon=5.3415629,alt=0.08
+ last_heartbeat = {float} 1772037611.948779
+ vehicle = {Vehicle} <dronekit.Vehicle object at 0x7615a6434790>
+  airspeed = {float} 0.02389111928641796
+  armed = {bool} False
+  attitude = {Attitude} Attitude:pitch=-0.0012584138894453645,yaw=-0.0245567224919796,roll=-0.001069862861186266
+  battery = {Battery} Battery:voltage=12.6,current=0.0,level=100
+  capabilities = {Capabilities} <dronekit.Capabilities object at 0x7615a5c3abf0>
+  channels = {Channels: 18} {'1': 1500, '2': 1500, '3': 1000, '4': 1500, '5': 1800, '6': 1000, '7': 1000, '8': 1800, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+  commands = {CommandSequence: 0} <dronekit.CommandSequence object at 0x7615a6434a60>
+  ekf_ok = {bool} True
+  gimbal = {Gimbal} pitch=None, roll=None, yaw=None
+  gps_0 = {GPSInfo} GPSInfo:fix=6,num_sat=10
+   eph = {int} 121
+   epv = {int} 200
+   fix_type = {int} 6
+   satellites_visible = {int} 10
+  groundspeed = {float} 0.02389063499867916
+  heading = {int} 358
+  home_location = {NoneType} None
+  is_armable = {bool} True
+  last_heartbeat = {float} 0.15489093700125522
+  location = {Locations} <dronekit.Locations object at 0x7615a64348b0>
+  message_factory = {MAVLink} <pymavlink.dialects.v20.ardupilotmega.MAVLink object at 0x7615b28a34c0>
+  mode = {VehicleMode} VehicleMode:STABILIZE
+  mount_status = {list: 3} [None, None, None]
+  parameters = {Parameters: 1369} <dronekit.Parameters object at 0x7615a6434ac0>
+  rangefinder = {Rangefinder} distance=None, voltage=None
+  system_status = {SystemStatus} SystemStatus:STANDBY
+  velocity = {list: 3} [0.01, -0.01, 0.0]
+   0 = {float} 0.01
+   1 = {float} -0.01
+   2 = {float} 0.0
+   __len__ = {int} 3
+  version = {Version} APM:Copter-4.7.0-dev0
+  wind = {Wind} wind direction: -180.0, wind speed: 0.0, wind speed z: 0.0
+   wind_direction = {float} -180.0
+   wind_speed = {float} 0.0
+   wind_speed_z = {float} 0.0

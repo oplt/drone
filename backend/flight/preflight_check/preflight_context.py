@@ -45,8 +45,13 @@ class PreflightContext:
     _computed_segment_distances: List[float] = field(default_factory=list, init=False, repr=False)
     _computed_total_distance: float = field(default=0.0, init=False, repr=False)
 
+
     def __post_init__(self):
         """Initialize internal caches if not provided."""
+        # Ensure config_overrides is never None
+        if self.config_overrides is None:
+            self.config_overrides = {}
+
         if self.terrain_cache is None:
             self._terrain_cache = TerrainCache()
         else:
@@ -60,6 +65,7 @@ class PreflightContext:
         # Precompute distances if waypoints exist and no precomputed data
         if self.mission and self.mission.waypoints and self.precomputed is None:
             self._precompute_distances()
+
 
     def _precompute_distances(self):
         """Precompute all segment distances."""
@@ -131,27 +137,26 @@ class PreflightContext:
             return self.precomputed.total_distance
         return self._computed_total_distance
 
-    # ========== Terrain methods ==========
 
-    def get_terrain_elevation(self, lat: float, lon: float) -> Optional[float]:
-        """Get terrain elevation with caching."""
+    async def get_terrain_elevation(self, lat: float, lon: float) -> Optional[float]:
+        """Async terrain fetch with cache."""
+        # Try precomputed first
         if self.precomputed:
-            # Try to find in precomputed data by matching coordinates
             for i, wp in enumerate(self.mission.waypoints):
                 if abs(wp.lat - lat) < 1e-6 and abs(wp.lon - lon) < 1e-6:
                     return self.precomputed.get_terrain_at(i)
 
-        # Check terrain cache
+        # Try cache
         elev = self._terrain_cache.get(lat, lon)
         if elev is not None:
             return elev
 
-        # Fetch from provider
+        # Async fetch from provider
         if self.terrain_provider and hasattr(self.terrain_provider, 'get_elevation'):
-            elev = self.terrain_provider.get_elevation(lat, lon)
+            elev = await self.terrain_provider.get_elevation(lat, lon)
             if elev is not None:
                 self._terrain_cache.set(lat, lon, elev)
-                return elev
+            return elev
 
         return None
 

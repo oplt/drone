@@ -111,3 +111,4 @@ yarl==1.22.0
 
 pip~=26.0.1
 setuptools~=79.0.1
+geoalchemy2

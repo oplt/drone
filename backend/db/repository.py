@@ -1,14 +1,19 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, Iterable, Mapping
-from sqlalchemy import select, insert
+from typing import Optional, Dict, Any, Iterable, Mapping, List, Tuple
+from sqlalchemy import select, insert, func, literal_column
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent, SettingsRow
+from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent, SettingsRow, VaultSecret
 from backend.drone.models import Telemetry as TelemetryDTO
 import logging
-
-
 from .session import Session
+from backend.utils.vault import Vault
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.db.models import Geofence
+from geoalchemy2.shape import from_shape
+from shapely.geometry import Polygon, Point
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -207,19 +212,81 @@ class TelemetryRepository:
 
 
 
+MASK = "********"
+
 
 class SettingsRepository:
+
+
     def __init__(self) -> None:
         self._session_factory = Session
+        self._vault = Vault()
 
-    async def get_settings(self) -> Dict[str, Any]:
+    async def get_settings_doc(self) -> Dict[str, Any]:
         async with self._session_factory() as db:
             res = await db.execute(select(SettingsRow).where(SettingsRow.id == 1))
             row = res.scalar_one_or_none()
-            return row.data if row else {}
+            data = row.data if row else {}
 
-    async def upsert_settings(self, data: Dict[str, Any]) -> None:
+            # attach masked secret fields
+            secrets = await db.execute(select(VaultSecret))
+            sec_rows = secrets.scalars().all()
+            sec_names = {s.name for s in sec_rows}
+
+            # only expose the ones your UI expects
+            general = data.get("general", {})
+            if "llm_api_key" in sec_names:
+                general["llm_api_key"] = MASK
+            if "mqtt_pass" in sec_names:
+                general["mqtt_pass"] = MASK
+            data["general"] = general
+
+            # updated_at is handy for UI
+            if row and getattr(row, "updated_at", None):
+                data["updated_at"] = row.updated_at.isoformat()
+
+            return data
+
+    async def put_settings_doc(self, incoming: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        - Upsert non-secret data into SettingsRow(id=1)
+        - If incoming contains a non-masked secret, encrypt+store in VaultSecret
+        - Return saved doc with masked secrets
+        """
         async with self._session_factory() as db:
+            data = dict(incoming)
+
+            # --- secrets handling ---
+            general = dict(data.get("general", {}) or {})
+
+            # helper: update secret only if provided and not masked/empty
+            async def upsert_secret(name: str, value: Optional[str]) -> None:
+                if value is None:
+                    return
+                v = str(value).strip()
+                if not v or v == MASK:
+                    return
+                ct = self._vault.encrypt(v)
+                stmt = (
+                    pg_insert(VaultSecret)
+                    .values(name=name, ciphertext=ct)
+                    .on_conflict_do_update(
+                        index_elements=[VaultSecret.name],
+                        set_={"ciphertext": ct},
+                    )
+                )
+                await db.execute(stmt)
+
+            #variables save with Vault
+            await upsert_secret("llm_api_key", general.get("llm_api_key"))
+            await upsert_secret("mqtt_pass", general.get("mqtt_pass"))
+
+            # never store plaintext secrets in settings JSON
+            general.pop("llm_api_key", None)
+            general.pop("mqtt_pass", None)
+            data["general"] = general
+
+            # --- upsert settings JSON ---
             stmt = (
                 pg_insert(SettingsRow)
                 .values(id=1, data=data)
@@ -231,4 +298,77 @@ class SettingsRepository:
             await db.execute(stmt)
             await db.commit()
 
+        # return fresh doc with masked secrets
+        return await self.get_settings_doc()
 
+
+class GeofenceRepository:
+
+    def __init__(self) -> None:
+        self._session_factory = Session
+
+
+    async def save_geofence_geojson(
+            db: AsyncSession,
+            *,
+            name: str,
+            coordinates_lonlat: list[list[float]],
+            min_alt_m: float | None = None,
+            max_alt_m: float | None = None,
+    ):
+
+        # GeoJSON gives [lon, lat]
+        polygon = Polygon(coordinates_lonlat)
+
+        geofence = Geofence(
+            name=name,
+            polygon=from_shape(polygon, srid=4326),
+            min_alt_m=min_alt_m,
+            max_alt_m=max_alt_m,
+        )
+
+        db.add(geofence)
+        await db.commit()
+        await db.refresh(geofence)
+
+        return geofence
+
+
+    async def is_point_inside_geofence(
+            db: AsyncSession,
+            *,
+            geofence_name: str,
+            lat: float,
+            lon: float,
+    ) -> bool:
+
+        point = from_shape(Point(lon, lat), srid=4326)
+
+        stmt = (
+            select(Geofence.id)
+            .where(Geofence.name == geofence_name)
+            .where(Geofence.is_active == True)
+            .where(func.ST_Contains(Geofence.polygon, point))
+        )
+
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+
+    async def validate_mission_waypoints(
+            db: AsyncSession,
+            geofence_name: str,
+            waypoints: list[tuple[float, float]],
+    ):
+
+        for lat, lon in waypoints:
+            inside = await is_point_inside_geofence(
+                db,
+                geofence_name=geofence_name,
+                lat=lat,
+                lon=lon,
+            )
+            if not inside:
+                return False
+
+        return True

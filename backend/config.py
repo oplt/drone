@@ -29,9 +29,6 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
             existing_path = Path(getattr(handler, "baseFilename", "")).resolve()
             if existing_path == log_path:
                 has_file_handler = True
-        # BUG FIX: use type() instead of isinstance() because FileHandler is a
-        # subclass of StreamHandler — isinstance would match FileHandlers here
-        # and incorrectly suppress adding a console StreamHandler.
         elif type(handler) is logging.StreamHandler:
             has_stream_handler = True
 
@@ -64,9 +61,6 @@ class Settings(BaseSettings):
     mqtt_port: int = 1883
     mqtt_user: str = ""
     mqtt_pass: str = ""
-    # BUG FIX: was True by default but mqtt_ca_certs defaults to "" — TLS with
-    # no CA cert path causes a connection failure at runtime. Safe default is False;
-    # operators who need TLS must explicitly set MQTT_USE_TLS=true and MQTT_CA_CERTS.
     mqtt_use_tls: bool = False
     mqtt_ca_certs: str = ""
 
@@ -92,8 +86,7 @@ class Settings(BaseSettings):
     admin_emails: str = ""
     admin_domains: str = ""
 
-    # BUG FIX: corrected 'rasperry' typo to 'raspberry' throughout.
-    # UPDATE YOUR .env FILE: rename RASPERRY_* keys to RASPBERRY_* accordingly.
+
     raspberry_ip: str
     raspberry_user: str
     raspberry_host: str
@@ -124,6 +117,8 @@ class Settings(BaseSettings):
     drone_video_rtsp_port: int = 8554
     drone_video_wifi_ssid: str = "Drone_Network"
     drone_video_wifi_password: str = "drone123"
+
+    settings_vault_key : str
 
 
 settings = Settings()

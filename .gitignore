@@ -348,22 +348,11 @@ build/
 .DS_Store
 Thumbs.db
 
-
-# IDE
-.idea/
-.vscode/
-
-# Python
-__pycache__/
-*.py[cod]
 .venv/
-.env
-
-# OS
-.DS_Store
-Thumbs.db
 
 /commands.txt
 
 /backend/certs
+
+TODO.txt
 

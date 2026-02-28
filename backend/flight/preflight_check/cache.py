@@ -1,10 +1,7 @@
-# drone/preflight/utils/cache.py
-
-import hashlib
-import json
 from typing import Dict, Tuple, Optional
-from math import radians, sin, cos, sqrt, atan2
 import time
+from backend.utils.geo import haversine_km
+import asyncio
 
 
 class TerrainCache:
@@ -71,6 +68,22 @@ class TerrainCache:
             "misses": self._misses,
             "hit_rate": self._hits / (self._hits + self._misses) if (self._hits + self._misses) > 0 else 0
         }
+
+
+    async def get_or_fetch(
+            self,
+            lat: float,
+            lon: float,
+            fetcher  # async callable: async def(lat, lon) -> float | None
+    ) -> Optional[float]:
+        """Get from cache or fetch asynchronously."""
+        cached = self.get(lat, lon)
+        if cached is not None:
+            return cached
+        elevation = await fetcher(lat, lon)
+        if elevation is not None:
+            self.set(lat, lon, elevation)
+        return elevation
 
 
 class DistanceCache:
@@ -140,18 +153,6 @@ def fast_local_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> f
     return R * sqrt(x*x + y*y)
 
 
-# Accurate haversine for longer distances
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Full haversine formula for accurate distance calculation."""
-    from math import radians, sin, cos, sqrt, atan2
-
-    R = 6371000
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
-    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
-    return 2 * R * atan2(sqrt(a), sqrt(1 - a))
-
-
 def optimized_distance(lat1: float, lon1: float, lat2: float, lon2: float,
                        threshold: float = 0.1) -> float:
     """
@@ -162,6 +163,8 @@ def optimized_distance(lat1: float, lon1: float, lat2: float, lon2: float,
     """
     # Quick check if points are far apart using rough approximation
     if abs(lat1 - lat2) > threshold or abs(lon1 - lon2) > threshold:
-        return haversine_distance(lat1, lon1, lat2, lon2)
+        dist_km = haversine_km(lat1, lon1, lat2, lon2)
+        dist_meter = dist_km * 1000
+        return dist_meter
     else:
         return fast_local_distance(lat1, lon1, lat2, lon2)

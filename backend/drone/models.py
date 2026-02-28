@@ -22,6 +22,15 @@ class Telemetry:
     battery_voltage: Optional[float] = None  # Volts
     battery_current: Optional[float] = None  # Amps (+discharge)
     battery_remaining: Optional[float] = None  # Percent (0-100)
+    gps_fix_type: Optional[int] = None
+    hdop: Optional[float] = None
+    satellites_visible: Optional[int] = None
+    heartbeat_age_s: Optional[float] = None
+    is_armable: Optional[bool] = None
+    home_set: Optional[bool] = None
+    home_lat: Optional[float] = None
+    home_lon: Optional[float] = None
+    ekf_ok: Optional[bool] = None
     system_time: Optional[datetime] = None  # UTC timestamp
 
 

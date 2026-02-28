@@ -1,550 +1,771 @@
-from math import radians, sin, cos, sqrt, atan2
-from typing import List, Optional, Any
+from __future__ import annotations
+
+import asyncio
+import time
+from dataclasses import dataclass
+from enum import IntEnum
+from typing import Any, Iterable, List, Optional, Sequence, Tuple
+
 from .schemas import CheckResult, CheckStatus
 from .preflight_context import PreflightContext
+from backend.utils.geo import haversine_km
+
+
+class Priority(IntEnum):
+    CRITICAL = 0   # hard gates: link/arming/gps/ekf/battery basics
+    SAFETY = 1     # operational safety: fence/nfz/failsafe/terrain
+    QUALITY = 2    # quality/health: compass/imu/storage/gnss interference
+    INFO = 3       # informational / best-effort diagnostics
+
+
+@dataclass(frozen=True)
+class CheckSpec:
+    name: str
+    priority: Priority
+    is_gate: bool  # if True and FAIL occurs, fail_fast may short-circuit
+    coro: Any      # awaitable factory (lambda returning coroutine)
 
 
 class BasePreflightChecks:
+    """
+    Baseline preflight checks with:
+      - Priority/ordering (critical gates first)
+      - Optional fail-fast
+      - Real geofence point-in-polygon
+      - Common additional checks:
+          RC link present, compass health, IMU calibration, arming checks flags,
+          storage/logging available, GNSS jamming/interference
+    """
 
     def __init__(self, context: PreflightContext):
-
         self.ctx = context
         self.v = context.vehicle_state
 
-        # Set thresholds from context
-        self.HDOP_MAX = context.get_threshold('HDOP_MAX', 2.5)
-        self.SAT_MIN = context.get_threshold('SAT_MIN', 6)
-        self.HOME_MAX_DIST = context.get_threshold('HOME_MAX_DIST', 100)
-        self.WIND_MAX = context.get_threshold('WIND_MAX', 12)
-        self.GUST_MAX = context.get_threshold('GUST_MAX', 15)
-        self.RTL_MIN_ALT = context.get_threshold('RTL_MIN_ALT', 30)
-        self.AGL_MIN = context.get_threshold('AGL_MIN', 10)
-        self.AGL_MAX = context.get_threshold('AGL_MAX', 120)
-        self.AGL_SAFETY_MIN = context.get_threshold('AGL_SAFETY_MIN', 5)
-        self.MSG_RATE_MIN_HZ = context.get_threshold('MSG_RATE_MIN_HZ', 5)
-        self.HEARTBEAT_MAX_AGE = context.get_threshold('HEARTBEAT_MAX_AGE', 3)
-        self.BATTERY_RESERVE_PCT = context.get_threshold('BATTERY_RESERVE_PCT', 15)
-        self.BATTERY_RESERVE_AH = context.get_threshold('BATTERY_RESERVE_AH', 2)
-        self.NFZ_BUFFER_M = context.get_threshold('NFZ_BUFFER_M', 50)
-        self.OBST_BUFFER_M = context.get_threshold('OBST_BUFFER_M', 10)
+        # Thresholds (context-overridable)
+        self.HDOP_MAX = context.get_threshold("HDOP_MAX", 2.5)
+        self.SAT_MIN = context.get_threshold("SAT_MIN", 6)
+        self.HOME_MAX_DIST = context.get_threshold("HOME_MAX_DIST", 100.0)  # meters
+
+        self.WIND_MAX = context.get_threshold("WIND_MAX", 12.0)  # m/s
+        self.GUST_MAX = context.get_threshold("GUST_MAX", 15.0)  # m/s
+
+        self.RTL_MIN_ALT = context.get_threshold("RTL_MIN_ALT", 30.0)  # meters
+        self.MIN_CLEARANCE = context.get_threshold("MIN_CLEARANCE", 5.0)  # meters
+
+        self.MSG_RATE_MIN_HZ = context.get_threshold("MSG_RATE_MIN_HZ", 5.0)  # Hz
+        self.HEARTBEAT_MAX_AGE = context.get_threshold("HEARTBEAT_MAX_AGE", 3.0)  # seconds
+
+        self.BATTERY_RESERVE_PCT = context.get_threshold("BATTERY_RESERVE_PCT", 15.0)  # %
+        self.BATTERY_RESERVE_AH = context.get_threshold("BATTERY_RESERVE_AH", 2.0)  # Ah
+
+        self.NFZ_BUFFER_M = context.get_threshold("NFZ_BUFFER_M", 50.0)  # meters
+
+        # RC + sensors + GNSS interference thresholds
+        self.RC_RSSI_MIN = context.get_threshold("RC_RSSI_MIN", 35.0)  # percent
+        self.COMPASS_HEALTH_REQUIRED = context.get_threshold("COMPASS_HEALTH_REQUIRED", True)
+        self.GNSS_INTERFERENCE_WARN = context.get_threshold("GNSS_INTERFERENCE_WARN", 0.6)  # 0..1 (if provided)
+        self.GNSS_INTERFERENCE_FAIL = context.get_threshold("GNSS_INTERFERENCE_FAIL", 0.85)  # 0..1 (if provided)
+
+        # Storage
+        self.LOG_FREE_MB_MIN = context.get_threshold("LOG_FREE_MB_MIN", 100.0)
+
+    # -------------------------
+    # Helpers
+    # -------------------------
+
+    def _value(self, *names: str) -> Any:
+        """Return first non-None telemetry attribute among aliases."""
+        for name in names:
+            if hasattr(self.v, name):
+                val = getattr(self.v, name)
+                if val is not None:
+                    return val
+        return None
+
+    def _ok(self, name: str, message: Optional[str] = None) -> CheckResult:
+        return CheckResult(name=name, status=CheckStatus.PASS, message=message)
+
+    def _fail(self, name: str, message: str) -> CheckResult:
+        return CheckResult(name=name, status=CheckStatus.FAIL, message=message)
+
+    def _warn(self, name: str, message: str) -> CheckResult:
+        return CheckResult(name=name, status=CheckStatus.WARN, message=message)
+
+    def _skip(self, name: str, message: str) -> CheckResult:
+        return CheckResult(name=name, status=CheckStatus.SKIP, message=message)
 
 
-    def haversine(self, lat1, lon1, lat2, lon2):
-        """Calculate great-circle distance between two points."""
-        # Use context's cached distance if available
-        if hasattr(self.ctx, 'get_distance_between_points'):
-            # Create simple waypoint-like objects for cache lookup
-            class SimpleWP:
-                def __init__(self, lat, lon):
-                    self.lat = lat
-                    self.lon = lon
+    @staticmethod
+    def _dedupe_by_name(results: List[CheckResult]) -> List[CheckResult]:
+        seen = set()
+        out: List[CheckResult] = []
+        for r in results:
+            if getattr(r, "name", None) in seen:
+                continue
+            seen.add(r.name)
+            out.append(r)
+        return out
 
-            wp1 = SimpleWP(lat1, lon1)
-            wp2 = SimpleWP(lat2, lon2)
-            return self.ctx.get_distance_between_points(wp1, wp2)
+    @staticmethod
+    def _has_fail(results: List[CheckResult]) -> bool:
+        return any(r.status == CheckStatus.FAIL for r in results)
 
-        # Fallback to direct calculation
-        R = 6371000
-        dlat = radians(lat2 - lat1)
-        dlon = radians(lon2 - lon1)
-        a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
-        return 2 * R * atan2(sqrt(a), sqrt(1 - a))
+    # -------------------------
+    # Core checks (return List[CheckResult])
+    # -------------------------
 
-    # ==================== Link & Telemetry Health ====================
-    def check_link_health(self):
-        """Check heartbeat age and message rate."""
-        checks = []
+    async def check_link_health(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
 
-        # Heartbeat age check
-        if hasattr(self.v, 'heartbeat_age_s'):
-            if self.v.heartbeat_age_s < self.HEARTBEAT_MAX_AGE:
-                checks.append(CheckResult(name="Heartbeat Age", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Heartbeat Age",
-                    status=CheckStatus.FAIL,
-                    message=f"Heartbeat age {self.v.heartbeat_age_s}s > {self.HEARTBEAT_MAX_AGE}s"
-                ))
-
-        # Message rate check
-        if hasattr(self.v, 'msg_rate_hz'):
-            if self.v.msg_rate_hz >= self.MSG_RATE_MIN_HZ:
-                checks.append(CheckResult(name="Message Rate", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Message Rate",
-                    status=CheckStatus.FAIL,
-                    message=f"Rate {self.v.msg_rate_hz}Hz < {self.MSG_RATE_MIN_HZ}Hz"
-                ))
-
-        return checks
-
-    # ==================== Wind / Weather Gate ====================
-    def check_wind(self):
-        """Check wind speed and gusts against limits."""
-        checks = []
-
-        wind_speed = self.ctx.get_wind_speed()
-        if wind_speed is not None:
-            if wind_speed <= self.WIND_MAX:
-                checks.append(CheckResult(name="Wind Speed", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Wind Speed",
-                    status=CheckStatus.FAIL,
-                    message=f"Wind {wind_speed}m/s > {self.WIND_MAX}m/s"
-                ))
-
-        wind_gust = self.ctx.get_wind_gust()
-        if wind_gust is not None:
-            if wind_gust <= self.GUST_MAX:
-                checks.append(CheckResult(name="Wind Gust", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Wind Gust",
-                    status=CheckStatus.FAIL,
-                    message=f"Gust {wind_gust}m/s > {self.GUST_MAX}m/s"
-                ))
-
-        return checks
-
-    # ==================== Geofence / Operational Area ====================
-    def check_geofence(self):
-        """Check if mission waypoints are within geofence."""
-        checks = []
-
-        if not self.ctx.geofence_polygon:
-            return [CheckResult(name="Geofence", status=CheckStatus.SKIP, message="No geofence defined")]
-
-        # This would need actual point-in-polygon checking
-        # Placeholder implementation
-        all_inside = True
-        for i, wp in enumerate(self.ctx.mission.waypoints):
-            # Check if point is inside geofence
-            # inside = point_in_polygon(wp.lat, wp.lon, self.ctx.geofence_polygon)
-            inside = True  # Placeholder
-            if not inside:
-                all_inside = False
-                checks.append(CheckResult(
-                    name=f"Waypoint {i} Geofence",
-                    status=CheckStatus.FAIL,
-                    message=f"Waypoint {i} outside geofence"
-                ))
-
-        if all_inside:
-            checks.append(CheckResult(name="Geofence", status=CheckStatus.PASS))
-
-        return checks
-
-    # ==================== No-Fly Zone Clearance ====================
-    def check_no_fly_zones(self):
-        """Check if mission waypoints avoid no-fly zones."""
-        checks = []
-
-        if not self.ctx.no_fly_zones:
-            return [CheckResult(name="No-Fly Zones", status=CheckStatus.SKIP, message="No no-fly zones defined")]
-
-        all_safe = True
-        for i, wp in enumerate(self.ctx.mission.waypoints):
-            safe = self.ctx.check_no_fly_zones(wp.lat, wp.lon, self.NFZ_BUFFER_M)
-            if not safe:
-                all_safe = False
-                checks.append(CheckResult(
-                    name=f"Waypoint {i} No-Fly",
-                    status=CheckStatus.FAIL,
-                    message=f"Waypoint {i} inside no-fly zone"
-                ))
-
-        if all_safe:
-            checks.append(CheckResult(name="No-Fly Zones", status=CheckStatus.PASS))
-
-        return checks
-
-    # ==================== Vehicle State & Mode Readiness ====================
-    def check_vehicle_state(self, allowed_modes=None):
-        """Check if vehicle is armable and in correct mode."""
-        checks = []
-
-        # Armability check
-        if hasattr(self.v, 'is_armable'):
-            if self.v.is_armable:
-                checks.append(CheckResult(name="Vehicle Armable", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Vehicle Armable",
-                    status=CheckStatus.FAIL,
-                    message="Vehicle not armable (prearm/EKF checks failed)"
-                ))
-
-        # Mode check
-        if allowed_modes and hasattr(self.v, 'current_mode'):
-            if self.v.current_mode in allowed_modes:
-                checks.append(CheckResult(name="Flight Mode", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Flight Mode",
-                    status=CheckStatus.FAIL,
-                    message=f"Mode {self.v.current_mode} not in allowed modes"
-                ))
-
-        return checks
-
-    # ==================== GPS Fix & Navigation Quality ====================
-    def check_gps_quality(self):
-        """Enhanced GPS check with fix type, HDOP, satellites, and uncertainty."""
-        checks = []
-
-        # GPS fix type
-        if hasattr(self.v, 'gps_fix_type'):
-            if self.v.gps_fix_type >= 3:  # 3D fix or better
-                checks.append(CheckResult(name="GPS Fix Type", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="GPS Fix Type",
-                    status=CheckStatus.FAIL,
-                    message=f"Fix type: {self.v.gps_fix_type} (need >=3)"
-                ))
-
-        # HDOP check
-        if hasattr(self.v, 'hdop'):
-            if self.v.hdop <= self.HDOP_MAX:
-                checks.append(CheckResult(name="GPS HDOP", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="GPS HDOP",
-                    status=CheckStatus.FAIL,
-                    message=f"HDOP {self.v.hdop} > {self.HDOP_MAX}"
-                ))
-
-        # Satellites visible
-        if hasattr(self.v, 'satellites_visible'):
-            if self.v.satellites_visible >= self.SAT_MIN:
-                checks.append(CheckResult(name="GPS Satellites", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="GPS Satellites",
-                    status=CheckStatus.FAIL,
-                    message=f"Sats {self.v.satellites_visible} < {self.SAT_MIN}"
-                ))
-
-        # Position uncertainty
-        if hasattr(self.v, 'pos_uncertainty_m'):
-            if hasattr(self.v, 'pos_uncertainty_max') and self.v.pos_uncertainty_m <= self.v.pos_uncertainty_max:
-                checks.append(CheckResult(name="Position Uncertainty", status=CheckStatus.PASS))
-            elif self.v.pos_uncertainty_m <= 5:  # Default threshold
-                checks.append(CheckResult(name="Position Uncertainty", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Position Uncertainty",
-                    status=CheckStatus.FAIL,
-                    message=f"Uncertainty {self.v.pos_uncertainty_m}m > threshold"
-                ))
-
-        return checks
-
-    # ==================== Home Position & Reference Frames ====================
-    def check_home_position(self):
-        """Check if home is set and within acceptable distance."""
-        checks = []
-
-        # Home set check
-        if hasattr(self.v, 'home_set'):
-            if self.v.home_set:
-                checks.append(CheckResult(name="Home Set", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Home Set",
-                    status=CheckStatus.FAIL,
-                    message="Home position not set"
-                ))
-
-        # Distance to home
-        if (hasattr(self.v, 'lat') and hasattr(self.v, 'lon') and
-                hasattr(self.v, 'home_lat') and hasattr(self.v, 'home_lon')):
-            distance = self.haversine(self.v.lat, self.v.lon,
-                                      self.v.home_lat, self.v.home_lon)
-            if distance <= self.HOME_MAX_DIST:
-                checks.append(CheckResult(name="Distance to Home", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Distance to Home",
-                    status=CheckStatus.FAIL,
-                    message=f"Distance {distance:.1f}m > {self.HOME_MAX_DIST}m"
-                ))
-
-        return checks
-
-    # ==================== EKF / Attitude Solution Health ====================
-    def check_ekf_health(self):
-        """Check EKF flags and attitude consistency."""
-        checks = []
-
-        # EKF OK check
-        if hasattr(self.v, 'ekf_ok'):
-            if self.v.ekf_ok:
-                checks.append(CheckResult(name="EKF Health", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="EKF Health",
-                    status=CheckStatus.FAIL,
-                    message="EKF not OK"
-                ))
-
-        # Innovation consistency
-        if hasattr(self.v, 'innovation_consistency'):
-            if hasattr(self.v, 'innovation_consistency_max') and self.v.innovation_consistency <= self.v.innovation_consistency_max:
-                checks.append(CheckResult(name="EKF Innovation", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="EKF Innovation",
-                    status=CheckStatus.FAIL,
-                    message=f"Innovation {self.v.innovation_consistency} > max"
-                ))
-
-        # Attitude variance
-        if hasattr(self.v, 'attitude_variance'):
-            if hasattr(self.v, 'attitude_variance_max') and self.v.attitude_variance <= self.v.attitude_variance_max:
-                checks.append(CheckResult(name="Attitude Variance", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Attitude Variance",
-                    status=CheckStatus.FAIL,
-                    message=f"Variance {self.v.attitude_variance} > max"
-                ))
-
-        return checks
-
-    # ==================== Battery & Power Budget ====================
-    def check_battery_voltage(self):
-        """Check battery voltage."""
-        if hasattr(self.v, 'v_batt') and hasattr(self.v, 'v_min'):
-            if self.v.v_batt >= self.v.v_min:
-                return CheckResult(name="Battery Voltage", status=CheckStatus.PASS)
-            else:
-                return CheckResult(
-                    name="Battery Voltage",
-                    status=CheckStatus.FAIL,
-                    message=f"Voltage {self.v.v_batt}V < {self.v.v_min}V"
-                )
-        return CheckResult(name="Battery Voltage", status=CheckStatus.SKIP, message="Battery voltage data not available")
-
-    def check_battery_capacity(self, estimated_time_s=None, mission_ah_req=None):
-        """Enhanced battery check with energy budget calculation."""
-        checks = [self.check_battery_voltage()]
-
-        # Simple percentage-based check
-        if estimated_time_s and hasattr(self.v, 'max_flight_time_s') and hasattr(self.v, 'battery_remaining_pct'):
-            required_pct = (estimated_time_s / self.v.max_flight_time_s) * 100
-            remaining = self.v.battery_remaining_pct
-
-            if remaining >= required_pct + self.BATTERY_RESERVE_PCT:
-                checks.append(CheckResult(name="Battery Percentage", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Battery Percentage",
-                    status=CheckStatus.FAIL,
-                    message=f"Remaining {remaining}% < Required {required_pct:.1f}%"
-                ))
-
-        # Advanced Ah-based check
-        if mission_ah_req and hasattr(self.v, 'battery_remaining_Ah'):
-            remaining_ah = self.v.battery_remaining_Ah
-            soc_margin = remaining_ah - mission_ah_req
-
-            if soc_margin >= self.BATTERY_RESERVE_AH:
-                checks.append(CheckResult(name="Battery Capacity (Ah)", status=CheckStatus.PASS))
-            else:
-                checks.append(CheckResult(
-                    name="Battery Capacity (Ah)",
-                    status=CheckStatus.FAIL,
-                    message=f"Margin {soc_margin:.2f}Ah < {self.BATTERY_RESERVE_AH}Ah reserve"
-                ))
-
-        return checks
-
-    # ==================== Basic Checks (Original Simplified Versions) ====================
-    def check_basic_link(self):
-        """Basic MAVLink link check."""
-        if hasattr(self.v, 'heartbeat_age_s'):
-            if self.v.heartbeat_age_s < self.HEARTBEAT_MAX_AGE:
-                return CheckResult(name="MAVLink Link", status=CheckStatus.PASS)
-            return CheckResult(name="MAVLink Link", status=CheckStatus.FAIL)
-        return CheckResult(name="MAVLink Link", status=CheckStatus.SKIP, message="Heartbeat data not available")
-
-    def check_basic_gps(self):
-        """Basic GPS check."""
-        if hasattr(self.v, 'gps_fix_type') and hasattr(self.v, 'hdop'):
-            if self.v.gps_fix_type >= 3 and self.v.hdop <= self.HDOP_MAX:
-                return CheckResult(name="GPS Lock", status=CheckStatus.PASS)
-            return CheckResult(
-                name="GPS Lock",
-                status=CheckStatus.FAIL,
-                message=f"Fix:{self.v.gps_fix_type}, HDOP:{self.v.hdop}"
-            )
-        return CheckResult(name="GPS Lock", status=CheckStatus.SKIP, message="GPS data not available")
-
-    def check_basic_battery(self, estimated_time_s=None):
-        """Basic battery check."""
-        if estimated_time_s is None and self.ctx.mission:
-            # Estimate from distance
-            distance = self.ctx.total_distance()
-            speed = self.ctx.mission.speed
-            estimated_time_s = distance / speed if speed and speed > 0 else 0
-
-        if estimated_time_s and hasattr(self.v, 'max_flight_time_s') and hasattr(self.v, 'battery_remaining_pct'):
-            required_pct = (estimated_time_s / self.v.max_flight_time_s) * 100
-            remaining = self.v.battery_remaining_pct
-
-            if remaining >= required_pct + self.BATTERY_RESERVE_PCT:
-                return CheckResult(name="Battery Margin", status=CheckStatus.PASS)
-            return CheckResult(
-                name="Battery Margin",
-                status=CheckStatus.FAIL,
-                message=f"Remaining {remaining}% < Required {required_pct:.1f}%"
-            )
-
-        return CheckResult(name="Battery Margin", status=CheckStatus.SKIP, message="Battery data not available")
-
-    # ==================== Mission Upload Integrity ====================
-    def check_mission_integrity(self, mission_waypoints, expected_count, mission_crc):
-        """Check mission upload integrity."""
-        checks = []
-
-        # Mission count check
-        if len(mission_waypoints) == expected_count:
-            checks.append(CheckResult(name="Mission Count", status=CheckStatus.PASS))
+        hb_age = self._value("heartbeat_age_s")
+        if hb_age is None:
+            results.append(self._skip("Heartbeat Age", "Heartbeat age not available"))
+        elif hb_age <= self.HEARTBEAT_MAX_AGE:
+            results.append(self._ok("Heartbeat Age", f"{hb_age:.2f}s"))
         else:
-            checks.append(CheckResult(
-                name="Mission Count",
-                status=CheckStatus.FAIL,
-                message=f"Got {len(mission_waypoints)} waypoints, expected {expected_count}"
-            ))
+            results.append(self._fail("Heartbeat Age", f"{hb_age:.2f}s > {self.HEARTBEAT_MAX_AGE:.2f}s"))
 
-        # CRC check
-        if mission_crc == getattr(self.v, 'mission_crc', None):
-            checks.append(CheckResult(name="Mission CRC", status=CheckStatus.PASS))
+        msg_rate = self._value("msg_rate_hz")
+        if msg_rate is None:
+            results.append(self._skip("Message Rate", "Message rate not available"))
+        elif msg_rate >= self.MSG_RATE_MIN_HZ:
+            results.append(self._ok("Message Rate", f"{msg_rate:.2f} Hz"))
         else:
-            checks.append(CheckResult(
-                name="Mission CRC",
-                status=CheckStatus.FAIL,
-                message="Mission CRC mismatch"
-            ))
+            results.append(self._fail("Message Rate", f"{msg_rate:.2f} Hz < {self.MSG_RATE_MIN_HZ:.2f} Hz"))
 
-        # First/last command validity
-        if mission_waypoints:
-            # Check first command (should be takeoff or similar)
-            if hasattr(mission_waypoints[0], 'command') and mission_waypoints[0].command in [22, 23]:  # MAV_CMD_NAV_TAKEOFF
-                checks.append(CheckResult(name="First Command", status=CheckStatus.PASS))
+        return results
+
+    async def check_vehicle_readiness(self, allowed_modes: Optional[Sequence[str]] = None) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        is_armable = self._value("is_armable")
+        if is_armable is None:
+            results.append(self._skip("Vehicle Armable", "Armable state not available"))
+        elif bool(is_armable):
+            results.append(self._ok("Vehicle Armable"))
+        else:
+            results.append(self._fail("Vehicle Armable", "Vehicle not armable (prearm/EKF checks failed)"))
+
+        if allowed_modes:
+            mode = self._value("current_mode", "mode")
+            if mode is None:
+                results.append(self._skip("Flight Mode", "Mode not available"))
+            elif mode in allowed_modes:
+                results.append(self._ok("Flight Mode", str(mode)))
             else:
-                checks.append(CheckResult(
-                    name="First Command",
-                    status=CheckStatus.WARN,
-                    message="First command is not takeoff"
-                ))
+                results.append(self._fail("Flight Mode", f"Mode '{mode}' not in allowed modes {list(allowed_modes)}"))
 
-            # Check last command (should be RTL or land)
-            if hasattr(mission_waypoints[-1], 'command'):
-                last_cmd = mission_waypoints[-1].command
-                if last_cmd in [20, 21, 22]:  # RTL, LAND, TAKEOFF
-                    checks.append(CheckResult(name="Last Command", status=CheckStatus.PASS))
+        return results
+
+    async def check_arming_checks(self) -> List[CheckResult]:
+        """
+        Best-effort arming checks flags / prearm status.
+        Supports multiple common telemetry conventions.
+        """
+        results: List[CheckResult] = []
+
+        # Common booleans / strings / lists
+        ok_flag = self._value("arming_checks_ok", "prearm_ok")
+        if ok_flag is not None:
+            if bool(ok_flag):
+                results.append(self._ok("Arming Checks", "OK"))
+            else:
+                # Try to surface reason list/string
+                reasons = self._value("prearm_errors", "arming_check_errors", "arming_fail_reasons")
+                if reasons:
+                    results.append(self._fail("Arming Checks", f"Failed: {reasons}"))
                 else:
-                    checks.append(CheckResult(
-                        name="Last Command",
-                        status=CheckStatus.WARN,
-                        message="Last command is not RTL or land"
-                    ))
+                    results.append(self._fail("Arming Checks", "Failed"))
+            return results
 
-        return checks
-
-    # ==================== Failsafe Configuration ====================
-    def check_failsafe_config(self):
-        """Check failsafe configuration."""
-        checks = []
-
-        # RTL altitude
-        if hasattr(self.v, 'rtl_alt_m'):
-            if self.v.rtl_alt_m >= self.RTL_MIN_ALT:
-                checks.append(CheckResult(name="RTL Altitude", status=CheckStatus.PASS))
+        # Bitmask style (project-specific); if present, just surface it
+        mask = self._value("arming_check_flags", "prearm_flags")
+        if mask is not None:
+            # Without a decoding table, we can only WARN when non-zero.
+            if int(mask) == 0:
+                results.append(self._ok("Arming Checks", "Flags=0"))
             else:
-                checks.append(CheckResult(
-                    name="RTL Altitude",
-                    status=CheckStatus.FAIL,
-                    message=f"RTL alt {self.v.rtl_alt_m}m < {self.RTL_MIN_ALT}m"
-                ))
+                results.append(self._warn("Arming Checks", f"Flags={int(mask)} (decode not implemented)"))
+            return results
 
-        # Battery failsafe enabled
-        if hasattr(self.v, 'battery_failsafe_enabled'):
-            if self.v.battery_failsafe_enabled:
-                checks.append(CheckResult(name="Battery Failsafe", status=CheckStatus.PASS))
+        return [self._skip("Arming Checks", "Arming checks telemetry not available")]
+
+    async def check_gps_quality(
+            self,
+            timeout_s: float = 30.0,
+            poll_interval_s: float = 1.0,
+            required_stable_reads: int = 3,
+    ) -> List[CheckResult]:
+        start = time.monotonic()
+        stable = 0
+        last_results: List[CheckResult] = []
+
+        def eval_once() -> List[CheckResult]:
+            r: List[CheckResult] = []
+
+            fix = self._value("gps_fix_type")
+            if fix is None:
+                r.append(self._skip("GPS Fix Type", "gps_fix_type not available"))
+            elif fix >= 3:
+                r.append(self._ok("GPS Fix Type", f"{fix}"))
             else:
-                checks.append(CheckResult(
-                    name="Battery Failsafe",
-                    status=CheckStatus.FAIL,
-                    message="Battery failsafe not enabled"
-                ))
+                r.append(self._fail("GPS Fix Type", f"Fix type {fix} < 3 (need 3D+)"))
 
-        # Geofence action
-        if hasattr(self.v, 'geo_fence_action'):
-            if self.v.geo_fence_action != 0:  # 0 = NONE
-                checks.append(CheckResult(name="Geofence Action", status=CheckStatus.PASS))
+            hdop = (self._value("hdop"))/100 # CHECK THIS LATER
+            if hdop is None:
+                r.append(self._skip("GPS HDOP", "hdop not available"))
+            elif float(hdop) <= float(self.HDOP_MAX):
+                r.append(self._ok("GPS HDOP", f"{float(hdop):.2f}"))
             else:
-                checks.append(CheckResult(
-                    name="Geofence Action",
-                    status=CheckStatus.FAIL,
-                    message="Geofence action set to NONE"
-                ))
+                r.append(self._fail("GPS HDOP", f"HDOP {float(hdop):.2f} > {float(self.HDOP_MAX):.2f}"))
 
-        return checks
+            sats = self._value("satellites_visible")
+            if sats is None:
+                r.append(self._skip("GPS Satellites", "satellites_visible not available"))
+            elif int(sats) >= int(self.SAT_MIN):
+                r.append(self._ok("GPS Satellites", f"{int(sats)}"))
+            else:
+                r.append(self._fail("GPS Satellites", f"Sats {int(sats)} < {int(self.SAT_MIN)}"))
 
-    def run(self, estimated_time_s=None, mission_waypoints=None,
-            expected_mission_count=None, mission_crc=None,
-            mission_ah_req=None, allowed_modes=None):
-        """
-        Run all base checks.
+            pos_unc = self._value("pos_uncertainty_m")
+            if pos_unc is not None:
+                pos_unc_max = self._value("pos_uncertainty_max")
+                threshold = float(pos_unc_max) if pos_unc_max is not None else 5.0
+                if float(pos_unc) <= threshold:
+                    r.append(self._ok("Position Uncertainty", f"{float(pos_unc):.2f}m"))
+                else:
+                    r.append(self._fail("Position Uncertainty", f"{float(pos_unc):.2f}m > {threshold:.2f}m"))
 
-        Args:
-            estimated_time_s: Estimated mission time in seconds
-            mission_waypoints: List of mission waypoints for integrity check
-            expected_mission_count: Expected number of waypoints
-            mission_crc: Mission CRC for integrity check
-            mission_ah_req: Required amp-hours for mission
-            allowed_modes: List of allowed flight modes
+            return r
 
-        Returns:
-            List of CheckResult objects
-        """
-        results = []
+        def no_fail(r: List[CheckResult]) -> bool:
+            return not any(x.status == CheckStatus.FAIL for x in r)
 
-        # Basic checks
-        results.append(self.check_basic_link())
-        results.append(self.check_basic_gps())
-        results.append(self.check_basic_battery(estimated_time_s))
+        while True:
+            last_results = eval_once()
+            stable = stable + 1 if no_fail(last_results) else 0
 
-        # Enhanced checks
-        results.extend(self.check_link_health())
-        results.extend(self.check_vehicle_state(allowed_modes))
-        results.extend(self.check_gps_quality())
-        results.extend(self.check_home_position())
-        results.extend(self.check_ekf_health())
-        results.extend(self.check_wind())
-        results.extend(self.check_geofence())
-        results.extend(self.check_no_fly_zones())
+            if stable >= required_stable_reads:
+                return last_results
 
-        # Battery checks
-        battery_checks = self.check_battery_capacity(estimated_time_s, mission_ah_req)
-        if isinstance(battery_checks, list):
-            results.extend(battery_checks)
+            if time.monotonic() - start >= timeout_s:
+                return last_results
+
+            await asyncio.sleep(poll_interval_s)
+
+    async def check_ekf_health(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        ekf_ok = self._value("ekf_ok")
+        if ekf_ok is None:
+            results.append(self._skip("EKF Health", "ekf_ok not available"))
+        elif bool(ekf_ok):
+            results.append(self._ok("EKF Health"))
         else:
-            results.append(battery_checks)
+            results.append(self._fail("EKF Health", "EKF not OK"))
 
-        # Mission integrity
+        innov = self._value("innovation_consistency")
+        if innov is not None:
+            innov_max = self._value("innovation_consistency_max")
+            if innov_max is not None and float(innov) <= float(innov_max):
+                results.append(self._ok("EKF Innovation", f"{float(innov):.3f}"))
+            elif innov_max is not None:
+                results.append(self._fail("EKF Innovation", f"{float(innov):.3f} > {float(innov_max):.3f}"))
+            else:
+                results.append(self._warn("EKF Innovation", f"{float(innov):.3f} (no max threshold)"))
+
+        return results
+
+    async def check_home_position(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        home_set = self._value("home_set")
+        if home_set is None:
+            results.append(self._skip("Home Set", "home_set not available"))
+        elif bool(home_set):
+            results.append(self._ok("Home Set"))
+        else:
+            results.append(self._fail("Home Set", "Home position not set"))
+
+        lat = self._value("lat")
+        lon = self._value("lon")
+        home_lat = self._value("home_lat")
+        home_lon = self._value("home_lon")
+
+        if None in (lat, lon, home_lat, home_lon):
+            results.append(self._skip("Distance to Home", "Current/home coordinates not available"))
+            return results
+
+        dist_m = haversine_km(float(lat), float(lon), float(home_lat), float(home_lon)) * 1000.0
+        if dist_m <= float(self.HOME_MAX_DIST):
+            results.append(self._ok("Distance to Home", f"{dist_m:.1f} m"))
+        else:
+            results.append(self._fail("Distance to Home", f"{dist_m:.1f} m > {float(self.HOME_MAX_DIST):.1f} m"))
+
+        return results
+
+    async def check_wind(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        wind = self.ctx.get_wind_speed() if hasattr(self.ctx, "get_wind_speed") else None
+        gust = self.ctx.get_wind_gust() if hasattr(self.ctx, "get_wind_gust") else None
+
+        if wind is None:
+            results.append(self._skip("Wind Speed", "Wind speed not available"))
+        elif float(wind) <= float(self.WIND_MAX):
+            results.append(self._ok("Wind Speed", f"{float(wind):.1f} m/s"))
+        else:
+            results.append(self._fail("Wind Speed", f"{float(wind):.1f} m/s > {float(self.WIND_MAX):.1f} m/s"))
+
+        if gust is None:
+            results.append(self._skip("Wind Gust", "Wind gust not available"))
+        elif float(gust) <= float(self.GUST_MAX):
+            results.append(self._ok("Wind Gust", f"{float(gust):.1f} m/s"))
+        else:
+            results.append(self._fail("Wind Gust", f"{float(gust):.1f} m/s > {float(self.GUST_MAX):.1f} m/s"))
+
+        return results
+
+    async def check_battery(
+            self,
+            estimated_time_s: Optional[float] = None,
+            mission_ah_req: Optional[float] = None,
+    ) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        v_batt = self._value("v_batt", "battery_voltage")
+        v_min = self._value("v_min")
+
+        if v_batt is None:
+            results.append(self._skip("Battery Voltage", "Battery voltage not available"))
+        elif v_min is None:
+            results.append(self._ok("Battery Voltage", f"{float(v_batt):.2f} V (no minimum threshold)"))
+        elif float(v_batt) >= float(v_min):
+            results.append(self._ok("Battery Voltage", f"{float(v_batt):.2f} V"))
+        else:
+            results.append(self._fail("Battery Voltage", f"{float(v_batt):.2f} V < {float(v_min):.2f} V"))
+
+        # Estimate mission time if possible
+        if estimated_time_s is None and getattr(self.ctx, "mission", None) is not None:
+            try:
+                total_dist = self.ctx.total_distance() if hasattr(self.ctx, "total_distance") else None
+                speed = getattr(self.ctx.mission, "speed", None)
+                if total_dist is not None and speed and float(speed) > 0:
+                    estimated_time_s = float(total_dist) / float(speed)
+            except Exception:
+                pass
+
+        max_flight_time_s = self._value("max_flight_time_s")
+        remaining_pct = self._value("battery_remaining_pct", "battery_remaining")
+
+        if estimated_time_s and max_flight_time_s and remaining_pct is not None:
+            required_pct = (float(estimated_time_s) / float(max_flight_time_s)) * 100.0
+            needed = required_pct + float(self.BATTERY_RESERVE_PCT)
+            remaining = float(remaining_pct)
+
+            if remaining >= needed:
+                results.append(self._ok("Battery Budget (%)", f"Remaining {remaining:.1f}% >= Needed {needed:.1f}%"))
+            else:
+                results.append(self._fail("Battery Budget (%)", f"Remaining {remaining:.1f}% < Needed {needed:.1f}%"))
+        else:
+            results.append(self._skip("Battery Budget (%)", "Insufficient data for % budget"))
+
+        remaining_ah = self._value("battery_remaining_Ah")
+        if mission_ah_req is not None and remaining_ah is not None:
+            margin = float(remaining_ah) - float(mission_ah_req)
+            if margin >= float(self.BATTERY_RESERVE_AH):
+                results.append(self._ok("Battery Budget (Ah)", f"Margin {margin:.2f} Ah"))
+            else:
+                results.append(self._fail("Battery Budget (Ah)", f"Margin {margin:.2f} Ah < {float(self.BATTERY_RESERVE_AH):.2f} Ah"))
+        elif mission_ah_req is not None:
+            results.append(self._skip("Battery Budget (Ah)", "Ah data not available"))
+
+        return results
+
+    async def check_failsafe_config(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        rtl_alt = self._value("rtl_alt_m")
+        if rtl_alt is None:
+            results.append(self._skip("RTL Altitude", "rtl_alt_m not available"))
+        elif float(rtl_alt) >= float(self.RTL_MIN_ALT):
+            results.append(self._ok("RTL Altitude", f"{float(rtl_alt):.1f} m"))
+        else:
+            results.append(self._fail("RTL Altitude", f"{float(rtl_alt):.1f} m < {float(self.RTL_MIN_ALT):.1f} m"))
+
+        batt_fs = self._value("battery_failsafe_enabled")
+        if batt_fs is None:
+            results.append(self._skip("Battery Failsafe", "battery_failsafe_enabled not available"))
+        elif bool(batt_fs):
+            results.append(self._ok("Battery Failsafe"))
+        else:
+            results.append(self._fail("Battery Failsafe", "Battery failsafe not enabled"))
+
+        gf_action = self._value("geo_fence_action")
+        if gf_action is None:
+            results.append(self._skip("Geofence Action", "geo_fence_action not available"))
+        elif int(gf_action) != 0:  # 0 = NONE
+            results.append(self._ok("Geofence Action", f"{int(gf_action)}"))
+        else:
+            results.append(self._fail("Geofence Action", "Geofence action set to NONE"))
+
+        return results
+
+
+    # -------------------------
+    # Additional common checks
+    # -------------------------
+
+    async def check_rc_link(self) -> List[CheckResult]:
+        """
+        RC link presence/quality. Best-effort.
+        Looks for:
+          - rc_link_ok / rc_present boolean
+          - rc_rssi (0..100) threshold
+          - rc_failsafe boolean (FAIL if active)
+        """
+        results: List[CheckResult] = []
+
+        rc_failsafe = self._value("rc_failsafe", "failsafe_rc")
+        if rc_failsafe is not None and bool(rc_failsafe):
+            results.append(self._fail("RC Link", "RC failsafe active"))
+            return results
+
+        rc_ok = self._value("rc_link_ok", "rc_present", "rc_ok")
+        if rc_ok is not None:
+            if bool(rc_ok):
+                results.append(self._ok("RC Link", "Present"))
+            else:
+                results.append(self._fail("RC Link", "Not present"))
+                return results
+        else:
+            results.append(self._skip("RC Link", "RC presence not available"))
+
+        rssi = self._value("rc_rssi", "rssi", "rc_signal_percent")
+        if rssi is None:
+            results.append(self._skip("RC RSSI", "RC RSSI not available"))
+        else:
+            rssi_f = float(rssi)
+            if rssi_f >= float(self.RC_RSSI_MIN):
+                results.append(self._ok("RC RSSI", f"{rssi_f:.0f}%"))
+            else:
+                results.append(self._warn("RC RSSI", f"{rssi_f:.0f}% < {float(self.RC_RSSI_MIN):.0f}%"))
+
+        return results
+
+    async def check_compass_health(self) -> List[CheckResult]:
+        """
+        Compass health/calibration. Best-effort.
+        """
+        results: List[CheckResult] = []
+
+        healthy = self._value("compass_healthy", "mag_healthy")
+        if healthy is None:
+            results.append(self._skip("Compass Health", "Compass health not available"))
+        elif bool(healthy):
+            results.append(self._ok("Compass Health"))
+        else:
+            # If compass health required, FAIL; else WARN.
+            if bool(self.COMPASS_HEALTH_REQUIRED):
+                results.append(self._fail("Compass Health", "Compass unhealthy"))
+            else:
+                results.append(self._warn("Compass Health", "Compass unhealthy"))
+
+        calibrated = self._value("compass_calibrated", "mag_calibrated")
+        if calibrated is None:
+            results.append(self._skip("Compass Calibration", "Compass calibration not available"))
+        elif bool(calibrated):
+            results.append(self._ok("Compass Calibration"))
+        else:
+            results.append(self._warn("Compass Calibration", "Compass not calibrated"))
+
+        return results
+
+    async def check_imu_calibration(self) -> List[CheckResult]:
+        """
+        IMU calibration / sensor readiness. Best-effort.
+        """
+        results: List[CheckResult] = []
+
+        imu_cal = self._value("imu_calibrated")
+        accel_cal = self._value("accel_calibrated")
+        gyro_cal = self._value("gyro_calibrated")
+
+        if imu_cal is None and accel_cal is None and gyro_cal is None:
+            return [self._skip("IMU Calibration", "IMU calibration telemetry not available")]
+
+        # Prefer imu_calibrated when present
+        if imu_cal is not None:
+            if bool(imu_cal):
+                results.append(self._ok("IMU Calibration"))
+            else:
+                results.append(self._fail("IMU Calibration", "IMU not calibrated"))
+            return results
+
+        if accel_cal is not None:
+            results.append(self._ok("Accel Calibration") if bool(accel_cal) else self._fail("Accel Calibration", "Accel not calibrated"))
+        if gyro_cal is not None:
+            results.append(self._ok("Gyro Calibration") if bool(gyro_cal) else self._fail("Gyro Calibration", "Gyro not calibrated"))
+
+        return results
+
+    async def check_storage_logging(self) -> List[CheckResult]:
+        """
+        Storage/logging availability. Best-effort.
+        """
+        results: List[CheckResult] = []
+
+        sd_present = self._value("sdcard_present", "log_storage_present")
+        if sd_present is None:
+            results.append(self._skip("Log Storage", "Storage presence not available"))
+        elif bool(sd_present):
+            results.append(self._ok("Log Storage", "Present"))
+        else:
+            results.append(self._warn("Log Storage", "Not present"))
+
+        logging_enabled = self._value("logging_enabled", "log_enabled")
+        if logging_enabled is None:
+            results.append(self._skip("Logging Enabled", "Logging enable flag not available"))
+        elif bool(logging_enabled):
+            results.append(self._ok("Logging Enabled"))
+        else:
+            results.append(self._warn("Logging Enabled", "Logging disabled"))
+
+        free_mb = self._value("log_free_mb", "storage_free_mb", "sd_free_mb")
+        if free_mb is None:
+            results.append(self._skip("Log Free Space", "Free space not available"))
+        else:
+            free_mb_f = float(free_mb)
+            if free_mb_f >= float(self.LOG_FREE_MB_MIN):
+                results.append(self._ok("Log Free Space", f"{free_mb_f:.0f} MB"))
+            else:
+                results.append(self._warn("Log Free Space", f"{free_mb_f:.0f} MB < {float(self.LOG_FREE_MB_MIN):.0f} MB"))
+
+        return results
+
+    async def check_gnss_interference(self) -> List[CheckResult]:
+        """
+        GNSS jamming/interference. Best-effort.
+        If provided, expects a normalized 0..1 interference metric, or a dB/ratio metric that your telemetry defines.
+        """
+        metric = self._value("gnss_interference", "gps_interference", "gps_jamming_indicator", "gnss_jamming")
+        if metric is None:
+            # Some stacks provide "noise_per_ms" or "jamming_level"
+            noise = self._value("noise_per_ms", "gps_noise")
+            if noise is None:
+                return [self._skip("GNSS Interference", "Interference telemetry not available")]
+            # Without a threshold definition, surface as WARN/INFO only.
+            return [self._warn("GNSS Interference", f"Noise={noise} (no thresholds)")]
+
+        try:
+            m = float(metric)
+        except Exception:
+            return [self._warn("GNSS Interference", f"Value={metric} (unparseable)")]
+
+        if m >= float(self.GNSS_INTERFERENCE_FAIL):
+            return [self._fail("GNSS Interference", f"{m:.2f} >= {float(self.GNSS_INTERFERENCE_FAIL):.2f}")]
+        if m >= float(self.GNSS_INTERFERENCE_WARN):
+            return [self._warn("GNSS Interference", f"{m:.2f} >= {float(self.GNSS_INTERFERENCE_WARN):.2f}")]
+        return [self._ok("GNSS Interference", f"{m:.2f}")]
+
+    # -------------------------
+    # Mission integrity (optional)
+    # -------------------------
+
+    async def check_mission_integrity(
+            self,
+            mission_waypoints: Sequence[Any],
+            expected_count: int,
+            mission_crc: Optional[int],
+    ) -> List[CheckResult]:
+        results: List[CheckResult] = []
+
+        if len(mission_waypoints) == int(expected_count):
+            results.append(self._ok("Mission Count", f"{len(mission_waypoints)}"))
+        else:
+            results.append(self._fail("Mission Count", f"Got {len(mission_waypoints)}, expected {int(expected_count)}"))
+
+        current_crc = getattr(self.v, "mission_crc", None)
+        if mission_crc is None:
+            results.append(self._skip("Mission CRC", "No CRC provided"))
+        elif current_crc is None:
+            results.append(self._skip("Mission CRC", "Vehicle mission_crc not available"))
+        elif int(mission_crc) == int(current_crc):
+            results.append(self._ok("Mission CRC"))
+        else:
+            results.append(self._fail("Mission CRC", "Mission CRC mismatch"))
+
+        return results
+
+    # -------------------------
+    # Priority runner
+    # -------------------------
+
+    def _specs(
+            self,
+            *,
+            estimated_time_s: Optional[float],
+            mission_ah_req: Optional[float],
+            allowed_modes: Optional[List[str]],
+            gps_timeout_s: float,
+            mission_waypoints: Optional[List[Any]],
+            expected_mission_count: Optional[int],
+            mission_crc: Optional[int],
+    ) -> List[CheckSpec]:
+        specs: List[CheckSpec] = [
+            # ---- CRITICAL gates ----
+            CheckSpec("Link Health", Priority.CRITICAL, True, lambda: self.check_link_health()),
+            CheckSpec("Arming Checks", Priority.CRITICAL, True, lambda: self.check_arming_checks()),
+            CheckSpec("Vehicle Readiness", Priority.CRITICAL, True, lambda: self.check_vehicle_readiness(allowed_modes=allowed_modes)),
+            CheckSpec("GPS Quality", Priority.CRITICAL, True, lambda: self.check_gps_quality(timeout_s=gps_timeout_s)),
+            CheckSpec("EKF Health", Priority.CRITICAL, True, lambda: self.check_ekf_health()),
+            CheckSpec("Battery", Priority.CRITICAL, True, lambda: self.check_battery(estimated_time_s=estimated_time_s, mission_ah_req=mission_ah_req)),
+
+            # ---- SAFETY checks ----
+            CheckSpec("Failsafe Config", Priority.SAFETY, True, lambda: self.check_failsafe_config()),
+            CheckSpec("Home Position", Priority.SAFETY, True, lambda: self.check_home_position()),
+            CheckSpec("Wind", Priority.SAFETY, False, lambda: self.check_wind()),
+            CheckSpec("Geofence", Priority.SAFETY, True, lambda: self.check_geofence()),
+            CheckSpec("Terrain Clearance", Priority.SAFETY, True, lambda: self.check_terrain_clearance()),
+
+            # ---- QUALITY diagnostics ----
+            CheckSpec("RC Link", Priority.QUALITY, False, lambda: self.check_rc_link()),
+            CheckSpec("Compass", Priority.QUALITY, False, lambda: self.check_compass_health()),
+            CheckSpec("IMU", Priority.QUALITY, False, lambda: self.check_imu_calibration()),
+            CheckSpec("Storage/Logging", Priority.QUALITY, False, lambda: self.check_storage_logging()),
+            CheckSpec("GNSS Interference", Priority.QUALITY, False, lambda: self.check_gnss_interference()),
+        ]
+
         if mission_waypoints is not None and expected_mission_count is not None:
-            results.extend(self.check_mission_integrity(mission_waypoints,
-                                                        expected_mission_count,
-                                                        mission_crc))
+            specs.append(
+                CheckSpec(
+                    "Mission Integrity",
+                    Priority.QUALITY,
+                    False,
+                    lambda: self.check_mission_integrity(
+                        mission_waypoints=mission_waypoints,
+                        expected_count=expected_mission_count,
+                        mission_crc=mission_crc,
+                    ),
+                )
+            )
 
-        # Failsafe configuration
-        results.extend(self.check_failsafe_config())
+        # Stable sort by priority (IntEnum order), then keep insertion order within same priority
+        return sorted(specs, key=lambda s: int(s.priority))
 
-        # Filter out None results
-        return [r for r in results if r is not None]
+    async def run(
+            self,
+            estimated_time_s: Optional[float] = None,
+            mission_waypoints: Optional[List[Any]] = None,
+            expected_mission_count: Optional[int] = None,
+            mission_crc: Optional[int] = None,
+            mission_ah_req: Optional[float] = None,
+            allowed_modes: Optional[List[str]] = None,
+            gps_timeout_s: float = 30.0,
+            fail_fast: bool = True,
+            concurrent_within_priority: bool = True,
+    ) -> List[CheckResult]:
+        """
+        Executes checks in priority order.
+
+        - fail_fast=True: if any CRITICAL/SAFETY gate FAILs, remaining lower-priority checks are SKIPped.
+        - concurrent_within_priority=True: runs checks of same priority concurrently.
+        """
+        specs = self._specs(
+            estimated_time_s=estimated_time_s,
+            mission_ah_req=mission_ah_req,
+            allowed_modes=allowed_modes,
+            gps_timeout_s=gps_timeout_s,
+            mission_waypoints=mission_waypoints,
+            expected_mission_count=expected_mission_count,
+            mission_crc=mission_crc,
+        )
+
+        results: List[CheckResult] = []
+        gates_failed = False
+        last_priority: Optional[Priority] = None
+        batch: List[CheckSpec] = []
+
+        async def run_spec(spec: CheckSpec) -> List[CheckResult]:
+            try:
+                out = await spec.coro()
+                return out if isinstance(out, list) else [out]
+            except Exception as e:
+                # preflight should be resilient; convert exceptions to FAIL for gates, WARN otherwise
+                if spec.is_gate:
+                    return [self._fail(spec.name, f"Exception: {type(e).__name__}: {e}")]
+                return [self._warn(spec.name, f"Exception: {type(e).__name__}: {e}")]
+
+        async def flush_batch() -> None:
+            nonlocal gates_failed, results, batch, last_priority
+
+            if not batch:
+                return
+
+            # If we already failed gates and we're fail-fast, skip remaining batches
+            if fail_fast and gates_failed:
+                for s in batch:
+                    results.append(self._skip(s.name, "Skipped due to previous gate failure"))
+                batch = []
+                return
+
+            if concurrent_within_priority and len(batch) > 1:
+                groups = await asyncio.gather(*(run_spec(s) for s in batch), return_exceptions=False)
+                flat: List[CheckResult] = []
+                for g in groups:
+                    flat.extend(g)
+            else:
+                flat = []
+                for s in batch:
+                    flat.extend(await run_spec(s))
+
+            results.extend(flat)
+
+            # Update gate-failure state
+            if fail_fast:
+                for s in batch:
+                    if s.is_gate:
+                        # Determine if this spec produced any FAIL
+                        spec_results = [r for r in flat if r.name == s.name or r.name.startswith(s.name)]
+                        if any(r.status == CheckStatus.FAIL for r in spec_results):
+                            gates_failed = True
+                            break
+
+            batch = []
+
+        # Group by priority and flush per priority
+        for spec in specs:
+            if last_priority is None:
+                last_priority = spec.priority
+                batch.append(spec)
+                continue
+
+            if spec.priority != last_priority:
+                await flush_batch()
+                last_priority = spec.priority
+                batch.append(spec)
+            else:
+                batch.append(spec)
+
+        await flush_batch()
+
+        # Deduplicate by name (defensive)
+        results = self._dedupe_by_name(results)
+
+        # Final ordering: priority buckets first, then status severity within each bucket
+        status_rank = {
+            CheckStatus.FAIL: 0,
+            CheckStatus.WARN: 1,
+            CheckStatus.PASS: 2,
+            CheckStatus.SKIP: 3,
+        }
+
+        # Create a map from spec-name to priority (for ordering)
+        prio_map = {s.name: s.priority for s in specs}
+
+        def result_priority(r: CheckResult) -> int:
+            # If name matches spec, use it; else default to INFO
+            return int(prio_map.get(r.name, Priority.INFO))
+
+        results.sort(key=lambda r: (result_priority(r), status_rank.get(r.status, 99), r.name))
+        return results

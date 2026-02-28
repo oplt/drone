@@ -22,10 +22,10 @@ def _start_streaming_server_via_ssh() -> None:
     Start the Raspberry Pi Flask camera server in background via SSH.
     Uses the same approach as pc_view_stream.py.
     """
-    pi_host = settings.rasperry_ip
-    pi_user = settings.rasperry_user
+    pi_host = settings.raspberry_ip
+    pi_user = settings.raspberry_user
     ssh_key = settings.ssh_key_path
-    remote_script = settings.rasperry_streaming_script_path
+    remote_script = settings.raspberry_streaming_script_path
 
     if not all([pi_host, pi_user, ssh_key, remote_script]):
         raise RuntimeError("Missing Raspberry Pi SSH settings in backend.config.settings")
@@ -71,7 +71,7 @@ async def start_pi_camera_server(user=Depends(require_admin)):
     Starts the Raspberry Pi streaming server over SSH (best effort).
     Returns the backend proxy URL clients should use.
     """
-    stream_src = f"http://{settings.rasperry_ip}:{PI_PORT}/video_feed"
+    stream_src = f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
     # First, check if the stream is already accessible
     try:
@@ -116,7 +116,7 @@ async def mjpeg_proxy(request: Request, user=Depends(require_user_header_or_quer
     Proxies the MJPEG stream from the Raspberry Pi so the frontend can load it
     from the same API origin (avoids CORS/network issues).
     """
-    src_url = f"http://{settings.rasperry_ip}:{PI_PORT}/video_feed"
+    src_url = f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
     async def stream_bytes() -> AsyncIterator[bytes]:
         """Generator function that yields video frames"""

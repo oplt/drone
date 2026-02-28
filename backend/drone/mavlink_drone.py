@@ -53,7 +53,7 @@ class MavlinkDrone(DroneClient):
         # print(f"Home location set: {self.home_location}")
         logger.info(f"Home location set: {self.home_location}")
 
-        """this function and heart beat flow should be added on rasperry pi on drone"""
+        """this function and heart beat flow should be added on raspberry pi on drone"""
         # Start the dead man's switch monitoring
         # self.start_dead_mans_switch()
 
@@ -194,6 +194,8 @@ class MavlinkDrone(DroneClient):
         if rel is None:
             raise RuntimeError("Vehicle location not ready yet")
         bat = getattr(v, "battery", None)
+        gps = getattr(v, "gps_0", None)
+        home = getattr(v, "home_location", None) or self.home_location
         return Telemetry(
             lat=rel.lat,
             lon=rel.lon,
@@ -204,6 +206,15 @@ class MavlinkDrone(DroneClient):
             battery_voltage=getattr(bat, "voltage", None),
             battery_current=getattr(bat, "current", None),
             battery_remaining=getattr(bat, "level", None),
+            gps_fix_type=getattr(gps, "fix_type", None),
+            hdop=getattr(gps, "eph", None),
+            satellites_visible=getattr(gps, "satellites_visible", None),
+            heartbeat_age_s=getattr(v, "last_heartbeat", None),
+            is_armable=getattr(v, "is_armable", None),
+            home_set=home is not None,
+            home_lat=getattr(home, "lat", None) if home is not None else None,
+            home_lon=getattr(home, "lon", None) if home is not None else None,
+            ekf_ok=getattr(v, "ekf_ok", None),
         )
 
     def follow_waypoints(self, path):

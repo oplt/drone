@@ -6,10 +6,10 @@ import numpy as np
 from backend.config import settings
 
 # ---------- CONFIGURATION ----------
-PI_HOST = settings.rasperry_ip
-PI_USER = settings.rasperry_user
+PI_HOST = settings.raspberry_ip
+PI_USER = settings.raspberry_user
 SSH_KEY_PATH = settings.ssh_key_path
-REMOTE_PY_SCRIPT = settings.rasperry_streaming_script_path
+REMOTE_PY_SCRIPT = settings.raspberry_streaming_script_path
 PI_PORT = 5000
 STREAM_URL = f"http://{PI_HOST}:{PI_PORT}/video_feed"
 

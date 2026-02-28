@@ -8,7 +8,7 @@ from backend.db.repository import SettingsRepository  # the repo you create for 
 _env = EnvSettings()  # env bootstrap (still ok)
 
 async def get_runtime_settings(repo: SettingsRepository) -> EnvSettings:
-    db_values: Dict[str, Any] = await repo.get_settings()  # dict from DB
+    db_values: Dict[str, Any] = await repo.get_settings_doc()  # dict from DB
     merged = _env.model_dump()
     merged.update(db_values)  # DB overrides env
     runtime = EnvSettings.model_validate(merged)

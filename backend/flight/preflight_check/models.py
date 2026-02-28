@@ -1,5 +1,4 @@
-# drone/preflight/models.py
-
+import asyncio
 import hashlib
 import json
 from typing import List, Dict, Optional, Any, Tuple
@@ -97,47 +96,33 @@ class MissionDataPreprocessor:
         self.distance_cache = DistanceCache()
         self._precomputed: Dict[str, PrecomputedMissionData] = {}
 
-    def preprocess(self, waypoints: List[Any], terrain_data=None) -> PrecomputedMissionData:
-        """
-        Precompute all mission data.
-
-        Args:
-            waypoints: List of waypoints
-            terrain_data: Optional terrain data provider
-
-        Returns:
-            PrecomputedMissionData object
-        """
-        # Create a hash of the waypoints for caching
+    async def preprocess(
+            self,
+            waypoints: List[Any],
+            terrain_data=None
+    ) -> PrecomputedMissionData:
+        """Async version: fetches terrain elevations concurrently."""
         wp_summary = [(w.lat, w.lon, getattr(w, 'alt', 0)) for w in waypoints]
         cache_key = hashlib.md5(json.dumps(wp_summary).encode()).hexdigest()
 
-        # Return cached if available
         if cache_key in self._precomputed:
             return self._precomputed[cache_key]
 
-        # Create new precomputed data
         precomputed = PrecomputedMissionData(waypoints=waypoints)
 
-        # Precompute terrain elevations if terrain data available
         if terrain_data and hasattr(terrain_data, 'get_elevation'):
-            for wp in waypoints:
-                # Check cache first
-                elev = self.terrain_cache.get(wp.lat, wp.lon)
-                if elev is None:
-                    # Fetch from terrain data
-                    try:
-                        elev = terrain_data.get_elevation(wp.lat, wp.lon)
-                        if elev is not None:
-                            self.terrain_cache.set(wp.lat, wp.lon, elev)
-                    except Exception:
-                        elev = None
-                precomputed.terrain_elevations.append(elev)
+            # Fetch all elevations concurrently
+            tasks = [
+                self.terrain_cache.get_or_fetch(
+                    wp.lat, wp.lon,
+                    terrain_data.get_elevation
+                )
+                for wp in waypoints
+            ]
+            precomputed.terrain_elevations = await asyncio.gather(*tasks)
         else:
-            # Fill with None if no terrain data
             precomputed.terrain_elevations = [None] * len(waypoints)
 
-        # Cache the result
         self._precomputed[cache_key] = precomputed
         return precomputed
 
@@ -148,3 +133,6 @@ class MissionDataPreprocessor:
         self.terrain_cache.clear()
         self.distance_cache = DistanceCache()
         self._precomputed.clear()
+
+
+

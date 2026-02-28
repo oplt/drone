@@ -1,6 +1,6 @@
 from .schemas import CheckResult, CheckStatus
 from math import tan, radians, atan, sqrt, pi, sin, cos
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Iterable, Tuple, Sequence
 from ..missions.schemas import (
     Mission, GridMission, OrbitMission, TerrainFollowMission,
     PerimeterPatrolMission, AdaptiveAltitudeMission, Waypoint
@@ -38,9 +38,244 @@ class MissionPreflightBase:
         """Get cached terrain elevation."""
         return self.ctx.get_waypoint_terrain(idx)
 
-    def run(self) -> List[CheckResult]:
-        """Base run method to be overridden."""
-        return []
+    def _thr(self, key: str, default: Any) -> Any:
+        """Read threshold from context with a default."""
+        return self.ctx.get_threshold(key, default)
+
+    @staticmethod
+    def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Haversine distance in meters."""
+        R = 6371000.0
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        dphi = math.radians(lat2 - lat1)
+        dlambda = math.radians(lon2 - lon1)
+        a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    def _as_latlon(self, p: Any) -> Optional[Tuple[float, float]]:
+        """Best-effort extraction of (lat, lon) from waypoint/polygon point."""
+        try:
+            if isinstance(p, (tuple, list)) and len(p) >= 2:
+                return float(p[0]), float(p[1])
+            if isinstance(p, dict) and "lat" in p and "lon" in p:
+                return float(p["lat"]), float(p["lon"])
+            if hasattr(p, "lat") and hasattr(p, "lon"):
+                return float(getattr(p, "lat")), float(getattr(p, "lon"))
+            if hasattr(p, "latitude") and hasattr(p, "longitude"):
+                return float(getattr(p, "latitude")), float(getattr(p, "longitude"))
+        except Exception:
+            return None
+        return None
+
+    def _normalize_polygon(self, poly: Iterable[Any]) -> List[Tuple[float, float]]:
+        pts: List[Tuple[float, float]] = []
+        for p in poly:
+            ll = self._as_latlon(p)
+            if ll is not None:
+                pts.append(ll)
+        if len(pts) >= 2 and pts[0] == pts[-1]:
+            pts.pop()
+        return pts
+
+    @staticmethod
+    def _point_in_polygon(lat: float, lon: float, polygon: Sequence[Tuple[float, float]]) -> bool:
+        """Ray casting point-in-polygon (lat/lon treated as local planar coords)."""
+        if len(polygon) < 3:
+            return False
+        x = lon
+        y = lat
+        inside = False
+        n = len(polygon)
+        for i in range(n):
+            y1, x1 = polygon[i]
+            y2, x2 = polygon[(i + 1) % n]
+            intersects = ((y1 > y) != (y2 > y)) and (
+                    x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-16) + x1
+            )
+            if intersects:
+                inside = not inside
+        return inside
+
+    def _mission_points(self) -> List[Tuple[float, float]]:
+        """Representative mission points for containment/range checks."""
+        pts: List[Tuple[float, float]] = []
+        wps = getattr(self.mission, "waypoints", None)
+        if wps:
+            for wp in wps:
+                ll = self._as_latlon(wp)
+                if ll:
+                    pts.append(ll)
+        poly = getattr(self.mission, "polygon", None)
+        if poly:
+            for p in poly:
+                ll = self._as_latlon(p)
+                if ll:
+                    pts.append(ll)
+        return pts
+
+    # -------------------------
+    # Recommended mission-common checks (still mission-specific)
+    # -------------------------
+
+    def check_speed_limits(self) -> CheckResult:
+        """Ensure mission speed is plausible and within vehicle limits (if available)."""
+        if not hasattr(self.mission, "speed") or self.mission.speed is None:
+            return CheckResult(name="Mission Speed", status=CheckStatus.SKIP, message="No mission speed provided")
+
+        v_cmd = float(self.mission.speed)
+        v_max = getattr(self.v, "speed_max_mps", None)
+        v_cruise = getattr(self.v, "cruise_speed_mps", None)
+
+        if v_max is not None and v_cmd > float(v_max):
+            return CheckResult(name="Mission Speed", status=CheckStatus.FAIL, message=f"{v_cmd:.1f}m/s > max {float(v_max):.1f}m/s")
+
+        if v_cruise is not None and v_cmd < 0.3 * float(v_cruise):
+            return CheckResult(name="Mission Speed", status=CheckStatus.WARN, message=f"{v_cmd:.1f}m/s unusually low vs cruise {float(v_cruise):.1f}m/s")
+
+        return CheckResult(name="Mission Speed", status=CheckStatus.PASS, message=f"{v_cmd:.1f} m/s")
+
+    def check_waypoint_count_limit(self) -> CheckResult:
+        """Guard against FC mission-item limits / upload issues."""
+        wps = getattr(self.mission, "waypoints", None)
+        if not wps:
+            return CheckResult(name="Waypoint Count", status=CheckStatus.SKIP, message="No waypoints")
+        max_wps = int(self._thr("MAX_WAYPOINTS", 700))
+        if len(wps) > max_wps:
+            return CheckResult(name="Waypoint Count", status=CheckStatus.FAIL, message=f"{len(wps)} > {max_wps}")
+        return CheckResult(name="Waypoint Count", status=CheckStatus.PASS, message=f"{len(wps)}")
+
+    def check_agl_envelope_basic(self) -> CheckResult:
+        """For missions with altitude_agl, enforce envelope."""
+        agl = getattr(self.mission, "altitude_agl", None)
+        if agl is None:
+            return CheckResult(name="AGL Envelope", status=CheckStatus.SKIP, message="No altitude_agl on mission")
+        if float(agl) < float(self.AGL_MIN):
+            return CheckResult(name="AGL Envelope", status=CheckStatus.FAIL, message=f"AGL {agl}m < min {self.AGL_MIN}m")
+        if float(agl) > float(self.AGL_MAX):
+            return CheckResult(name="AGL Envelope", status=CheckStatus.FAIL, message=f"AGL {agl}m > max {self.AGL_MAX}m")
+        return CheckResult(name="AGL Envelope", status=CheckStatus.PASS, message=f"AGL {agl}m")
+
+    def check_max_range_from_home(self) -> CheckResult:
+        """Ensure mission remains within a max radius from home (if home known)."""
+        pts = self._mission_points()
+        if not pts:
+            return CheckResult(name="Max Range From Home", status=CheckStatus.SKIP, message="No mission points")
+
+        home_lat = getattr(self.v, "home_lat", None)
+        home_lon = getattr(self.v, "home_lon", None)
+        if home_lat is None or home_lon is None:
+            return CheckResult(name="Max Range From Home", status=CheckStatus.SKIP, message="Home location not available")
+
+        max_range_m = float(self._thr("MAX_RANGE_M", 5000.0))
+        worst = 0.0
+        for (lat, lon) in pts:
+            d_m = self._haversine_m(float(home_lat), float(home_lon), lat, lon)
+            worst = max(worst, d_m)
+
+        if worst > max_range_m:
+            return CheckResult(name="Max Range From Home", status=CheckStatus.FAIL, message=f"{worst:.0f}m > {max_range_m:.0f}m")
+        return CheckResult(name="Max Range From Home", status=CheckStatus.PASS, message=f"{worst:.0f}m")
+
+    def check_geofence_containment(self) -> CheckResult:
+        """Validate mission points are inside ctx.geofence_polygon (if provided)."""
+        raw_poly = getattr(self.ctx, "geofence_polygon", None)
+        if not raw_poly:
+            return CheckResult(name="Geofence Containment", status=CheckStatus.SKIP, message="No geofence polygon")
+        poly = self._normalize_polygon(raw_poly)
+        if len(poly) < 3:
+            return CheckResult(name="Geofence Containment", status=CheckStatus.FAIL, message="Invalid geofence polygon")
+
+        pts = self._mission_points()
+        if not pts:
+            return CheckResult(name="Geofence Containment", status=CheckStatus.SKIP, message="No mission points")
+
+        for i, (lat, lon) in enumerate(pts):
+            if not self._point_in_polygon(lat, lon, poly):
+                return CheckResult(name="Geofence Containment", status=CheckStatus.FAIL, message=f"Point {i} outside geofence")
+        return CheckResult(name="Geofence Containment", status=CheckStatus.PASS, message="All mission points inside")
+
+    def check_no_fly_zones(self) -> CheckResult:
+        """Validate mission points are not inside NFZ buffers (if ctx implements it)."""
+        nfz = getattr(self.ctx, "no_fly_zones", None)
+        if not nfz:
+            return CheckResult(name="No-Fly Zones", status=CheckStatus.SKIP, message="No NFZ data")
+        if not hasattr(self.ctx, "check_no_fly_zones"):
+            return CheckResult(name="No-Fly Zones", status=CheckStatus.WARN, message="NFZ present but ctx.check_no_fly_zones not implemented")
+
+        buffer_m = float(self.ctx.get_threshold("NFZ_BUFFER_M", 50.0))
+        pts = self._mission_points()
+        if not pts:
+            return CheckResult(name="No-Fly Zones", status=CheckStatus.SKIP, message="No mission points")
+
+        for i, (lat, lon) in enumerate(pts):
+            if not self.ctx.check_no_fly_zones(lat, lon, buffer_m):
+                return CheckResult(name="No-Fly Zones", status=CheckStatus.FAIL, message=f"Point {i} inside/near NFZ (buffer {buffer_m:.0f}m)")
+        return CheckResult(name="No-Fly Zones", status=CheckStatus.PASS, message=f"Buffer {buffer_m:.0f}m OK")
+
+    def check_basic_terrain_clearance(self) -> CheckResult:
+        """Generic clearance check using cached waypoint terrain (if available)."""
+        wps = getattr(self.mission, "waypoints", None)
+        if not wps:
+            return CheckResult(name="Terrain Clearance", status=CheckStatus.SKIP, message="No waypoints")
+        if not hasattr(self.ctx, "get_waypoint_terrain"):
+            return CheckResult(name="Terrain Clearance", status=CheckStatus.SKIP, message="No cached terrain in context")
+
+        min_clearance = float(self.ctx.get_threshold("MIN_CLEARANCE_M", 5.0))
+        for i, wp in enumerate(wps):
+            terrain = self._get_terrain(i)
+            if terrain is None:
+                return CheckResult(name="Terrain Clearance", status=CheckStatus.WARN, message=f"Terrain missing at waypoint {i}")
+            alt = getattr(wp, "alt", None)
+            if alt is None:
+                return CheckResult(name="Terrain Clearance", status=CheckStatus.WARN, message=f"Waypoint {i} missing alt")
+            clearance = float(alt) - float(terrain)
+            if clearance < min_clearance:
+                return CheckResult(name="Terrain Clearance", status=CheckStatus.FAIL, message=f"WP{i} clearance {clearance:.1f}m < {min_clearance:.1f}m")
+        return CheckResult(name="Terrain Clearance", status=CheckStatus.PASS, message=f"Min clearance >= {min_clearance:.1f}m")
+
+    def check_grid_turn_margin(self) -> CheckResult:
+        """Grid missions: approximate row-end turning feasibility based on spacing and speed."""
+        if not hasattr(self.mission, "speed") or self.mission.speed is None:
+            return CheckResult(name="Grid Turn Margin", status=CheckStatus.SKIP, message="No mission speed")
+        spacing = getattr(self.mission, "line_spacing_m", None)
+        if spacing is None:
+            return CheckResult(name="Grid Turn Margin", status=CheckStatus.SKIP, message="No line_spacing_m")
+
+        v = float(self.mission.speed)
+        bank_max = float(self.BANK_MAX_DEG)
+        g = 9.81
+        # min radius from bank angle limit
+        min_r = v * v / (g * math.tan(math.radians(bank_max)) + 1e-9)
+        # crude available radius ~ half spacing (U-turn in corridor)
+        avail_r = 0.5 * float(spacing)
+
+        if avail_r <= 0:
+            return CheckResult(name="Grid Turn Margin", status=CheckStatus.SKIP, message="Invalid spacing")
+
+        if avail_r < 0.8 * min_r:
+            return CheckResult(name="Grid Turn Margin", status=CheckStatus.FAIL, message=f"Avail R~{avail_r:.1f}m < min {min_r:.1f}m (bank {bank_max:.0f}°)")
+        if avail_r < min_r:
+            return CheckResult(name="Grid Turn Margin", status=CheckStatus.WARN, message=f"Avail R~{avail_r:.1f}m slightly < min {min_r:.1f}m")
+        return CheckResult(name="Grid Turn Margin", status=CheckStatus.PASS, message=f"Avail R~{avail_r:.1f}m, min {min_r:.1f}m")
+
+    async def run(self) -> List[CheckResult]:
+        return [CheckResult(name="Mission Type", status=CheckStatus.WARN, message="No mission-specific checks registered")]
+
+
+class WaypointMissionPreflight(MissionPreflightBase):
+    """Generic waypoint-route mission (non-grid/orbit/patrol) checks."""
+
+    async def run(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
+        results.append(self.check_waypoint_count_limit())
+        results.append(self.check_speed_limits())
+        results.append(self.check_max_range_from_home())
+        results.append(self.check_geofence_containment())
+        results.append(self.check_no_fly_zones())
+        results.append(self.check_basic_terrain_clearance())
+        return results
 
 
 class GridMissionPreflight(MissionPreflightBase):
@@ -123,13 +358,23 @@ class GridMissionPreflight(MissionPreflightBase):
             message=f"Est. time: {flight_time_s/60:.1f}min"
         )
 
-    def run(self) -> List[CheckResult]:
+    async def run(self) -> List[CheckResult]:
         """Run all grid mission checks."""
-        results = []
+        results: List[CheckResult] = []
+        # Common mission-specific safety/validity checks
+        results.append(self.check_waypoint_count_limit())
+        results.append(self.check_speed_limits())
+        results.append(self.check_agl_envelope_basic())
+        results.append(self.check_max_range_from_home())
+        results.append(self.check_geofence_containment())
+        results.append(self.check_no_fly_zones())
+        results.append(self.check_basic_terrain_clearance())
+        results.append(self.check_grid_turn_margin())
+
+        # Grid-specific payload/coverage checks
         results.append(self.check_camera_footprint())
         results.append(self.check_mission_duration())
         return results
-
 
 class TerrainFollowMissionPreflight(MissionPreflightBase):
     """Terrain-following mission checks using context."""
@@ -201,10 +446,17 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
 
         return results
 
-    def run(self) -> List[CheckResult]:
+    async def run(self) -> List[CheckResult]:
         """Run all terrain-following mission checks."""
-        return self.check_terrain_follow_feasibility()
-
+        results: List[CheckResult] = []
+        results.append(self.check_waypoint_count_limit())
+        results.append(self.check_speed_limits())
+        results.append(self.check_max_range_from_home())
+        results.append(self.check_geofence_containment())
+        results.append(self.check_no_fly_zones())
+        # terrain-follow includes its own climb/descent feasibility and uses cached terrain
+        results.extend(self.check_terrain_follow_feasibility())
+        return results
 
 class OrbitMissionPreflight(MissionPreflightBase):
     """Orbit / POI mission preflight checks."""
@@ -284,13 +536,16 @@ class OrbitMissionPreflight(MissionPreflightBase):
             message=f"Radius: {self.mission.radius}m, Standoff OK"
         )
 
-    def run(self) -> List[CheckResult]:
+    async def run(self) -> List[CheckResult]:
         """Run all orbit mission checks."""
-        results = []
+        results: List[CheckResult] = []
+        results.append(self.check_speed_limits())
+        results.append(self.check_max_range_from_home())
+        results.append(self.check_geofence_containment())
+        results.append(self.check_no_fly_zones())
         results.extend(self.check_turn_feasibility())
         results.append(self.check_clearance())
         return results
-
 
 class PerimeterPatrolMissionPreflight(MissionPreflightBase):
     """Perimeter patrol (polygon follow) mission preflight checks."""
@@ -436,14 +691,18 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
             message=f"Buffer: {self.mission.path_offset_m}m (min {self.mission.boundary_buffer_min}m)"
         )
 
-    def run(self) -> List[CheckResult]:
+    async def run(self) -> List[CheckResult]:
         """Run all perimeter patrol checks."""
-        results = []
+        results: List[CheckResult] = []
         results.append(self.check_polygon_validity())
+        results.append(self.check_speed_limits())
+        results.append(self.check_agl_envelope_basic())
+        results.append(self.check_max_range_from_home())
+        results.append(self.check_geofence_containment())
+        results.append(self.check_no_fly_zones())
         results.append(self.check_boundary_buffer())
         results.append(self.check_cornering_limits())
         return results
-
 
 class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
     """Adaptive altitude over elevation models preflight checks."""
@@ -502,25 +761,20 @@ class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
             message=f"Target AGL {self.mission.target_agl}m within envelope"
         )
 
-    def run(self) -> List[CheckResult]:
+    async def run(self) -> List[CheckResult]:
         """Run all adaptive altitude checks."""
-        results = []
+        results: List[CheckResult] = []
+        results.append(self.check_waypoint_count_limit())
+        results.append(self.check_speed_limits())
+        results.append(self.check_max_range_from_home())
+        results.append(self.check_geofence_containment())
+        results.append(self.check_no_fly_zones())
         results.extend(self.check_altitude_limits())
         results.append(self.check_agl_envelope())
         return results
 
-
-# Factory function to create appropriate mission preflight instance
 def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
-    """
-    Factory function to create the appropriate mission preflight instance.
 
-    Args:
-        context: PreflightContext containing mission and vehicle state
-
-    Returns:
-        Appropriate MissionPreflightBase subclass instance
-    """
     mission_type = context.mission.type.lower() if hasattr(context.mission, 'type') else ""
 
     mission_classes = {
@@ -534,6 +788,9 @@ def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
         'polygon': PerimeterPatrolMissionPreflight,
         'patrol': PerimeterPatrolMissionPreflight,
         'adaptive_altitude': AdaptiveAltitudeMissionPreflight,
+        'waypoints': WaypointMissionPreflight,
+        'waypoint': WaypointMissionPreflight,
+        'route': WaypointMissionPreflight,
     }
 
     # Handle aliases

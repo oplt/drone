@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from backend.config import settings
 from backend.db.models import Base
 
+
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -22,6 +23,12 @@ def get_url() -> str:
     return settings.database_url
 
 
+def include_object(obj, name, type_, reflected, compare_to):
+    if type_ == "table" and name == "spatial_ref_sys":
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     url = get_url()
     context.configure(
@@ -29,6 +36,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
         compare_type=True,
         compare_server_default=True,
     )

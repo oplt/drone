@@ -1,35 +1,25 @@
 from __future__ import annotations
-from typing import Any, Dict
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-
-from backend.db.repository import SettingsRepository
-from backend.auth.deps import require_admin
+from fastapi import APIRouter, Request
+from backend.schemas.settings import SettingsDoc
 from backend.utils.config_runtime import get_runtime_settings
+from backend.db.repository import SettingsRepository
 
-router = APIRouter(prefix="/settings", tags=["settings"])
+router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-
-class SettingsPayload(BaseModel):
-    data: Dict[str, Any]
-
-
-@router.get("", response_model=Dict[str, Any])
-async def get_settings(
-    repo: SettingsRepository = Depends(SettingsRepository),
-    user=Depends(require_admin),
-):
-    return await repo.get_settings()
+svc = SettingsRepository()
 
 
-@router.put("", response_model=Dict[str, Any])
-async def save_settings(
-    payload: SettingsPayload,
-    repo: SettingsRepository = Depends(SettingsRepository),
-    user=Depends(require_admin),
-):
-    await repo.upsert_settings(payload.data)
-    # Refresh runtime settings so changes take effect immediately.
-    await get_runtime_settings(repo)
-    return payload.data
+@router.get("", response_model=SettingsDoc)
+async def get_settings():
+    return await svc.get_settings_doc()
+
+
+@router.put("", response_model=SettingsDoc)
+async def put_settings(payload: SettingsDoc, request: Request):
+    saved = await svc.put_settings_doc(payload.model_dump())
+
+    # refresh runtime settings used by orchestrator/preflight (loaded on startup) :contentReference[oaicite:9]{index=9}
+    request.app.state.settings = await get_runtime_settings(SettingsRepository())
+
+    return saved

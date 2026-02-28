@@ -1,18 +1,19 @@
 """generate tables
 
-Revision ID: 1502d56be2a4
+Revision ID: 5f72bb90ad98
 Revises: 
-Create Date: 2026-02-13 21:06:13.263628
+Create Date: 2026-02-26 06:07:00.032850
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+import geoalchemy2
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1502d56be2a4'
+revision: str = '5f72bb90ad98'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,6 +36,17 @@ def upgrade() -> None:
     sa.Column('dest_alt', sa.Float(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('geofences',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('polygon', geoalchemy2.types.Geometry(geometry_type='POLYGON', srid=4326, dimension=2, from_text='ST_GeomFromEWKT', name='geometry', nullable=False), nullable=False),
+    sa.Column('min_alt_m', sa.Float(), nullable=True),
+    sa.Column('max_alt_m', sa.Float(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_geofences_name'), 'geofences', ['name'], unique=False)
     op.create_table('mavlink_event',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('flight_id', sa.Integer(), nullable=False),
@@ -52,6 +64,7 @@ def upgrade() -> None:
     op.create_table('settings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('data', sa.JSON(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
@@ -64,6 +77,16 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_table('vault_secrets',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('ciphertext', sa.LargeBinary(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name', name='uq_vault_secret_name')
+    )
+    op.create_index(op.f('ix_vault_secrets_name'), 'vault_secrets', ['name'], unique=True)
     op.create_table('flight_events',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('flight_id', sa.Integer(), nullable=False),
@@ -106,11 +129,15 @@ def downgrade() -> None:
     op.drop_table('telemetry')
     op.drop_index(op.f('ix_flight_events_flight_id'), table_name='flight_events')
     op.drop_table('flight_events')
+    op.drop_index(op.f('ix_vault_secrets_name'), table_name='vault_secrets')
+    op.drop_table('vault_secrets')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     op.drop_table('settings')
     op.drop_index(op.f('ix_mavlink_event_flight_id'), table_name='mavlink_event')
     op.drop_index('idx_evt_flt_time', table_name='mavlink_event')
     op.drop_table('mavlink_event')
+    op.drop_index(op.f('ix_geofences_name'), table_name='geofences')
+    op.drop_table('geofences')
     op.drop_table('flights')
     # ### end Alembic commands ###

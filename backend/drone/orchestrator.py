@@ -12,7 +12,7 @@ from backend.db.repository import TelemetryRepository
 from backend.config import settings
 from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from backend.utils.geo import haversine_km, coord_from_home
-from backend.flight.preflight_check.preflight_check import PreflightOrchestrator
+from backend.flight.preflight_check.preflight_orch import PreflightOrchestrator
 from backend.flight.preflight_check.schemas import CheckStatus
 
 logger = logging.getLogger(__name__)
@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 
 class Orchestrator:
     def __init__(
-        self,
-        drone: DroneClient,
-        maps: GoogleMapsClient,
-        analyzer: LLMAnalyzer,
-        mqtt: MqttClient | None,
-        # opcua: DroneOpcUaServer,
-        video: DroneVideoStream | None,
-        telemetry_repo: TelemetryRepository,
-        publisher: MqttPublisher | None,
+            self,
+            drone: DroneClient,
+            maps: GoogleMapsClient,
+            analyzer: LLMAnalyzer,
+            mqtt: MqttClient | None,
+            # opcua: DroneOpcUaServer,
+            video: DroneVideoStream | None,
+            telemetry_repo: TelemetryRepository,
+            publisher: MqttPublisher | None,
     ):
         self.drone = drone
         self.maps = maps
@@ -261,7 +261,7 @@ class Orchestrator:
                 await asyncio.sleep(1.0)
 
     async def _preflight_range_check(
-        self, home: Coordinate, start: Coordinate, dest: Coordinate
+            self, home: Coordinate, start: Coordinate, dest: Coordinate
     ) -> RangeEstimateResult:
         """Range check for a simple home→start→dest→home route."""
         # Create a simple route for checking
@@ -318,7 +318,7 @@ class Orchestrator:
         )
 
     def _total_route_distance_km(
-        self, home: Coordinate, route: list[Coordinate]
+            self, home: Coordinate, route: list[Coordinate]
     ) -> float:
         """Total mission distance (km): home→route[0]→...→route[-1]→home."""
         if not route:
@@ -330,7 +330,7 @@ class Orchestrator:
         return total
 
     async def _preflight_range_check_route(
-        self, home: Coordinate, route: list[Coordinate]
+            self, home: Coordinate, route: list[Coordinate]
     ) -> RangeEstimateResult:
         """Range check over the full clicked route."""
         from backend.config import settings
@@ -382,10 +382,10 @@ class Orchestrator:
         )
 
     async def fly_route_waypoints(
-        self,
-        waypoints: list[Coordinate],
-        cruise_alt: float = 30.0,
-        interpolate_steps: int = 6,
+            self,
+            waypoints: list[Coordinate],
+            cruise_alt: float = 30.0,
+            interpolate_steps: int = 6,
     ):
         """
         Fly a route defined by clicked map waypoints.
@@ -479,6 +479,98 @@ class Orchestrator:
             note="Mission completed and returned home",
         )
 
+    async def _run_preflight_checks(
+            self,
+            waypoints: list[Coordinate],
+            alt: float,
+            **kwargs,
+    ):
+
+        mission_data = {
+            "type": "waypoint",
+            "waypoints": [
+                {"lat": w.lat, "lon": w.lon, "alt": getattr(w, "alt", None) or alt}
+                for w in waypoints
+            ],
+            "speed": kwargs.pop("mission_speed", settings.cruise_speed_mps),
+            "altitude_agl": alt,
+        }
+
+        vehicle_state = await asyncio.to_thread(self.drone.get_telemetry)
+        orchestrator = PreflightOrchestrator(config=kwargs.pop("preflight_config", {}))
+        report = await orchestrator.run(
+            vehicle_state,
+            mission_data,
+            flight_id=str(self._flight_id),
+            allowed_modes=["STANDBY", "GUIDED", "AUTO", "LOITER"],
+            **kwargs,
+        )
+
+        # --- log every individual result ---
+        logger.info(
+            f"Preflight overall: {report.overall_status} | "
+            f"pass={report.summary.get('passed', 0)} "
+            f"warn={report.summary.get('warned', 0)} "
+            f"fail={report.summary.get('failed', 0)}"
+        )
+        for result in report.base_checks + report.mission_checks:
+            level = (
+                logging.WARNING if result.status == CheckStatus.WARN
+                else logging.ERROR if result.status == CheckStatus.FAIL
+                else logging.DEBUG
+            )
+            logger.log(level, f"  [{result.status}] {result.name}: {result.message or ''}")
+
+        # --- publish report to MQTT so the ground station sees it ---
+        if self.mqtt:
+            self.mqtt.publish(
+                "drone/preflight",
+                {
+                    "timestamp": time.time(),
+                    "overall": report.overall_status,
+                    "summary": report.summary,
+                    "critical_failures": (
+                        [{"name": c.name, "message": c.message}
+                         for c in report.critical_failures]
+                        if report.critical_failures else []
+                    ),
+                },
+                qos=1,
+            )
+
+        # --- persist to DB ---
+        if self._flight_id is not None:
+            await self.repo.add_event(
+                self._flight_id,
+                "preflight_report",
+                {
+                    "overall": report.overall_status,
+                    "summary": report.summary,
+                    "critical_failures": (
+                        [c.name for c in report.critical_failures]
+                        if report.critical_failures else []
+                    ),
+                },
+            )
+
+        # --- abort on hard failure ---
+        if report.overall_status == CheckStatus.FAIL:
+            failed_names = (
+                [c.name for c in report.critical_failures]
+                if report.critical_failures
+                else [r.name for r in report.base_checks + report.mission_checks
+                      if r.status == CheckStatus.FAIL]
+            )
+            raise RuntimeError(
+                f"Preflight FAILED - mission aborted. "
+                f"Failed checks: {', '.join(failed_names)}"
+            )
+
+        # WARN is non-fatal: mission continues but operator has been notified
+        if report.overall_status == CheckStatus.WARN:
+            logger.warning("Preflight passed with warnings - proceeding with caution")
+
+        return report
 
     async def run_waypoints(self, waypoints: list[Coordinate], alt: float = 30.0):
         """Run a mission with the given waypoints"""
@@ -513,7 +605,12 @@ class Orchestrator:
             )
             logger.info(f"✅ Created flight record with ID: {self._flight_id}")
 
-            # STEP 4: Start telemetry stream (if not already running)
+            # STEP 4: Preflight checks
+            logger.info("🔍 Running preflight checks...")
+            await self._run_preflight_checks(waypoints, alt)
+            logger.info("✅ Preflight checks passed")
+
+            # STEP 5: Start telemetry stream (if not already running)
             from backend.config import settings
             from backend.messaging.websocket import telemetry_manager
 
@@ -530,7 +627,7 @@ class Orchestrator:
                 else:
                     logger.warning("⚠️ Failed to start telemetry stream")
 
-            # STEP 5: Start background tasks
+            # STEP 6: Start background tasks
             tasks = [
                 asyncio.create_task(self.heartbeat_task()),
                 asyncio.create_task(self.telemetry_publish_task()),
@@ -543,7 +640,7 @@ class Orchestrator:
             # Give tasks time to initialize
             await asyncio.sleep(0.5)
 
-            # STEP 6: Execute the mission
+            # STEP 7: Execute the mission
             await self.fly_route_waypoints(waypoints, cruise_alt=alt)
             logger.info("✅ Mission execution completed")
 
@@ -565,8 +662,6 @@ class Orchestrator:
 
             # Clean up other resources
             await self._cleanup()
-
-
 
     async def _cleanup(self):
         """Clean up orchestrator resources"""
