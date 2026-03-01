@@ -19,6 +19,8 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import { Link, useLocation } from "react-router-dom";
 import TerrainIcon from '@mui/icons-material/Terrain';
+import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
+import PermIdentityRoundedIcon from '@mui/icons-material/PermIdentityRounded';
 
 const mainListItems = [
   { text: "Operations", icon: <HomeRoundedIcon />, path: "/dashboard" },
@@ -38,6 +40,8 @@ const mainListItems = [
 ];
 
 const secondaryListItems = [
+  { text: "Profile", icon: <PermIdentityRoundedIcon />, path: "/dashboard/profile" },
+  { text: "Account", icon: <ManageAccountsRoundedIcon />, path: "/dashboard/account" },
   { text: "Settings", icon: <SettingsRoundedIcon />, path: "/dashboard/settings" },
 ];
 
@@ -60,6 +64,7 @@ export default function MenuContent() {
             <ListItem disablePadding sx={{ display: "block" }}>
               {item.children ? (
                 // Item with children (expandable)
+                <>
                 <ListItemButton
                   onClick={handleTasksClick}
                   selected={location.pathname.startsWith(item.path)}
@@ -68,25 +73,7 @@ export default function MenuContent() {
                   <ListItemText primary={item.text} />
                   {openTasks ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
-              ) : (
-                // Regular item (no children)
-                <ListItemButton
-                  component={Link}
-                  to={item.path}
-                  selected={
-                    location.pathname === item.path ||
-                    location.pathname.startsWith(`${item.path}/`)
-                  }
-                >
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              )}
-            </ListItem>
-
-            {/* Render children if they exist */}
-            {item.children && (
-              <Collapse in={openTasks} timeout="auto" unmountOnExit>
+                <Collapse in={openTasks} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding dense>
                   {item.children.map((child) => (
                     <ListItemButton
@@ -105,7 +92,22 @@ export default function MenuContent() {
                   ))}
                 </List>
               </Collapse>
-            )}
+              </>
+              ) : (
+                // Regular item (no children)
+                <ListItemButton
+                  component={Link}
+                  to={item.path}
+                  selected={
+                    location.pathname === item.path ||
+                    location.pathname.startsWith(`${item.path}/`)
+                  }
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              )}
+            </ListItem>
           </div>
         ))}
       </List>

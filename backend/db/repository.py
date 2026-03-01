@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Iterable, Mapping, List, Tuple
-from sqlalchemy import select, insert, func, literal_column
+from sqlalchemy import select, insert, func, literal_column, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from .models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent, SettingsRow, VaultSecret
 from backend.drone.models import Telemetry as TelemetryDTO
@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.db.models import Geofence
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Polygon, Point
-
 
 
 logger = logging.getLogger(__name__)
@@ -215,58 +214,135 @@ class TelemetryRepository:
 MASK = "********"
 
 
+# Vault keys (names stored in VaultSecret.name)
+V_TELEM_MQTT_PASS = "telemetry.mqtt_pass"
+V_AI_LLM_KEY = "ai.llm_api_key"
+V_PI_PASS = "raspberry.raspberry_password"
+
+SECRET_PATHS = {
+    V_TELEM_MQTT_PASS: ("telemetry", "mqtt_pass"),
+    V_AI_LLM_KEY: ("ai", "llm_api_key"),
+    V_PI_PASS: ("raspberry", "raspberry_password"),
+}
+
+
+def _ensure_dict(x: Any) -> Dict[str, Any]:
+    return x if isinstance(x, dict) else {}
+
+
+def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge override into base (dict-dict recursively)."""
+    out = dict(base)
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+def _set_path(d: Dict[str, Any], path: tuple[str, str], value: Any) -> None:
+    a, b = path
+    d.setdefault(a, {})
+    if isinstance(d[a], dict):
+        d[a][b] = value
+
+
+def _pop_path(d: Dict[str, Any], path: tuple[str, str]) -> Optional[Any]:
+    a, b = path
+    if not isinstance(d.get(a), dict):
+        return None
+    return d[a].pop(b, None)
+
+
 class SettingsRepository:
-
-
     def __init__(self) -> None:
         self._session_factory = Session
         self._vault = Vault()
 
-    async def get_settings_doc(self) -> Dict[str, Any]:
+    async def _read_row(self) -> tuple[Dict[str, Any], Optional[str]]:
         async with self._session_factory() as db:
             res = await db.execute(select(SettingsRow).where(SettingsRow.id == 1))
             row = res.scalar_one_or_none()
-            data = row.data if row else {}
+            data = (row.data if row else {}) or {}
+            updated_at = row.updated_at.isoformat() if row and getattr(row, "updated_at", None) else None
+            return dict(data), updated_at
 
-            # attach masked secret fields
-            secrets = await db.execute(select(VaultSecret))
-            sec_rows = secrets.scalars().all()
-            sec_names = {s.name for s in sec_rows}
+    async def _read_secret_names(self) -> set[str]:
+        async with self._session_factory() as db:
+            sec = await db.execute(select(VaultSecret.name))
+            return {r[0] for r in sec.all()}
 
-            # only expose the ones your UI expects
-            general = data.get("general", {})
-            if "llm_api_key" in sec_names:
-                general["llm_api_key"] = MASK
-            if "mqtt_pass" in sec_names:
-                general["mqtt_pass"] = MASK
-            data["general"] = general
+    async def get_settings_doc(self) -> Dict[str, Any]:
+        """
+        Public (UI) shape:
+        - returns SettingsDoc-compatible dict
+        - secrets are masked if present in vault
+        """
+        data, updated_at = await self._read_row()
 
-            # updated_at is handy for UI
-            if row and getattr(row, "updated_at", None):
-                data["updated_at"] = row.updated_at.isoformat()
+        # Ensure top-level sections exist so UI doesn't crash on undefined access
+        data = _deep_merge(
+            {
+                "telemetry": {},
+                "ai": {},
+                "credentials": {},
+                "hardware": {},
+                "preflight": {},
+                "raspberry": {},
+                "camera": {},
+            },
+            data,
+        )
 
-            return data
+        sec_names = await self._read_secret_names()
+        for secret_name, path in SECRET_PATHS.items():
+            if secret_name in sec_names:
+                _set_path(data, path, MASK)
+
+        if updated_at:
+            data["updated_at"] = updated_at
+
+        return data
 
     async def put_settings_doc(self, incoming: Dict[str, Any]) -> Dict[str, Any]:
         """
-        - Upsert non-secret data into SettingsRow(id=1)
-        - If incoming contains a non-masked secret, encrypt+store in VaultSecret
-        - Return saved doc with masked secrets
+        - Upsert non-secret settings JSON into SettingsRow(id=1)
+        - If incoming contains a non-masked secret, encrypt+store it in VaultSecret
+        - Never stores plaintext secrets in SettingsRow.data
+        - Returns saved doc with masked secrets
         """
+        # Normalize and ensure sections exist
+        data = _ensure_dict(incoming)
+
+        # updated_at should be DB-derived, not stored
+        data.pop("updated_at", None)
+
+        data = _deep_merge(
+            {
+                "telemetry": {},
+                "ai": {},
+                "credentials": {},
+                "hardware": {},
+                "preflight": {},
+                "raspberry": {},
+                "camera": {},
+            },
+            data,
+        )
+
         async with self._session_factory() as db:
-            data = dict(incoming)
 
-            # --- secrets handling ---
-            general = dict(data.get("general", {}) or {})
-
-            # helper: update secret only if provided and not masked/empty
             async def upsert_secret(name: str, value: Optional[str]) -> None:
                 if value is None:
                     return
-                v = str(value).strip()
-                if not v or v == MASK:
+                raw = str(value)
+                if raw == MASK:
                     return
-                ct = self._vault.encrypt(v)
+                if not raw.strip():
+                    await db.execute(delete(VaultSecret).where(VaultSecret.name == name))
+                    return
+                ct = self._vault.encrypt(raw)
                 stmt = (
                     pg_insert(VaultSecret)
                     .values(name=name, ciphertext=ct)
@@ -277,19 +353,16 @@ class SettingsRepository:
                 )
                 await db.execute(stmt)
 
-            #variables save with Vault
-            await upsert_secret("llm_api_key", general.get("llm_api_key"))
-            await upsert_secret("mqtt_pass", general.get("mqtt_pass"))
-            await upsert_secret("raspberry_ip", general.get("raspberry_ip"))
-            await upsert_secret("raspberry_password", general.get("raspberry_password"))
-            await upsert_secret("raspberry_password", general.get("raspberry_password"))
+            # --- extract + store secrets (then remove from JSON) ---
+            mqtt_pass = _pop_path(data, SECRET_PATHS[V_TELEM_MQTT_PASS])
+            llm_key = _pop_path(data, SECRET_PATHS[V_AI_LLM_KEY])
+            pi_pass = _pop_path(data, SECRET_PATHS[V_PI_PASS])
 
-            # never store plaintext secrets in settings JSON
-            general.pop("llm_api_key", None)
-            general.pop("mqtt_pass", None)
-            data["general"] = general
+            await upsert_secret(V_TELEM_MQTT_PASS, mqtt_pass)
+            await upsert_secret(V_AI_LLM_KEY, llm_key)
+            await upsert_secret(V_PI_PASS, pi_pass)
 
-            # --- upsert settings JSON ---
+            # --- upsert non-secret JSON ---
             stmt = (
                 pg_insert(SettingsRow)
                 .values(id=1, data=data)
@@ -301,9 +374,48 @@ class SettingsRepository:
             await db.execute(stmt)
             await db.commit()
 
-        # return fresh doc with masked secrets
         return await self.get_settings_doc()
 
+    async def get_effective_settings_doc(self) -> Dict[str, Any]:
+        """
+        Internal runtime shape:
+        - returns SettingsDoc-compatible dict
+        - secrets are decrypted and injected into the SAME nested paths the UI uses
+        """
+        data, updated_at = await self._read_row()
+
+        data = _deep_merge(
+            {
+                "telemetry": {},
+                "ai": {},
+                "credentials": {},
+                "hardware": {},
+                "preflight": {},
+                "raspberry": {},
+                "camera": {},
+            },
+            data,
+        )
+
+        async with self._session_factory() as db:
+            sec_res = await db.execute(select(VaultSecret))
+            secrets = {s.name: s.ciphertext for s in sec_res.scalars().all()}
+
+        def dec(name: str) -> str:
+            ct = secrets.get(name)
+            if not ct:
+                return ""
+            raw = self._vault.decrypt(ct)
+            # Vault.decrypt may already return bytes or str depending on your impl
+            return raw.decode("utf-8") if hasattr(raw, "decode") else str(raw)
+
+        for secret_name, path in SECRET_PATHS.items():
+            _set_path(data, path, dec(secret_name))
+
+        if updated_at:
+            data["updated_at"] = updated_at
+
+        return data
 
 class GeofenceRepository:
 

@@ -67,6 +67,18 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
   const [open, setOpen] = React.useState(false);
+  const [rememberMe, setRememberMe] = React.useState(false);
+
+  React.useEffect(() => {
+    const rememberedEmail = localStorage.getItem('remembered_email');
+    if (rememberedEmail) {
+      const emailInput = document.getElementById('email') as HTMLInputElement;
+      if (emailInput) {
+        emailInput.value = rememberedEmail;
+      }
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -103,6 +115,13 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
 
     const json = await res.json();
     setToken(json.access_token);
+
+    if (rememberMe) {
+      localStorage.setItem('remembered_email', email);
+    } else {
+      localStorage.removeItem('remembered_email');
+    }
+
     navigate('/dashboard');
   };
 
@@ -210,7 +229,13 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
                 />
               </FormControl>
               <FormControlLabel
-                control={<Checkbox value="remember" color="primary" />}
+                control={
+                  <Checkbox
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    color="primary"
+                  />
+                }
                 label="Remember this device"
               />
               <ForgotPassword open={open} handleClose={handleClose} />

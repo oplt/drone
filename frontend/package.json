@@ -33,6 +33,7 @@
     "@nivo/pie": "^0.99.0",
     "@react-google-maps/api": "^2.20.8",
     "@react-spring/web": "^10.0.3",
+    "@tanstack/react-query": "^5.90.21",
     "cesium": "^1.138.0",
     "dayjs": "^1.11.19",
     "formik": "^2.4.9",

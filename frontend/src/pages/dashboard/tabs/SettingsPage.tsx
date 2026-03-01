@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Header from "../../../components/dashboard/Header";
+import { IconButton, InputAdornment } from "@mui/material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 import {
   Alert,
@@ -87,6 +90,7 @@ type RaspberrySettings = {
     raspberry_host: string;
     raspberry_password?: string;
     ssh_key_path: string;
+    raspberry_streaming_script_path: string;
 };
 
 type CameraSettings=  {
@@ -112,18 +116,101 @@ type SettingsDoc = {
   updated_at?: string;
 };
 
+type SettingsSection = Exclude<keyof SettingsDoc, "updated_at">;
+
 const MASK = "********";
 
 const DEFAULTS: SettingsDoc = {
-    telemetry: {},
-    ai: {},
-    credentials: { },
-    hardware: { },
-    preflight: {},
-    raspberry: {},
-    camera: {},
-    updated_at: new Date().toISOString(),
+  telemetry: {
+    mqtt_broker: "localhost",
+    mqtt_port: 1883,
+    mqtt_user: "",
+    mqtt_pass: "",
+    mqtt_use_tls: false,
+    mqtt_ca_certs: "",
+    opcua_endpoint: "",
+    opcua_security_policy: "",
+    opcua_cert_path: "",
+    opcua_key_path: "",
+    telem_log_interval_sec: 2,
+    telemetry_topic: "ardupilot/telemetry",
+  },
+  ai: {
+    llm_provider: "ollama",
+    llm_api_base: "",
+    llm_model: "",
+    llm_api_key: "",
+  },
+  credentials: {
+    google_maps_api_key: "",
+    drone_conn: "",
+    admin_emails: "",
+    admin_domains: "",
+  },
+  hardware: {
+    battery_capacity_wh: 77,
+    energy_reserve_frac: 0.2,
+    cruise_speed_mps: 8,
+    cruise_power_w: 180,
+    heartbeat_timeout: 5,
+    enforce_preflight_range: false,
+  },
+  preflight: {
+    HDOP_MAX: 2,
+    SAT_MIN: 10,
+    HOME_MAX_DIST: 30,
+    GPS_FIX_TYPE_MIN: 3,
+    EKF_THRESHOLD: 0.8,
+    COMPASS_HEALTH_REQUIRED: true,
+    BATTERY_MIN_V: 0,
+    BATTERY_MIN_PERCENT: 20,
+    HEARTBEAT_MAX_AGE: 3,
+    MSG_RATE_MIN_HZ: 2,
+    RTL_MIN_ALT: 15,
+    MIN_CLEARANCE: 3,
+    AGL_MIN: 5,
+    AGL_MAX: 120,
+    MAX_RANGE_M: 1500,
+    MAX_WAYPOINTS: 60,
+    NFZ_BUFFER_M: 15,
+    A_LAT_MAX: 3,
+    BANK_MAX_DEG: 30,
+    TURN_PENALTY_S: 2,
+    WP_RADIUS_M: 2,
+  },
+  raspberry: {
+    raspberry_ip: "",
+    raspberry_user: "",
+    raspberry_host: "",
+    raspberry_password: "",
+    ssh_key_path: "",
+    raspberry_streaming_script_path: "",
+  },
+  camera: {
+    drone_video_source: "",
+    drone_video_width: 640,
+    drone_video_height: 480,
+    drone_video_fps: 30,
+    drone_video_timeout: 10,
+    drone_video_save_path: "./recordings/",
+    drone_video_fallback: "",
+    drone_video_enabled: true,
+    drone_video_save_stream: false,
+  },
+  updated_at: undefined,
 };
+
+const normalizeDoc = (raw: Partial<SettingsDoc>): SettingsDoc => ({
+  ...DEFAULTS,
+  ...raw,
+  telemetry: { ...DEFAULTS.telemetry, ...(raw.telemetry ?? {}) },
+  ai: { ...DEFAULTS.ai, ...(raw.ai ?? {}) },
+  credentials: { ...DEFAULTS.credentials, ...(raw.credentials ?? {}) },
+  hardware: { ...DEFAULTS.hardware, ...(raw.hardware ?? {}) },
+  preflight: { ...DEFAULTS.preflight, ...(raw.preflight ?? {}) },
+  raspberry: { ...DEFAULTS.raspberry, ...(raw.raspberry ?? {}) },
+  camera: { ...DEFAULTS.camera, ...(raw.camera ?? {}) },
+});
 
 export default function SettingsPage() {
   const [tab, setTab] = useState(0);
@@ -141,12 +228,29 @@ export default function SettingsPage() {
     return null;
   };
 
+  const parseApiError = async (res: Response, fallback: string): Promise<string> => {
+    try {
+      const bodyText = await res.text();
+      if (!bodyText.trim()) {
+        return `${fallback} (${res.status})`;
+      }
+      const payload = JSON.parse(bodyText);
+      if (typeof payload?.detail === "string" && payload.detail.trim()) {
+        return payload.detail;
+      }
+      return bodyText;
+    } catch {
+      // ignore parse errors
+    }
+    return `${fallback} (${res.status})`;
+  };
+
   async function fetchSettings() {
     setLoading(true); setErr(null);
     try {
       const res = await fetch("/api/settings");
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
+      if (!res.ok) throw new Error(await parseApiError(res, "Failed to fetch settings"));
+      const data = normalizeDoc(await res.json());
       setDoc(data); setLastLoaded(data);
     } catch (e: any) { setErr(e.message); } finally { setLoading(false); }
   }
@@ -154,40 +258,79 @@ export default function SettingsPage() {
   async function saveSettings() {
     const vErr = validateSettings();
     if (vErr) { setErr(vErr); return; }
-    setSaving(true);
+    setSaving(true); setErr(null);
     try {
-      await fetch("/api/settings", { method: "PUT", body: JSON.stringify(doc), headers: { "Content-Type": "application/json" } });
-      await fetchSettings();
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify(doc),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error(await parseApiError(res, "Failed to save settings"));
+      const saved = normalizeDoc(await res.json());
+      setDoc(saved);
+      setLastLoaded(saved);
     } catch (e: any) { setErr(e.message); } finally { setSaving(false); }
   }
 
   useEffect(() => { void fetchSettings(); }, []);
 
-  const update = (section: keyof SettingsDoc, field: string, value: any) => {
+  const update = (section: SettingsSection, field: string, value: string | number | boolean) => {
     setDoc(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
     if (err) setErr(null);
   };
 
-  const handleFileUpload = (section: keyof SettingsDoc, field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (section: SettingsSection, field: string) => async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        update(section, field, content);
-      };
-      reader.readAsText(file);
+    if (!file) return;
+
+    try {
+      setErr(null);
+      const formData = new FormData();
+      formData.append("section", section);
+      formData.append("field", field);
+      formData.append("file", file);
+
+      const res = await fetch("/api/settings/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error(await parseApiError(res, "Failed to upload file"));
+      const payload = await res.json();
+      if (typeof payload?.path !== "string" || !payload.path) {
+        throw new Error("Upload succeeded but no path was returned.");
+      }
+      update(section, field, payload.path);
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      event.target.value = "";
     }
   };
 
-  // Helper function to split array into chunks for column layout
-  const chunkArray = (array: any[], chunkSize: number) => {
-    const chunks = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-    }
-    return chunks;
-  };
+function SecretField(props: React.ComponentProps<typeof TextField>) {
+  const [show, setShow] = useState(false);
+  return (
+    <TextField
+      {...props}
+      type={show ? "text" : "password"}
+      InputProps={{
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton
+              onClick={() => setShow(v => !v)}
+              onMouseDown={e => e.preventDefault()}
+              edge="end"
+              size="small"
+              aria-label={show ? "Hide value" : "Show value"}
+            >
+              {show ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
+}
 
   return (
     <>
@@ -207,6 +350,7 @@ export default function SettingsPage() {
 
           <Box sx={{ p: 3 }}>
             {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
+            {loading && <Alert severity="info" sx={{ mb: 2 }}>Loading settings...</Alert>}
 
             {/* TELEMETRY TAB */}
             {tab === 0 && (
@@ -217,7 +361,7 @@ export default function SettingsPage() {
                     <TextField fullWidth label="Broker" value={doc.telemetry?.mqtt_broker} onChange={e => update("telemetry", "mqtt_broker", e.target.value)} />
                     <TextField fullWidth label="Port" type="number" value={doc.telemetry?.mqtt_port} onChange={e => update("telemetry", "mqtt_port", Number(e.target.value))} />
                     <TextField fullWidth label="User" value={doc.telemetry?.mqtt_user} onChange={e => update("telemetry", "mqtt_user", e.target.value)} />
-                    <TextField fullWidth label="Password" type="password" placeholder={MASK} value={doc.telemetry?.mqtt_pass} onChange={e => update("telemetry", "mqtt_pass", e.target.value)} />
+                    <SecretField fullWidth label="Password" placeholder={MASK} value={doc.telemetry?.mqtt_pass} onChange={e => update("telemetry", "mqtt_pass", e.target.value)} />
                     <FormControlLabel control={<Switch checked={doc.telemetry?.mqtt_use_tls} onChange={e => update("telemetry", "mqtt_use_tls", e.target.checked)} />} label="Use TLS" />
 
                       <Button variant="outlined" component="label" fullWidth>
@@ -265,7 +409,7 @@ export default function SettingsPage() {
                     <TextField fullWidth label="Provider" value={doc.ai?.llm_provider} onChange={e => update("ai", "llm_provider", e.target.value)} />
                     <TextField fullWidth label="Model" value={doc.ai?.llm_model} onChange={e => update("ai", "llm_model", e.target.value)} />
                     <TextField fullWidth label="API Base" value={doc.ai?.llm_api_base} onChange={e => update("ai", "llm_api_base", e.target.value)} />
-                    <TextField fullWidth label="API Key" type="password" placeholder={MASK} value={doc.ai?.llm_api_key} onChange={e => update("ai", "llm_api_key", e.target.value)} />
+                    <SecretField fullWidth label="API Key"placeholder={MASK} value={doc.ai?.llm_api_key} onChange={e => update("ai", "llm_api_key", e.target.value)} />
                   </Stack>
                 </Grid>
 
@@ -278,8 +422,8 @@ export default function SettingsPage() {
                 <Grid item size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>External APIs</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="Google Maps API Key" type="password" value={doc.credentials?.google_maps_api_key} onChange={e => update("credentials", "google_maps_api_key", e.target.value)} />
-                    <TextField fullWidth label="Drone Connection String" value={doc.credentials?.drone_conn} onChange={e => update("credentials", "drone_conn", e.target.value)} />
+                    <SecretField fullWidth label="Google Maps API Key" value={doc.credentials?.google_maps_api_key} onChange={e => update("credentials", "google_maps_api_key", e.target.value)} />
+                    <SecretField fullWidth label="Drone Connection String" value={doc.credentials?.drone_conn} onChange={e => update("credentials", "drone_conn", e.target.value)} />
                   </Stack>
                 </Grid>
                 <Grid item size={{ xs: 12, md: 6 }} >
@@ -364,11 +508,11 @@ export default function SettingsPage() {
                 <Grid item size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Raspberry Pi Connection</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="IP Address" value={doc.raspberry?.raspberry_ip} onChange={e => update("raspberry", "raspberry_ip", e.target.value)} />
+                    <SecretField fullWidth label="IP Address" value={doc.raspberry?.raspberry_ip} onChange={e => update("raspberry", "raspberry_ip", e.target.value)} />
                     <TextField fullWidth label="Hostname" value={doc.raspberry?.raspberry_host} onChange={e => update("raspberry", "raspberry_host", e.target.value)} />
                     <TextField fullWidth label="Username" value={doc.raspberry?.raspberry_user} onChange={e => update("raspberry", "raspberry_user", e.target.value)} />
-                    <TextField fullWidth label="Password" type="password" placeholder={MASK} value={doc.raspberry?.raspberry_password} onChange={e => update("raspberry", "raspberry_password", e.target.value)} />
-                    <TextField fullWidth label="Streaming Script Path" value={doc.raspberry?.raspberry_streaming_script_path} onChange={e => update("raspberry", "raspberry_streaming_script_path", e.target.value)} />
+                    <SecretField fullWidth label="Password" placeholder={MASK} value={doc.raspberry?.raspberry_password} onChange={e => update("raspberry", "raspberry_password", e.target.value)} />
+                    <SecretField fullWidth label="Streaming Script Path" value={doc.raspberry?.raspberry_streaming_script_path} onChange={e => update("raspberry", "raspberry_streaming_script_path", e.target.value)} />
 
                       <Button variant="outlined" component="label" fullWidth>
                         Upload SSH Key
@@ -388,11 +532,11 @@ export default function SettingsPage() {
                 <Grid item size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Drone Camera Parameters</Typography>
                   <Stack spacing={3}>
-                    <TextField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
-                    <TextField fullWidth label="Width" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", e.target.value)} />
-                    <TextField fullWidth label="Height" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", e.target.value)} />
-                    <TextField fullWidth label="FPS" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", e.target.value)} />
-                    <TextField fullWidth label="Timeout" value={doc.camera?.drone_video_timeout} onChange={e => update("camera", "drone_video_timeout", e.target.value)} />
+                    <SecretField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
+                    <TextField fullWidth label="Width" type="number" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", Number(e.target.value))} />
+                    <TextField fullWidth label="Height" type="number" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", Number(e.target.value))} />
+                    <TextField fullWidth label="FPS" type="number" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", Number(e.target.value))} />
+                    <TextField fullWidth label="Timeout" type="number" value={doc.camera?.drone_video_timeout} onChange={e => update("camera", "drone_video_timeout", Number(e.target.value))} />
                     <TextField fullWidth label="Fallback" value={doc.camera?.drone_video_fallback} onChange={e => update("camera", "drone_video_fallback", e.target.value)} />
 
                     <Stack direction="row" spacing={25}>
@@ -413,8 +557,8 @@ export default function SettingsPage() {
 
 
             <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 2 }}>
-              <Button onClick={fetchSettings} variant="outlined">Reset</Button>
-              <Button disabled={!dirty || saving} onClick={saveSettings} variant="contained">
+              <Button onClick={fetchSettings} disabled={loading || saving} variant="outlined">Reset</Button>
+              <Button disabled={!dirty || saving || loading} onClick={saveSettings} variant="contained">
                 {saving ? "Saving..." : "Save All Changes"}
               </Button>
             </Box>

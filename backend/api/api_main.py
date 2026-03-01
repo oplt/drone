@@ -15,6 +15,8 @@ from contextlib import asynccontextmanager
 import logging
 from backend.config import setup_logging
 import asyncio
+from backend.db.repository import SettingsRepository
+from backend.utils.config_runtime import get_runtime_settings
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +77,6 @@ app.include_router(video_router)
 app.include_router(settings_router)
 app.include_router(analytics_router)
 app.include_router(geofence_router)
-
 
 
 @app.get("/health")

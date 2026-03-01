@@ -175,7 +175,14 @@ class MissionPreflightBase:
             worst = max(worst, d_m)
 
         if worst > max_range_m:
-            return CheckResult(name="Max Range From Home", status=CheckStatus.FAIL, message=f"{worst:.0f}m > {max_range_m:.0f}m")
+            enforce = bool(self._thr("ENFORCE_PREFLIGHT_RANGE", True))
+            status = CheckStatus.FAIL if enforce else CheckStatus.WARN
+            detail = "" if enforce else " (enforcement disabled)"
+            return CheckResult(
+                name="Max Range From Home",
+                status=status,
+                message=f"{worst:.0f}m > {max_range_m:.0f}m{detail}"
+            )
         return CheckResult(name="Max Range From Home", status=CheckStatus.PASS, message=f"{worst:.0f}m")
 
     def check_geofence_containment(self) -> CheckResult:

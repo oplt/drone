@@ -43,7 +43,21 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
         root_logger.addHandler(stream_handler)
 
 
-class Settings(BaseSettings):
+class BootstrapSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    database_url: str
+    settings_vault_key: str
+
+bootstrap = BootstrapSettings()
+
+
+class RuntimeSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
@@ -98,6 +112,29 @@ class Settings(BaseSettings):
     heartbeat_timeout: float
     enforce_preflight_range: bool = False
 
+    # Preflight thresholds (override defaults at runtime via /api/settings)
+    HDOP_MAX: float = 2.0
+    SAT_MIN: int = 10
+    HOME_MAX_DIST: float = 30.0
+    GPS_FIX_TYPE_MIN: int = 3
+    EKF_THRESHOLD: float = 0.8
+    COMPASS_HEALTH_REQUIRED: bool = True
+    BATTERY_MIN_V: float = 0.0
+    BATTERY_MIN_PERCENT: float = 20.0
+    HEARTBEAT_MAX_AGE: float = 3.0
+    MSG_RATE_MIN_HZ: float = 2.0
+    RTL_MIN_ALT: float = 15.0
+    MIN_CLEARANCE: float = 3.0
+    AGL_MIN: float = 5.0
+    AGL_MAX: float = 120.0
+    MAX_RANGE_M: float = 1500.0
+    MAX_WAYPOINTS: int = 60
+    NFZ_BUFFER_M: float = 15.0
+    A_LAT_MAX: float = 3.0
+    BANK_MAX_DEG: float = 30.0
+    TURN_PENALTY_S: float = 2.0
+    WP_RADIUS_M: float = 2.0
+
     # Video streaming configuration
     drone_video_source: str = "rtsp://192.168.4.1:8554/stream"
     drone_video_enabled: bool = True
@@ -113,7 +150,6 @@ class Settings(BaseSettings):
     drone_video_wifi_ssid: str = "Drone_Network"
     drone_video_wifi_password: str = "drone123"
 
-    settings_vault_key : str
 
 
-settings = Settings()
+settings = RuntimeSettings()

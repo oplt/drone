@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import SelectContent from './SelectContent';
 import MenuContent from './MenuContent';
-import OptionsMenu from './OptionsMenu';
+// import OptionsMenu from './OptionsMenu';
 
 const drawerWidth = 240;
 
@@ -40,20 +40,6 @@ export default function SideMenu() {
           p: 1.5,
         }}
       >
-        <SelectContent />
-      </Box>
-      <Divider />
-      <Box
-        sx={{
-          overflow: 'auto',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <MenuContent />
-
-      </Box>
       <Stack
         direction="row"
         sx={{
@@ -78,8 +64,21 @@ export default function SideMenu() {
             Farm session
           </Typography>
         </Box>
-        <OptionsMenu />
-      </Stack>
+{/* }        <OptionsMenu />*/}
+      </Stack>      </Box>
+      <Divider />
+      <Box
+        sx={{
+          overflow: 'auto',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <MenuContent />
+
+      </Box>
+
     </Drawer>
   );
 }

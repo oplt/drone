@@ -45,6 +45,9 @@ class BasePreflightChecks:
         self.HDOP_MAX = context.get_threshold("HDOP_MAX", 2.5)
         self.SAT_MIN = context.get_threshold("SAT_MIN", 6)
         self.HOME_MAX_DIST = context.get_threshold("HOME_MAX_DIST", 100.0)  # meters
+        self.GPS_FIX_TYPE_MIN = context.get_threshold("GPS_FIX_TYPE_MIN", 3)
+        self.EKF_THRESHOLD = context.get_threshold("EKF_THRESHOLD", None)
+        self.BATTERY_MIN_V = context.get_threshold("BATTERY_MIN_V", None)
 
         self.WIND_MAX = context.get_threshold("WIND_MAX", 12.0)  # m/s
         self.GUST_MAX = context.get_threshold("GUST_MAX", 15.0)  # m/s
@@ -55,7 +58,10 @@ class BasePreflightChecks:
         self.MSG_RATE_MIN_HZ = context.get_threshold("MSG_RATE_MIN_HZ", 5.0)  # Hz
         self.HEARTBEAT_MAX_AGE = context.get_threshold("HEARTBEAT_MAX_AGE", 3.0)  # seconds
 
-        self.BATTERY_RESERVE_PCT = context.get_threshold("BATTERY_RESERVE_PCT", 15.0)  # %
+        self.BATTERY_RESERVE_PCT = context.get_threshold(
+            "BATTERY_RESERVE_PCT",
+            context.get_threshold("BATTERY_MIN_PERCENT", 15.0),
+        )  # %
         self.BATTERY_RESERVE_AH = context.get_threshold("BATTERY_RESERVE_AH", 2.0)  # Ah
 
         self.NFZ_BUFFER_M = context.get_threshold("NFZ_BUFFER_M", 50.0)  # meters
@@ -94,6 +100,51 @@ class BasePreflightChecks:
     def _skip(self, name: str, message: str) -> CheckResult:
         return CheckResult(name=name, status=CheckStatus.SKIP, message=message)
 
+
+    @staticmethod
+    def _as_latlon(point: Any) -> Optional[Tuple[float, float]]:
+        """Best-effort extraction of (lat, lon) from tuples/dicts/objects."""
+        try:
+            if isinstance(point, (tuple, list)) and len(point) >= 2:
+                return float(point[0]), float(point[1])
+            if isinstance(point, dict) and "lat" in point and "lon" in point:
+                return float(point["lat"]), float(point["lon"])
+            if hasattr(point, "lat") and hasattr(point, "lon"):
+                return float(getattr(point, "lat")), float(getattr(point, "lon"))
+            if hasattr(point, "latitude") and hasattr(point, "longitude"):
+                return float(getattr(point, "latitude")), float(getattr(point, "longitude"))
+        except Exception:
+            return None
+        return None
+
+    def _normalize_polygon(self, polygon: Iterable[Any]) -> List[Tuple[float, float]]:
+        pts: List[Tuple[float, float]] = []
+        for p in polygon:
+            ll = self._as_latlon(p)
+            if ll is not None:
+                pts.append(ll)
+        if len(pts) >= 2 and pts[0] == pts[-1]:
+            pts.pop()
+        return pts
+
+    @staticmethod
+    def _point_in_polygon(lat: float, lon: float, polygon: Sequence[Tuple[float, float]]) -> bool:
+        """Ray-casting point-in-polygon using lat/lon as local planar coordinates."""
+        if len(polygon) < 3:
+            return False
+        x = lon
+        y = lat
+        inside = False
+        n = len(polygon)
+        for i in range(n):
+            y1, x1 = polygon[i]
+            y2, x2 = polygon[(i + 1) % n]
+            intersects = ((y1 > y) != (y2 > y)) and (
+                x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-16) + x1
+            )
+            if intersects:
+                inside = not inside
+        return inside
 
     @staticmethod
     def _dedupe_by_name(results: List[CheckResult]) -> List[CheckResult]:
@@ -206,12 +257,13 @@ class BasePreflightChecks:
             fix = self._value("gps_fix_type")
             if fix is None:
                 r.append(self._skip("GPS Fix Type", "gps_fix_type not available"))
-            elif fix >= 3:
+            elif fix >= self.GPS_FIX_TYPE_MIN:
                 r.append(self._ok("GPS Fix Type", f"{fix}"))
             else:
-                r.append(self._fail("GPS Fix Type", f"Fix type {fix} < 3 (need 3D+)"))
+                r.append(self._fail("GPS Fix Type", f"Fix type {fix} < {self.GPS_FIX_TYPE_MIN}"))
 
-            hdop = (self._value("hdop"))/100 # CHECK THIS LATER
+            hdop_raw = self._value("hdop")
+            hdop = (float(hdop_raw) / 100.0) if hdop_raw is not None else None
             if hdop is None:
                 r.append(self._skip("GPS HDOP", "hdop not available"))
             elif float(hdop) <= float(self.HDOP_MAX):
@@ -267,6 +319,8 @@ class BasePreflightChecks:
         innov = self._value("innovation_consistency")
         if innov is not None:
             innov_max = self._value("innovation_consistency_max")
+            if innov_max is None:
+                innov_max = self.EKF_THRESHOLD
             if innov_max is not None and float(innov) <= float(innov_max):
                 results.append(self._ok("EKF Innovation", f"{float(innov):.3f}"))
             elif innov_max is not None:
@@ -335,6 +389,8 @@ class BasePreflightChecks:
 
         v_batt = self._value("v_batt", "battery_voltage")
         v_min = self._value("v_min")
+        if v_min is None:
+            v_min = self.BATTERY_MIN_V
 
         if v_batt is None:
             results.append(self._skip("Battery Voltage", "Battery voltage not available"))
@@ -410,6 +466,71 @@ class BasePreflightChecks:
             results.append(self._fail("Geofence Action", "Geofence action set to NONE"))
 
         return results
+
+    async def check_geofence(self) -> List[CheckResult]:
+        """
+        Validate current position against a configured geofence polygon when available.
+        If no polygon is configured for this run, treat as SKIP.
+        """
+        raw_poly = getattr(self.ctx, "geofence_polygon", None)
+        if not raw_poly:
+            return [self._skip("Geofence", "No geofence polygon")]
+
+        poly = self._normalize_polygon(raw_poly)
+        if len(poly) < 3:
+            return [self._fail("Geofence", "Invalid geofence polygon")]
+
+        lat = self._value("lat")
+        lon = self._value("lon")
+        if lat is None or lon is None:
+            return [self._skip("Geofence", "Current position unavailable")]
+
+        if self._point_in_polygon(float(lat), float(lon), poly):
+            return [self._ok("Geofence", "Current position inside")]
+        return [self._fail("Geofence", "Current position outside geofence")]
+
+    async def check_terrain_clearance(self) -> List[CheckResult]:
+        """
+        Validate terrain clearance.
+        Priority:
+          1) direct telemetry AGL/terrain-clearance fields when present
+          2) fallback to waypoint altitude minus cached terrain data
+        """
+        agl = self._value("altitude_terrain_m", "agl_m", "height_agl_m")
+        if agl is not None:
+            agl_f = float(agl)
+            if agl_f < float(self.MIN_CLEARANCE):
+                return [self._fail("Terrain Clearance", f"{agl_f:.1f}m < {float(self.MIN_CLEARANCE):.1f}m")]
+            return [self._ok("Terrain Clearance", f"{agl_f:.1f}m")]
+
+        waypoints = getattr(self.ctx.mission, "waypoints", None)
+        if not waypoints:
+            return [self._skip("Terrain Clearance", "No waypoints")]
+        if not hasattr(self.ctx, "get_waypoint_terrain"):
+            return [self._skip("Terrain Clearance", "No cached terrain in context")]
+
+        for i, wp in enumerate(waypoints):
+            terrain = self.ctx.get_waypoint_terrain(i)
+            if asyncio.iscoroutine(terrain):
+                terrain = await terrain
+
+            if terrain is None:
+                return [self._warn("Terrain Clearance", f"Terrain missing at waypoint {i}")]
+
+            wp_alt = getattr(wp, "alt", None)
+            if wp_alt is None:
+                return [self._warn("Terrain Clearance", f"Waypoint {i} missing alt")]
+
+            clearance = float(wp_alt) - float(terrain)
+            if clearance < float(self.MIN_CLEARANCE):
+                return [
+                    self._fail(
+                        "Terrain Clearance",
+                        f"WP{i} clearance {clearance:.1f}m < {float(self.MIN_CLEARANCE):.1f}m"
+                    )
+                ]
+
+        return [self._ok("Terrain Clearance", f"Min clearance >= {float(self.MIN_CLEARANCE):.1f}m")]
 
 
     # -------------------------

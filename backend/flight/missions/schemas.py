@@ -12,11 +12,6 @@ class MissionType(str, Enum):
     TERRAIN_FOLLOW = "terrain_follow"
     PERIMETER_PATROL = "perimeter_patrol"
     ADAPTIVE_ALTITUDE = "adaptive_altitude"
-    SURVEY = "survey"       # alias for grid
-    CIRCLE = "circle"       # alias for orbit
-    POI = "poi"             # alias for orbit
-    POLYGON = "polygon"     # alias for perimeter_patrol
-    PATROL = "patrol"       # alias for perimeter_patrol
     WAYPOINT = "waypoint"
     ROUTE = "route"
 
