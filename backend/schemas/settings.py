@@ -77,11 +77,13 @@ class RaspberrySettings(BaseModel):
 
 class CameraSettings(BaseModel):
     drone_video_source: str = ""
+    drone_video_source_gazebo: str = "udp://127.0.0.1:5600"
+    drone_video_use_gazebo: bool = False
     drone_video_width: int = 640
     drone_video_height: int = 480
     drone_video_fps: int = 30
     drone_video_timeout: float = 10.0
-    drone_video_save_path: str = "./recordings/"
+    drone_video_save_path: str
     drone_video_fallback: str = ""
     drone_video_enabled: bool = True
     drone_video_save_stream: bool = False

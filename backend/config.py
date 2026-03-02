@@ -137,6 +137,8 @@ class RuntimeSettings(BaseSettings):
 
     # Video streaming configuration
     drone_video_source: str = "rtsp://192.168.4.1:8554/stream"
+    drone_video_source_gazebo: str = "udp://127.0.0.1:5600"
+    drone_video_use_gazebo: bool = False
     drone_video_enabled: bool = True
     drone_video_width: int = 640
     drone_video_height: int = 480
@@ -144,7 +146,7 @@ class RuntimeSettings(BaseSettings):
     drone_video_timeout: float = 10.0
     drone_video_fallback: str = ""
     drone_video_save_stream: bool = False
-    drone_video_save_path: str = "./recordings/"
+    drone_video_save_path: str = "./backend/video/recordings/"
 
     # Wireless streaming network configuration
     drone_video_wifi_ssid: str = "Drone_Network"

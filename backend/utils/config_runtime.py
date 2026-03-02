@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from backend.config import RuntimeSettings as EnvSettings
-from backend.db.repository import SettingsRepository
+from backend.db.repository.settings_repo import SettingsRepository
 
 _env = EnvSettings()  # env defaults / bootstrap
 
@@ -89,6 +89,8 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
 
         # Camera
         "drone_video_source": cam.get("drone_video_source"),
+        "drone_video_source_gazebo": cam.get("drone_video_source_gazebo"),
+        "drone_video_use_gazebo": cam.get("drone_video_use_gazebo"),
         "drone_video_width": cam.get("drone_video_width"),
         "drone_video_height": cam.get("drone_video_height"),
         "drone_video_fps": cam.get("drone_video_fps"),

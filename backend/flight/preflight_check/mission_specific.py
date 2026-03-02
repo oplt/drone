@@ -7,6 +7,9 @@ from ..missions.schemas import (
 )
 from .preflight_context import PreflightContext
 import math
+from backend.drone.models import Coordinate
+from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
+
 
 
 class MissionPreflightBase:
@@ -22,6 +25,10 @@ class MissionPreflightBase:
         self.ctx = context
         self.v = context.vehicle_state
         self.mission = context.mission
+
+        # FIX (Bug 4): range_model was never initialised on this base class,
+        # causing AttributeError inside check_preflight_range.
+        self.range_model = SimpleWhPerKmModel()
 
         # Default thresholds from context
         self.A_LAT_MAX = context.get_threshold('A_LAT_MAX', 9.81)
@@ -114,6 +121,16 @@ class MissionPreflightBase:
                 if ll:
                     pts.append(ll)
         return pts
+
+    def _total_route_distance_m(self, home: Coordinate, route: list[Coordinate]) -> float:
+        """Total mission distance (km): home→route[0]→...→route[-1]→home."""
+        if not route:
+            return 0.0
+        total = self._haversine_m(home.lat, home.lon, route[0].lat, route[0].lon)
+        for a, b in zip(route, route[1:]):
+            total += self._haversine_m(a.lat, a.lon, b.lat, b.lon)
+        total += self._haversine_m(route[-1].lat, route[-1].lon, home.lat, home.lon)
+        return total
 
     # -------------------------
     # Recommended mission-common checks (still mission-specific)
@@ -267,6 +284,92 @@ class MissionPreflightBase:
             return CheckResult(name="Grid Turn Margin", status=CheckStatus.WARN, message=f"Avail R~{avail_r:.1f}m slightly < min {min_r:.1f}m")
         return CheckResult(name="Grid Turn Margin", status=CheckStatus.PASS, message=f"Avail R~{avail_r:.1f}m, min {min_r:.1f}m")
 
+
+    def check_preflight_range(self) -> CheckResult:
+        """Range check over the full clicked route."""
+        from backend.config import settings
+
+        # FIX (Bug 1 & 2): method previously required `home` and `route` as
+        # positional arguments but was called with no arguments at the call site.
+        # Both values are available on the context/vehicle_state, so derive them
+        # here instead of requiring the caller to pass them.
+        home_lat = getattr(self.v, "home_lat", None)
+        home_lon = getattr(self.v, "home_lon", None)
+        if home_lat is None or home_lon is None:
+            return CheckResult(
+                name="Preflight Range",
+                status=CheckStatus.SKIP,
+                message="Home location not available; skipping range check",
+            )
+        home = Coordinate(lat=float(home_lat), lon=float(home_lon), alt=0.0)
+        route: list[Coordinate] = list(getattr(self.mission, "waypoints", []) or [])
+        if not route:
+            return CheckResult(
+                name="Preflight Range",
+                status=CheckStatus.SKIP,
+                message="No route waypoints; skipping range check",
+            )
+
+        distance_km = self._total_route_distance_m(home, route) / 1000
+
+        # FIX (Bug 3): original code imported Orchestrator as `orch` and then
+        # called `orch.drone.get_telemetry()` — which uses the *class* object,
+        # not an instance, and would raise AttributeError.  The vehicle state
+        # (telemetry snapshot) is already available as self.v.
+        t = self.v
+        battery_remaining = getattr(t, "battery_remaining", None)
+        level_frac = (
+            None
+            if battery_remaining is None
+            else max(0.0, min(1.0, float(battery_remaining) / 100.0))
+        )
+
+        v_kmh = max(0.1, settings.cruise_speed_mps * 3.6)
+        wh_per_km = settings.cruise_power_w / v_kmh
+        required_Wh = distance_km * wh_per_km
+        available_Wh = (
+            None
+            if level_frac is None
+            else max(
+                0.0,
+                settings.battery_capacity_wh
+                * max(0.0, level_frac - settings.energy_reserve_frac),
+                )
+        )
+
+        est_range_km = self.range_model.estimate_range_km(
+            capacity_Wh=settings.battery_capacity_wh,
+            battery_level_frac=level_frac,
+            cruise_power_W=settings.cruise_power_w,
+            cruise_speed_mps=settings.cruise_speed_mps,
+            reserve_frac=settings.energy_reserve_frac,
+        )
+
+        feasible = (est_range_km is not None) and (est_range_km >= distance_km)
+
+        if est_range_km is None:
+            return CheckResult(
+                name="Preflight Range",
+                status=CheckStatus.WARN,
+                message="No battery level reading; cannot estimate range",
+            )
+
+        # FIX (Bug 5): original code always returned CheckStatus.PASS regardless
+        # of whether `feasible` was True or False.
+        if not feasible:
+            return CheckResult(
+                name="Preflight Range",
+                status=CheckStatus.FAIL,
+                message=f"Insufficient range. Need ~{distance_km:.2f} km, est range {est_range_km:.2f} km.",
+            )
+
+        return CheckResult(
+            name="Preflight Range",
+            status=CheckStatus.PASS,
+            message=f"Est range {est_range_km:.2f} km >= mission distance {distance_km:.2f} km",
+        )
+
+
     async def run(self) -> List[CheckResult]:
         return [CheckResult(name="Mission Type", status=CheckStatus.WARN, message="No mission-specific checks registered")]
 
@@ -282,6 +385,7 @@ class WaypointMissionPreflight(MissionPreflightBase):
         results.append(self.check_geofence_containment())
         results.append(self.check_no_fly_zones())
         results.append(self.check_basic_terrain_clearance())
+        results.append(self.check_preflight_range()) #check parameters
         return results
 
 

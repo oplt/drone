@@ -4,6 +4,9 @@ from .models import Coordinate, Telemetry
 
 
 class DroneClient(ABC):
+    def __init__(self):
+        self.home_location = None
+
     @abstractmethod
     def connect(self) -> None: ...
     @abstractmethod

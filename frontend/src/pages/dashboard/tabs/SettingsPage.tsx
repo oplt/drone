@@ -95,6 +95,8 @@ type RaspberrySettings = {
 
 type CameraSettings=  {
   drone_video_source: string;
+  drone_video_source_gazebo: string;
+  drone_video_use_gazebo: boolean;
   drone_video_width: number;
   drone_video_height: number;
   drone_video_fps: number;
@@ -188,11 +190,13 @@ const DEFAULTS: SettingsDoc = {
   },
   camera: {
     drone_video_source: "",
+    drone_video_source_gazebo: "udp://127.0.0.1:5600",
+    drone_video_use_gazebo: false,
     drone_video_width: 640,
     drone_video_height: 480,
     drone_video_fps: 30,
     drone_video_timeout: 10,
-    drone_video_save_path: "./recordings/",
+    drone_video_save_path: "./backend/video/recordings/",
     drone_video_fallback: "",
     drone_video_enabled: true,
     drone_video_save_stream: false,
@@ -533,6 +537,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                   <Typography variant="h6" gutterBottom>Drone Camera Parameters</Typography>
                   <Stack spacing={3}>
                     <SecretField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
+                    <SecretField fullWidth label="Gazebo Camera Source" value={doc.camera?.drone_video_source_gazebo} onChange={e => update("camera", "drone_video_source_gazebo", e.target.value)} />
                     <TextField fullWidth label="Width" type="number" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", Number(e.target.value))} />
                     <TextField fullWidth label="Height" type="number" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", Number(e.target.value))} />
                     <TextField fullWidth label="FPS" type="number" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", Number(e.target.value))} />
@@ -547,6 +552,10 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                       <FormControlLabel
                         control={<Switch checked={doc.camera?.drone_video_save_stream} onChange={e => update("camera", "drone_video_save_stream", e.target.checked)} />}
                         label="Save Stream"
+                      />
+                      <FormControlLabel
+                        control={<Switch checked={doc.camera?.drone_video_use_gazebo} onChange={e => update("camera", "drone_video_use_gazebo", e.target.checked)} />}
+                        label="Use Gazebo"
                       />
                     </Stack>
                   </Stack>

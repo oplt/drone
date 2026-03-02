@@ -1,31 +1,55 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import {
-  Box,
-  Button,
-  Paper,
-  Stack,
-  Typography,
-  Divider,
-  TextField,
-  Alert,
-  CircularProgress,
-  Chip,
-} from "@mui/material";
+import { Box, Button, Paper, Stack, Typography, Divider, TextField, Alert, CircularProgress, Chip, MenuItem,  Select,
+  FormControl, InputLabel} from "@mui/material";
 import Header from "../../../components/dashboard/Header";
-import {
-  GoogleMap,
-  Polyline,
-  OverlayView,
-  useJsApiLoader,
-} from "@react-google-maps/api";
-import { getToken } from "../../../auth"; // adjust path if needed
+import {  GoogleMap,  Polyline,  OverlayView,  useJsApiLoader} from "@react-google-maps/api";
+import { getToken } from "../../../auth";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
 import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import CesiumMap from "../../../utils/CesiumMap";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import {  } from "@mui/material";
+
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
+type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
+
+type Herd = {
+  id: number;
+  name: string;
+  pasture_geofence_id?: number | null;
+};
+
+type HerdLatestPos = {
+  animal_id: number;
+  collar_id: string;
+  animal_name?: string | null;
+  species: string;
+  lat: number;
+  lon: number;
+  alt?: number | null;
+  created_at: string;
+};
+
+type HerdAlert = {
+  type: string; // "boundary_exit" | "isolation" | ...
+  severity: "low" | "medium" | "high";
+  animal_id: number;
+  collar_id: string;
+  lat: number;
+  lon: number;
+  message: string;
+  distance_to_nearest_m?: number;
+};
+
+
+
 
 interface MissionStatus {
   flight_id?: string;
@@ -80,7 +104,7 @@ function extractLatLng(value: any): LatLng | null {
 const containerStyle = { width: "100%", height: "400px" };
 const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
-export default function TasksPage() {
+export default function AnimalFarmPage() {
   const mapRef = useRef<google.maps.Map | null>(null);
 
   // IMPORTANT: refs for cleanup to avoid “cleanup runs on dependency change” bug
@@ -118,6 +142,9 @@ export default function TasksPage() {
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
+  const [useCesium, setUseCesium] = useState(false);
+  const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
+
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
@@ -131,6 +158,12 @@ export default function TasksPage() {
       missionStatus?.telemetry?.running &&
       activeFlightId,
   );
+
+    const handleCesiumPick = useCallback((p: { lat: number; lng: number }) => {
+      setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
+    }, [alt]);
+
+
   const { telemetry, isConnected: wsConnected, disconnect } = useTelemetryWebSocket(
     {
       enabled: wsEnabled,
@@ -146,6 +179,15 @@ export default function TasksPage() {
     googleMapsApiKey: apiKey || "MISSING_KEY",
     libraries,
   });
+
+const [herds, setHerds] = useState<Herd[]>([]);
+const [selectedHerdId, setSelectedHerdId] = useState<number | null>(null);
+
+const [latestPositions, setLatestPositions] = useState<HerdLatestPos[]>([]);
+const [herdAlerts, setHerdAlerts] = useState<HerdAlert[]>([]);
+
+const [loadingHerdOps, setLoadingHerdOps] = useState(false);
+const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
 
   // Keep latest activeFlightId in a ref for unmount cleanup
   useEffect(() => {
@@ -246,30 +288,6 @@ export default function TasksPage() {
   }, [telemetry]);
 
 
-/*
-  // Fallback: use last known position from flight status when WS is not yet streaming
-  useEffect(() => {
-    const statusPosition = missionStatus?.telemetry?.position;
-    const hasPosition = Boolean(missionStatus?.telemetry?.has_position_data);
-    if (!statusPosition || !hasPosition) return;
-    if (wsConnected && droneCenter) return;
-
-    const next = extractLatLng(statusPosition);
-    if (!next) return;
-
-    if (
-      droneCenter &&
-      Math.abs(droneCenter.lat - next.lat) < 1e-7 &&
-      Math.abs(droneCenter.lng - next.lng) < 1e-7
-    ) {
-      return;
-    }
-
-    setDroneCenter(next);
-  }, [missionStatus, wsConnected, droneCenter]);
-
-*/
-
   // AdvancedMarkerElement for waypoint markers (avoids deprecated google.maps.Marker).
   useEffect(() => {
     if (!isLoaded || !mapReady) return;
@@ -345,7 +363,7 @@ export default function TasksPage() {
   // Start Pi camera streaming when drone becomes ready (best effort)
   useEffect(() => {
     const token = getToken();
-    if (!droneConnected || !token || videoStartedRef.current) return;
+    if (!droneReady || !token || videoStartedRef.current) return;
 
     const timer = setTimeout(() => {
       setStartingVideo(true);
@@ -377,6 +395,82 @@ export default function TasksPage() {
 
     return () => clearTimeout(timer);
   }, [droneReady, API_BASE_CLEAN, addError]);
+
+
+
+
+const fetchHerds = useCallback(async () => {
+  const token = getToken();
+  if (!token) return;
+
+  const r = await fetch(`${API_BASE_CLEAN}/livestock/herds`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error(await r.text().catch(() => "") || `HTTP ${r.status}`);
+  const data = (await r.json()) as Herd[];
+  setHerds(data);
+
+  // Auto-select first herd if none selected
+  if (!selectedHerdId && data.length > 0) setSelectedHerdId(data[0].id);
+}, [API_BASE_CLEAN, selectedHerdId]);
+
+const fetchLatestPositions = useCallback(async (herdId: number) => {
+  const token = getToken();
+  if (!token) return;
+
+  const r = await fetch(`${API_BASE_CLEAN}/livestock/herds/${herdId}/latest_positions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error(await r.text().catch(() => "") || `HTTP ${r.status}`);
+  const data = await r.json();
+  setLatestPositions((data?.positions ?? []) as HerdLatestPos[]);
+}, [API_BASE_CLEAN]);
+
+const fetchRisk = useCallback(async (herdId: number) => {
+  const token = getToken();
+  if (!token) return;
+
+  const r = await fetch(`${API_BASE_CLEAN}/livestock/herds/${herdId}/risk`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error(await r.text().catch(() => "") || `HTTP ${r.status}`);
+  const data = await r.json();
+  setHerdAlerts((data?.alerts ?? []) as HerdAlert[]);
+}, [API_BASE_CLEAN]);
+
+
+
+useEffect(() => {
+  (async () => {
+    try {
+      await fetchHerds();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to load herds";
+      addError(msg);
+    }
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+useEffect(() => {
+  if (!selectedHerdId) return;
+  (async () => {
+    try {
+      setLoadingHerdOps(true);
+      await Promise.all([
+        fetchLatestPositions(selectedHerdId),
+        fetchRisk(selectedHerdId),
+      ]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to load herd ops data";
+      addError(msg);
+    } finally {
+      setLoadingHerdOps(false);
+    }
+  })();
+}, [selectedHerdId, fetchLatestPositions, fetchRisk, addError]);
+
+
 
   const pollFlightStatus = useCallback(async () => {
     const token = getToken();
@@ -513,6 +607,8 @@ export default function TasksPage() {
     setAlt(num);
   };
 
+
+
     const sendMission = async () => {
       const token = getToken();
       if (!token) {
@@ -581,6 +677,72 @@ export default function TasksPage() {
         setSending(false);
       }
     };
+
+const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "search_locate") => {
+  const token = getToken();
+  if (!token) {
+    addError("Not authenticated");
+    return;
+  }
+  if (!selectedHerdId) {
+    addError("Select a herd first");
+    return;
+  }
+
+  try {
+    setLoadingHerdOps(true);
+    clearErrors();
+
+    const params: any = {};
+    if (type === "search_locate" && collarIdForSearch.trim()) {
+      params.collar_id = collarIdForSearch.trim();
+    }
+
+    // 1) Create task
+    const taskRes = await fetch(`${API_BASE_CLEAN}/livestock/tasks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ herd_id: selectedHerdId, type, params }),
+    });
+    if (!taskRes.ok) throw new Error(await taskRes.text().catch(() => "") || "Failed to create task");
+    const task = await taskRes.json();
+
+    // 2) Plan mission
+    const planRes = await fetch(`${API_BASE_CLEAN}/livestock/tasks/${task.id}/plan`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!planRes.ok) throw new Error(await planRes.text().catch(() => "") || "Failed to plan mission");
+    const plan = await planRes.json();
+
+    const m = plan?.mission;
+    const wps = (m?.waypoints ?? []).map((wp: any) => ({
+      lat: wp.lat,
+      lon: wp.lon,
+      alt: wp.alt ?? alt,
+    }));
+
+    if (wps.length === 0) {
+      addError("Mission plan returned no waypoints");
+      return;
+    }
+
+    // Fill in existing mission builder state
+    setWaypoints(wps);
+    setName(`herd-${selectedHerdId}-${type}-${Date.now()}`);
+
+    // Optional: center map to first waypoint
+    setCenter({ lat: wps[0].lat, lng: wps[0].lon });
+
+  } catch (e) {
+    addError(e instanceof Error ? e.message : "Task planning error");
+  } finally {
+    setLoadingHerdOps(false);
+  }
+}, [API_BASE_CLEAN, selectedHerdId, collarIdForSearch, alt, addError, clearErrors]);
 
 
 
@@ -781,6 +943,88 @@ export default function TasksPage() {
   return (
     <>
       <Header />
+      <Paper sx={{ p: 2 }}>
+        <Stack spacing={1.5}>
+          <Typography variant="h6">Animal Farms</Typography>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel id="herd-select-label">Herd</InputLabel>
+            <Select
+              labelId="herd-select-label"
+              label="Herd"
+              value={selectedHerdId ?? ""}
+              onChange={(e) => setSelectedHerdId(Number(e.target.value))}
+            >
+              {herds.map((h) => (
+                <MenuItem key={h.id} value={h.id}>{h.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button
+              variant="contained"
+              onClick={() => createTaskAndPlan("census")}
+              disabled={!selectedHerdId || loadingHerdOps}
+            >
+              Plan Census
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => createTaskAndPlan("herd_sweep")}
+              disabled={!selectedHerdId || loadingHerdOps}
+            >
+              Plan Herd Sweep
+            </Button>
+          </Stack>
+
+          <Stack direction="row" spacing={1}>
+            <TextField
+              size="small"
+              label="Collar ID (optional)"
+              value={collarIdForSearch}
+              onChange={(e) => setCollarIdForSearch(e.target.value)}
+              fullWidth
+            />
+            <Button
+              variant="outlined"
+              onClick={() => createTaskAndPlan("search_locate")}
+              disabled={!selectedHerdId || loadingHerdOps}
+            >
+              Search
+            </Button>
+          </Stack>
+
+          <Divider />
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => selectedHerdId && fetchLatestPositions(selectedHerdId)}
+              disabled={!selectedHerdId}
+            >
+              Refresh positions
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => selectedHerdId && fetchRisk(selectedHerdId)}
+              disabled={!selectedHerdId}
+            >
+              Refresh risk
+            </Button>
+            {loadingHerdOps && <CircularProgress size={16} />}
+          </Stack>
+
+          {herdAlerts.slice(0, 4).map((a, idx) => (
+            <Alert key={idx} severity={a.severity === "high" ? "error" : a.severity === "medium" ? "warning" : "info"}>
+              {a.type}: {a.message} ({a.collar_id})
+            </Alert>
+          ))}
+        </Stack>
+      </Paper>
+
       <Paper
         sx={{
           width: "100%",
@@ -861,6 +1105,8 @@ export default function TasksPage() {
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
               {/* Left side: Map & Camera */}
               <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
+
+
                 <Box
                   sx={{
                     borderRadius: 2,
@@ -897,6 +1143,16 @@ export default function TasksPage() {
                       <CircularProgress />
                       <Typography sx={{ ml: 2 }}>Loading map...</Typography>
                     </Box>
+                  ) : useCesium ? (
+                    <CesiumMap
+                      center={mapCenter}
+                      zoom={mapZoom}
+                      viewMode={cesiumViewMode}
+                      waypoints={waypoints}
+                      droneCenter={droneCenter}
+                      headingDeg={typeof heading === "number" ? heading : null}
+                      onPickLatLng={handleCesiumPick}
+                    />
                   ) : (
                     <GoogleMap
                       mapContainerStyle={containerStyle}
@@ -984,9 +1240,82 @@ export default function TasksPage() {
                         }}
                       />
                     )}
+                     {latestPositions.map((p) => (
+                       <OverlayView
+                         key={p.animal_id}
+                         position={{ lat: p.lat, lng: p.lon }}
+                         mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                       >
+                         <Box sx={{
+                           transform: "translate(-50%, -100%)",
+                           display: "flex",
+                           alignItems: "center",
+                           gap: 0.5,
+                           background: "rgba(0,0,0,0.55)",
+                           color: "white",
+                           px: 1,
+                           py: 0.25,
+                           borderRadius: 1,
+                           fontSize: 12
+                         }}>
+                           <RoomIcon fontSize="small" />
+                           <span>{p.animal_name || p.collar_id}</span>
+                         </Box>
+                       </OverlayView>
+                     ))}
+
                     </GoogleMap>
                   )}
                 </Box>
+
+                <Box
+                  sx={{
+                    mt: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 2,
+                  }}
+                >
+                  {/* Left cluster: 3D toggle + view selector (visible only when 3D enabled) */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={useCesium}
+                          onChange={(e) => setUseCesium(e.target.checked)}
+                        />
+                      }
+                      label={useCesium ? "3D (Cesium)" : "2D (Google)"}
+                    />
+
+                    {useCesium && (
+                      <ToggleButtonGroup
+                        value={cesiumViewMode}
+                        exclusive
+                        size="small"
+                        onChange={(_, v) => {
+                          if (!v) return; // keep current if user clicks selected
+                          setCesiumViewMode(v);
+                        }}
+                        aria-label="Cesium view mode"
+                      >
+                        <ToggleButton value="top" aria-label="Top view">Top</ToggleButton>
+                        <ToggleButton value="tilted" aria-label="Tilted view">Tilted</ToggleButton>
+                        <ToggleButton value="follow" aria-label="Follow drone">Follow</ToggleButton>
+                        <ToggleButton value="fpv" aria-label="FPV view">FPV</ToggleButton>
+                        <ToggleButton value="orbit" aria-label="Orbit view">Orbit</ToggleButton>
+                      </ToggleButtonGroup>
+                    )}
+                  </Box>
+
+                  {/* Right cluster: your mission controls (keep your existing buttons here) */}
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {/* ... your existing mission control buttons ... */}
+                  </Box>
+                </Box>
+
 
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Click on the map to add waypoints. Markers are ordered (1..N).

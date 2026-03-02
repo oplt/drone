@@ -14,6 +14,8 @@ import ProfilePage from "./pages/dashboard/tabs/ProfilePage";
 import InsightsPage from "./pages/dashboard/tabs/InsightsPage";
 import FleetPage from "./pages/dashboard/tabs/FleetPage";
 import TerrainPage from "./pages/dashboard/tabs/TerrainPage";
+import PhotoGrammetryPage from "./pages/dashboard/tabs/PhotoGrammetry";
+import AnimalFarmPage from "./pages/dashboard/tabs/AnimalFarmPage";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
@@ -61,6 +63,8 @@ export default function App() {
           <Route path="terrain" element={<TerrainPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="account" element={<AccountPage />} />
+          <Route path="photogrammetry" element={<PhotoGrammetryPage />} />
+          <Route path="animalfarm" element={<AnimalFarmPage />} />
 
         </Route>
       </Routes>

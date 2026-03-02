@@ -21,6 +21,8 @@ import { Link, useLocation } from "react-router-dom";
 import TerrainIcon from '@mui/icons-material/Terrain';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import PermIdentityRoundedIcon from '@mui/icons-material/PermIdentityRounded';
+import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
+import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
 
 const mainListItems = [
   { text: "Operations", icon: <HomeRoundedIcon />, path: "/dashboard" },
@@ -31,7 +33,8 @@ const mainListItems = [
     children: [
       { text: "Flight", icon: <FlightTakeoffIcon />, path: "/dashboard/tasks" },
       { text: "Terrain", icon: <TerrainIcon />, path: "/dashboard/terrain" },
-//       { text: "Harvesting", icon: <AgricultureIcon />, path: "/dashboard/tasks/harvesting" },
+      { text: "PhotoGrammetry", icon: <PhotoCameraRoundedIcon />, path: "/dashboard/photogrammetry" },
+      { text: "Animal Farm", icon: <EmojiNatureRoundedIcon />, path: "/dashboard/animalfarm" },
 //       { text: "Spraying", icon: <WaterDropIcon />, path: "/dashboard/tasks/spraying" },
     ]
   },

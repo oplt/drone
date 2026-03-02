@@ -8,7 +8,7 @@ from backend.video.stream import DroneVideoStream
 from backend.analysis.llm import LLMAnalyzer
 from backend.messaging.mqtt import MqttClient, MqttPublisher
 # from backend.messaging.opcua import DroneOpcUaServer
-from backend.db.repository import TelemetryRepository
+from backend.db.repository.telemetry_repo import TelemetryRepository
 from backend.config import settings
 from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
 from backend.utils.geo import haversine_km, coord_from_home
@@ -255,227 +255,8 @@ class Orchestrator:
                 await asyncio.sleep(1.0)
             except Exception as e:
                 logger.info(f"Error in emergency monitor: {e}")
-                # print(f"Error in emergency monitor: {e}")
                 await asyncio.sleep(1.0)
 
-    async def _preflight_range_check(
-            self, home: Coordinate, start: Coordinate, dest: Coordinate
-    ) -> RangeEstimateResult:
-        """Range check for a simple home→start→dest→home route."""
-        # Create a simple route for checking
-        route = [start, dest]
-        return await self._preflight_range_check_route(home, route)
-
-    async def fly_route(self, start, dest, cruise_alt=30.0):
-        # start = await asyncio.to_thread(self.maps.geocode, start_addr); start.alt = cruise_alt
-        # dest  = await asyncio.to_thread(self.maps.geocode, end_addr); dest.alt = cruise_alt
-        self._running = True
-
-        # Create flight record if not already created
-        if self._flight_id is None:
-            self._flight_id = await self.repo.create_flight(
-                start_lat=start.lat,
-                start_lon=start.lon,
-                start_alt=start.alt,
-                dest_lat=dest.lat,
-                dest_lon=dest.lon,
-                dest_alt=dest.alt,
-            )
-            logger.info(f"Created flight with ID: {self._flight_id}")
-
-        await self.repo.add_event(
-            self._flight_id, "mission_created", {"alt": cruise_alt}
-        )
-
-        self._dest_coord = dest
-
-        await asyncio.sleep(1.0)
-
-        await self.repo.add_event(self._flight_id, "connected", {})
-
-        # Preflight range check (can hard-fail if you want)
-        home = coord_from_home(self.drone.home_location)
-
-        preflight = await self._preflight_range_check(home, start, dest)
-        if not preflight.feasible and settings.enforce_preflight_range:
-            raise RuntimeError(preflight.reason)
-        await asyncio.to_thread(self.drone.arm_and_takeoff, cruise_alt)
-        await self.repo.add_event(self._flight_id, "takeoff", {})
-
-        path = list(self.maps.waypoints_between(start, dest, steps=6))
-        await asyncio.to_thread(self.drone.follow_waypoints, path)
-        await self.repo.add_event(self._flight_id, "reached_destination", {})
-
-        # Return to takeoff home using RTL and wait for landing
-        self.drone.set_mode("RTL")
-        await self.repo.add_event(self._flight_id, "rtl_initiated", {})
-        await asyncio.to_thread(self.drone.wait_until_disarmed, 900)
-        await self.repo.add_event(self._flight_id, "landed_home", {})
-        await self.repo.finish_flight(
-            self._flight_id, status="completed", note="RTL to home completed"
-        )
-
-    def _total_route_distance_km(
-            self, home: Coordinate, route: list[Coordinate]
-    ) -> float:
-        """Total mission distance (km): home→route[0]→...→route[-1]→home."""
-        if not route:
-            return 0.0
-        total = haversine_km(home.lat, home.lon, route[0].lat, route[0].lon)
-        for a, b in zip(route, route[1:]):
-            total += haversine_km(a.lat, a.lon, b.lat, b.lon)
-        total += haversine_km(route[-1].lat, route[-1].lon, home.lat, home.lon)
-        return total
-
-    async def _preflight_range_check_route(
-            self, home: Coordinate, route: list[Coordinate]
-    ) -> RangeEstimateResult:
-        """Range check over the full clicked route."""
-        from backend.config import settings
-
-        distance_km = self._total_route_distance_km(home, route)
-
-        t = self.drone.get_telemetry()
-        level_frac = (
-            None
-            if t.battery_remaining is None
-            else max(0.0, min(1.0, float(t.battery_remaining) / 100.0))
-        )
-
-        v_kmh = max(0.1, settings.cruise_speed_mps * 3.6)
-        wh_per_km = settings.cruise_power_w / v_kmh
-        required_Wh = distance_km * wh_per_km
-        available_Wh = (
-            None
-            if level_frac is None
-            else max(
-                0.0,
-                settings.battery_capacity_wh
-                * max(0.0, level_frac - settings.energy_reserve_frac),
-            )
-        )
-
-        est_range_km = self.range_model.estimate_range_km(
-            capacity_Wh=settings.battery_capacity_wh,
-            battery_level_frac=level_frac,
-            cruise_power_W=settings.cruise_power_w,
-            cruise_speed_mps=settings.cruise_speed_mps,
-            reserve_frac=settings.energy_reserve_frac,
-        )
-
-        feasible = (est_range_km is not None) and (est_range_km >= distance_km)
-        reason = "OK"
-        if est_range_km is None:
-            reason = "No battery level reading; cannot estimate range"
-        elif not feasible:
-            reason = f"Insufficient range. Need ~{distance_km:.2f} km, est range {est_range_km:.2f} km."
-
-        return RangeEstimateResult(
-            distance_km=distance_km,
-            est_range_km=est_range_km,
-            available_Wh=available_Wh,
-            required_Wh=required_Wh,
-            feasible=feasible,
-            reason=reason,
-        )
-
-    async def fly_route_waypoints(
-            self,
-            waypoints: list[Coordinate],
-            cruise_alt: float = 30.0,
-            interpolate_steps: int = 6,
-    ):
-        """
-        Fly a route defined by clicked map waypoints.
-        - Drone starts from current/home location
-        - Then flies to all specified waypoints
-        - Returns home after last waypoint
-        """
-
-        if len(waypoints) < 2:
-            raise ValueError("Need at least 2 waypoints (start & destination).")
-
-        # Check if drone is connected and has home location
-        if not hasattr(self.drone, "home_location") or self.drone.home_location is None:
-            raise RuntimeError("Drone not connected or home location not available")
-
-        # Get drone's home/current location
-        from backend.utils.geo import coord_from_home
-
-        home_coord = coord_from_home(self.drone.home_location)
-        home_coord.alt = cruise_alt  # Set altitude for takeoff
-
-        # normalize altitude for all waypoints
-        route: list[Coordinate] = [home_coord]  # Start from drone's current location
-        for w in waypoints:
-            if getattr(w, "alt", None) is None:
-                w.alt = cruise_alt
-            route.append(w)
-
-        # Add return to home as final point
-        route.append(home_coord)
-
-        start, dest = (
-            route[0],
-            route[-2],
-        )  # Start from home, destination is last waypoint before returning home
-        self._running = True
-
-        # flight record
-        if self._flight_id is None:
-            self._flight_id = await self.repo.create_flight(
-                start_lat=start.lat,
-                start_lon=start.lon,
-                start_alt=start.alt,
-                dest_lat=dest.lat,
-                dest_lon=dest.lon,
-                dest_alt=dest.alt,
-            )
-
-        await self.repo.add_event(
-            self._flight_id,
-            "mission_created",
-            {"alt": cruise_alt, "waypoints": len(waypoints)},
-        )
-
-        self._dest_coord = dest
-        await asyncio.sleep(1.0)
-
-        await self.repo.add_event(self._flight_id, "connected", {})
-
-        # range check over full route (including return to home)
-        from backend.config import settings
-
-        preflight = await self._preflight_range_check_route(home_coord, waypoints)
-        if not preflight.feasible and settings.enforce_preflight_range:
-            raise RuntimeError(preflight.reason)
-
-        await asyncio.to_thread(self.drone.arm_and_takeoff, cruise_alt)
-        await self.repo.add_event(self._flight_id, "takeoff", {})
-
-        # stitch segments; keep all anchors (starting from home -> waypoints -> home)
-        path: list[Coordinate] = []
-        for a, b in zip(route, route[1:]):
-            seg = (
-                list(self.maps.waypoints_between(a, b, steps=interpolate_steps))
-                if interpolate_steps
-                else [a, b]
-            )
-            if path and seg:
-                seg = seg[1:]  # avoid duplicates
-            path.extend(seg)
-
-        await asyncio.to_thread(self.drone.follow_waypoints, path)
-        await self.repo.add_event(self._flight_id, "reached_destination", {})
-
-        # Wait for landing (RTL is already part of the path)
-        await asyncio.to_thread(self.drone.wait_until_disarmed, 900)
-        await self.repo.add_event(self._flight_id, "landed_home", {})
-        await self.repo.finish_flight(
-            self._flight_id,
-            status="completed",
-            note="Mission completed and returned home",
-        )
 
     async def _run_preflight_checks(
             self,
@@ -602,27 +383,30 @@ class Orchestrator:
 
         return report
 
-    async def run_waypoints(self, waypoints: list[Coordinate], alt: float = 30.0):
-        """Run a mission with the given waypoints"""
-        logger.info(f"🚁 Starting mission from {len(waypoints)} waypoint(s)")
 
-        if len(waypoints) < 2:
-            raise ValueError("Need at least 2 waypoints (start & destination).")
+    async def run_mission(self, mission: "Mission", alt: float = 30.0, flight_fn=None):
 
         self._flight_id = None
         self._running = True
         tasks: list[asyncio.Task] = []
+        waypoints = mission.get_waypoints()
+        cruise_alt = alt
 
+        # ------------------------------------------------------------------
+        # STEP 1: Connect to drone
+        # ------------------------------------------------------------------
         try:
-            # STEP 1: Connect to drone FIRST
             logger.info("🔌 Connecting to drone...")
             await asyncio.to_thread(self.drone.connect)
             logger.info("✅ Drone connected successfully")
+        except Exception as e:  # FIX (Bug 2): bare except → except Exception as e
+            logger.exception(f"❌ Drone Connection failed: {e}")
+            raise
 
-            # STEP 2: Start OPC UA server
-            # await self.opcua.start()
-
-            # STEP 3: Create flight record
+        # ------------------------------------------------------------------
+        # STEP 2: Create flight record
+        # ------------------------------------------------------------------
+        try:
             start = waypoints[0]
             dest = waypoints[-1]
             self._flight_id = await self.repo.create_flight(
@@ -633,31 +417,51 @@ class Orchestrator:
                 dest_lon=dest.lon,
                 dest_alt=alt,
             )
+            await self.repo.add_event(
+                self._flight_id,
+                "mission_created",
+                {"alt": cruise_alt, "waypoints": len(waypoints)},
+            )
+            await self.repo.add_event(self._flight_id, "connected", {})
             logger.info(f"✅ Created flight record with ID: {self._flight_id}")
+        except Exception as e:  # FIX (Bug 2)
+            logger.exception(f"❌ Flight record generation failed: {e}")
+            raise
 
-            # STEP 4: Preflight checks
+        # ------------------------------------------------------------------
+        # STEP 3: Preflight checks
+        # ------------------------------------------------------------------
+        try:
             logger.info("🔍 Running preflight checks...")
             await self._run_preflight_checks(waypoints, alt)
             logger.info("✅ Preflight checks passed")
+        except Exception as e:  # FIX (Bug 2)
+            logger.exception(f"❌ Preflight checks failed: {e}")
+            raise
 
-            # STEP 5: Start telemetry stream (if not already running)
+        # ------------------------------------------------------------------
+        # STEP 4: Start telemetry stream
+        # ------------------------------------------------------------------
+        try:
             from backend.config import settings
             from backend.messaging.websocket import telemetry_manager
 
             if not telemetry_manager._running:
                 logger.info("Starting telemetry stream...")
-                success = await asyncio.to_thread(
+                await asyncio.to_thread(
                     telemetry_manager.start_telemetry_stream,
                     settings.drone_conn_mavproxy
                 )
-                if success:
-                    logger.info("✅ Telemetry stream started")
-                    # Give telemetry a moment to initialize
-                    await asyncio.sleep(1)
-                else:
-                    logger.warning("⚠️ Failed to start telemetry stream")
+                logger.info("✅ Telemetry stream started")
+                await asyncio.sleep(1)
+        except Exception as e:  # FIX (Bug 2)
+            logger.warning(f"⚠️ Failed to start telemetry stream: {e}")
+            raise
 
-            # STEP 6: Start background tasks
+        # ------------------------------------------------------------------
+        # STEP 5: Start background tasks, run flight, then clean up.
+        # ------------------------------------------------------------------
+        try:
             tasks = [
                 asyncio.create_task(self.heartbeat_task()),
                 asyncio.create_task(self.telemetry_publish_task()),
@@ -666,32 +470,28 @@ class Orchestrator:
                 asyncio.create_task(self.video_health_monitor_task()),
                 asyncio.create_task(self.emergency_monitor_task()),
             ]
-
-            # Give tasks time to initialize
-            await asyncio.sleep(0.5)
-
-            # STEP 7: Execute the mission
-            await self.fly_route_waypoints(waypoints, cruise_alt=alt)
-            logger.info("✅ Mission execution completed")
+            if flight_fn is not None:
+                await flight_fn()
 
         except Exception as e:
-            logger.exception(f"❌ Mission failed in run_waypoints: {e}")
+            logger.exception(f"❌ Mission failed: {e}")
             raise
         finally:
-            # Cleanup
+            # Graceful teardown — always runs after flight completes or fails.
             self._running = False
 
-            # Cancel background tasks
             for task in tasks:
                 if task and not task.done():
                     task.cancel()
 
-            # Wait for tasks to cancel
             if tasks:
-                await asyncio.gather(*[t for t in tasks if not t.done()], return_exceptions=True)
+                await asyncio.gather(
+                    *[t for t in tasks if not t.done()],
+                    return_exceptions=True,
+                )
 
-            # Clean up other resources
             await self._cleanup()
+
 
     async def _cleanup(self):
         """Clean up orchestrator resources"""

@@ -4,7 +4,7 @@ import time
 import socket
 import paho.mqtt.client as mqtt
 from backend.config import settings
-from backend.db.repository import TelemetryRepository
+from backend.db.repository.telemetry_repo import TelemetryRepository
 from typing import Dict, Any, Optional
 import asyncio
 from datetime import datetime, timezone

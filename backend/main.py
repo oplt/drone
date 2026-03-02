@@ -9,7 +9,7 @@ from backend.messaging.mqtt import MqttClient, MqttPublisher
 from backend.config import settings, setup_logging
 from backend.video.stream import DroneVideoStream
 from backend.db.session import init_db, close_db
-from backend.db.repository import TelemetryRepository
+from backend.db.repository.telemetry_repo import TelemetryRepository
 
 logger = logging.getLogger(__name__)
 
@@ -61,28 +61,34 @@ async def _build_orchestrator() -> Orchestrator:
         video = None
         if settings.drone_video_enabled:
             try:
-                cam_source = settings.drone_video_source
-                try:
-                    cam_source = int(cam_source)
-                except ValueError:
-                    pass
+                if settings.drone_video_use_gazebo:
+                    # If using Gazebo, we let the API handle the stream to avoid port conflict
+                    # (UDP unicast port can usually only be opened by one process/thread)
+                    logger.info("🎥 Gazebo video mode enabled - Stream will be handled by API on demand")
+                    video = None
+                else:
+                    cam_source = settings.drone_video_source
+                    try:
+                        cam_source = int(cam_source)
+                    except ValueError:
+                        pass
 
-                video = DroneVideoStream(
-                    source=cam_source,
-                    width=settings.drone_video_width,
-                    height=settings.drone_video_height,
-                    fps=settings.drone_video_fps,
-                    open_timeout_s=settings.drone_video_timeout,
-                    probe_indices=5,
-                    fallback_file=settings.drone_video_fallback
-                    if settings.drone_video_fallback
-                    else None,
-                    fps_limit=None,
-                    enable_recording=settings.drone_video_save_stream,
-                    recording_path=settings.drone_video_save_path,
-                    recording_format="mp4",
-                )
-                logger.info("✅ Drone video stream initialized successfully")
+                    video = DroneVideoStream(
+                        source=cam_source,
+                        width=settings.drone_video_width,
+                        height=settings.drone_video_height,
+                        fps=settings.drone_video_fps,
+                        open_timeout_s=settings.drone_video_timeout,
+                        probe_indices=5,
+                        fallback_file=settings.drone_video_fallback
+                        if settings.drone_video_fallback
+                        else None,
+                        fps_limit=None,
+                        enable_recording=settings.drone_video_save_stream,
+                        recording_path=settings.drone_video_save_path,
+                        recording_format="mp4",
+                    )
+                    logger.info("✅ Drone video stream initialized successfully")
             except Exception as e:
                 logger.info(f"❌ Failed to initialize drone video stream: {e}")
                 video = None

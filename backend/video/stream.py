@@ -4,6 +4,9 @@ from typing import Iterator, Union
 import cv2
 from datetime import datetime
 import logging
+import re
+from functools import lru_cache
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +17,32 @@ def _is_rtsp(s: str) -> bool:
     )
 
 
+def _get_udp_port(s: str) -> int | None:
+    if isinstance(s, str) and s.lower().startswith("udp://"):
+        match = re.search(r":(\d+)", s)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+@lru_cache(maxsize=1)
+def opencv_has_gstreamer() -> bool:
+    """Return True when the active OpenCV build has GStreamer enabled."""
+    try:
+        info = cv2.getBuildInformation()
+    except Exception:
+        return False
+
+    match = re.search(r"^\s*GStreamer:\s*(YES|NO)\s*$", info, re.MULTILINE)
+    return bool(match and match.group(1).upper() == "YES")
+
+
 class DroneVideoStream:
     """
     Enhanced video streaming for drone applications with:
       - Raspberry Pi 5 camera support (USB, CSI, network)
       - Auto backend selection (V4L2 for /dev/video*, FFMPEG for RTSP/HTTP/file)
+      - GStreamer pipeline for raw UDP H264 streams (Gazebo)
       - Warm-up with retries and connection monitoring
       - Multi-source probing when a source fails
       - Optional video recording with timestamp
@@ -38,7 +62,7 @@ class DroneVideoStream:
         fps_limit: float
         | None = None,  # throttle frame rate to save CPU/LLM cost (None = no limit)
         enable_recording: bool = False,
-        recording_path: str = "./recordings/",
+        recording_path: str = settings.drone_video_save_path,
         recording_format: str = "mp4",
     ):
         self.fps_limit = fps_limit
@@ -95,7 +119,28 @@ class DroneVideoStream:
             self._start_recording()
 
     def _open_source(self, source, width, height, fps, open_timeout_s):
-        if isinstance(source, int):
+        udp_port = _get_udp_port(source)
+
+        if udp_port is not None:
+            if not opencv_has_gstreamer():
+                raise RuntimeError(
+                    "OpenCV was built without GStreamer support for UDP/RTP H264 sources"
+                )
+
+            # Use GStreamer for raw UDP H264 streams (e.g., from Gazebo)
+            # This pipeline listens on a UDP port, decodes the H264 stream, and passes it to OpenCV
+            gst_pipeline = (
+                f"udpsrc port={udp_port} "
+                "! application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264 "
+                "! rtph264depay "
+                "! avdec_h264 "
+                "! videoconvert "
+                "! appsink"
+            )
+            logger.info(f"Using GStreamer pipeline for UDP source: {gst_pipeline}")
+            cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
+
+        elif isinstance(source, int):
             # Try V4L2 first for Linux USB cameras (Raspberry Pi 5)
             cap = cv2.VideoCapture(source, cv2.CAP_V4L2)
             if not cap.isOpened():
@@ -110,10 +155,11 @@ class DroneVideoStream:
         else:
             cap = cv2.VideoCapture(source)
 
-        # Try to set resolution and FPS (may be ignored by RTSP)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        cap.set(cv2.CAP_PROP_FPS, fps)
+        # Try to set resolution and FPS (may be ignored by RTSP/GStreamer)
+        if udp_port is None:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+            cap.set(cv2.CAP_PROP_FPS, fps)
 
         # Warm-up / readiness check
         t0 = time.time()

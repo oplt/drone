@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from backend.schemas.settings import SettingsDoc
 from backend.utils.config_runtime import get_runtime_settings
-from backend.db.repository import SettingsRepository
+from backend.db.repository.settings_repo import SettingsRepository
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 

@@ -10,6 +10,7 @@ from backend.main import _build_orchestrator
 from backend.auth.deps import require_user
 import asyncio
 from backend.messaging.websocket import telemetry_manager
+from backend.flight.missions.mission_runners import WaypointsMission
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -75,18 +76,15 @@ async def create_mission(
     # Generate a client-facing flight ID
     client_flight_id = f"flight_{int(time.time())}_{uuid.uuid4().hex[:8]}"
 
-    # Get orchestrator
     orch = await get_orchestrator()
 
-    # Store mission metadata
     orch.current_mission_name = payload.name
     orch.current_client_flight_id = client_flight_id
-
-    # Start mission execution in background
+    mission = WaypointsMission(waypoints=coords)
     asyncio.create_task(
         execute_mission(
             orch,
-            coords,
+            mission,
             payload.cruise_alt,
             payload.name,
         )
@@ -101,22 +99,16 @@ async def create_mission(
 
 async def execute_mission(
         orch,
-        coords: list[Coordinate],
+        mission: WaypointsMission,   # FIX (Bug 1): was typed as WaypointsMission but received list
         cruise_alt: float,
         mission_name: str,
 ):
-    """Execute mission in background - orchestrator handles all initialization"""
     try:
-        # The orchestrator's run_waypoints handles:
-        # - Drone connection
-        # - Flight record creation
-        # - Telemetry streaming (via telemetry_manager)
-        # - Background tasks (heartbeat, MQTT, etc.)
-        await orch.run_waypoints(coords, alt=cruise_alt)
+        # Execute the mission with the orchestrator
+        await mission.execute(orch, alt=cruise_alt)
         print(f"✅ Mission '{mission_name}' completed successfully")
     except Exception as e:
         print(f"❌ Mission '{mission_name}' failed: {e}")
-        # Log the error but don't re-raise
 
 
 
