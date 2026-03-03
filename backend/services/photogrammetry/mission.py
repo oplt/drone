@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Tuple
 import math
+from typing import List, Tuple
 
 from backend.drone.models import Coordinate
+from backend.flight.missions.grid_mission import GridPlanner
 from backend.utils.geo import haversine_km
+
 
 @dataclass(frozen=True)
 class PhotogrammetryPlan:
@@ -12,8 +15,10 @@ class PhotogrammetryPlan:
     along_track_m: float
     cross_track_m: float
 
+
 def _footprint_m(agl_m: float, fov_deg: float) -> float:
     return 2.0 * agl_m * math.tan(math.radians(fov_deg / 2.0))
+
 
 def compute_spacings(
     *,
@@ -27,7 +32,29 @@ def compute_spacings(
     fp_h = _footprint_m(altitude_agl, fov_v)
     along = fp_h * (1.0 - front_overlap)
     cross = fp_w * (1.0 - side_overlap)
-    return max(2.0, along), max(2.0, cross)
+    return max(0.5, along), max(0.5, cross)
+
+
+def _interpolate_segment(
+    a: Coordinate,
+    b: Coordinate,
+    *,
+    spacing_m: float,
+) -> List[Coordinate]:
+    dist_m = max(0.0, float(haversine_km(a.lat, a.lon, b.lat, b.lon) * 1000.0))
+    if dist_m <= spacing_m:
+        return [b]
+
+    steps = max(1, int(math.ceil(dist_m / spacing_m)))
+    pts: List[Coordinate] = []
+    for i in range(1, steps + 1):
+        t = i / steps
+        lat = a.lat + (b.lat - a.lat) * t
+        lon = a.lon + (b.lon - a.lon) * t
+        alt = a.alt + (b.alt - a.alt) * t
+        pts.append(Coordinate(lat=lat, lon=lon, alt=alt))
+    return pts
+
 
 def build_lawnmower_path(
     polygon_lonlat: List[Tuple[float, float]],
@@ -38,13 +65,34 @@ def build_lawnmower_path(
     heading_deg: float = 0.0,
 ) -> List[Coordinate]:
     """
-    Production note:
-    - Implement with shapely in service/planning layer for correct clipping.
-    - Here: define signature + expected output only.
+    Build a clipped lawnmower route and densify work legs to along-track spacing.
     """
-    # Placeholder: return polygon vertices as a minimal route
-    # Replace using backend/services/planning/grid_generator.py
-    return [Coordinate(lat=lat, lon=lon, alt=altitude_agl) for lon, lat in polygon_lonlat]
+    plan = GridPlanner.generate(
+        poly_lonlat=polygon_lonlat,
+        spacing_m=cross_track_m,
+        angle_deg=heading_deg % 180.0,
+        inset_m=1.5,
+        start_corner="auto",
+        lane_strategy="serpentine",
+        row_stride=1,
+        row_phase_m=0.0,
+    )
+    if not plan.waypoints:
+        return []
+
+    for wp in plan.waypoints:
+        wp.alt = altitude_agl
+
+    dense: List[Coordinate] = [plan.waypoints[0]]
+    for i, b in enumerate(plan.waypoints[1:]):
+        a = plan.waypoints[i]
+        is_work_leg = bool(plan.work_leg_mask[i]) if i < len(plan.work_leg_mask) else True
+        if is_work_leg:
+            dense.extend(_interpolate_segment(a, b, spacing_m=along_track_m))
+        else:
+            dense.append(b)
+    return dense
+
 
 def make_photogrammetry_plan(
     *,

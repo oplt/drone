@@ -1,5 +1,3 @@
-# drone/missions/schemas.py
-
 from typing import List, Optional, Union, Literal, Annotated
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from enum import Enum
@@ -198,6 +196,16 @@ class AdaptiveAltitudeMission(BaseMission):
             )
         return self
 
+class PhotogrammetryMission(BaseMission):
+    type: Literal["photogrammetry"]
+    polygon: List[Waypoint] = Field(..., min_length=3)
+    altitude_agl: float = Field(default=30.0, ge=10.0, le=120.0)
+    front_overlap: float = Field(default=0.8, ge=0.5, le=0.95)
+    side_overlap: float = Field(default=0.7, ge=0.5, le=0.95)
+    camera_fov_h: float = Field(default=78.0, gt=0, lt=180)
+    camera_fov_v: float = Field(default=62.0, gt=0, lt=180)
+    max_flight_time_min: Optional[float] = None
+
 
 Mission = Annotated[
     Union[
@@ -236,15 +244,3 @@ def create_mission_from_dict(data: dict) -> Mission:
 
     return mission_class(**data)
 
-
-# backend/drone/missions/schemas.py (add)
-class PhotogrammetryMission(BaseMission):
-    type: Literal["photogrammetry"]
-    polygon: List[Waypoint] = Field(..., min_length=3)
-    altitude_agl: float = Field(default=30.0, ge=10.0, le=120.0)
-    front_overlap: float = Field(default=0.8, ge=0.5, le=0.95)
-    side_overlap: float = Field(default=0.7, ge=0.5, le=0.95)
-    camera_fov_h: float = Field(default=78.0, gt=0, lt=180)
-    camera_fov_v: float = Field(default=62.0, gt=0, lt=180)
-    # optional: trigger config
-    max_flight_time_min: Optional[float] = None

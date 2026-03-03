@@ -69,12 +69,23 @@ class TelemetryRepository:
             return fid
 
     async def add_event(
-            self, flight_id: int, etype: str, data: Dict[str, Any] | None = None
+            self, flight_id: Optional[int], etype: str, data: Dict[str, Any] | None = None
     ) -> None:
+        if flight_id is None:
+            logger.warning("Skipping flight event '%s': flight_id is None", etype)
+            return
         async with self._session_factory() as s:
-            e = FlightEvent(flight_id=flight_id, type=etype, data=data or {})
-            s.add(e)
-            await s.commit()
+            try:
+                e = FlightEvent(flight_id=flight_id, type=etype, data=data or {})
+                s.add(e)
+                await s.commit()
+            except Exception:
+                await s.rollback()
+                logger.exception(
+                    "Failed to persist flight event '%s' for flight_id=%s",
+                    etype,
+                    flight_id,
+                )
 
     async def add_telemetry(self, flight_id: int, **fields) -> None:
         async with self._session_factory() as s:
@@ -203,6 +214,5 @@ class TelemetryRepository:
                     f"Fallback single inserts completed: {inserted}/{len(payload)} records inserted"
                 )
                 return inserted
-
 
 

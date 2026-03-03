@@ -5,6 +5,7 @@ import "./output.css";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./queryClient";
+import { GoogleMapsProvider } from "./utils/googleMaps";
 
 
 
@@ -15,8 +16,10 @@ const root = createRoot(container);
 
 root.render(
   <StrictMode>
-      <QueryClientProvider client={queryClient}>
-            <App />
-      </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <GoogleMapsProvider>
+        <App />
+      </GoogleMapsProvider>
+    </QueryClientProvider>
   </StrictMode>
 );

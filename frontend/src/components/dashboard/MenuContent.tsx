@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -13,9 +13,6 @@ import PrecisionManufacturingRoundedIcon from "@mui/icons-material/PrecisionManu
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import AgricultureIcon from "@mui/icons-material/Agriculture";
-import GrassIcon from "@mui/icons-material/Grass";
-import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import { Link, useLocation } from "react-router-dom";
 import TerrainIcon from '@mui/icons-material/Terrain';
@@ -23,19 +20,20 @@ import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded
 import PermIdentityRoundedIcon from '@mui/icons-material/PermIdentityRounded';
 import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
 import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
+import LocalFloristRoundedIcon from '@mui/icons-material/LocalFloristRounded';
 
 const mainListItems = [
   { text: "Operations", icon: <HomeRoundedIcon />, path: "/dashboard" },
   {
     text: "Tasks",
     icon: <AssignmentRoundedIcon />,
-//     path: "/dashboard/tasks",
+    path: "/dashboard/tasks",
     children: [
       { text: "Flight", icon: <FlightTakeoffIcon />, path: "/dashboard/tasks" },
       { text: "Terrain", icon: <TerrainIcon />, path: "/dashboard/terrain" },
       { text: "PhotoGrammetry", icon: <PhotoCameraRoundedIcon />, path: "/dashboard/photogrammetry" },
       { text: "Animal Farm", icon: <EmojiNatureRoundedIcon />, path: "/dashboard/animalfarm" },
-//       { text: "Spraying", icon: <WaterDropIcon />, path: "/dashboard/tasks/spraying" },
+      { text: "Field", icon: <LocalFloristRoundedIcon />, path: "/dashboard/field" },
     ]
   },
   { text: "Insights", icon: <InsightsRoundedIcon />, path: "/dashboard/insights" },
@@ -50,10 +48,24 @@ const secondaryListItems = [
 
 export default function MenuContent() {
   const location = useLocation();
+  const isTaskRoute = (pathname: string) =>
+    mainListItems
+      .find((item) => item.text === "Tasks")
+      ?.children?.some(
+        (child) =>
+          pathname === child.path || pathname.startsWith(`${child.path}/`)
+      ) ?? false;
+
   const [openTasks, setOpenTasks] = useState(() => {
     // Auto-expand if any task route is active
-    return location.pathname.startsWith("/dashboard/tasks");
+    return isTaskRoute(location.pathname);
   });
+
+  useEffect(() => {
+    if (isTaskRoute(location.pathname)) {
+      setOpenTasks(true);
+    }
+  }, [location.pathname]);
 
   const handleTasksClick = () => {
     setOpenTasks(!openTasks);
@@ -70,7 +82,7 @@ export default function MenuContent() {
                 <>
                 <ListItemButton
                   onClick={handleTasksClick}
-                  selected={location.pathname.startsWith(item.path)}
+                  selected={isTaskRoute(location.pathname)}
                 >
                   <ListItemIcon>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.text} />

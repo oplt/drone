@@ -16,6 +16,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getToken } from "../../../auth";
 import { apiRequest } from "../../../utils/api";
+import InfoLabel from "../../../components/dashboard/InfoLabel";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -184,10 +185,24 @@ export default function ProfilePage() {
             </Stack>
             <TextField
               fullWidth
-              label="Email"
+              label={
+                <InfoLabel
+                  label="Email"
+                  info="Email cannot be changed here. Contact support if you need to update it."
+                />
+              }
+              InputLabelProps={{
+                shrink: true,
+                sx: {
+                  pointerEvents: "auto",
+                  px: 0.5,
+                  backgroundColor: "background.paper",
+                  borderRadius: 0.5,
+                  lineHeight: 1.2,
+                },
+              }}
               value={user?.email ?? ""}
               disabled
-              helperText="Email cannot be changed here. Contact support if you need to update it."
             />
             <Box>
               <Button

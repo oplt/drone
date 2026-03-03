@@ -1,10 +1,17 @@
 from __future__ import annotations
-import asyncio
-from celery import shared_task
-from backend.services.photogrammetry.mission import PhotogrammetryService
 
-@shared_task(bind=True, name="photogrammetry.process_job")
-def process_photogrammetry_job(self, job_id: str) -> dict:
+import asyncio
+import os
+
+from backend.tasks.celery_app import celery_app
+from backend.services.photogrammetry.service import PhotogrammetryService
+
+
+PHOTOGRAMMETRY_QUEUE = os.getenv("CELERY_PHOTOGRAMMETRY_QUEUE", "photogrammetry")
+
+
+@celery_app.task(bind=True, name="photogrammetry.process_job", queue=PHOTOGRAMMETRY_QUEUE)
+def process_photogrammetry_job(self, job_id: int) -> dict:
     """
     Runs:
       1) WebODM task creation + monitor

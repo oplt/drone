@@ -27,6 +27,7 @@ import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getToken } from "../../../auth";
 import { apiRequest } from "../../../utils/api";
+import InfoLabel from "../../../components/dashboard/InfoLabel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,13 +63,15 @@ function PasswordField({
   disabled,
   helperText,
   error,
+  inputLabelProps,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
   helperText?: string;
   error?: boolean;
+  inputLabelProps?: React.ComponentProps<typeof TextField>["InputLabelProps"];
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -81,6 +84,7 @@ function PasswordField({
       disabled={disabled}
       helperText={helperText}
       error={error}
+      InputLabelProps={inputLabelProps}
       slotProps={{
         input: {
           endAdornment: (
@@ -202,11 +206,20 @@ function PasswordSection({ token }: { token: string | null }) {
           disabled={mutation.isPending}
         />
         <PasswordField
-          label="New password"
+          label={<InfoLabel label="New password" info="Minimum 8 characters." />}
+          inputLabelProps={{
+            shrink: true,
+            sx: {
+              pointerEvents: "auto",
+              px: 0.5,
+              backgroundColor: "background.paper",
+              borderRadius: 0.5,
+              lineHeight: 1.2,
+            },
+          }}
           value={newPassword}
           onChange={setNewPassword}
           disabled={mutation.isPending}
-          helperText="Minimum 8 characters."
           error={Boolean(newPassword && newPassword.length < 8)}
         />
         <PasswordField

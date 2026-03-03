@@ -13,7 +13,6 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
-  LinearProgress,
 } from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
@@ -91,16 +90,6 @@ type GridParams = {
   row_stride: number;
   row_phase_m: number;
 };
-type PhotogrammetryProfile = {
-  front_overlap_pct: number;
-  side_overlap_pct: number;
-  fixed_exposure: boolean;
-  trigger_mode: "distance" | "time";
-  trigger_distance_m: number;
-  trigger_interval_s: number;
-  speed_mps: number;
-  positioning: "standard_gnss" | "rtk_ppk";
-};
 type GridPreviewWaypoint = { lat: number; lon: number };
 type GridPreviewStats = {
   rows?: number;
@@ -142,29 +131,9 @@ interface MissionStatus {
     drone_connected: boolean;
   };
 }
-type MappingAssetRecord = {
-  id: number;
-  type: string;
-  url: string;
-  meta_data?: Record<string, unknown>;
-  created_at?: string;
-};
-type MappingJobRecord = {
-  job_id: number;
-  field_id: number;
-  model_id: number;
-  status: "pending" | "uploading" | "processing" | "ready" | "failed";
-  progress: number;
-  error?: string | null;
-  processor: string;
-  processor_task_id?: string | null;
-  assets: MappingAssetRecord[];
-};
 
 const MAX_GRID_PREVIEW_WAYPOINTS = 2200;
 const GRID_PREVIEW_DEBOUNCE_MS = 250;
-const PHOTOGRAMMETRY_ALT_MIN_M = 20;
-const PHOTOGRAMMETRY_ALT_MAX_M = 30;
 const INFO_INPUT_LABEL_PROPS = {
   shrink: true,
   sx: {
@@ -205,7 +174,7 @@ function extractLatLng(value: any): LatLng | null {
   return { lat, lng: lon };
 }
 
-export default function PhotoGrammetryPage() {
+export default function FieldPage() {
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [fields, setFields] = useState<FieldFeature[]>([]);
@@ -435,9 +404,9 @@ export default function PhotoGrammetryPage() {
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
   const [droneCenter, setDroneCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [alt, setAlt] = useState(25);
-  const [altInput, setAltInput] = useState("25");
-  const [name, setName] = useState("photogrammetry-plan-1");
+  const [alt, setAlt] = useState(30);
+  const [altInput, setAltInput] = useState("30");
+  const [name, setName] = useState("field-plan-1");
   const [sending, setSending] = useState(false);
   const [gridParams, setGridParams] = useState<GridParams>({
     row_spacing_m: 7.5,
@@ -445,7 +414,7 @@ export default function PhotoGrammetryPage() {
     slope_aware: false,
     safety_inset_m: 1.5,
     terrain_follow: false,
-    agl_m: 25,
+    agl_m: 30,
     pattern_mode: "boustrophedon",
     crosshatch_angle_offset_deg: 90,
     start_corner: "auto",
@@ -453,17 +422,6 @@ export default function PhotoGrammetryPage() {
     row_stride: 1,
     row_phase_m: 0,
   });
-  const [photogrammetryProfile, setPhotogrammetryProfile] =
-    useState<PhotogrammetryProfile>({
-      front_overlap_pct: 80,
-      side_overlap_pct: 70,
-      fixed_exposure: true,
-      trigger_mode: "distance",
-      trigger_distance_m: 2.5,
-      trigger_interval_s: 1.0,
-      speed_mps: 3.0,
-      positioning: "rtk_ppk",
-    });
   const [gridPreview, setGridPreview] = useState<GridPreviewWaypoint[] | null>(
     null
   );
@@ -484,19 +442,6 @@ export default function PhotoGrammetryPage() {
   );
   const [exclusionZones, setExclusionZones] = useState<LonLat[][]>([]);
   const [fieldTilesetUrl, setFieldTilesetUrl] = useState<string | null>(null);
-  const [mappingInputMode, setMappingInputMode] = useState<"upload" | "drone_sync">(
-    "upload"
-  );
-  const [mappingInputFiles, setMappingInputFiles] = useState<File[]>([]);
-  const [mappingSyncSourceDir, setMappingSyncSourceDir] = useState("");
-  const [mappingBusy, setMappingBusy] = useState(false);
-  const [mappingError, setMappingError] = useState<string | null>(null);
-  const [mappingJobStatus, setMappingJobStatus] = useState<MappingJobRecord | null>(
-    null
-  );
-  const [activeMappingJobId, setActiveMappingJobId] = useState<number | null>(
-    null
-  );
   const [mapZoom, setMapZoom] = useState(12);
   const [streamKey, setStreamKey] = useState(Date.now());
   const [startingVideo, setStartingVideo] = useState(false);
@@ -702,13 +647,6 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     [fields, selectedFieldId]
   );
 
-  useEffect(() => {
-    setMappingError(null);
-    setMappingJobStatus(null);
-    setActiveMappingJobId(null);
-    setFieldTilesetUrl(null);
-  }, [selectedFieldId]);
-
   const lonLatRingToPath = useCallback((ring: LonLat[]): LatLng[] => {
     return ring.map(([lon, lat]) => ({ lat, lng: lon }));
   }, []);
@@ -887,6 +825,48 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     };
   }, [API_BASE_CLEAN, stripClosedRing]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fieldId = selectedFieldId;
+    if (fieldId == null) {
+      setFieldTilesetUrl(null);
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      setFieldTilesetUrl(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_CLEAN}/mapping/fields/${fieldId}/latest-ready`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          if (!cancelled) setFieldTilesetUrl(null);
+          return;
+        }
+
+        const payload = await res.json();
+        const assets = Array.isArray(payload?.assets) ? payload.assets : [];
+        const tilesetAsset = assets.find((a: any) => a?.type === "TILESET_3D");
+        const rawUrl = typeof tilesetAsset?.url === "string" ? tilesetAsset.url : "";
+        if (!cancelled) {
+          setFieldTilesetUrl(rawUrl ? toAbsoluteAssetUrl(rawUrl) : null);
+        }
+      } catch {
+        if (!cancelled) setFieldTilesetUrl(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [API_BASE_CLEAN, selectedFieldId, toAbsoluteAssetUrl]);
+
   const selectField = useCallback(
     (f: FieldFeature) => {
       setUseCesium(false);
@@ -975,237 +955,6 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   const clearErrors = useCallback(() => {
     setErrors([]);
   }, []);
-
-  const resolveTilesetUrlFromAssets = useCallback(
-    async (assets: MappingAssetRecord[] | undefined): Promise<string | null> => {
-      if (!Array.isArray(assets)) return null;
-      const tilesetAsset = assets.find(
-        (asset) => asset?.type === "TILESET_3D" && typeof asset?.url === "string"
-      );
-      if (!tilesetAsset?.url) return null;
-
-      const token = getToken();
-      if (token && Number.isFinite(tilesetAsset.id)) {
-        try {
-          const signedRes = await fetch(
-            `${API_BASE_CLEAN}/mapping/assets/${tilesetAsset.id}/signed-url?ttl_seconds=3600&path=tileset.json`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (signedRes.ok) {
-            const signedData = (await signedRes.json()) as { url?: string };
-            if (typeof signedData?.url === "string" && signedData.url.trim().length > 0) {
-              return signedData.url;
-            }
-          }
-        } catch {
-          // Fallback to direct static URL when signed URL is unavailable.
-        }
-      }
-
-      const absolute = toAbsoluteAssetUrl(tilesetAsset.url);
-      if (/\.json(\?|$)/i.test(absolute)) {
-        return absolute;
-      }
-      return `${absolute.replace(/\/+$/, "")}/tileset.json`;
-    },
-    [API_BASE_CLEAN, toAbsoluteAssetUrl]
-  );
-
-  const fetchMappingJobStatus = useCallback(
-    async (jobId: number): Promise<MappingJobRecord | null> => {
-      const token = getToken();
-      if (!token) return null;
-
-      const res = await fetch(`${API_BASE_CLEAN}/mapping/jobs/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const detail = await res.text();
-        throw new Error(detail || `Failed to fetch mapping job ${jobId}`);
-      }
-
-      const data = (await res.json()) as MappingJobRecord;
-      setMappingJobStatus(data);
-      setMappingError(data.error ?? null);
-
-      if (data.status === "ready") {
-        const tilesetUrl = await resolveTilesetUrlFromAssets(data.assets);
-        if (tilesetUrl) {
-          setFieldTilesetUrl(tilesetUrl);
-        }
-        setUseCesium(true);
-        setCesiumViewMode("top");
-        setActiveMappingJobId(null);
-      } else if (data.status === "failed") {
-        setActiveMappingJobId(null);
-      }
-
-      return data;
-    },
-    [API_BASE_CLEAN, resolveTilesetUrlFromAssets]
-  );
-
-  useEffect(() => {
-    if (activeMappingJobId == null) return;
-
-    let cancelled = false;
-    const tick = async () => {
-      try {
-        await fetchMappingJobStatus(activeMappingJobId);
-      } catch (e: any) {
-        if (!cancelled) {
-          setMappingError(e?.message ?? "Failed to refresh mapping progress");
-        }
-      }
-    };
-
-    void tick();
-    const id = setInterval(() => {
-      void tick();
-    }, 3000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [activeMappingJobId, fetchMappingJobStatus]);
-
-  useEffect(() => {
-    if (selectedFieldId == null) return;
-    const token = getToken();
-    if (!token) return;
-
-    let cancelled = false;
-    const loadLatestReady = async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_CLEAN}/mapping/fields/${selectedFieldId}/latest-ready`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as MappingJobRecord;
-        if (cancelled) return;
-
-        setMappingJobStatus(data);
-        const tilesetUrl = await resolveTilesetUrlFromAssets(data.assets);
-        if (cancelled) return;
-        if (tilesetUrl) {
-          setFieldTilesetUrl(tilesetUrl);
-        }
-      } catch {
-        // Ignore preload errors; user can still create a new map.
-      }
-    };
-
-    void loadLatestReady();
-    return () => {
-      cancelled = true;
-    };
-  }, [API_BASE_CLEAN, resolveTilesetUrlFromAssets, selectedFieldId]);
-
-  const mappingJobRunning = activeMappingJobId != null;
-
-  const create3DFieldMap = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      setMappingError("Not authenticated");
-      return;
-    }
-    if (selectedFieldId == null) {
-      setMappingError("Select a saved field before creating a 3D field map.");
-      return;
-    }
-    if (mappingInputMode === "upload" && mappingInputFiles.length === 0) {
-      setMappingError("Select mapping images before starting upload-based processing.");
-      return;
-    }
-
-    setMappingBusy(true);
-    setMappingError(null);
-    setMappingJobStatus(null);
-
-    try {
-      const createRes = await fetch(`${API_BASE_CLEAN}/mapping/jobs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          field_id: selectedFieldId,
-          processor: "webodm",
-          input_source: mappingInputMode,
-          drone_sync:
-            mappingInputMode === "drone_sync"
-              ? {
-                  source_dir: mappingSyncSourceDir.trim() || undefined,
-                  recursive: true,
-                }
-              : undefined,
-          start_immediately: mappingInputMode === "drone_sync",
-          artifacts: {
-            orthomosaic: true,
-            dsm: true,
-            dtm: false,
-            textured_mesh: true,
-            point_cloud: false,
-            xyz_tiles: true,
-          },
-          webodm_options: {},
-        }),
-      });
-      if (!createRes.ok) {
-        const detail = await createRes.text();
-        throw new Error(detail || "Failed to create mapping job");
-      }
-
-      const created = (await createRes.json()) as { job_id?: number };
-      const jobId = Number(created?.job_id);
-      if (!Number.isFinite(jobId) || jobId <= 0) {
-        throw new Error("Mapping job was created but no valid job id was returned.");
-      }
-
-      if (mappingInputMode === "upload") {
-        const formData = new FormData();
-        mappingInputFiles.forEach((file) => {
-          formData.append("files", file);
-        });
-
-        const uploadRes = await fetch(`${API_BASE_CLEAN}/mapping/jobs/${jobId}/images`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-        if (!uploadRes.ok) {
-          const detail = await uploadRes.text();
-          throw new Error(detail || "Failed to upload mapping images");
-        }
-
-        const startRes = await fetch(`${API_BASE_CLEAN}/mapping/jobs/${jobId}/start`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!startRes.ok) {
-          const detail = await startRes.text();
-          throw new Error(detail || "Failed to start mapping job");
-        }
-      }
-
-      setActiveMappingJobId(jobId);
-      await fetchMappingJobStatus(jobId);
-    } catch (e: any) {
-      setMappingError(e?.message ?? "Failed to create 3D field map");
-    } finally {
-      setMappingBusy(false);
-    }
-  }, [
-    API_BASE_CLEAN,
-    fetchMappingJobStatus,
-    mappingInputFiles,
-    mappingInputMode,
-    mappingSyncSourceDir,
-    selectedFieldId,
-  ]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -1501,10 +1250,8 @@ useEffect(() => {
       setAltInput(String(alt));
       return;
     }
-    if (num < PHOTOGRAMMETRY_ALT_MIN_M || num > PHOTOGRAMMETRY_ALT_MAX_M) {
-      addError(
-        `Photogrammetry altitude must be between ${PHOTOGRAMMETRY_ALT_MIN_M} and ${PHOTOGRAMMETRY_ALT_MAX_M} meters`
-      );
+    if (num < 1 || num > 500) {
+      addError("Altitude must be between 1 and 500 meters");
       return;
     }
     setAlt(num);
@@ -1556,9 +1303,7 @@ useEffect(() => {
           setGridPreview(null);
           setGridPreviewMask(null);
           setGridPreviewStats(null);
-          setGridPreviewError(
-            detail || `Photogrammetry coverage preview failed (HTTP ${res.status})`
-          );
+          setGridPreviewError(detail || `Grid preview failed (HTTP ${res.status})`);
           return;
         }
         const data = await res.json();
@@ -1572,7 +1317,7 @@ useEffect(() => {
         setGridPreview(null);
         setGridPreviewMask(null);
         setGridPreviewStats(null);
-        setGridPreviewError("Photogrammetry coverage preview failed. Please try again.");
+        setGridPreviewError("Grid preview failed. Please try again.");
       } finally {
         if (!signal.aborted) setPreviewLoading(false);
       }
@@ -1611,24 +1356,18 @@ useEffect(() => {
     }
 
     const altToUse = altInput === "" ? NaN : Number(altInput);
-    if (
-      !Number.isFinite(altToUse) ||
-      altToUse < PHOTOGRAMMETRY_ALT_MIN_M ||
-      altToUse > PHOTOGRAMMETRY_ALT_MAX_M
-    ) {
-      addError(
-        `Photogrammetry altitude must be between ${PHOTOGRAMMETRY_ALT_MIN_M} and ${PHOTOGRAMMETRY_ALT_MAX_M} meters`
-      );
+    if (!Number.isFinite(altToUse) || altToUse < 1 || altToUse > 500) {
+      addError("Altitude must be between 1 and 500 meters");
       return;
     }
 
     if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw or select a field polygon before starting a photogrammetry mission");
+      addError("Draw or select a field polygon before starting a grid survey");
       return;
     }
     if (gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS) {
       addError(
-        `Photogrammetry coverage preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row spacing, increase row stride, or split the field.`
+        `Grid preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row spacing, increase row stride, or split the field.`
       );
       return;
     }
@@ -1646,44 +1385,6 @@ useEffect(() => {
         name: name.trim(),
         cruise_alt: altToUse,
         mission_type: "grid",
-        mission_profile: {
-          type: "photogrammetry",
-          altitude_m: altToUse,
-          front_overlap_pct: photogrammetryProfile.front_overlap_pct,
-          side_overlap_pct: photogrammetryProfile.side_overlap_pct,
-          camera: {
-            orientation: "nadir",
-            fixed_exposure: photogrammetryProfile.fixed_exposure,
-          },
-          speed_mps: photogrammetryProfile.speed_mps,
-          trigger:
-            photogrammetryProfile.trigger_mode === "distance"
-              ? {
-                  mode: "distance",
-                  distance_m: photogrammetryProfile.trigger_distance_m,
-                }
-              : {
-                  mode: "time",
-                  interval_s: photogrammetryProfile.trigger_interval_s,
-                },
-          accuracy: photogrammetryProfile.positioning,
-        },
-        processing: {
-          service: "webodm",
-          deployment: "fastapi_job_service",
-          worker: {
-            dedicated_machine_recommended: true,
-            gpu_recommended: true,
-            gpu_required: false,
-          },
-        },
-        requested_artifacts: {
-          orthomosaic: { required: true, format: "cog_geotiff" },
-          dsm: { required: true, format: "cog_geotiff" },
-          dtm: { required: false, format: "cog_geotiff" },
-          textured_mesh: { required: true, format: "3d_tiles" },
-          point_cloud: { required: false, format: "las_laz" },
-        },
         grid: {
           field_polygon_lonlat: fieldBorder,
           row_spacing_m: gridParams.row_spacing_m,
@@ -1691,7 +1392,7 @@ useEffect(() => {
           slope_aware: gridParams.slope_aware,
           safety_inset_m: gridParams.safety_inset_m,
           terrain_follow: gridParams.terrain_follow,
-          agl_m: altToUse,
+          agl_m: gridParams.agl_m,
           pattern_mode: gridParams.pattern_mode,
           crosshatch_angle_offset_deg: gridParams.crosshatch_angle_offset_deg,
           start_corner: gridParams.start_corner,
@@ -1714,14 +1415,14 @@ useEffect(() => {
         const error = await missionRes.text();
         if (missionRes.status === 409) {
           throw new Error(
-            "Another mission is already running. Wait for completion before starting a new mission."
+            "Another mission is already running. Wait for completion before starting a new survey."
           );
         }
         throw new Error(error || "Failed to create flight plan");
       }
 
       const data = await missionRes.json();
-      alert(`PhotoGrammetry Mission: "${data.mission_name}" started! Tracking flight...`);
+      alert(`Grid Survey: "${data.mission_name}" started! Tracking flight...`);
 
       setActiveFlightId(data.flight_id);
       missionStartAtRef.current = Date.now();
@@ -1750,7 +1451,7 @@ useEffect(() => {
       fields.find((f) => f.id === selectedFieldId)?.name ??
       `#${String(selectedFieldId)}`;
     const confirmed = window.confirm(
-      `Start photogrammetry mission for "${selectedName}" now with current capture parameters?`
+      `Start grid survey for "${selectedName}" now with current grid parameters?`
     );
     if (!confirmed) return;
     void sendMission();
@@ -1990,10 +1691,10 @@ useEffect(() => {
           spacing={2}
         >
           <div>
-            <Typography variant="h5">PhotoGrammetry Operations</Typography>
+            <Typography variant="h5">Field Operations</Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Build per-field digital twins (orthomosaic, elevation, and 3D mesh),
-              then stream them into the tasking basemap.
+              Configure field routes, stream telemetry, and monitor imagery in
+              real time.
             </Typography>
           </div>
           <Stack direction="row" spacing={1} alignItems="center">
@@ -2011,40 +1712,6 @@ useEffect(() => {
             />
           </Stack>
         </Stack>
-
-        <Paper
-          variant="outlined"
-          sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: "rgba(255,255,255,0.7)" }}
-        >
-          <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-            Digital Twin Artifacts
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
-            Mission target: build a georeferenced field digital twin via
-            OpenDroneMap/WebODM and publish the outputs as the React tasking map.
-            3D delivery can be streamed as 3D Tiles directly or via Cesium ion.
-          </Typography>
-          <Stack spacing={0.5}>
-            <Typography variant="caption">
-              Orthomosaic (georeferenced 2D texture) delivered as COG GeoTIFF.
-            </Typography>
-            <Typography variant="caption">
-              DSM and optional DTM delivered as COG GeoTIFF.
-            </Typography>
-            <Typography variant="caption">
-              Textured 3D mesh (OBJ/GLTF/etc) converted to 3D Tiles for web streaming.
-            </Typography>
-            <Typography variant="caption">
-              Optional: point cloud (LAS/LAZ) for inspection-grade detail.
-            </Typography>
-            <Typography variant="caption">
-              Processing service: WebODM behind FastAPI as a mapping job service.
-            </Typography>
-            <Typography variant="caption">
-              Deployment: dedicated worker machine recommended; GPU helps but is not mandatory.
-            </Typography>
-          </Stack>
-        </Paper>
 
         {errors.length > 0 && (
           <Box sx={{ mb: 2 }}>
@@ -2509,7 +2176,7 @@ useEffect(() => {
                       }
                       label={
                         <Typography variant="caption">
-                          Auto-start photogrammetry mission when selecting a saved field
+                          Auto-start survey when selecting a saved field
                         </Typography>
                       }
                     />
@@ -2645,7 +2312,7 @@ useEffect(() => {
 
                 <Box sx={{ mt: 3 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    PhotoGrammetry Mission Parameters
+                    Grid Survey Parameters
                   </Typography>
                   <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                     <Box
@@ -2904,7 +2571,7 @@ useEffect(() => {
                       {!fieldBorder && (
                         <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
                           Draw or select a field polygon above to generate a
-                          photogrammetry coverage preview.
+                          grid preview.
                         </Alert>
                       )}
                       {fieldBorder && gridPreview && (
@@ -2916,7 +2583,7 @@ useEffect(() => {
                           <Chip
                             size="small"
                             color="success"
-                            label={`${gridPreview.length} capture waypoints previewed`}
+                            label={`${gridPreview.length} waypoints previewed`}
                           />
                           {typeof gridPreviewStats?.route_m === "number" && (
                             <Chip
@@ -2952,9 +2619,9 @@ useEffect(() => {
                       )}
                       {gridPreviewTooDense && (
                         <Alert severity="warning" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          Coverage preview is too dense ({gridPreview?.length}/
+                          Grid preview is too dense ({gridPreview?.length}/
                           {MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row
-                          spacing or row stride before starting the mission.
+                          spacing or row stride before starting the survey.
                         </Alert>
                       )}
                       {gridPreviewError && (
@@ -3056,7 +2723,7 @@ useEffect(() => {
                     justifyContent="space-between"
                     sx={{ mb: 1 }}
                   >
-                    <Typography variant="subtitle1">PhotoGrammetry Camera</Typography>
+                    <Typography variant="subtitle1">Survey Camera</Typography>
                     <Stack direction="row" alignItems="center" spacing={1}>
                       {startingVideo && <CircularProgress size={16} />}
                       <Typography variant="caption" color="text.secondary">
@@ -3137,7 +2804,7 @@ useEffect(() => {
                                   ? `&token=${encodeURIComponent(videoToken)}`
                                   : ""
                               }`}
-                              alt="Photogrammetry camera stream"
+                              alt="Survey camera stream"
                               onError={handleVideoError}
                               onLoad={handleVideoLoad}
                               sx={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -3212,7 +2879,7 @@ useEffect(() => {
                       </>
                     ) : (
                       <Typography sx={{ color: "white" }}>
-                        Connect the drone to view the photogrammetry stream.
+                        Connect the drone to view the survey stream.
                       </Typography>
                     )}
                   </Box>
@@ -3297,145 +2964,6 @@ useEffect(() => {
                       </Stack>
                     </Stack>
                   </Paper>
-
-                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                    <Typography variant="subtitle2">3D Field Map Workflow</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                      1) Select a saved field polygon. 2) Create 3D map from uploaded images or direct drone sync.
-                      3) Wait for processing. 4) Plan spray routes in 3D mode.
-                    </Typography>
-
-                    <Stack spacing={1.2} sx={{ mt: 1 }}>
-                      <TextField
-                        select
-                        size="small"
-                        label="Input source"
-                        value={mappingInputMode}
-                        onChange={(e) => {
-                          const mode = e.target.value as "upload" | "drone_sync";
-                          setMappingInputMode(mode);
-                          if (mode === "drone_sync") setMappingInputFiles([]);
-                        }}
-                      >
-                        <MenuItem value="upload">Upload Images</MenuItem>
-                        <MenuItem value="drone_sync">Direct Drone Sync</MenuItem>
-                      </TextField>
-
-                      {mappingInputMode === "upload" && (
-                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                          <Button variant="outlined" component="label" size="small">
-                            Select Images
-                            <input
-                              hidden
-                              multiple
-                              type="file"
-                              accept="image/*,.jpg,.jpeg,.png,.tif,.tiff"
-                              onChange={(e) => {
-                                const files = e.target.files ? Array.from(e.target.files) : [];
-                                setMappingInputFiles(files);
-                              }}
-                            />
-                          </Button>
-                          <Chip
-                            size="small"
-                            color={mappingInputFiles.length > 0 ? "success" : "default"}
-                            label={`${mappingInputFiles.length} file(s)`}
-                          />
-                        </Stack>
-                      )}
-
-                      {mappingInputMode === "drone_sync" && (
-                        <TextField
-                          size="small"
-                          label={
-                            <InfoLabel
-                              label="Sync source folder (optional)"
-                              info="If blank, backend tries auto-discovery in configured drone sync directory."
-                            />
-                          }
-                          InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                          value={mappingSyncSourceDir}
-                          onChange={(e) => setMappingSyncSourceDir(e.target.value)}
-                          placeholder="field_12 or /mnt/gs-sync/field_12"
-                        />
-                      )}
-
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={create3DFieldMap}
-                        disabled={
-                          mappingBusy ||
-                          mappingJobRunning ||
-                          selectedFieldId == null ||
-                          (mappingInputMode === "upload" && mappingInputFiles.length === 0)
-                        }
-                      >
-                        {mappingBusy ? "Creating 3D Field Map..." : "Create 3D Field Map"}
-                      </Button>
-
-                      {selectedFieldId == null && (
-                        <Alert severity="info" sx={{ py: 0.5 }}>
-                          Save/select a field first. Mapping jobs are linked to saved field IDs.
-                        </Alert>
-                      )}
-
-                      {mappingError && (
-                        <Alert severity="error" sx={{ py: 0.5 }}>
-                          {mappingError}
-                        </Alert>
-                      )}
-
-                      {mappingJobStatus && (
-                        <Box>
-                          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1, mb: 0.5 }}>
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`Job #${mappingJobStatus.job_id}`}
-                            />
-                            <Chip
-                              size="small"
-                              color={
-                                mappingJobStatus.status === "ready"
-                                  ? "success"
-                                  : mappingJobStatus.status === "failed"
-                                  ? "error"
-                                  : "warning"
-                              }
-                              label={mappingJobStatus.status}
-                            />
-                            <Chip size="small" label={`${mappingJobStatus.progress}%`} />
-                          </Stack>
-                          <LinearProgress
-                            variant="determinate"
-                            value={Math.max(0, Math.min(100, mappingJobStatus.progress))}
-                          />
-                          {mappingJobRunning && mappingJobStatus.status !== "ready" && mappingJobStatus.status !== "failed" && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                              Processing is active. You can continue route planning once status is ready.
-                            </Typography>
-                          )}
-                          {mappingJobStatus.status === "ready" && (
-                            <Alert severity="success" sx={{ mt: 1, py: 0.5 }}>
-                              3D field map is ready. Mesh + boundary are loaded for route planning.
-                              <Button
-                                size="small"
-                                sx={{ ml: 1 }}
-                                onClick={() => {
-                                  setUseCesium(true);
-                                  setCesiumViewMode("top");
-                                }}
-                              >
-                                Open 3D Planning
-                              </Button>
-                            </Alert>
-                          )}
-                        </Box>
-                      )}
-                    </Stack>
-                  </Paper>
-
                   <TextField
                     label="Mission name"
                     value={name}
@@ -3448,7 +2976,7 @@ useEffect(() => {
                   />
 
                   <TextField
-                    label="Mapping altitude (m)"
+                    label="Cruise altitude (m)"
                     type="text"
                     value={altInput}
                     onChange={(e) => handleAltitudeInputChange(e.target.value)}
@@ -3457,162 +2985,14 @@ useEffect(() => {
                     fullWidth
                     inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
                     error={
-                      altInput !== "" &&
-                      (Number(altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
-                        Number(altInput) > PHOTOGRAMMETRY_ALT_MAX_M)
+                      altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
                     }
                     helperText={
-                      altInput !== "" &&
-                      (Number(altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
-                        Number(altInput) > PHOTOGRAMMETRY_ALT_MAX_M)
-                        ? `Recommended capture range is ${PHOTOGRAMMETRY_ALT_MIN_M}–${PHOTOGRAMMETRY_ALT_MAX_M}m`
-                        : `High-res mapping profile: ${PHOTOGRAMMETRY_ALT_MIN_M}–${PHOTOGRAMMETRY_ALT_MAX_M}m`
+                      altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
+                        ? "Must be between 1–500m"
+                        : " "
                     }
                   />
-
-                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Mapping Mission Profile
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                        gap: 1,
-                      }}
-                    >
-                      <TextField
-                        size="small"
-                        label="Front overlap (%)"
-                        type="number"
-                        value={photogrammetryProfile.front_overlap_pct}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          if (!Number.isFinite(value)) return;
-                          setPhotogrammetryProfile((p) => ({
-                            ...p,
-                            front_overlap_pct: Math.min(85, Math.max(75, value)),
-                          }));
-                        }}
-                        inputProps={{ min: 75, max: 85, step: 1 }}
-                      />
-                      <TextField
-                        size="small"
-                        label="Side overlap (%)"
-                        type="number"
-                        value={photogrammetryProfile.side_overlap_pct}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          if (!Number.isFinite(value)) return;
-                          setPhotogrammetryProfile((p) => ({
-                            ...p,
-                            side_overlap_pct: Math.min(75, Math.max(65, value)),
-                          }));
-                        }}
-                        inputProps={{ min: 65, max: 75, step: 1 }}
-                      />
-                      <TextField
-                        size="small"
-                        label={
-                          <InfoLabel
-                            label="Speed (m/s)"
-                            info="Slow flight helps reduce motion blur."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        type="number"
-                        value={photogrammetryProfile.speed_mps}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          if (!Number.isFinite(value)) return;
-                          setPhotogrammetryProfile((p) => ({
-                            ...p,
-                            speed_mps: Math.min(8, Math.max(1, value)),
-                          }));
-                        }}
-                        inputProps={{ min: 1, max: 8, step: 0.1 }}
-                      />
-                      <TextField
-                        select
-                        size="small"
-                        label="Trigger mode"
-                        value={photogrammetryProfile.trigger_mode}
-                        onChange={(e) =>
-                          setPhotogrammetryProfile((p) => ({
-                            ...p,
-                            trigger_mode: e.target.value as PhotogrammetryProfile["trigger_mode"],
-                          }))
-                        }
-                      >
-                        <MenuItem value="distance">Distance-based</MenuItem>
-                        <MenuItem value="time">Time-based</MenuItem>
-                      </TextField>
-                      {photogrammetryProfile.trigger_mode === "distance" ? (
-                        <TextField
-                          size="small"
-                          label="Trigger distance (m)"
-                          type="number"
-                          value={photogrammetryProfile.trigger_distance_m}
-                          onChange={(e) => {
-                            const value = Number(e.target.value);
-                            if (!Number.isFinite(value)) return;
-                            setPhotogrammetryProfile((p) => ({
-                              ...p,
-                              trigger_distance_m: Math.min(20, Math.max(0.5, value)),
-                            }));
-                          }}
-                          inputProps={{ min: 0.5, max: 20, step: 0.1 }}
-                        />
-                      ) : (
-                        <TextField
-                          size="small"
-                          label="Trigger interval (s)"
-                          type="number"
-                          value={photogrammetryProfile.trigger_interval_s}
-                          onChange={(e) => {
-                            const value = Number(e.target.value);
-                            if (!Number.isFinite(value)) return;
-                            setPhotogrammetryProfile((p) => ({
-                              ...p,
-                              trigger_interval_s: Math.min(10, Math.max(0.2, value)),
-                            }));
-                          }}
-                          inputProps={{ min: 0.2, max: 10, step: 0.1 }}
-                        />
-                      )}
-                      <TextField
-                        select
-                        size="small"
-                        label="Accuracy option"
-                        value={photogrammetryProfile.positioning}
-                        onChange={(e) =>
-                          setPhotogrammetryProfile((p) => ({
-                            ...p,
-                            positioning: e.target.value as PhotogrammetryProfile["positioning"],
-                          }))
-                        }
-                      >
-                        <MenuItem value="rtk_ppk">RTK/PPK</MenuItem>
-                        <MenuItem value="standard_gnss">Standard GNSS</MenuItem>
-                      </TextField>
-                    </Box>
-                    <FormControlLabel
-                      sx={{ mt: 0.5 }}
-                      control={
-                        <Switch
-                          size="small"
-                          checked={photogrammetryProfile.fixed_exposure}
-                          onChange={(e) =>
-                            setPhotogrammetryProfile((p) => ({
-                              ...p,
-                              fixed_exposure: e.target.checked,
-                            }))
-                          }
-                        />
-                      }
-                      label={<Typography variant="caption">Camera: nadir + fixed exposure (recommended)</Typography>}
-                    />
-                  </Paper>
 
                   <Button
                     variant="contained"
@@ -3624,8 +3004,8 @@ useEffect(() => {
                       !!gridPreviewError ||
                       !name.trim() ||
                       altInput === "" ||
-                      Number(altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
-                      Number(altInput) > PHOTOGRAMMETRY_ALT_MAX_M ||
+                      Number(altInput) < 1 ||
+                      Number(altInput) > 500 ||
                       !fieldBorder ||
                       fieldBorder.length < 3
                     }
@@ -3636,10 +3016,10 @@ useEffect(() => {
                     {sending ? (
                       <>
                         <CircularProgress size={20} sx={{ mr: 1 }} />
-                        Starting PhotoGrammetry...
+                        Starting Grid Survey...
                       </>
                     ) : (
-                      "Start PhotoGrammetry"
+                      "Start Grid Survey"
                     )}
                   </Button>
 

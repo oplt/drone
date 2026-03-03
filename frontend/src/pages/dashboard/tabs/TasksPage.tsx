@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
 import {
   Box,
   Button,
@@ -15,14 +15,14 @@ import Header from "../../../components/dashboard/Header";
 import {
   GoogleMap,
   Polyline,
-  OverlayView,
-  useJsApiLoader,
+  OverlayView
 } from "@react-google-maps/api";
 import { getToken } from "../../../auth"; // adjust path if needed
 import DroneSvg from "../../../assets/Drone.svg?react";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
 import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
+import { GoogleMapsContext } from "../../../utils/googleMaps";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
@@ -123,7 +123,6 @@ export default function TasksPage() {
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
   const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
-  const libraries = useMemo(() => ["marker"] as any, []);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoRetryCount, setVideoRetryCount] = useState(0);
   const wsEnabled = Boolean(
@@ -140,12 +139,7 @@ export default function TasksPage() {
     missionStatus?.orchestrator?.drone_connected || wsConnected,
   );
   const droneReady = Boolean(wsConnected && droneCenter);
-  // Removes LoadScript + prevents repeated script injection
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: "google-maps-script",
-    googleMapsApiKey: apiKey || "MISSING_KEY",
-    libraries,
-  });
+  const { isLoaded, loadError } = useContext(GoogleMapsContext);
 
   // Keep latest activeFlightId in a ref for unmount cleanup
   useEffect(() => {

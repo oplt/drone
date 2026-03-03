@@ -1,5 +1,12 @@
+import os
+from pathlib import Path
+from contextlib import asynccontextmanager
+import logging
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from backend.db.session import init_db, close_db
 from backend.api.routes.routes_auth import router as auth_router
 from backend.api.routes.routes_flights import router as missions_router
@@ -10,12 +17,9 @@ from backend.api.routes.routes_analytics import router as analytics_router
 from backend.api.routes.routes_settings import router as settings_router
 from backend.api.routes.routes_geofence import router as geofence_router
 from backend.api.routes.routes_animal_farm import router as animal_farm_router
-from backend.utils.config_runtime import get_runtime_settings
-from backend.db.repository.settings_repo import SettingsRepository
-from contextlib import asynccontextmanager
-import logging
+from backend.api.routes.routes_field import router as fields_router
+from backend.api.routes.routes_mapping import router as mapping_router
 from backend.config import setup_logging
-import asyncio
 from backend.db.repository.settings_repo import SettingsRepository
 from backend.utils.config_runtime import get_runtime_settings
 
@@ -79,6 +83,26 @@ app.include_router(settings_router)
 app.include_router(analytics_router)
 app.include_router(geofence_router)
 app.include_router(animal_farm_router)
+app.include_router(fields_router)
+app.include_router(mapping_router)
+
+mapping_assets_dir = Path(
+    os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")
+).resolve()
+mapping_assets_dir.mkdir(parents=True, exist_ok=True)
+serve_public_mapping_assets = os.getenv("PHOTOGRAMMETRY_PUBLIC_STATIC_ASSETS", "1").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+if serve_public_mapping_assets:
+    app.mount(
+        "/mapping-assets",
+        StaticFiles(directory=str(mapping_assets_dir)),
+        name="mapping-assets",
+    )
+else:
+    logger.info("Public mapping asset mount disabled; use signed mapping asset gateway routes")
 
 
 @app.get("/health")
