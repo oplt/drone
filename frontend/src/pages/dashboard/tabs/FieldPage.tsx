@@ -136,13 +136,7 @@ const MAX_GRID_PREVIEW_WAYPOINTS = 2200;
 const GRID_PREVIEW_DEBOUNCE_MS = 250;
 const INFO_INPUT_LABEL_PROPS = {
   shrink: true,
-  sx: {
-    pointerEvents: "auto",
-    px: 0.5,
-    backgroundColor: "background.paper",
-    borderRadius: 0.5,
-    lineHeight: 1.2,
-  },
+  sx: { pointerEvents: "auto" },
 } as const;
 
 function extractLatLng(value: any): LatLng | null {
@@ -2109,7 +2103,7 @@ useEffect(() => {
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Saved Fields
                     </Typography>
-                    <TextField
+                    <TextField variant="filled"
                       select
                       size="small"
                       fullWidth
@@ -2192,7 +2186,7 @@ useEffect(() => {
                       alignItems="center"
                       sx={{ flexWrap: "wrap" }}
                     >
-                      <TextField
+                      <TextField variant="filled"
                         size="small"
                         label="Field name"
                         value={fieldName}
@@ -2327,7 +2321,7 @@ useEffect(() => {
                         alignItems: "start",
                       }}
                     >
-                      <TextField
+                      <TextField variant="filled"
                         select
                         label={
                           <InfoLabel
@@ -2349,7 +2343,7 @@ useEffect(() => {
                         <MenuItem value="boustrophedon">Boustrophedon (single pass)</MenuItem>
                         <MenuItem value="crosshatch">Crosshatch (two passes)</MenuItem>
                       </TextField>
-                      <TextField
+                      <TextField variant="filled"
                         select
                         label={
                           <InfoLabel
@@ -2371,7 +2365,7 @@ useEffect(() => {
                         <MenuItem value="serpentine">Serpentine (recommended)</MenuItem>
                         <MenuItem value="one_way">One-way lanes</MenuItem>
                       </TextField>
-                      <TextField
+                      <TextField variant="filled"
                         select
                         label={
                           <InfoLabel
@@ -2396,7 +2390,7 @@ useEffect(() => {
                         <MenuItem value="nw">North-West</MenuItem>
                         <MenuItem value="ne">North-East</MenuItem>
                       </TextField>
-                      <TextField
+                      <TextField variant="filled"
                         label="Row spacing (m)"
                         type="number"
                         size="small"
@@ -2412,7 +2406,7 @@ useEffect(() => {
                         }}
                         inputProps={{ min: 1, max: 200, step: 0.5 }}
                       />
-                      <TextField
+                      <TextField variant="filled"
                         label={
                           <InfoLabel
                             label="Row stride (every Nth line)"
@@ -2434,7 +2428,7 @@ useEffect(() => {
                         }}
                         inputProps={{ min: 1, max: 20, step: 1 }}
                       />
-                      <TextField
+                      <TextField variant="filled"
                         label={
                           <InfoLabel
                             label="Row phase offset (m)"
@@ -2456,7 +2450,7 @@ useEffect(() => {
                         }}
                         inputProps={{ min: 0, max: 500, step: 0.5 }}
                       />
-                      <TextField
+                      <TextField variant="filled"
                         label={
                           <InfoLabel
                             label="Grid angle (°, blank = auto)"
@@ -2478,7 +2472,7 @@ useEffect(() => {
                         inputProps={{ min: 0, max: 179, step: 1 }}
                       />
                       {gridParams.pattern_mode === "crosshatch" && (
-                        <TextField
+                        <TextField variant="filled"
                           label={
                             <InfoLabel
                               label="Crosshatch angle offset (°)"
@@ -2504,7 +2498,7 @@ useEffect(() => {
                           inputProps={{ min: 1, max: 179, step: 1 }}
                         />
                       )}
-                      <TextField
+                      <TextField variant="filled"
                         label="Safety inset (m)"
                         type="number"
                         size="small"
@@ -2553,7 +2547,7 @@ useEffect(() => {
                         }
                       />
                       {gridParams.terrain_follow && (
-                        <TextField
+                        <TextField variant="filled"
                           label="AGL height (m)"
                           type="number"
                           size="small"
@@ -2964,7 +2958,7 @@ useEffect(() => {
                       </Stack>
                     </Stack>
                   </Paper>
-                  <TextField
+                  <TextField variant="filled"
                     label="Mission name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -2975,7 +2969,7 @@ useEffect(() => {
                     helperText={!name.trim() ? "Mission name is required" : " "}
                   />
 
-                  <TextField
+                  <TextField variant="filled"
                     label="Cruise altitude (m)"
                     type="text"
                     value={altInput}

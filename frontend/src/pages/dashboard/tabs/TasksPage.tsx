@@ -1227,7 +1227,7 @@ export default function TasksPage() {
                       </Stack>
                     </Stack>
                   </Paper>
-                  <TextField
+                  <TextField variant="filled"
                     label="Field plan name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -1238,7 +1238,7 @@ export default function TasksPage() {
                     helperText={!name.trim() ? "Field plan name is required" : ""}
                   />
 
-                  <TextField
+                  <TextField variant="filled"
                     label="Cruise altitude (m)"
                     type="text"
                     value={altInput}

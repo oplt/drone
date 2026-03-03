@@ -180,7 +180,7 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
             >
               <FormControl>
                 <FormLabel htmlFor="name">Full name</FormLabel>
-                <TextField
+                <TextField variant="filled"
                   autoComplete="name"
                   name="name"
                   required
@@ -201,7 +201,7 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
                   placeholder="grower@farmco.com"
                   name="email"
                   autoComplete="email"
-                  variant="outlined"
+                  variant="filled"
                   error={emailError}
                   helperText={emailErrorMessage}
                   color={emailError ? 'error' : 'primary'}
@@ -217,7 +217,7 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
                   type="password"
                   id="password"
                   autoComplete="new-password"
-                  variant="outlined"
+                  variant="filled"
                   error={passwordError}
                   helperText={passwordErrorMessage}
                   color={passwordError ? 'error' : 'primary'}

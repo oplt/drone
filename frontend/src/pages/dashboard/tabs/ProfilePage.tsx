@@ -174,7 +174,7 @@ export default function ProfilePage() {
         <Section title="Personal information">
           <Stack spacing={2.5}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
+              <TextField variant="filled"
                 fullWidth
                 label="Full name"
                 value={fullName}
@@ -183,7 +183,7 @@ export default function ProfilePage() {
               />
 
             </Stack>
-            <TextField
+            <TextField variant="filled"
               fullWidth
               label={
                 <InfoLabel
@@ -191,16 +191,7 @@ export default function ProfilePage() {
                   info="Email cannot be changed here. Contact support if you need to update it."
                 />
               }
-              InputLabelProps={{
-                shrink: true,
-                sx: {
-                  pointerEvents: "auto",
-                  px: 0.5,
-                  backgroundColor: "background.paper",
-                  borderRadius: 0.5,
-                  lineHeight: 1.2,
-                },
-              }}
+              InputLabelProps={{ shrink: true, sx: { pointerEvents: "auto" } }}
               value={user?.email ?? ""}
               disabled
             />

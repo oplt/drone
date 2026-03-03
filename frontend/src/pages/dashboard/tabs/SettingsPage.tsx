@@ -314,7 +314,7 @@ export default function SettingsPage() {
 function SecretField(props: React.ComponentProps<typeof TextField>) {
   const [show, setShow] = useState(false);
   return (
-    <TextField
+    <TextField variant="filled"
       {...props}
       type={show ? "text" : "password"}
       InputProps={{
@@ -362,9 +362,9 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 4 }} >
                   <Typography variant="h6" gutterBottom>MQTT Broker</Typography>
                   <Stack spacing={3}>
-                    <TextField fullWidth label="Broker" value={doc.telemetry?.mqtt_broker} onChange={e => update("telemetry", "mqtt_broker", e.target.value)} />
-                    <TextField fullWidth label="Port" type="number" value={doc.telemetry?.mqtt_port} onChange={e => update("telemetry", "mqtt_port", Number(e.target.value))} />
-                    <TextField fullWidth label="User" value={doc.telemetry?.mqtt_user} onChange={e => update("telemetry", "mqtt_user", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Broker" value={doc.telemetry?.mqtt_broker} onChange={e => update("telemetry", "mqtt_broker", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Port" type="number" value={doc.telemetry?.mqtt_port} onChange={e => update("telemetry", "mqtt_port", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="User" value={doc.telemetry?.mqtt_user} onChange={e => update("telemetry", "mqtt_user", e.target.value)} />
                     <SecretField fullWidth label="Password" placeholder={MASK} value={doc.telemetry?.mqtt_pass} onChange={e => update("telemetry", "mqtt_pass", e.target.value)} />
                     <FormControlLabel control={<Switch checked={doc.telemetry?.mqtt_use_tls} onChange={e => update("telemetry", "mqtt_use_tls", e.target.checked)} />} label="Use TLS" />
 
@@ -378,8 +378,8 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 4 }}>
                   <Typography variant="h6" gutterBottom>OPC UA</Typography>
                   <Stack spacing={3}>
-                    <TextField fullWidth label="Endpoint" value={doc.telemetry?.opcua_endpoint} onChange={e => update("telemetry", "opcua_endpoint", e.target.value)} />
-                    <TextField fullWidth label="Security Policy" value={doc.telemetry?.opcua_security_policy} onChange={e => update("telemetry", "opcua_security_policy", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Endpoint" value={doc.telemetry?.opcua_endpoint} onChange={e => update("telemetry", "opcua_endpoint", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Security Policy" value={doc.telemetry?.opcua_security_policy} onChange={e => update("telemetry", "opcua_security_policy", e.target.value)} />
 
                       <Button variant="outlined" component="label" fullWidth>
                         Upload OPC UA Certificate
@@ -397,8 +397,8 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 4 }}>
                   <Typography variant="h6" gutterBottom>Logging & Topics</Typography>
                   <Stack spacing={3}>
-                    <TextField fullWidth label="Log Interval (sec)" type="number" value={doc.telemetry?.telem_log_interval_sec} onChange={e => update("telemetry", "telem_log_interval_sec", Number(e.target.value))} />
-                    <TextField fullWidth label="Telemetry Topic" value={doc.telemetry?.telemetry_topic} onChange={e => update("telemetry", "telemetry_topic", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Log Interval (sec)" type="number" value={doc.telemetry?.telem_log_interval_sec} onChange={e => update("telemetry", "telem_log_interval_sec", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Telemetry Topic" value={doc.telemetry?.telemetry_topic} onChange={e => update("telemetry", "telemetry_topic", e.target.value)} />
                   </Stack>
               </Grid>
               </Grid>
@@ -410,9 +410,9 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>LLM Provider</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="Provider" value={doc.ai?.llm_provider} onChange={e => update("ai", "llm_provider", e.target.value)} />
-                    <TextField fullWidth label="Model" value={doc.ai?.llm_model} onChange={e => update("ai", "llm_model", e.target.value)} />
-                    <TextField fullWidth label="API Base" value={doc.ai?.llm_api_base} onChange={e => update("ai", "llm_api_base", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Provider" value={doc.ai?.llm_provider} onChange={e => update("ai", "llm_provider", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Model" value={doc.ai?.llm_model} onChange={e => update("ai", "llm_model", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="API Base" value={doc.ai?.llm_api_base} onChange={e => update("ai", "llm_api_base", e.target.value)} />
                     <SecretField fullWidth label="API Key"placeholder={MASK} value={doc.ai?.llm_api_key} onChange={e => update("ai", "llm_api_key", e.target.value)} />
                   </Stack>
                 </Grid>
@@ -433,8 +433,8 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Administration</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="Admin Emails" value={doc.credentials?.admin_emails} onChange={e => update("credentials", "admin_emails", e.target.value)} />
-                    <TextField fullWidth label="Admin Domains" value={doc.credentials?.admin_domains} onChange={e => update("credentials", "admin_domains", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Admin Emails" value={doc.credentials?.admin_emails} onChange={e => update("credentials", "admin_emails", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Admin Domains" value={doc.credentials?.admin_domains} onChange={e => update("credentials", "admin_domains", e.target.value)} />
                   </Stack>
                 </Grid>
               </Grid>
@@ -446,11 +446,11 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Drone</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="Battery Capacity (Wh)" type="number" value={doc.hardware?.battery_capacity_wh} onChange={e => update("hardware", "battery_capacity_wh", Number(e.target.value))} />
-                    <TextField fullWidth label="Energy Reserve Fraction" type="number" inputProps={{ step: 0.1, min: 0, max: 1 }} value={doc.hardware?.energy_reserve_frac} onChange={e => update("hardware", "energy_reserve_frac", Number(e.target.value))} />
-                    <TextField fullWidth label="Cruise Power (W)" type="number" value={doc.hardware?.cruise_power_w} onChange={e => update("hardware", "cruise_power_w", Number(e.target.value))} />
-                    <TextField fullWidth label="Cruise Speed (mps)" type="number" value={doc.hardware?.cruise_speed_mps} onChange={e => update("hardware", "cruise_speed_mps", Number(e.target.value))} />
-                    <TextField fullWidth label="Heartbeat Timeout" type="number" value={doc.hardware?.heartbeat_timeout} onChange={e => update("hardware", "heartbeat_timeout", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Battery Capacity (Wh)" type="number" value={doc.hardware?.battery_capacity_wh} onChange={e => update("hardware", "battery_capacity_wh", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Energy Reserve Fraction" type="number" inputProps={{ step: 0.1, min: 0, max: 1 }} value={doc.hardware?.energy_reserve_frac} onChange={e => update("hardware", "energy_reserve_frac", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Cruise Power (W)" type="number" value={doc.hardware?.cruise_power_w} onChange={e => update("hardware", "cruise_power_w", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Cruise Speed (mps)" type="number" value={doc.hardware?.cruise_speed_mps} onChange={e => update("hardware", "cruise_speed_mps", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Heartbeat Timeout" type="number" value={doc.hardware?.heartbeat_timeout} onChange={e => update("hardware", "heartbeat_timeout", Number(e.target.value))} />
                     <FormControlLabel control={<Switch checked={doc.hardware?.enforce_preflight_range} onChange={e => update("hardware", "enforce_preflight_range", e.target.checked)} />} label="Enforce Preflight Range" />
                   </Stack>
                 </Grid>
@@ -464,43 +464,43 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                 <Grid item size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>GPS & Navigation</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="HDOP Max" type="number" value={doc.preflight?.HDOP_MAX} onChange={e => update("preflight", "HDOP_MAX", Number(e.target.value))} />
-                    <TextField fullWidth label="Satellites Min" type="number" value={doc.preflight?.SAT_MIN} onChange={e => update("preflight", "SAT_MIN", Number(e.target.value))} />
-                    <TextField fullWidth label="Home Max Dist (m)" type="number" value={doc.preflight?.HOME_MAX_DIST} onChange={e => update("preflight", "HOME_MAX_DIST", Number(e.target.value))} />
-                    <TextField fullWidth label="GPS Fix Type Min" type="number" value={doc.preflight?.GPS_FIX_TYPE_MIN} onChange={e => update("preflight", "GPS_FIX_TYPE_MIN", Number(e.target.value))} />
-                    <TextField fullWidth label="EKF Threshold" type="number" value={doc.preflight?.EKF_THRESHOLD} onChange={e => update("preflight", "EKF_THRESHOLD", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="HDOP Max" type="number" value={doc.preflight?.HDOP_MAX} onChange={e => update("preflight", "HDOP_MAX", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Satellites Min" type="number" value={doc.preflight?.SAT_MIN} onChange={e => update("preflight", "SAT_MIN", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Home Max Dist (m)" type="number" value={doc.preflight?.HOME_MAX_DIST} onChange={e => update("preflight", "HOME_MAX_DIST", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="GPS Fix Type Min" type="number" value={doc.preflight?.GPS_FIX_TYPE_MIN} onChange={e => update("preflight", "GPS_FIX_TYPE_MIN", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="EKF Threshold" type="number" value={doc.preflight?.EKF_THRESHOLD} onChange={e => update("preflight", "EKF_THRESHOLD", Number(e.target.value))} />
                     <FormControlLabel control={<Switch checked={doc.preflight?.COMPASS_HEALTH_REQUIRED} onChange={e => update("preflight", "COMPASS_HEALTH_REQUIRED", e.target.checked)} />} label="Compass Health Required" />
                   </Stack>
                 </Grid>
                 <Grid item size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>Battery & Heartbeat</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="Battery Min (V)" type="number" value={doc.preflight?.BATTERY_MIN_V} onChange={e => update("preflight", "BATTERY_MIN_V", Number(e.target.value))} />
-                    <TextField fullWidth label="Battery Min %" type="number" value={doc.preflight?.BATTERY_MIN_PERCENT} onChange={e => update("preflight", "BATTERY_MIN_PERCENT", Number(e.target.value))} />
-                    <TextField fullWidth label="Heartbeat Max Age" type="number" value={doc.preflight?.HEARTBEAT_MAX_AGE} onChange={e => update("preflight", "HEARTBEAT_MAX_AGE", Number(e.target.value))} />
-                    <TextField fullWidth label="Msg Rate Min (Hz)" type="number" value={doc.preflight?.MSG_RATE_MIN_HZ} onChange={e => update("preflight", "MSG_RATE_MIN_HZ", Number(e.target.value))} />
-                    <TextField fullWidth label="RTL Min Alt (m)" type="number" value={doc.preflight?.RTL_MIN_ALT} onChange={e => update("preflight", "RTL_MIN_ALT", Number(e.target.value))} />
-                    <TextField fullWidth label="Min Clearance (m)" type="number" value={doc.preflight?.MIN_CLEARANCE} onChange={e => update("preflight", "MIN_CLEARANCE", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Battery Min (V)" type="number" value={doc.preflight?.BATTERY_MIN_V} onChange={e => update("preflight", "BATTERY_MIN_V", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Battery Min %" type="number" value={doc.preflight?.BATTERY_MIN_PERCENT} onChange={e => update("preflight", "BATTERY_MIN_PERCENT", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Heartbeat Max Age" type="number" value={doc.preflight?.HEARTBEAT_MAX_AGE} onChange={e => update("preflight", "HEARTBEAT_MAX_AGE", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Msg Rate Min (Hz)" type="number" value={doc.preflight?.MSG_RATE_MIN_HZ} onChange={e => update("preflight", "MSG_RATE_MIN_HZ", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="RTL Min Alt (m)" type="number" value={doc.preflight?.RTL_MIN_ALT} onChange={e => update("preflight", "RTL_MIN_ALT", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Min Clearance (m)" type="number" value={doc.preflight?.MIN_CLEARANCE} onChange={e => update("preflight", "MIN_CLEARANCE", Number(e.target.value))} />
                   </Stack>
                 </Grid>
 
                 <Grid item size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>Altitude & Range</Typography>
                    <Stack spacing={3}>
-                    <TextField fullWidth label="AGL Min (m)" type="number" value={doc.preflight?.AGL_MIN} onChange={e => update("preflight", "AGL_MIN", Number(e.target.value))} />
-                    <TextField fullWidth label="AGL Max (m)" type="number" value={doc.preflight?.AGL_MAX} onChange={e => update("preflight", "AGL_MAX", Number(e.target.value))} />
-                    <TextField fullWidth label="Max Range (m)" type="number" value={doc.preflight?.MAX_RANGE_M} onChange={e => update("preflight", "MAX_RANGE_M", Number(e.target.value))} />
-                    <TextField fullWidth label="Max Waypoints" type="number" value={doc.preflight?.MAX_WAYPOINTS} onChange={e => update("preflight", "MAX_WAYPOINTS", Number(e.target.value))} />
-                    <TextField fullWidth label="NFZ Buffer (m)" type="number" value={doc.preflight?.NFZ_BUFFER_M} onChange={e => update("preflight", "NFZ_BUFFER_M", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="AGL Min (m)" type="number" value={doc.preflight?.AGL_MIN} onChange={e => update("preflight", "AGL_MIN", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="AGL Max (m)" type="number" value={doc.preflight?.AGL_MAX} onChange={e => update("preflight", "AGL_MAX", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Max Range (m)" type="number" value={doc.preflight?.MAX_RANGE_M} onChange={e => update("preflight", "MAX_RANGE_M", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Max Waypoints" type="number" value={doc.preflight?.MAX_WAYPOINTS} onChange={e => update("preflight", "MAX_WAYPOINTS", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="NFZ Buffer (m)" type="number" value={doc.preflight?.NFZ_BUFFER_M} onChange={e => update("preflight", "NFZ_BUFFER_M", Number(e.target.value))} />
                   </Stack>
                 </Grid>
                 <Grid item size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>Performance</Typography>
                   <Stack spacing={3}>
-                    <TextField fullWidth label="A Lat Max" type="number" value={doc.preflight?.A_LAT_MAX} onChange={e => update("preflight", "A_LAT_MAX", Number(e.target.value))} />
-                    <TextField fullWidth label="Bank Max (deg)" type="number" value={doc.preflight?.BANK_MAX_DEG} onChange={e => update("preflight", "BANK_MAX_DEG", Number(e.target.value))} />
-                    <TextField fullWidth label="Turn Penalty (s)" type="number" value={doc.preflight?.TURN_PENALTY_S} onChange={e => update("preflight", "TURN_PENALTY_S", Number(e.target.value))} />
-                    <TextField fullWidth label="WP Radius (m)" type="number" value={doc.preflight?.WP_RADIUS_M} onChange={e => update("preflight", "WP_RADIUS_M", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="A Lat Max" type="number" value={doc.preflight?.A_LAT_MAX} onChange={e => update("preflight", "A_LAT_MAX", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Bank Max (deg)" type="number" value={doc.preflight?.BANK_MAX_DEG} onChange={e => update("preflight", "BANK_MAX_DEG", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Turn Penalty (s)" type="number" value={doc.preflight?.TURN_PENALTY_S} onChange={e => update("preflight", "TURN_PENALTY_S", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="WP Radius (m)" type="number" value={doc.preflight?.WP_RADIUS_M} onChange={e => update("preflight", "WP_RADIUS_M", Number(e.target.value))} />
                   </Stack>
                 </Grid>
               </Grid>
@@ -513,8 +513,8 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                   <Typography variant="h6" gutterBottom>Raspberry Pi Connection</Typography>
                    <Stack spacing={3}>
                     <SecretField fullWidth label="IP Address" value={doc.raspberry?.raspberry_ip} onChange={e => update("raspberry", "raspberry_ip", e.target.value)} />
-                    <TextField fullWidth label="Hostname" value={doc.raspberry?.raspberry_host} onChange={e => update("raspberry", "raspberry_host", e.target.value)} />
-                    <TextField fullWidth label="Username" value={doc.raspberry?.raspberry_user} onChange={e => update("raspberry", "raspberry_user", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Hostname" value={doc.raspberry?.raspberry_host} onChange={e => update("raspberry", "raspberry_host", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Username" value={doc.raspberry?.raspberry_user} onChange={e => update("raspberry", "raspberry_user", e.target.value)} />
                     <SecretField fullWidth label="Password" placeholder={MASK} value={doc.raspberry?.raspberry_password} onChange={e => update("raspberry", "raspberry_password", e.target.value)} />
                     <SecretField fullWidth label="Streaming Script Path" value={doc.raspberry?.raspberry_streaming_script_path} onChange={e => update("raspberry", "raspberry_streaming_script_path", e.target.value)} />
 
@@ -538,11 +538,11 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                   <Stack spacing={3}>
                     <SecretField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
                     <SecretField fullWidth label="Gazebo Camera Source" value={doc.camera?.drone_video_source_gazebo} onChange={e => update("camera", "drone_video_source_gazebo", e.target.value)} />
-                    <TextField fullWidth label="Width" type="number" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", Number(e.target.value))} />
-                    <TextField fullWidth label="Height" type="number" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", Number(e.target.value))} />
-                    <TextField fullWidth label="FPS" type="number" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", Number(e.target.value))} />
-                    <TextField fullWidth label="Timeout" type="number" value={doc.camera?.drone_video_timeout} onChange={e => update("camera", "drone_video_timeout", Number(e.target.value))} />
-                    <TextField fullWidth label="Fallback" value={doc.camera?.drone_video_fallback} onChange={e => update("camera", "drone_video_fallback", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Width" type="number" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Height" type="number" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="FPS" type="number" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Timeout" type="number" value={doc.camera?.drone_video_timeout} onChange={e => update("camera", "drone_video_timeout", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Fallback" value={doc.camera?.drone_video_fallback} onChange={e => update("camera", "drone_video_fallback", e.target.value)} />
 
                     <Stack direction="row" spacing={25}>
                       <FormControlLabel

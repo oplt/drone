@@ -75,7 +75,7 @@ function PasswordField({
 }) {
   const [show, setShow] = useState(false);
   return (
-    <TextField
+    <TextField variant="filled"
       fullWidth
       label={label}
       type={show ? "text" : "password"}
@@ -207,16 +207,7 @@ function PasswordSection({ token }: { token: string | null }) {
         />
         <PasswordField
           label={<InfoLabel label="New password" info="Minimum 8 characters." />}
-          inputLabelProps={{
-            shrink: true,
-            sx: {
-              pointerEvents: "auto",
-              px: 0.5,
-              backgroundColor: "background.paper",
-              borderRadius: 0.5,
-              lineHeight: 1.2,
-            },
-          }}
+          inputLabelProps={{ shrink: true, sx: { pointerEvents: "auto" } }}
           value={newPassword}
           onChange={setNewPassword}
           disabled={mutation.isPending}
@@ -358,7 +349,7 @@ function TwoFASection({
             <Typography variant="caption" color="text.secondary" fontFamily="monospace">
               Manual key: {setupData.secret}
             </Typography>
-            <TextField
+            <TextField variant="filled"
               label="Verification code"
               value={verifyToken}
               onChange={(e) => setVerifyToken(e.target.value.replace(/\D/g, "").slice(0, 6))}

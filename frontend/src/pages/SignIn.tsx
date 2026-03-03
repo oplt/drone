@@ -208,7 +208,7 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
                   autoFocus
                   required
                   fullWidth
-                  variant="outlined"
+                  variant="filled"
                   color={emailError ? 'error' : 'primary'}
                 />
               </FormControl>
@@ -224,7 +224,7 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
                   autoComplete="current-password"
                   required
                   fullWidth
-                  variant="outlined"
+                  variant="filled"
                   color={passwordError ? 'error' : 'primary'}
                 />
               </FormControl>
