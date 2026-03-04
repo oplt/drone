@@ -107,6 +107,23 @@ type CameraSettings=  {
   drone_video_save_stream: boolean;
 };
 
+type PhotogrammetrySettings = {
+  PHOTOGRAMMETRY_DRONE_SYNC_DIR: string;
+  PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR: string;
+  PHOTOGRAMMETRY_INPUTS_DIR: string;
+  PHOTOGRAMMETRY_STORAGE_DIR: string;
+  PHOTOGRAMMETRY_STORAGE_BASE_URL: string;
+  PHOTOGRAMMETRY_3DTILES_CMD: string;
+  PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: boolean;
+  WEBODM_BASE_URL: string;
+  WEBODM_API_TOKEN?: string;
+  WEBODM_PROJECT_ID: number;
+  WEBODM_MOCK_MODE: boolean;
+  MAPPING_JOB_QUEUE_BACKEND: string;
+  CELERY_PHOTOGRAMMETRY_QUEUE: string;
+  PHOTOGRAMMETRY_ASSET_SIGNING_SECRET?: string;
+};
+
 type SettingsDoc = {
   telemetry: TelemetrySettings;
   ai: AISettings;
@@ -115,6 +132,7 @@ type SettingsDoc = {
   preflight: PreflightSettings;
   raspberry: RaspberrySettings;
   camera: CameraSettings;
+  photogrammetry: PhotogrammetrySettings;
   updated_at?: string;
 };
 
@@ -201,6 +219,22 @@ const DEFAULTS: SettingsDoc = {
     drone_video_enabled: true,
     drone_video_save_stream: false,
   },
+  photogrammetry: {
+    PHOTOGRAMMETRY_DRONE_SYNC_DIR: "backend/storage/drone_sync",
+    PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR: "backend/storage/staging",
+    PHOTOGRAMMETRY_INPUTS_DIR: "backend/storage/mapping_jobs_inputs",
+    PHOTOGRAMMETRY_STORAGE_DIR: "backend/storage/mapping",
+    PHOTOGRAMMETRY_STORAGE_BASE_URL: "/mapping-assets",
+    PHOTOGRAMMETRY_3DTILES_CMD: "",
+    PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: false,
+    WEBODM_BASE_URL: "http://localhost:8001",
+    WEBODM_API_TOKEN: "",
+    WEBODM_PROJECT_ID: 1,
+    WEBODM_MOCK_MODE: false,
+    MAPPING_JOB_QUEUE_BACKEND: "celery",
+    CELERY_PHOTOGRAMMETRY_QUEUE: "photogrammetry",
+    PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: "",
+  },
   updated_at: undefined,
 };
 
@@ -214,6 +248,7 @@ const normalizeDoc = (raw: Partial<SettingsDoc>): SettingsDoc => ({
   preflight: { ...DEFAULTS.preflight, ...(raw.preflight ?? {}) },
   raspberry: { ...DEFAULTS.raspberry, ...(raw.raspberry ?? {}) },
   camera: { ...DEFAULTS.camera, ...(raw.camera ?? {}) },
+  photogrammetry: { ...DEFAULTS.photogrammetry, ...(raw.photogrammetry ?? {}) },
 });
 
 export default function SettingsPage() {
@@ -349,6 +384,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             <Tab label="Preflight Check Params" />
             <Tab label="Raspberry" />
             <Tab label="Camera" />
+            <Tab label="Photogrammetry" />
           </Tabs>
           <Divider />
 
@@ -558,6 +594,136 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                         label="Use Gazebo"
                       />
                     </Stack>
+                  </Stack>
+                </Grid>
+              </Grid>
+            )}
+
+            {/* PHOTOGRAMMETRY TAB */}
+            {tab === 7 && (
+              <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 6 }}>
+                  <Typography variant="h6" gutterBottom>Storage & Sync</Typography>
+                  <Stack spacing={3}>
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Drone Sync Dir"
+                      placeholder={DEFAULTS.photogrammetry.PHOTOGRAMMETRY_DRONE_SYNC_DIR}
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_DRONE_SYNC_DIR}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_DRONE_SYNC_DIR", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Capture Staging Dir"
+                      placeholder={DEFAULTS.photogrammetry.PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR}
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Inputs Dir"
+                      placeholder={DEFAULTS.photogrammetry.PHOTOGRAMMETRY_INPUTS_DIR}
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_INPUTS_DIR}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_INPUTS_DIR", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Storage Dir"
+                      placeholder={DEFAULTS.photogrammetry.PHOTOGRAMMETRY_STORAGE_DIR}
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_STORAGE_DIR}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_STORAGE_DIR", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Storage Base URL"
+                      placeholder={DEFAULTS.photogrammetry.PHOTOGRAMMETRY_STORAGE_BASE_URL}
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_STORAGE_BASE_URL}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_STORAGE_BASE_URL", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="3D Tiles Command"
+                      placeholder="(none)"
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_3DTILES_CMD}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_3DTILES_CMD", e.target.value)}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={doc.photogrammetry?.PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET}
+                          onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET", e.target.checked)}
+                        />
+                      }
+                      label="Allow Minimal Tileset (Dev)"
+                    />
+                  </Stack>
+                </Grid>
+
+                <Grid item size={{ xs: 12, md: 6 }}>
+                  <Typography variant="h6" gutterBottom>WebODM & Queue</Typography>
+                  <Stack spacing={3}>
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="WebODM Base URL"
+                      placeholder={DEFAULTS.photogrammetry.WEBODM_BASE_URL}
+                      value={doc.photogrammetry?.WEBODM_BASE_URL}
+                      onChange={e => update("photogrammetry", "WEBODM_BASE_URL", e.target.value)}
+                    />
+                    <SecretField
+                      fullWidth
+                      label="WebODM API Token"
+                      placeholder="(none)"
+                      value={doc.photogrammetry?.WEBODM_API_TOKEN}
+                      onChange={e => update("photogrammetry", "WEBODM_API_TOKEN", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      type="number"
+                      label="WebODM Project ID"
+                      placeholder={String(DEFAULTS.photogrammetry.WEBODM_PROJECT_ID)}
+                      value={doc.photogrammetry?.WEBODM_PROJECT_ID}
+                      onChange={e => update("photogrammetry", "WEBODM_PROJECT_ID", Number(e.target.value))}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={doc.photogrammetry?.WEBODM_MOCK_MODE}
+                          onChange={e => update("photogrammetry", "WEBODM_MOCK_MODE", e.target.checked)}
+                        />
+                      }
+                      label="WebODM Mock Mode"
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Mapping Job Queue Backend"
+                      placeholder={DEFAULTS.photogrammetry.MAPPING_JOB_QUEUE_BACKEND}
+                      value={doc.photogrammetry?.MAPPING_JOB_QUEUE_BACKEND}
+                      onChange={e => update("photogrammetry", "MAPPING_JOB_QUEUE_BACKEND", e.target.value)}
+                    />
+                    <TextField
+                      variant="filled"
+                      fullWidth
+                      label="Celery Photogrammetry Queue"
+                      placeholder={DEFAULTS.photogrammetry.CELERY_PHOTOGRAMMETRY_QUEUE}
+                      value={doc.photogrammetry?.CELERY_PHOTOGRAMMETRY_QUEUE}
+                      onChange={e => update("photogrammetry", "CELERY_PHOTOGRAMMETRY_QUEUE", e.target.value)}
+                    />
+                    <SecretField
+                      fullWidth
+                      label="Asset Signing Secret"
+                      placeholder="(uses jwt_secret)"
+                      value={doc.photogrammetry?.PHOTOGRAMMETRY_ASSET_SIGNING_SECRET}
+                      onChange={e => update("photogrammetry", "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET", e.target.value)}
+                    />
                   </Stack>
                 </Grid>
               </Grid>

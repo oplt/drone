@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import shutil
 from pathlib import Path
@@ -31,7 +32,7 @@ class StorageService:
         suffix = src.suffix.lower()
         target_name = f"{src.stem}-{uuid4().hex[:10]}{suffix}"
         dst = self.storage_dir / target_name
-        shutil.copy2(src, dst)
+        await asyncio.to_thread(shutil.copy2, src, dst)
         return f"{self.base_url}/{target_name}"
 
     async def upload_directory(self, src_dir: str) -> str:
@@ -41,6 +42,5 @@ class StorageService:
 
         target_name = f"{src.name}-{uuid4().hex[:10]}"
         dst = self.storage_dir / target_name
-        shutil.copytree(src, dst)
+        await asyncio.to_thread(shutil.copytree, src, dst)
         return f"{self.base_url}/{target_name}"
-

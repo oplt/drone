@@ -6,6 +6,7 @@ from math import tan, radians
 
 class MissionType(str, Enum):
     GRID = "grid"
+    PHOTOGRAMMETRY = "photogrammetry"
     ORBIT = "orbit"
     TERRAIN_FOLLOW = "terrain_follow"
     PERIMETER_PATROL = "perimeter_patrol"
@@ -202,6 +203,7 @@ class PhotogrammetryMission(BaseMission):
     altitude_agl: float = Field(default=30.0, ge=10.0, le=120.0)
     front_overlap: float = Field(default=0.8, ge=0.5, le=0.95)
     side_overlap: float = Field(default=0.7, ge=0.5, le=0.95)
+    min_spacing_m: float = Field(default=0.5, gt=0.0, le=10.0)
     camera_fov_h: float = Field(default=78.0, gt=0, lt=180)
     camera_fov_v: float = Field(default=62.0, gt=0, lt=180)
     max_flight_time_min: Optional[float] = None
@@ -211,6 +213,7 @@ Mission = Annotated[
     Union[
         WaypointMission,
         GridMission,
+        PhotogrammetryMission,
         OrbitMission,
         TerrainFollowMission,
         PerimeterPatrolMission,
@@ -228,6 +231,7 @@ def create_mission_from_dict(data: dict) -> Mission:
         'route':             WaypointMission,
         'grid':              GridMission,
         'survey':            GridMission,
+        'photogrammetry':    PhotogrammetryMission,
         'orbit':             OrbitMission,
         'circle':            OrbitMission,
         'poi':               OrbitMission,
@@ -243,4 +247,3 @@ def create_mission_from_dict(data: dict) -> Mission:
         raise ValueError(f"Unknown mission type: {mission_type}")
 
     return mission_class(**data)
-

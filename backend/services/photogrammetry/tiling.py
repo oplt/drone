@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -14,6 +15,67 @@ def _which(cmd: str) -> str | None:
 
 def _run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
+
+
+def _extract_lonlat_pairs(node: object) -> list[tuple[float, float]]:
+    if isinstance(node, (list, tuple)):
+        if (
+            len(node) >= 2
+            and isinstance(node[0], (int, float))
+            and isinstance(node[1], (int, float))
+        ):
+            return [(float(node[0]), float(node[1]))]
+        out: list[tuple[float, float]] = []
+        for child in node:
+            out.extend(_extract_lonlat_pairs(child))
+        return out
+    return []
+
+
+def _bbox_from_wgs84_extent(wgs84_extent: dict | None) -> dict[str, float] | None:
+    if not isinstance(wgs84_extent, dict):
+        return None
+    pts = _extract_lonlat_pairs(wgs84_extent.get("coordinates"))
+    if not pts:
+        return None
+
+    lons = [p[0] for p in pts]
+    lats = [p[1] for p in pts]
+    west = max(-180.0, min(180.0, min(lons)))
+    east = max(-180.0, min(180.0, max(lons)))
+    south = max(-90.0, min(90.0, min(lats)))
+    north = max(-90.0, min(90.0, max(lats)))
+    if east <= west or north <= south:
+        return None
+    return {
+        "west": west,
+        "south": south,
+        "east": east,
+        "north": north,
+    }
+
+
+def _region_from_bbox(bbox_wgs84: dict | None) -> list[float] | None:
+    bbox = _bbox_from_wgs84_extent(bbox_wgs84)
+    if not bbox:
+        return None
+    return [
+        math.radians(bbox["west"]),
+        math.radians(bbox["south"]),
+        math.radians(bbox["east"]),
+        math.radians(bbox["north"]),
+        0.0,
+        1000.0,
+    ]
+
+
+def _bbox_from_georef(georef: dict | None) -> dict | None:
+    if not isinstance(georef, dict):
+        return None
+    maybe_bbox = georef.get("bbox_wgs84")
+    if isinstance(maybe_bbox, dict):
+        return maybe_bbox
+    return None
 
 
 def convert_to_cog(src_path: str, out_path: str | None = None) -> str:
@@ -117,7 +179,13 @@ def convert_mesh_to_gltf(mesh_path: str, out_dir: str | None = None) -> str:
     )
 
 
-def _write_single_tile_tileset(glb_path: Path, out_dir: Path) -> str:
+def _write_single_tile_tileset(
+    glb_path: Path,
+    out_dir: Path,
+    *,
+    georef: dict | None = None,
+    bbox_wgs84: dict | None = None,
+) -> str:
     """
     Minimal self-hosted 3D Tiles representation using a single GLB content URI.
     """
@@ -126,20 +194,24 @@ def _write_single_tile_tileset(glb_path: Path, out_dir: Path) -> str:
     if glb_path.resolve() != dst_glb.resolve():
         shutil.copy2(glb_path, dst_glb)
 
-    # Broad world region; replace with precise bounds once mesh georef metadata is available.
+    effective_bbox = _bbox_from_georef(georef) or bbox_wgs84
+    region = _region_from_bbox(effective_bbox)
+    if region is None:
+        # Localized safe fallback only when georeferencing bounds are unavailable.
+        region = [
+            -0.01,
+            -0.01,
+            0.01,
+            0.01,
+            0.0,
+            150.0,
+        ]
     tileset = {
         "asset": {"version": "1.1"},
         "geometricError": 500,
         "root": {
             "boundingVolume": {
-                "region": [
-                    -3.14159265359,
-                    -1.57079632679,
-                    3.14159265359,
-                    1.57079632679,
-                    0,
-                    1000,
-                ]
+                "region": region
             },
             "geometricError": 0,
             "refine": "ADD",
@@ -151,7 +223,13 @@ def _write_single_tile_tileset(glb_path: Path, out_dir: Path) -> str:
     return str(out_dir)
 
 
-def convert_mesh_to_3dtiles(mesh_path: str, out_dir: str | None = None) -> str:
+def convert_mesh_to_3dtiles(
+    mesh_path: str,
+    out_dir: str | None = None,
+    *,
+    georef: dict | None = None,
+    bbox_wgs84: dict | None = None,
+) -> str:
     """
     Convert mesh output to web-streamable 3D Tiles.
 
@@ -172,7 +250,12 @@ def convert_mesh_to_3dtiles(mesh_path: str, out_dir: str | None = None) -> str:
             "yes",
         }
         if allow_minimal:
-            return _write_single_tile_tileset(gltf_or_glb, target_dir)
+            return _write_single_tile_tileset(
+                gltf_or_glb,
+                target_dir,
+                georef=georef,
+                bbox_wgs84=bbox_wgs84,
+            )
         raise RuntimeError(
             "PHOTOGRAMMETRY_3DTILES_CMD is required for production 3D Tiles conversion."
         )

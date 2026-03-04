@@ -1,23 +1,28 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
-import { Box, Button, Paper, Stack, Typography, Divider, TextField, Alert, CircularProgress, Chip, MenuItem,  Select,
+import { Box, Button, Paper, Stack, Typography, Divider, TextField, Alert, CircularProgress, MenuItem,  Select,
   FormControl, InputLabel} from "@mui/material";
 import Header from "../../../components/dashboard/Header";
-import {  GoogleMap,  Polyline,  OverlayView } from "@react-google-maps/api";
+import { Polyline, OverlayView } from "@react-google-maps/api";
 import { getToken } from "../../../auth";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
-import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
 import { GoogleMapsContext } from "../../../utils/googleMaps";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import CesiumMap from "../../../utils/CesiumMap";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import {  } from "@mui/material";
+import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
+import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
+import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
+import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
+import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
+import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
+import { useDroneCenter } from "../../../hooks/useDroneCenter";
+import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
+import { useErrors } from "../../../hooks/useErrors";
+import { useAutoStartVideo } from "../../../hooks/useAutoStartVideo";
+import { useMissionCommandMetrics } from "../../../hooks/useMissionCommandMetrics";
+import { useMissionWebsocketRuntime } from "../../../hooks/useMissionWebsocketRuntime";
+import { type LatLng } from "../../../lib/extractLatLng";
 
 
-type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
 type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
 
@@ -72,54 +77,13 @@ interface MissionStatus {
   };
 }
 
-// Try to safely extract lat/lon from whatever the backend publishes
-function extractLatLng(value: any): LatLng | null {
-  if (!value) return null;
-
-  const lat =
-    value.lat ??
-    value.latitude ??
-    value.Lat ??
-    value.Latitude ??
-    (value.position ? value.position.lat ?? value.position.latitude : undefined);
-
-  const lon =
-    value.lon ??
-    value.lng ??
-    value.longitude ??
-    value.Lon ??
-    value.Lng ??
-    value.Longitude ??
-    (value.position
-      ? value.position.lon ?? value.position.lng ?? value.position.longitude
-      : undefined);
-
-  if (typeof lat !== "number" || typeof lon !== "number") return null;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (lat < -90 || lat > 90) return null;
-  if (lon < -180 || lon > 180) return null;
-
-  return { lat, lng: lon };
-}
-
 const containerStyle = { width: "100%", height: "400px" };
 const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
 export default function AnimalFarmPage() {
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // IMPORTANT: refs for cleanup to avoid “cleanup runs on dependency change” bug
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const activeFlightIdRef = useRef<string | null>(null);
-  const missionStartAtRef = useRef<number | null>(null);
-
-  // animation + panning control
-  const rafRef = useRef<number | null>(null);
-  const lastPanRef = useRef<number>(0);
-  const snappedToDroneRef = useRef(false);
-
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
-  const [droneCenter, setDroneCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
 
   // altitude: keep input string to avoid error spam while typing
@@ -131,15 +95,11 @@ export default function AnimalFarmPage() {
   const [center, setCenter] = useState<LatLng>(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
 
-  const videoStartedRef = useRef(false);
-  const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
-  const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(null);
+  const { errors, addError, clearErrors, dismissError } = useErrors();
 
   const [mapZoom, setMapZoom] = useState<number>(12);
 
   const [streamKey, setStreamKey] = useState<number>(Date.now());
-  const [startingVideo, setStartingVideo] = useState<boolean>(false);
-  const [errors, setErrors] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
@@ -153,26 +113,33 @@ export default function AnimalFarmPage() {
   const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoRetryCount, setVideoRetryCount] = useState(0);
-  const wsEnabled = Boolean(
-    missionStatus?.orchestrator?.drone_connected &&
-      missionStatus?.telemetry?.running &&
-      activeFlightId,
-  );
+  const {
+    missionStatus,
+    activeFlightId,
+    setPendingFlightId,
+    telemetry,
+    wsConnected,
+    disconnect,
+    droneConnected,
+  } = useMissionWebsocketRuntime<MissionStatus>({
+    apiBase: API_BASE_CLEAN,
+    getTokenFn: getToken,
+    onError: addError,
+  });
+  const droneCenter = useDroneCenter(telemetry);
+  const { heading, armed } = useMissionCommandMetrics(telemetry);
 
     const handleCesiumPick = useCallback((p: { lat: number; lng: number }) => {
       setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
     }, [alt]);
-
-
-  const { telemetry, isConnected: wsConnected, disconnect } = useTelemetryWebSocket(
-    {
-      enabled: wsEnabled,
-    },
-  );
-  const droneConnected = Boolean(
-    missionStatus?.orchestrator?.drone_connected || wsConnected,
-  );
   const droneReady = Boolean(wsConnected && droneCenter);
+  const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
+    apiBase: API_BASE_CLEAN,
+    getToken,
+    enabled: droneReady,
+    onError: addError,
+    resetKey: activeFlightId ?? "none",
+  });
   const { isLoaded, loadError } = useContext(GoogleMapsContext);
 
 const [herds, setHerds] = useState<Herd[]>([]);
@@ -184,10 +151,9 @@ const [herdAlerts, setHerdAlerts] = useState<HerdAlert[]>([]);
 const [loadingHerdOps, setLoadingHerdOps] = useState(false);
 const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
 
-  // Keep latest activeFlightId in a ref for unmount cleanup
   useEffect(() => {
-    activeFlightIdRef.current = activeFlightId;
-  }, [activeFlightId]);
+    if (autoStreamKey) setStreamKey(autoStreamKey);
+  }, [autoStreamKey]);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -200,14 +166,6 @@ const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
     if (typeof zoom === "number" && Number.isFinite(zoom)) {
       setMapZoom(zoom);
     }
-  }, []);
-
-  const addError = useCallback((error: string) => {
-    setErrors((prev) => [...prev.slice(-4), error]); // keep last 5
-  }, []);
-
-  const clearErrors = useCallback(() => {
-    setErrors([]);
   }, []);
 
 
@@ -259,29 +217,6 @@ const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
       setVideoError(null);
       setVideoRetryCount(0);
     }, []);
-
-
-  // Extract drone position from telemetry (handles multiple possible shapes)
-  useEffect(() => {
-    const next =
-      extractLatLng(telemetry?.position) ||
-      extractLatLng(telemetry?.gps) ||
-      extractLatLng(telemetry?.home) ||
-      extractLatLng(telemetry);
-
-    if (!next) return;
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => setDroneCenter(next));
-
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, [telemetry]);
-
 
   // AdvancedMarkerElement for waypoint markers (avoids deprecated google.maps.Marker).
   useEffect(() => {
@@ -348,51 +283,6 @@ const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
       waypointMarkersRef.current = [];
     };
   }, [isLoaded, mapReady, waypoints]);
-
-  useEffect(() => {
-    if (!activeFlightId) {
-      videoStartedRef.current = false;
-    }
-  }, [activeFlightId]);
-
-  // Start Pi camera streaming when drone becomes ready (best effort)
-  useEffect(() => {
-    const token = getToken();
-    if (!droneReady || !token || videoStartedRef.current) return;
-
-    const timer = setTimeout(() => {
-      setStartingVideo(true);
-      fetch(`${API_BASE_CLEAN}/video/start`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            let detail = `HTTP ${res.status}`;
-            try {
-              const data = (await res.json()) as { detail?: string };
-              if (data?.detail) detail = data.detail;
-            } catch {
-              // ignore
-            }
-            throw new Error(detail);
-          }
-          setStreamKey(Date.now());
-          videoStartedRef.current = true;
-        })
-        .catch((error) => {
-          addError(`Failed to start video: ${error.message}`);
-        })
-        .finally(() => {
-          setStartingVideo(false);
-        });
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [droneReady, API_BASE_CLEAN, addError]);
-
-
-
 
 const fetchHerds = useCallback(async () => {
   const token = getToken();
@@ -464,104 +354,19 @@ useEffect(() => {
     }
   })();
 }, [selectedHerdId, fetchLatestPositions, fetchRisk, addError]);
-
-
-
-  const pollFlightStatus = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-
-    try {
-      const res = await fetch(`${API_BASE_CLEAN}/tasks/flight/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const status = (await res.json()) as MissionStatus;
-      setMissionStatus(status);
-
-      if (!status.flight_id) {
-        // backend may lag before reporting a flight_id; keep local ID briefly
-        const graceMs = 30000;
-        const startedAt = missionStartAtRef.current ?? 0;
-        const withinGrace = startedAt > 0 && Date.now() - startedAt < graceMs;
-        if (!withinGrace) {
-          setActiveFlightId(null);
-        }
-        return;
-      }
-
-      if (status.flight_id !== activeFlightIdRef.current) {
-        setActiveFlightId(status.flight_id);
-        missionStartAtRef.current = Date.now();
-      }
-    } catch (error) {
-      console.error("Failed to poll flight status:", error);
-      addError(
-        `Flight status polling failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-      );
-    }
-  }, [API_BASE_CLEAN, addError]);
-
-  // Poll flight status continuously so telemetry/drone readiness is known even before a mission
-  useEffect(() => {
-    pollFlightStatus();
-
-    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    pollIntervalRef.current = setInterval(pollFlightStatus, 5000);
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [pollFlightStatus]);
-
-  // Cleanup on unmount ONLY (stop telemetry, clear polling, disconnect WS)
+  // Cleanup on unmount (disconnect WS)
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-
       disconnect();
     };
   }, [disconnect]);
 
-  // Focus map on drone once (as soon as we get a valid position)
-  useEffect(() => {
-    if (!mapRef.current || !droneCenter) return;
-
-    if (!snappedToDroneRef.current) {
-      snappedToDroneRef.current = true;
-      mapRef.current.panTo(droneCenter);
-      mapRef.current.setZoom(18);
-      setMapZoom(18);
-    }
-  }, [droneCenter]);
-
-  useEffect(() => {
-    if (!wsConnected) snappedToDroneRef.current = false;
-  }, [wsConnected]);
-
-  // During flight, keep following in a non-invasive way (only when zoomed-in already)
-  useEffect(() => {
-    if (!mapRef.current || !droneCenter || !wsConnected) return;
-
-    const now = Date.now();
-    if (now - lastPanRef.current < 500) return; // max 2x/sec
-    lastPanRef.current = now;
-
-    const currentZoom = mapRef.current.getZoom() ?? 0;
-    if (currentZoom < 16) return;
-
-    mapRef.current.panTo(droneCenter);
-  }, [droneCenter, wsConnected]);
+  useDroneMapFollow({
+    mapRef,
+    droneCenter,
+    wsConnected,
+    onInitialSnap: () => setMapZoom(18),
+  });
 
   const onMapClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
@@ -657,8 +462,7 @@ useEffect(() => {
         const data = await missionRes.json();
         alert(`Flight plan "${data.mission_name}" started! Tracking flight...`);
 
-        setActiveFlightId(data.flight_id);
-        missionStartAtRef.current = Date.now();
+        setPendingFlightId(data.flight_id ?? null);
 
         // Clear waypoints after successful mission start
         setWaypoints([]);
@@ -769,172 +573,6 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
     [mapId],
   );
 
-  // --- Telemetry overlay values (best-effort extraction) ---
-  const batteryPctRaw =
-    telemetry?.battery?.percent ??
-    telemetry?.battery?.percentage ??
-    telemetry?.battery?.remaining ??
-    telemetry?.battery_remaining ??
-    telemetry?.batteryPercent ??
-    null;
-  const batteryPct =
-    typeof batteryPctRaw === "number" && batteryPctRaw >= 0
-      ? batteryPctRaw
-      : null;
-
-  const groundSpeed =
-    telemetry?.velocity?.ground ??
-    telemetry?.status?.groundspeed ??
-    telemetry?.ground_speed ??
-    telemetry?.groundSpeed ??
-    telemetry?.speed ??
-    null;
-
-  const relAlt =
-    telemetry?.position?.rel_alt_m ??
-    telemetry?.position?.relative_altitude ??
-    telemetry?.position?.relative_alt ??
-    telemetry?.altitude ??
-    telemetry?.relativeAltitude ??
-    null;
-
-  const heading =
-    telemetry?.status?.heading ?? telemetry?.heading ?? telemetry?.yaw ?? null;
-
-  const mode =
-    telemetry?.status?.mode ?? telemetry?.mode ?? telemetry?.flight_mode ?? null;
-
-  const sats = telemetry?.gps?.satellites ?? telemetry?.satellites ?? null;
-  const hdop =
-    telemetry?.gps?.hdop ?? telemetry?.hdop ?? telemetry?.gps_hdop ?? null;
-
-  const armed = Boolean(telemetry?.armed ?? telemetry?.status?.armed);
-
-  const batteryCellsRaw =
-    telemetry?.battery?.cells ??
-    telemetry?.battery?.cell_voltages ??
-    telemetry?.battery_cells ??
-    telemetry?.cell_voltages ??
-    null;
-
-  const batteryCells = Array.isArray(batteryCellsRaw) ? batteryCellsRaw : null;
-
-  const linkRc =
-    telemetry?.link?.rc ??
-    telemetry?.rc?.quality ??
-    telemetry?.rc_quality ??
-    telemetry?.rssi ??
-    null;
-
-  const linkLte =
-    telemetry?.link?.lte ??
-    telemetry?.lte?.quality ??
-    telemetry?.lte_quality ??
-    null;
-
-  const linkTelemetry =
-    telemetry?.link?.telemetry ??
-    telemetry?.telemetry?.quality ??
-    telemetry?.telemetry_quality ??
-    null;
-
-  const windSpeed =
-    telemetry?.wind?.speed ??
-    telemetry?.wind_speed ??
-    telemetry?.windSpeed ??
-    null;
-
-  const failsafeRaw =
-    telemetry?.failsafe?.state ??
-    telemetry?.failsafe_state ??
-    telemetry?.status?.failsafe ??
-    null;
-
-  const formatMaybeNumber = (v: any, digits = 1) =>
-    typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
-
-  const formatMaybePercent = (v: any) =>
-    typeof v === "number" && Number.isFinite(v) ? `${Math.round(v)}%` : "--";
-
-  const batteryHealth =
-    typeof batteryPct === "number" && Number.isFinite(batteryPct)
-      ? batteryPct >= 60
-        ? `Good (${Math.round(batteryPct)}%)`
-        : batteryPct >= 30
-          ? `Fair (${Math.round(batteryPct)}%)`
-          : `Critical (${Math.round(batteryPct)}%)`
-      : "--";
-
-  const batteryCellDisplay = batteryCells?.length
-    ? batteryCells.map((v) => `${formatMaybeNumber(Number(v), 2)}V`).join(" / ")
-    : "--";
-
-  const gpsStrength =
-    sats === null && hdop === null
-      ? "--"
-      : `${sats ?? "--"} sats • HDOP ${formatMaybeNumber(hdop, 1)}`;
-
-  const linkParts: string[] = [];
-  if (linkRc !== null && linkRc !== undefined) {
-    linkParts.push(`RC ${formatMaybePercent(Number(linkRc))}`);
-  }
-  if (linkLte !== null && linkLte !== undefined) {
-    linkParts.push(`LTE ${formatMaybePercent(Number(linkLte))}`);
-  }
-  if (linkTelemetry !== null && linkTelemetry !== undefined) {
-    linkParts.push(`TEL ${formatMaybePercent(Number(linkTelemetry))}`);
-  }
-  const linkQuality = linkParts.length > 0 ? linkParts.join(" • ") : "--";
-
-  const failsafeState =
-    typeof failsafeRaw === "string" && failsafeRaw.trim() !== ""
-      ? failsafeRaw
-      : typeof failsafeRaw === "boolean"
-        ? failsafeRaw
-          ? "Active"
-          : "None"
-        : "--";
-
-  const failsafeActive =
-    typeof failsafeRaw === "boolean"
-      ? failsafeRaw
-      : typeof failsafeRaw === "string"
-        ? !["none", "ok", "inactive"].includes(failsafeRaw.toLowerCase())
-        : false;
-
-  const flightStatus = failsafeActive
-    ? "Emergency"
-    : typeof mode === "string" && mode.toUpperCase().includes("RTL")
-      ? "RTL"
-      : armed && typeof groundSpeed === "number" && groundSpeed > 1
-        ? "In Air"
-        : armed
-          ? "Armed"
-          : "Idle";
-
-  const windDisplay =
-    windSpeed === null || windSpeed === undefined
-      ? "--"
-      : `${formatMaybeNumber(Number(windSpeed), 1)} m/s`;
-
-  const TelemetryBox = ({ label, value }: { label: string; value: string }) => (
-    <Box
-      sx={{
-        px: 1,
-        py: 0.5,
-        borderRadius: 1,
-        bgcolor: "rgba(0,0,0,0.65)",
-        color: "white",
-        fontSize: 12,
-        lineHeight: 1.2,
-        minWidth: 88,
-      }}
-    >
-      <div style={{ opacity: 0.85, fontSize: 10 }}>{label}</div>
-      <div style={{ fontWeight: 600 }}>{value}</div>
-    </Box>
-  );
-
   return (
     <>
       <Header />
@@ -1043,40 +681,14 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
               Configure field routes, stream telemetry, and monitor imagery in real time.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip
-              size="small"
-              label={droneConnected ? "Drone online" : "Drone offline"}
-              color={droneConnected ? "success" : "default"}
-              variant={droneConnected ? "filled" : "outlined"}
-            />
-            <Chip
-              size="small"
-              label={wsConnected ? "Secure link" : "Link down"}
-              color={wsConnected ? "success" : "default"}
-              variant={wsConnected ? "filled" : "outlined"}
-            />
-          </Stack>
+          <MissionStatusChips droneConnected={droneConnected} wsConnected={wsConnected} />
         </Stack>
 
-        {/* Error display */}
-        {errors.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            {errors.map((error, idx) => (
-              <Alert
-                key={`${idx}-${error}`}
-                severity="error"
-                sx={{ mb: 1 }}
-                onClose={() => setErrors((prev) => prev.filter((_, i) => i !== idx))}
-              >
-                {error}
-              </Alert>
-            ))}
-            <Button size="small" onClick={clearErrors} sx={{ mt: 1 }}>
-              Clear All Errors
-            </Button>
-          </Box>
-        )}
+        <ErrorAlerts
+          errors={errors}
+          onDismiss={dismissError}
+          onClearAll={clearErrors}
+        />
 
         {!apiKey ? (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -1110,157 +722,131 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
                     backgroundColor: "background.paper",
                   }}
                 >
-                  {loadingLocation ? (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 400,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: "hsla(36, 30%, 96%, 0.7)",
-                      }}
-                    >
-                      <CircularProgress />
-                      <Typography sx={{ ml: 2 }}>Loading your location...</Typography>
-                    </Box>
-                  ) : !isLoaded ? (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 400,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: "hsla(36, 30%, 96%, 0.7)",
-                      }}
-                    >
-                      <CircularProgress />
-                      <Typography sx={{ ml: 2 }}>Loading map...</Typography>
-                    </Box>
-                  ) : useCesium ? (
-                    <CesiumMap
-                      center={mapCenter}
-                      zoom={mapZoom}
-                      viewMode={cesiumViewMode}
-                      waypoints={waypoints}
-                      droneCenter={droneCenter}
-                      headingDeg={typeof heading === "number" ? heading : null}
-                      onPickLatLng={handleCesiumPick}
-                    />
-                  ) : (
-                    <GoogleMap
-                      mapContainerStyle={containerStyle}
-                      center={mapCenter}
-                      zoom={mapZoom}
-                      onClick={onMapClick}
-                      onLoad={onMapLoad}
-                      onZoomChanged={onMapZoomChanged}
-                      options={mapOptions}
-                    >
-                    {/* Drone icon (now always visible whenever we have droneCenter) */}
-                    {droneCenter && (
-                      <OverlayView
-                        position={droneCenter}
-                        mapPaneName={OverlayView.OVERLAY_LAYER}
-                      >
-                        <div
-                          style={{
-                            transform: `translate(-50%, -50%) rotate(${
-                              typeof heading === "number" ? heading : 0
-                            }deg)`,
-                            transformOrigin: "center",
-                            color: armed ? "#1976d2" : "#9aa0a6",
-                            zIndex: 9999,
-                          }}
-                        >
-                          <SvgIcon
-                            component={DroneSvg}
-                            inheritViewBox
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
-                            }}
-                          />
-                          {activeFlightId && (
+                  <MissionMapViewport
+                    loadingLocation={loadingLocation}
+                    isLoaded={isLoaded}
+                    useCesium={useCesium}
+                    googleMapProps={{
+                      mapContainerStyle: containerStyle,
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      onClick: onMapClick,
+                      onLoad: onMapLoad,
+                      onZoomChanged: onMapZoomChanged,
+                      options: mapOptions,
+                    }}
+                    cesiumMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      viewMode: cesiumViewMode,
+                      waypoints,
+                      droneCenter,
+                      headingDeg: typeof heading === "number" ? heading : null,
+                      onPickLatLng: handleCesiumPick,
+                    }}
+                    googleChildren={
+                      <>
+                        {droneCenter && (
+                          <OverlayView
+                            position={droneCenter}
+                            mapPaneName={OverlayView.OVERLAY_LAYER}
+                          >
                             <div
                               style={{
-                                position: "absolute",
-                                top: "-28px",
-                                left: "50%",
-                                transform: "translateX(-50%)",
-                                background: "white",
-                                padding: "2px 6px",
-                                borderRadius: "3px",
-                                fontSize: "10px",
-                                whiteSpace: "nowrap",
-                                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                transform: `translate(-50%, -50%) rotate(${
+                                  typeof heading === "number" ? heading : 0
+                                }deg)`,
+                                transformOrigin: "center",
+                                color: armed ? "#1976d2" : "#9aa0a6",
+                                zIndex: 9999,
                               }}
                             >
-                              Flight: {activeFlightId.substring(0, 8)}...
+                              <SvgIcon
+                                component={DroneSvg}
+                                inheritViewBox
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
+                                }}
+                              />
+                              {activeFlightId && (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: "-28px",
+                                    left: "50%",
+                                    transform: "translateX(-50%)",
+                                    background: "white",
+                                    padding: "2px 6px",
+                                    borderRadius: "3px",
+                                    fontSize: "10px",
+                                    whiteSpace: "nowrap",
+                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                  }}
+                                >
+                                  Flight: {activeFlightId.substring(0, 8)}...
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </OverlayView>
-                    )}
+                          </OverlayView>
+                        )}
 
-                    {/* User location icon */}
-                    {userCenter && (
-                      <OverlayView
-                        position={userCenter}
-                        mapPaneName={OverlayView.OVERLAY_LAYER}
-                      >
-                        <div
-                          style={{
-                            transform: "translate(-50%, -50%)",
-                            color: "#4caf50",
-                          }}
-                        >
-                          <RoomIcon fontSize="large" />
-                        </div>
-                      </OverlayView>
-                    )}
+                        {userCenter && (
+                          <OverlayView
+                            position={userCenter}
+                            mapPaneName={OverlayView.OVERLAY_LAYER}
+                          >
+                            <div
+                              style={{
+                                transform: "translate(-50%, -50%)",
+                                color: "#4caf50",
+                              }}
+                            >
+                              <RoomIcon fontSize="large" />
+                            </div>
+                          </OverlayView>
+                        )}
 
-                    {/* Waypoint markers rendered via AdvancedMarkerElement */}
+                        {waypoints.length >= 2 && (
+                          <Polyline
+                            path={polylinePath}
+                            options={{
+                              strokeColor: "#1976d2",
+                              strokeOpacity: 0.8,
+                              strokeWeight: 3,
+                            }}
+                          />
+                        )}
 
-                    {/* Flight path */}
-                    {waypoints.length >= 2 && (
-                      <Polyline
-                        path={polylinePath}
-                        options={{
-                          strokeColor: "#1976d2",
-                          strokeOpacity: 0.8,
-                          strokeWeight: 3,
-                        }}
-                      />
-                    )}
-                     {latestPositions.map((p) => (
-                       <OverlayView
-                         key={p.animal_id}
-                         position={{ lat: p.lat, lng: p.lon }}
-                         mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                       >
-                         <Box sx={{
-                           transform: "translate(-50%, -100%)",
-                           display: "flex",
-                           alignItems: "center",
-                           gap: 0.5,
-                           background: "rgba(0,0,0,0.55)",
-                           color: "white",
-                           px: 1,
-                           py: 0.25,
-                           borderRadius: 1,
-                           fontSize: 12
-                         }}>
-                           <RoomIcon fontSize="small" />
-                           <span>{p.animal_name || p.collar_id}</span>
-                         </Box>
-                       </OverlayView>
-                     ))}
-
-                    </GoogleMap>
-                  )}
+                        {latestPositions.map((p) => (
+                          <OverlayView
+                            key={p.animal_id}
+                            position={{ lat: p.lat, lng: p.lon }}
+                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                          >
+                            <Box
+                              sx={{
+                                transform: "translate(-50%, -100%)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                                background: "rgba(0,0,0,0.55)",
+                                color: "white",
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 1,
+                                fontSize: 12
+                              }}
+                            >
+                              <RoomIcon fontSize="small" />
+                              <span>{p.animal_name || p.collar_id}</span>
+                            </Box>
+                          </OverlayView>
+                        ))}
+                      </>
+                    }
+                  />
                 </Box>
 
                 <Box
@@ -1273,290 +859,44 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
                     gap: 2,
                   }}
                 >
-                  {/* Left cluster: 3D toggle + view selector (visible only when 3D enabled) */}
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={useCesium}
-                          onChange={(e) => setUseCesium(e.target.checked)}
-                        />
-                      }
-                      label={useCesium ? "3D (Cesium)" : "2D (Google)"}
-                    />
-
-                    {useCesium && (
-                      <ToggleButtonGroup
-                        value={cesiumViewMode}
-                        exclusive
-                        size="small"
-                        onChange={(_, v) => {
-                          if (!v) return; // keep current if user clicks selected
-                          setCesiumViewMode(v);
-                        }}
-                        aria-label="Cesium view mode"
-                      >
-                        <ToggleButton value="top" aria-label="Top view">Top</ToggleButton>
-                        <ToggleButton value="tilted" aria-label="Tilted view">Tilted</ToggleButton>
-                        <ToggleButton value="follow" aria-label="Follow drone">Follow</ToggleButton>
-                        <ToggleButton value="fpv" aria-label="FPV view">FPV</ToggleButton>
-                        <ToggleButton value="orbit" aria-label="Orbit view">Orbit</ToggleButton>
-                      </ToggleButtonGroup>
-                    )}
-                  </Box>
-
-                  {/* Right cluster: your mission controls (keep your existing buttons here) */}
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {/* ... your existing mission control buttons ... */}
-                  </Box>
+                  <CesiumViewControls
+                    useCesium={useCesium}
+                    onUseCesiumChange={setUseCesium}
+                    viewMode={cesiumViewMode}
+                    onViewModeChange={setCesiumViewMode}
+                  />
                 </Box>
 
 
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Click on the map to add waypoints. Markers are ordered (1..N).
                 </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Drone Status: {droneConnected ? "Connected" : "Disconnected"}
-                  {activeFlightId && ` | Active Flight: ${activeFlightId.substring(0, 8)}...`}
-                  {wsConnected && ` | WS: Connected`}
-                </Typography>
 
-                {/* Camera stream panel under the map */}
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    borderColor: "hsla(174, 30%, 40%, 0.25)",
-                    background: "hsla(0, 0%, 100%, 0.7)",
+                <MissionVideoPanel
+                  title="Survey Camera"
+                  imgAlt="Survey camera stream"
+                  disconnectedMessage="Connect the drone to view the survey stream."
+                  apiBase={API_BASE_CLEAN}
+                  streamKey={streamKey}
+                  videoToken={videoToken}
+                  startingVideo={startingVideo}
+                  videoError={videoError}
+                  videoRetryCount={videoRetryCount}
+                  droneConnected={droneConnected}
+                  telemetry={telemetry}
+                  onVideoError={handleVideoError}
+                  onVideoLoad={handleVideoLoad}
+                  onRetry={() => {
+                    setStreamKey(Date.now());
+                    setVideoError(null);
                   }}
-                >
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ mb: 1 }}
-                  >
-                    <Typography variant="subtitle1">Survey Camera</Typography>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      {startingVideo && <CircularProgress size={16} />}
-                      <Typography variant="caption" color="text.secondary">
-                        {startingVideo
-                          ? "Starting video…"
-                          : videoError
-                            ? "Error"
-                            : droneConnected
-                              ? "Live"
-                              : "Disconnected"}
-                      </Typography>
-                    </Stack>
-                  </Stack>
-
-                  <Box
-                    sx={{
-                      width: "100%",
-                      height: 240,
-                      bgcolor: "#000",
-                      borderRadius: 1,
-                      overflow: "hidden",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      position: "relative",
-                    }}
-                  >
-                    {droneConnected ? (
-                      <>
-                        {videoError ? (
-                          // Warning overlay when video fails
-                          <Box
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              bgcolor: "rgba(0,0,0,0.85)",
-                              color: "warning.main",
-                              p: 2,
-                              textAlign: "center",
-                            }}
-                          >
-                            <Typography variant="h6" sx={{ color: "warning.main", mb: 1 }}>
-                              ⚠️ Video Stream Unavailable
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: "grey.400", mb: 2 }}>
-                              {videoError}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: "grey.500" }}>
-                              Retry attempt {videoRetryCount}...
-                            </Typography>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              sx={{ mt: 2, color: "white", borderColor: "grey.600" }}
-                              onClick={() => {
-                                setStreamKey(Date.now());
-                                setVideoError(null);
-                              }}
-                            >
-                              Retry Now
-                            </Button>
-                          </Box>
-                        ) : (
-                          <>
-                            <Box
-                              component="img"
-                              src={`${API_BASE_CLEAN}/video/mjpeg?key=${streamKey}${videoToken ? `&token=${encodeURIComponent(videoToken)}` : ""}`}
-                              alt="Survey camera stream"
-                              onError={handleVideoError}
-                              onLoad={handleVideoLoad}
-                              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-
-                            {/* Telemetry overlay boxes (like your screenshot) */}
-                            <Box sx={{ position: "absolute", top: 8, left: 8 }}>
-                              <Stack spacing={0.75}>
-                                <TelemetryBox
-                                  label="Battery"
-                                  value={
-                                    batteryPct === null
-                                      ? "--"
-                                      : `${formatMaybeNumber(Number(batteryPct), 0)}%`
-                                  }
-                                />
-                                <TelemetryBox
-                                  label="GND SPD"
-                                  value={`${formatMaybeNumber(Number(groundSpeed), 1)} m/s`}
-                                />
-                                <TelemetryBox
-                                  label="ALT"
-                                  value={`${formatMaybeNumber(Number(relAlt), 1)} m`}
-                                />
-                              </Stack>
-                            </Box>
-
-                            <Box sx={{ position: "absolute", top: 8, right: 8 }}>
-                              <Stack spacing={0.75} alignItems="flex-end">
-                                <TelemetryBox
-                                  label="MODE"
-                                  value={typeof mode === "string" ? mode : "--"}
-                                />
-                                <TelemetryBox
-                                  label="HDG"
-                                  value={
-                                    typeof heading === "number" && Number.isFinite(heading)
-                                      ? `${Math.round(heading)}°`
-                                      : "--"
-                                  }
-                                />
-                                <TelemetryBox
-                                  label="GPS"
-                                  value={sats === null || sats === undefined ? "--" : `${sats} sats`}
-                                />
-                              </Stack>
-                            </Box>
-                          </>
-                        )}
-
-                        {startingVideo && (
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              backgroundColor: "rgba(0,0,0,0.7)",
-                            }}
-                          >
-                            <CircularProgress />
-                          </Box>
-                        )}
-                      </>
-                    ) : (
-                      <Typography sx={{ color: "white" }}>
-                        Connect the drone to view the survey stream.
-                      </Typography>
-                    )}
-                  </Box>
-                </Paper>
+                />
               </Stack>
 
               {/* Right side: Controls */}
               <Box sx={{ width: { xs: "100%", md: 300 } }}>
                 <Stack spacing={2}>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      borderColor: "hsla(174, 30%, 40%, 0.25)",
-                      background: "hsla(0, 0%, 100%, 0.7)",
-                    }}
-                  >
-                    <Typography variant="subtitle1">Command Panel</Typography>
-                    <Stack spacing={1.2} sx={{ mt: 1 }}>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Flight Status
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: 600, color: failsafeActive ? "error.main" : "text.primary" }}
-                        >
-                          {flightStatus}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          GPS Strength
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {gpsStrength}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Battery
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, textAlign: "right" }}>
-                          {batteryCellDisplay} • {batteryHealth}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Link Quality
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {linkQuality}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Wind @ Altitude
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {windDisplay}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Failsafe State
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: 600, color: failsafeActive ? "error.main" : "text.primary" }}
-                        >
-                          {failsafeState}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Paper>
+                  <MissionCommandPanel telemetry={telemetry} droneConnected={droneConnected} />
                   <TextField variant="filled"
                     label="Field plan name"
                     value={name}

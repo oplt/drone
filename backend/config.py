@@ -1,8 +1,81 @@
 from pathlib import Path
 import logging
+import threading
+from datetime import datetime
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+class DailyDateFileHandler(logging.Handler):
+    """
+    File handler that writes to backend/logs/YYYY-MM-DD.log and rolls over at day change.
+    """
+
+    def __init__(self, log_dir: Path, *, encoding: str = "utf-8") -> None:
+        super().__init__()
+        self.log_dir = log_dir.resolve()
+        self.encoding = encoding
+        self._current_day: str | None = None
+        self._file_handler: logging.FileHandler | None = None
+        self._lock = threading.RLock()
+
+    @staticmethod
+    def _today_token() -> str:
+        return datetime.now().strftime("%Y-%m-%d")
+
+    def _build_log_path(self, day_token: str) -> Path:
+        return self.log_dir / f"{day_token}.log"
+
+    def _ensure_handler(self) -> None:
+        day_token = self._today_token()
+        if self._file_handler is not None and self._current_day == day_token:
+            return
+
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        if self._file_handler is not None:
+            self._file_handler.close()
+            self._file_handler = None
+
+        file_handler = logging.FileHandler(
+            self._build_log_path(day_token),
+            encoding=self.encoding,
+        )
+        file_handler.setLevel(self.level)
+        if self.formatter is not None:
+            file_handler.setFormatter(self.formatter)
+        self._file_handler = file_handler
+        self._current_day = day_token
+
+    def emit(self, record: logging.LogRecord) -> None:
+        with self._lock:
+            try:
+                self._ensure_handler()
+                if self._file_handler is not None:
+                    self._file_handler.emit(record)
+            except Exception:
+                self.handleError(record)
+
+    def setFormatter(self, fmt: logging.Formatter) -> None:
+        with self._lock:
+            super().setFormatter(fmt)
+            if self._file_handler is not None:
+                self._file_handler.setFormatter(fmt)
+
+    def setLevel(self, level: int | str) -> None:
+        with self._lock:
+            super().setLevel(level)
+            if self._file_handler is not None:
+                self._file_handler.setLevel(level)
+
+    def close(self) -> None:
+        with self._lock:
+            try:
+                if self._file_handler is not None:
+                    self._file_handler.close()
+                    self._file_handler = None
+            finally:
+                super().close()
 
 
 def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -> None:
@@ -12,33 +85,38 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
         if isinstance(log_level, int)
         else getattr(logging, log_level, logging.INFO)
     )
-    log_path = (log_file or (BASE_DIR.parent / "drone.log")).resolve()
+    log_dir = (log_file.parent if log_file else (BASE_DIR / "logs")).resolve()
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
 
     formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
     )
 
-    has_file_handler = False
+    has_daily_file_handler = False
     has_stream_handler = False
 
     for handler in root_logger.handlers:
-        if isinstance(handler, logging.FileHandler):
-            existing_path = Path(getattr(handler, "baseFilename", "")).resolve()
-            if existing_path == log_path:
-                has_file_handler = True
-        elif type(handler) is logging.StreamHandler:
+        if isinstance(handler, DailyDateFileHandler):
+            if handler.log_dir == log_dir:
+                has_daily_file_handler = True
+                handler.setLevel(level)
+                handler.setFormatter(formatter)
+        elif isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
             has_stream_handler = True
+            handler.setLevel(level)
+            handler.setFormatter(formatter)
 
-    if not has_file_handler:
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    if not has_daily_file_handler:
+        file_handler = DailyDateFileHandler(log_dir=log_dir)
+        file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
 
     if not has_stream_handler:
         stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(level)
         stream_handler.setFormatter(formatter)
         root_logger.addHandler(stream_handler)
 
@@ -151,6 +229,22 @@ class RuntimeSettings(BaseSettings):
     # Wireless streaming network configuration
     drone_video_wifi_ssid: str = "Drone_Network"
     drone_video_wifi_password: str = "drone123"
+
+    # Photogrammetry pipeline/runtime parameters
+    PHOTOGRAMMETRY_DRONE_SYNC_DIR: str = "backend/storage/drone_sync"
+    PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR: str = "backend/storage/staging"
+    PHOTOGRAMMETRY_INPUTS_DIR: str = "backend/storage/mapping_jobs_inputs"
+    PHOTOGRAMMETRY_STORAGE_DIR: str = "backend/storage/mapping"
+    PHOTOGRAMMETRY_STORAGE_BASE_URL: str = "/mapping-assets"
+    PHOTOGRAMMETRY_3DTILES_CMD: str = ""
+    PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: bool = False
+    WEBODM_BASE_URL: str =""
+    WEBODM_API_TOKEN: str = ""
+    WEBODM_PROJECT_ID: int = 1
+    WEBODM_MOCK_MODE: bool = False
+    MAPPING_JOB_QUEUE_BACKEND: str = "celery"
+    CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
+    PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: str = ""
 
 
 

@@ -599,6 +599,9 @@ export default function CesiumMap({
       viewer.scene.canvas
     );
     drawHandlerRef.current = handler;
+    const canvas = viewer.scene.canvas;
+    const preventContextMenu = (event: Event) => event.preventDefault();
+    canvas.addEventListener("contextmenu", preventContextMenu);
 
     const ensureTempEntity = () => {
       if (drawTempEntityRef.current) return;
@@ -713,6 +716,9 @@ export default function CesiumMap({
     handler.setInputAction(() => {
       finishDraw(drawMode);
     }, CesiumModule.ScreenSpaceEventType.RIGHT_CLICK);
+    handler.setInputAction(() => {
+      finishDraw(drawMode);
+    }, CesiumModule.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") clearDrawEntities();
@@ -722,6 +728,7 @@ export default function CesiumMap({
 
     return () => {
       window.removeEventListener("keydown", onKey);
+      canvas.removeEventListener("contextmenu", preventContextMenu);
       try {
         handler.destroy();
       } catch {}

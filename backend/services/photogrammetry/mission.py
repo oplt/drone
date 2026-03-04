@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import List, Tuple
+from typing import Iterator, List, Tuple
 
 from backend.drone.models import Coordinate
 from backend.flight.missions.grid_mission import GridPlanner
@@ -27,12 +27,18 @@ def compute_spacings(
     fov_v: float,
     front_overlap: float,
     side_overlap: float,
+    min_spacing_m: float = 0.5,
 ) -> Tuple[float, float]:
     fp_w = _footprint_m(altitude_agl, fov_h)
     fp_h = _footprint_m(altitude_agl, fov_v)
     along = fp_h * (1.0 - front_overlap)
     cross = fp_w * (1.0 - side_overlap)
-    return max(0.5, along), max(0.5, cross)
+    spacing_floor = max(0.0, float(min_spacing_m))
+    return max(spacing_floor, along), max(spacing_floor, cross)
+
+
+def _segment_distance_m(a: Coordinate, b: Coordinate) -> float:
+    return max(0.0, float(haversine_km(a.lat, a.lon, b.lat, b.lon) * 1000.0))
 
 
 def _interpolate_segment(
@@ -40,20 +46,25 @@ def _interpolate_segment(
     b: Coordinate,
     *,
     spacing_m: float,
-) -> List[Coordinate]:
-    dist_m = max(0.0, float(haversine_km(a.lat, a.lon, b.lat, b.lon) * 1000.0))
+    dist_m: float | None = None,
+) -> Iterator[Coordinate]:
+    if dist_m is None:
+        dist_m = _segment_distance_m(a, b)
+
     if dist_m <= spacing_m:
-        return [b]
+        yield b
+        return
 
     steps = max(1, int(math.ceil(dist_m / spacing_m)))
-    pts: List[Coordinate] = []
+    lat_step = (b.lat - a.lat) / steps
+    lon_step = (b.lon - a.lon) / steps
+    alt_step = (b.alt - a.alt) / steps
     for i in range(1, steps + 1):
-        t = i / steps
-        lat = a.lat + (b.lat - a.lat) * t
-        lon = a.lon + (b.lon - a.lon) * t
-        alt = a.alt + (b.alt - a.alt) * t
-        pts.append(Coordinate(lat=lat, lon=lon, alt=alt))
-    return pts
+        yield Coordinate(
+            lat=a.lat + lat_step * i,
+            lon=a.lon + lon_step * i,
+            alt=a.alt + alt_step * i,
+        )
 
 
 def build_lawnmower_path(
@@ -80,15 +91,28 @@ def build_lawnmower_path(
     if not plan.waypoints:
         return []
 
-    for wp in plan.waypoints:
+    waypoints = plan.waypoints
+    work_leg_mask = plan.work_leg_mask
+
+    for wp in waypoints:
         wp.alt = altitude_agl
 
-    dense: List[Coordinate] = [plan.waypoints[0]]
-    for i, b in enumerate(plan.waypoints[1:]):
-        a = plan.waypoints[i]
-        is_work_leg = bool(plan.work_leg_mask[i]) if i < len(plan.work_leg_mask) else True
+    dense: List[Coordinate] = [waypoints[0]]
+    for i, (a, b) in enumerate(zip(waypoints, waypoints[1:])):
+        is_work_leg = bool(work_leg_mask[i]) if i < len(work_leg_mask) else True
         if is_work_leg:
-            dense.extend(_interpolate_segment(a, b, spacing_m=along_track_m))
+            segment_dist_m = _segment_distance_m(a, b)
+            if segment_dist_m <= along_track_m:
+                dense.append(b)
+                continue
+            dense.extend(
+                _interpolate_segment(
+                    a,
+                    b,
+                    spacing_m=along_track_m,
+                    dist_m=segment_dist_m,
+                )
+            )
         else:
             dense.append(b)
     return dense
@@ -103,6 +127,7 @@ def make_photogrammetry_plan(
     front_overlap: float,
     side_overlap: float,
     heading_deg: float = 0.0,
+    min_spacing_m: float = 0.5,
 ) -> PhotogrammetryPlan:
     along, cross = compute_spacings(
         altitude_agl=altitude_agl,
@@ -110,6 +135,7 @@ def make_photogrammetry_plan(
         fov_v=fov_v,
         front_overlap=front_overlap,
         side_overlap=side_overlap,
+        min_spacing_m=min_spacing_m,
     )
     wps = build_lawnmower_path(
         polygon_lonlat,

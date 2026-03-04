@@ -19,11 +19,18 @@ MASK = "********"
 V_TELEM_MQTT_PASS = "telemetry.mqtt_pass"
 V_AI_LLM_KEY = "ai.llm_api_key"
 V_PI_PASS = "raspberry.raspberry_password"
+V_PHOTO_WEBODM_API_TOKEN = "photogrammetry.WEBODM_API_TOKEN"
+V_PHOTO_ASSET_SIGNING_SECRET = "photogrammetry.PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"
 
 SECRET_PATHS = {
     V_TELEM_MQTT_PASS: ("telemetry", "mqtt_pass"),
     V_AI_LLM_KEY: ("ai", "llm_api_key"),
     V_PI_PASS: ("raspberry", "raspberry_password"),
+    V_PHOTO_WEBODM_API_TOKEN: ("photogrammetry", "WEBODM_API_TOKEN"),
+    V_PHOTO_ASSET_SIGNING_SECRET: (
+        "photogrammetry",
+        "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET",
+    ),
 }
 
 
@@ -92,6 +99,7 @@ class SettingsRepository:
                 "preflight": {},
                 "raspberry": {},
                 "camera": {},
+                "photogrammetry": {},
             },
             data,
         )
@@ -128,6 +136,7 @@ class SettingsRepository:
                 "preflight": {},
                 "raspberry": {},
                 "camera": {},
+                "photogrammetry": {},
             },
             data,
         )
@@ -136,6 +145,8 @@ class SettingsRepository:
         mqtt_pass = _pop_path(data, SECRET_PATHS[V_TELEM_MQTT_PASS])
         llm_key = _pop_path(data, SECRET_PATHS[V_AI_LLM_KEY])
         pi_pass = _pop_path(data, SECRET_PATHS[V_PI_PASS])
+        webodm_api_token = _pop_path(data, SECRET_PATHS[V_PHOTO_WEBODM_API_TOKEN])
+        asset_signing_secret = _pop_path(data, SECRET_PATHS[V_PHOTO_ASSET_SIGNING_SECRET])
 
         async with self._session_factory() as db:
 
@@ -162,6 +173,8 @@ class SettingsRepository:
             await upsert_secret(V_TELEM_MQTT_PASS, mqtt_pass)
             await upsert_secret(V_AI_LLM_KEY, llm_key)
             await upsert_secret(V_PI_PASS, pi_pass)
+            await upsert_secret(V_PHOTO_WEBODM_API_TOKEN, webodm_api_token)
+            await upsert_secret(V_PHOTO_ASSET_SIGNING_SECRET, asset_signing_secret)
 
             # --- upsert non-secret JSON ---
             stmt = (
@@ -194,6 +207,7 @@ class SettingsRepository:
                 "preflight": {},
                 "raspberry": {},
                 "camera": {},
+                "photogrammetry": {},
             },
             data,
         )

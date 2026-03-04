@@ -89,6 +89,23 @@ class CameraSettings(BaseModel):
     drone_video_save_stream: bool = False
 
 
+class PhotogrammetrySettings(BaseModel):
+    PHOTOGRAMMETRY_DRONE_SYNC_DIR: str = "backend/storage/drone_sync"
+    PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR: str = "backend/storage/staging"
+    PHOTOGRAMMETRY_INPUTS_DIR: str = "backend/storage/mapping_jobs_inputs"
+    PHOTOGRAMMETRY_STORAGE_DIR: str = "backend/storage/mapping"
+    PHOTOGRAMMETRY_STORAGE_BASE_URL: str = "/mapping-assets"
+    PHOTOGRAMMETRY_3DTILES_CMD: str = ""
+    PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: bool = False
+    WEBODM_BASE_URL: str = "http://localhost:8001"
+    WEBODM_API_TOKEN: Optional[str] = None  # SECRET (vault); masked in GET
+    WEBODM_PROJECT_ID: int = 1
+    WEBODM_MOCK_MODE: bool = False
+    MAPPING_JOB_QUEUE_BACKEND: str = "celery"
+    CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
+    PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: Optional[str] = None  # SECRET (vault); masked in GET
+
+
 class SettingsDoc(BaseModel):
     telemetry: TelemetrySettings = Field(default_factory=TelemetrySettings)
     ai: AISettings = Field(default_factory=AISettings)
@@ -97,4 +114,5 @@ class SettingsDoc(BaseModel):
     preflight: PreflightSettings = Field(default_factory=PreflightSettings)
     raspberry: RaspberrySettings = Field(default_factory=RaspberrySettings)
     camera: CameraSettings = Field(default_factory=CameraSettings)
+    photogrammetry: PhotogrammetrySettings = Field(default_factory=PhotogrammetrySettings)
     updated_at: Optional[str] = None

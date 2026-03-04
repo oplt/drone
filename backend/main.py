@@ -64,7 +64,7 @@ async def _build_orchestrator() -> Orchestrator:
                 if settings.drone_video_use_gazebo:
                     # If using Gazebo, we let the API handle the stream to avoid port conflict
                     # (UDP unicast port can usually only be opened by one process/thread)
-                    logger.info("🎥 Gazebo video mode enabled - Stream will be handled by API on demand")
+                    logger.info("Gazebo video mode enabled; stream will be handled by API on demand")
                     video = None
                 else:
                     cam_source = settings.drone_video_source
@@ -88,12 +88,12 @@ async def _build_orchestrator() -> Orchestrator:
                         recording_path=settings.drone_video_save_path,
                         recording_format="mp4",
                     )
-                    logger.info("✅ Drone video stream initialized successfully")
+                    logger.info("Drone video stream initialized successfully")
             except Exception as e:
-                logger.info(f"❌ Failed to initialize drone video stream: {e}")
+                logger.error("Failed to initialize drone video stream: %s", e)
                 video = None
         else:
-            logger.info("ℹ️  Drone video streaming disabled in configuration")
+            logger.info("Drone video streaming disabled in configuration")
 
         repo = TelemetryRepository()
         publisher = (
@@ -124,4 +124,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("\n✅ Program terminated safely")
+        logger.info("Program terminated safely")

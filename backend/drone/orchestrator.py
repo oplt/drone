@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import time
 import logging
 from .models import Coordinate
@@ -471,7 +472,12 @@ class Orchestrator:
                 asyncio.create_task(self.emergency_monitor_task()),
             ]
             if flight_fn is not None:
-                await flight_fn()
+                flight_awaitable = flight_fn() if callable(flight_fn) else flight_fn
+                if not inspect.isawaitable(flight_awaitable):
+                    raise TypeError(
+                        "flight_fn must be an awaitable or a callable returning an awaitable."
+                    )
+                await flight_awaitable
 
         except Exception as e:
             logger.exception(f"❌ Mission failed: {e}")

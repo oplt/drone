@@ -20,6 +20,7 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
     p = doc.get("preflight", {}) or {}
     r = doc.get("raspberry", {}) or {}
     cam = doc.get("camera", {}) or {}
+    photo = doc.get("photogrammetry", {}) or {}
 
     flat: Dict[str, Any] = {
         # Telemetry
@@ -99,6 +100,28 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "drone_video_fallback": cam.get("drone_video_fallback"),
         "drone_video_enabled": cam.get("drone_video_enabled"),
         "drone_video_save_stream": cam.get("drone_video_save_stream"),
+
+        # Photogrammetry
+        "PHOTOGRAMMETRY_DRONE_SYNC_DIR": photo.get("PHOTOGRAMMETRY_DRONE_SYNC_DIR"),
+        "PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR": photo.get(
+            "PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR"
+        ),
+        "PHOTOGRAMMETRY_INPUTS_DIR": photo.get("PHOTOGRAMMETRY_INPUTS_DIR"),
+        "PHOTOGRAMMETRY_STORAGE_DIR": photo.get("PHOTOGRAMMETRY_STORAGE_DIR"),
+        "PHOTOGRAMMETRY_STORAGE_BASE_URL": photo.get("PHOTOGRAMMETRY_STORAGE_BASE_URL"),
+        "PHOTOGRAMMETRY_3DTILES_CMD": photo.get("PHOTOGRAMMETRY_3DTILES_CMD"),
+        "PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET": photo.get(
+            "PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET"
+        ),
+        "WEBODM_BASE_URL": photo.get("WEBODM_BASE_URL"),
+        "WEBODM_API_TOKEN": photo.get("WEBODM_API_TOKEN"),
+        "WEBODM_PROJECT_ID": photo.get("WEBODM_PROJECT_ID"),
+        "WEBODM_MOCK_MODE": photo.get("WEBODM_MOCK_MODE"),
+        "MAPPING_JOB_QUEUE_BACKEND": photo.get("MAPPING_JOB_QUEUE_BACKEND"),
+        "CELERY_PHOTOGRAMMETRY_QUEUE": photo.get("CELERY_PHOTOGRAMMETRY_QUEUE"),
+        "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET": photo.get(
+            "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"
+        ),
     }
 
     # drop None so env defaults remain if DB lacks a value

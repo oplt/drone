@@ -32,6 +32,10 @@ from typing import TYPE_CHECKING, Literal, Optional, Protocol, Tuple
 from shapely.geometry import LineString, Point, Polygon
 
 from backend.drone.models import Coordinate
+from backend.flight.missions.terrain_follow import (
+    apply_terrain_follow_to_path,
+    resolve_home_amsl_m,
+)
 from backend.utils.geo import coord_from_home
 
 if TYPE_CHECKING:
@@ -108,7 +112,7 @@ def _maybe_get_elevation_provider(
     if maps is None:
         return None
 
-    for attr in ("elevation_at", "get_elevation", "elevation"):
+    for attr in ("elevation_m", "elevation_at", "get_elevation", "elevation"):
         fn = getattr(maps, attr, None)
         if not callable(fn):
             continue
@@ -117,7 +121,10 @@ def _maybe_get_elevation_provider(
             try:
                 return float(_fn(lat, lon))
             except TypeError:
-                return float(_fn(lat=lat, lon=lon))
+                try:
+                    return float(_fn(lat=lat, lon=lon))
+                except TypeError:
+                    return float(_fn((lat, lon)))
 
         return _prov
 
@@ -584,9 +591,10 @@ class GridMission:
         # Allow caller-supplied alt to override cruise_alt_m.
         if alt != self.cruise_alt_m:
             object.__setattr__(self, "cruise_alt_m", alt)
+        effective_alt = float(self.agl_m if self.terrain_follow else self.cruise_alt_m)
         await orch.run_mission(
             self,
-            alt=alt,
+            alt=effective_alt,
             flight_fn=lambda: self.fly_grid(orch),
         )
 
@@ -685,19 +693,8 @@ class GridMission:
             plan.stats["route_m"],
         )
 
-        # Terrain following: convert absolute waypoint alts to AGL-relative.
-        if self.terrain_follow and elev is not None:
-            home = coord_from_home(orch.drone.home_location)
-            home_elev = float(elev(home.lat, home.lon))
-            rebuilt = [
-                Coordinate(
-                    lat=w.lat,
-                    lon=w.lon,
-                    alt=float(self.agl_m + (elev(w.lat, w.lon) - home_elev)),
-                )
-                for w in self.waypoints
-            ]
-            object.__setattr__(self, "waypoints", rebuilt)
+        # Terrain following is applied after interpolation in _stitch_path()
+        # so altitude remains terrain-aware across the full flown path.
 
     # ------------------------------------------------------------------
     # Stubs - these are provided by BaseMission in the real codebase.
@@ -731,7 +728,7 @@ class GridMission:
             raise ValueError("GridMission requires at least 2 planned waypoints.")
 
         home = coord_from_home(orch.drone.home_location)
-        home.alt = cruise_alt
+        home.alt = float(self.agl_m if self.terrain_follow else cruise_alt)
 
         route = [home]
         for wp in self.waypoints:
@@ -746,8 +743,9 @@ class GridMission:
         if len(anchors) < 2:
             raise ValueError("Grid route requires at least 2 anchors.")
 
+        takeoff_alt_m = float(self.agl_m if self.terrain_follow else self.cruise_alt_m)
         await asyncio.sleep(1.0)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, self.cruise_alt_m)
+        await asyncio.to_thread(orch.drone.arm_and_takeoff, takeoff_alt_m)
 
         await self._add_event_safe(orch, "takeoff", {})
 
@@ -766,16 +764,47 @@ class GridMission:
         for a, b in zip(anchors, anchors[1:]):
             seg = (
                 list(orch.maps.waypoints_between(a, b, steps=interpolate_steps))
-                if interpolate_steps
+                if interpolate_steps > 0
                 else [a, b]
             )
             if path and seg:
-                seg = seg[1:]
+                prev = path[-1]
+                first = seg[0]
+                if (
+                    abs(prev.lat - first.lat) <= 1e-9
+                    and abs(prev.lon - first.lon) <= 1e-9
+                    and abs(float(prev.alt) - float(first.alt)) <= 1e-6
+                ):
+                    seg = seg[1:]
             path.extend(seg)
+
+        if not path:
+            raise ValueError("GridMission produced an empty route path")
+
+        if self.terrain_follow:
+            home_amsl_m = await asyncio.to_thread(resolve_home_amsl_m, orch.drone)
+            path = await apply_terrain_follow_to_path(
+                maps_client=orch.maps,
+                path=path,
+                home_amsl_m=home_amsl_m,
+                target_agl_m=float(self.agl_m),
+            )
+            await self._add_event_safe(
+                orch,
+                "grid_terrain_follow_applied",
+                {
+                    "path_points": len(path),
+                    "target_agl_m": float(self.agl_m),
+                    "takeoff_alt_m": takeoff_alt_m,
+                },
+            )
 
         await asyncio.to_thread(orch.drone.follow_waypoints, path)
 
         await self._add_event_safe(orch, "reached_destination", {})
+
+        await asyncio.to_thread(orch.drone.land)
+        await self._add_event_safe(orch, "landing_command_sent", {})
 
         await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
 

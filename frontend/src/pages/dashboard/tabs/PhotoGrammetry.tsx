@@ -14,6 +14,7 @@ import {
   IconButton,
   Tooltip,
   LinearProgress,
+
 } from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
@@ -29,7 +30,6 @@ import {
 } from "terra-draw";
 import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
 import {
-  GoogleMap,
   Polyline,
   Polygon,
   OverlayView,
@@ -38,12 +38,8 @@ import { getToken } from "../../../auth";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
-import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import CesiumMap from "../../../utils/CesiumMap";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { GoogleMapsContext } from "../../../utils/googleMaps";
 import ChangeHistoryOutlinedIcon from "@mui/icons-material/ChangeHistoryOutlined";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
@@ -53,8 +49,23 @@ import RadioButtonUncheckedOutlinedIcon from "@mui/icons-material/RadioButtonUnc
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PanToolAltOutlinedIcon from "@mui/icons-material/PanToolAltOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
+import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
+import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
+import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
+import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
+import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
+import { SavedFieldsPanel } from "../../../components/dashboard/tasks/SavedFieldsPanel";
+import { FieldBorderPanel } from "../../../components/dashboard/tasks/FieldBorderPanel";
+import { useDroneCenter } from "../../../hooks/useDroneCenter";
+import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
+import { useErrors } from "../../../hooks/useErrors";
+import { useAutoStartVideo } from "../../../hooks/useAutoStartVideo";
+import { useMissionCommandMetrics } from "../../../hooks/useMissionCommandMetrics";
+import { useMissionWebsocketRuntime } from "../../../hooks/useMissionWebsocketRuntime";
+import { type LatLng } from "../../../lib/extractLatLng";
+import type { DrawResult as CesiumDrawResult } from "../../../utils/CesiumMap";
 
-type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
 type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
 type DrawMode = "none" | "point" | "polyline" | "polygon";
@@ -163,41 +174,13 @@ type MappingJobRecord = {
 
 const MAX_GRID_PREVIEW_WAYPOINTS = 2200;
 const GRID_PREVIEW_DEBOUNCE_MS = 250;
+const CESIUM_MAX_SAFE_ZOOM = 16;
 const PHOTOGRAMMETRY_ALT_MIN_M = 20;
 const PHOTOGRAMMETRY_ALT_MAX_M = 30;
 const INFO_INPUT_LABEL_PROPS = {
   shrink: true,
   sx: { pointerEvents: "auto" },
 } as const;
-
-function extractLatLng(value: any): LatLng | null {
-  if (!value) return null;
-  const lat =
-    value.lat ??
-    value.latitude ??
-    value.Lat ??
-    value.Latitude ??
-    (value.position
-      ? value.position.lat ?? value.position.latitude
-      : undefined);
-  const lon =
-    value.lon ??
-    value.lng ??
-    value.longitude ??
-    value.Lon ??
-    value.Lng ??
-    value.Longitude ??
-    (value.position
-      ? value.position.lon ??
-        value.position.lng ??
-        value.position.longitude
-      : undefined);
-  if (typeof lat !== "number" || typeof lon !== "number") return null;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (lat < -90 || lat > 90) return null;
-  if (lon < -180 || lon > 180) return null;
-  return { lat, lng: lon };
-}
 
 export default function PhotoGrammetryPage() {
   const [fieldName, setFieldName] = useState("Field A");
@@ -208,10 +191,6 @@ export default function PhotoGrammetryPage() {
   const [fieldsRefreshNonce, setFieldsRefreshNonce] = useState(0);
   const [savingField, setSavingField] = useState(false);
   const [deletingField, setDeletingField] = useState(false);
-  const [autoStartOnFieldSelect, setAutoStartOnFieldSelect] = useState(false);
-  const [pendingAutoStartForFieldId, setPendingAutoStartForFieldId] = useState<
-    number | null
-  >(null);
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
@@ -323,7 +302,6 @@ export default function PhotoGrammetryPage() {
     }
     setFieldBorder(null);
     setSelectedFieldId(null);
-    setPendingAutoStartForFieldId(null);
   };
 
   const saveFieldBorder = async () => {
@@ -418,16 +396,9 @@ export default function PhotoGrammetryPage() {
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const fieldPolygonRef = useRef<google.maps.Polygon | null>(null);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const activeFlightIdRef = useRef<string | null>(null);
-  const missionStartAtRef = useRef<number | null>(null);
   const missionLaunchInFlightRef = useRef(false);
   const gridPreviewAbortRef = useRef<AbortController | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastPanRef = useRef(0);
-  const snappedToDroneRef = useRef(false);
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
-  const [droneCenter, setDroneCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [alt, setAlt] = useState(25);
   const [altInput, setAltInput] = useState("25");
@@ -471,11 +442,7 @@ export default function PhotoGrammetryPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [center, setCenter] = useState(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
-  const videoStartedRef = useRef(false);
-  const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
-  const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(
-    null
-  );
+  const { errors, addError, clearErrors, dismissError } = useErrors();
   const [exclusionZones, setExclusionZones] = useState<LonLat[][]>([]);
   const [fieldTilesetUrl, setFieldTilesetUrl] = useState<string | null>(null);
   const [mappingInputMode, setMappingInputMode] = useState<"upload" | "drone_sync">(
@@ -493,8 +460,6 @@ export default function PhotoGrammetryPage() {
   );
   const [mapZoom, setMapZoom] = useState(12);
   const [streamKey, setStreamKey] = useState(Date.now());
-  const [startingVideo, setStartingVideo] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
@@ -516,11 +481,21 @@ export default function PhotoGrammetryPage() {
   );
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoRetryCount, setVideoRetryCount] = useState(0);
-  const wsEnabled = Boolean(
-    missionStatus?.orchestrator?.drone_connected &&
-      missionStatus?.telemetry?.running &&
-      activeFlightId
-  );
+  const {
+    missionStatus,
+    activeFlightId,
+    setPendingFlightId,
+    telemetry,
+    wsConnected,
+    disconnect,
+    droneConnected,
+  } = useMissionWebsocketRuntime<MissionStatus>({
+    apiBase: API_BASE_CLEAN,
+    getTokenFn: getToken,
+    onError: addError,
+  });
+  const droneCenter = useDroneCenter(telemetry);
+  const { heading, armed } = useMissionCommandMetrics(telemetry);
 
   const handleCesiumPick = useCallback(
     (p: { lat: number; lng: number }) => {
@@ -529,29 +504,22 @@ export default function PhotoGrammetryPage() {
     [alt]
   );
 
-  const { telemetry, isConnected: wsConnected, disconnect } = useTelemetryWebSocket({
-    enabled: wsEnabled,
-  });
-
-  const droneConnected = Boolean(
-    missionStatus?.orchestrator?.drone_connected || wsConnected
-  );
   const droneReady = Boolean(wsConnected && droneCenter);
+  const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
+    apiBase: API_BASE_CLEAN,
+    getToken,
+    enabled: droneReady,
+    onError: addError,
+    resetKey: activeFlightId ?? "none",
+  });
 
   const { isLoaded, loadError } = useContext(GoogleMapsContext);
 
   useEffect(() => {
-    activeFlightIdRef.current = activeFlightId;
-  }, [activeFlightId]);
+    if (autoStreamKey) setStreamKey(autoStreamKey);
+  }, [autoStreamKey]);
 
-// ✅ Define addError FIRST
-const addError = useCallback((error: string) => {
-  setErrors((prev) => [...prev.slice(-4), error]);
-}, []);
-
-
-
-// ✅ Then define onMapLoad (which depends on addError)
+  // ✅ Then define onMapLoad (which depends on addError)
 const onMapLoad = useCallback((map: google.maps.Map) => {
   mapRef.current = map;
   setMapReady(true);
@@ -889,12 +857,27 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
       setFieldBorder(f.ring);
       loadRingIntoEditor(f.ring);
       focusRingOnMap(f.ring);
-      if (autoStartOnFieldSelect) {
-        setPendingAutoStartForFieldId(f.id);
-      }
     },
-    [autoStartOnFieldSelect, focusRingOnMap, loadRingIntoEditor]
+    [focusRingOnMap, loadRingIntoEditor]
   );
+
+  const handleSavedFieldSelect = useCallback(
+    (fieldId: number | null) => {
+      if (fieldId == null) {
+        clearFieldBorder();
+        return;
+      }
+      const field = fields.find((f) => f.id === fieldId);
+      if (field) selectField(field);
+    },
+    [clearFieldBorder, fields, selectField]
+  );
+
+  const handleNewField = useCallback(() => {
+    setSelectedFieldId(null);
+    setFieldName("Field A");
+    clearFieldBorder();
+  }, [clearFieldBorder]);
 
   const deleteSelectedField = useCallback(async () => {
     const token = getToken();
@@ -965,10 +948,6 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   }, [gridPreview, gridPreviewMask]);
   const gridPreviewTooDense =
     !!gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS;
-
-  const clearErrors = useCallback(() => {
-    setErrors([]);
-  }, []);
 
   const resolveTilesetUrlFromAssets = useCallback(
     async (assets: MappingAssetRecord[] | undefined): Promise<string | null> => {
@@ -1246,25 +1225,6 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   }, []);
 
   useEffect(() => {
-    const next =
-      extractLatLng(telemetry?.position) ||
-      extractLatLng(telemetry?.gps) ||
-      extractLatLng(telemetry?.home) ||
-      extractLatLng(telemetry);
-    if (!next) return;
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => setDroneCenter(next));
-
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, [telemetry]);
-
-  useEffect(() => {
     if (!isLoaded || !mapReady) return;
     if (!mapRef.current) return;
     const markerLib = (google.maps as any)?.marker;
@@ -1321,101 +1281,14 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     };
   }, [isLoaded, mapReady, terraDrawMode, waypoints]);
 
-  useEffect(() => {
-    if (!activeFlightId) {
-      videoStartedRef.current = false;
-    }
-  }, [activeFlightId]);
-
-  useEffect(() => {
-    const token = getToken();
-    if (!droneReady || !token || videoStartedRef.current) return;
-    const timer = setTimeout(() => {
-      setStartingVideo(true);
-      fetch(`${API_BASE_CLEAN}/video/start`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            let detail = `HTTP ${res.status}`;
-            try {
-              const data = (await res.json()) as { detail?: string };
-              if (data?.detail) detail = data.detail;
-            } catch {
-              // ignore
-            }
-            throw new Error(detail);
-          }
-          setStreamKey(Date.now());
-          videoStartedRef.current = true;
-        })
-        .catch((error) => {
-          addError(`Failed to start video: ${error.message}`);
-        })
-        .finally(() => {
-          setStartingVideo(false);
-        });
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [droneReady, API_BASE_CLEAN, addError]);
-
-  const pollFlightStatus = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_BASE_CLEAN}/tasks/flight/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const status = (await res.json()) as MissionStatus;
-      setMissionStatus(status);
-
-      if (!status.flight_id) {
-        const graceMs = 30000;
-        const startedAt = missionStartAtRef.current ?? 0;
-        const withinGrace = startedAt > 0 && Date.now() - startedAt < graceMs;
-        if (!withinGrace) {
-          setActiveFlightId(null);
-        }
-        return;
-      }
-
-      if (status.flight_id !== activeFlightIdRef.current) {
-        setActiveFlightId(status.flight_id);
-        missionStartAtRef.current = Date.now();
-      }
-    } catch (error) {
-      console.error("Failed to poll flight status:", error);
-      addError(
-        `Flight status polling failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
-    }
-  }, [API_BASE_CLEAN, addError]);
-
-  useEffect(() => {
-    pollFlightStatus();
-    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    pollIntervalRef.current = setInterval(pollFlightStatus, 5000);
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [pollFlightStatus]);
 useEffect(() => {
-  const modeMap: Record<string, any> = {
-    "polygon": "polygon",
-    "polyline": "linestring",
-    "point": "point",
-    "none": "static",
+  if (useCesium) return;
+
+  const modeMap: Record<DrawMode, TerraDrawEditorMode> = {
+    polygon: "polygon",
+    polyline: "linestring",
+    point: "point",
+    none: "static",
   };
 
   const tdMode = modeMap[drawMode];
@@ -1423,14 +1296,16 @@ useEffect(() => {
     terraDrawRef.current.setMode(tdMode);
     setTerraDrawMode(tdMode);
   }
-}, [drawMode, terraDrawReady]);
+}, [drawMode, terraDrawReady, useCesium]);
+
+useEffect(() => {
+  if (useCesium) return;
+  if (!terraDrawRef.current || !terraDrawReady) return;
+  terraDrawRef.current.setMode(terraDrawMode);
+}, [terraDrawMode, terraDrawReady, useCesium]);
 
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
       disconnect();
       if (terraDrawRef.current) {
             terraDrawRef.current.stop();
@@ -1439,31 +1314,12 @@ useEffect(() => {
     };
   }, [disconnect]);
 
-  useEffect(() => {
-    if (!mapRef.current || !droneCenter) return;
-    if (!snappedToDroneRef.current) {
-      snappedToDroneRef.current = true;
-      mapRef.current.panTo(droneCenter);
-      mapRef.current.setZoom(18);
-      setMapZoom(18);
-    }
-  }, [droneCenter]);
-
-  useEffect(() => {
-    if (!wsConnected) snappedToDroneRef.current = false;
-  }, [wsConnected]);
-
-  useEffect(() => {
-    if (!mapRef.current || !droneCenter || !wsConnected) return;
-    const now = Date.now();
-    if (now - lastPanRef.current < 500) return;
-    lastPanRef.current = now;
-
-    const currentZoom = mapRef.current.getZoom() ?? 0;
-    if (currentZoom < 16) return;
-
-    mapRef.current.panTo(droneCenter);
-  }, [droneCenter, wsConnected]);
+  useDroneMapFollow({
+    mapRef,
+    droneCenter,
+    wsConnected,
+    onInitialSnap: () => setMapZoom(18),
+  });
 
   const onMapClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
@@ -1474,6 +1330,53 @@ useEffect(() => {
       setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
     },
     [alt, terraDrawMode]
+  );
+  const handleDrawingToolSelection = useCallback(
+    (toolMode: TerraDrawToolMode) => {
+      if (useCesium) {
+        const cesiumModeMap: Record<TerraDrawToolMode, DrawMode> = {
+          polygon: "polygon",
+          linestring: "polyline",
+          point: "point",
+          rectangle: "polygon",
+          circle: "polygon",
+          freehand: "polygon",
+          select: "none",
+        };
+        setDrawMode(cesiumModeMap[toolMode] ?? "none");
+        return;
+      }
+
+      setTerraDrawMode(toolMode);
+    },
+    [useCesium]
+  );
+  const handleCesiumDrawComplete = useCallback(
+    (result: CesiumDrawResult) => {
+      if (result.type === "polygon") {
+        const ring = stripClosedRing(
+          result.coordinates.map(([lon, lat]) => [lon, lat] as LonLat)
+        );
+        if (ring.length >= 3) {
+          setFieldBorder(ring);
+          setSelectedFieldId(null);
+        }
+      } else if (result.type === "polyline") {
+        setWaypoints(
+          result.coordinates.map(([lon, lat]) => ({
+            lat,
+            lon,
+            alt,
+          }))
+        );
+      } else if (result.type === "point") {
+        const [lon, lat] = result.coordinates;
+        setWaypoints((prev) => [...prev, { lat, lon, alt }]);
+      }
+
+      setDrawMode("none");
+    },
+    [alt, stripClosedRing]
   );
 
   const handleAltitudeInputChange = (value: string) => {
@@ -1717,8 +1620,7 @@ useEffect(() => {
       const data = await missionRes.json();
       alert(`PhotoGrammetry Mission: "${data.mission_name}" started! Tracking flight...`);
 
-      setActiveFlightId(data.flight_id);
-      missionStartAtRef.current = Date.now();
+      setPendingFlightId(data.flight_id ?? null);
 
       setAlt(altToUse);
       setAltInput(String(altToUse));
@@ -1731,31 +1633,6 @@ useEffect(() => {
       missionLaunchInFlightRef.current = false;
     }
   };
-
-  useEffect(() => {
-    if (!autoStartOnFieldSelect) return;
-    if (pendingAutoStartForFieldId == null) return;
-    if (selectedFieldId !== pendingAutoStartForFieldId) return;
-    if (!fieldBorder || fieldBorder.length < 3) return;
-    if (sending) return;
-
-    setPendingAutoStartForFieldId(null);
-    const selectedName =
-      fields.find((f) => f.id === selectedFieldId)?.name ??
-      `#${String(selectedFieldId)}`;
-    const confirmed = window.confirm(
-      `Start photogrammetry mission for "${selectedName}" now with current capture parameters?`
-    );
-    if (!confirmed) return;
-    void sendMission();
-  }, [
-    autoStartOnFieldSelect,
-    fieldBorder,
-    fields,
-    pendingAutoStartForFieldId,
-    selectedFieldId,
-    sending,
-  ]);
 
   const polylinePath = useMemo(
     () => waypoints.map((p) => ({ lat: p.lat, lng: p.lon })),
@@ -1785,6 +1662,10 @@ useEffect(() => {
     }
     return userCenter || center;
   }, [fieldBorder, waypoints, userCenter, center]);
+  const cesiumZoom = useMemo(
+    () => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
+    [mapZoom]
+  );
 
   const mapOptions = useMemo(
     () => ({
@@ -1799,168 +1680,6 @@ useEffect(() => {
       ...(mapId ? { mapId } : {}),
     }),
     [mapId]
-  );
-
-  const batteryPctRaw =
-    telemetry?.battery?.percent ??
-    telemetry?.battery?.percentage ??
-    telemetry?.battery?.remaining ??
-    telemetry?.battery_remaining ??
-    telemetry?.batteryPercent ??
-    null;
-  const batteryPct =
-    typeof batteryPctRaw === "number" && batteryPctRaw >= 0
-      ? batteryPctRaw
-      : null;
-  const groundSpeed =
-    telemetry?.velocity?.ground ??
-    telemetry?.status?.groundspeed ??
-    telemetry?.ground_speed ??
-    telemetry?.groundSpeed ??
-    telemetry?.speed ??
-    null;
-  const relAlt =
-    telemetry?.position?.rel_alt_m ??
-    telemetry?.position?.relative_altitude ??
-    telemetry?.position?.relative_alt ??
-    telemetry?.altitude ??
-    telemetry?.relativeAltitude ??
-    null;
-  const heading =
-    telemetry?.status?.heading ??
-    telemetry?.heading ??
-    telemetry?.yaw ??
-    null;
-  const mode =
-    telemetry?.status?.mode ??
-    telemetry?.mode ??
-    telemetry?.flight_mode ??
-    null;
-  const sats = telemetry?.gps?.satellites ?? telemetry?.satellites ?? null;
-  const hdop =
-    telemetry?.gps?.hdop ??
-    telemetry?.hdop ??
-    telemetry?.gps_hdop ??
-    null;
-  const armed = Boolean(telemetry?.armed ?? telemetry?.status?.armed);
-  const batteryCellsRaw =
-    telemetry?.battery?.cells ??
-    telemetry?.battery?.cell_voltages ??
-    telemetry?.battery_cells ??
-    telemetry?.cell_voltages ??
-    null;
-  const batteryCells = Array.isArray(batteryCellsRaw) ? batteryCellsRaw : null;
-  const linkRc =
-    telemetry?.link?.rc ??
-    telemetry?.rc?.quality ??
-    telemetry?.rc_quality ??
-    telemetry?.rssi ??
-    null;
-  const linkLte =
-    telemetry?.link?.lte ??
-    telemetry?.lte?.quality ??
-    telemetry?.lte_quality ??
-    null;
-  const linkTelemetry =
-    telemetry?.link?.telemetry ??
-    telemetry?.telemetry?.quality ??
-    telemetry?.telemetry_quality ??
-    null;
-  const windSpeed =
-    telemetry?.wind?.speed ??
-    telemetry?.wind_speed ??
-    telemetry?.windSpeed ??
-    null;
-  const failsafeRaw =
-    telemetry?.failsafe?.state ??
-    telemetry?.failsafe_state ??
-    telemetry?.status?.failsafe ??
-    null;
-
-  const formatMaybeNumber = (v: any, digits = 1) =>
-    typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
-  const formatMaybePercent = (v: any) =>
-    typeof v === "number" && Number.isFinite(v) ? `${Math.round(v)}%` : "--";
-
-  const batteryHealth =
-    typeof batteryPct === "number" && Number.isFinite(batteryPct)
-      ? batteryPct >= 60
-        ? `Good (${Math.round(batteryPct)}%)`
-        : batteryPct >= 30
-        ? `Fair (${Math.round(batteryPct)}%)`
-        : `Critical (${Math.round(batteryPct)}%)`
-      : "--";
-
-  const batteryCellDisplay = batteryCells?.length
-    ? batteryCells
-        .map((v) => `${formatMaybeNumber(Number(v), 2)}V`)
-        .join(" / ")
-    : "--";
-
-  const gpsStrength =
-    sats === null && hdop === null
-      ? "--"
-      : `${sats ?? "--"} sats • HDOP ${formatMaybeNumber(hdop, 1)}`;
-
-  const linkParts: string[] = [];
-  if (linkRc !== null && linkRc !== undefined) {
-    linkParts.push(`RC ${formatMaybePercent(Number(linkRc))}`);
-  }
-  if (linkLte !== null && linkLte !== undefined) {
-    linkParts.push(`LTE ${formatMaybePercent(Number(linkLte))}`);
-  }
-  if (linkTelemetry !== null && linkTelemetry !== undefined) {
-    linkParts.push(`TEL ${formatMaybePercent(Number(linkTelemetry))}`);
-  }
-  const linkQuality = linkParts.length > 0 ? linkParts.join(" • ") : "--";
-
-  const failsafeState =
-    typeof failsafeRaw === "string" && failsafeRaw.trim() !== ""
-      ? failsafeRaw
-      : typeof failsafeRaw === "boolean"
-      ? failsafeRaw
-        ? "Active"
-        : "None"
-      : "--";
-
-  const failsafeActive =
-    typeof failsafeRaw === "boolean"
-      ? failsafeRaw
-      : typeof failsafeRaw === "string"
-      ? !["none", "ok", "inactive"].includes(failsafeRaw.toLowerCase())
-      : false;
-
-  const flightStatus = failsafeActive
-    ? "Emergency"
-    : typeof mode === "string" && mode.toUpperCase().includes("RTL")
-    ? "RTL"
-    : armed && typeof groundSpeed === "number" && groundSpeed > 1
-    ? "In Air"
-    : armed
-    ? "Armed"
-    : "Idle";
-
-  const windDisplay =
-    windSpeed === null || windSpeed === undefined
-      ? "--"
-      : `${formatMaybeNumber(Number(windSpeed), 1)} m/s`;
-
-  const TelemetryBox = ({ label, value }: { label: string; value: string }) => (
-    <Box
-      sx={{
-        px: 1,
-        py: 0.5,
-        borderRadius: 1,
-        bgcolor: "rgba(0,0,0,0.65)",
-        color: "white",
-        fontSize: 12,
-        lineHeight: 1.2,
-        minWidth: 88,
-      }}
-    >
-      <div style={{ opacity: 0.85, fontSize: 10 }}>{label}</div>
-      <div style={{ fontWeight: 600 }}>{value}</div>
-    </Box>
   );
 
   return (
@@ -1990,20 +1709,7 @@ useEffect(() => {
               then stream them into the tasking basemap.
             </Typography>
           </div>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip
-              size="small"
-              label={droneConnected ? "Drone online" : "Drone offline"}
-              color={droneConnected ? "success" : "default"}
-              variant={droneConnected ? "filled" : "outlined"}
-            />
-            <Chip
-              size="small"
-              label={wsConnected ? "Secure link" : "Link down"}
-              color={wsConnected ? "success" : "default"}
-              variant={wsConnected ? "filled" : "outlined"}
-            />
-          </Stack>
+          <MissionStatusChips droneConnected={droneConnected} wsConnected={wsConnected} />
         </Stack>
 
         <Paper
@@ -2040,23 +1746,11 @@ useEffect(() => {
           </Stack>
         </Paper>
 
-        {errors.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            {errors.map((error, idx) => (
-              <Alert
-                key={`${idx}-${error}`}
-                severity="error"
-                sx={{ mb: 1 }}
-                onClose={() => setErrors((prev) => prev.filter((_, i) => i !== idx))}
-              >
-                {error}
-              </Alert>
-            ))}
-            <Button size="small" onClick={clearErrors} sx={{ mt: 1 }}>
-              Clear All Errors
-            </Button>
-          </Box>
-        )}
+        <ErrorAlerts
+          errors={errors}
+          onDismiss={dismissError}
+          onClearAll={clearErrors}
+        />
 
         {!apiKey ? (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -2090,70 +1784,39 @@ useEffect(() => {
                     backgroundColor: "background.paper",
                   }}
                 >
-                  {loadingLocation ? (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 400,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: "hsla(36, 30%, 96%, 0.7)",
-                      }}
-                    >
-                      <CircularProgress />
-                      <Typography sx={{ ml: 2 }}>
-                        Loading your location...
-                      </Typography>
-                    </Box>
-                  ) : !isLoaded ? (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 400,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: "hsla(36, 30%, 96%, 0.7)",
-                      }}
-                    >
-                      <CircularProgress />
-                      <Typography sx={{ ml: 2 }}>Loading map...</Typography>
-                    </Box>
-                  ) : useCesium ? (
-                    <CesiumMap
-                      center={mapCenter}
-                      zoom={mapZoom}
-                      viewMode={cesiumViewMode}
-                      waypoints={waypoints}
-                      fieldBoundary={cesiumFieldBoundary}
-                      plannedRoute={cesiumPlannedRoute}
-                      exclusionZones={exclusionZones}
-                      fieldTilesetUrl={fieldTilesetUrl}
-                      planningAltitudeM={alt}
-                      lockCameraToPlanningAltitude
-                      droneCenter={droneCenter}
-                      headingDeg={typeof heading === "number" ? heading : null}
-                      onPickLatLng={handleCesiumPick}
-                      drawMode={drawMode}
-                      onDrawComplete={(res) => {
-                        console.log(res);
-                        setDrawMode("none");
-                      }}
-                    />
-                  ) : (
-                    <Box sx={{ position: "relative" }}>
-                      <GoogleMap
-                        mapContainerStyle={containerStyle}
-                        center={mapCenter}
-                        zoom={mapZoom}
-                        onClick={onMapClick}
-                        onLoad={onMapLoad}
-                        onUnmount={onMapUnmount}
-                        onZoomChanged={onMapZoomChanged}
-                        onCenterChanged={onMapCenterChanged}
-                        options={mapOptions}
-                      >
+                  <MissionMapViewport
+                    loadingLocation={loadingLocation}
+                    isLoaded={isLoaded}
+                    useCesium={useCesium}
+                    googleMapProps={{
+                      mapContainerStyle: containerStyle,
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      onClick: onMapClick,
+                      onLoad: onMapLoad,
+                      onUnmount: onMapUnmount,
+                      onZoomChanged: onMapZoomChanged,
+                      onCenterChanged: onMapCenterChanged,
+                      options: mapOptions,
+                    }}
+                    cesiumMapProps={{
+                      center: mapCenter,
+                      zoom: cesiumZoom,
+                      viewMode: cesiumViewMode,
+                      waypoints,
+                      fieldBoundary: cesiumFieldBoundary,
+                      plannedRoute: cesiumPlannedRoute,
+                      exclusionZones,
+                      fieldTilesetUrl,
+                      droneCenter,
+                      headingDeg: typeof heading === "number" ? heading : null,
+                      onPickLatLng: handleCesiumPick,
+                      drawMode,
+                      onDrawComplete: handleCesiumDrawComplete,
+                    }}
+                    googleWrapperSx={{ position: "relative" }}
+                    googleChildren={
+                      <>
                         {fields.map((f) => (
                           <Polygon
                             key={f.id}
@@ -2293,7 +1956,9 @@ useEffect(() => {
                             }}
                           />
                         )}
-                      </GoogleMap>
+                      </>
+                    }
+                    googleOverlay={
                       <Paper
                         elevation={2}
                         sx={{
@@ -2301,7 +1966,8 @@ useEffect(() => {
                           left: 10,
                           top: "50%",
                           transform: "translateY(-50%)",
-                          zIndex: 20,
+                          zIndex: 1300,
+                          pointerEvents: "auto",
                           p: 0.5,
                           borderRadius: 1.5,
                           border: "1px solid",
@@ -2348,19 +2014,25 @@ useEffect(() => {
                               icon: <PanToolAltOutlinedIcon fontSize="small" />,
                             },
                           ].map((tool) => {
-                            const selected = terraDrawMode === tool.mode;
+                            const selected = useCesium
+                              ? (drawMode === "point" && tool.mode === "point") ||
+                                (drawMode === "polyline" && tool.mode === "linestring") ||
+                                (drawMode === "polygon" &&
+                                  ["polygon", "rectangle", "circle", "freehand"].includes(
+                                    tool.mode
+                                  )) ||
+                                (drawMode === "none" && tool.mode === "select")
+                              : terraDrawMode === tool.mode;
                             return (
                               <Tooltip key={tool.mode} title={tool.label} placement="right" arrow>
                                 <span>
                                   <IconButton
                                     size="small"
-                                    onClick={() => {
-                                      setTerraDrawMode(tool.mode as TerraDrawToolMode);
-                                      if (terraDrawRef.current && terraDrawReady) {
-                                        terraDrawRef.current.setMode(tool.mode);
-                                      }
-                                    }}
-                                    disabled={!terraDrawReady || useCesium}
+                                    onClick={() =>
+                                      handleDrawingToolSelection(
+                                        tool.mode as TerraDrawToolMode
+                                      )
+                                    }
                                     sx={{
                                       border: "1px solid",
                                       borderColor: "divider",
@@ -2388,6 +2060,22 @@ useEffect(() => {
                                 size="small"
                                 color="error"
                                 onClick={() => {
+                                  if (useCesium) {
+                                    if (drawMode !== "none") {
+                                      setDrawMode("none");
+                                      return;
+                                    }
+                                    if (fieldBorder && fieldBorder.length > 0) {
+                                      setFieldBorder((prev) => {
+                                        if (!prev || prev.length <= 1) return null;
+                                        return prev.slice(0, -1) as LonLat[];
+                                      });
+                                      return;
+                                    }
+                                    setWaypoints((prev) => prev.slice(0, -1));
+                                    return;
+                                  }
+
                                   if (!terraDrawRef.current) return;
                                   const snapshot = terraDrawRef.current.getSnapshot();
                                   const latestFeature = [...snapshot]
@@ -2402,7 +2090,13 @@ useEffect(() => {
                                   const remaining = terraDrawRef.current.getSnapshot();
                                   syncFieldBorderFromSnapshot(remaining);
                                 }}
-                                disabled={!terraDrawReady || useCesium}
+                                disabled={
+                                  useCesium
+                                    ? drawMode === "none" &&
+                                      (!fieldBorder || fieldBorder.length === 0) &&
+                                      waypoints.length === 0
+                                    : !terraDrawReady
+                                }
                                 sx={{
                                   border: "1px solid",
                                   borderColor: "divider",
@@ -2416,10 +2110,30 @@ useEffect(() => {
                           </Tooltip>
                         </Stack>
                       </Paper>
-
-                    </Box>
-                  )}
+                    }
+                  />
                 </Box>
+
+                <Tooltip title="Map view" placement="top-start">
+                <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        flexShrink: 0,
+                        alignSelf: { xs: "stretch", lg: "flex-start" },
+                      }}
+                    >
+
+                      <CesiumViewControls
+                        useCesium={useCesium}
+                        onUseCesiumChange={setUseCesium}
+                        viewMode={cesiumViewMode}
+                        onViewModeChange={setCesiumViewMode}
+                      />
+                    </Paper>
+                    </Tooltip>
+
 
                 <Box
                   sx={{
@@ -2432,210 +2146,39 @@ useEffect(() => {
                     gap: 2,
                   }}
                 >
-                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Saved Fields
-                    </Typography>
-                    <TextField variant="filled"
-                      select
-                      size="small"
-                      fullWidth
-                      label="Saved fields (database)"
-                      value={selectedFieldId == null ? "" : String(selectedFieldId)}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        if (!raw) {
-                          clearFieldBorder();
-                          return;
-                        }
-                        const id = Number(raw);
-                        const field = fields.find((f) => f.id === id);
-                        if (field) selectField(field);
-                      }}
-                      helperText={
-                        selectedField
-                          ? `Selected: ${selectedField.name} (#${selectedField.id})`
-                          : "Select a saved field to load and focus it on the map."
-                      }
-                    >
-                      <MenuItem value="">None</MenuItem>
-                      {fields.map((f) => (
-                        <MenuItem key={f.id} value={String(f.id)}>
-                          {f.name} (#{f.id})
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => setFieldsRefreshNonce((n) => n + 1)}
-                        disabled={loadingFields}
-                      >
-                        Refresh
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="text"
-                        disabled={!selectedField}
-                        onClick={() => selectedField && focusRingOnMap(selectedField.ring)}
-                      >
-                        Focus
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        disabled={!selectedField || deletingField}
-                        onClick={deleteSelectedField}
-                      >
-                        {deletingField ? "Deleting..." : "Delete"}
-                      </Button>
-                    </Stack>
-                    <FormControlLabel
-                      sx={{ mt: 1 }}
-                      control={
-                        <Switch
-                          size="small"
-                          checked={autoStartOnFieldSelect}
-                          onChange={(e) => setAutoStartOnFieldSelect(e.target.checked)}
-                        />
-                      }
-                      label={
-                        <Typography variant="caption">
-                          Auto-start photogrammetry mission when selecting a saved field
-                        </Typography>
-                      }
-                    />
-                  </Paper>
+                  <SavedFieldsPanel
+                    fields={fields}
+                    selectedFieldId={selectedFieldId}
+                    selectedField={selectedField}
+                    loadingFields={loadingFields}
+                    deletingField={deletingField}
+                    onSelectField={handleSavedFieldSelect}
+                    onRefresh={() => setFieldsRefreshNonce((n) => n + 1)}
+                    onFocusSelected={() => selectedField && focusRingOnMap(selectedField.ring)}
+                    onDeleteSelected={deleteSelectedField}
+                  />
 
-                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Field Border
-                    </Typography>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={1}
-                      alignItems="center"
-                      sx={{ flexWrap: "wrap" }}
-                    >
-                      <TextField variant="filled"
-                        size="small"
-                        label="Field name"
-                        value={fieldName}
-                        onChange={(e) => setFieldName(e.target.value)}
-                        sx={{ minWidth: 220 }}
-                      />
-
-                      <Button
-                        variant="contained"
-                        onClick={selectedFieldId ? updateFieldBorder : saveFieldBorder}
-                        disabled={savingField || !fieldBorder || fieldBorder.length < 3}
-                      >
-                        {savingField
-                          ? selectedFieldId
-                            ? "Updating..."
-                            : "Saving..."
-                          : selectedFieldId
-                          ? "Update Field"
-                          : "Save Field Border"}
-                      </Button>
-
-                      <Button variant="outlined" onClick={clearFieldBorder}>
-                        Clear Border
-                      </Button>
-
-                      <Button
-                        variant="text"
-                        onClick={() => {
-                          setSelectedFieldId(null);
-                          setFieldName("Field A");
-                          clearFieldBorder();
-                        }}
-                      >
-                        New Field
-                      </Button>
-
-                      {fieldBorder && (
-                        <>
-                          <Chip label={`Points: ${fieldBorder.length}`} size="small" />
-                          {metrics?.areaHa != null && (
-                            <Chip
-                              label={`Area: ${metrics.areaHa.toFixed(2)} ha`}
-                              size="small"
-                            />
-                          )}
-                          {metrics?.centroid && (
-                            <Chip
-                              label={`Centroid: ${metrics.centroid.lat.toFixed(5)}, ${metrics.centroid.lng.toFixed(5)}`}
-                              size="small"
-                            />
-                          )}
-                          {selectedField && (
-                            <Chip label={`Selected: #${selectedField.id}`} size="small" />
-                          )}
-                        </>
-                      )}
-                    </Stack>
-
-                    <Typography
-                      variant="caption"
-                      sx={{ display: "block", mt: 1, opacity: 0.8 }}
-                    >
-                      Draw a polygon on the map. We store coordinates as [lon, lat]
-                      (GeoJSON order).
-                    </Typography>
-                  </Paper>
-                </Box>
-
-                <Divider sx={{ my: 2 }} />
-
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1}
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Typography variant="subtitle2">Existing Fields</Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setFieldsRefreshNonce((n) => n + 1)}
-                    disabled={loadingFields}
-                  >
-                    Refresh
-                  </Button>
-                </Stack>
-
-                {loadingFields ? (
-                  <Box
-                    sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}
-                  >
-                    <CircularProgress size={18} />
-                    <Typography variant="body2">Loading fields…</Typography>
-                  </Box>
-                ) : fields.length === 0 ? (
-                  <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-                    No fields saved yet.
-                  </Typography>
-                ) : (
                   <Stack
-                    direction="row"
+                    direction={{ xs: "column", lg: "row" }}
                     spacing={1}
-                    sx={{ mt: 1, flexWrap: "wrap", rowGap: 1 }}
+                    alignItems={{ xs: "stretch", lg: "flex-start" }}
                   >
-                    {fields.map((f) => (
-                      <Chip
-                        key={f.id}
-                        label={`${f.name} (#${f.id})`}
-                        variant={selectedFieldId === f.id ? "filled" : "outlined"}
-                        color={selectedFieldId === f.id ? "primary" : "default"}
-                        onClick={() => selectField(f)}
-                        sx={{ cursor: "pointer" }}
-                      />
-                    ))}
+                    <FieldBorderPanel
+                      fieldName={fieldName}
+                      selectedFieldId={selectedFieldId}
+                      fieldBorder={fieldBorder}
+                      metrics={metrics}
+                      selectedFieldDisplayId={selectedField?.id ?? null}
+                      savingField={savingField}
+                      onFieldNameChange={setFieldName}
+                      onSaveOrUpdate={
+                        selectedFieldId ? updateFieldBorder : saveFieldBorder
+                      }
+                      onClearBorder={clearFieldBorder}
+                      onNewField={handleNewField}
+                    />
                   </Stack>
-                )}
+                </Box>
 
                 <Box sx={{ mt: 3 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -2971,326 +2514,34 @@ useEffect(() => {
                   </Paper>
                 </Box>
 
-                <Box
-                  sx={{
-                    mt: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 2,
-                  }}
-                >
-                  <Box
-                    sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}
-                  >
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={useCesium}
-                          onChange={(e) => setUseCesium(e.target.checked)}
-                        />
-                      }
-                      label={useCesium ? "3D (Cesium)" : "2D (Google)"}
-                    />
-
-                    {useCesium && (
-                      <ToggleButtonGroup
-                        value={cesiumViewMode}
-                        exclusive
-                        size="small"
-                        onChange={(_, v) => {
-                          if (!v) return;
-                          setCesiumViewMode(v);
-                        }}
-                        aria-label="Cesium view mode"
-                      >
-                        <ToggleButton value="top" aria-label="Top view">
-                          Top
-                        </ToggleButton>
-                        <ToggleButton value="tilted" aria-label="Tilted view">
-                          Tilted
-                        </ToggleButton>
-                        <ToggleButton value="follow" aria-label="Follow drone">
-                          Follow
-                        </ToggleButton>
-                        <ToggleButton value="fpv" aria-label="FPV view">
-                          FPV
-                        </ToggleButton>
-                        <ToggleButton value="orbit" aria-label="Orbit view">
-                          Orbit
-                        </ToggleButton>
-                      </ToggleButtonGroup>
-                    )}
-                  </Box>
-                </Box>
-
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   Click on the map to add waypoints.
                 </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Drone Status: {droneConnected ? "Connected" : "Disconnected"}
-                  {activeFlightId &&
-                    ` | Active Flight: ${activeFlightId.substring(0, 8)}...`}
-                  {wsConnected && ` | WS: Connected`}
-                </Typography>
 
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    borderColor: "hsla(174, 30%, 40%, 0.25)",
-                    background: "hsla(0, 0%, 100%, 0.7)",
+                <MissionVideoPanel
+                  title="PhotoGrammetry Camera"
+                  imgAlt="Photogrammetry camera stream"
+                  disconnectedMessage="Connect the drone to view the photogrammetry stream."
+                  apiBase={API_BASE_CLEAN}
+                  streamKey={streamKey}
+                  videoToken={videoToken}
+                  startingVideo={startingVideo}
+                  videoError={videoError}
+                  videoRetryCount={videoRetryCount}
+                  droneConnected={droneConnected}
+                  telemetry={telemetry}
+                  onVideoError={handleVideoError}
+                  onVideoLoad={handleVideoLoad}
+                  onRetry={() => {
+                    setStreamKey(Date.now());
+                    setVideoError(null);
                   }}
-                >
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ mb: 1 }}
-                  >
-                    <Typography variant="subtitle1">PhotoGrammetry Camera</Typography>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      {startingVideo && <CircularProgress size={16} />}
-                      <Typography variant="caption" color="text.secondary">
-                        {startingVideo
-                          ? "Starting video…"
-                          : videoError
-                          ? "Error"
-                          : droneConnected
-                          ? "Live"
-                          : "Disconnected"}
-                      </Typography>
-                    </Stack>
-                  </Stack>
-
-                  <Box
-                    sx={{
-                      width: "100%",
-                      height: 240,
-                      bgcolor: "#000",
-                      borderRadius: 1,
-                      overflow: "hidden",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      position: "relative",
-                    }}
-                  >
-                    {droneConnected ? (
-                      <>
-                        {videoError ? (
-                          <Box
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              bgcolor: "rgba(0,0,0,0.85)",
-                              color: "warning.main",
-                              p: 2,
-                              textAlign: "center",
-                            }}
-                          >
-                            <Typography
-                              variant="h6"
-                              sx={{ color: "warning.main", mb: 1 }}
-                            >
-                              ⚠️ Video Stream Unavailable
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{ color: "grey.400", mb: 2 }}
-                            >
-                              {videoError}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: "grey.500" }}>
-                              Retry attempt {videoRetryCount}...
-                            </Typography>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              sx={{ mt: 2, color: "white", borderColor: "grey.600" }}
-                              onClick={() => {
-                                setStreamKey(Date.now());
-                                setVideoError(null);
-                              }}
-                            >
-                              Retry Now
-                            </Button>
-                          </Box>
-                        ) : (
-                          <>
-                            <Box
-                              component="img"
-                              src={`${API_BASE_CLEAN}/video/mjpeg?key=${streamKey}${
-                                videoToken
-                                  ? `&token=${encodeURIComponent(videoToken)}`
-                                  : ""
-                              }`}
-                              alt="Photogrammetry camera stream"
-                              onError={handleVideoError}
-                              onLoad={handleVideoLoad}
-                              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-
-                            <Box sx={{ position: "absolute", top: 8, left: 8 }}>
-                              <Stack spacing={0.75}>
-                                <TelemetryBox
-                                  label="Battery"
-                                  value={
-                                    batteryPct === null
-                                      ? "--"
-                                      : `${formatMaybeNumber(Number(batteryPct), 0)}%`
-                                  }
-                                />
-                                <TelemetryBox
-                                  label="GND SPD"
-                                  value={`${formatMaybeNumber(Number(groundSpeed), 1)} m/s`}
-                                />
-                                <TelemetryBox
-                                  label="ALT"
-                                  value={`${formatMaybeNumber(Number(relAlt), 1)} m`}
-                                />
-                              </Stack>
-                            </Box>
-
-                            <Box sx={{ position: "absolute", top: 8, right: 8 }}>
-                              <Stack spacing={0.75} alignItems="flex-end">
-                                <TelemetryBox
-                                  label="MODE"
-                                  value={typeof mode === "string" ? mode : "--"}
-                                />
-                                <TelemetryBox
-                                  label="HDG"
-                                  value={
-                                    typeof heading === "number" &&
-                                    Number.isFinite(heading)
-                                      ? `${Math.round(heading)}°`
-                                      : "--"
-                                  }
-                                />
-                                <TelemetryBox
-                                  label="GPS"
-                                  value={
-                                    sats === null || sats === undefined
-                                      ? "--"
-                                      : `${sats} sats`
-                                  }
-                                />
-                              </Stack>
-                            </Box>
-                          </>
-                        )}
-
-                        {startingVideo && (
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              backgroundColor: "rgba(0,0,0,0.7)",
-                            }}
-                          >
-                            <CircularProgress />
-                          </Box>
-                        )}
-                      </>
-                    ) : (
-                      <Typography sx={{ color: "white" }}>
-                        Connect the drone to view the photogrammetry stream.
-                      </Typography>
-                    )}
-                  </Box>
-                </Paper>
+                />
               </Stack>
 
               <Box sx={{ width: { xs: "100%", md: 300 } }}>
                 <Stack spacing={2}>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      borderColor: "hsla(174, 30%, 40%, 0.25)",
-                      background: "hsla(0, 0%, 100%, 0.7)",
-                    }}
-                  >
-                    <Typography variant="subtitle1">Command Panel</Typography>
-                    <Stack spacing={1.2} sx={{ mt: 1 }}>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Flight Status
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                            color: failsafeActive ? "error.main" : "text.primary",
-                          }}
-                        >
-                          {flightStatus}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          GPS Strength
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {gpsStrength}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Battery
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: 600, textAlign: "right" }}
-                        >
-                          {batteryCellDisplay} • {batteryHealth}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Link Quality
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {linkQuality}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Wind @ Altitude
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {windDisplay}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Failsafe State
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                            color: failsafeActive ? "error.main" : "text.primary",
-                          }}
-                        >
-                          {failsafeState}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Paper>
+                  <MissionCommandPanel telemetry={telemetry} droneConnected={droneConnected} />
 
                   <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
                     <Typography variant="subtitle2">3D Field Map Workflow</Typography>

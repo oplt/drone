@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import require_user
-from backend.db.models import Asset, Field as FieldEntity, FieldModel, MappingJob
+from backend.db.models import Asset, Field as FieldEntity, FieldModel, FlightEvent, MappingJob
 from backend.db.session import get_db
 from backend.services.photogrammetry.asset_gateway import AssetGatewayService
 from backend.services.photogrammetry.field_registry import FieldRegistryService
@@ -180,6 +180,25 @@ async def _assets_for_model(db: AsyncSession, *, model_id: int) -> List[Asset]:
     ).scalars().all()
 
 
+async def _latest_photogrammetry_source_dir(db: AsyncSession) -> str | None:
+    row = await db.execute(
+        select(FlightEvent.data)
+        .where(FlightEvent.type == "photogrammetry_mapping_job_params")
+        .order_by(FlightEvent.id.desc())
+        .limit(1)
+    )
+    data = row.scalar_one_or_none()
+    if not isinstance(data, dict):
+        return None
+    drone_sync = data.get("drone_sync")
+    if not isinstance(drone_sync, dict):
+        return None
+    source_dir = drone_sync.get("source_dir")
+    if not isinstance(source_dir, str) or not source_dir.strip():
+        return None
+    return source_dir.strip()
+
+
 def _to_job_status(job: MappingJob, assets: List[Asset]) -> MappingJobStatusOut:
     return MappingJobStatusOut(
         job_id=job.id,
@@ -238,13 +257,29 @@ async def create_mapping_job(
     db.add(model)
     await db.flush()
 
+    params = payload.model_dump()
+    if params.get("input_source") == "drone_sync":
+        drone_sync = params.get("drone_sync")
+        if not isinstance(drone_sync, dict):
+            drone_sync = {}
+        source_dir = drone_sync.get("source_dir")
+        if not isinstance(source_dir, str) or not source_dir.strip():
+            inferred = await _latest_photogrammetry_source_dir(db)
+            if inferred:
+                drone_sync["source_dir"] = inferred
+                params["drone_sync"] = drone_sync
+                logger.info(
+                    "Auto-filled mapping drone_sync.source_dir from latest photogrammetry session: %s",
+                    inferred,
+                )
+
     job = MappingJob(
         field_id=field.id,
         model_id=model.id,
         status="pending",
         progress=0,
         processor=payload.processor,
-        params=payload.model_dump(),
+        params=params,
     )
     db.add(job)
     await db.commit()
@@ -424,7 +459,7 @@ async def upload_mapping_job_images(
                 detail=f"Unsupported file type '{ext}' for '{safe_name}'.",
             )
 
-        dst = job_dir / f"{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
+        dst = job_dir / f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
         size = 0
         try:
             with dst.open("wb") as out:

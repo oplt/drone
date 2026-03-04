@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable, List, Tuple
+from typing import Protocol, runtime_checkable
+
 from backend.drone.models import Coordinate
 from backend.drone.orchestrator import Orchestrator
-import logging
-import asyncio
-from backend.services.photogrammetry.mission import make_photogrammetry_plan
+from backend.flight.missions.terrain_follow import (
+    apply_terrain_follow_to_path,
+    resolve_home_amsl_m,
+)
+
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +53,13 @@ class WaypointsMission(BaseMission):
         return self.waypoints
 
 
-    async def fly_waypoints(self, orch: "Orchestrator", cruise_alt: float = 30.0, interpolate_steps: int = 6):
+    async def fly_waypoints(
+        self,
+        orch: "Orchestrator",
+        cruise_alt: float = 30.0,
+        interpolate_steps: int = 6,
+        terrain_mode: str = "REL_HOME",  # "REL_HOME" or "AMSL"
+    ):
 
         waypoints = self.waypoints
         if len(waypoints) < 2:
@@ -56,7 +67,9 @@ class WaypointsMission(BaseMission):
 
         from backend.utils.geo import coord_from_home
         home_coord = coord_from_home(orch.drone.home_location)
-        home_coord.alt = cruise_alt
+
+        # Treat cruise_alt as TARGET AGL (meters above ground)
+        target_agl_m = float(cruise_alt)
 
         def _with_alt(w: Coordinate, default_alt: float) -> Coordinate:
             alt = getattr(w, "alt", None)
@@ -64,38 +77,65 @@ class WaypointsMission(BaseMission):
                 return Coordinate(lat=w.lat, lon=w.lon, alt=default_alt)
             return w
 
+        # Keep route anchors; alt here is not final anymore (we will overwrite per path point)
         route: list[Coordinate] = (
-                [home_coord]
-                + [_with_alt(w, cruise_alt) for w in waypoints]
-                + [home_coord]
+            [Coordinate(lat=home_coord.lat, lon=home_coord.lon, alt=target_agl_m)]
+            + [_with_alt(w, target_agl_m) for w in waypoints]
+            + [Coordinate(lat=home_coord.lat, lon=home_coord.lon, alt=target_agl_m)]
         )
 
-        start, dest = route[0], route[-2]  # home → ... → last waypoint → home
+        dest = route[-2]
         orch._dest_coord = dest
+
+        if terrain_mode.upper() != "REL_HOME":
+            logger.warning(
+                "WaypointsMission terrain_mode=%s requested, but relative-home "
+                "altitude is used by the active drone adapter.",
+                terrain_mode,
+            )
+
+        home_amsl = await asyncio.to_thread(resolve_home_amsl_m, orch.drone)
 
         await asyncio.sleep(1.0)
 
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, cruise_alt)
+        await asyncio.to_thread(orch.drone.arm_and_takeoff, target_agl_m)
         await orch.repo.add_event(orch._flight_id, "takeoff", {})
 
-        # stitch segments; keep all anchors (home -> waypoints -> home)
+        requested_steps = max(0, int(interpolate_steps))
         path: list[Coordinate] = []
         for a, b in zip(route, route[1:]):
             seg = (
-                list(orch.maps.waypoints_between(a, b, steps=interpolate_steps))
-                if interpolate_steps
+                list(orch.maps.waypoints_between(a, b, steps=requested_steps))
+                if requested_steps > 0
                 else [a, b]
             )
             if path and seg:
-                seg = seg[1:]  # avoid duplicates at segment joints
+                prev = path[-1]
+                first = seg[0]
+                if (
+                    abs(prev.lat - first.lat) <= 1e-9
+                    and abs(prev.lon - first.lon) <= 1e-9
+                    and abs(float(prev.alt) - float(first.alt)) <= 1e-6
+                ):
+                    seg = seg[1:]
             path.extend(seg)
+
+        path = await apply_terrain_follow_to_path(
+            maps_client=orch.maps,
+            path=path,
+            home_amsl_m=home_amsl,
+            target_agl_m=target_agl_m,
+        )
 
         await asyncio.to_thread(orch.drone.follow_waypoints, path)
         await orch.repo.add_event(orch._flight_id, "reached_destination", {})
 
-        # Wait for landing (RTL is already part of the path)
+        await asyncio.to_thread(orch.drone.land)
+        await orch.repo.add_event(orch._flight_id, "landing_command_sent", {})
+
         await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
         await orch.repo.add_event(orch._flight_id, "landed_home", {})
+
         await orch.repo.finish_flight(
             orch._flight_id,
             status="completed",
@@ -110,5 +150,3 @@ class WaypointsMission(BaseMission):
             alt=alt,
             flight_fn=lambda: self.fly_waypoints(orch, cruise_alt=alt),
         )
-
-

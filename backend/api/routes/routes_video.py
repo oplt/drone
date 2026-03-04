@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 import cv2
 
 from backend.config import settings
-from backend.auth.deps import require_admin, require_user_header_or_query
+from backend.auth.deps import require_user, require_user_header_or_query
 from backend.video.stream import DroneVideoStream, opencv_has_gstreamer
 
 logger = logging.getLogger(__name__)
@@ -328,7 +328,7 @@ async def _gazebo_gst_fallback_stream_generator(request: Request):
                 await proc.wait()
 
 @router.post("/start")
-async def start_pi_camera_server(user=Depends(require_admin)):
+async def start_pi_camera_server(user=Depends(require_user)):
     """
     Starts the Raspberry Pi streaming server over SSH (best effort).
     Returns the backend proxy URL clients should use.

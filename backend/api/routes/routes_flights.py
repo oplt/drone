@@ -12,6 +12,9 @@ from backend.auth.deps import require_user
 from backend.db.session import Session, get_db
 from backend.drone.models import Coordinate
 from backend.flight.missions.grid_mission import GridMission
+from backend.flight.missions.photogrammetry_mission import (
+    PhotogrammetryMission as FlightPhotogrammetryMission,
+)
 from backend.flight.missions.waypoints_mission import WaypointsMission
 from backend.main import _build_orchestrator
 from backend.messaging.websocket import telemetry_manager
@@ -72,6 +75,7 @@ class PhotogrammetryMissionProfile(BaseModel):
     altitude_m: float = Field(default=25.0, ge=20.0, le=30.0)
     front_overlap_pct: float = Field(default=80.0, ge=75.0, le=85.0)
     side_overlap_pct: float = Field(default=70.0, ge=65.0, le=75.0)
+    min_spacing_m: float = Field(default=0.5, gt=0.0, le=10.0)
     speed_mps: float = Field(default=3.0, gt=0.1, le=20.0)
     trigger: MissionProfileTrigger = Field(default_factory=MissionProfileTriggerDistance)
     accuracy: Literal["standard_gnss", "rtk_ppk"] = "rtk_ppk"
@@ -103,17 +107,22 @@ class MissionCreateIn(BaseModel):
                 raise ValueError(
                     "mission_type='waypoints' requires at least 2 waypoints."
                 )
-        elif self.mission_type == MissionType.GRID:
+        elif self.mission_type in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}:
             if self.grid is None:
                 raise ValueError(
-                    "mission_type='grid' requires a 'grid' object with field_polygon_lonlat."
+                    "mission_type requires a 'grid' object with field_polygon_lonlat."
                 )
             if len(self.grid.field_polygon_lonlat) < 3:
                 raise ValueError(
                     "field_polygon_lonlat must have at least 3 coordinate pairs."
                 )
-        if self.mission_profile is not None and self.mission_type != MissionType.GRID:
-            raise ValueError("mission_profile is supported only for mission_type='grid'.")
+        if (
+            self.mission_profile is not None
+            and self.mission_type not in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}
+        ):
+            raise ValueError(
+                "mission_profile is supported only for mission_type='grid' or 'photogrammetry'."
+            )
         return self
 
 
@@ -160,9 +169,11 @@ def _build_mission(payload: MissionCreateIn) -> Any:
         ]
         return WaypointsMission(waypoints=coords), len(coords)
 
-    if payload.mission_type == MissionType.GRID:
+    if payload.mission_type in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}:
         g = payload.grid  # validated non-None by model_validator
         profile = payload.mission_profile
+        if payload.mission_type == MissionType.PHOTOGRAMMETRY and profile is None:
+            profile = PhotogrammetryMissionProfile()
 
         cruise_alt_m = payload.cruise_alt
         row_spacing_m = g.row_spacing_m
@@ -182,6 +193,38 @@ def _build_mission(payload: MissionCreateIn) -> Any:
 
         # Convert [[lon, lat], …] → [(lon, lat), …] tuples for GridMission.
         poly = [tuple(pt) for pt in g.field_polygon_lonlat]
+        if profile is not None:
+            trigger = profile.trigger
+            trigger_mode: Literal["distance", "time"]
+            trigger_distance_m = 0.0
+            trigger_interval_s = 0.0
+            if isinstance(trigger, MissionProfileTriggerDistance):
+                trigger_mode = "distance"
+                trigger_distance_m = float(trigger.distance_m)
+            else:
+                trigger_mode = "time"
+                trigger_interval_s = float(trigger.interval_s)
+
+            mission = FlightPhotogrammetryMission(
+                polygon_lonlat=poly,
+                altitude_agl=float(profile.altitude_m),
+                fov_h=float(profile.camera.fov_h_deg),
+                fov_v=float(profile.camera.fov_v_deg),
+                front_overlap=float(profile.front_overlap_pct) / 100.0,
+                side_overlap=float(profile.side_overlap_pct) / 100.0,
+                min_spacing_m=float(profile.min_spacing_m),
+                heading_deg=float(g.grid_angle_deg or 0.0),
+                speed_mps=float(profile.speed_mps),
+                trigger_mode=trigger_mode,
+                trigger_distance_m=trigger_distance_m
+                or max(float(profile.min_spacing_m), recommended["along_track_m"]),
+                trigger_interval_s=trigger_interval_s
+                or max(0.2, recommended["along_track_m"] / max(0.1, float(profile.speed_mps))),
+                terrain_follow=bool(g.terrain_follow),
+                terrain_target_agl_m=float(agl_m) if g.terrain_follow else None,
+            )
+            return mission, len(poly)
+
         mission = GridMission(
             cruise_alt_m=cruise_alt_m,
             field_polygon_lonlat=poly,
@@ -212,8 +255,9 @@ def _compute_photogrammetry_spacing(profile: PhotogrammetryMissionProfile) -> di
     footprint_w = 2.0 * altitude * math.tan(math.radians(profile.camera.fov_h_deg / 2.0))
     footprint_h = 2.0 * altitude * math.tan(math.radians(profile.camera.fov_v_deg / 2.0))
 
-    along_track_m = max(0.5, footprint_h * (1.0 - front))
-    cross_track_m = max(0.5, footprint_w * (1.0 - side))
+    spacing_floor = max(0.0, float(profile.min_spacing_m))
+    along_track_m = max(spacing_floor, footprint_h * (1.0 - front))
+    cross_track_m = max(spacing_floor, footprint_w * (1.0 - side))
 
     trigger = profile.trigger
     if isinstance(trigger, MissionProfileTriggerDistance):
@@ -264,6 +308,7 @@ async def create_mission(
     -----------------------
     ``"waypoints"``  – fly an ordered list of lat/lon/alt coordinates.
     ``"grid"``       – auto-generate a lawnmower survey over a field polygon.
+    ``"photogrammetry"`` – run survey with camera trigger + image staging flow.
     """
     try:
         mission, wps_count = _build_mission(payload)
