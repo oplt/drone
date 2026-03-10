@@ -19,9 +19,13 @@ from backend.api.routes.routes_geofence import router as geofence_router
 from backend.api.routes.routes_animal_farm import router as animal_farm_router
 from backend.api.routes.routes_field import router as fields_router
 from backend.api.routes.routes_mapping import router as mapping_router
+from backend.api.routes.routes_alerts import router as alerts_router
+from backend.api.routes.routes_ml import router as ml_router
+from backend.api.routes.routes_patrol_debug import router as patrol_debug_router
 from backend.config import setup_logging
 from backend.db.repository.settings_repo import SettingsRepository
 from backend.utils.config_runtime import get_runtime_settings
+from backend.services.alerts.engine import alert_engine
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +48,9 @@ async def lifespan(app: FastAPI):
     telemetry_manager._event_loop = asyncio.get_running_loop()
     logger.info("WebSocket manager initialized")
 
+    await alert_engine.start()
+    logger.info("Operational alert engine started")
+
     yield
 
     # Shutdown
@@ -53,6 +60,9 @@ async def lifespan(app: FastAPI):
     if telemetry_manager._running:
         telemetry_manager.stop_telemetry_stream()
         logger.info("Telemetry WebSocket server stopped")
+
+    await alert_engine.stop()
+    logger.info("Operational alert engine stopped")
 
     await close_db()
 
@@ -85,6 +95,9 @@ app.include_router(geofence_router)
 app.include_router(animal_farm_router)
 app.include_router(fields_router)
 app.include_router(mapping_router)
+app.include_router(alerts_router)
+app.include_router(ml_router)
+app.include_router(patrol_debug_router)
 
 mapping_assets_dir = Path(
     os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")

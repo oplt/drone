@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Protocol, Tuple
 
 from shapely.geometry import LineString, Point, Polygon
 
+from backend.db.models import FlightStatus
 from backend.drone.models import Coordinate
 from backend.flight.missions.terrain_follow import (
     apply_terrain_follow_to_path,
@@ -814,7 +815,7 @@ class GridMission:
             try:
                 await orch.repo.finish_flight(
                     flight_id,
-                    status="completed",
+                    status=FlightStatus.COMPLETED,
                     note="Grid mission completed and returned home",
                 )
             except Exception:

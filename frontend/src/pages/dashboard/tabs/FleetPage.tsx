@@ -37,20 +37,27 @@ export default function FleetPage() {
 
   const recentRows = useMemo(() => {
     if (!data?.recent_flights) return [];
-    return data.recent_flights.map((flight) => ({
-      id: flight.id,
-      plan: flight.name,
-      status:
-        flight.status === "in_progress"
-          ? "Active"
-          : flight.status === "failed"
-            ? "Failed"
-            : "Completed",
-      duration: formatDuration(flight.duration_min),
-      distance: `${flight.distance_km.toFixed(1)} km`,
-      telemetry_points: flight.telemetry_points,
-      started_at: formatTime(flight.started_at),
-    }));
+    return data.recent_flights.map((flight) => {
+      const normalizedStatus = String(flight.status ?? "").toLowerCase();
+      return {
+        id: flight.id,
+        plan: flight.name,
+        status:
+          ["active", "in_progress", "running"].includes(normalizedStatus)
+            ? "Active"
+            : normalizedStatus === "paused"
+              ? "Paused"
+              : ["interrupted", "aborted"].includes(normalizedStatus)
+                ? "Interrupted"
+                : normalizedStatus === "failed"
+                  ? "Failed"
+                  : "Completed",
+        duration: formatDuration(flight.duration_min),
+        distance: `${flight.distance_km.toFixed(1)} km`,
+        telemetry_points: flight.telemetry_points,
+        started_at: formatTime(flight.started_at),
+      };
+    });
   }, [data?.recent_flights]);
 
   const linkQualityRaw = telemetry?.link?.telemetry ?? telemetry?.link?.rc ?? null;

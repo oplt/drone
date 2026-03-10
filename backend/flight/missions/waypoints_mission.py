@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
+from backend.db.models import FlightStatus
 from backend.drone.models import Coordinate
 from backend.drone.orchestrator import Orchestrator
 from backend.flight.missions.terrain_follow import (
@@ -138,7 +139,7 @@ class WaypointsMission(BaseMission):
 
         await orch.repo.finish_flight(
             orch._flight_id,
-            status="completed",
+            status=FlightStatus.COMPLETED,
             note="Mission completed and returned home",
         )
 

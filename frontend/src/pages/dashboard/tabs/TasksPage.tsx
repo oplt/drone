@@ -11,6 +11,7 @@ import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
 import { GoogleMapsContext } from "../../../utils/googleMaps";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
+import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
@@ -22,6 +23,10 @@ import { useAutoStartVideo } from "../../../hooks/useAutoStartVideo";
 import { useMissionCommandMetrics } from "../../../hooks/useMissionCommandMetrics";
 import { useMissionWebsocketRuntime } from "../../../hooks/useMissionWebsocketRuntime";
 import { type LatLng } from "../../../lib/extractLatLng";
+import {
+  startMissionWithPreflight,
+  type PreflightRunResponse,
+} from "../../../utils/api";
 
 type Waypoint = { lat: number; lon: number; alt: number };
 
@@ -66,6 +71,8 @@ export default function TasksPage() {
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
   const [mapZoom, setMapZoom] = useState<number>(12);
+  const [preflightRun, setPreflightRun] =
+    useState<PreflightRunResponse | null>(null);
 
   const [streamKey, setStreamKey] = useState<number>(Date.now());
   const [mapReady, setMapReady] = useState(false);
@@ -316,30 +323,21 @@ export default function TasksPage() {
       clearErrors();
 
       try {
-        // Create and start mission - orchestrator handles telemetry internally
-        const missionRes = await fetch(`${API_BASE_CLEAN}/tasks/missions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: name.trim(),
-            cruise_alt: altToUse,
-            waypoints: waypoints.map(wp => ({
-              lat: wp.lat,
-              lon: wp.lon,
-              alt: wp.alt
-            })),
-          }),
-        });
-
-        if (!missionRes.ok) {
-          const error = await missionRes.text();
-          throw new Error(error || "Failed to create flight plan");
-        }
-
-        const data = await missionRes.json();
+        const payload = {
+          name: name.trim(),
+          cruise_alt: altToUse,
+          waypoints: waypoints.map((wp) => ({
+            lat: wp.lat,
+            lon: wp.lon,
+            alt: wp.alt,
+          })),
+        };
+        const { preflight, mission: data } = await startMissionWithPreflight(
+          payload,
+          token,
+          API_BASE_CLEAN,
+        );
+        setPreflightRun(preflight);
         alert(`Flight plan "${data.mission_name}" started! Tracking flight...`);
 
         setPendingFlightId(data.flight_id ?? null);
@@ -571,7 +569,19 @@ export default function TasksPage() {
               {/* Right side: Controls */}
               <Box sx={{ width: { xs: "100%", md: 300 } }}>
                 <Stack spacing={2}>
-                  <MissionCommandPanel telemetry={telemetry} droneConnected={droneConnected} />
+                  <MissionPreflightPanel
+                    apiBase={API_BASE_CLEAN}
+                    missionType="route"
+                    preflightRun={preflightRun}
+                    telemetry={telemetry}
+                  />
+                  <MissionCommandPanel
+                    telemetry={telemetry}
+                    droneConnected={droneConnected}
+                    missionStatus={missionStatus}
+                    activeFlightId={activeFlightId}
+                    apiBase={API_BASE_CLEAN}
+                  />
                   <TextField variant="filled"
                     label="Field plan name"
                     value={name}

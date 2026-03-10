@@ -124,6 +124,32 @@ type PhotogrammetrySettings = {
   PHOTOGRAMMETRY_ASSET_SIGNING_SECRET?: string;
 };
 
+type AlertSettings = {
+  enabled: boolean;
+  check_interval_sec: number;
+  dedupe_window_sec: number;
+  operation_geofence_id?: number | null;
+  monitor_herd_ids: string;
+  herd_isolation_threshold_m: number;
+  low_battery_percent: number;
+  weak_link_percent: number;
+  high_wind_mps: number;
+  route_in_app: boolean;
+  route_email: boolean;
+  route_sms: boolean;
+  email_recipients: string;
+  sms_recipients: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_password?: string;
+  smtp_from: string;
+  smtp_use_tls: boolean;
+  twilio_account_sid: string;
+  twilio_auth_token?: string;
+  twilio_from_number: string;
+};
+
 type SettingsDoc = {
   telemetry: TelemetrySettings;
   ai: AISettings;
@@ -133,6 +159,7 @@ type SettingsDoc = {
   raspberry: RaspberrySettings;
   camera: CameraSettings;
   photogrammetry: PhotogrammetrySettings;
+  alerts: AlertSettings;
   updated_at?: string;
 };
 
@@ -235,6 +262,31 @@ const DEFAULTS: SettingsDoc = {
     CELERY_PHOTOGRAMMETRY_QUEUE: "photogrammetry",
     PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: "",
   },
+  alerts: {
+    enabled: true,
+    check_interval_sec: 5,
+    dedupe_window_sec: 300,
+    operation_geofence_id: null,
+    monitor_herd_ids: "",
+    herd_isolation_threshold_m: 250,
+    low_battery_percent: 25,
+    weak_link_percent: 35,
+    high_wind_mps: 12,
+    route_in_app: true,
+    route_email: false,
+    route_sms: false,
+    email_recipients: "",
+    sms_recipients: "",
+    smtp_host: "",
+    smtp_port: 587,
+    smtp_user: "",
+    smtp_password: "",
+    smtp_from: "",
+    smtp_use_tls: true,
+    twilio_account_sid: "",
+    twilio_auth_token: "",
+    twilio_from_number: "",
+  },
   updated_at: undefined,
 };
 
@@ -249,6 +301,7 @@ const normalizeDoc = (raw: Partial<SettingsDoc>): SettingsDoc => ({
   raspberry: { ...DEFAULTS.raspberry, ...(raw.raspberry ?? {}) },
   camera: { ...DEFAULTS.camera, ...(raw.camera ?? {}) },
   photogrammetry: { ...DEFAULTS.photogrammetry, ...(raw.photogrammetry ?? {}) },
+  alerts: { ...DEFAULTS.alerts, ...(raw.alerts ?? {}) },
 });
 
 export default function SettingsPage() {
@@ -313,7 +366,7 @@ export default function SettingsPage() {
 
   useEffect(() => { void fetchSettings(); }, []);
 
-  const update = (section: SettingsSection, field: string, value: string | number | boolean) => {
+  const update = (section: SettingsSection, field: string, value: string | number | boolean | null) => {
     setDoc(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
     if (err) setErr(null);
   };
@@ -382,6 +435,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             <Tab label="Credentials" />
             <Tab label="Hardware" />
             <Tab label="Preflight Check Params" />
+            <Tab label="Alerts" />
             <Tab label="Raspberry" />
             <Tab label="Camera" />
             <Tab label="Photogrammetry" />
@@ -542,8 +596,62 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
               </Grid>
             )}
 
-            {/* RASPBERRY TAB */}
+            {/* ALERTS TAB */}
             {tab === 5 && (
+              <Grid container spacing={3}>
+                <Grid item size={{ xs: 12, md: 6 }}>
+                  <Typography variant="h6" gutterBottom>Rules</Typography>
+                  <Stack spacing={3}>
+                    <FormControlLabel
+                      control={<Switch checked={doc.alerts?.enabled} onChange={e => update("alerts", "enabled", e.target.checked)} />}
+                      label="Enable Alert Engine"
+                    />
+                    <TextField variant="filled" fullWidth label="Check Interval (sec)" type="number" value={doc.alerts?.check_interval_sec} onChange={e => update("alerts", "check_interval_sec", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Dedupe Window (sec)" type="number" value={doc.alerts?.dedupe_window_sec} onChange={e => update("alerts", "dedupe_window_sec", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Operation Geofence ID" type="number" value={doc.alerts?.operation_geofence_id ?? ""} onChange={e => update("alerts", "operation_geofence_id", e.target.value ? Number(e.target.value) : null)} />
+                    <TextField variant="filled" fullWidth label="Monitor Herd IDs (comma-separated)" value={doc.alerts?.monitor_herd_ids} onChange={e => update("alerts", "monitor_herd_ids", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Herd Isolation Threshold (m)" type="number" value={doc.alerts?.herd_isolation_threshold_m} onChange={e => update("alerts", "herd_isolation_threshold_m", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Low Battery Threshold (%)" type="number" value={doc.alerts?.low_battery_percent} onChange={e => update("alerts", "low_battery_percent", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="Weak Link Threshold (%)" type="number" value={doc.alerts?.weak_link_percent} onChange={e => update("alerts", "weak_link_percent", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="High Wind Threshold (m/s)" type="number" value={doc.alerts?.high_wind_mps} onChange={e => update("alerts", "high_wind_mps", Number(e.target.value))} />
+                  </Stack>
+                </Grid>
+                <Grid item size={{ xs: 12, md: 6 }}>
+                  <Typography variant="h6" gutterBottom>Routing & Channels</Typography>
+                  <Stack spacing={3}>
+                    <FormControlLabel
+                      control={<Switch checked={doc.alerts?.route_in_app} onChange={e => update("alerts", "route_in_app", e.target.checked)} />}
+                      label="Route In-App"
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={doc.alerts?.route_email} onChange={e => update("alerts", "route_email", e.target.checked)} />}
+                      label="Route Email"
+                    />
+                    <TextField variant="filled" fullWidth label="Email Recipients" value={doc.alerts?.email_recipients} onChange={e => update("alerts", "email_recipients", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="SMTP Host" value={doc.alerts?.smtp_host} onChange={e => update("alerts", "smtp_host", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="SMTP Port" type="number" value={doc.alerts?.smtp_port} onChange={e => update("alerts", "smtp_port", Number(e.target.value))} />
+                    <TextField variant="filled" fullWidth label="SMTP User" value={doc.alerts?.smtp_user} onChange={e => update("alerts", "smtp_user", e.target.value)} />
+                    <SecretField fullWidth label="SMTP Password" placeholder={MASK} value={doc.alerts?.smtp_password} onChange={e => update("alerts", "smtp_password", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="SMTP From Address" value={doc.alerts?.smtp_from} onChange={e => update("alerts", "smtp_from", e.target.value)} />
+                    <FormControlLabel
+                      control={<Switch checked={doc.alerts?.smtp_use_tls} onChange={e => update("alerts", "smtp_use_tls", e.target.checked)} />}
+                      label="SMTP TLS"
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={doc.alerts?.route_sms} onChange={e => update("alerts", "route_sms", e.target.checked)} />}
+                      label="Route SMS"
+                    />
+                    <TextField variant="filled" fullWidth label="SMS Recipients" value={doc.alerts?.sms_recipients} onChange={e => update("alerts", "sms_recipients", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Twilio Account SID" value={doc.alerts?.twilio_account_sid} onChange={e => update("alerts", "twilio_account_sid", e.target.value)} />
+                    <SecretField fullWidth label="Twilio Auth Token" placeholder={MASK} value={doc.alerts?.twilio_auth_token} onChange={e => update("alerts", "twilio_auth_token", e.target.value)} />
+                    <TextField variant="filled" fullWidth label="Twilio From Number" value={doc.alerts?.twilio_from_number} onChange={e => update("alerts", "twilio_from_number", e.target.value)} />
+                  </Stack>
+                </Grid>
+              </Grid>
+            )}
+
+            {/* RASPBERRY TAB */}
+            {tab === 6 && (
                 <Grid container spacing={3}>
                 <Grid item size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Raspberry Pi Connection</Typography>
@@ -567,7 +675,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
 
 
             {/* CAMERA TAB */}
-            {tab === 6 && (
+            {tab === 7 && (
               <Grid container spacing={3}>
                 <Grid item size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Drone Camera Parameters</Typography>
@@ -600,7 +708,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             )}
 
             {/* PHOTOGRAMMETRY TAB */}
-            {tab === 7 && (
+            {tab === 8 && (
               <Grid container spacing={3}>
                 <Grid item size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Storage & Sync</Typography>

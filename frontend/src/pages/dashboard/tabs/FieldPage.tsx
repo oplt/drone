@@ -2,9 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "r
 import { Box,  Button,  Paper,  Stack,  Typography,  Divider,  TextField,  Alert,  CircularProgress,  Chip,  MenuItem,  IconButton,  Tooltip,} from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
-import {  TerraDraw,  TerraDrawSelectMode,  TerraDrawPolygonMode,  TerraDrawLineStringMode,  TerraDrawPointMode,  TerraDrawRectangleMode,  TerraDrawCircleMode,
-  TerraDrawFreehandMode,} from "terra-draw";
-import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
+import type { TerraDraw } from "terra-draw";
 import {  Polyline,  Polygon,  OverlayView,} from "@react-google-maps/api";
 import { getToken } from "../../../auth";
 import DroneSvg from "../../../assets/Drone.svg?react";
@@ -24,11 +22,18 @@ import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined
 import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
+import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { SavedFieldsPanel } from "../../../components/dashboard/tasks/SavedFieldsPanel";
 import { FieldBorderPanel } from "../../../components/dashboard/tasks/FieldBorderPanel";
+import {
+  TerraDrawController,
+  type TerraDrawEditorMode,
+  type TerraDrawFeature,
+  type TerraDrawToolMode,
+} from "../../../components/dashboard/tasks/TerraDrawController";
 import { useDroneCenter } from "../../../hooks/useDroneCenter";
 import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
 import { useErrors } from "../../../hooks/useErrors";
@@ -37,21 +42,16 @@ import { useMissionCommandMetrics } from "../../../hooks/useMissionCommandMetric
 import { useMissionWebsocketRuntime } from "../../../hooks/useMissionWebsocketRuntime";
 import { type LatLng } from "../../../lib/extractLatLng";
 import type { DrawResult as CesiumDrawResult } from "../../../utils/CesiumMap";
+import {
+  startMissionWithPreflight,
+  type PreflightRunResponse,
+} from "../../../utils/api";
 
 type Waypoint = { lat: number; lon: number; alt: number };
 type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
 type DrawMode = "none" | "point" | "polyline" | "polygon";
-type TerraDrawEditorMode =  | "polygon"  | "linestring"  | "point"  | "rectangle"  | "circle"  | "freehand"  | "select"  | "static";
-type TerraDrawToolMode = Exclude<TerraDrawEditorMode, "static">;
+type TerraFeature = TerraDrawFeature;
 type LonLat = [number, number];
-type TerraFeature = {
-  id?: string | number;
-  properties?: Record<string, unknown>;
-  geometry?: {
-    type?: string;
-    coordinates?: unknown;
-  };
-};
 type GridParams = {
   row_spacing_m: number;
   grid_angle_deg: number | null;
@@ -338,6 +338,8 @@ export default function FieldPage() {
   const [altInput, setAltInput] = useState("30");
   const [name, setName] = useState("field-plan-1");
   const [sending, setSending] = useState(false);
+  const [preflightRun, setPreflightRun] =
+    useState<PreflightRunResponse | null>(null);
   const [gridParams, setGridParams] = useState<GridParams>({
     row_spacing_m: 7.5,
     grid_angle_deg: null,
@@ -428,100 +430,11 @@ export default function FieldPage() {
   useEffect(() => {
     if (autoStreamKey) setStreamKey(autoStreamKey);
   }, [autoStreamKey]);
-// ✅ Then define onMapLoad (which depends on addError)
+
 const onMapLoad = useCallback((map: google.maps.Map) => {
   mapRef.current = map;
   setMapReady(true);
-
-  map.addListener("projection_changed", () => {
-    if (terraDrawRef.current) return;
-
-    try {
-      const adapter = new TerraDrawGoogleMapsAdapter({
-        map,
-        lib: google.maps,
-        coordinatePrecision: 9,
-      });
-
-      const draw = new TerraDraw({
-        adapter,
-        modes: [
-          new TerraDrawSelectMode({
-            flags: {
-              polygon: {
-                feature: {
-                  draggable: true,
-                  coordinates: { draggable: true, deletable: true, midpoints: true },
-                },
-              },
-              linestring: {
-                feature: {
-                  draggable: true,
-                  coordinates: { draggable: true, deletable: true, midpoints: true },
-                },
-              },
-              point: { feature: { draggable: true } },
-            },
-          }),
-          new TerraDrawPolygonMode({
-            editable: true,
-            showCoordinatePoints: false,
-            styles: {
-              fillColor: "#000000",
-              fillOpacity: 0.1,
-              outlineColor: "#1976d2",
-              // Hide the numbered vertex dots shown while drawing
-              closingPointWidth: 0,
-              closingPointOutlineWidth: 0,
-              coordinatePointWidth: 0,
-              coordinatePointOutlineWidth: 0,
-            },
-          }),
-          new TerraDrawLineStringMode({
-            editable: true,
-            showCoordinatePoints: false,
-            styles: {
-              lineStringColor: "#1976d2",
-              closingPointWidth: 0,
-              closingPointOutlineWidth: 0,
-              coordinatePointWidth: 0,
-              coordinatePointOutlineWidth: 0,
-            },
-          }),
-          new TerraDrawPointMode({ editable: true, styles: { pointColor: "#1976d2" } }),
-          new TerraDrawRectangleMode({ styles: { fillColor: "#000000", fillOpacity: 0.1, outlineColor: "#1976d2" } }),
-          new TerraDrawCircleMode({ styles: { fillColor: "#000000", fillOpacity: 0.1, outlineColor: "#1976d2" } }),
-          new TerraDrawFreehandMode({ styles: { fillColor: "#000000", fillOpacity: 0.1, outlineColor: "#1976d2" } }),
-        ],
-      });
-
-      // Register listener BEFORE start() — TerraDraw has no "ready" event.
-      draw.on("change", (_ids: Array<string | number>, event: string) => {
-        if (
-          event === "create" ||
-          event === "update" ||
-          event === "delete" ||
-          event === "created" ||
-          event === "updated" ||
-          event === "deleted"
-        ) {
-          const snapshot = draw.getSnapshot();
-          syncFieldBorderFromSnapshot(snapshot);
-        }
-      });
-
-      draw.start();
-
-      // Assign ref and mark ready synchronously right after start()
-      terraDrawRef.current = draw;
-      setTerraDrawReady(true);
-
-    } catch (error) {
-      console.error("Failed to initialize TerraDraw:", error);
-      addError("Failed to initialize drawing tools"); // ✅ Now addError is available!
-    }
-  });
-}, [addError, syncFieldBorderFromSnapshot]);
+}, []);
 
 
   const onMapUnmount = useCallback(() => {
@@ -1005,25 +918,12 @@ useEffect(() => {
   };
 
   const tdMode = modeMap[drawMode];
-  if (tdMode && terraDrawRef.current && terraDrawReady) {
-    terraDrawRef.current.setMode(tdMode);
-    setTerraDrawMode(tdMode);
-  }
-}, [drawMode, terraDrawReady, useCesium]);
-
-useEffect(() => {
-  if (useCesium) return;
-  if (!terraDrawRef.current || !terraDrawReady) return;
-  terraDrawRef.current.setMode(terraDrawMode);
-}, [terraDrawMode, terraDrawReady, useCesium]);
+  if (tdMode) setTerraDrawMode(tdMode);
+}, [drawMode, useCesium]);
 
   useEffect(() => {
     return () => {
       disconnect();
-      if (terraDrawRef.current) {
-            terraDrawRef.current.stop();
-            terraDrawRef.current = null;
-          }
     };
   }, [disconnect]);
 
@@ -1120,6 +1020,10 @@ useEffect(() => {
 
   const fetchGridPreview = useCallback(
     async (signal: AbortSignal) => {
+      if (!useCesium && terraDrawMode !== "static" && terraDrawMode !== "select") {
+        setPreviewLoading(false);
+        return;
+      }
       if (!fieldBorder || fieldBorder.length < 3) {
         setGridPreview(null);
         setGridPreviewMask(null);
@@ -1183,7 +1087,7 @@ useEffect(() => {
         if (!signal.aborted) setPreviewLoading(false);
       }
     },
-    [API_BASE_CLEAN, fieldBorder, gridParams]
+    [API_BASE_CLEAN, fieldBorder, gridParams, terraDrawMode, useCesium]
   );
 
   useEffect(() => {
@@ -1263,26 +1167,12 @@ useEffect(() => {
         },
       };
 
-      const missionRes = await fetch(`${API_BASE_CLEAN}/tasks/missions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!missionRes.ok) {
-        const error = await missionRes.text();
-        if (missionRes.status === 409) {
-          throw new Error(
-            "Another mission is already running. Wait for completion before starting a new survey."
-          );
-        }
-        throw new Error(error || "Failed to create flight plan");
-      }
-
-      const data = await missionRes.json();
+      const { preflight, mission: data } = await startMissionWithPreflight(
+        payload,
+        token,
+        API_BASE_CLEAN,
+      );
+      setPreflightRun(preflight);
       alert(`Grid Survey: "${data.mission_name}" started! Tracking flight...`);
 
       setPendingFlightId(data.flight_id ?? null);
@@ -1317,16 +1207,7 @@ useEffect(() => {
     return null;
   }, [gridPreview, waypoints]);
 
-  const mapCenter = useMemo(() => {
-    if (waypoints.length > 0) {
-      return { lat: waypoints[0].lat, lng: waypoints[0].lon };
-    }
-    if (fieldBorder && fieldBorder.length > 0) {
-      const [lon, lat] = fieldBorder[0];
-      return { lat, lng: lon };
-    }
-    return userCenter || center;
-  }, [fieldBorder, waypoints, userCenter, center]);
+  const mapCenter = useMemo(() => userCenter || center, [userCenter, center]);
   const cesiumZoom = useMemo(
     () => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
     [mapZoom]
@@ -1401,6 +1282,15 @@ useEffect(() => {
           </Alert>
         ) : (
           <>
+            <TerraDrawController
+              map={mapReady ? mapRef.current : null}
+              enabled={!useCesium}
+              mode={terraDrawMode}
+              drawRef={terraDrawRef}
+              onReadyChange={setTerraDrawReady}
+              onSnapshotChange={syncFieldBorderFromSnapshot}
+              onError={addError}
+            />
             <Stack
               direction={{ xs: "column", md: "row" }}
               spacing={3}
@@ -2169,7 +2059,19 @@ useEffect(() => {
 
               <Box sx={{ width: { xs: "100%", md: 300 } }}>
                 <Stack spacing={2}>
-                  <MissionCommandPanel telemetry={telemetry} droneConnected={droneConnected} />
+                  <MissionPreflightPanel
+                    apiBase={API_BASE_CLEAN}
+                    missionType="grid"
+                    preflightRun={preflightRun}
+                    telemetry={telemetry}
+                  />
+                  <MissionCommandPanel
+                    telemetry={telemetry}
+                    droneConnected={droneConnected}
+                    missionStatus={missionStatus}
+                    activeFlightId={activeFlightId}
+                    apiBase={API_BASE_CLEAN}
+                  />
                   <TextField variant="filled"
                     label="Mission name"
                     value={name}

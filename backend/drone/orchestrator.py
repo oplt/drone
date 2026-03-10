@@ -3,12 +3,13 @@ import inspect
 import time
 import logging
 from .models import Coordinate
-from .drone_base import DroneClient
+from .drone_base import DroneClient, MissionAbortRequested
 from backend.map.google_maps import GoogleMapsClient
 from backend.video.stream import DroneVideoStream
 from backend.analysis.llm import LLMAnalyzer
 from backend.messaging.mqtt import MqttClient, MqttPublisher
 # from backend.messaging.opcua import DroneOpcUaServer
+from backend.db.models import FlightStatus
 from backend.db.repository.telemetry_repo import TelemetryRepository
 from backend.config import settings
 from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
@@ -142,6 +143,25 @@ class Orchestrator:
                 logger.error(f"Error in video health monitor: {e}")
                 await asyncio.sleep(1.0)
 
+    async def video_frame_pump_task(self):
+        """Drain frames so the configured recorder actually receives video data."""
+        if self.video is None:
+            return
+
+        logger.info("Starting video frame pump task...")
+        frame_iter = self.video.frames()
+        while self._running:
+            try:
+                packet = await asyncio.to_thread(next, frame_iter, None)
+            except Exception as e:
+                logger.error(f"Error in video frame pump: {e}")
+                break
+
+            if packet is None:
+                break
+
+            await asyncio.sleep(0)
+
     async def _raw_event_ingest_worker(self):
         BATCH_SIZE = 1000
         INTERVAL_S = 0.25
@@ -263,6 +283,8 @@ class Orchestrator:
             self,
             waypoints: list[Coordinate],
             alt: float,
+            *,
+            raise_on_fail: bool = True,
             **kwargs,
     ):
 
@@ -373,10 +395,11 @@ class Orchestrator:
                 else [r.name for r in report.base_checks + report.mission_checks
                       if r.status == CheckStatus.FAIL]
             )
-            raise RuntimeError(
-                f"Preflight FAILED - mission aborted. "
-                f"Failed checks: {', '.join(failed_names)}"
-            )
+            if raise_on_fail:
+                raise RuntimeError(
+                    f"Preflight FAILED - mission aborted. "
+                    f"Failed checks: {', '.join(failed_names)}"
+                )
 
         # WARN is non-fatal: mission continues but operator has been notified
         if report.overall_status == CheckStatus.WARN:
@@ -386,117 +409,199 @@ class Orchestrator:
 
 
     async def run_mission(self, mission: "Mission", alt: float = 30.0, flight_fn=None):
-
         self._flight_id = None
         self._running = True
         tasks: list[asyncio.Task] = []
         waypoints = mission.get_waypoints()
         cruise_alt = alt
 
-        # ------------------------------------------------------------------
-        # STEP 1: Connect to drone
-        # ------------------------------------------------------------------
-        try:
-            logger.info("🔌 Connecting to drone...")
-            await asyncio.to_thread(self.drone.connect)
-            logger.info("✅ Drone connected successfully")
-        except Exception as e:  # FIX (Bug 2): bare except → except Exception as e
-            logger.exception(f"❌ Drone Connection failed: {e}")
-            raise
+        async def _finalize_started_flight(
+            *,
+            status: FlightStatus,
+            note: str,
+            event_type: str | None = None,
+            event_data: dict | None = None,
+        ) -> None:
+            if self._flight_id is None:
+                return
 
-        # ------------------------------------------------------------------
-        # STEP 2: Create flight record
-        # ------------------------------------------------------------------
-        try:
-            start = waypoints[0]
-            dest = waypoints[-1]
-            self._flight_id = await self.repo.create_flight(
-                start_lat=start.lat,
-                start_lon=start.lon,
-                start_alt=alt,
-                dest_lat=dest.lat,
-                dest_lon=dest.lon,
-                dest_alt=alt,
-            )
-            await self.repo.add_event(
-                self._flight_id,
-                "mission_created",
-                {"alt": cruise_alt, "waypoints": len(waypoints)},
-            )
-            await self.repo.add_event(self._flight_id, "connected", {})
-            logger.info(f"✅ Created flight record with ID: {self._flight_id}")
-        except Exception as e:  # FIX (Bug 2)
-            logger.exception(f"❌ Flight record generation failed: {e}")
-            raise
+            safe_note = (note or "").strip()
+            if len(safe_note) > 250:
+                safe_note = safe_note[:247] + "..."
 
-        # ------------------------------------------------------------------
-        # STEP 3: Preflight checks
-        # ------------------------------------------------------------------
-        try:
-            logger.info("🔍 Running preflight checks...")
-            await self._run_preflight_checks(waypoints, alt)
-            logger.info("✅ Preflight checks passed")
-        except Exception as e:  # FIX (Bug 2)
-            logger.exception(f"❌ Preflight checks failed: {e}")
-            raise
-
-        # ------------------------------------------------------------------
-        # STEP 4: Start telemetry stream
-        # ------------------------------------------------------------------
-        try:
-            from backend.config import settings
-            from backend.messaging.websocket import telemetry_manager
-
-            if not telemetry_manager._running:
-                logger.info("Starting telemetry stream...")
-                await asyncio.to_thread(
-                    telemetry_manager.start_telemetry_stream,
-                    settings.drone_conn_mavproxy
-                )
-                logger.info("✅ Telemetry stream started")
-                await asyncio.sleep(1)
-        except Exception as e:  # FIX (Bug 2)
-            logger.warning(f"⚠️ Failed to start telemetry stream: {e}")
-            raise
-
-        # ------------------------------------------------------------------
-        # STEP 5: Start background tasks, run flight, then clean up.
-        # ------------------------------------------------------------------
-        try:
-            tasks = [
-                asyncio.create_task(self.heartbeat_task()),
-                asyncio.create_task(self.telemetry_publish_task()),
-                asyncio.create_task(self.mqtt_subscriber_task()),
-                asyncio.create_task(self._raw_event_ingest_worker()),
-                asyncio.create_task(self.video_health_monitor_task()),
-                asyncio.create_task(self.emergency_monitor_task()),
-            ]
-            if flight_fn is not None:
-                flight_awaitable = flight_fn() if callable(flight_fn) else flight_fn
-                if not inspect.isawaitable(flight_awaitable):
-                    raise TypeError(
-                        "flight_fn must be an awaitable or a callable returning an awaitable."
+            if event_type:
+                try:
+                    await self.repo.add_event(
+                        self._flight_id,
+                        event_type,
+                        event_data or {},
                     )
-                await flight_awaitable
+                except Exception:
+                    logger.exception(
+                        "Failed to persist '%s' event for flight_id=%s",
+                        event_type,
+                        self._flight_id,
+                    )
 
-        except Exception as e:
-            logger.exception(f"❌ Mission failed: {e}")
-            raise
+            try:
+                updated = await self.repo.finish_flight_if_in_progress(
+                    self._flight_id,
+                    status=status,
+                    note=safe_note,
+                )
+                if updated:
+                    logger.info(
+                        "Marked flight_id=%s as %s",
+                        self._flight_id,
+                        status.value,
+                    )
+            except Exception:
+                logger.exception(
+                    "Failed to update %s flight status for flight_id=%s",
+                    status.value,
+                    self._flight_id,
+                )
+
+        try:
+            # ------------------------------------------------------------------
+            # STEP 1: Connect to drone
+            # ------------------------------------------------------------------
+            try:
+                logger.info("🔌 Connecting to drone...")
+                await asyncio.to_thread(self.drone.connect)
+                logger.info("✅ Drone connected successfully")
+            except Exception as e:  # FIX (Bug 2): bare except -> except Exception as e
+                logger.exception(f"❌ Drone Connection failed: {e}")
+                raise
+
+            # ------------------------------------------------------------------
+            # STEP 2: Create flight record
+            # ------------------------------------------------------------------
+            try:
+                start = waypoints[0]
+                dest = waypoints[-1]
+                self._flight_id = await self.repo.create_flight(
+                    start_lat=start.lat,
+                    start_lon=start.lon,
+                    start_alt=alt,
+                    dest_lat=dest.lat,
+                    dest_lon=dest.lon,
+                    dest_alt=alt,
+                    status=FlightStatus.ACTIVE,
+                )
+                await self.repo.add_event(
+                    self._flight_id,
+                    "mission_created",
+                    {"alt": cruise_alt, "waypoints": len(waypoints)},
+                )
+                await self.repo.add_event(
+                    self._flight_id,
+                    "mission_state_changed",
+                    {"state": FlightStatus.ACTIVE.value},
+                )
+                await self.repo.add_event(self._flight_id, "connected", {})
+                logger.info(f"✅ Created flight record with ID: {self._flight_id}")
+            except Exception as e:  # FIX (Bug 2)
+                logger.exception(f"❌ Flight record generation failed: {e}")
+                raise
+
+            # ------------------------------------------------------------------
+            # STEP 3: Preflight checks
+            # ------------------------------------------------------------------
+            try:
+                logger.info("🔍 Running preflight checks...")
+                await self._run_preflight_checks(waypoints, alt)
+                logger.info("✅ Preflight checks passed")
+            except Exception as e:  # FIX (Bug 2)
+                logger.exception(f"❌ Preflight checks failed: {e}")
+                await _finalize_started_flight(
+                    status=FlightStatus.INTERRUPTED,
+                    note=f"Preflight blocked mission start: {e}",
+                    event_type="mission_aborted",
+                    event_data={"reason": str(e), "stage": "preflight"},
+                )
+                raise
+
+            # ------------------------------------------------------------------
+            # STEP 4: Start telemetry stream
+            # ------------------------------------------------------------------
+            try:
+                from backend.config import settings
+                from backend.messaging.websocket import telemetry_manager
+
+                if not telemetry_manager._running:
+                    logger.info("Starting telemetry stream...")
+                    await asyncio.to_thread(
+                        telemetry_manager.start_telemetry_stream,
+                        settings.drone_conn_mavproxy
+                    )
+                    logger.info("✅ Telemetry stream started")
+                    await asyncio.sleep(1)
+            except Exception as e:  # FIX (Bug 2)
+                logger.warning(f"⚠️ Failed to start telemetry stream: {e}")
+                await _finalize_started_flight(
+                    status=FlightStatus.FAILED,
+                    note=f"Telemetry startup failed: {e}",
+                    event_type="mission_failed",
+                    event_data={"error": str(e), "stage": "telemetry_start"},
+                )
+                raise
+
+            # ------------------------------------------------------------------
+            # STEP 5: Start background tasks and run flight.
+            # ------------------------------------------------------------------
+            try:
+                tasks = [
+                    asyncio.create_task(self.heartbeat_task()),
+                    asyncio.create_task(self.telemetry_publish_task()),
+                    asyncio.create_task(self.mqtt_subscriber_task()),
+                    asyncio.create_task(self._raw_event_ingest_worker()),
+                    asyncio.create_task(self.video_health_monitor_task()),
+                    asyncio.create_task(self.emergency_monitor_task()),
+                ]
+                if self.video is not None and getattr(self.video, "enable_recording", False):
+                    tasks.append(asyncio.create_task(self.video_frame_pump_task()))
+                if flight_fn is not None:
+                    flight_awaitable = flight_fn() if callable(flight_fn) else flight_fn
+                    if not inspect.isawaitable(flight_awaitable):
+                        raise TypeError(
+                            "flight_fn must be an awaitable or a callable returning an awaitable."
+                        )
+                    await flight_awaitable
+
+            except MissionAbortRequested as e:
+                logger.warning("🛑 Mission aborted by operator: %s", e)
+                await _finalize_started_flight(
+                    status=FlightStatus.INTERRUPTED,
+                    note=f"Mission interrupted: {e}",
+                    event_type="mission_aborted",
+                    event_data={"reason": str(e)},
+                )
+                raise
+            except Exception as e:
+                logger.exception(f"❌ Mission failed: {e}")
+                await _finalize_started_flight(
+                    status=FlightStatus.FAILED,
+                    note=f"Mission failed: {e}",
+                    event_type="mission_failed",
+                    event_data={"error": str(e)},
+                )
+                raise
         finally:
             # Graceful teardown — always runs after flight completes or fails.
             self._running = False
 
-            for task in tasks:
-                if task and not task.done():
-                    task.cancel()
+            pending_tasks = [t for t in tasks if not t.done()]
+            for task in pending_tasks:
+                task.cancel()
 
-            if tasks:
-                await asyncio.gather(
-                    *[t for t in tasks if not t.done()],
-                    return_exceptions=True,
-                )
+            if pending_tasks:
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
 
-            await self._cleanup()
+            try:
+                await self._cleanup()
+            except Exception as e:
+                logger.warning(f"Failed during mission cleanup: {e}")
 
 
     async def _cleanup(self):

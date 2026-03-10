@@ -9,7 +9,7 @@ function TelemetryBox({ label, value }: { label: string; value: string }) {
         px: 1,
         py: 0.5,
         borderRadius: 1,
-        bgcolor: "rgba(0,0,0,0.65)",
+        bgcolor: "rgba(0,0,0,0.35)",
         color: "white",
         fontSize: 12,
         lineHeight: 1.2,
@@ -49,6 +49,7 @@ export function TelemetryHud({
       <TelemetryBox label="Mode" value={d.mode} />
       <TelemetryBox label="Speed" value={d.speed} />
       <TelemetryBox label="Alt" value={d.alt} />
+      <TelemetryBox label="Wind" value={d.wind} />
       <TelemetryBox label="GPS" value={d.gpsStrength} />
       <TelemetryBox label="Battery" value={d.batteryHealth} />
       <TelemetryBox label="Failsafe" value={d.failsafe} />

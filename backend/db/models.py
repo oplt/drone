@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
+from enum import Enum
 from geoalchemy2 import Geometry
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -25,6 +26,41 @@ class Base(DeclarativeBase):
     pass
 
 
+class FlightStatus(str, Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    INTERRUPTED = "interrupted"
+    FAILED = "failed"
+
+    @classmethod
+    def terminal_values(cls) -> set[str]:
+        return {cls.COMPLETED.value, cls.INTERRUPTED.value, cls.FAILED.value}
+
+
+_FLIGHT_STATUS_ALIASES: dict[str, FlightStatus] = {
+    "running": FlightStatus.ACTIVE,
+    "in_progress": FlightStatus.ACTIVE,
+    "aborted": FlightStatus.INTERRUPTED,
+}
+
+
+def normalize_flight_status(status: str | FlightStatus) -> FlightStatus:
+    if isinstance(status, FlightStatus):
+        return status
+    raw = str(status).strip().lower()
+    if not raw:
+        raise ValueError("Flight status cannot be empty")
+    aliased = _FLIGHT_STATUS_ALIASES.get(raw)
+    if aliased is not None:
+        return aliased
+    try:
+        return FlightStatus(raw)
+    except ValueError as exc:
+        allowed = ", ".join(s.value for s in FlightStatus)
+        raise ValueError(f"Unsupported flight status '{status}'. Allowed: {allowed}") from exc
+
+
 class Flight(Base):
     __tablename__ = "flights"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -33,7 +69,7 @@ class Flight(Base):
     )
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(
-        String(32), default="in_progress", nullable=False
+        String(32), default=FlightStatus.ACTIVE.value, nullable=False
     )
     note: Mapped[Optional[str]] = mapped_column(String(255))
 
@@ -48,6 +84,12 @@ class Flight(Base):
         back_populates="flight", cascade="all, delete-orphan"
     )
     events: Mapped[list["FlightEvent"]] = relationship(
+        back_populates="flight", cascade="all, delete-orphan"
+    )
+    patrol_detections: Mapped[list["PatrolDetection"]] = relationship(
+        back_populates="flight", cascade="all, delete-orphan"
+    )
+    patrol_incidents: Mapped[list["PatrolIncident"]] = relationship(
         back_populates="flight", cascade="all, delete-orphan"
     )
 
@@ -414,3 +456,236 @@ class HerdTask(Base):
 
     params: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     result: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+
+class OperationalAlert(Base):
+    __tablename__ = "operational_alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rule_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    dedupe_key: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    source: Mapped[str] = mapped_column(String(32), default="drone", nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True, nullable=False)
+
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    first_triggered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    last_triggered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    last_notified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    acknowledged_by_user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        index=True,
+    )
+    occurrences: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    deliveries: Mapped[List["AlertDelivery"]] = relationship(
+        back_populates="alert",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        Index("idx_operational_alert_status_triggered", "status", "last_triggered_at"),
+        Index("idx_operational_alert_rule_status", "rule_type", "status"),
+    )
+
+
+class AlertDelivery(Base):
+    __tablename__ = "alert_deliveries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    alert_id: Mapped[int] = mapped_column(
+        ForeignKey("operational_alerts.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    channel: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    destination: Mapped[Optional[str]] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    provider_message_id: Mapped[Optional[str]] = mapped_column(String(128))
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    payload: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    attempted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    alert: Mapped["OperationalAlert"] = relationship(back_populates="deliveries")
+
+
+class PatrolDetection(Base):
+    __tablename__ = "patrol_detections"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+
+    flight_id: Mapped[int] = mapped_column(
+        ForeignKey("flights.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    telemetry_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("telemetry.id", ondelete="SET NULL"),
+        index=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+    )
+
+    frame_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+
+    mission_task_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    ai_task: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+
+    object_class: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    anomaly_type: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    track_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+
+    zone_name: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    checkpoint_index: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+
+    bbox_xyxy: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    centroid_xy: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    lat: Mapped[Optional[float]] = mapped_column(Float)
+    lon: Mapped[Optional[float]] = mapped_column(Float)
+    alt: Mapped[Optional[float]] = mapped_column(Float)
+
+    heading: Mapped[Optional[float]] = mapped_column(Float)
+    groundspeed: Mapped[Optional[float]] = mapped_column(Float)
+
+    source: Mapped[str] = mapped_column(String(32), default="rgb", nullable=False)
+    snapshot_path: Mapped[Optional[str]] = mapped_column(String(1024))
+    clip_path: Mapped[Optional[str]] = mapped_column(String(1024))
+
+    model_name: Mapped[Optional[str]] = mapped_column(String(128))
+    model_version: Mapped[Optional[str]] = mapped_column(String(64))
+
+    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    flight: Mapped["Flight"] = relationship(back_populates="patrol_detections")
+    telemetry: Mapped[Optional["TelemetryRecord"]] = relationship()
+    incident_links: Mapped[List["PatrolIncidentDetection"]] = relationship(
+        back_populates="detection",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        Index("idx_patrol_det_flight_time", "flight_id", "created_at"),
+        Index("idx_patrol_det_flight_track", "flight_id", "track_id"),
+        Index("idx_patrol_det_task_ai", "mission_task_type", "ai_task"),
+        Index("idx_patrol_det_object_anomaly", "object_class", "anomaly_type"),
+    )
+
+
+class PatrolIncident(Base):
+    __tablename__ = "patrol_incidents"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+
+    flight_id: Mapped[int] = mapped_column(
+        ForeignKey("flights.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+
+    opened_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+    status: Mapped[str] = mapped_column(String(32), default="open", index=True, nullable=False)
+
+    mission_task_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    incident_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+
+    primary_object_class: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    primary_track_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+
+    ai_task: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+
+    zone_name: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    checkpoint_index: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+
+    start_lat: Mapped[Optional[float]] = mapped_column(Float)
+    start_lon: Mapped[Optional[float]] = mapped_column(Float)
+    end_lat: Mapped[Optional[float]] = mapped_column(Float)
+    end_lon: Mapped[Optional[float]] = mapped_column(Float)
+
+    peak_confidence: Mapped[Optional[float]] = mapped_column(Float)
+    detection_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    first_detection_id: Mapped[Optional[int]] = mapped_column(BigInteger, index=True)
+    last_detection_id: Mapped[Optional[int]] = mapped_column(BigInteger, index=True)
+
+    snapshot_path: Mapped[Optional[str]] = mapped_column(String(1024))
+    clip_path: Mapped[Optional[str]] = mapped_column(String(1024))
+
+    last_alert_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("operational_alerts.id", ondelete="SET NULL"),
+        index=True,
+    )
+
+    summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    flight: Mapped["Flight"] = relationship(back_populates="patrol_incidents")
+    detection_links: Mapped[List["PatrolIncidentDetection"]] = relationship(
+        back_populates="incident",
+        cascade="all, delete-orphan",
+    )
+    last_alert: Mapped[Optional["OperationalAlert"]] = relationship()
+
+    __table_args__ = (
+        Index("idx_patrol_inc_flight_opened", "flight_id", "opened_at"),
+        Index("idx_patrol_inc_type_status", "incident_type", "status"),
+        Index("idx_patrol_inc_track_status", "primary_track_id", "status"),
+    )
+
+
+class PatrolIncidentDetection(Base):
+    __tablename__ = "patrol_incident_detections"
+
+    incident_id: Mapped[int] = mapped_column(
+        ForeignKey("patrol_incidents.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    detection_id: Mapped[int] = mapped_column(
+        ForeignKey("patrol_detections.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    incident: Mapped["PatrolIncident"] = relationship(back_populates="detection_links")
+    detection: Mapped["PatrolDetection"] = relationship(back_populates="incident_links")

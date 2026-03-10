@@ -6,7 +6,7 @@ for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
 import time
 import threading
 from .models import Coordinate, Telemetry
-from .drone_base import DroneClient
+from .drone_base import DroneClient, MissionAbortRequested
 import logging
 from dronekit import connect, VehicleMode, LocationGlobalRelative
 from pymavlink import mavutil
@@ -28,6 +28,9 @@ class MavlinkDrone(DroneClient):
         self._running = False
         self._groundspeed_override_mps = None
         self._capture_mode = None
+        self._mission_pause_requested = threading.Event()
+        self._mission_abort_requested = threading.Event()
+        self._mission_control_lock = threading.Lock()
 
     def connect(self) -> None:
         self.vehicle = connect(
@@ -194,6 +197,43 @@ class MavlinkDrone(DroneClient):
         # self.send_heartbeat()
         self.vehicle.mode = VehicleMode(mode)
 
+    def _set_mode_best_effort(self, *modes: str) -> bool:
+        if not self.vehicle:
+            return False
+        for mode in modes:
+            try:
+                self.vehicle.mode = VehicleMode(mode)
+                logger.info("Mission control switched mode to %s", mode)
+                return True
+            except Exception as exc:
+                logger.warning("Failed to set mode '%s': %s", mode, exc)
+        return False
+
+    def pause_mission(self) -> bool:
+        if not self.vehicle:
+            return False
+        with self._mission_control_lock:
+            self._mission_pause_requested.set()
+            # Prefer LOITER; BRAKE as fallback where supported.
+            return self._set_mode_best_effort("LOITER", "BRAKE")
+
+    def resume_mission(self) -> bool:
+        if not self.vehicle:
+            return False
+        with self._mission_control_lock:
+            self._mission_pause_requested.clear()
+            # Guided mode allows simple_goto waypoint execution to continue.
+            return self._set_mode_best_effort("GUIDED", "AUTO")
+
+    def abort_mission(self) -> bool:
+        if not self.vehicle:
+            return False
+        with self._mission_control_lock:
+            self._mission_abort_requested.set()
+            self._mission_pause_requested.clear()
+            # RTL first for safe recovery, LAND fallback.
+            return self._set_mode_best_effort("RTL", "LAND")
+
     def get_telemetry(self) -> Telemetry:
         # Send heartbeat when getting telemetry (this happens regularly)
         # self.send_heartbeat()
@@ -337,6 +377,47 @@ class MavlinkDrone(DroneClient):
         self._capture_mode = None
         return sent
 
+    def start_video_recording(self) -> bool:
+        if not self.vehicle:
+            return False
+
+        command = getattr(mavutil.mavlink, "MAV_CMD_VIDEO_START_CAPTURE", None)
+        if command is None:
+            logger.warning("MAV_CMD_VIDEO_START_CAPTURE is unavailable in this pymavlink build")
+            return False
+
+        try:
+            self._send_command_long(
+                command=command,
+                p1=0.0,  # camera id: all/default camera
+                p2=1.0,  # status frequency in Hz
+                p3=0.0,
+                p4=0.0,
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Failed to send MAV_CMD_VIDEO_START_CAPTURE: %s", exc)
+            return False
+
+    def stop_video_recording(self) -> bool:
+        if not self.vehicle:
+            return False
+
+        command = getattr(mavutil.mavlink, "MAV_CMD_VIDEO_STOP_CAPTURE", None)
+        if command is None:
+            logger.warning("MAV_CMD_VIDEO_STOP_CAPTURE is unavailable in this pymavlink build")
+            return False
+
+        try:
+            self._send_command_long(
+                command=command,
+                p1=0.0,  # camera id: all/default camera
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Failed to send MAV_CMD_VIDEO_STOP_CAPTURE: %s", exc)
+            return False
+
     def download_captured_images(self, *, destination_dir: str) -> list[str]:
         # DroneKit+MAVLink path in this adapter does not expose camera file transfer.
         # A companion sync process should populate destination_dir instead.
@@ -348,14 +429,36 @@ class MavlinkDrone(DroneClient):
         return []
 
     def follow_waypoints(self, path):
+        self._mission_abort_requested.clear()
+        self._mission_pause_requested.clear()
         for wp in path:
             # self.send_heartbeat()  # Heartbeat before each waypoint
             self.goto(wp)
 
-            # Wait for waypoint with heartbeat
-            start_time = time.time()
-            while time.time() - start_time < 30:  # 30 second timeout per waypoint
-                # self.send_heartbeat()
+            # Wait for waypoint with mission-control awareness.
+            start_time = time.monotonic()
+            paused_started_at = None
+            paused_total_s = 0.0
+            was_paused = False
+            max_active_leg_s = 300.0
+            while True:
+                if self._mission_abort_requested.is_set():
+                    raise MissionAbortRequested("Operator abort requested")
+
+                if self._mission_pause_requested.is_set():
+                    if paused_started_at is None:
+                        paused_started_at = time.monotonic()
+                        was_paused = True
+                    time.sleep(0.4)
+                    continue
+
+                if paused_started_at is not None:
+                    paused_total_s += time.monotonic() - paused_started_at
+                    paused_started_at = None
+                if was_paused:
+                    # Re-send target after unpausing to continue route reliably.
+                    self.goto(wp)
+                    was_paused = False
 
                 # Check if we're close enough to the waypoint
                 current = self.vehicle.location.global_relative_frame
@@ -363,6 +466,12 @@ class MavlinkDrone(DroneClient):
 
                 if distance < 2.0:  # Within 2 meters
                     break
+
+                active_elapsed_s = (time.monotonic() - start_time) - paused_total_s
+                if active_elapsed_s > max_active_leg_s:
+                    raise RuntimeError(
+                        f"Waypoint leg timeout after {max_active_leg_s:.0f}s active flight time"
+                    )
 
                 time.sleep(1)
 
@@ -389,15 +498,23 @@ class MavlinkDrone(DroneClient):
         self.vehicle.mode = VehicleMode("LAND")
 
     def wait_until_disarmed(self, timeout_s: float = 900):
-        """Block until vehicle.armed == False or timeout."""
+        """Block until vehicle.armed == False or raise TimeoutError."""
         start = time.time()
-        while (
-            self.vehicle
-            and getattr(self.vehicle, "armed", False)
-            and (time.time() - start) < timeout_s
-        ):
+        while (time.time() - start) < timeout_s:
+            if self.vehicle is None:
+                raise RuntimeError("Vehicle unavailable while waiting for disarm")
+
+            if not getattr(self.vehicle, "armed", False):
+                return
+
             # self.send_heartbeat()  # keeps dead-man switch happy
             time.sleep(1.0)
+
+        if self.vehicle is not None and getattr(self.vehicle, "armed", False):
+            mode = getattr(getattr(self.vehicle, "mode", None), "name", None)
+            raise TimeoutError(
+                f"Timed out after {timeout_s}s waiting for disarm (mode={mode or 'unknown'})"
+            )
 
     def stop_dead_mans_switch(self):
         """Safely disable the dead man's switch"""

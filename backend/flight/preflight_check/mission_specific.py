@@ -903,7 +903,7 @@ def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
         base_type = 'grid'
     elif mission_type in ['circle', 'poi']:
         base_type = 'orbit'
-    elif mission_type in ['polygon', 'patrol']:
+    elif mission_type in ['private_patrol', 'polygon', 'patrol']:
         base_type = 'perimeter_patrol'
 
     mission_class = mission_classes.get(base_type) or mission_classes.get(mission_type)

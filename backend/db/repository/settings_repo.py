@@ -21,6 +21,8 @@ V_AI_LLM_KEY = "ai.llm_api_key"
 V_PI_PASS = "raspberry.raspberry_password"
 V_PHOTO_WEBODM_API_TOKEN = "photogrammetry.WEBODM_API_TOKEN"
 V_PHOTO_ASSET_SIGNING_SECRET = "photogrammetry.PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"
+V_ALERT_SMTP_PASSWORD = "alerts.smtp_password"
+V_ALERT_TWILIO_AUTH_TOKEN = "alerts.twilio_auth_token"
 
 SECRET_PATHS = {
     V_TELEM_MQTT_PASS: ("telemetry", "mqtt_pass"),
@@ -31,6 +33,8 @@ SECRET_PATHS = {
         "photogrammetry",
         "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET",
     ),
+    V_ALERT_SMTP_PASSWORD: ("alerts", "smtp_password"),
+    V_ALERT_TWILIO_AUTH_TOKEN: ("alerts", "twilio_auth_token"),
 }
 
 
@@ -100,6 +104,7 @@ class SettingsRepository:
                 "raspberry": {},
                 "camera": {},
                 "photogrammetry": {},
+                "alerts": {},
             },
             data,
         )
@@ -137,6 +142,7 @@ class SettingsRepository:
                 "raspberry": {},
                 "camera": {},
                 "photogrammetry": {},
+                "alerts": {},
             },
             data,
         )
@@ -147,6 +153,8 @@ class SettingsRepository:
         pi_pass = _pop_path(data, SECRET_PATHS[V_PI_PASS])
         webodm_api_token = _pop_path(data, SECRET_PATHS[V_PHOTO_WEBODM_API_TOKEN])
         asset_signing_secret = _pop_path(data, SECRET_PATHS[V_PHOTO_ASSET_SIGNING_SECRET])
+        smtp_password = _pop_path(data, SECRET_PATHS[V_ALERT_SMTP_PASSWORD])
+        twilio_auth_token = _pop_path(data, SECRET_PATHS[V_ALERT_TWILIO_AUTH_TOKEN])
 
         async with self._session_factory() as db:
 
@@ -175,6 +183,8 @@ class SettingsRepository:
             await upsert_secret(V_PI_PASS, pi_pass)
             await upsert_secret(V_PHOTO_WEBODM_API_TOKEN, webodm_api_token)
             await upsert_secret(V_PHOTO_ASSET_SIGNING_SECRET, asset_signing_secret)
+            await upsert_secret(V_ALERT_SMTP_PASSWORD, smtp_password)
+            await upsert_secret(V_ALERT_TWILIO_AUTH_TOKEN, twilio_auth_token)
 
             # --- upsert non-secret JSON ---
             stmt = (
@@ -208,6 +218,7 @@ class SettingsRepository:
                 "raspberry": {},
                 "camera": {},
                 "photogrammetry": {},
+                "alerts": {},
             },
             data,
         )

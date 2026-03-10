@@ -5,6 +5,15 @@ function formatMaybeNumber(v: unknown, digits = 1) {
   return typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
 }
 
+function toFiniteNumber(v: unknown): number | null {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string" && v.trim() !== "") {
+    const parsed = Number(v);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function formatMaybePercent(v: unknown) {
   return typeof v === "number" && Number.isFinite(v) ? `${Math.round(v)}%` : "--";
 }
@@ -37,11 +46,21 @@ export function useMissionCommandMetrics(telemetry: any) {
       telemetry?.telemetry?.quality ??
       telemetry?.telemetry_quality ??
       null;
-    const windSpeed =
-      telemetry?.wind?.speed ??
-      telemetry?.wind_speed ??
-      telemetry?.windSpeed ??
-      null;
+    let windSpeed =
+      toFiniteNumber(telemetry?.wind?.speed) ??
+      toFiniteNumber(telemetry?.wind_speed) ??
+      toFiniteNumber(telemetry?.windSpeed);
+    if (windSpeed === null) {
+      const windX =
+        toFiniteNumber(telemetry?.wind?.wind_x_ned_m_s) ??
+        toFiniteNumber(telemetry?.wind_x_ned_m_s);
+      const windY =
+        toFiniteNumber(telemetry?.wind?.wind_y_ned_m_s) ??
+        toFiniteNumber(telemetry?.wind_y_ned_m_s);
+      if (windX !== null || windY !== null) {
+        windSpeed = Math.hypot(windX ?? 0, windY ?? 0);
+      }
+    }
     const failsafeRaw =
       telemetry?.failsafe?.state ??
       telemetry?.failsafe_state ??
@@ -72,15 +91,14 @@ export function useMissionCommandMetrics(telemetry: any) {
           : false;
 
     const windDisplay =
-      windSpeed === null || windSpeed === undefined
-        ? "--"
-        : `${formatMaybeNumber(Number(windSpeed), 1)} m/s`;
+      windSpeed === null ? telemetrySummary.wind : `${formatMaybeNumber(windSpeed, 1)} m/s`;
 
     return {
       flightStatus: telemetrySummary.flightStatus,
       gpsStrength: telemetrySummary.gpsStrength,
       batteryHealth: telemetrySummary.batteryHealth,
       failsafeState: telemetrySummary.failsafe,
+      altitudeDisplay: telemetrySummary.alt,
       batteryCellDisplay,
       linkQuality,
       windDisplay,

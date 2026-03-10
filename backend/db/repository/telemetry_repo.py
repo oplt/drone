@@ -2,7 +2,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Iterable, Mapping
 from sqlalchemy import select, insert
-from ..models import TelemetryRecord, Flight, FlightEvent, MavlinkEvent
+from ..models import (
+    TelemetryRecord,
+    Flight,
+    FlightEvent,
+    MavlinkEvent,
+    FlightStatus,
+    normalize_flight_status,
+)
 from backend.drone.models import Telemetry as TelemetryDTO
 import logging
 from ..session import Session
@@ -10,6 +17,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 logger = logging.getLogger(__name__)
+TERMINAL_FLIGHT_STATUSES = FlightStatus.terminal_values()
+
+
+def _normalized_status_value(status: str | FlightStatus) -> str:
+    return normalize_flight_status(status).value
+
+
+def _status_is_terminal(status: str | FlightStatus) -> bool:
+    try:
+        return _normalized_status_value(status) in TERMINAL_FLIGHT_STATUSES
+    except ValueError:
+        return str(status).strip().lower() in TERMINAL_FLIGHT_STATUSES
 
 
 class TelemetryRepository:
@@ -46,14 +65,15 @@ class TelemetryRepository:
             dest_lat: float,
             dest_lon: float,
             dest_alt: float,
-            status: str = "in_progress",
+            status: str | FlightStatus = FlightStatus.ACTIVE,
             note: str = "",
     ) -> int:
+        normalized_status = _normalized_status_value(status)
         started_at = started_at or datetime.now(timezone.utc)
         async with self._session_factory() as s:
             f = Flight(
                 started_at=started_at,
-                status=status,
+                status=normalized_status,
                 note=note,
                 start_lat=start_lat,
                 start_lon=start_lon,
@@ -118,15 +138,62 @@ class TelemetryRepository:
             return len(payload)
 
     async def finish_flight(
-            self, flight_id: int, *, status: str, note: str = ""
+            self, flight_id: int, *, status: str | FlightStatus, note: str = ""
     ) -> None:
+        normalized_status = _normalized_status_value(status)
         async with self._session_factory() as s:
             q = await s.execute(select(Flight).where(Flight.id == flight_id))
             f = q.scalar_one()
-            f.status = status
+            f.status = normalized_status
             f.note = note
             f.ended_at = datetime.now(timezone.utc)
             await s.commit()
+
+    async def finish_flight_if_in_progress(
+            self, flight_id: int, *, status: str | FlightStatus, note: str = ""
+    ) -> bool:
+        """
+        Finish a flight only if it is still active and has no ended_at.
+        Returns True when a row was updated, False when already finalized.
+        """
+        normalized_status = _normalized_status_value(status)
+        async with self._session_factory() as s:
+            q = await s.execute(select(Flight).where(Flight.id == flight_id))
+            f = q.scalar_one()
+            if f.ended_at is not None or _status_is_terminal(f.status):
+                return False
+
+            f.status = normalized_status
+            f.note = note
+            f.ended_at = datetime.now(timezone.utc)
+            await s.commit()
+            return True
+
+    async def set_flight_status_if_active(
+            self,
+            flight_id: int,
+            *,
+            status: str | FlightStatus,
+            note: str = "",
+    ) -> bool:
+        """
+        Update lifecycle status for an active flight.
+        Returns False if the flight has already ended or is terminal.
+        """
+        normalized_status = _normalized_status_value(status)
+        async with self._session_factory() as s:
+            q = await s.execute(select(Flight).where(Flight.id == flight_id))
+            f = q.scalar_one()
+            if f.ended_at is not None or _status_is_terminal(f.status):
+                return False
+
+            f.status = normalized_status
+            if note:
+                f.note = note
+            if normalized_status in TERMINAL_FLIGHT_STATUSES:
+                f.ended_at = datetime.now(timezone.utc)
+            await s.commit()
+            return True
 
     # repository.py
     async def add_mavlink_events_many(
@@ -214,5 +281,3 @@ class TelemetryRepository:
                     f"Fallback single inserts completed: {inserted}/{len(payload)} records inserted"
                 )
                 return inserted
-
-

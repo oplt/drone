@@ -21,6 +21,7 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
     r = doc.get("raspberry", {}) or {}
     cam = doc.get("camera", {}) or {}
     photo = doc.get("photogrammetry", {}) or {}
+    al = doc.get("alerts", {}) or {}
 
     flat: Dict[str, Any] = {
         # Telemetry
@@ -56,6 +57,31 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "cruise_power_w": h.get("cruise_power_w"),
         "heartbeat_timeout": h.get("heartbeat_timeout"),
         "enforce_preflight_range": h.get("enforce_preflight_range"),
+
+        # Alerts
+        "alerts_enabled": al.get("enabled"),
+        "alerts_check_interval_sec": al.get("check_interval_sec"),
+        "alerts_dedupe_window_sec": al.get("dedupe_window_sec"),
+        "alerts_operation_geofence_id": al.get("operation_geofence_id"),
+        "alerts_monitor_herd_ids": al.get("monitor_herd_ids"),
+        "alerts_herd_isolation_threshold_m": al.get("herd_isolation_threshold_m"),
+        "alerts_low_battery_percent": al.get("low_battery_percent"),
+        "alerts_weak_link_percent": al.get("weak_link_percent"),
+        "alerts_high_wind_mps": al.get("high_wind_mps"),
+        "alerts_route_in_app": al.get("route_in_app"),
+        "alerts_route_email": al.get("route_email"),
+        "alerts_route_sms": al.get("route_sms"),
+        "alerts_email_recipients": al.get("email_recipients"),
+        "alerts_sms_recipients": al.get("sms_recipients"),
+        "alerts_smtp_host": al.get("smtp_host"),
+        "alerts_smtp_port": al.get("smtp_port"),
+        "alerts_smtp_user": al.get("smtp_user"),
+        "alerts_smtp_password": al.get("smtp_password"),
+        "alerts_smtp_from": al.get("smtp_from"),
+        "alerts_smtp_use_tls": al.get("smtp_use_tls"),
+        "alerts_twilio_account_sid": al.get("twilio_account_sid"),
+        "alerts_twilio_auth_token": al.get("twilio_auth_token"),
+        "alerts_twilio_from_number": al.get("twilio_from_number"),
 
         # Preflight
         "HDOP_MAX": p.get("HDOP_MAX"),

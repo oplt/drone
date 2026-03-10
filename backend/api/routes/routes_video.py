@@ -161,6 +161,9 @@ async def _gazebo_stream_generator():
             height=settings.drone_video_height,
             fps=settings.drone_video_fps,
             open_timeout_s=settings.drone_video_timeout,
+            enable_recording=settings.drone_video_save_stream,
+            recording_path=settings.drone_video_save_path,
+            recording_format="mp4",
         )
 
         logger.info(f"Started Gazebo stream from {settings.drone_video_source_gazebo}")

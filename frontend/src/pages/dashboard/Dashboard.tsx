@@ -14,6 +14,7 @@ import {
   datePickersCustomizations,
   treeViewCustomizations,
 } from "../../components/theme/customizations";
+import { AlertCenterProvider } from "../../contexts/AlertCenterContext";
 
 type User = {
   id: number;
@@ -99,18 +100,20 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
             overflow: "auto",
           })}
         >
-          <Stack
-            spacing={2}
-            sx={{
-              alignItems: "center",
-              mx: 3,
-              pb: 5,
-              mt: { xs: 8, md: 0 },
-            }}
-          >
-            {/* This is where pages will render */}
-            <Outlet />
-          </Stack>
+          <AlertCenterProvider>
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: "center",
+                mx: 3,
+                pb: 5,
+                mt: { xs: 8, md: 0 },
+              }}
+            >
+              {/* This is where pages will render */}
+              <Outlet />
+            </Stack>
+          </AlertCenterProvider>
         </Box>
       </Box>
     </AppTheme>

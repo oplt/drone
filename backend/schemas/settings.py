@@ -106,6 +106,36 @@ class PhotogrammetrySettings(BaseModel):
     PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: Optional[str] = None  # SECRET (vault); masked in GET
 
 
+class AlertSettings(BaseModel):
+    enabled: bool = True
+    check_interval_sec: int = 5
+    dedupe_window_sec: int = 300
+    operation_geofence_id: Optional[int] = None
+    monitor_herd_ids: str = ""
+    herd_isolation_threshold_m: float = 250.0
+    low_battery_percent: float = 25.0
+    weak_link_percent: float = 35.0
+    high_wind_mps: float = 12.0
+
+    route_in_app: bool = True
+    route_email: bool = False
+    route_sms: bool = False
+
+    email_recipients: str = ""
+    sms_recipients: str = ""
+
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: Optional[str] = None  # SECRET (vault); masked in GET
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+
+    twilio_account_sid: str = ""
+    twilio_auth_token: Optional[str] = None  # SECRET (vault); masked in GET
+    twilio_from_number: str = ""
+
+
 class SettingsDoc(BaseModel):
     telemetry: TelemetrySettings = Field(default_factory=TelemetrySettings)
     ai: AISettings = Field(default_factory=AISettings)
@@ -115,4 +145,5 @@ class SettingsDoc(BaseModel):
     raspberry: RaspberrySettings = Field(default_factory=RaspberrySettings)
     camera: CameraSettings = Field(default_factory=CameraSettings)
     photogrammetry: PhotogrammetrySettings = Field(default_factory=PhotogrammetrySettings)
+    alerts: AlertSettings = Field(default_factory=AlertSettings)
     updated_at: Optional[str] = None

@@ -190,6 +190,31 @@ class RuntimeSettings(BaseSettings):
     heartbeat_timeout: float
     enforce_preflight_range: bool = False
 
+    # Operational alert/rules engine
+    alerts_enabled: bool = True
+    alerts_check_interval_sec: int = 5
+    alerts_dedupe_window_sec: int = 300
+    alerts_operation_geofence_id: int | None = None
+    alerts_monitor_herd_ids: str = ""
+    alerts_herd_isolation_threshold_m: float = 250.0
+    alerts_low_battery_percent: float = 25.0
+    alerts_weak_link_percent: float = 35.0
+    alerts_high_wind_mps: float = 12.0
+    alerts_route_in_app: bool = True
+    alerts_route_email: bool = False
+    alerts_route_sms: bool = False
+    alerts_email_recipients: str = ""
+    alerts_sms_recipients: str = ""
+    alerts_smtp_host: str = ""
+    alerts_smtp_port: int = 587
+    alerts_smtp_user: str = ""
+    alerts_smtp_password: str = ""
+    alerts_smtp_from: str = ""
+    alerts_smtp_use_tls: bool = True
+    alerts_twilio_account_sid: str = ""
+    alerts_twilio_auth_token: str = ""
+    alerts_twilio_from_number: str = ""
+
     # Preflight thresholds (override defaults at runtime via /api/settings)
     HDOP_MAX: float = 2.0
     SAT_MIN: int = 10

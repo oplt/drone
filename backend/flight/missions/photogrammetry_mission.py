@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, List, Literal, Tuple
 
+from backend.db.models import FlightStatus
 from backend.drone.models import Coordinate
 from backend.drone.orchestrator import Orchestrator
 from backend.flight.missions.terrain_follow import (
@@ -13,6 +14,7 @@ from backend.flight.missions.terrain_follow import (
 )
 from backend.services.photogrammetry.flight_capture import FlightCaptureSessionService
 from backend.services.photogrammetry.mission import make_photogrammetry_plan
+from backend.utils.geo import coord_from_home
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +81,41 @@ class PhotogrammetryMission:
                 event_type,
                 exc,
             )
+
+    async def _finish_flight_safe(
+        self,
+        orch: Orchestrator,
+        *,
+        status: FlightStatus,
+        note: str,
+    ) -> bool:
+        flight_id = getattr(orch, "_flight_id", None)
+        if flight_id is None:
+            logger.warning(
+                "PhotogrammetryMission: flight_id unavailable; cannot finish flight with status=%s",
+                status.value,
+            )
+            return False
+
+        safe_note = (note or "").strip()
+        if len(safe_note) > 250:
+            safe_note = safe_note[:247] + "..."
+
+        try:
+            await orch.repo.finish_flight(
+                flight_id,
+                status=status,
+                note=safe_note,
+            )
+            return True
+        except Exception as exc:
+            logger.warning(
+                "PhotogrammetryMission: failed to finish flight_id=%s status=%s: %s",
+                flight_id,
+                status.value,
+                exc,
+            )
+            return False
 
     async def _configure_capture(self, orch: Orchestrator) -> tuple[bool, str]:
         try:
@@ -189,6 +226,8 @@ class PhotogrammetryMission:
             self.trigger_mode,
             self.terrain_follow,
         )
+        home = coord_from_home(orch.drone.home_location)
+        home.alt = float(waypoints[-1].alt if waypoints and waypoints[-1].alt is not None else takeoff_alt_m)
 
         capture_session_service = FlightCaptureSessionService()
         session = capture_session_service.start_session(flight_id=getattr(orch, "_flight_id", "unknown"))
@@ -209,6 +248,7 @@ class PhotogrammetryMission:
 
         mission_error: Exception | None = None
         capture_started = False
+        flight_finalized = False
 
         await asyncio.sleep(1.0)
         logger.info("Photogrammetry takeoff command: target_alt=%s", takeoff_alt_m)
@@ -239,12 +279,42 @@ class PhotogrammetryMission:
                 await self._stop_capture(orch)
 
         try:
+            await asyncio.to_thread(orch.drone.follow_waypoints, [home])
+            await self._add_event_safe(
+                orch,
+                "photogrammetry_return_home_completed",
+                {"lat": float(home.lat), "lon": float(home.lon)},
+            )
+        except Exception as exc:
+            if mission_error is None:
+                mission_error = exc
+            logger.error("Photogrammetry return-home leg failed: %s", exc)
+            await self._add_event_safe(
+                orch,
+                "photogrammetry_return_home_failed",
+                {"error": str(exc)},
+            )
+
+        try:
             logger.info("Photogrammetry landing command issued")
             await asyncio.to_thread(orch.drone.land)
             await self._add_event_safe(orch, "landing_command_sent", {})
 
             await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
             await self._add_event_safe(orch, "landed_home", {})
+            status_at_touchdown = (
+                FlightStatus.COMPLETED if mission_error is None else FlightStatus.FAILED
+            )
+            note_at_touchdown = (
+                "Photogrammetry flight returned home, landed, and disarmed"
+                if status_at_touchdown == FlightStatus.COMPLETED
+                else "Photogrammetry flight landed/disarmed after mission error"
+            )
+            flight_finalized = await self._finish_flight_safe(
+                orch,
+                status=status_at_touchdown,
+                note=note_at_touchdown,
+            )
             logger.info("Photogrammetry landing complete and drone disarmed")
         except Exception as exc:
             logger.error("Photogrammetry landing failed: %s", exc)
@@ -255,6 +325,11 @@ class PhotogrammetryMission:
             )
             if mission_error is None:
                 mission_error = exc
+            flight_finalized = await self._finish_flight_safe(
+                orch,
+                status=FlightStatus.FAILED,
+                note=f"Landing/disarm failed: {exc}",
+            )
 
         min_images = self.image_sync_min_count if self.await_image_sync else 0
         wait_timeout = self.image_sync_wait_timeout_s if self.await_image_sync else 0.0
@@ -331,17 +406,17 @@ class PhotogrammetryMission:
             mapping_job_params,
         )
 
-        image_count = int(sync_result.get("image_count", 0))
-        status = "completed" if mission_error is None else "failed"
-        note = (
-            f"Photogrammetry mission {status}; staged_images={image_count}; "
-            f"source_dir={sync_result.get('source_dir')}"
-        )
-        await orch.repo.finish_flight(
-            orch._flight_id,
-            status=status,
-            note=note,
-        )
+        if not flight_finalized:
+            status = (
+                FlightStatus.COMPLETED
+                if mission_error is None
+                else FlightStatus.FAILED
+            )
+            await self._finish_flight_safe(
+                orch,
+                status=status,
+                note=f"Photogrammetry mission {status.value}",
+            )
         if mission_error is not None:
             logger.error("Photogrammetry mission finished with error: %s", mission_error)
             raise mission_error

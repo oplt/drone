@@ -20,6 +20,7 @@ import SessionsChart from './SessionsChart';
 import StatCard, { type StatCardProps } from './StatCard';
 import useAnalyticsOverview from '../../hooks/useAnalyticsOverview';
 import useTelemetryWebSocket from '../../hooks/useTelemetryWebsocket';
+import { useAlertCenter } from '../../contexts/AlertCenterContext';
 
 const formatNumber = (value: number | null | undefined, suffix = '') => {
   if (value === null || value === undefined || Number.isNaN(value)) return '--';
@@ -68,6 +69,7 @@ const deltaLabelFromSeries = (series: number[]) => {
 
 export default function MainGrid() {
   const { data, loading, error, refresh } = useAnalyticsOverview();
+  const { alerts: activeAlerts } = useAlertCenter();
   const system = data?.system;
   const wsEnabled = Boolean(system?.mavlink_connected);
   const { telemetry, isConnected } = useTelemetryWebSocket({ enabled: wsEnabled });
@@ -134,20 +136,27 @@ export default function MainGrid() {
 
   const recentRows = useMemo(() => {
     if (!data?.recent_flights) return [];
-    return data.recent_flights.map((flight) => ({
-      id: flight.id,
-      plan: flight.name,
-      status:
-        flight.status === 'in_progress'
-          ? 'Active'
-          : flight.status === 'failed'
-            ? 'Failed'
-            : 'Completed',
-      duration: formatDuration(flight.duration_min),
-      distance: `${flight.distance_km.toFixed(1)} km`,
-      telemetry_points: flight.telemetry_points,
-      started_at: formatTime(flight.started_at),
-    }));
+    return data.recent_flights.map((flight) => {
+      const normalizedStatus = String(flight.status ?? '').toLowerCase();
+      return {
+        id: flight.id,
+        plan: flight.name,
+        status:
+          ['active', 'in_progress', 'running'].includes(normalizedStatus)
+            ? 'Active'
+            : normalizedStatus === 'paused'
+              ? 'Paused'
+              : ['interrupted', 'aborted'].includes(normalizedStatus)
+                ? 'Interrupted'
+                : normalizedStatus === 'failed'
+                  ? 'Failed'
+                  : 'Completed',
+        duration: formatDuration(flight.duration_min),
+        distance: `${flight.distance_km.toFixed(1)} km`,
+        telemetry_points: flight.telemetry_points,
+        started_at: formatTime(flight.started_at),
+      };
+    });
   }, [data?.recent_flights]);
 
   const telemetryBatteryRaw = telemetry?.battery?.remaining ?? telemetry?.battery_remaining ?? null;
@@ -170,13 +179,17 @@ export default function MainGrid() {
   const gpsHdop =
     typeof gpsHdopRaw === 'number' ? gpsHdopRaw : Number(gpsHdopRaw);
 
-  const alertItems = [
+  const fallbackAlertItems = [
     system && !system.telemetry_running ? 'Telemetry stream is offline.' : null,
     telemetryBatterySafe !== null && telemetryBatterySafe < 30
       ? `Battery health low (${Math.round(telemetryBatterySafe)}%).`
       : null,
     system && !isConnected ? 'Live telemetry link disconnected.' : null,
   ].filter(Boolean) as string[];
+  const alertItems =
+    activeAlerts.length > 0
+      ? activeAlerts.slice(0, 4).map((item) => `${item.title}: ${item.message}`)
+      : fallbackAlertItems;
 
   const last7Labels = labels.slice(-7);
   const last7Flights = (trends?.flight_counts ?? []).slice(-7);

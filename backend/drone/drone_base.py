@@ -3,6 +3,10 @@ from typing import Iterable
 from .models import Coordinate, Telemetry
 
 
+class MissionAbortRequested(RuntimeError):
+    """Raised when an operator-issued abort command stops mission execution."""
+
+
 class DroneClient(ABC):
     def __init__(self):
         self.home_location = None
@@ -21,6 +25,8 @@ class DroneClient(ABC):
     def follow_waypoints(self, path: Iterable[Coordinate]) -> None: ...
     @abstractmethod
     def land(self) -> None: ...
+    def wait_until_disarmed(self, timeout_s: float = 900) -> None:
+        raise NotImplementedError
     @abstractmethod
     def close(self) -> None: ...
 
@@ -39,6 +45,22 @@ class DroneClient(ABC):
         return False
 
     def stop_image_capture(self) -> bool:
+        return False
+
+    def start_video_recording(self) -> bool:
+        return False
+
+    def stop_video_recording(self) -> bool:
+        return False
+
+    # Optional mission-control hooks for command endpoints.
+    def pause_mission(self) -> bool:
+        return False
+
+    def resume_mission(self) -> bool:
+        return False
+
+    def abort_mission(self) -> bool:
         return False
 
     # Optional direct image retrieval hook for adapters that can pull images

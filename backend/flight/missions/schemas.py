@@ -10,6 +10,7 @@ class MissionType(str, Enum):
     ORBIT = "orbit"
     TERRAIN_FOLLOW = "terrain_follow"
     PERIMETER_PATROL = "perimeter_patrol"
+    PRIVATE_PATROL = "private_patrol"
     ADAPTIVE_ALTITUDE = "adaptive_altitude"
     WAYPOINT = "waypoint"
     ROUTE = "route"
@@ -151,7 +152,7 @@ class TerrainFollowMission(BaseMission):
 
 
 class PerimeterPatrolMission(BaseMission):
-    type: Literal["perimeter_patrol", "polygon", "patrol"]
+    type: Literal["perimeter_patrol", "private_patrol", "polygon", "patrol"]
     polygon: List[Waypoint] = Field(..., min_length=3)
     path_offset_m: float = Field(default=0, ge=0)
     boundary_buffer_min: float = Field(default=10, ge=0)
@@ -237,6 +238,7 @@ def create_mission_from_dict(data: dict) -> Mission:
         'poi':               OrbitMission,
         'terrain_follow':    TerrainFollowMission,
         'perimeter_patrol':  PerimeterPatrolMission,
+        'private_patrol':    PerimeterPatrolMission,
         'polygon':           PerimeterPatrolMission,
         'patrol':            PerimeterPatrolMission,
         'adaptive_altitude': AdaptiveAltitudeMission,

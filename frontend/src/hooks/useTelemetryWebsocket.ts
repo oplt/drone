@@ -5,6 +5,7 @@ import { getToken } from "../auth";
 type TelemetryWebSocketOptions = {
   enabled?: boolean;
   onTelemetry?: (data: any) => void;
+  onMessage?: (message: any) => void;
 };
 
 export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) => {
@@ -23,10 +24,17 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
   const onTelemetryRef = useRef<TelemetryWebSocketOptions["onTelemetry"]>(
     options.onTelemetry,
   );
+  const onMessageRef = useRef<TelemetryWebSocketOptions["onMessage"]>(
+    options.onMessage,
+  );
 
   useEffect(() => {
     onTelemetryRef.current = options.onTelemetry;
   }, [options.onTelemetry]);
+
+  useEffect(() => {
+    onMessageRef.current = options.onMessage;
+  }, [options.onMessage]);
 
   // Helper to parse incoming messages
   const parseMessage = async (data: any): Promise<any> => {
@@ -154,16 +162,31 @@ export const useTelemetryWebSocket = (options: TelemetryWebSocketOptions = {}) =
             return;
           }
 
-          // Handle telemetry data
-          let telemetryData = msg;
-          if (msg?.type === "telemetry" && msg.data) {
-            telemetryData = msg.data;
+          if (msg && typeof msg === "object" && "type" in msg) {
+            if (onMessageRef.current) {
+              onMessageRef.current(msg);
+            }
+
+            if (msg?.type !== "telemetry") {
+              return;
+            }
+
+            if (msg.data) {
+              setTelemetry(msg.data);
+              if (onTelemetryRef.current) {
+                onTelemetryRef.current(msg.data);
+              }
+            }
+            return;
           }
 
-          if (telemetryData) {
-            setTelemetry(telemetryData);
+          if (msg) {
+            setTelemetry(msg);
             if (onTelemetryRef.current) {
-              onTelemetryRef.current(telemetryData);
+              onTelemetryRef.current(msg);
+            }
+            if (onMessageRef.current) {
+              onMessageRef.current(msg);
             }
           }
         } catch (e) {
