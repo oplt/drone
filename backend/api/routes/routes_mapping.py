@@ -1,21 +1,29 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
+import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import require_user
 from backend.db.models import Asset, Field as FieldEntity, FieldModel, FlightEvent, MappingJob
 from backend.db.session import get_db
 from backend.services.photogrammetry.asset_gateway import AssetGatewayService
+from backend.services.photogrammetry.field_derivation import (
+    collect_image_gps_locations,
+    derive_field_ring_from_points,
+    ring_to_polygon_wkt,
+)
 from backend.services.photogrammetry.field_registry import FieldRegistryService
 from backend.services.photogrammetry.queue import MappingJobQueue, MappingJobQueueError
 
@@ -23,8 +31,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mapping", tags=["mapping"])
 field_registry = FieldRegistryService()
-asset_gateway = AssetGatewayService()
-job_queue = MappingJobQueue()
+
+
+def _asset_gateway() -> AssetGatewayService:
+    return AssetGatewayService()
+
+
+def _job_queue() -> MappingJobQueue:
+    return MappingJobQueue()
 
 
 class MappingArtifactsIn(BaseModel):
@@ -96,6 +110,11 @@ class MappingJobUploadOut(BaseModel):
     job_id: int
     uploaded_count: int
     uploaded_paths: List[str]
+
+
+class MappingJobDeleteOut(BaseModel):
+    job_id: int
+    deleted: bool = True
 
 
 class FieldModelVersionOut(BaseModel):
@@ -199,6 +218,175 @@ async def _latest_photogrammetry_source_dir(db: AsyncSession) -> str | None:
     return source_dir.strip()
 
 
+def _mapping_inputs_root() -> Path:
+    return Path(
+        os.getenv("PHOTOGRAMMETRY_INPUTS_DIR", "backend/storage/mapping_jobs_inputs")
+    ).resolve()
+
+
+def _mapping_allowed_extensions() -> set[str]:
+    allowed_exts = {
+        ext.strip().lower()
+        for ext in os.getenv(
+            "PHOTOGRAMMETRY_ALLOWED_IMAGE_EXTENSIONS",
+            ".jpg,.jpeg,.png,.tif,.tiff,.webp",
+        ).split(",")
+        if ext.strip()
+    }
+    return allowed_exts or {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
+
+
+def _mapping_max_upload_files() -> int:
+    return int(os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILES", "5000"))
+
+
+def _mapping_max_upload_file_bytes() -> int:
+    return int(
+        os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES", str(1024 * 1024 * 1024))
+    )
+
+
+def _parse_form_object(raw: str | None, *, field_name: str) -> Dict[str, Any]:
+    if raw is None or not raw.strip():
+        return {}
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name} JSON") from exc
+    if not isinstance(value, dict):
+        raise HTTPException(status_code=400, detail=f"{field_name} must be a JSON object")
+    return value
+
+
+async def _persist_upload_files(
+    files: List[UploadFile],
+    *,
+    destination_dir: Path,
+) -> List[Path]:
+    max_upload_files = _mapping_max_upload_files()
+    if len(files) > max_upload_files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files uploaded ({len(files)} > {max_upload_files}).",
+        )
+
+    max_upload_file_bytes = _mapping_max_upload_file_bytes()
+    allowed_exts = _mapping_allowed_extensions()
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    stored_paths: List[Path] = []
+    for upload in files:
+        safe_name = Path(upload.filename or "upload.bin").name
+        if not safe_name:
+            await upload.close()
+            continue
+
+        ext = Path(safe_name).suffix.lower()
+        if ext not in allowed_exts:
+            await upload.close()
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type '{ext}' for '{safe_name}'.",
+            )
+
+        dst = destination_dir / (
+            f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
+        )
+        size = 0
+        try:
+            with dst.open("wb") as out:
+                while True:
+                    chunk = await upload.read(8 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > max_upload_file_bytes:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=(
+                                f"Uploaded file '{safe_name}' exceeds "
+                                f"PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES={max_upload_file_bytes}."
+                            ),
+                        )
+                    out.write(chunk)
+        except Exception:
+            if dst.exists():
+                dst.unlink(missing_ok=True)
+            raise
+        finally:
+            await upload.close()
+
+        if size == 0:
+            dst.unlink(missing_ok=True)
+            continue
+        stored_paths.append(dst)
+
+    return stored_paths
+
+
+def _relative_input_paths(paths: List[Path], *, inputs_root: Path) -> List[str]:
+    return [str(path.relative_to(inputs_root)) for path in paths]
+
+
+def _move_staged_uploads_into_job(
+    staged_paths: List[Path],
+    *,
+    inputs_root: Path,
+    job_id: int,
+) -> List[Path]:
+    job_dir = inputs_root / str(job_id)
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    moved_paths: List[Path] = []
+    for src in staged_paths:
+        dst = job_dir / src.name
+        if dst.exists():
+            dst = job_dir / f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{src.name}"
+        shutil.move(str(src), str(dst))
+        moved_paths.append(dst)
+    return moved_paths
+
+
+async def _create_field_from_ring(
+    db: AsyncSession,
+    *,
+    owner_id: int,
+    name: str,
+    ring: List[List[float]],
+) -> FieldEntity:
+    polygon_wkt = ring_to_polygon_wkt(ring)
+    row = await db.execute(
+        text(
+            """
+            INSERT INTO fields (owner_id, name, boundary, area_ha, centroid)
+            VALUES (
+                :owner_id,
+                :name,
+                ST_GeomFromText(:polygon_wkt, 4326),
+                ST_Area(ST_Transform(ST_GeomFromText(:polygon_wkt, 4326), 3857)) / 10000.0,
+                ST_Centroid(ST_GeomFromText(:polygon_wkt, 4326))
+            )
+            RETURNING id
+            """
+        ),
+        {
+            "owner_id": owner_id,
+            "name": name,
+            "polygon_wkt": polygon_wkt,
+        },
+    )
+    field_id = int(row.scalar_one())
+    field = await db.get(FieldEntity, field_id)
+    if field is None:
+        raise HTTPException(status_code=500, detail="Failed to create field for uploaded images")
+    return field
+
+
+def _auto_generated_field_name() -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    return f"Uploaded field {stamp}"
+
+
 def _to_job_status(job: MappingJob, assets: List[Asset]) -> MappingJobStatusOut:
     return MappingJobStatusOut(
         job_id=job.id,
@@ -224,10 +412,10 @@ def _to_job_status(job: MappingJob, assets: List[Asset]) -> MappingJobStatusOut:
 
 async def _enqueue_job_or_503(db: AsyncSession, *, job: MappingJob) -> None:
     try:
-        task_id = job_queue.enqueue(job_id=job.id)
+        task_id = _job_queue().enqueue(job_id=job.id)
     except MappingJobQueueError as exc:
-        msg = str(exc)
-        logger.error("Failed to enqueue mapping job %s: %s", job.id, msg)
+        msg = "Failed to enqueue mapping job. Ensure Redis broker and Celery workers are running."
+        logger.error("Failed to enqueue mapping job %s: %s", job.id, str(exc))
         job.status = "failed"
         job.error = msg
         await db.commit()
@@ -296,6 +484,142 @@ async def create_mapping_job(
         status=job.status,
         processor=job.processor,
     )
+
+
+@router.post("/jobs/upload", response_model=MappingJobStatusOut)
+async def create_mapping_job_from_uploaded_images(
+    files: List[UploadFile] = File(...),
+    field_name: Optional[str] = Form(default=None),
+    processor: str = Form(default="webodm"),
+    artifacts: str = Form(default=""),
+    webodm_options: str = Form(default=""),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
+) -> MappingJobStatusOut:
+    if processor.strip().lower() != "webodm":
+        raise HTTPException(status_code=400, detail="Only processor='webodm' is currently supported.")
+
+    inputs_root = _mapping_inputs_root()
+    staging_root = inputs_root / "_staging"
+    staging_root.mkdir(parents=True, exist_ok=True)
+    stage_dir = Path(tempfile.mkdtemp(prefix="mapping-upload-", dir=str(staging_root)))
+
+    try:
+        staged_paths = await _persist_upload_files(files, destination_dir=stage_dir)
+        gps_points = collect_image_gps_locations(staged_paths)
+        derived_ring = derive_field_ring_from_points(gps_points)
+        if not derived_ring:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Uploaded images do not contain usable GPS coordinates. "
+                    "Select/draw a field first or upload geotagged drone images."
+                ),
+            )
+
+        resolved_field_name = (field_name or "").strip() or _auto_generated_field_name()
+        artifacts_payload = MappingArtifactsIn.model_validate(
+            _parse_form_object(artifacts, field_name="artifacts")
+        )
+        webodm_options_payload = _parse_form_object(
+            webodm_options,
+            field_name="webodm_options",
+        )
+
+        field = await _create_field_from_ring(
+            db,
+            owner_id=user.id,
+            name=resolved_field_name,
+            ring=derived_ring,
+        )
+        version = await field_registry.next_model_version(db, field_id=field.id)
+
+        model = FieldModel(
+            field_id=field.id,
+            version=version,
+            status="pending",
+        )
+        db.add(model)
+        await db.flush()
+
+        job = MappingJob(
+            field_id=field.id,
+            model_id=model.id,
+            status="uploading",
+            progress=0,
+            processor=processor.strip().lower(),
+            params={},
+        )
+        db.add(job)
+        await db.flush()
+
+        stored_paths = _move_staged_uploads_into_job(
+            staged_paths,
+            inputs_root=inputs_root,
+            job_id=job.id,
+        )
+        relative_paths = _relative_input_paths(stored_paths, inputs_root=inputs_root)
+        job.params = {
+            "field_id": field.id,
+            "processor": job.processor,
+            "input_source": "upload",
+            "start_immediately": True,
+            "artifacts": artifacts_payload.model_dump(),
+            "webodm_options": webodm_options_payload,
+            "uploaded_images": relative_paths,
+            "uploaded_count": len(relative_paths),
+            "auto_created_field": True,
+            "field_source": {
+                "type": "image_gps",
+                "gps_point_count": len(gps_points),
+            },
+        }
+        await db.commit()
+        await db.refresh(job)
+
+        await _enqueue_job_or_503(db, job=job)
+        await db.refresh(job)
+        return _to_job_status(job, [])
+    except Exception:
+        await db.rollback()
+        raise
+    finally:
+        shutil.rmtree(stage_dir, ignore_errors=True)
+
+
+@router.get("/jobs", response_model=List[MappingJobStatusOut])
+async def list_mapping_jobs(
+    limit: int = Query(default=100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
+) -> List[MappingJobStatusOut]:
+    jobs = (
+        await db.execute(
+            select(MappingJob)
+            .join(FieldEntity, MappingJob.field_id == FieldEntity.id)
+            .where(FieldEntity.owner_id == user.id)
+            .order_by(MappingJob.id.desc())
+            .limit(limit)
+        )
+    ).scalars().all()
+
+    if not jobs:
+        return []
+
+    model_ids = sorted({int(job.model_id) for job in jobs})
+    assets = (
+        await db.execute(
+            select(Asset)
+            .where(Asset.model_id.in_(model_ids))
+            .order_by(Asset.model_id.asc(), Asset.id.asc())
+        )
+    ).scalars().all()
+
+    assets_by_model: Dict[int, List[Asset]] = {}
+    for asset in assets:
+        assets_by_model.setdefault(int(asset.model_id), []).append(asset)
+
+    return [_to_job_status(job, assets_by_model.get(int(job.model_id), [])) for job in jobs]
 
 
 @router.get("/jobs/{job_id}", response_model=MappingJobStatusOut)
@@ -421,73 +745,10 @@ async def upload_mapping_job_images(
             detail=f"Cannot upload inputs while job is '{job.status}'",
         )
 
-    max_upload_files = int(os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILES", "5000"))
-    if len(files) > max_upload_files:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Too many files uploaded ({len(files)} > {max_upload_files}).",
-        )
-
-    max_upload_file_bytes = int(os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES", str(1024 * 1024 * 1024)))
-    allowed_exts = {
-        ext.strip().lower()
-        for ext in os.getenv(
-            "PHOTOGRAMMETRY_ALLOWED_IMAGE_EXTENSIONS",
-            ".jpg,.jpeg,.png,.tif,.tiff,.webp",
-        ).split(",")
-        if ext.strip()
-    }
-    if not allowed_exts:
-        allowed_exts = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
-
-    inputs_root = Path(
-        os.getenv("PHOTOGRAMMETRY_INPUTS_DIR", "backend/storage/mapping_jobs_inputs")
-    ).resolve()
+    inputs_root = _mapping_inputs_root()
     job_dir = inputs_root / str(job.id)
-    job_dir.mkdir(parents=True, exist_ok=True)
-
-    uploaded_paths: List[str] = []
-    for f in files:
-        safe_name = Path(f.filename or "upload.bin").name
-        if not safe_name:
-            continue
-        ext = Path(safe_name).suffix.lower()
-        if ext not in allowed_exts:
-            await f.close()
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported file type '{ext}' for '{safe_name}'.",
-            )
-
-        dst = job_dir / f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
-        size = 0
-        try:
-            with dst.open("wb") as out:
-                while True:
-                    chunk = await f.read(8 * 1024 * 1024)
-                    if not chunk:
-                        break
-                    size += len(chunk)
-                    if size > max_upload_file_bytes:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=(
-                                f"Uploaded file '{safe_name}' exceeds "
-                                f"PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES={max_upload_file_bytes}."
-                            ),
-                        )
-                    out.write(chunk)
-        except Exception:
-            if dst.exists():
-                dst.unlink(missing_ok=True)
-            raise
-        finally:
-            await f.close()
-
-        if size == 0:
-            dst.unlink(missing_ok=True)
-            continue
-        uploaded_paths.append(str(dst.relative_to(inputs_root)))
+    stored_paths = await _persist_upload_files(files, destination_dir=job_dir)
+    uploaded_paths = _relative_input_paths(stored_paths, inputs_root=inputs_root)
 
     params = job.params if isinstance(job.params, dict) else {}
     existing = params.get("uploaded_images")
@@ -507,6 +768,41 @@ async def upload_mapping_job_images(
     )
 
 
+@router.delete("/jobs/{job_id}", response_model=MappingJobDeleteOut)
+async def delete_mapping_job(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
+) -> MappingJobDeleteOut:
+    job = await _get_owned_job_or_404(db, job_id=job_id, owner_id=user.id)
+    if job.status == "processing":
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete a mapping job while processing is active.",
+        )
+
+    jobs_for_model = int(
+        (
+            await db.execute(
+                select(func.count(MappingJob.id)).where(MappingJob.model_id == job.model_id)
+            )
+        ).scalar_one()
+        or 0
+    )
+    if jobs_for_model <= 1:
+        model = await db.get(FieldModel, job.model_id)
+        if model is not None:
+            await db.delete(model)
+        else:
+            await db.delete(job)
+    else:
+        await db.delete(job)
+
+    await db.commit()
+    shutil.rmtree(_mapping_inputs_root() / str(job_id), ignore_errors=True)
+    return MappingJobDeleteOut(job_id=job_id, deleted=True)
+
+
 @router.get("/assets/{asset_id}/signed-url", response_model=MappingSignedUrlOut)
 async def get_mapping_asset_signed_url(
     asset_id: int,
@@ -521,7 +817,8 @@ async def get_mapping_asset_signed_url(
         raise HTTPException(status_code=400, detail="Invalid asset sub-path")
 
     asset, owner_id = await _get_owned_asset_or_404(db, asset_id=asset_id, owner_id=user.id)
-    relative_url, exp = asset_gateway.build_signed_url(
+    gateway = _asset_gateway()
+    relative_url, exp = gateway.build_signed_url(
         asset_id=asset.id,
         user_id=owner_id,
         ttl_seconds=ttl_seconds,
@@ -562,7 +859,8 @@ async def download_mapping_asset(
 
     asset, owner_id = pair
     owner_id = int(owner_id)
-    if not asset_gateway.verify(
+    gateway = _asset_gateway()
+    if not gateway.verify(
         asset_id=asset_id,
         user_id=owner_id,
         exp=exp,
@@ -571,7 +869,7 @@ async def download_mapping_asset(
     ):
         raise HTTPException(status_code=403, detail="Invalid or expired asset token")
 
-    local_target = asset_gateway.resolve_local_target(
+    local_target = gateway.resolve_local_target(
         asset_url=asset.url,
         asset_type=asset.type,
         path=clean_path,

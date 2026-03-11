@@ -1,5 +1,24 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
-import { Box,  Button,  Paper,  Stack,  Typography,  Divider,  TextField,  Alert,  CircularProgress,  Chip,  MenuItem,  IconButton,  Tooltip,} from "@mui/material";
+import {
+  Box,
+  Button,
+  Paper,
+  Stack,
+  Typography,
+  Divider,
+  TextField,
+  Alert,
+  CircularProgress,
+  Chip,
+  MenuItem,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
 import type { TerraDraw } from "terra-draw";
@@ -125,6 +144,7 @@ export default function FieldPage() {
   const [fieldsRefreshNonce, setFieldsRefreshNonce] = useState(0);
   const [savingField, setSavingField] = useState(false);
   const [deletingField, setDeletingField] = useState(false);
+  const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(null);
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
@@ -694,7 +714,13 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         const tilesetAsset = assets.find((a: any) => a?.type === "TILESET_3D");
         const rawUrl = typeof tilesetAsset?.url === "string" ? tilesetAsset.url : "";
         if (!cancelled) {
-          setFieldTilesetUrl(rawUrl ? toAbsoluteAssetUrl(rawUrl) : null);
+          if (rawUrl) {
+            setFieldTilesetUrl(toAbsoluteAssetUrl(rawUrl));
+            setUseCesium(true);
+            setCesiumViewMode("top");
+          } else {
+            setFieldTilesetUrl(null);
+          }
         }
       } catch {
         if (!cancelled) setFieldTilesetUrl(null);
@@ -736,26 +762,43 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     clearFieldBorder();
   }, [clearFieldBorder]);
 
-  const deleteSelectedField = useCallback(async () => {
+  const requestDeleteSelectedField = useCallback(() => {
     const token = getToken();
     if (!token) {
       addError("Not authenticated");
       return;
     }
-    if (!selectedFieldId) {
+    if (selectedFieldId == null) {
       addError("Select a saved field to delete.");
       return;
     }
 
     const targetField = fields.find((f) => f.id === selectedFieldId) ?? null;
-    const confirmed = window.confirm(
-      `Delete field "${targetField?.name ?? `#${selectedFieldId}`}"? This cannot be undone.`
-    );
-    if (!confirmed) return;
+    if (!targetField) {
+      addError("Selected field could not be resolved.");
+      return;
+    }
+    setPendingDeleteField(targetField);
+  }, [addError, fields, selectedFieldId]);
+
+  const closeDeleteFieldDialog = useCallback(() => {
+    if (deletingField) return;
+    setPendingDeleteField(null);
+  }, [deletingField]);
+
+  const confirmDeleteSelectedField = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      addError("Not authenticated");
+      return;
+    }
+    if (!pendingDeleteField) {
+      return;
+    }
 
     setDeletingField(true);
     try {
-      const res = await fetch(`${API_BASE_CLEAN}/fields/${selectedFieldId}`, {
+      const res = await fetch(`${API_BASE_CLEAN}/fields/${pendingDeleteField.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -766,16 +809,17 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         throw new Error(t || "Failed to delete field");
       }
 
-      setFields((prev) => prev.filter((f) => f.id !== selectedFieldId));
+      setFields((prev) => prev.filter((f) => f.id !== pendingDeleteField.id));
+      setFieldsRefreshNonce((n) => n + 1);
       clearFieldBorder();
       setFieldName("Field A");
-      alert(`Deleted field "${targetField?.name ?? `#${selectedFieldId}`}"`);
+      setPendingDeleteField(null);
     } catch (e: any) {
       addError(e?.message ?? "Failed to delete field");
     } finally {
       setDeletingField(false);
     }
-  }, [API_BASE_CLEAN, addError, fields, selectedFieldId]);
+  }, [API_BASE_CLEAN, addError, clearFieldBorder, pendingDeleteField]);
 
   useEffect(() => {
     if (useCesium) return;
@@ -1673,7 +1717,7 @@ useEffect(() => {
                     onSelectField={handleSavedFieldSelect}
                     onRefresh={() => setFieldsRefreshNonce((n) => n + 1)}
                     onFocusSelected={() => selectedField && focusRingOnMap(selectedField.ring)}
-                    onDeleteSelected={deleteSelectedField}
+                    onDeleteSelected={requestDeleteSelectedField}
                   />
 
                   <Stack
@@ -2201,6 +2245,27 @@ useEffect(() => {
           </>
         )}
       </Paper>
+      <Dialog open={Boolean(pendingDeleteField)} onClose={closeDeleteFieldDialog}>
+        <DialogTitle>Delete Field</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Delete field "{pendingDeleteField?.name}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteFieldDialog} disabled={deletingField}>
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={confirmDeleteSelectedField}
+            disabled={deletingField}
+          >
+            {deletingField ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

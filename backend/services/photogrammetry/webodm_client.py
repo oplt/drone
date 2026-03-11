@@ -10,7 +10,7 @@ import zipfile
 from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Iterable, List, Literal, Optional, TypeVar
 
 import httpx
 
@@ -26,7 +26,7 @@ def _ensure_dir(path: Path) -> Path:
 
 class WebODMClient:
     """
-    Async WebODM client for task orchestration and output retrieval.
+    Async WebODM / NodeODM client for task orchestration and output retrieval.
 
     Modes:
     - Mock mode: reads local canned outputs
@@ -81,11 +81,22 @@ class WebODMClient:
             "WEBODM_DOWNLOAD_ALL_ENDPOINT_TEMPLATE",
             "/api/projects/{project_id}/tasks/{task_id}/download/all.zip",
         )
+        configured_backend = os.getenv("PHOTOGRAMMETRY_PROCESSOR_BACKEND", "auto").strip().lower()
+        if configured_backend not in {"auto", "webodm", "nodeodm"}:
+            logger.warning(
+                "Invalid PHOTOGRAMMETRY_PROCESSOR_BACKEND=%r; expected auto|webodm|nodeodm. "
+                "Falling back to auto.",
+                configured_backend,
+            )
+            configured_backend = "auto"
+        self.processor_backend: Literal["auto", "webodm", "nodeodm"] = configured_backend  # type: ignore[assignment]
+        self._detected_backend: Literal["webodm", "nodeodm"] | None = None
         logger.info(
-            "WebODM client initialized: base_url=%s project_id=%s mock_mode=%s",
+            "Photogrammetry client initialized: base_url=%s project_id=%s mock_mode=%s configured_backend=%s",
             self.base_url,
             self.project_id,
             self.mock_mode,
+            self.processor_backend,
         )
 
     def _headers(self) -> Dict[str, str]:
@@ -93,6 +104,67 @@ class WebODMClient:
         if self.api_token:
             headers["Authorization"] = f"JWT {self.api_token}"
         return headers
+
+    def _nodeodm_auth_params(self) -> Dict[str, str]:
+        if not self.api_token:
+            return {}
+        return {"token": self.api_token}
+
+    @staticmethod
+    def _looks_like_jwt_token(token: str) -> bool:
+        stripped = token.strip()
+        return stripped.count(".") == 2 and " " not in stripped
+
+    @staticmethod
+    def _looks_like_uuid_token(token: str) -> bool:
+        stripped = token.strip()
+        return len(stripped) == 36 and stripped.count("-") == 4 and " " not in stripped
+
+    @staticmethod
+    def _looks_like_nodeodm_info(payload: Any) -> bool:
+        return (
+            isinstance(payload, dict)
+            and "version" in payload
+            and ("taskQueueCount" in payload or "engineVersion" in payload or "maxImages" in payload)
+        )
+
+    async def _get_backend_kind(self) -> Literal["webodm", "nodeodm"]:
+        if self.processor_backend in {"webodm", "nodeodm"}:
+            return self.processor_backend
+        if self._detected_backend is not None:
+            return self._detected_backend
+        self._detected_backend = await self._detect_backend_kind()
+        return self._detected_backend
+
+    async def _detect_backend_kind(self) -> Literal["webodm", "nodeodm"]:
+        info_url = f"{self.base_url}/info"
+        try:
+            async with httpx.AsyncClient(timeout=self.http_timeout_s) as client:
+                resp = await client.get(
+                    info_url,
+                    params=self._nodeodm_auth_params(),
+                )
+                if resp.is_success:
+                    payload = resp.json()
+                    if self._looks_like_nodeodm_info(payload):
+                        logger.info(
+                            "Detected NodeODM backend: base_url=%s version=%s",
+                            self.base_url,
+                            payload.get("version"),
+                        )
+                        return "nodeodm"
+        except Exception as exc:
+            logger.debug("NodeODM backend probe failed for %s: %s", info_url, exc)
+
+        if self._looks_like_uuid_token(self.api_token) and not self._looks_like_jwt_token(self.api_token):
+            logger.info(
+                "Assuming NodeODM backend for base_url=%s because WEBODM_API_TOKEN looks like a NodeODM token",
+                self.base_url,
+            )
+            return "nodeodm"
+
+        logger.info("Defaulting to WebODM backend for base_url=%s", self.base_url)
+        return "webodm"
 
     def _resolve_image_paths(self, image_paths: Optional[Iterable[str]]) -> List[Path]:
         resolved: List[Path] = []
@@ -188,11 +260,13 @@ class WebODMClient:
             return f"mock-{job_id}"
 
         resolved_images = self._resolve_image_paths(image_paths)
+        backend_kind = await self._get_backend_kind()
         logger.info(
-            "WebODM create_task start: job_id=%s images=%s project_id=%s",
+            "Photogrammetry create_task start: job_id=%s images=%s project_id=%s backend=%s",
             job_id,
             len(resolved_images),
             self.project_id,
+            backend_kind,
         )
         if len(resolved_images) > self.upload_batch_size:
             raise RuntimeError(
@@ -201,6 +275,26 @@ class WebODMClient:
                 "This client uploads images in one multipart request (one open file descriptor per image); "
                 "increase WEBODM_UPLOAD_BATCH_SIZE only if your OS ulimit supports it, or add chunked upload support."
             )
+
+        if backend_kind == "nodeodm":
+            return await self._create_task_nodeodm(
+                job_id=job_id,
+                options=options,
+                resolved_images=resolved_images,
+            )
+        return await self._create_task_webodm(
+            job_id=job_id,
+            options=options,
+            resolved_images=resolved_images,
+        )
+
+    async def _create_task_webodm(
+        self,
+        *,
+        job_id: int,
+        options: Dict[str, Any] | None,
+        resolved_images: List[Path],
+    ) -> str:
 
         url = f"{self.base_url}/api/projects/{self.project_id}/tasks/"
         data = {
@@ -231,10 +325,66 @@ class WebODMClient:
         logger.info("WebODM create_task success: job_id=%s task_id=%s", job_id, task_id)
         return str(task_id)
 
+    @staticmethod
+    def _nodeodm_options_payload(options: Dict[str, Any] | None) -> str:
+        if not options:
+            return "[]"
+        payload = []
+        for name, value in options.items():
+            if value is None:
+                continue
+            payload.append({"name": str(name), "value": value})
+        return json.dumps(payload)
+
+    async def _create_task_nodeodm(
+        self,
+        *,
+        job_id: int,
+        options: Dict[str, Any] | None,
+        resolved_images: List[Path],
+    ) -> str:
+        url = f"{self.base_url}/task/new"
+        data = {
+            "name": f"mapping-job-{job_id}",
+            "options": self._nodeodm_options_payload(options),
+        }
+
+        with ExitStack() as stack:
+            files = []
+            for image in resolved_images:
+                fh = stack.enter_context(image.open("rb"))
+                mime_type = mimetypes.guess_type(image.name)[0] or "application/octet-stream"
+                files.append(("images", (image.name, fh, mime_type)))
+
+            async with httpx.AsyncClient(timeout=self.http_timeout_s) as client:
+                resp = await client.post(
+                    url,
+                    params=self._nodeodm_auth_params(),
+                    data=data,
+                    files=files,
+                )
+                resp.raise_for_status()
+                payload = resp.json()
+
+        task_id = payload.get("uuid")
+        if task_id is None:
+            error = payload.get("error")
+            if error:
+                raise RuntimeError(f"NodeODM task creation failed: {error}")
+            raise RuntimeError("NodeODM did not return a task uuid")
+        logger.info("NodeODM create_task success: job_id=%s task_id=%s", job_id, task_id)
+        return str(task_id)
+
     async def get_task_status(self, task_id: str) -> Dict[str, Any]:
         if self.mock_mode:
             return {"state": "COMPLETED", "progress": 100}
 
+        backend_kind = await self._get_backend_kind()
+        if backend_kind == "nodeodm":
+            return await self._get_task_status_nodeodm(task_id)
+        return await self._get_task_status_webodm(task_id)
+
+    async def _get_task_status_webodm(self, task_id: str) -> Dict[str, Any]:
         url = f"{self.base_url}/api/projects/{self.project_id}/tasks/{task_id}/"
 
         async def _fetch_status() -> Dict[str, Any]:
@@ -248,12 +398,38 @@ class WebODMClient:
             _fetch_status,
         )
 
-        raw_status = payload.get("status")
+        return self._normalize_task_status(payload)
+
+    async def _get_task_status_nodeodm(self, task_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/task/{task_id}/info"
+
+        async def _fetch_status() -> Dict[str, Any]:
+            async with httpx.AsyncClient(timeout=self.http_timeout_s) as client:
+                resp = await client.get(url, params=self._nodeodm_auth_params())
+                resp.raise_for_status()
+                return resp.json()
+
+        payload = await self._run_with_retry(
+            f"get_task_status(task_id={task_id})",
+            _fetch_status,
+        )
+
+        return self._normalize_task_status(payload)
+
+    @staticmethod
+    def _status_code(raw_status: Any) -> int | None:
+        if isinstance(raw_status, dict):
+            raw_status = raw_status.get("code", raw_status.get("status"))
         status_str = str(raw_status).lower()
         if isinstance(raw_status, int) or status_str.isdigit():
-            status_code = int(raw_status)
-        else:
-            status_code = None
+            return int(raw_status)
+        return None
+
+    @classmethod
+    def _normalize_task_status(cls, payload: Dict[str, Any]) -> Dict[str, Any]:
+        raw_status = payload.get("status")
+        status_code = cls._status_code(raw_status)
+        status_str = str(raw_status).lower()
 
         # WebODM status codes: 10 queued, 20 running, 30 failed, 40 completed, 50 canceled.
         if status_code == 40 or status_str in {"completed", "done", "ready"}:
@@ -310,13 +486,21 @@ class WebODMClient:
         return outputs
 
     async def _download_all_archive(self, *, task_id: str, destination: Path) -> None:
-        endpoint = self.download_all_endpoint_template.format(
-            project_id=self.project_id,
-            task_id=task_id,
-        )
-        if not endpoint.startswith("/"):
-            endpoint = f"/{endpoint}"
-        url = f"{self.base_url}{endpoint}"
+        backend_kind = await self._get_backend_kind()
+        if backend_kind == "nodeodm":
+            url = f"{self.base_url}/task/{task_id}/download/all.zip"
+            request_headers = {}
+            request_params = self._nodeodm_auth_params()
+        else:
+            endpoint = self.download_all_endpoint_template.format(
+                project_id=self.project_id,
+                task_id=task_id,
+            )
+            if not endpoint.startswith("/"):
+                endpoint = f"/{endpoint}"
+            url = f"{self.base_url}{endpoint}"
+            request_headers = self._headers()
+            request_params: Dict[str, str] = {}
         logger.info(
             "WebODM archive download start: task_id=%s url=%s destination=%s",
             task_id,
@@ -328,8 +512,13 @@ class WebODMClient:
             destination.parent.mkdir(parents=True, exist_ok=True)
             if destination.exists():
                 destination.unlink()
-            async with httpx.AsyncClient(timeout=None) as client:
-                async with client.stream("GET", url, headers=self._headers()) as resp:
+            async with httpx.AsyncClient(timeout=None, follow_redirects=True) as client:
+                async with client.stream(
+                    "GET",
+                    url,
+                    headers=request_headers,
+                    params=request_params,
+                ) as resp:
                     resp.raise_for_status()
                     with destination.open("wb") as f:
                         async for chunk in resp.aiter_bytes():

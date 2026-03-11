@@ -35,6 +35,20 @@ def _extract_lonlat_pairs(node: object) -> list[tuple[float, float]]:
 def _bbox_from_wgs84_extent(wgs84_extent: dict | None) -> dict[str, float] | None:
     if not isinstance(wgs84_extent, dict):
         return None
+    direct_keys = {"west", "south", "east", "north"}
+    if direct_keys.issubset(wgs84_extent.keys()):
+        west = float(wgs84_extent["west"])
+        south = float(wgs84_extent["south"])
+        east = float(wgs84_extent["east"])
+        north = float(wgs84_extent["north"])
+        if east <= west or north <= south:
+            return None
+        return {
+            "west": west,
+            "south": south,
+            "east": east,
+            "north": north,
+        }
     pts = _extract_lonlat_pairs(wgs84_extent.get("coordinates"))
     if not pts:
         return None

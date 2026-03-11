@@ -78,8 +78,6 @@ async def main() -> None:
         "motion_detection",
     ]
 
-    service = PatrolPersistenceService()
-
     async def _fake_runtime_context():
         return {
             "client_flight_id": args.client_flight_id,
@@ -91,8 +89,7 @@ async def main() -> None:
             "private_patrol_target_label": args.target_label,
         }
 
-    # bypass runtime registry so this can be executed standalone
-    service._resolve_active_runtime_context = _fake_runtime_context  # type: ignore[method-assign]
+    service = PatrolPersistenceService(runtime_context_provider=_fake_runtime_context)
 
     anomaly = _Anomaly(
         event_type=args.event_type,

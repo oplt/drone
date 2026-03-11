@@ -97,9 +97,9 @@ class PhotogrammetrySettings(BaseModel):
     PHOTOGRAMMETRY_STORAGE_BASE_URL: str = "/mapping-assets"
     PHOTOGRAMMETRY_3DTILES_CMD: str = ""
     PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: bool = False
-    WEBODM_BASE_URL: str = "http://localhost:8001"
+    WEBODM_BASE_URL: str
     WEBODM_API_TOKEN: Optional[str] = None  # SECRET (vault); masked in GET
-    WEBODM_PROJECT_ID: int = 1
+    WEBODM_PROJECT_ID: int
     WEBODM_MOCK_MODE: bool = False
     MAPPING_JOB_QUEUE_BACKEND: str = "celery"
     CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"

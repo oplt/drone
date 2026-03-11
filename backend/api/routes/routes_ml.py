@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.auth.deps import require_user
+from backend.messaging.websocket import telemetry_manager
 from backend.ml.patrol.config import ml_settings
 from backend.ml.patrol.runtime import ml_runtime
 
@@ -71,5 +72,7 @@ async def configure_zones(body: MLZonesIn, user=Depends(require_user)) -> dict[s
 
 @router.post("/simulate")
 async def simulate_ml_event(user=Depends(require_user)) -> MLSimulatedEventOut:
-    await ml_runtime.pipeline.events.emit_system_message("Simulated ML event channel test")
+    await telemetry_manager.broadcast(
+        {"type": "ml_status", "message": "Simulated ML event channel test"}
+    )
     return MLSimulatedEventOut(detail="Broadcasted simulated ML status event over websocket")

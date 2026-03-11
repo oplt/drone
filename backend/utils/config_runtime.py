@@ -1,11 +1,23 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict
 
 from backend.config import RuntimeSettings as EnvSettings
 from backend.db.repository.settings_repo import SettingsRepository
 
 _env = EnvSettings()  # env defaults / bootstrap
+
+
+def _env_string(value: Any) -> str:
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    return "" if value is None else str(value)
+
+
+def _apply_runtime_to_process_env(runtime: EnvSettings) -> None:
+    for key, value in runtime.model_dump().items():
+        os.environ[key] = _env_string(value)
 
 
 def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -171,5 +183,6 @@ async def get_runtime_settings(repo: SettingsRepository) -> EnvSettings:
     from backend import config as config_module
     for key, value in runtime.model_dump().items():
         setattr(config_module.settings, key, value)
+    _apply_runtime_to_process_env(runtime)
 
     return runtime

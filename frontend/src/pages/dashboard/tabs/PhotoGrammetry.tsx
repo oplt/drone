@@ -14,7 +14,17 @@ import {
   IconButton,
   Tooltip,
   LinearProgress,
-
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
@@ -161,10 +171,86 @@ const GRID_PREVIEW_DEBOUNCE_MS = 250;
 const CESIUM_MAX_SAFE_ZOOM = 16;
 const PHOTOGRAMMETRY_ALT_MIN_M = 20;
 const PHOTOGRAMMETRY_ALT_MAX_M = 30;
+const FAST_3D_MAP_WEBODM_OPTIONS = {
+  "auto-boundary": true,
+  "dem-resolution": 10,
+  "feature-quality": "medium",
+  gltf: true,
+  "mesh-size": 100000,
+  "orthophoto-resolution": 10,
+  "pc-quality": "low",
+  "skip-report": true,
+  "use-3dmesh": true,
+} as const;
 const INFO_INPUT_LABEL_PROPS = {
   shrink: true,
   sx: { pointerEvents: "auto" },
 } as const;
+
+const IncompleteJobsTable = ({
+  jobs,
+  onDelete,
+  onResume,
+}: {
+  jobs: MappingJobRecord[];
+  onDelete: (jobId: number) => void;
+  onResume: (jobId: number) => void;
+}) => {
+  const incompleteJobs = jobs.filter(
+    (job) => job.status !== "ready" && job.status !== "failed"
+  );
+
+  if (incompleteJobs.length === 0) {
+    return null;
+  }
+
+  return (
+    <TableContainer component={Paper} sx={{ mt: 2 }}>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>Job ID</TableCell>
+            <TableCell>Field ID</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Progress</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {incompleteJobs.map((job) => (
+            <TableRow key={job.job_id}>
+              <TableCell>{job.job_id}</TableCell>
+              <TableCell>{job.field_id}</TableCell>
+              <TableCell>{job.status}</TableCell>
+              <TableCell>
+                <LinearProgress variant="determinate" value={job.progress} />
+              </TableCell>
+              <TableCell>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => onResume(job.job_id)}
+                  >
+                    Resume
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    onClick={() => onDelete(job.job_id)}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
 
 export default function PhotoGrammetryPage() {
   const [fieldName, setFieldName] = useState("Field A");
@@ -175,6 +261,7 @@ export default function PhotoGrammetryPage() {
   const [fieldsRefreshNonce, setFieldsRefreshNonce] = useState(0);
   const [savingField, setSavingField] = useState(false);
   const [deletingField, setDeletingField] = useState(false);
+  const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(null);
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
@@ -182,6 +269,7 @@ export default function PhotoGrammetryPage() {
   const terraDrawRef = useRef<TerraDraw | null>(null);
   const [terraDrawReady, setTerraDrawReady] = useState(false);
   const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("static");
+  const [allMappingJobs, setAllMappingJobs] = useState<MappingJobRecord[]>([]);
 
   const isTerraGuidanceFeature = useCallback((feature: TerraFeature): boolean => {
     const props = (feature?.properties ?? {}) as Record<string, unknown>;
@@ -294,37 +382,9 @@ export default function PhotoGrammetryPage() {
       addError("Not authenticated");
       return;
     }
-    if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw a field polygon (min 3 points) before saving.");
-      return;
-    }
-    if (!fieldName.trim()) {
-      addError("Please enter a field name.");
-      return;
-    }
     setSavingField(true);
     try {
-      const res = await fetch(`${API_BASE_CLEAN}/fields`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: fieldName.trim(),
-          coordinates: fieldBorder,
-          metadata: {},
-        }),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || "Failed to save field");
-      }
-
-      const data = await res.json();
-      alert(`Saved field "${data.name}" (id=${data.id})`);
-      setFieldsRefreshNonce((n) => n + 1);
-      setSelectedFieldId(data?.id ?? null);
+      await createFieldRecord(token);
     } catch (e: any) {
       addError(e?.message ?? "Failed to save field");
     } finally {
@@ -451,6 +511,7 @@ export default function PhotoGrammetryPage() {
   const waypointMarkersRef = useRef<any[]>([]);
   const [useCesium, setUseCesium] = useState(false);
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
+  const suppressFieldSelectionResetRef = useRef(false);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -464,6 +525,50 @@ export default function PhotoGrammetryPage() {
       return `${API_BASE_CLEAN}${url.startsWith("/") ? "" : "/"}${url}`;
     },
     [API_BASE_CLEAN]
+  );
+  const createFieldRecord = useCallback(
+    async (
+      token: string,
+      options?: { announce?: boolean }
+    ): Promise<FieldSummary> => {
+      if (!fieldBorder || fieldBorder.length < 3) {
+        throw new Error("Draw a field polygon (min 3 points) before continuing.");
+      }
+
+      const trimmedFieldName = fieldName.trim();
+      if (!trimmedFieldName) {
+        throw new Error("Please enter a field name before continuing.");
+      }
+
+      const res = await fetch(`${API_BASE_CLEAN}/fields`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: trimmedFieldName,
+          coordinates: fieldBorder,
+          metadata: {},
+        }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || "Failed to save field");
+      }
+
+      const data = (await res.json()) as FieldSummary;
+      setFieldsRefreshNonce((n) => n + 1);
+      suppressFieldSelectionResetRef.current = true;
+      setSelectedFieldId(data?.id ?? null);
+
+      if (options?.announce ?? true) {
+        alert(`Saved field "${data.name}" (id=${data.id})`);
+      }
+
+      return data;
+    },
+    [API_BASE_CLEAN, fieldBorder, fieldName]
   );
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoRetryCount, setVideoRetryCount] = useState(0);
@@ -561,6 +666,10 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   );
 
   useEffect(() => {
+    if (suppressFieldSelectionResetRef.current) {
+      suppressFieldSelectionResetRef.current = false;
+      return;
+    }
     setMappingError(null);
     setMappingJobStatus(null);
     setActiveMappingJobId(null);
@@ -775,26 +884,43 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     clearFieldBorder();
   }, [clearFieldBorder]);
 
-  const deleteSelectedField = useCallback(async () => {
+  const requestDeleteSelectedField = useCallback(() => {
     const token = getToken();
     if (!token) {
       addError("Not authenticated");
       return;
     }
-    if (!selectedFieldId) {
+    if (selectedFieldId == null) {
       addError("Select a saved field to delete.");
       return;
     }
 
     const targetField = fields.find((f) => f.id === selectedFieldId) ?? null;
-    const confirmed = window.confirm(
-      `Delete field "${targetField?.name ?? `#${selectedFieldId}`}"? This cannot be undone.`
-    );
-    if (!confirmed) return;
+    if (!targetField) {
+      addError("Selected field could not be resolved.");
+      return;
+    }
+    setPendingDeleteField(targetField);
+  }, [addError, fields, selectedFieldId]);
+
+  const closeDeleteFieldDialog = useCallback(() => {
+    if (deletingField) return;
+    setPendingDeleteField(null);
+  }, [deletingField]);
+
+  const confirmDeleteSelectedField = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      addError("Not authenticated");
+      return;
+    }
+    if (!pendingDeleteField) {
+      return;
+    }
 
     setDeletingField(true);
     try {
-      const res = await fetch(`${API_BASE_CLEAN}/fields/${selectedFieldId}`, {
+      const res = await fetch(`${API_BASE_CLEAN}/fields/${pendingDeleteField.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -805,16 +931,17 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         throw new Error(t || "Failed to delete field");
       }
 
-      setFields((prev) => prev.filter((f) => f.id !== selectedFieldId));
+      setFields((prev) => prev.filter((f) => f.id !== pendingDeleteField.id));
+      setFieldsRefreshNonce((n) => n + 1);
       clearFieldBorder();
       setFieldName("Field A");
-      alert(`Deleted field "${targetField?.name ?? `#${selectedFieldId}`}"`);
+      setPendingDeleteField(null);
     } catch (e: any) {
       addError(e?.message ?? "Failed to delete field");
     } finally {
       setDeletingField(false);
     }
-  }, [API_BASE_CLEAN, addError, fields, selectedFieldId]);
+  }, [API_BASE_CLEAN, addError, clearFieldBorder, pendingDeleteField]);
 
   useEffect(() => {
     if (useCesium) return;
@@ -960,6 +1087,8 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         if (cancelled) return;
         if (tilesetUrl) {
           setFieldTilesetUrl(tilesetUrl);
+          setUseCesium(true);
+          setCesiumViewMode("top");
         }
       } catch {
         // Ignore preload errors; user can still create a new map.
@@ -973,15 +1102,22 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   }, [API_BASE_CLEAN, resolveTilesetUrlFromAssets, selectedFieldId]);
 
   const mappingJobRunning = activeMappingJobId != null;
+  const mappingWillAutoSaveField =
+    selectedFieldId == null &&
+    Boolean(fieldBorder && fieldBorder.length >= 3 && fieldName.trim());
+  const mappingWillInferFieldFromUpload =
+    mappingInputMode === "upload" &&
+    selectedFieldId == null &&
+    !mappingWillAutoSaveField;
+  const mappingFieldReady =
+    mappingInputMode === "upload"
+      ? true
+      : selectedFieldId != null || mappingWillAutoSaveField;
 
   const create3DFieldMap = useCallback(async () => {
     const token = getToken();
     if (!token) {
       setMappingError("Not authenticated");
-      return;
-    }
-    if (selectedFieldId == null) {
-      setMappingError("Select a saved field before creating a 3D field map.");
       return;
     }
     if (mappingInputMode === "upload" && mappingInputFiles.length === 0) {
@@ -994,6 +1130,62 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     setMappingJobStatus(null);
 
     try {
+      if (mappingInputMode === "upload" && mappingWillInferFieldFromUpload) {
+        const formData = new FormData();
+        mappingInputFiles.forEach((file) => {
+          formData.append("files", file);
+        });
+
+        const trimmedFieldName = fieldName.trim();
+        if (trimmedFieldName && trimmedFieldName !== "Field A") {
+          formData.append("field_name", trimmedFieldName);
+        }
+        formData.append(
+          "artifacts",
+          JSON.stringify({
+            orthomosaic: false,
+            dsm: false,
+            dtm: false,
+            textured_mesh: true,
+            point_cloud: false,
+            xyz_tiles: false,
+          })
+        );
+        formData.append(
+          "webodm_options",
+          JSON.stringify(FAST_3D_MAP_WEBODM_OPTIONS)
+        );
+
+        const uploadCreateRes = await fetch(`${API_BASE_CLEAN}/mapping/jobs/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!uploadCreateRes.ok) {
+          const detail = await uploadCreateRes.text();
+          throw new Error(detail || "Failed to create mapping job from uploaded images");
+        }
+
+        const created = (await uploadCreateRes.json()) as MappingJobRecord;
+        suppressFieldSelectionResetRef.current = true;
+        setSelectedFieldId(created.field_id);
+        setFieldsRefreshNonce((n) => n + 1);
+        setMappingJobStatus(created);
+        if (created.status === "ready" || created.status === "failed") {
+          setActiveMappingJobId(null);
+        } else {
+          setActiveMappingJobId(created.job_id);
+        }
+        await fetchMappingJobStatus(created.job_id);
+        return;
+      }
+
+      let fieldId = selectedFieldId;
+      if (fieldId == null) {
+        const savedField = await createFieldRecord(token, { announce: false });
+        fieldId = savedField.id;
+      }
+
       const createRes = await fetch(`${API_BASE_CLEAN}/mapping/jobs`, {
         method: "POST",
         headers: {
@@ -1001,7 +1193,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          field_id: selectedFieldId,
+          field_id: fieldId,
           processor: "webodm",
           input_source: mappingInputMode,
           drone_sync:
@@ -1013,14 +1205,14 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
               : undefined,
           start_immediately: mappingInputMode === "drone_sync",
           artifacts: {
-            orthomosaic: true,
-            dsm: true,
+            orthomosaic: false,
+            dsm: false,
             dtm: false,
             textured_mesh: true,
             point_cloud: false,
-            xyz_tiles: true,
+            xyz_tiles: false,
           },
-          webodm_options: {},
+          webodm_options: FAST_3D_MAP_WEBODM_OPTIONS,
         }),
       });
       if (!createRes.ok) {
@@ -1069,10 +1261,14 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     }
   }, [
     API_BASE_CLEAN,
+    createFieldRecord,
+    fieldName,
+    fieldBorder,
     fetchMappingJobStatus,
     mappingInputFiles,
     mappingInputMode,
     mappingSyncSourceDir,
+    mappingWillInferFieldFromUpload,
     selectedFieldId,
   ]);
 
@@ -1544,6 +1740,79 @@ useEffect(() => {
       ...(mapId ? { mapId } : {}),
     }),
     [mapId]
+  );
+
+  const fetchAllMappingJobs = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_CLEAN}/mapping/jobs`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch mapping jobs");
+      }
+      const jobs = await res.json();
+      setAllMappingJobs(jobs);
+    } catch (e: any) {
+      addError(e?.message ?? "Failed to fetch mapping jobs");
+    }
+  }, [API_BASE_CLEAN, addError]);
+
+  useEffect(() => {
+    fetchAllMappingJobs();
+  }, [fetchAllMappingJobs]);
+
+  const handleDeleteJob = useCallback(
+    async (jobId: number) => {
+      const token = getToken();
+      if (!token) {
+        addError("Not authenticated");
+        return;
+      }
+      if (!window.confirm(`Are you sure you want to delete job #${jobId}?`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE_CLEAN}/mapping/jobs/${jobId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const detail = await res.text();
+          throw new Error(detail || `Failed to delete job #${jobId}`);
+        }
+        fetchAllMappingJobs();
+      } catch (e: any) {
+        addError(e?.message ?? `Failed to delete job #${jobId}`);
+      }
+    },
+    [API_BASE_CLEAN, addError, fetchAllMappingJobs]
+  );
+
+  const handleResumeJob = useCallback(
+    async (jobId: number) => {
+      const token = getToken();
+      if (!token) {
+        addError("Not authenticated");
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE_CLEAN}/mapping/jobs/${jobId}/start`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const detail = await res.text();
+          throw new Error(detail || `Failed to resume job #${jobId}`);
+        }
+        fetchAllMappingJobs();
+        setActiveMappingJobId(jobId);
+      } catch (e: any) {
+        addError(e?.message ?? `Failed to resume job #${jobId}`);
+      }
+    },
+    [API_BASE_CLEAN, addError, fetchAllMappingJobs]
   );
 
   return (
@@ -2028,7 +2297,7 @@ useEffect(() => {
                     onSelectField={handleSavedFieldSelect}
                     onRefresh={() => setFieldsRefreshNonce((n) => n + 1)}
                     onFocusSelected={() => selectedField && focusRingOnMap(selectedField.ring)}
-                    onDeleteSelected={deleteSelectedField}
+                    onDeleteSelected={requestDeleteSelectedField}
                   />
 
                   <Stack
@@ -2431,8 +2700,8 @@ useEffect(() => {
                   <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
                     <Typography variant="subtitle2">3D Field Map Workflow</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                      1) Select a saved field polygon. 2) Create 3D map from uploaded images or direct drone sync.
-                      3) Wait for processing. 4) Plan spray routes in 3D mode.
+                      Upload geotagged images to auto-create a field, or select a saved field for manual/drone-sync
+                      processing. Once the map is ready, continue route planning in 3D mode.
                     </Typography>
 
                     <Stack spacing={1.2} sx={{ mt: 1 }}>
@@ -2490,23 +2759,56 @@ useEffect(() => {
                         />
                       )}
 
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={create3DFieldMap}
-                        disabled={
-                          mappingBusy ||
-                          mappingJobRunning ||
-                          selectedFieldId == null ||
-                          (mappingInputMode === "upload" && mappingInputFiles.length === 0)
+                      <Tooltip
+                        title={
+                          !mappingFieldReady
+                            ? "Select a saved field or draw a named field first"
+                            : (mappingInputMode === "upload" && mappingInputFiles.length === 0)
+                            ? "Please select images to upload"
+                            : ""
                         }
                       >
-                        {mappingBusy ? "Creating 3D Field Map..." : "Create 3D Field Map"}
-                      </Button>
+                        <span>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={create3DFieldMap}
+                            disabled={
+                              mappingBusy ||
+                              mappingJobRunning ||
+                              !mappingFieldReady ||
+                              (mappingInputMode === "upload" && mappingInputFiles.length === 0)
+                            }
+                          >
+                            {mappingBusy
+                              ? "Preparing 3D Field Map..."
+                              : mappingWillAutoSaveField
+                              ? "Save Field & Create 3D Field Map"
+                              : mappingWillInferFieldFromUpload
+                              ? "Create Map From Images"
+                              : "Create 3D Field Map"}
+                          </Button>
+                        </span>
+                      </Tooltip>
 
-                      {selectedFieldId == null && (
+                      {mappingInputMode !== "upload" &&
+                        selectedFieldId == null &&
+                        !mappingWillAutoSaveField && (
                         <Alert severity="info" sx={{ py: 0.5 }}>
-                          Save/select a field first. Mapping jobs are linked to saved field IDs.
+                          Select a saved field or draw a named field first. Mapping jobs are linked to saved field IDs.
+                        </Alert>
+                      )}
+
+                      {mappingWillInferFieldFromUpload && (
+                        <Alert severity="info" sx={{ py: 0.5 }}>
+                          No saved field is selected. Upload mode will create one from the images&apos; GPS
+                          coordinates, then place the processed map on the field automatically.
+                        </Alert>
+                      )}
+
+                      {mappingWillAutoSaveField && (
+                        <Alert severity="info" sx={{ py: 0.5 }}>
+                          This field is not saved yet. Starting 3D mapping will save it first.
                         </Alert>
                       )}
 
@@ -2565,6 +2867,12 @@ useEffect(() => {
                       )}
                     </Stack>
                   </Paper>
+
+                  <IncompleteJobsTable
+                    jobs={allMappingJobs}
+                    onDelete={handleDeleteJob}
+                    onResume={handleResumeJob}
+                  />
 
                   <TextField variant="filled"
                     label="Mission name"
@@ -2843,6 +3151,27 @@ useEffect(() => {
           </>
         )}
       </Paper>
+      <Dialog open={Boolean(pendingDeleteField)} onClose={closeDeleteFieldDialog}>
+        <DialogTitle>Delete Field</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Delete field "{pendingDeleteField?.name}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteFieldDialog} disabled={deletingField}>
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={confirmDeleteSelectedField}
+            disabled={deletingField}
+          >
+            {deletingField ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

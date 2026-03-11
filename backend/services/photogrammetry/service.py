@@ -9,8 +9,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from sqlalchemy import text
+
 from backend.db.models import Asset, FieldModel, MappingJob
 from backend.db.session import Session
+from backend.services.photogrammetry.field_derivation import (
+    derive_field_ring_from_bbox_wgs84,
+    ring_to_polygon_wkt,
+)
 from backend.services.photogrammetry.ingest import DroneSyncIngestService
 from backend.services.photogrammetry.storage import StorageService
 from backend.services.photogrammetry.tiling import (
@@ -216,6 +222,11 @@ class PhotogrammetryService:
                     sorted(uploaded.keys()),
                 )
 
+            await self._refresh_auto_created_field_boundary(
+                job_id=job_id,
+                artifact_meta=artifact_meta,
+            )
+
             if download_root:
                 try:
                     shutil.rmtree(download_root, ignore_errors=True)
@@ -280,51 +291,57 @@ class PhotogrammetryService:
         xyz_enabled = enabled("xyz_tiles", True)
         point_cloud_enabled = enabled("point_cloud", False)
 
+        ortho_src = outputs.get("orthophoto")
+        dsm_src = outputs.get("dsm")
+        dtm_src = outputs.get("dtm")
         ortho_cog: Optional[str] = None
         mesh_georef: Optional[dict[str, Any]] = None
+        ortho_georef: Optional[dict[str, Any]] = None
+        dsm_georef: Optional[dict[str, Any]] = None
+        dtm_georef: Optional[dict[str, Any]] = None
+
+        if ortho_src and (ortho_enabled or mesh_enabled):
+            ortho_georef = inspect_raster_georeferencing(ortho_src)
+        if dsm_src and (dsm_enabled or mesh_enabled):
+            dsm_georef = inspect_raster_georeferencing(dsm_src)
+        if dtm_src and (dtm_enabled or mesh_enabled):
+            dtm_georef = inspect_raster_georeferencing(dtm_src)
+
+        for candidate in (ortho_georef, dsm_georef, dtm_georef):
+            if isinstance(candidate, dict) and candidate.get("validated"):
+                mesh_georef = candidate
+                break
 
         if ortho_enabled:
-            ortho_src = outputs.get("orthophoto")
             if not ortho_src:
                 raise RuntimeError("WebODM output missing required orthophoto")
             ortho_cog = convert_to_cog(ortho_src, str(work_dir / "orthomosaic.cog.tif"))
-            ortho_georef = inspect_raster_georeferencing(ortho_cog)
             converted["orthomosaic_cog"] = ortho_cog
             artifact_meta["orthomosaic_cog"] = {
                 "georef": ortho_georef,
                 "source": "orthophoto",
             }
-            if mesh_georef is None and isinstance(ortho_georef, dict):
-                mesh_georef = ortho_georef
             logger.info("Converted orthomosaic COG: %s", ortho_cog)
 
         if dsm_enabled:
-            dsm_src = outputs.get("dsm")
             if not dsm_src:
                 raise RuntimeError("WebODM output missing required DSM")
             dsm_cog = convert_to_cog(dsm_src, str(work_dir / "dsm.cog.tif"))
-            dsm_georef = inspect_raster_georeferencing(dsm_cog)
             converted["dsm_cog"] = dsm_cog
             artifact_meta["dsm_cog"] = {
                 "georef": dsm_georef,
                 "source": "dsm",
             }
-            if mesh_georef is None and isinstance(dsm_georef, dict):
-                mesh_georef = dsm_georef
             logger.info("Converted DSM COG: %s", dsm_cog)
 
         if dtm_enabled:
-            dtm_src = outputs.get("dtm")
             if dtm_src:
                 dtm_cog = convert_to_cog(dtm_src, str(work_dir / "dtm.cog.tif"))
-                dtm_georef = inspect_raster_georeferencing(dtm_cog)
                 converted["dtm_cog"] = dtm_cog
                 artifact_meta["dtm_cog"] = {
                     "georef": dtm_georef,
                     "source": "dtm",
                 }
-                if mesh_georef is None and isinstance(dtm_georef, dict):
-                    mesh_georef = dtm_georef
                 logger.info("Converted DTM COG: %s", dtm_cog)
             else:
                 logger.warning("DTM requested but not available in WebODM outputs")
@@ -442,6 +459,69 @@ class PhotogrammetryService:
             len(uploaded),
             model_id,
             job_id,
+        )
+
+    async def _refresh_auto_created_field_boundary(
+        self,
+        *,
+        job_id: int,
+        artifact_meta: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> None:
+        artifact_meta = artifact_meta or {}
+        ring = None
+        for key in ("textured_mesh_3dtiles", "orthomosaic_cog", "dsm_cog", "dtm_cog"):
+            meta = artifact_meta.get(key)
+            if not isinstance(meta, dict):
+                continue
+            bbox_wgs84 = meta.get("bbox_wgs84")
+            if not isinstance(bbox_wgs84, dict):
+                georef = meta.get("georef")
+                if isinstance(georef, dict):
+                    bbox_wgs84 = georef.get("bbox_wgs84")
+            ring = derive_field_ring_from_bbox_wgs84(
+                bbox_wgs84 if isinstance(bbox_wgs84, dict) else None
+            )
+            if ring:
+                break
+
+        if not ring:
+            return
+
+        async with Session() as db:
+            job = await db.get(MappingJob, job_id)
+            if not job:
+                return
+
+            params = job.params if isinstance(job.params, dict) else {}
+            if not bool(params.get("auto_created_field")):
+                return
+
+            polygon_wkt = ring_to_polygon_wkt(ring)
+            await db.execute(
+                text(
+                    """
+                    UPDATE fields
+                    SET
+                        boundary = ST_GeomFromText(:polygon_wkt, 4326),
+                        centroid = ST_Centroid(ST_GeomFromText(:polygon_wkt, 4326)),
+                        area_ha = ST_Area(
+                            ST_Transform(ST_GeomFromText(:polygon_wkt, 4326), 3857)
+                        ) / 10000.0
+                    WHERE id = :field_id
+                    """
+                ),
+                {
+                    "polygon_wkt": polygon_wkt,
+                    "field_id": int(job.field_id),
+                },
+            )
+            params["field_boundary_source"] = "mapping_outputs"
+            job.params = params
+            await db.commit()
+        logger.info(
+            "Refined auto-created field boundary from mapping outputs: job_id=%s field_id=%s",
+            job_id,
+            job.field_id if job else None,
         )
 
     async def _update_job(

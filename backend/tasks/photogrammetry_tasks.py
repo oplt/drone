@@ -9,7 +9,9 @@ from typing import Any, Coroutine
 
 from backend.tasks.celery_app import celery_app
 from backend.config import setup_logging
+from backend.db.repository.settings_repo import SettingsRepository
 from backend.services.photogrammetry.service import PhotogrammetryService
+from backend.utils.config_runtime import get_runtime_settings
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +58,7 @@ def _run_on_worker_loop(coro: Coroutine[Any, Any, dict]) -> dict:
 
 
 async def _run_photogrammetry_pipeline(task, job_id: int) -> dict:
+    await get_runtime_settings(SettingsRepository())
     svc = PhotogrammetryService()
 
     def _progress_cb(progress: dict) -> None:

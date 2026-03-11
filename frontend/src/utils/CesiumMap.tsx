@@ -61,6 +61,72 @@ function normalizeLonLatRing(coords: LonLat[] | null | undefined): LonLat[] {
   return line;
 }
 
+function computeRingCentroid(coords: LonLat[] | null | undefined): LatLng | null {
+  const ring = normalizeLonLatRing(coords);
+  if (ring.length < 3) return null;
+
+  let twiceArea = 0;
+  let cx = 0;
+  let cy = 0;
+
+  for (let i = 0; i < ring.length; i += 1) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[(i + 1) % ring.length];
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    cx += (x1 + x2) * cross;
+    cy += (y1 + y2) * cross;
+  }
+
+  if (Math.abs(twiceArea) < 1e-12) {
+    const average = ring.reduce(
+      (acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }),
+      { lng: 0, lat: 0 }
+    );
+    return {
+      lng: average.lng / ring.length,
+      lat: average.lat / ring.length,
+    };
+  }
+
+  return {
+    lng: cx / (3 * twiceArea),
+    lat: cy / (3 * twiceArea),
+  };
+}
+
+function computeFieldCameraView(
+  coords: LonLat[] | null | undefined
+): { center: LatLng; topHeight: number } | null {
+  const ring = normalizeLonLatRing(coords);
+  if (ring.length < 3) return null;
+
+  const center = computeRingCentroid(ring);
+  if (!center) return null;
+
+  let west = Infinity;
+  let east = -Infinity;
+  let south = Infinity;
+  let north = -Infinity;
+
+  ring.forEach(([lng, lat]) => {
+    west = Math.min(west, lng);
+    east = Math.max(east, lng);
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+  });
+
+  const latSpanMeters = Math.max(0, north - south) * 111_320;
+  const lngScale = Math.max(0.2, Math.cos((center.lat * Math.PI) / 180));
+  const lngSpanMeters = Math.max(0, east - west) * 111_320 * lngScale;
+  const spanMeters = Math.max(latSpanMeters, lngSpanMeters);
+
+  return {
+    center,
+    topHeight: clamp(Math.round(spanMeters * 2.4), 120, 20_000),
+  };
+}
+
 export default function CesiumMap({
   center,
   zoom,
@@ -128,7 +194,17 @@ export default function CesiumMap({
     return (h * Math.PI) / 180;
   }, [headingDeg]);
 
-  const latestValuesRef = useRef({ droneCenter, center, safeHeadingRad });
+  const fieldCameraView = useMemo(
+    () => computeFieldCameraView(fieldBoundary),
+    [fieldBoundary]
+  );
+
+  const latestValuesRef = useRef({
+    droneCenter,
+    center,
+    safeHeadingRad,
+    fieldCameraView,
+  });
 
   const userInteractingRef = useRef(false);
   const interactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -136,8 +212,8 @@ export default function CesiumMap({
   );
 
   useEffect(() => {
-    latestValuesRef.current = { droneCenter, center, safeHeadingRad };
-  });
+    latestValuesRef.current = { droneCenter, center, safeHeadingRad, fieldCameraView };
+  }, [droneCenter, center, safeHeadingRad, fieldCameraView]);
 
   useEffect(() => {
     const el = hostRef.current;
@@ -271,12 +347,13 @@ export default function CesiumMap({
       }, CesiumModule.ScreenSpaceEventType.LEFT_CLICK);
       clickHandlerRef.current = handler;
 
-      const height = zoomToHeightMeters(zoom);
+      const initialTarget = fieldCameraView?.center ?? droneCenter ?? center;
+      const initialHeight = fieldCameraView?.topHeight ?? zoomToHeightMeters(zoom);
       viewer.camera.setView({
         destination: CesiumModule.Cartesian3.fromDegrees(
-          center.lng,
-          center.lat,
-          height
+          initialTarget.lng,
+          initialTarget.lat,
+          initialHeight
         ),
       });
 
@@ -337,7 +414,18 @@ export default function CesiumMap({
 
     let tilesetUrl = url.trim();
     if (!tilesetUrl) return;
-    if (!/\.json(\?|$)/i.test(tilesetUrl)) {
+
+    let tilesetUrlPointsToJson = /\.json(\?|$)/i.test(tilesetUrl);
+    if (!tilesetUrlPointsToJson) {
+      try {
+        const parsed = new URL(tilesetUrl, window.location.origin);
+        const signedAssetPath = parsed.searchParams.get("path")?.trim() ?? "";
+        tilesetUrlPointsToJson = /\.json$/i.test(parsed.pathname) || /\.json$/i.test(signedAssetPath);
+      } catch {
+        tilesetUrlPointsToJson = false;
+      }
+    }
+    if (!tilesetUrlPointsToJson) {
       tilesetUrl = `${tilesetUrl.replace(/\/$/, "")}/tileset.json`;
     }
 
@@ -751,22 +839,27 @@ export default function CesiumMap({
       droneCenter: dc,
       center: c,
       safeHeadingRad: headingRad,
+      fieldCameraView: fieldView,
     } = latestValuesRef.current;
     const planningHeight = clamp(
       Number.isFinite(planningAltitudeM) ? planningAltitudeM : 25,
       20,
       30
     );
-    const baseHeight = lockCameraToPlanningAltitude
+    const defaultBaseHeight = lockCameraToPlanningAltitude
       ? planningHeight
       : zoomToHeightMeters(zoom);
+    const baseHeight =
+      !lockCameraToPlanningAltitude && !dc && fieldView
+        ? fieldView.topHeight
+        : defaultBaseHeight;
     const tiltedHeight = lockCameraToPlanningAltitude
       ? clamp(baseHeight + 5, 20, 30)
       : Math.max(500, Math.round(baseHeight * 0.6));
     const followHeight = lockCameraToPlanningAltitude
       ? clamp(baseHeight + 4, 20, 30)
       : Math.max(300, Math.round(baseHeight * 0.4));
-    const target = dc ?? c;
+    const target = dc ?? fieldView?.center ?? c;
 
     const setView = (opts: {
       lat: number;
@@ -861,8 +954,9 @@ export default function CesiumMap({
           droneCenter: p0,
           center: p1,
           safeHeadingRad: hr,
+          fieldCameraView: fv,
         } = latestValuesRef.current;
-        const p = p0 ?? p1;
+        const p = p0 ?? fv?.center ?? p1;
 
         const currentHeight = lockCameraToPlanningAltitude
           ? baseHeight
@@ -884,8 +978,8 @@ export default function CesiumMap({
 
     const tickOrbit = () => {
       if (!userInteractingRef.current) {
-        const { droneCenter: p0, center: p1 } = latestValuesRef.current;
-        const p = p0 ?? p1;
+        const { droneCenter: p0, center: p1, fieldCameraView: fv } = latestValuesRef.current;
+        const p = p0 ?? fv?.center ?? p1;
         const t = performance.now() * 0.00015;
         const radiusMeters = lockCameraToPlanningAltitude ? 35 : 250;
 
@@ -936,6 +1030,9 @@ export default function CesiumMap({
     zoom,
     droneCenter?.lat,
     droneCenter?.lng,
+    fieldCameraView?.center.lat,
+    fieldCameraView?.center.lng,
+    fieldCameraView?.topHeight,
     safeHeadingRad,
     planningAltitudeM,
     lockCameraToPlanningAltitude,
