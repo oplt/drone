@@ -7,12 +7,12 @@ import Stack from "@mui/material/Stack";
 import AppNavbar from "../../components/dashboard/AppNavbar";
 import SideMenu from "../../components/dashboard/SideMenu";
 import AppTheme from "../../components/shared-theme/AppTheme";
+import PageLoader from "../../components/shared/PageLoader";
 import { getToken, clearToken } from "../../auth";
 import {
   chartsCustomizations,
   dataGridCustomizations,
   datePickersCustomizations,
-  treeViewCustomizations,
 } from "../../components/theme/customizations";
 import { AlertCenterProvider } from "../../contexts/AlertCenterContext";
 
@@ -47,9 +47,11 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
     }
 
     let cancelled = false;
+    const controller = new AbortController();
 
     fetch(`${API_BASE_CLEAN}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
       .then(async (r) => {
         if (!r.ok) {
@@ -68,6 +70,9 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
       })
       .catch((error) => {
         if (cancelled) return;
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         if (error instanceof Error && error.message === "unauthorized") {
           clearToken();
           navigate("/signin", { replace: true });
@@ -79,17 +84,20 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [API_BASE_CLEAN, navigate]);
 
-  if (!authChecked) return <>Loading...</>;
+  if (!authChecked) {
+    return <PageLoader fullScreen title="Loading console" subtitle="Checking access and preparing your operations workspace." />;
+  }
 
   return (
     <AppTheme {...props} themeComponents={xThemeComponents}>
       <CssBaseline enableColorScheme />
-      <Box sx={{ display: "flex" }}>
-        <SideMenu />
-        <AppNavbar />
+      <Box sx={{ display: "flex", minHeight: "100dvh" }}>
+        <SideMenu user={user} />
+        <AppNavbar user={user} />
         <Box
           component="main"
           sx={(theme) => ({
@@ -98,6 +106,16 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
               ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
               : alpha(theme.palette.background.default, 1),
             overflow: "auto",
+            position: "relative",
+            "&::before": {
+              content: '""',
+              position: "fixed",
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: "none",
+              background:
+                "radial-gradient(circle at top right, hsla(174, 55%, 88%, 0.22), transparent 30%), radial-gradient(circle at top left, hsla(36, 90%, 88%, 0.2), transparent 28%)",
+            },
           })}
         >
           <AlertCenterProvider>
@@ -105,9 +123,11 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
               spacing={2}
               sx={{
                 alignItems: "center",
-                mx: 3,
+                px: { xs: 2, md: 3 },
                 pb: 5,
-                mt: { xs: 8, md: 0 },
+                pt: { xs: 9, md: 2.5 },
+                position: "relative",
+                zIndex: 1,
               }}
             >
               {/* This is where pages will render */}

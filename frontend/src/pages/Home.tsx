@@ -13,14 +13,14 @@ export default function Home(props: { disableCustomTheme?: boolean }) {
 
       <AppAppBar />
       <Container
-        maxWidth="lg"
+        maxWidth="xl"
         component="main"
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          pt: { xs: 10, md: 14 },
-          pb: { xs: 6, md: 10 },
-          gap: 6,
+          pt: { xs: 11, md: 16 },
+          pb: { xs: 7, md: 11 },
+          gap: { xs: 7, md: 9 },
         }}
       >
         <MainContent />

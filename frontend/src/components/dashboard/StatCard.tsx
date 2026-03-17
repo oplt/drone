@@ -1,7 +1,7 @@
+import { useId } from 'react';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -39,20 +39,12 @@ export default function StatCard({
   labels,
 }: StatCardProps) {
   const theme = useTheme();
+  const gradientId = useId().replace(/:/g, '-');
 
   const trendColors = {
-    up:
-      theme.palette.mode === 'light'
-        ? theme.palette.success.main
-        : theme.palette.success.dark,
-    down:
-      theme.palette.mode === 'light'
-        ? theme.palette.error.main
-        : theme.palette.error.dark,
-    neutral:
-      theme.palette.mode === 'light'
-        ? theme.palette.grey[400]
-        : theme.palette.grey[700],
+    up: theme.palette.success.main,
+    down: theme.palette.error.main,
+    neutral: theme.palette.grey[500],
   };
 
   const labelColors = {
@@ -63,7 +55,6 @@ export default function StatCard({
 
   const color = labelColors[trend];
   const chartColor = trendColors[trend];
-  const showDelta = Boolean(deltaLabel);
   const xLabels =
     labels && labels.length === data.length
       ? labels
@@ -71,56 +62,50 @@ export default function StatCard({
 
   return (
     <Card variant="outlined" sx={{ height: '100%', flexGrow: 1 }}>
-      <CardContent>
-        <Typography component="h2" variant="subtitle2" gutterBottom>
-          {title}
-        </Typography>
-        <Stack
-          direction="column"
-          sx={{ justifyContent: 'space-between', flexGrow: '1', gap: 1 }}
-        >
-          <Stack sx={{ justifyContent: 'space-between' }}>
-            <Stack
-              direction="row"
-              sx={{ justifyContent: 'space-between', alignItems: 'center' }}
-            >
-              <Typography variant="h4" component="p">
-                {value}
-              </Typography>
-              {showDelta && <Chip size="small" color={color} label={deltaLabel} />}
-            </Stack>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+      <Stack spacing={2} sx={{ height: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+          <Stack spacing={0.75}>
+            <Typography component="h2" variant="subtitle2">
+              {title}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {interval}
             </Typography>
           </Stack>
-          <Box sx={{ width: '100%', height: 50 }}>
-            {data.length > 0 ? (
-              <SparkLineChart
-                color={chartColor}
-                data={data}
-                area
-                showHighlight
-                showTooltip
-                xAxis={{
-                  scaleType: 'band',
-                  data: xLabels,
-                }}
-                sx={{
-                  [`& .${areaElementClasses.root}`]: {
-                    fill: `url(#area-gradient-${value})`,
-                  },
-                }}
-              >
-                <AreaGradient color={chartColor} id={`area-gradient-${value}`} />
-              </SparkLineChart>
-            ) : (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                No data yet
-              </Typography>
-            )}
-          </Box>
+          {deltaLabel ? <Chip size="small" color={color} label={deltaLabel} /> : null}
         </Stack>
-      </CardContent>
+
+        <Typography variant="h4" component="p">
+          {value}
+        </Typography>
+
+        <Box sx={{ width: '100%', minHeight: 68, mt: 'auto' }}>
+          {data.length > 0 ? (
+            <SparkLineChart
+              color={chartColor}
+              data={data}
+              area
+              showHighlight
+              showTooltip
+              xAxis={{
+                scaleType: 'band',
+                data: xLabels,
+              }}
+              sx={{
+                [`& .${areaElementClasses.root}`]: {
+                  fill: `url(#area-gradient-${gradientId})`,
+                },
+              }}
+            >
+              <AreaGradient color={chartColor} id={`area-gradient-${gradientId}`} />
+            </SparkLineChart>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              No data yet
+            </Typography>
+          )}
+        </Box>
+      </Stack>
     </Card>
   );
 }

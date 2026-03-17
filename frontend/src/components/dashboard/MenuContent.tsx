@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -23,6 +23,7 @@ import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
 import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
 import LocalFloristRoundedIcon from '@mui/icons-material/LocalFloristRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import WarehouseRoundedIcon from '@mui/icons-material/WarehouseRounded';
 import { Link, useLocation } from 'react-router-dom';
 
 interface MenuChildItem {
@@ -55,6 +56,7 @@ const mainListItems: MenuItem[] = [
       { text: 'Animal Farm', icon: <EmojiNatureRoundedIcon />, path: '/dashboard/animalfarm' },
       { text: 'Field', icon: <LocalFloristRoundedIcon />, path: '/dashboard/field' },
       { text: 'Private Patrol', icon: <VisibilityRoundedIcon />, path: '/dashboard/privatepatrol' },
+      { text: 'Warehouse', icon: <WarehouseRoundedIcon />, path: '/dashboard/warehouse' },
     ],
   },
   { text: 'Insights', icon: <InsightsRoundedIcon />, path: '/dashboard/insights' },
@@ -80,6 +82,12 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
     return isTaskRoute(location.pathname);
   });
 
+  useEffect(() => {
+    if (isTaskRoute(location.pathname)) {
+      setOpenTasks(true);
+    }
+  }, [location.pathname]);
+
   const handleTasksClick = () => {
     setOpenTasks((prevOpenTasks) => !prevOpenTasks);
   };
@@ -94,8 +102,8 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
     );
 
   const listButtonSx = collapsed
-    ? { minHeight: 44, justifyContent: 'center', px: 1.5 }
-    : { minHeight: 44 };
+    ? { minHeight: 46, justifyContent: 'center', px: 1.5, borderRadius: 3 }
+    : { minHeight: 46, borderRadius: 3 };
 
   const listIconSx = collapsed
     ? { minWidth: 0, mr: 0, justifyContent: 'center' }
@@ -136,7 +144,7 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
                           location.pathname === child.path ||
                           location.pathname.startsWith(`${child.path}/`)
                         }
-                        sx={{ pl: 4 }}
+                        sx={{ pl: 4, borderRadius: 3 }}
                       >
                         <ListItemIcon sx={{ minWidth: 36 }}>{child.icon}</ListItemIcon>
                         <ListItemText primary={child.text} />

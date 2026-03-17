@@ -8,13 +8,33 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';
+import { clearToken } from '../../auth';
+import { useNavigate } from 'react-router-dom';
+
+type DashboardUser = {
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string;
+} | null;
 
 interface SideMenuMobileProps {
   open: boolean | undefined;
   toggleDrawer: (newOpen: boolean) => () => void;
+  user: DashboardUser;
 }
 
-export default function SideMenuMobile({ open, toggleDrawer }: SideMenuMobileProps) {
+function getDisplayName(user: DashboardUser) {
+  return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Operator';
+}
+
+export default function SideMenuMobile({ open, toggleDrawer, user }: SideMenuMobileProps) {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearToken();
+    navigate('/signin', { replace: true });
+  };
+
   return (
     <Drawer
       anchor="right"
@@ -30,24 +50,32 @@ export default function SideMenuMobile({ open, toggleDrawer }: SideMenuMobilePro
     >
       <Stack
         sx={{
-          maxWidth: '70dvw',
+          width: { xs: '82dvw', sm: 360 },
+          maxWidth: 360,
           height: '100%',
         }}
       >
-        <Stack direction="row" sx={{ p: 2, pb: 0, gap: 1 }}>
+        <Stack direction="row" sx={{ p: 2, pb: 1, gap: 1.25 }}>
           <Stack
             direction="row"
-            sx={{ gap: 1, alignItems: 'center', flexGrow: 1, p: 1 }}
+            sx={{ gap: 1.25, alignItems: 'center', flexGrow: 1, p: 1 }}
           >
-            <Avatar
-              sizes="small"
-              alt="Jordan Lee"
-              src="/static/images/avatar/7.jpg"
-              sx={{ width: 24, height: 24 }}
-            />
-            <Typography component="p" variant="h6">
-              Jordan Lee
-            </Typography>
+            <Avatar sx={{ width: 34, height: 34 }}>
+              {getDisplayName(user)
+                .split(/[\s@._-]+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part.charAt(0).toUpperCase())
+                .join('')}
+            </Avatar>
+            <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+              <Typography component="p" variant="subtitle2" noWrap>
+                {getDisplayName(user)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {user?.email || 'Farm session'}
+              </Typography>
+            </Stack>
           </Stack>
           <MenuButton showBadge>
             <NotificationsRoundedIcon />
@@ -59,8 +87,13 @@ export default function SideMenuMobile({ open, toggleDrawer }: SideMenuMobilePro
           <Divider />
         </Stack>
         <Stack sx={{ p: 2 }}>
-          <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />}>
-            Logout
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LogoutRoundedIcon />}
+            onClick={handleLogout}
+          >
+            Log out
           </Button>
         </Stack>
       </Stack>

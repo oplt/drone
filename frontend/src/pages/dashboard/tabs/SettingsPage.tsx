@@ -449,7 +449,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* TELEMETRY TAB */}
             {tab === 0 && (
               <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 4 }} >
+                <Grid size={{ xs: 12, md: 4 }} >
                   <Typography variant="h6" gutterBottom>MQTT Broker</Typography>
                   <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Broker" value={doc.telemetry?.mqtt_broker} onChange={e => update("telemetry", "mqtt_broker", e.target.value)} />
@@ -465,7 +465,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                       {doc.telemetry?.mqtt_ca_certs && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ CA certificate uploaded</Typography>}
                     </Stack>
                 </Grid>
-                <Grid item size={{ xs: 12, md: 4 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="h6" gutterBottom>OPC UA</Typography>
                   <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Endpoint" value={doc.telemetry?.opcua_endpoint} onChange={e => update("telemetry", "opcua_endpoint", e.target.value)} />
@@ -484,7 +484,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                       {doc.telemetry?.opcua_key_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ Key uploaded</Typography>}
                   </Stack>
                 </Grid>
-                <Grid item size={{ xs: 12, md: 4 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="h6" gutterBottom>Logging & Topics</Typography>
                   <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Log Interval (sec)" type="number" value={doc.telemetry?.telem_log_interval_sec} onChange={e => update("telemetry", "telem_log_interval_sec", Number(e.target.value))} />
@@ -497,7 +497,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* AI TAB */}
             {tab === 1 && (
               <Grid container spacing={4}>
-                <Grid item size={{ xs: 12, md: 6 }} >
+                <Grid size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>LLM Provider</Typography>
                    <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Provider" value={doc.ai?.llm_provider} onChange={e => update("ai", "llm_provider", e.target.value)} />
@@ -513,14 +513,14 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* CREDENTIALS TAB */}
             {tab === 2 && (
               <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 6 }} >
+                <Grid size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>External APIs</Typography>
                    <Stack spacing={3}>
                     <SecretField fullWidth label="Google Maps API Key" value={doc.credentials?.google_maps_api_key} onChange={e => update("credentials", "google_maps_api_key", e.target.value)} />
                     <SecretField fullWidth label="Drone Connection String" value={doc.credentials?.drone_conn} onChange={e => update("credentials", "drone_conn", e.target.value)} />
                   </Stack>
                 </Grid>
-                <Grid item size={{ xs: 12, md: 6 }} >
+                <Grid size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Administration</Typography>
                    <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Admin Emails" value={doc.credentials?.admin_emails} onChange={e => update("credentials", "admin_emails", e.target.value)} />
@@ -533,7 +533,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* HARDWARE TAB */}
             {tab === 3 && (
               <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 6 }} >
+                <Grid size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Drone</Typography>
                    <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Battery Capacity (Wh)" type="number" value={doc.hardware?.battery_capacity_wh} onChange={e => update("hardware", "battery_capacity_wh", Number(e.target.value))} />
@@ -551,7 +551,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* PREFLIGHT CHECK TAB */}
             {tab === 4 && (
               <Grid container spacing={4}>
-                <Grid item size={{ xs: 12, md: 3 }} >
+                <Grid size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>GPS & Navigation</Typography>
                    <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="HDOP Max" type="number" value={doc.preflight?.HDOP_MAX} onChange={e => update("preflight", "HDOP_MAX", Number(e.target.value))} />
@@ -562,7 +562,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                     <FormControlLabel control={<Switch checked={doc.preflight?.COMPASS_HEALTH_REQUIRED} onChange={e => update("preflight", "COMPASS_HEALTH_REQUIRED", e.target.checked)} />} label="Compass Health Required" />
                   </Stack>
                 </Grid>
-                <Grid item size={{ xs: 12, md: 3 }} >
+                <Grid size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>Battery & Heartbeat</Typography>
                    <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="Battery Min (V)" type="number" value={doc.preflight?.BATTERY_MIN_V} onChange={e => update("preflight", "BATTERY_MIN_V", Number(e.target.value))} />
@@ -574,7 +574,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                   </Stack>
                 </Grid>
 
-                <Grid item size={{ xs: 12, md: 3 }} >
+                <Grid size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>Altitude & Range</Typography>
                    <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="AGL Min (m)" type="number" value={doc.preflight?.AGL_MIN} onChange={e => update("preflight", "AGL_MIN", Number(e.target.value))} />
@@ -584,7 +584,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                     <TextField variant="filled" fullWidth label="NFZ Buffer (m)" type="number" value={doc.preflight?.NFZ_BUFFER_M} onChange={e => update("preflight", "NFZ_BUFFER_M", Number(e.target.value))} />
                   </Stack>
                 </Grid>
-                <Grid item size={{ xs: 12, md: 3 }} >
+                <Grid size={{ xs: 12, md: 3 }} >
                   <Typography variant="h6" gutterBottom>Performance</Typography>
                   <Stack spacing={3}>
                     <TextField variant="filled" fullWidth label="A Lat Max" type="number" value={doc.preflight?.A_LAT_MAX} onChange={e => update("preflight", "A_LAT_MAX", Number(e.target.value))} />
@@ -599,7 +599,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* ALERTS TAB */}
             {tab === 5 && (
               <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Rules</Typography>
                   <Stack spacing={3}>
                     <FormControlLabel
@@ -616,7 +616,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                     <TextField variant="filled" fullWidth label="High Wind Threshold (m/s)" type="number" value={doc.alerts?.high_wind_mps} onChange={e => update("alerts", "high_wind_mps", Number(e.target.value))} />
                   </Stack>
                 </Grid>
-                <Grid item size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Routing & Channels</Typography>
                   <Stack spacing={3}>
                     <FormControlLabel
@@ -653,7 +653,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* RASPBERRY TAB */}
             {tab === 6 && (
                 <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 6 }} >
+                <Grid size={{ xs: 12, md: 6 }} >
                   <Typography variant="h6" gutterBottom>Raspberry Pi Connection</Typography>
                    <Stack spacing={3}>
                     <SecretField fullWidth label="IP Address" value={doc.raspberry?.raspberry_ip} onChange={e => update("raspberry", "raspberry_ip", e.target.value)} />
@@ -677,7 +677,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* CAMERA TAB */}
             {tab === 7 && (
               <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Drone Camera Parameters</Typography>
                   <Stack spacing={3}>
                     <SecretField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
@@ -710,7 +710,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             {/* PHOTOGRAMMETRY TAB */}
             {tab === 8 && (
               <Grid container spacing={3}>
-                <Grid item size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>Storage & Sync</Typography>
                   <Stack spacing={3}>
                     <TextField
@@ -773,7 +773,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                   </Stack>
                 </Grid>
 
-                <Grid item size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="h6" gutterBottom>WebODM & Queue</Typography>
                   <Stack spacing={3}>
                     <TextField

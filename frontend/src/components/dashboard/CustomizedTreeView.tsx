@@ -175,12 +175,12 @@ export default function CustomizedTreeView({
   coverage,
 }: CustomizedTreeViewProps) {
   const items = React.useMemo<TreeViewBaseItem<ExtendedTreeItemProps>[]>(() => {
-    const statusColor = (value: number | null | undefined) => {
+    const statusColor = (value: number | null | undefined): Color | undefined => {
       if (value === null || value === undefined || Number.isNaN(value)) return undefined;
       return value > 0 ? 'green' : 'blue';
     };
 
-    const boolColor = (value: boolean | undefined) => {
+    const boolColor = (value: boolean | undefined): Color | undefined => {
       if (value === undefined) return undefined;
       return value ? 'green' : 'blue';
     };
@@ -190,7 +190,7 @@ export default function CustomizedTreeView({
       return value ? onLabel : offLabel;
     };
 
-    const coverageItems =
+    const coverageItems: TreeViewBaseItem<ExtendedTreeItemProps>[] =
       coverage && coverage.length > 0
         ? coverage.map((segment, index) => ({
             id: `coverage-${index}`,

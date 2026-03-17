@@ -22,7 +22,14 @@ function toTitle(segment: string) {
     insights: "Insights",
     fleet: "Fleet",
     settings: "Settings",
-
+    terrain: "Terrain",
+    profile: "Profile",
+    account: "Account",
+    photogrammetry: "Photogrammetry",
+    animalfarm: "Animal Farm",
+    privatepatrol: "Private Patrol",
+    field: "Field Operations",
+    warehouse: "Warehouse",
   };
 
   if (overrides[segment]) return overrides[segment];
@@ -58,7 +65,6 @@ export default function NavbarBreadcrumbs() {
       aria-label="breadcrumb"
       separator={<NavigateNextRoundedIcon fontSize="small" />}
     >
-      {/* Optional: make Dashboard clickable */}
       <Link
         component={RouterLink}
         to="/dashboard"

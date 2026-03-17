@@ -1283,6 +1283,11 @@ useEffect(() => {
           background:
             "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
           border: "1px solid hsla(174, 30%, 40%, 0.2)",
+          '[data-mui-color-scheme="dark"] &': {
+            background:
+              "linear-gradient(135deg, hsla(168, 24%, 14%, 0.94), hsla(28, 22%, 13%, 0.96))",
+            borderColor: "hsla(168, 22%, 36%, 0.3)",
+          },
         }}
       >
         <Stack
@@ -1537,7 +1542,7 @@ useEffect(() => {
                           borderRadius: 1.5,
                           border: "1px solid",
                           borderColor: "divider",
-                          bgcolor: "rgba(255,255,255,0.92)",
+                          bgcolor: "background.paper",
                           backdropFilter: "blur(2px)",
                         }}
                       >
@@ -2203,7 +2208,7 @@ useEffect(() => {
             )}
 
             {missionStatus && (activeFlightId || waypoints.length > 0) && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: "#e8f5e8", borderRadius: 1 }}>
+              <Box sx={{ mt: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
                   Flight Status
                 </Typography>

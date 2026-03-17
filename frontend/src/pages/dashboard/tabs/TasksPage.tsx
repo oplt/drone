@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
-import {  Box,  Button,  Paper,  Stack,  Typography,  Divider,  TextField,  Alert,  CircularProgress,} from "@mui/material";
+import {  Box,  Button,  Stack,  Typography,  Divider,  TextField,  Alert,  CircularProgress,} from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import {
   Polyline,
@@ -16,6 +16,7 @@ import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
+import { OperationsShell } from "../../../components/dashboard/tasks/OperationsShell";
 import { useDroneCenter } from "../../../hooks/useDroneCenter";
 import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
 import { useErrors } from "../../../hooks/useErrors";
@@ -76,6 +77,7 @@ export default function TasksPage() {
 
   const [streamKey, setStreamKey] = useState<number>(Date.now());
   const [mapReady, setMapReady] = useState(false);
+  const [launchMessage, setLaunchMessage] = useState<string | null>(null);
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
 
@@ -321,6 +323,7 @@ export default function TasksPage() {
 
       setSending(true);
       clearErrors();
+      setLaunchMessage(null);
 
       try {
         const payload = {
@@ -338,7 +341,9 @@ export default function TasksPage() {
           API_BASE_CLEAN,
         );
         setPreflightRun(preflight);
-        alert(`Flight plan "${data.mission_name}" started! Tracking flight...`);
+        setLaunchMessage(
+          `Flight plan "${data.mission_name}" started. Tracking live mission status now.`,
+        );
 
         setPendingFlightId(data.flight_id ?? null);
 
@@ -386,59 +391,45 @@ export default function TasksPage() {
   );
 
   return (
-    <>
-      <Header />
-      <Paper
-        sx={{
-          width: "100%",
-          p: 3,
-          borderRadius: 3,
-          background:
-            "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
-          border: "1px solid hsla(174, 30%, 40%, 0.2)",
-        }}
-      >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          alignItems={{ xs: "flex-start", md: "center" }}
-          justifyContent="space-between"
-          sx={{ mb: 2 }}
-          spacing={2}
-        >
-          <Box>
-            <Typography variant="h3">Field Operations</Typography>
+    <OperationsShell
+      header={<Header />}
+      title="Field Operations"
+      subtitle="Configure field routes, stream telemetry, and monitor imagery in real time."
+      droneConnected={droneConnected}
+      wsConnected={wsConnected}
+      apiKey={apiKey}
+      loadError={loadError}
+      mapId={mapId}
+      banner={
+        <>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            alignItems={{ xs: "flex-start", md: "center" }}
+            justifyContent="space-between"
+            sx={{ mb: 2 }}
+            spacing={2}
+          >
+            <MissionStatusChips droneConnected={droneConnected} wsConnected={wsConnected} />
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Configure field routes, stream telemetry, and monitor imagery in real time.
+              Tap to place waypoints, review preflight checks, then launch a tracked route.
             </Typography>
-          </Box>
-          <MissionStatusChips droneConnected={droneConnected} wsConnected={wsConnected} />
-        </Stack>
+          </Stack>
 
-        <ErrorAlerts
-          errors={errors}
-          onDismiss={dismissError}
-          onClearAll={clearErrors}
-        />
+          <ErrorAlerts
+            errors={errors}
+            onDismiss={dismissError}
+            onClearAll={clearErrors}
+          />
 
-        {!apiKey ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Missing Google Maps API Key. Please set VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY
-            in your .env file.
-          </Alert>
-        ) : loadError ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Failed to load Google Maps. {loadError.message}
-            {" "}
-            Ensure the Maps JavaScript API is enabled, billing is active, and the
-            key allows your domain (for local dev: http://localhost:5173/*).
-          </Alert>
-        ) : !mapId ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Google Maps Map ID is not set. Advanced markers require a Map ID. Set
-            VITE_GOOGLE_MAPS_MAP_ID to remove this warning.
-          </Alert>
-        ) : (
-          <>
+          {launchMessage ? (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setLaunchMessage(null)}>
+              {launchMessage}
+            </Alert>
+          ) : null}
+        </>
+      }
+    >
+      <>
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
               {/* Left side: Map & Camera */}
               <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
@@ -541,8 +532,9 @@ export default function TasksPage() {
                   />
                 </Box>
 
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Click on the map to add waypoints. Markers are ordered (1..N).
+                <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
+                  Click on the map to add ordered waypoints. The route preview updates as each
+                  point is placed.
                 </Typography>
 
                 <MissionVideoPanel
@@ -686,7 +678,7 @@ export default function TasksPage() {
 
             {/* Status display panel */}
             {missionStatus && (activeFlightId || waypoints.length > 0) && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: "#e8f5e8", borderRadius: 1 }}>
+              <Box sx={{ mt: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
                   Flight Status
                 </Typography>
@@ -725,9 +717,7 @@ export default function TasksPage() {
                 </Stack>
               </Box>
             )}
-          </>
-        )}
-      </Paper>
-    </>
+      </>
+    </OperationsShell>
   );
 }

@@ -15,20 +15,28 @@ import ColorModeIconDropdown from './shared-theme/ColorModeIconDropdown';
 import Sitemark from './SitemarkIcon';
 import { Link as RouterLink } from "react-router-dom";
 
+const navItems = [
+  { label: 'Platform', href: '#platform' },
+  { label: 'Field Safety', href: '#safety' },
+  { label: 'Integrations', href: '#integration' },
+  { label: 'Contact', href: '#contact' },
+];
+
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
   flexShrink: 0,
+  minHeight: 74,
   borderRadius: `calc(${theme.shape.borderRadius}px + 8px)`,
   backdropFilter: 'blur(24px)',
   border: '1px solid',
   borderColor: (theme.vars || theme).palette.divider,
   backgroundColor: theme.vars
-    ? `rgba(${theme.vars.palette.background.defaultChannel} / 0.4)`
-    : alpha(theme.palette.background.default, 0.4),
+    ? `rgba(${theme.vars.palette.background.paperChannel} / 0.68)`
+    : alpha(theme.palette.background.paper, 0.68),
   boxShadow: (theme.vars || theme).shadows[1],
-  padding: '8px 12px',
+  padding: '10px 14px',
 }));
 
 export default function AppAppBar() {
@@ -54,18 +62,11 @@ export default function AppAppBar() {
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', px: 0 }}>
             <Sitemark />
             <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-              <Button variant="text" color="primary" size="small" href="#platform">
-                Platform
-              </Button>
-              <Button variant="text" color="primary" size="small" href="#safety">
-                Field Safety
-              </Button>
-              <Button variant="text" color="primary" size="small" href="#integration">
-                Integrations
-              </Button>
-              <Button variant="text" color="primary" size="small" href="#contact">
-                Contact
-              </Button>
+              {navItems.map((item) => (
+                <Button key={item.label} variant="text" color="primary" size="small" href={item.href}>
+                  {item.label}
+                </Button>
+              ))}
             </Box>
           </Box>
           <Box
@@ -109,18 +110,33 @@ export default function AppAppBar() {
                     <CloseRoundedIcon />
                   </IconButton>
                 </Box>
-                <MenuItem component="a" href="#platform">Platform</MenuItem>
-                <MenuItem component="a" href="#safety">Field Safety</MenuItem>
-                <MenuItem component="a" href="#integration">Integrations</MenuItem>
-                <MenuItem component="a" href="#contact">Contact</MenuItem>
+                {navItems.map((item) => (
+                  <MenuItem key={item.label} component="a" href={item.href} onClick={toggleDrawer(false)}>
+                    {item.label}
+                  </MenuItem>
+                ))}
                 <Divider sx={{ my: 3 }} />
                 <MenuItem>
-                  <Button color="primary" variant="contained" component={RouterLink} to="/signup" fullWidth>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    component={RouterLink}
+                    to="/signup"
+                    fullWidth
+                    onClick={toggleDrawer(false)}
+                  >
                     Request onboarding
                   </Button>
                 </MenuItem>
                 <MenuItem>
-                  <Button color="primary" variant="outlined" component={RouterLink} to="/signin" fullWidth>
+                  <Button
+                    color="primary"
+                    variant="outlined"
+                    component={RouterLink}
+                    to="/signin"
+                    fullWidth
+                    onClick={toggleDrawer(false)}
+                  >
                     Grower sign in
                   </Button>
                 </MenuItem>

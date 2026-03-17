@@ -39,12 +39,12 @@ const checklist = [
 export default function Latest() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Stack spacing={1}>
-        <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
+      <Stack spacing={1.25}>
+        <Typography variant="overline" sx={{ color: 'text.secondary' }}>
           Field readiness
         </Typography>
         <Typography variant="h2">Grower-ready building blocks</Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
+        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 760 }}>
           Designed for agronomy teams that need consistent telemetry, reliable imagery, and
           configurable autonomy with human-in-the-loop controls.
         </Typography>
@@ -62,12 +62,12 @@ export default function Latest() {
               }}
             >
               <Stack spacing={2}>
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                   <Box
                     sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '12px',
+                      width: 40,
+                      height: 40,
+                      borderRadius: 3,
                       display: 'grid',
                       placeItems: 'center',
                       bgcolor: 'hsla(174, 50%, 30%, 0.12)',
@@ -87,21 +87,47 @@ export default function Latest() {
         ))}
       </Grid>
 
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack spacing={2}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <CheckCircleRoundedIcon color="success" />
-            <Typography variant="h6">Field checklist</Typography>
-          </Stack>
-          <Divider />
-          <Stack spacing={1.5}>
-            {checklist.map((item) => (
-              <Typography key={item} variant="body2" sx={{ color: 'text.secondary' }}>
-                {item}
+      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack spacing={1.5}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <CheckCircleRoundedIcon color="success" />
+                <Typography variant="h6">Launch checklist</Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                Every onboarding includes a dry-run checklist so teams can validate operations
+                before moving into live acreage.
               </Typography>
-            ))}
-          </Stack>
-        </Stack>
+            </Stack>
+          </Grid>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Divider sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }} />
+            <Stack spacing={1.5}>
+              {checklist.map((item) => (
+                <Paper
+                  key={item}
+                  variant="outlined"
+                  sx={(theme) => ({
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    backgroundColor: 'rgba(255,255,255,0.72)',
+                    ...theme.applyStyles('dark', {
+                      backgroundColor: 'rgba(17,22,26,0.72)',
+                    }),
+                  })}
+                >
+                  <CheckCircleRoundedIcon color="success" fontSize="small" />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {item}
+                  </Typography>
+                </Paper>
+              ))}
+            </Stack>
+          </Grid>
+        </Grid>
       </Paper>
     </Box>
   );

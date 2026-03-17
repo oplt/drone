@@ -49,7 +49,16 @@ export const inputsCustomizations: Components<Theme> = {
               size: 'medium',
             },
             style: {
-              height: '2.5rem', // 40px
+              height: '2.75rem',
+            },
+          },
+          {
+            props: {
+              size: 'large',
+            },
+            style: {
+              height: '3.25rem',
+              padding: '0 18px',
             },
           },
           {
@@ -441,6 +450,56 @@ export const inputsCustomizations: Components<Theme> = {
         typography: theme.typography.caption,
         marginBottom: 8,
       }),
+    },
+  },
+  MuiFilledInput: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        overflow: 'hidden',
+        borderRadius: (theme.vars || theme).shape.borderRadius,
+        border: `1px solid ${alpha(gray[200], 0.9)}`,
+        backgroundColor: alpha(gray[50], 0.9),
+        transition: 'border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease',
+        '&:before, &:after': {
+          display: 'none',
+        },
+        '&:hover': {
+          backgroundColor: alpha(gray[50], 1),
+          borderColor: gray[300],
+        },
+        '&.Mui-focused': {
+          backgroundColor: gray[50],
+          borderColor: brand[400],
+          boxShadow: `0 0 0 4px ${alpha(brand[500], 0.14)}`,
+        },
+        '&.Mui-error': {
+          borderColor: theme.palette.error.main,
+          boxShadow: `0 0 0 4px ${alpha(theme.palette.error.main, 0.12)}`,
+        },
+        ...theme.applyStyles('dark', {
+          borderColor: alpha(gray[700], 0.7),
+          backgroundColor: alpha(gray[900], 0.55),
+          '&:hover': {
+            backgroundColor: alpha(gray[900], 0.72),
+            borderColor: gray[600],
+          },
+          '&.Mui-focused': {
+            backgroundColor: alpha(gray[900], 0.85),
+          },
+        }),
+      }),
+      input: {
+        paddingTop: 24,
+        paddingBottom: 14,
+      },
+    },
+  },
+  MuiFormHelperText: {
+    styleOverrides: {
+      root: {
+        marginLeft: 0,
+        marginRight: 0,
+      },
     },
   },
 };

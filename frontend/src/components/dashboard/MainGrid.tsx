@@ -1,26 +1,27 @@
-import { useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import Grid from '@mui/material/Grid';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import LinearProgress from '@mui/material/LinearProgress';
+import Paper from '@mui/material/Paper';
+import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
-import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
-import LinearProgress from '@mui/material/LinearProgress';
-import Button from '@mui/material/Button';
-import Alert from '@mui/material/Alert';
-
 import Copyright from '../Copyright';
-import ChartUserByCountry from './ChartUserByCountry';
-import CustomizedTreeView from './CustomizedTreeView';
-import CustomizedDataGrid from './CustomizedDataGrid';
 import HighlightedCard from './HighlightedCard';
-import PageViewsBarChart from './PageViewsBarChart';
-import SessionsChart from './SessionsChart';
 import StatCard, { type StatCardProps } from './StatCard';
 import useAnalyticsOverview from '../../hooks/useAnalyticsOverview';
 import useTelemetryWebSocket from '../../hooks/useTelemetryWebsocket';
 import { useAlertCenter } from '../../contexts/AlertCenterContext';
+import PageLayout, { PageSection } from './PageLayout';
+
+const ChartUserByCountry = lazy(() => import('./ChartUserByCountry'));
+const CustomizedTreeView = lazy(() => import('./CustomizedTreeView'));
+const CustomizedDataGrid = lazy(() => import('./CustomizedDataGrid'));
+const PageViewsBarChart = lazy(() => import('./PageViewsBarChart'));
+const SessionsChart = lazy(() => import('./SessionsChart'));
 
 const formatNumber = (value: number | null | undefined, suffix = '') => {
   if (value === null || value === undefined || Number.isNaN(value)) return '--';
@@ -67,6 +68,17 @@ const deltaLabelFromSeries = (series: number[]) => {
   return `${sign}${pct.toFixed(1)}%`;
 };
 
+function PanelSkeleton({ height = 280 }: { height?: number }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, minHeight: height }}>
+      <Stack spacing={2}>
+        <Skeleton variant="rounded" width="36%" height={24} />
+        <Skeleton variant="rounded" width="100%" height={height - 60} />
+      </Stack>
+    </Paper>
+  );
+}
+
 export default function MainGrid() {
   const { data, loading, error, refresh } = useAnalyticsOverview();
   const { alerts: activeAlerts } = useAlertCenter();
@@ -83,6 +95,7 @@ export default function MainGrid() {
 
   const days = trends?.days ?? [];
   const labels = days.map(formatDateLabel);
+  const showInitialSkeleton = loading && !data;
 
   const statCards = useMemo<StatCardProps[]>(() => {
     const flightCounts = trends?.flight_counts ?? [];
@@ -119,9 +132,10 @@ export default function MainGrid() {
       },
       {
         title: 'Avg battery health',
-        value: summary?.avg_battery_24h !== null && summary?.avg_battery_24h !== undefined
-          ? `${summary.avg_battery_24h}%`
-          : '--',
+        value:
+          summary?.avg_battery_24h !== null && summary?.avg_battery_24h !== undefined
+            ? `${summary.avg_battery_24h}%`
+            : '--',
         interval: 'Last 24 hours',
         trend:
           summary?.avg_battery_24h !== null &&
@@ -176,8 +190,7 @@ export default function MainGrid() {
   const gpsHdopRaw = telemetry?.gps?.hdop ?? null;
   const gpsSatellites =
     typeof gpsSatellitesRaw === 'number' ? gpsSatellitesRaw : Number(gpsSatellitesRaw);
-  const gpsHdop =
-    typeof gpsHdopRaw === 'number' ? gpsHdopRaw : Number(gpsHdopRaw);
+  const gpsHdop = typeof gpsHdopRaw === 'number' ? gpsHdopRaw : Number(gpsHdopRaw);
 
   const fallbackAlertItems = [
     system && !system.telemetry_running ? 'Telemetry stream is offline.' : null,
@@ -200,265 +213,252 @@ export default function MainGrid() {
   const workloadDelta = deltaLabelFromSeries(trends?.flight_counts ?? []);
 
   return (
-    <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 3,
-          mb: 3,
-          borderRadius: 3,
-          background:
-            'linear-gradient(135deg, hsla(36, 70%, 92%, 0.65), hsla(174, 55%, 92%, 0.55))',
-          borderColor: 'hsla(174, 30%, 40%, 0.25)',
-        }}
-      >
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center">
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h4">Operations Pulse</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 520 }}>
-              Live overview of field operations, telemetry health, and coverage readiness.
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Chip
-              size="small"
-              color={system?.telemetry_running ? 'success' : 'warning'}
-              label={system?.telemetry_running ? 'Telemetry Live' : 'Telemetry Offline'}
-            />
-            <Chip
-              size="small"
-              color={system?.mavlink_connected ? 'success' : 'default'}
-              label={system?.mavlink_connected ? 'MAVLink Connected' : 'MAVLink Idle'}
-            />
-            <Button variant="contained" size="small" onClick={refresh}>
-              Refresh data
-            </Button>
-          </Stack>
+    <PageLayout
+      eyebrow="Operations pulse"
+      title="Live command overview"
+      description="Monitor field operations, route execution, telemetry health, and coverage trends from one command surface."
+      actions={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+          <Chip
+            size="small"
+            color={system?.telemetry_running ? 'success' : 'warning'}
+            label={system?.telemetry_running ? 'Telemetry live' : 'Telemetry offline'}
+          />
+          <Chip
+            size="small"
+            color={system?.mavlink_connected ? 'success' : 'default'}
+            label={system?.mavlink_connected ? 'MAVLink connected' : 'MAVLink idle'}
+          />
+          <Button variant="contained" size="small" onClick={refresh}>
+            Refresh data
+          </Button>
         </Stack>
-        {error && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
-      </Paper>
+      }
+      metrics={[
+        {
+          label: 'Open alerts',
+          value: `${activeAlerts.length || alertItems.length}`,
+          caption: activeAlerts.length > 0 ? 'Requires review' : 'Systems nominal',
+        },
+        {
+          label: 'Live clients',
+          value: `${system?.active_connections ?? 0}`,
+          caption: 'Connected operator sessions',
+        },
+        {
+          label: 'Last telemetry',
+          value: lastUpdateAge !== null ? `${lastUpdateAge}s` : '--',
+          caption: 'Since latest heartbeat',
+        },
+      ]}
+      hero={
+        <PageSection
+          title="Operational alerts"
+          description="Warnings and watch items surfaced from telemetry and route health."
+          sx={{ height: '100%', p: 2.5 }}
+        >
+          {alertItems.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No critical alerts detected. Systems are operating within safe bounds.
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {alertItems.map((item) => (
+                <Alert key={item} severity="warning">
+                  {item}
+                </Alert>
+              ))}
+            </Stack>
+          )}
+        </PageSection>
+      }
+    >
+      {error ? <Alert severity="warning">{error}</Alert> : null}
 
-      <Typography component="h2" variant="h6" sx={{ mb: 2 }}>
+      <Typography component="h2" variant="h6">
         Field operations overview
       </Typography>
-      <Grid container spacing={2} columns={12} sx={{ mb: (theme) => theme.spacing(2) }}>
-        {statCards.map((card) => (
-          <Grid key={card.title} size={{ xs: 12, sm: 6, lg: 3 }}>
-            <StatCard {...card} />
+      <Grid container spacing={2} columns={12}>
+        {(showInitialSkeleton ? Array.from({ length: 4 }) : statCards).map((card, index) => (
+          <Grid key={showInitialSkeleton ? `stat-skeleton-${index}` : (card as StatCardProps).title} size={{ xs: 12, sm: 6, lg: 3 }}>
+            {showInitialSkeleton ? (
+              <PanelSkeleton height={190} />
+            ) : (
+              <StatCard {...(card as StatCardProps)} />
+            )}
           </Grid>
         ))}
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <HighlightedCard />
+          {showInitialSkeleton ? <PanelSkeleton height={190} /> : <HighlightedCard />}
         </Grid>
       </Grid>
 
-      <Grid container spacing={2} columns={12} sx={{ mb: 3 }}>
+      <Grid container spacing={2} columns={12}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              height: '100%',
-              borderColor: 'hsla(174, 30%, 40%, 0.25)',
-            }}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack>
-                <Typography variant="h6">Live telemetry</Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Streaming vehicle health and GPS quality.
-                </Typography>
-              </Stack>
+          <PageSection
+            title="Live telemetry"
+            description="Streaming vehicle health, mode state, battery reserve, and GPS quality."
+            action={
               <Chip
                 size="small"
                 color={isConnected ? 'success' : 'default'}
                 label={isConnected ? 'Live' : 'Offline'}
               />
-            </Stack>
-            <Divider sx={{ my: 2 }} />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Flight mode
-                </Typography>
-                <Typography variant="h6">{telemetryMode}</Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Altitude
-                </Typography>
-                <Typography variant="h6">
-                  {Number.isFinite(telemetryAlt) ? `${telemetryAlt.toFixed(1)} m` : '--'}
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Groundspeed
-                </Typography>
-                <Typography variant="h6">
-                  {Number.isFinite(telemetrySpeed) ? `${telemetrySpeed.toFixed(1)} m/s` : '--'}
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Battery
-                </Typography>
-                <Typography variant="h6">
-                  {telemetryBatterySafe !== null
-                    ? `${Math.round(telemetryBatterySafe)}%`
-                    : '--'}
-                </Typography>
-              </Grid>
-            </Grid>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    GPS strength
-                  </Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                    {Number.isFinite(gpsSatellites) ? gpsSatellites : '--'} sats • HDOP{' '}
-                    {Number.isFinite(gpsHdop) ? gpsHdop.toFixed(1) : '--'}
-                  </Typography>
+            }
+            sx={{ height: '100%' }}
+          >
+            {showInitialSkeleton ? (
+              <PanelSkeleton height={260} />
+            ) : (
+              <Stack spacing={3}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Flight mode
+                    </Typography>
+                    <Typography variant="h6">{telemetryMode}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Altitude
+                    </Typography>
+                    <Typography variant="h6">
+                      {Number.isFinite(telemetryAlt) ? `${telemetryAlt.toFixed(1)} m` : '--'}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Groundspeed
+                    </Typography>
+                    <Typography variant="h6">
+                      {Number.isFinite(telemetrySpeed) ? `${telemetrySpeed.toFixed(1)} m/s` : '--'}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Battery
+                    </Typography>
+                    <Typography variant="h6">
+                      {telemetryBatterySafe !== null ? `${Math.round(telemetryBatterySafe)}%` : '--'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                  <Box sx={{ flex: 1 }}>
+                    <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.75 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        GPS strength
+                      </Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        {Number.isFinite(gpsSatellites) ? gpsSatellites : '--'} sats • HDOP{' '}
+                        {Number.isFinite(gpsHdop) ? gpsHdop.toFixed(1) : '--'}
+                      </Typography>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={
+                        Number.isFinite(gpsSatellites) ? Math.min(100, (gpsSatellites as number) * 8) : 0
+                      }
+                      sx={{ height: 8, borderRadius: 999 }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.75 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Battery reserve
+                      </Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        {telemetryBatterySafe !== null ? `${Math.round(telemetryBatterySafe)}%` : '--'}
+                      </Typography>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={telemetryBatterySafe ?? 0}
+                      color={telemetryBatterySafe !== null && telemetryBatterySafe < 30 ? 'error' : 'primary'}
+                      sx={{ height: 8, borderRadius: 999 }}
+                    />
+                  </Box>
                 </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={
-                    Number.isFinite(gpsSatellites)
-                      ? Math.min(100, (gpsSatellites as number) * 8)
-                      : 0
-                  }
-                  sx={{ height: 6, borderRadius: 999 }}
-                />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Battery reserve
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                    {telemetryBatterySafe !== null
-                      ? `${Math.round(telemetryBatterySafe)}%`
-                      : '--'}
-                  </Typography>
-                </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={telemetryBatterySafe ?? 0}
-                  color={
-                    telemetryBatterySafe !== null && telemetryBatterySafe < 30
-                      ? 'error'
-                      : 'primary'
-                  }
-                  sx={{ height: 6, borderRadius: 999 }}
-                />
-              </Box>
-            </Stack>
-          </Paper>
+              </Stack>
+            )}
+          </PageSection>
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Stack spacing={2} sx={{ height: '100%' }}>
+          <Suspense fallback={<PanelSkeleton height={390} />}>
             <ChartUserByCountry segments={data?.coverage} totalLabel="Flight coverage" />
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2.5,
-                borderRadius: 3,
-                borderColor: 'hsla(174, 30%, 40%, 0.25)',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Operational alerts
-              </Typography>
-              {alertItems.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No critical alerts detected. Systems are operating within safe bounds.
-                </Typography>
-              ) : (
-                <Stack spacing={1}>
-                  {alertItems.map((item) => (
-                    <Alert key={item} severity="warning">
-                      {item}
-                    </Alert>
-                  ))}
-                </Stack>
-              )}
-            </Paper>
-          </Stack>
+          </Suspense>
         </Grid>
       </Grid>
 
-      <Grid container spacing={2} columns={12} sx={{ mb: 3 }}>
+      <Grid container spacing={2} columns={12}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SessionsChart
-            title="Survey hours"
-            totalValue={formatNumber(summary?.flight_hours_7d, 'h')}
-            deltaLabel={surveyDelta}
-            subtitle="Survey hours per day for the last 30 days"
-            labels={hasTrendData ? labels : undefined}
-            series={
-              hasTrendData
-                ? [
-                    {
-                      id: 'hours',
-                      label: 'Hours',
-                      data: trends?.flight_hours ?? [],
-                    },
-                  ]
-                : undefined
-            }
-          />
+          <Suspense fallback={<PanelSkeleton height={360} />}>
+            <SessionsChart
+              title="Survey hours"
+              totalValue={formatNumber(summary?.flight_hours_7d, 'h')}
+              deltaLabel={surveyDelta}
+              subtitle="Survey hours per day for the last 30 days"
+              labels={hasTrendData ? labels : undefined}
+              series={
+                hasTrendData
+                  ? [
+                      {
+                        id: 'hours',
+                        label: 'Hours',
+                        data: trends?.flight_hours ?? [],
+                      },
+                    ]
+                  : undefined
+              }
+            />
+          </Suspense>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <PageViewsBarChart
-            title="Workload mix"
-            totalValue={formatNumber(summary?.flights_24h)}
-            deltaLabel={workloadDelta}
-            subtitle="Flights and telemetry points for the last 7 days"
-            labels={hasWorkloadData ? last7Labels : undefined}
-            series={
-              hasWorkloadData
-                ? [
-                    { id: 'flights', label: 'Flights', data: last7Flights },
-                    { id: 'telemetry', label: 'Telemetry', data: last7Telemetry },
-                  ]
-                : undefined
-            }
-          />
+          <Suspense fallback={<PanelSkeleton height={360} />}>
+            <PageViewsBarChart
+              title="Workload mix"
+              totalValue={formatNumber(summary?.flights_24h)}
+              deltaLabel={workloadDelta}
+              subtitle="Flights and telemetry points for the last 7 days"
+              labels={hasWorkloadData ? last7Labels : undefined}
+              series={
+                hasWorkloadData
+                  ? [
+                      { id: 'flights', label: 'Flights', data: last7Flights },
+                      { id: 'telemetry', label: 'Telemetry', data: last7Telemetry },
+                    ]
+                  : undefined
+              }
+            />
+          </Suspense>
         </Grid>
       </Grid>
 
-      <Typography component="h2" variant="h6" sx={{ mb: 2 }}>
+      <Typography component="h2" variant="h6">
         Equipment health
       </Typography>
       <Grid container spacing={2} columns={12}>
         <Grid size={{ xs: 12, lg: 9 }}>
-          <CustomizedDataGrid rows={recentRows} loading={loading} />
+          <PageSection
+            title="Recent flights"
+            description="Mission duration, distance, and telemetry volume across the latest runs."
+          >
+            <Suspense fallback={<PanelSkeleton height={500} />}>
+              <CustomizedDataGrid rows={recentRows} loading={loading} />
+            </Suspense>
+          </PageSection>
         </Grid>
         <Grid size={{ xs: 12, lg: 3 }}>
-          <Stack gap={2} direction={{ xs: 'column', sm: 'row', lg: 'column' }}>
-            <CustomizedTreeView
-              summary={summary}
-              system={system}
-              coverage={data?.coverage}
-            />
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2.5,
-                borderRadius: 3,
-                borderColor: 'hsla(174, 30%, 40%, 0.25)',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                System status
-              </Typography>
-              <Stack spacing={1}>
+          <Stack gap={2}>
+            <Suspense fallback={<PanelSkeleton height={280} />}>
+              <CustomizedTreeView
+                summary={summary}
+                system={system}
+                coverage={data?.coverage}
+              />
+            </Suspense>
+            <PageSection title="System status">
+              <Stack spacing={1.25}>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">
                     WebSocket
@@ -492,11 +492,11 @@ export default function MainGrid() {
                   </Typography>
                 </Stack>
               </Stack>
-            </Paper>
+            </PageSection>
           </Stack>
         </Grid>
       </Grid>
       <Copyright sx={{ my: 4 }} />
-    </Box>
+    </PageLayout>
   );
 }

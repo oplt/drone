@@ -1,32 +1,37 @@
 import { alpha } from '@mui/material/styles';
 import type { Components } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
-import { gray, orange } from '../themePrimitives';
+import { gray } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const feedbackCustomizations: Components<Theme> = {
   MuiAlert: {
     styleOverrides: {
-      root: ({ theme }) => ({
-        borderRadius: 10,
-        backgroundColor: orange[100],
-        color: (theme.vars || theme).palette.text.primary,
-        border: `1px solid ${alpha(orange[300], 0.5)}`,
-        '& .MuiAlert-icon': {
-          color: orange[500],
-        },
-        ...theme.applyStyles('dark', {
-          backgroundColor: `${alpha(orange[900], 0.5)}`,
-          border: `1px solid ${alpha(orange[800], 0.5)}`,
-        }),
-      }),
+      root: ({ theme, ownerState }) => {
+        const severity = ownerState.severity ?? 'info';
+        const palette = theme.palette[severity];
+
+        return {
+          borderRadius: 14,
+          backgroundColor: alpha(palette.main, 0.08),
+          color: (theme.vars || theme).palette.text.primary,
+          border: `1px solid ${alpha(palette.main, 0.18)}`,
+          '& .MuiAlert-icon': {
+            color: palette.main,
+          },
+          ...theme.applyStyles('dark', {
+            backgroundColor: alpha(palette.main, 0.18),
+            border: `1px solid ${alpha(palette.main, 0.34)}`,
+          }),
+        };
+      },
     },
   },
   MuiDialog: {
     styleOverrides: {
       root: ({ theme }) => ({
         '& .MuiDialog-paper': {
-          borderRadius: '10px',
+          borderRadius: '20px',
           border: '1px solid',
           borderColor: (theme.vars || theme).palette.divider,
         },
@@ -41,6 +46,17 @@ export const feedbackCustomizations: Components<Theme> = {
         backgroundColor: gray[200],
         ...theme.applyStyles('dark', {
           backgroundColor: gray[800],
+        }),
+      }),
+    },
+  },
+  MuiSkeleton: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius: 12,
+        backgroundColor: alpha(theme.palette.text.primary, 0.07),
+        ...theme.applyStyles('dark', {
+          backgroundColor: alpha(theme.palette.common.white, 0.08),
         }),
       }),
     },

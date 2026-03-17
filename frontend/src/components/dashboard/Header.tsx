@@ -1,20 +1,19 @@
-import Stack from '@mui/material/Stack';
+import { useState } from 'react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import Paper from '@mui/material/Paper';
-import Alert from '@mui/material/Alert';
-import Divider from '@mui/material/Divider';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import CustomDatePicker from './CustomDatePicker';
 import NavbarBreadcrumbs from './NavbarBreadcrumbs';
 import MenuButton from './MenuButton';
-import Chip from '@mui/material/Chip';
 import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
-import CircularProgress from '@mui/material/CircularProgress';
-import { useState } from 'react';
-
 import Search from './Search';
 import { useAlertCenter, type AlertItem } from '../../contexts/AlertCenterContext';
 
@@ -49,8 +48,8 @@ function AlertCard({
   onResolve: () => Promise<void>;
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-      <Stack spacing={1}>
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+      <Stack spacing={1.25}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
           <Typography variant="subtitle2">{item.title}</Typography>
           <Chip size="small" color={severityColor(item.severity)} label={item.severity.toUpperCase()} />
@@ -58,7 +57,7 @@ function AlertCard({
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {item.message}
         </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           Triggered {formatTimestamp(item.last_triggered_at)}
         </Typography>
         <Stack direction="row" spacing={1}>
@@ -117,60 +116,79 @@ export default function Header() {
 
   return (
     <>
-      <Stack
-        direction="row"
+      <Paper
+        variant="outlined"
         sx={{
-          display: { xs: 'none', md: 'flex' },
+          display: { xs: 'none', md: 'block' },
           width: '100%',
-          alignItems: { xs: 'flex-start', md: 'center' },
-          justifyContent: 'space-between',
           maxWidth: { sm: '100%', md: '1700px' },
-          pt: 1.5,
+          p: 1.5,
+          borderRadius: 999,
+          backgroundColor: 'rgba(255,255,255,0.76)',
+          backdropFilter: 'blur(16px)',
+          '[data-mui-color-scheme="dark"] &': {
+            backgroundColor: 'rgba(14,18,22,0.76)',
+            borderColor: 'rgba(122, 160, 145, 0.18)',
+          },
         }}
-        spacing={2}
       >
-        <NavbarBreadcrumbs />
-        <Stack direction="row" sx={{ gap: 1 }}>
-          <Search />
-          <CustomDatePicker />
-          <Chip size="small" color="success" label="Telemetry live" />
-          <MenuButton
-            showBadge={openCount > 0}
-            aria-label="Open notifications"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <NotificationsRoundedIcon />
-          </MenuButton>
-          <ColorModeIconDropdown />
+        <Stack
+          direction="row"
+          sx={{
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+          spacing={2}
+        >
+          <NavbarBreadcrumbs />
+          <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
+            <Search />
+            <CustomDatePicker />
+            <Chip size="small" color="success" label="Telemetry live" />
+            <MenuButton
+              showBadge={openCount > 0}
+              aria-label="Open notifications"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <NotificationsRoundedIcon />
+            </MenuButton>
+            <ColorModeIconDropdown />
+          </Stack>
         </Stack>
-      </Stack>
+      </Paper>
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Box sx={{ width: { xs: 320, sm: 420 }, p: 2 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="h6">Operational Alerts</Typography>
+        <Box sx={{ width: { xs: 340, sm: 440 }, p: 2.5 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+            <Stack spacing={0.5}>
+              <Typography variant="h5">Operational Alerts</Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {openCount} open alerts
+              </Typography>
+            </Stack>
             <Button size="small" onClick={() => void refresh()}>
               Refresh
             </Button>
           </Stack>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-            {openCount} open alerts
-          </Typography>
           <Divider sx={{ mb: 2 }} />
-          {actionError && (
+          {actionError ? (
             <Alert severity="error" sx={{ mb: 1.5 }}>
               {actionError}
             </Alert>
-          )}
-          {loading && (
+          ) : null}
+          {loading ? (
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
               <CircularProgress size={16} />
               <Typography variant="body2">Updating alerts...</Typography>
             </Stack>
-          )}
+          ) : null}
           {alerts.length === 0 ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              No active alerts.
-            </Typography>
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                No active alerts. Telemetry, route safety, and system health are all within the
+                configured thresholds.
+              </Typography>
+            </Paper>
           ) : (
             <Stack spacing={1.25}>
               {alerts.map((item) => (

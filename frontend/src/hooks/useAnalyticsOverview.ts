@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../auth";
 
 export type AnalyticsOverview = {
@@ -66,7 +66,9 @@ export default function useAnalyticsOverview(pollMs = 30000) {
         throw new Error(await res.text());
       }
       const json = (await res.json()) as AnalyticsOverview;
-      setData(json);
+      startTransition(() => {
+        setData(json);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load analytics");
     } finally {

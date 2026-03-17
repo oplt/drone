@@ -1,5 +1,5 @@
 import Chip from '@mui/material/Chip';
-import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 
 export const columns: GridColDef[] = [
   { field: 'plan', headerName: 'Field Plan', flex: 1.2, minWidth: 180 },
@@ -8,8 +8,9 @@ export const columns: GridColDef[] = [
     headerName: 'Status',
     flex: 0.6,
     minWidth: 100,
-    renderCell: (params: GridCellParams<string>) => {
-      const value = String(params.value ?? '').toLowerCase();
+    renderCell: (params: GridRenderCellParams) => {
+      const label = typeof params.value === 'string' ? params.value : 'Unknown';
+      const value = label.toLowerCase();
       const color =
         value.includes('progress') || value.includes('active')
           ? 'success'
@@ -18,7 +19,7 @@ export const columns: GridColDef[] = [
             : 'default';
       return (
         <Chip
-          label={params.value ?? 'Unknown'}
+          label={label}
           color={color}
           size="small"
           variant="outlined"

@@ -255,14 +255,20 @@ export function MissionCommandPanel({
     <Accordion
       disableGutters
       defaultExpanded={defaultExpanded}
-      sx={{
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: "hsla(174, 30%, 40%, 0.25)",
-        background: "hsla(0, 0%, 100%, 0.7)",
-        "&:before": { display: "none" },
-        ...sx,
-      }}
+      sx={[
+        {
+          borderRadius: 2,
+          border: "1px solid",
+          borderColor: "hsla(174, 30%, 40%, 0.25)",
+          background: "hsla(0, 0%, 100%, 0.7)",
+          "&:before": { display: "none" },
+          '[data-mui-color-scheme="dark"] &': {
+            background: "hsla(20, 16%, 12%, 0.92)",
+            borderColor: "hsla(168, 22%, 36%, 0.3)",
+          },
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreRoundedIcon />}

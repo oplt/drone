@@ -10,6 +10,7 @@ export function OperationsShell({
   apiKey,
   loadError,
   mapId,
+  banner,
   children,
 }: {
   header: React.ReactNode;
@@ -20,6 +21,7 @@ export function OperationsShell({
   apiKey?: string;
   loadError?: Error | null;
   mapId?: string;
+  banner?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -33,6 +35,11 @@ export function OperationsShell({
           background:
             "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
           border: "1px solid hsla(174, 30%, 40%, 0.2)",
+          '[data-mui-color-scheme="dark"] &': {
+            background:
+              "linear-gradient(135deg, hsla(168, 24%, 14%, 0.94), hsla(28, 22%, 13%, 0.96))",
+            borderColor: "hsla(168, 22%, 36%, 0.3)",
+          },
         }}
       >
         <Stack
@@ -64,6 +71,8 @@ export function OperationsShell({
             />
           </Stack>
         </Stack>
+
+        {banner}
 
         {!apiKey ? (
           <Alert severity="error" sx={{ mb: 2 }}>

@@ -1,34 +1,33 @@
-import { useMemo } from "react";
-import {
-  Box,
-  Grid,
-  Stack,
-  Typography,
-  Paper,
-  Chip,
-  Divider,
-  Alert,
-} from "@mui/material";
-import Header from "../../../components/dashboard/Header";
-import useAnalyticsOverview from "../../../hooks/useAnalyticsOverview";
-import useTelemetryWebSocket from "../../../hooks/useTelemetryWebsocket";
-import SessionsChart from "../../../components/dashboard/SessionsChart";
-import PageViewsBarChart from "../../../components/dashboard/PageViewsBarChart";
-import ChartUserByCountry from "../../../components/dashboard/ChartUserByCountry";
+import { Suspense, lazy, useMemo } from 'react';
+import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Grid';
+import Paper from '@mui/material/Paper';
+import Skeleton from '@mui/material/Skeleton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import Header from '../../../components/dashboard/Header';
+import PageLayout, { PageSection } from '../../../components/dashboard/PageLayout';
+import useAnalyticsOverview from '../../../hooks/useAnalyticsOverview';
+import useTelemetryWebSocket from '../../../hooks/useTelemetryWebsocket';
+
+const SessionsChart = lazy(() => import('../../../components/dashboard/SessionsChart'));
+const PageViewsBarChart = lazy(() => import('../../../components/dashboard/PageViewsBarChart'));
+const ChartUserByCountry = lazy(() => import('../../../components/dashboard/ChartUserByCountry'));
 
 const formatDateLabel = (iso: string) => {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return iso;
-  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-const formatNumber = (value: number | null | undefined, suffix = "") => {
-  if (value === null || value === undefined || Number.isNaN(value)) return "--";
+const formatNumber = (value: number | null | undefined, suffix = '') => {
+  if (value === null || value === undefined || Number.isNaN(value)) return '--';
   return `${value.toLocaleString()}${suffix}`;
 };
 
 const formatHours = (value: number | null | undefined) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return "--";
+  if (value === null || value === undefined || Number.isNaN(value)) return '--';
   return `${value.toFixed(1)}h`;
 };
 
@@ -38,9 +37,25 @@ const deltaLabelFromSeries = (series: number[]) => {
   const prev = series[series.length - 2];
   if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) return undefined;
   const pct = ((last - prev) / Math.abs(prev)) * 100;
-  const sign = pct > 0 ? "+" : "";
+  const sign = pct > 0 ? '+' : '';
   return `${sign}${pct.toFixed(1)}%`;
 };
+
+function PanelSkeleton({ height = 300 }: { height?: number }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, minHeight: height }}>
+      <Stack spacing={2}>
+        <Skeleton variant="rounded" width="34%" height={24} />
+        <Skeleton variant="rounded" width="100%" height={height - 60} />
+      </Stack>
+    </Paper>
+  );
+}
+
+function formatEventData(data: Record<string, unknown>) {
+  const raw = JSON.stringify(data);
+  return raw.length > 140 ? `${raw.slice(0, 137)}...` : raw;
+}
 
 export default function InsightsPage() {
   const { data, loading, error } = useAnalyticsOverview();
@@ -60,15 +75,13 @@ export default function InsightsPage() {
   const activityDelta = deltaLabelFromSeries(flightCounts);
 
   const windSpeedRaw = telemetry?.wind?.speed ?? null;
-  const linkQualityRaw =
-    telemetry?.link?.telemetry ?? telemetry?.link?.rc ?? null;
+  const linkQualityRaw = telemetry?.link?.telemetry ?? telemetry?.link?.rc ?? null;
   const batteryPctRaw = telemetry?.battery?.remaining ?? null;
-  const windSpeed =
-    typeof windSpeedRaw === "number" ? windSpeedRaw : Number(windSpeedRaw);
+  const windSpeed = typeof windSpeedRaw === 'number' ? windSpeedRaw : Number(windSpeedRaw);
   const linkQuality =
-    typeof linkQualityRaw === "number" ? linkQualityRaw : Number(linkQualityRaw);
+    typeof linkQualityRaw === 'number' ? linkQualityRaw : Number(linkQualityRaw);
   const batteryPctCandidate =
-    typeof batteryPctRaw === "number" ? batteryPctRaw : Number(batteryPctRaw);
+    typeof batteryPctRaw === 'number' ? batteryPctRaw : Number(batteryPctRaw);
   const batteryPct =
     Number.isFinite(batteryPctCandidate) && batteryPctCandidate >= 0
       ? batteryPctCandidate
@@ -76,36 +89,46 @@ export default function InsightsPage() {
 
   const recommendations = [
     Number.isFinite(windSpeed) && windSpeed > 8
-      ? "High wind at altitude. Consider rescheduling sensitive flights."
+      ? 'High wind at altitude. Consider rescheduling sensitive flights.'
       : null,
     batteryPct !== null && batteryPct < 35
-      ? "Battery reserve below target. Plan shorter routes."
+      ? 'Battery reserve below target. Plan shorter routes.'
       : null,
     Number.isFinite(linkQuality) && linkQuality < 50
-      ? "Link quality degraded. Verify uplink and ground station positioning."
+      ? 'Link quality degraded. Verify uplink and ground station positioning.'
       : null,
   ].filter(Boolean) as string[];
 
   return (
     <>
       <Header />
-      <Box sx={{ width: "100%", maxWidth: 1400, p: 2 }}>
-        <Stack spacing={3}>
-          <Stack spacing={1}>
-            <Typography variant="h4">Field Insights</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Trends, alerts, and agronomy-ready signals based on flight history and
-              live telemetry.
-            </Typography>
-            {error && (
-              <Alert severity="warning">
-                {error}
-              </Alert>
-            )}
-          </Stack>
+      <PageLayout
+        eyebrow="Insights"
+        title="Field intelligence and operating signals"
+        description="Track flight trends, coverage, recent events, and live recommendations without leaving the dashboard flow."
+        metrics={[
+          {
+            label: 'Survey hours',
+            value: formatHours(data?.summary?.flight_hours_7d),
+            caption: 'Last 7 days',
+          },
+          {
+            label: 'Flights today',
+            value: formatNumber(data?.summary?.flights_24h),
+            caption: 'Completed or active',
+          },
+          {
+            label: 'Telemetry link',
+            value: isConnected ? 'Live' : 'Offline',
+            caption: 'Current session state',
+          },
+        ]}
+      >
+        {error ? <Alert severity="warning">{error}</Alert> : null}
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, lg: 8 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, lg: 8 }}>
+            <Suspense fallback={<PanelSkeleton height={360} />}>
               <SessionsChart
                 title="Survey hours trend"
                 totalValue={formatHours(data?.summary?.flight_hours_7d)}
@@ -116,25 +139,29 @@ export default function InsightsPage() {
                   hasHoursData
                     ? [
                         {
-                          id: "hours",
-                          label: "Hours",
+                          id: 'hours',
+                          label: 'Hours',
                           data: flightHours,
                         },
                       ]
                     : undefined
                 }
               />
-            </Grid>
-            <Grid size={{ xs: 12, lg: 4 }}>
+            </Suspense>
+          </Grid>
+          <Grid size={{ xs: 12, lg: 4 }}>
+            <Suspense fallback={<PanelSkeleton height={360} />}>
               <ChartUserByCountry
                 segments={data?.coverage}
                 totalLabel="Coverage segments"
               />
-            </Grid>
+            </Suspense>
           </Grid>
+        </Grid>
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Suspense fallback={<PanelSkeleton height={330} />}>
               <PageViewsBarChart
                 title="Activity mix"
                 totalValue={formatNumber(data?.summary?.flights_24h)}
@@ -144,94 +171,80 @@ export default function InsightsPage() {
                 series={
                   hasActivityData
                     ? [
-                        { id: "flights", label: "Flights", data: flightCounts.slice(-7) },
+                        { id: 'flights', label: 'Flights', data: flightCounts.slice(-7) },
                         {
-                          id: "telemetry",
-                          label: "Telemetry",
+                          id: 'telemetry',
+                          label: 'Telemetry',
                           data: telemetryCounts.slice(-7),
                         },
                       ]
                     : undefined
                 }
               />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 3,
-                  borderRadius: 3,
-                  borderColor: "hsla(174, 30%, 40%, 0.25)",
-                  height: "100%",
-                }}
-              >
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6">Recommendations</Typography>
-                  <Chip
-                    size="small"
-                    label={isConnected ? "Live telemetry" : "Telemetry offline"}
-                    color={isConnected ? "success" : "default"}
-                  />
-                </Stack>
-                <Divider sx={{ my: 2 }} />
-                {loading ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Loading recommendations...
-                  </Typography>
-                ) : recommendations.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No critical recommendations. Operations within optimal bounds.
-                  </Typography>
-                ) : (
-                  <Stack spacing={1.5}>
-                    {recommendations.map((item) => (
-                      <Alert key={item} severity="info">
-                        {item}
-                      </Alert>
-                    ))}
-                  </Stack>
-                )}
-              </Paper>
-            </Grid>
+            </Suspense>
           </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <PageSection
+              title="Recommendations"
+              description="Operational suggestions based on live link, battery, and wind conditions."
+              action={
+                <Chip
+                  size="small"
+                  label={isConnected ? 'Live telemetry' : 'Telemetry offline'}
+                  color={isConnected ? 'success' : 'default'}
+                />
+              }
+              sx={{ height: '100%' }}
+            >
+              {loading && !data ? (
+                <PanelSkeleton height={250} />
+              ) : recommendations.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No critical recommendations. Operations are within optimal bounds.
+                </Typography>
+              ) : (
+                <Stack spacing={1.5}>
+                  {recommendations.map((item) => (
+                    <Alert key={item} severity="info">
+                      {item}
+                    </Alert>
+                  ))}
+                </Stack>
+              )}
+            </PageSection>
+          </Grid>
+        </Grid>
 
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              borderColor: "hsla(174, 30%, 40%, 0.25)",
-            }}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">Recent events</Typography>
-              <Chip size="small" label={`${data?.events?.length ?? 0} events`} />
-            </Stack>
-            <Divider sx={{ my: 2 }} />
-            {data?.events && data.events.length > 0 ? (
-              <Stack spacing={1.5}>
-                {data.events.map((evt) => (
-                  <Box key={evt.id} sx={{ display: "flex", gap: 2 }}>
-                    <Chip size="small" label={evt.type} color="warning" />
-                    <Stack>
+        <PageSection
+          title="Recent events"
+          description="Notable system and mission events recorded in the current analytics window."
+          action={<Chip size="small" label={`${data?.events?.length ?? 0} events`} />}
+        >
+          {data?.events && data.events.length > 0 ? (
+            <Stack spacing={1.5}>
+              {data.events.map((evt) => (
+                <Paper key={evt.id} variant="outlined" sx={{ p: 2 }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Chip size="small" label={evt.type} color="warning" sx={{ width: 'fit-content' }} />
+                    <Stack spacing={0.5}>
                       <Typography variant="body2">
                         Flight #{evt.flight_id} • {new Date(evt.created_at).toLocaleString()}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {JSON.stringify(evt.data)}
+                      <Typography variant="body2" color="text.secondary">
+                        {formatEventData(evt.data)}
                       </Typography>
                     </Stack>
-                  </Box>
-                ))}
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No events recorded in the current window.
-              </Typography>
-            )}
-          </Paper>
-        </Stack>
-      </Box>
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No events recorded in the current window.
+            </Typography>
+          )}
+        </PageSection>
+      </PageLayout>
     </>
   );
 }

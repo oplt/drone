@@ -2,9 +2,9 @@ import * as React from 'react';
 import { styled } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import MuiToolbar from '@mui/material/Toolbar';
-import { tabsClasses } from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
@@ -12,39 +12,40 @@ import SideMenuMobile from './SideMenuMobile';
 import MenuButton from './MenuButton';
 import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
 
+type DashboardUser = {
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string;
+} | null;
+
 const Toolbar = styled(MuiToolbar)({
   width: '100%',
-  padding: '12px',
+  padding: '12px 16px',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'start',
   justifyContent: 'center',
   gap: '12px',
   flexShrink: 0,
-  [`& ${tabsClasses.flexContainer}`]: {
-    gap: '8px',
-    p: '8px',
-    pb: 0,
-  },
 });
 
-export default function AppNavbar() {
+export default function AppNavbar({ user }: { user: DashboardUser }) {
   const [open, setOpen] = React.useState(false);
+  const displayName =
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Operator';
 
-  const toggleDrawer = (newOpen) => () => {
-    setOpen(newOpen);
+  const toggleDrawer = (nextOpen: boolean) => () => {
+    setOpen(nextOpen);
   };
 
   return (
     <AppBar
       position="fixed"
       sx={{
-        display: { xs: 'auto', md: 'none' },
+        display: { xs: 'block', md: 'none' },
         boxShadow: 0,
-        bgcolor: 'background.paper',
+        bgcolor: 'transparent',
         backgroundImage: 'none',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
         top: 'var(--template-frame-height, 0px)',
       }}
     >
@@ -53,26 +54,35 @@ export default function AppNavbar() {
           direction="row"
           sx={{
             alignItems: 'center',
-            flexGrow: 1,
             width: '100%',
-            gap: 1,
+            gap: 1.25,
+            px: 1.25,
+            py: 1,
+            borderRadius: 999,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            backdropFilter: 'blur(18px)',
+            boxShadow: 1,
           }}
         >
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ justifyContent: 'center', mr: 'auto' }}
-          >
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mr: 'auto', minWidth: 0 }}>
             <CustomIcon />
-            <Typography variant="h4" component="h1" sx={{ color: 'text.primary' }}>
-              Farm Ops Console
-            </Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ color: 'text.primary' }}>
+                Farm Ops Console
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
+                {displayName}
+              </Typography>
+            </Box>
           </Stack>
+          <Chip size="small" label="Live" color="success" />
           <ColorModeIconDropdown />
-          <MenuButton aria-label="menu" onClick={toggleDrawer(true)}>
+          <MenuButton aria-label="Open menu" onClick={toggleDrawer(true)}>
             <MenuRoundedIcon />
           </MenuButton>
-          <SideMenuMobile open={open} toggleDrawer={toggleDrawer} />
+          <SideMenuMobile open={open} toggleDrawer={toggleDrawer} user={user} />
         </Stack>
       </Toolbar>
     </AppBar>
@@ -83,9 +93,9 @@ export function CustomIcon() {
   return (
     <Box
       sx={{
-        width: '1.5rem',
-        height: '1.5rem',
-        borderRadius: '10px',
+        width: '1.85rem',
+        height: '1.85rem',
+        borderRadius: '12px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',

@@ -305,8 +305,8 @@ export default function CesiumMap({
         try {
           if (CesiumModule.createWorldTerrainAsync) {
             viewer.terrainProvider = await CesiumModule.createWorldTerrainAsync();
-          } else if (CesiumModule.createWorldTerrain) {
-            viewer.terrainProvider = CesiumModule.createWorldTerrain();
+          } else if (typeof (CesiumModule as any).createWorldTerrain === "function") {
+            viewer.terrainProvider = (CesiumModule as any).createWorldTerrain();
           }
         } catch {
           // keep default terrain
@@ -329,12 +329,14 @@ export default function CesiumMap({
         if (drawModeRef.current !== "none") return;
         if (!onPickLatLngRef.current) return;
         const scene = viewer.scene;
-        let cartesian = scene.pickPosition?.(movement.position);
+        let cartesian: Cesium.Cartesian3 | null =
+          scene.pickPosition?.(movement.position) ?? null;
         if (!cartesian) {
-          cartesian = viewer.camera.pickEllipsoid(
-            movement.position,
-            scene.globe.ellipsoid
-          );
+          cartesian =
+            viewer.camera.pickEllipsoid(
+              movement.position,
+              scene.globe.ellipsoid
+            ) ?? null;
         }
         if (!cartesian) return;
 
@@ -435,7 +437,7 @@ export default function CesiumMap({
           ? await CesiumModule.Cesium3DTileset.fromUrl(tilesetUrl, {
               maximumScreenSpaceError: 16,
             })
-          : new CesiumModule.Cesium3DTileset({
+          : new (CesiumModule.Cesium3DTileset as any)({
               url: tilesetUrl,
               maximumScreenSpaceError: 16,
             });
@@ -598,7 +600,6 @@ export default function CesiumMap({
   }
 
   function cartesianToLngLat(
-    viewer: Cesium.Viewer,
     CesiumModule: typeof Cesium,
     c: Cesium.Cartesian3
   ): [number, number] {
@@ -639,7 +640,7 @@ export default function CesiumMap({
     if (floating) pos = pos.filter((p) => p !== floating);
 
     const coords = pos.map((p) =>
-      cartesianToLngLat(viewer, CesiumModule, p)
+      cartesianToLngLat(CesiumModule, p)
     );
 
     if (mode === "point") {
@@ -743,7 +744,7 @@ export default function CesiumMap({
         addAnchor(c);
         onDrawCompleteRef.current?.({
           type: "point",
-          coordinates: cartesianToLngLat(viewer, CesiumModule, c),
+          coordinates: cartesianToLngLat(CesiumModule, c),
         });
         clearDrawEntities();
         return;
@@ -783,7 +784,8 @@ export default function CesiumMap({
       drawPositionsRef.current.push(newFloating);
 
       if (drawFloatingPointRef.current) {
-        drawFloatingPointRef.current.position = newFloating;
+        drawFloatingPointRef.current.position =
+          new CesiumModule.ConstantPositionProperty(newFloating);
       }
     }, CesiumModule.ScreenSpaceEventType.LEFT_CLICK);
 

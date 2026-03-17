@@ -1,24 +1,23 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
 import {
-  Alert,
   Box,
   Button,
-  Chip,
+  Paper,
+  Stack,
+  Typography,
+  Divider,
+  TextField,
+  Alert,
   CircularProgress,
+  Chip,
+  MenuItem,
+  IconButton,
+  Tooltip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Divider,
-  IconButton,
-  MenuItem,
-  Paper,
-  Snackbar,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
 } from "@mui/material";
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
@@ -72,66 +71,31 @@ type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
 type DrawMode = "none" | "point" | "polyline" | "polygon";
 type TerraFeature = TerraDrawFeature;
 type LonLat = [number, number];
-type PrivatePatrolTaskType =
-  | "perimeter_patrol"
-  | "waypoint_patrol"
-  | "grid_surveillance"
-  | "event_triggered_patrol";
-type PatrolTriggerType =
-  | "motion_sensor"
-  | "fence_alarm"
-  | "camera_detection"
-  | "night_schedule"
-  | "unknown_vehicle";
-type PatrolAiTask =
-  | "intruder_detection"
-  | "vehicle_detection"
-  | "fence_breach_detection"
-  | "motion_detection";
 type GridParams = {
-  task_type: PrivatePatrolTaskType;
-  path_offset_m: number;
-  direction: "clockwise" | "counterclockwise";
-  patrol_loops: number;
-  speed_mps: number;
-  camera_angle_deg: number;
-  camera_overlap_pct: number;
-  max_segment_length_m: number;
-  hover_time_s: number;
-  camera_scan_yaw_deg: number;
-  zoom_capture: boolean;
-  return_to_start: boolean;
-  grid_spacing_m: number;
-  grid_angle_deg: number;
+  row_spacing_m: number;
+  grid_angle_deg: number | null;
+  slope_aware: boolean;
   safety_inset_m: number;
-  trigger_type: PatrolTriggerType;
-  verification_loiter_s: number;
-  verification_radius_m: number;
-  track_target: boolean;
-  auto_stream_video: boolean;
-  target_label: string;
-  ai_tasks: PatrolAiTask[];
+  terrain_follow: boolean;
+  agl_m: number;
+  pattern_mode: "boustrophedon" | "crosshatch";
+  crosshatch_angle_offset_deg: number;
+  start_corner: "auto" | "nw" | "ne" | "sw" | "se";
+  lane_strategy: "serpentine" | "one_way";
+  row_stride: number;
+  row_phase_m: number;
 };
 type GridPreviewWaypoint = { lat: number; lon: number };
 type GridPreviewStats = {
-  task_type?: string;
-  waypoints?: number;
-  key_points?: number;
   rows?: number;
-  perimeter_m?: number;
-  total_route_m?: number;
+  waypoints?: number;
+  route_m?: number;
   area_m2?: number;
-  path_offset_requested_m?: number;
-  path_offset_applied_m?: number;
-  grid_spacing_m?: number;
-  grid_angle_deg?: number;
-  trigger_type?: string;
-  trigger_action?: string;
-  patrol_loops?: number;
-  hover_time_s?: number;
-  hover_total_s?: number;
-  verification_loiter_s?: number;
-  estimated_duration_s?: number;
+  passes?: number;
+  start_corner?: string;
+  lane_strategy?: string;
+  row_stride?: number;
+  row_phase_m?: number;
 };
 type FieldSummary = {
   id: number;
@@ -163,13 +127,6 @@ interface MissionStatus {
   };
 }
 
-type NoticeSeverity = "success" | "info" | "warning" | "error";
-type UiNotice = {
-  open: boolean;
-  severity: NoticeSeverity;
-  message: string;
-};
-
 const MAX_GRID_PREVIEW_WAYPOINTS = 2200;
 const GRID_PREVIEW_DEBOUNCE_MS = 250;
 const CESIUM_MAX_SAFE_ZOOM = 16;
@@ -178,7 +135,7 @@ const INFO_INPUT_LABEL_PROPS = {
   sx: { pointerEvents: "auto" },
 } as const;
 
-export default function PrivatePatrolPage() {
+export default function WarehousePage() {
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [fields, setFields] = useState<FieldFeature[]>([]);
@@ -187,11 +144,6 @@ export default function PrivatePatrolPage() {
   const [fieldsRefreshNonce, setFieldsRefreshNonce] = useState(0);
   const [savingField, setSavingField] = useState(false);
   const [deletingField, setDeletingField] = useState(false);
-  const [uiNotice, setUiNotice] = useState<UiNotice>({
-    open: false,
-    severity: "success",
-    message: "",
-  });
   const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(null);
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
@@ -261,7 +213,7 @@ export default function PrivatePatrolPage() {
     setFieldBorder(null);
   }, [isRemovableUserDrawingFeature]);
 
-  const polygonPathToLonLat = useCallback((poly: google.maps.Polygon): LonLat[] => {
+  const polygonPathToLonLat = (poly: google.maps.Polygon): LonLat[] => {
     const path = poly.getPath();
     const pts: LonLat[] = [];
     for (let i = 0; i < path.getLength(); i++) {
@@ -269,45 +221,21 @@ export default function PrivatePatrolPage() {
       pts.push([p.lng(), p.lat()]);
     }
     return pts;
-  }, []);
+  };
 
-  const showUiNotice = useCallback((message: string, severity: NoticeSeverity = "success") => {
-    setUiNotice({ open: true, severity, message });
-  }, []);
-
-  const handleUiNoticeClose = useCallback((_event?: unknown, reason?: string) => {
-    if (reason === "clickaway") return;
-    setUiNotice((prev) => ({ ...prev, open: false }));
-  }, []);
-
-  const clearFieldPolygonListeners = useCallback(() => {
-    fieldPolygonListenersRef.current.forEach((listener) => {
-      try {
-        listener.remove();
-      } catch {
-        // ignore listener cleanup issues
-      }
-    });
-    fieldPolygonListenersRef.current = [];
-  }, []);
-
-  const wirePolygonEditListeners = useCallback((poly: google.maps.Polygon) => {
-    clearFieldPolygonListeners();
+  const wirePolygonEditListeners = (poly: google.maps.Polygon) => {
     const path = poly.getPath();
 
     const update = () => setFieldBorder(polygonPathToLonLat(poly));
 
     update();
 
-    fieldPolygonListenersRef.current = [
-      path.addListener("set_at", update),
-      path.addListener("insert_at", update),
-      path.addListener("remove_at", update),
-    ];
-  }, [clearFieldPolygonListeners, polygonPathToLonLat]);
+    path.addListener("set_at", update);
+    path.addListener("insert_at", update);
+    path.addListener("remove_at", update);
+  };
 
-  const clearFieldBorder = useCallback(() => {
-    clearFieldPolygonListeners();
+  const clearFieldBorder = () => {
     if (fieldPolygonRef.current) {
       fieldPolygonRef.current.setMap(null);
       fieldPolygonRef.current = null;
@@ -328,7 +256,7 @@ export default function PrivatePatrolPage() {
     }
     setFieldBorder(null);
     setSelectedFieldId(null);
-  }, [clearFieldPolygonListeners, isRemovableUserDrawingFeature]);
+  };
 
   const saveFieldBorder = async () => {
     const token = getToken();
@@ -364,7 +292,7 @@ export default function PrivatePatrolPage() {
       }
 
       const data = await res.json();
-      showUiNotice(`Saved field "${data.name}" (#${data.id})`);
+      alert(`Saved field "${data.name}" (id=${data.id})`);
       setFieldsRefreshNonce((n) => n + 1);
       setSelectedFieldId(data?.id ?? null);
     } catch (e: any) {
@@ -411,7 +339,7 @@ export default function PrivatePatrolPage() {
       }
 
       const data = await res.json();
-      showUiNotice(`Updated field "${data.name}" (#${data.id})`);
+      alert(`Updated field "${data.name}" (id=${data.id})`);
       setFieldsRefreshNonce((n) => n + 1);
     } catch (e: any) {
       addError(e?.message ?? "Failed to update field");
@@ -422,46 +350,29 @@ export default function PrivatePatrolPage() {
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const fieldPolygonRef = useRef<google.maps.Polygon | null>(null);
-  const fieldPolygonListenersRef = useRef<google.maps.MapsEventListener[]>([]);
   const missionLaunchInFlightRef = useRef(false);
   const gridPreviewAbortRef = useRef<AbortController | null>(null);
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [eventLocation, setEventLocation] = useState<Waypoint | null>(null);
   const [alt, setAlt] = useState(30);
   const [altInput, setAltInput] = useState("30");
-  const [name, setName] = useState("private-patrol-1");
+  const [name, setName] = useState("field-plan-1");
   const [sending, setSending] = useState(false);
   const [preflightRun, setPreflightRun] =
     useState<PreflightRunResponse | null>(null);
   const [gridParams, setGridParams] = useState<GridParams>({
-    task_type: "perimeter_patrol",
-    path_offset_m: 15,
-    direction: "clockwise",
-    patrol_loops: 1,
-    speed_mps: 6,
-    camera_angle_deg: 35,
-    camera_overlap_pct: 50,
-    max_segment_length_m: 20,
-    hover_time_s: 15,
-    camera_scan_yaw_deg: 360,
-    zoom_capture: true,
-    return_to_start: true,
-    grid_spacing_m: 40,
-    grid_angle_deg: 0,
-    safety_inset_m: 2,
-    trigger_type: "fence_alarm",
-    verification_loiter_s: 45,
-    verification_radius_m: 18,
-    track_target: true,
-    auto_stream_video: true,
-    target_label: "",
-    ai_tasks: [
-      "intruder_detection",
-      "vehicle_detection",
-      "fence_breach_detection",
-      "motion_detection",
-    ],
+    row_spacing_m: 7.5,
+    grid_angle_deg: null,
+    slope_aware: false,
+    safety_inset_m: 1.5,
+    terrain_follow: false,
+    agl_m: 30,
+    pattern_mode: "boustrophedon",
+    crosshatch_angle_offset_deg: 90,
+    start_corner: "auto",
+    lane_strategy: "serpentine",
+    row_stride: 1,
+    row_phase_m: 0,
   });
   const [gridPreview, setGridPreview] = useState<GridPreviewWaypoint[] | null>(
     null
@@ -473,19 +384,6 @@ export default function PrivatePatrolPage() {
     null
   );
   const [gridPreviewError, setGridPreviewError] = useState<string | null>(null);
-  const isWaypointPatrol = gridParams.task_type === "waypoint_patrol";
-  const isGridSurveillance = gridParams.task_type === "grid_surveillance";
-  const isEventTriggeredPatrol = gridParams.task_type === "event_triggered_patrol";
-  const hasPerimeterPolygon = Boolean(fieldBorder && fieldBorder.length >= 3);
-  const hasWaypointKeyPoints = waypoints.length >= 2;
-  const hasEventLocation = Boolean(eventLocation);
-  const hasRequiredTaskGeometry = isWaypointPatrol
-    ? hasWaypointKeyPoints
-    : isEventTriggeredPatrol
-      ? gridParams.trigger_type === "night_schedule"
-        ? hasEventLocation || hasPerimeterPolygon
-        : hasEventLocation
-      : hasPerimeterPolygon;
   const [previewLoading, setPreviewLoading] = useState(false);
   const [center, setCenter] = useState(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
@@ -533,15 +431,9 @@ export default function PrivatePatrolPage() {
 
   const handleCesiumPick = useCallback(
     (p: { lat: number; lng: number }) => {
-      if (gridParams.task_type === "waypoint_patrol") {
-        setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
-        return;
-      }
-      if (gridParams.task_type === "event_triggered_patrol") {
-        setEventLocation({ lat: p.lat, lon: p.lng, alt });
-      }
+      setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
     },
-    [alt, gridParams.task_type]
+    [alt]
   );
 
   const droneReady = Boolean(wsConnected && droneCenter);
@@ -566,14 +458,13 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
 
 
   const onMapUnmount = useCallback(() => {
-    clearFieldPolygonListeners();
     if (fieldPolygonRef.current) {
       fieldPolygonRef.current.setMap(null);
       fieldPolygonRef.current = null;
     }
     mapRef.current = null;
     setMapReady(false);
-  }, [clearFieldPolygonListeners]);
+  }, []);
 
   const onMapZoomChanged = useCallback(() => {
     if (!mapRef.current) return;
@@ -675,7 +566,6 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     (ring: LonLat[]) => {
       if (!mapRef.current || !(window as any).google?.maps) return;
 
-      clearFieldPolygonListeners();
       if (fieldPolygonRef.current) {
         fieldPolygonRef.current.setMap(null);
         fieldPolygonRef.current = null;
@@ -698,7 +588,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
       fieldPolygonRef.current = poly;
       wirePolygonEditListeners(poly);
     },
-    [clearFieldPolygonListeners, stripClosedRing, wirePolygonEditListeners]
+    [stripClosedRing]
   );
 
   const focusRingOnMap = useCallback(
@@ -753,7 +643,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     } finally {
       setLoadingFields(false);
     }
-  }, [API_BASE_CLEAN, addError, lonLatRingToPath, stripClosedRing]);
+  }, [addError, lonLatRingToPath, stripClosedRing]);
 
   useEffect(() => {
     fetchFields();
@@ -824,7 +714,13 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         const tilesetAsset = assets.find((a: any) => a?.type === "TILESET_3D");
         const rawUrl = typeof tilesetAsset?.url === "string" ? tilesetAsset.url : "";
         if (!cancelled) {
-          setFieldTilesetUrl(rawUrl ? toAbsoluteAssetUrl(rawUrl) : null);
+          if (rawUrl) {
+            setFieldTilesetUrl(toAbsoluteAssetUrl(rawUrl));
+            setUseCesium(true);
+            setCesiumViewMode("top");
+          } else {
+            setFieldTilesetUrl(null);
+          }
         }
       } catch {
         if (!cancelled) setFieldTilesetUrl(null);
@@ -872,7 +768,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
       addError("Not authenticated");
       return;
     }
-    if (!selectedFieldId) {
+    if (selectedFieldId == null) {
       addError("Select a saved field to delete.");
       return;
     }
@@ -914,16 +810,16 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
       }
 
       setFields((prev) => prev.filter((f) => f.id !== pendingDeleteField.id));
+      setFieldsRefreshNonce((n) => n + 1);
       clearFieldBorder();
       setFieldName("Field A");
       setPendingDeleteField(null);
-      showUiNotice(`Deleted field "${pendingDeleteField.name}"`);
     } catch (e: any) {
       addError(e?.message ?? "Failed to delete field");
     } finally {
       setDeletingField(false);
     }
-  }, [API_BASE_CLEAN, addError, clearFieldBorder, pendingDeleteField, showUiNotice]);
+  }, [API_BASE_CLEAN, addError, clearFieldBorder, pendingDeleteField]);
 
   useEffect(() => {
     if (useCesium) return;
@@ -945,6 +841,12 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     return { areaHa, centroid };
   }, [computeAreaHa, computeCentroid, fieldBorder]);
 
+  const previewLegStats = useMemo(() => {
+    if (!gridPreview || !gridPreviewMask) return null;
+    const workLegs = gridPreviewMask.filter(Boolean).length;
+    const transitLegs = gridPreviewMask.length - workLegs;
+    return { workLegs, transitLegs };
+  }, [gridPreview, gridPreviewMask]);
   const gridPreviewTooDense =
     !!gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS;
 
@@ -1013,35 +915,22 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     waypointMarkersRef.current = [];
 
     if (terraDrawMode !== "static") return;
+    if (waypoints.length === 0) return;
 
-    const markersToRender: Array<{ point: Waypoint; title: string; color: string }> = [];
-    if (gridParams.task_type === "waypoint_patrol" && waypoints.length > 0) {
-      waypoints.forEach((p) =>
-        markersToRender.push({ point: p, title: "Waypoint", color: "#1976d2" })
-      );
-    } else if (gridParams.task_type === "event_triggered_patrol" && eventLocation) {
-      markersToRender.push({
-        point: eventLocation,
-        title: "Event Location",
-        color: "#d32f2f",
-      });
-    }
-    if (markersToRender.length === 0) return;
-
-    markersToRender.forEach(({ point, title, color }) => {
+    waypoints.forEach((p) => {
       const content = document.createElement("div");
       content.style.width = "12px";
       content.style.height = "12px";
       content.style.borderRadius = "50%";
-      content.style.background = color;
+      content.style.background = "#1976d2";
       content.style.border = "2px solid #ffffff";
       content.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
 
       const marker = new markerLib.AdvancedMarkerElement({
         map: mapRef.current,
-        position: { lat: point.lat, lng: point.lon },
+        position: { lat: p.lat, lng: p.lon },
         content,
-        title,
+        title: "Waypoint",
       });
 
       waypointMarkersRef.current.push(marker);
@@ -1060,7 +949,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
       });
       waypointMarkersRef.current = [];
     };
-  }, [eventLocation, gridParams.task_type, isLoaded, mapReady, terraDrawMode, waypoints]);
+  }, [isLoaded, mapReady, terraDrawMode, waypoints]);
 
 useEffect(() => {
   if (useCesium) return;
@@ -1095,15 +984,9 @@ useEffect(() => {
       if (!e.latLng) return;
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
-      if (gridParams.task_type === "waypoint_patrol") {
-        setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
-        return;
-      }
-      if (gridParams.task_type === "event_triggered_patrol") {
-        setEventLocation({ lat, lon: lng, alt });
-      }
+      setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
     },
-    [alt, gridParams.task_type, terraDrawMode]
+    [alt, terraDrawMode]
   );
   const handleDrawingToolSelection = useCallback(
     (toolMode: TerraDrawToolMode) => {
@@ -1136,28 +1019,21 @@ useEffect(() => {
           setSelectedFieldId(null);
         }
       } else if (result.type === "polyline") {
-        if (gridParams.task_type === "waypoint_patrol") {
-          setWaypoints(
-            result.coordinates.map(([lon, lat]) => ({
-              lat,
-              lon,
-              alt,
-            }))
-          );
-        }
+        setWaypoints(
+          result.coordinates.map(([lon, lat]) => ({
+            lat,
+            lon,
+            alt,
+          }))
+        );
       } else if (result.type === "point") {
-        if (gridParams.task_type === "waypoint_patrol") {
-          const [lon, lat] = result.coordinates;
-          setWaypoints((prev) => [...prev, { lat, lon, alt }]);
-        } else if (gridParams.task_type === "event_triggered_patrol") {
-          const [lon, lat] = result.coordinates;
-          setEventLocation({ lat, lon, alt });
-        }
+        const [lon, lat] = result.coordinates;
+        setWaypoints((prev) => [...prev, { lat, lon, alt }]);
       }
 
       setDrawMode("none");
     },
-    [alt, gridParams.task_type, stripClosedRing]
+    [alt, stripClosedRing]
   );
 
   const handleAltitudeInputChange = (value: string) => {
@@ -1192,21 +1068,7 @@ useEffect(() => {
         setPreviewLoading(false);
         return;
       }
-      const keyPointsLonLat = waypoints.map((p) => [p.lon, p.lat]);
-      const eventLocationLonLat = eventLocation
-        ? [eventLocation.lon, eventLocation.lat]
-        : undefined;
-      if (
-        (gridParams.task_type === "waypoint_patrol" && keyPointsLonLat.length < 2) ||
-        (gridParams.task_type === "event_triggered_patrol" &&
-          ((gridParams.trigger_type === "night_schedule" &&
-            !eventLocationLonLat &&
-            (!fieldBorder || fieldBorder.length < 3)) ||
-            (gridParams.trigger_type !== "night_schedule" && !eventLocationLonLat))) ||
-        (gridParams.task_type !== "waypoint_patrol" &&
-          gridParams.task_type !== "event_triggered_patrol" &&
-          (!fieldBorder || fieldBorder.length < 3))
-      ) {
+      if (!fieldBorder || fieldBorder.length < 3) {
         setGridPreview(null);
         setGridPreviewMask(null);
         setGridPreviewStats(null);
@@ -1218,7 +1080,7 @@ useEffect(() => {
       if (!token) return;
       setPreviewLoading(true);
       try {
-        const res = await fetch(`${API_BASE_CLEAN}/tasks/missions/private-patrol/preview`, {
+        const res = await fetch(`${API_BASE_CLEAN}/tasks/missions/grid-preview`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1226,40 +1088,16 @@ useEffect(() => {
           },
           signal,
           body: JSON.stringify({
-            task_type: gridParams.task_type,
-            property_polygon_lonlat:
-              gridParams.task_type !== "waypoint_patrol" ? fieldBorder : undefined,
-            key_points_lonlat:
-              gridParams.task_type === "waypoint_patrol" ? keyPointsLonLat : undefined,
-            trigger_event_location_lonlat:
-              gridParams.task_type === "event_triggered_patrol"
-                ? eventLocationLonLat
-                : undefined,
-            cruise_alt: alt,
-            path_offset_m: gridParams.path_offset_m,
-            direction: gridParams.direction,
-            patrol_loops: gridParams.patrol_loops,
-            speed_mps: gridParams.speed_mps,
-            camera_angle_deg: gridParams.camera_angle_deg,
-            camera_overlap_pct: gridParams.camera_overlap_pct,
-            max_segment_length_m: gridParams.max_segment_length_m,
-            hover_time_s: gridParams.hover_time_s,
-            camera_scan_yaw_deg: gridParams.camera_scan_yaw_deg,
-            zoom_capture: gridParams.zoom_capture,
-            return_to_start: gridParams.return_to_start,
-            grid_spacing_m: gridParams.grid_spacing_m,
+            field_polygon_lonlat: fieldBorder,
+            row_spacing_m: gridParams.row_spacing_m,
             grid_angle_deg: gridParams.grid_angle_deg,
             safety_inset_m: gridParams.safety_inset_m,
-            trigger_type: gridParams.trigger_type,
-            verification_loiter_s: gridParams.verification_loiter_s,
-            verification_radius_m: gridParams.verification_radius_m,
-            track_target: gridParams.track_target,
-            auto_stream_video: gridParams.auto_stream_video,
-            target_label:
-              gridParams.target_label.trim().length > 0
-                ? gridParams.target_label.trim()
-                : undefined,
-            ai_tasks: gridParams.ai_tasks,
+            pattern_mode: gridParams.pattern_mode,
+            crosshatch_angle_offset_deg: gridParams.crosshatch_angle_offset_deg,
+            start_corner: gridParams.start_corner,
+            lane_strategy: gridParams.lane_strategy,
+            row_stride: gridParams.row_stride,
+            row_phase_m: gridParams.row_phase_m,
           }),
         });
         if (!res.ok) {
@@ -1274,7 +1112,7 @@ useEffect(() => {
           setGridPreview(null);
           setGridPreviewMask(null);
           setGridPreviewStats(null);
-          setGridPreviewError(detail || `Patrol preview failed (HTTP ${res.status})`);
+          setGridPreviewError(detail || `Grid preview failed (HTTP ${res.status})`);
           return;
         }
         const data = await res.json();
@@ -1288,12 +1126,12 @@ useEffect(() => {
         setGridPreview(null);
         setGridPreviewMask(null);
         setGridPreviewStats(null);
-        setGridPreviewError("Patrol preview failed. Please try again.");
+        setGridPreviewError("Grid preview failed. Please try again.");
       } finally {
         if (!signal.aborted) setPreviewLoading(false);
       }
     },
-    [API_BASE_CLEAN, alt, eventLocation, fieldBorder, gridParams, terraDrawMode, useCesium, waypoints]
+    [API_BASE_CLEAN, fieldBorder, gridParams, terraDrawMode, useCesium]
   );
 
   useEffect(() => {
@@ -1332,41 +1170,13 @@ useEffect(() => {
       return;
     }
 
-    const keyPointsLonLat = waypoints.map((p) => [p.lon, p.lat]);
-    const eventLocationLonLat = eventLocation
-      ? [eventLocation.lon, eventLocation.lat]
-      : undefined;
-    if (
-      gridParams.task_type !== "waypoint_patrol" &&
-      gridParams.task_type !== "event_triggered_patrol" &&
-      (!fieldBorder || fieldBorder.length < 3)
-    ) {
-      addError("Draw or select a property polygon before starting this mission");
+    if (!fieldBorder || fieldBorder.length < 3) {
+      addError("Draw or select a field polygon before starting a grid survey");
       return;
-    }
-    if (gridParams.task_type === "waypoint_patrol" && keyPointsLonLat.length < 2) {
-      addError("Add at least 2 key points before starting waypoint patrol");
-      return;
-    }
-    if (gridParams.task_type === "event_triggered_patrol") {
-      if (
-        gridParams.trigger_type === "night_schedule" &&
-        !eventLocationLonLat &&
-        (!fieldBorder || fieldBorder.length < 3)
-      ) {
-        addError(
-          "For night schedule trigger, set an event location point or draw/select a property polygon."
-        );
-        return;
-      }
-      if (gridParams.trigger_type !== "night_schedule" && !eventLocationLonLat) {
-        addError("Set an event location point before starting event-triggered patrol.");
-        return;
-      }
     }
     if (gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS) {
       addError(
-        `Patrol preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase segment length, reduce patrol loops, or split the property.`
+        `Grid preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row spacing, increase row stride, or split the field.`
       );
       return;
     }
@@ -1383,41 +1193,21 @@ useEffect(() => {
       const payload: Record<string, unknown> = {
         name: name.trim(),
         cruise_alt: altToUse,
-        mission_type: "perimeter_patrol",
-        private_patrol: {
-          task_type: gridParams.task_type,
-          property_polygon_lonlat:
-            gridParams.task_type !== "waypoint_patrol" ? fieldBorder : undefined,
-          key_points_lonlat:
-            gridParams.task_type === "waypoint_patrol" ? keyPointsLonLat : undefined,
-          trigger_event_location_lonlat:
-            gridParams.task_type === "event_triggered_patrol"
-              ? eventLocationLonLat
-              : undefined,
-          path_offset_m: gridParams.path_offset_m,
-          direction: gridParams.direction,
-          patrol_loops: gridParams.patrol_loops,
-          speed_mps: gridParams.speed_mps,
-          camera_angle_deg: gridParams.camera_angle_deg,
-          camera_overlap_pct: gridParams.camera_overlap_pct,
-          max_segment_length_m: gridParams.max_segment_length_m,
-          hover_time_s: gridParams.hover_time_s,
-          camera_scan_yaw_deg: gridParams.camera_scan_yaw_deg,
-          zoom_capture: gridParams.zoom_capture,
-          return_to_start: gridParams.return_to_start,
-          grid_spacing_m: gridParams.grid_spacing_m,
+        mission_type: "grid",
+        grid: {
+          field_polygon_lonlat: fieldBorder,
+          row_spacing_m: gridParams.row_spacing_m,
           grid_angle_deg: gridParams.grid_angle_deg,
+          slope_aware: gridParams.slope_aware,
           safety_inset_m: gridParams.safety_inset_m,
-          trigger_type: gridParams.trigger_type,
-          verification_loiter_s: gridParams.verification_loiter_s,
-          verification_radius_m: gridParams.verification_radius_m,
-          track_target: gridParams.track_target,
-          auto_stream_video: gridParams.auto_stream_video,
-          target_label:
-            gridParams.target_label.trim().length > 0
-              ? gridParams.target_label.trim()
-              : undefined,
-          ai_tasks: gridParams.ai_tasks,
+          terrain_follow: gridParams.terrain_follow,
+          agl_m: gridParams.agl_m,
+          pattern_mode: gridParams.pattern_mode,
+          crosshatch_angle_offset_deg: gridParams.crosshatch_angle_offset_deg,
+          start_corner: gridParams.start_corner,
+          lane_strategy: gridParams.lane_strategy,
+          row_stride: gridParams.row_stride,
+          row_phase_m: gridParams.row_phase_m,
         },
       };
 
@@ -1427,17 +1217,7 @@ useEffect(() => {
         API_BASE_CLEAN,
       );
       setPreflightRun(preflight);
-      const missionLabel =
-        gridParams.task_type === "waypoint_patrol"
-          ? "Waypoint Patrol"
-          : gridParams.task_type === "grid_surveillance"
-            ? "Grid Surveillance"
-            : gridParams.task_type === "event_triggered_patrol"
-              ? "Event-Triggered Patrol"
-            : "Perimeter Patrol";
-      showUiNotice(
-        `${missionLabel}: "${data.mission_name}" started. Tracking flight...`
-      );
+      alert(`Grid Survey: "${data.mission_name}" started! Tracking flight...`);
 
       setPendingFlightId(data.flight_id ?? null);
 
@@ -1457,42 +1237,6 @@ useEffect(() => {
     () => waypoints.map((p) => ({ lat: p.lat, lng: p.lon })),
     [waypoints]
   );
-  const gridPreviewPolylineGroups = useMemo(() => {
-    const grouped = {
-      work: [] as Array<Array<{ lat: number; lng: number }>>,
-      turn: [] as Array<Array<{ lat: number; lng: number }>>,
-    };
-
-    if (!gridPreview || gridPreview.length < 2) {
-      return grouped;
-    }
-
-    let currentKind: "work" | "turn" | null = null;
-    let currentPath: Array<{ lat: number; lng: number }> = [];
-
-    for (let i = 0; i < gridPreview.length - 1; i++) {
-      const start = { lat: gridPreview[i].lat, lng: gridPreview[i].lon };
-      const end = { lat: gridPreview[i + 1].lat, lng: gridPreview[i + 1].lon };
-      const nextKind: "work" | "turn" = gridPreviewMask?.[i] === false ? "turn" : "work";
-
-      if (currentKind !== nextKind) {
-        if (currentPath.length >= 2 && currentKind) {
-          grouped[currentKind].push(currentPath);
-        }
-        currentKind = nextKind;
-        currentPath = [start, end];
-        continue;
-      }
-
-      currentPath.push(end);
-    }
-
-    if (currentPath.length >= 2 && currentKind) {
-      grouped[currentKind].push(currentPath);
-    }
-
-    return grouped;
-  }, [gridPreview, gridPreviewMask]);
   const cesiumFieldBoundary = useMemo(
     () => (fieldBorder && fieldBorder.length >= 3 ? fieldBorder : null),
     [fieldBorder]
@@ -1501,11 +1245,11 @@ useEffect(() => {
     if (gridPreview && gridPreview.length >= 2) {
       return gridPreview.map((p) => [p.lon, p.lat] as LonLat);
     }
-    if (isWaypointPatrol && waypoints.length >= 2) {
+    if (waypoints.length >= 2) {
       return waypoints.map((p) => [p.lon, p.lat] as LonLat);
     }
     return null;
-  }, [gridPreview, isWaypointPatrol, waypoints]);
+  }, [gridPreview, waypoints]);
 
   const mapCenter = useMemo(() => userCenter || center, [userCenter, center]);
   const cesiumZoom = useMemo(
@@ -1554,11 +1298,10 @@ useEffect(() => {
           spacing={2}
         >
           <div>
-            <Typography variant="h5">Private Patrol</Typography>
+            <Typography variant="h5">Field Operations</Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Persistent surveillance missions for private property security with
-              perimeter patrol, key-point verification, grid area coverage, and
-              event-triggered response workflows.
+              Configure field routes, stream telemetry, and monitor imagery in
+              real time.
             </Typography>
           </div>
           <MissionStatusChips droneConnected={droneConnected} wsConnected={wsConnected} />
@@ -1722,61 +1465,58 @@ useEffect(() => {
                           </OverlayView>
                         )}
 
-                        {isEventTriggeredPatrol && eventLocation && (
-                          <OverlayView
-                            position={{ lat: eventLocation.lat, lng: eventLocation.lon }}
-                            mapPaneName={OverlayView.OVERLAY_LAYER}
-                          >
-                            <div
-                              style={{
-                                transform: "translate(-50%, -50%)",
-                                color: "#d32f2f",
-                              }}
-                            >
-                              <PlaceOutlinedIcon fontSize="large" />
-                            </div>
-                          </OverlayView>
-                        )}
-
                         {gridPreview && gridPreview.length >= 2 && (
                           <>
-                            {gridPreviewPolylineGroups.work.map((path, i) => (
-                              <Polyline
-                                key={`work-${i}`}
-                                path={path}
-                                options={{
-                                  strokeColor: "#2e7d32",
-                                  strokeOpacity: 0.85,
-                                  strokeWeight: 2,
-                                }}
-                              />
-                            ))}
-                            {gridPreviewPolylineGroups.turn.map((path, i) => (
-                              <Polyline
-                                key={`turn-${i}`}
-                                path={path}
-                                options={{
-                                  strokeColor: "#f57c00",
-                                  strokeOpacity: 0.6,
-                                  strokeWeight: 1.5,
-                                  icons: [
+                            {gridPreview.slice(0, -1).map((wp, i) =>
+                              gridPreviewMask?.[i] ? (
+                                <Polyline
+                                  key={`work-${i}`}
+                                  path={[
+                                    { lat: wp.lat, lng: wp.lon },
                                     {
-                                      icon: {
-                                        path: "M 0,-1 0,1",
-                                        strokeOpacity: 1,
-                                        scale: 2,
-                                      },
-                                      offset: "0",
-                                      repeat: "10px",
+                                      lat: gridPreview[i + 1].lat,
+                                      lng: gridPreview[i + 1].lon,
                                     },
-                                  ],
-                                }}
-                              />
-                            ))}
+                                  ]}
+                                  options={{
+                                    strokeColor: "#2e7d32",
+                                    strokeOpacity: 0.85,
+                                    strokeWeight: 2,
+                                  }}
+                                />
+                              ) : (
+                                <Polyline
+                                  key={`turn-${i}`}
+                                  path={[
+                                    { lat: wp.lat, lng: wp.lon },
+                                    {
+                                      lat: gridPreview[i + 1].lat,
+                                      lng: gridPreview[i + 1].lon,
+                                    },
+                                  ]}
+                                  options={{
+                                    strokeColor: "#f57c00",
+                                    strokeOpacity: 0.6,
+                                    strokeWeight: 1.5,
+                                    icons: [
+                                      {
+                                        icon: {
+                                          path: "M 0,-1 0,1",
+                                          strokeOpacity: 1,
+                                          scale: 2,
+                                        },
+                                        offset: "0",
+                                        repeat: "10px",
+                                      },
+                                    ],
+                                  }}
+                                />
+                              )
+                            )}
                           </>
                         )}
 
-                        {isWaypointPatrol && terraDrawMode === "static" && waypoints.length >= 2 && (
+                        {terraDrawMode === "static" && waypoints.length >= 2 && (
                           <Polyline
                             path={polylinePath}
                             options={{
@@ -1895,14 +1635,6 @@ useEffect(() => {
                                       setDrawMode("none");
                                       return;
                                     }
-                                    if (isEventTriggeredPatrol && eventLocation) {
-                                      setEventLocation(null);
-                                      return;
-                                    }
-                                    if (isWaypointPatrol && waypoints.length > 0) {
-                                      setWaypoints((prev) => prev.slice(0, -1));
-                                      return;
-                                    }
                                     if (fieldBorder && fieldBorder.length > 0) {
                                       setFieldBorder((prev) => {
                                         if (!prev || prev.length <= 1) return null;
@@ -1910,17 +1642,10 @@ useEffect(() => {
                                       });
                                       return;
                                     }
-                                    return;
-                                  }
-
-                                  if (isEventTriggeredPatrol && eventLocation) {
-                                    setEventLocation(null);
-                                    return;
-                                  }
-                                  if (isWaypointPatrol && waypoints.length > 0) {
                                     setWaypoints((prev) => prev.slice(0, -1));
                                     return;
                                   }
+
                                   if (!terraDrawRef.current) return;
                                   const snapshot = terraDrawRef.current.getSnapshot();
                                   const latestFeature = [...snapshot]
@@ -1939,8 +1664,7 @@ useEffect(() => {
                                   useCesium
                                     ? drawMode === "none" &&
                                       (!fieldBorder || fieldBorder.length === 0) &&
-                                      waypoints.length === 0 &&
-                                      !eventLocation
+                                      waypoints.length === 0
                                     : !terraDrawReady
                                 }
                                 sx={{
@@ -2025,7 +1749,7 @@ useEffect(() => {
 
                 <Box sx={{ mt: 3 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Private Patrol Parameters
+                    Grid Survey Parameters
                   </Typography>
                   <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                     <Box
@@ -2040,519 +1764,254 @@ useEffect(() => {
                         alignItems: "start",
                       }}
                     >
-                      <TextField
-                        variant="filled"
+                      <TextField variant="filled"
                         select
                         label={
                           <InfoLabel
-                            label="Mission task"
-                            info="Task profile for private property security missions."
+                            label="Pattern mode"
+                            info="Boustrophedon is a classic lawnmower sweep. Crosshatch adds a second pass."
                           />
                         }
                         InputLabelProps={INFO_INPUT_LABEL_PROPS}
                         size="small"
                         fullWidth
-                        value={gridParams.task_type}
+                        value={gridParams.pattern_mode}
                         onChange={(e) =>
                           setGridParams((p) => ({
                             ...p,
-                            task_type: e.target.value as GridParams["task_type"],
+                            pattern_mode: e.target.value as GridParams["pattern_mode"],
                           }))
                         }
                       >
-                          <MenuItem value="perimeter_patrol">A. Perimeter Patrol Mission</MenuItem>
-                          <MenuItem value="waypoint_patrol">B. Waypoint Patrol (Key Points)</MenuItem>
-                          <MenuItem value="grid_surveillance">C. Grid Surveillance Mission</MenuItem>
-                          <MenuItem value="event_triggered_patrol">
-                            D. Event-Triggered Patrol
-                          </MenuItem>
-                        </TextField>
-                      <TextField
-                        variant="filled"
+                        <MenuItem value="boustrophedon">Boustrophedon (single pass)</MenuItem>
+                        <MenuItem value="crosshatch">Crosshatch (two passes)</MenuItem>
+                      </TextField>
+                      <TextField variant="filled"
+                        select
                         label={
                           <InfoLabel
-                            label="Speed (m/s)"
-                            info={
-                              isWaypointPatrol
-                                ? "Waypoint patrol uses moderate speed for precise checkpoint approaches."
-                                : isGridSurveillance
-                                  ? "Typical grid surveillance speed is 4–6 m/s for stable area coverage."
-                                  : isEventTriggeredPatrol
-                                    ? "Event response missions prioritize rapid verification (typically 5-8 m/s)."
-                                  : "Typical perimeter patrol speed is 5–8 m/s."
-                            }
+                            label="Lane strategy"
+                            info="Serpentine is efficient (classic lawnmower). One-way keeps each lane in the same direction."
+                          />
+                        }
+                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                        size="small"
+                        fullWidth
+                        value={gridParams.lane_strategy}
+                        onChange={(e) =>
+                          setGridParams((p) => ({
+                            ...p,
+                            lane_strategy: e.target.value as GridParams["lane_strategy"],
+                          }))
+                        }
+                      >
+                        <MenuItem value="serpentine">Serpentine (recommended)</MenuItem>
+                        <MenuItem value="one_way">One-way lanes</MenuItem>
+                      </TextField>
+                      <TextField variant="filled"
+                        select
+                        label={
+                          <InfoLabel
+                            label="Start corner"
+                            info="Choose where lane sequencing starts. Auto keeps the default planner behavior."
+                          />
+                        }
+                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                        size="small"
+                        fullWidth
+                        value={gridParams.start_corner}
+                        onChange={(e) =>
+                          setGridParams((p) => ({
+                            ...p,
+                            start_corner: e.target.value as GridParams["start_corner"],
+                          }))
+                        }
+                      >
+                        <MenuItem value="auto">Auto</MenuItem>
+                        <MenuItem value="sw">South-West</MenuItem>
+                        <MenuItem value="se">South-East</MenuItem>
+                        <MenuItem value="nw">North-West</MenuItem>
+                        <MenuItem value="ne">North-East</MenuItem>
+                      </TextField>
+                      <TextField variant="filled"
+                        label="Row spacing (m)"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        value={gridParams.row_spacing_m}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          if (!Number.isFinite(value)) return;
+                          setGridParams((p) => ({
+                            ...p,
+                            row_spacing_m: Math.max(1, value),
+                          }));
+                        }}
+                        inputProps={{ min: 1, max: 200, step: 0.5 }}
+                      />
+                      <TextField variant="filled"
+                        label={
+                          <InfoLabel
+                            label="Row stride (every Nth line)"
+                            info="1 uses every line. 2 flies every second line (wider effective spacing)."
                           />
                         }
                         InputLabelProps={INFO_INPUT_LABEL_PROPS}
                         type="number"
                         size="small"
                         fullWidth
-                        value={gridParams.speed_mps}
+                        value={gridParams.row_stride}
                         onChange={(e) => {
                           const value = Number(e.target.value);
                           if (!Number.isFinite(value)) return;
                           setGridParams((p) => ({
                             ...p,
-                            speed_mps: Math.min(20, Math.max(0.5, value)),
+                            row_stride: Math.min(20, Math.max(1, Math.round(value))),
                           }));
                         }}
-                        inputProps={{ min: 0.5, max: 20, step: 0.1 }}
+                        inputProps={{ min: 1, max: 20, step: 1 }}
                       />
-                      {gridParams.task_type === "perimeter_patrol" && (
-                        <>
-                          <TextField
-                            variant="filled"
-                            select
-                            label={
-                              <InfoLabel
-                                label="Direction"
-                                info="Drone route direction around the perimeter."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            size="small"
-                            fullWidth
-                            value={gridParams.direction}
-                            onChange={(e) =>
-                              setGridParams((p) => ({
-                                ...p,
-                                direction: e.target.value as GridParams["direction"],
-                              }))
-                            }
-                          >
-                            <MenuItem value="clockwise">Clockwise</MenuItem>
-                            <MenuItem value="counterclockwise">Counter-clockwise</MenuItem>
-                          </TextField>
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Perimeter offset (m)"
-                                info="Typical private patrol offset is 10–30m from the property boundary."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.path_offset_m}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                path_offset_m: Math.max(0, value),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 120, step: 1 }}
+                      <TextField variant="filled"
+                        label={
+                          <InfoLabel
+                            label="Row phase offset (m)"
+                            info="Shifts line placement to align passes with crop rows."
                           />
-                          <TextField
-                            variant="filled"
-                            label="Patrol loops"
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.patrol_loops}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                patrol_loops: Math.min(200, Math.max(1, Math.round(value))),
-                              }));
-                            }}
-                            inputProps={{ min: 1, max: 200, step: 1 }}
+                        }
+                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        value={gridParams.row_phase_m}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          if (!Number.isFinite(value)) return;
+                          setGridParams((p) => ({
+                            ...p,
+                            row_phase_m: Math.max(0, value),
+                          }));
+                        }}
+                        inputProps={{ min: 0, max: 500, step: 0.5 }}
+                      />
+                      <TextField variant="filled"
+                        label={
+                          <InfoLabel
+                            label="Grid angle (°, blank = auto)"
+                            info="Leave blank to auto-align with terrain."
                           />
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Camera angle (° down)"
-                                info="Typical private patrol camera tilt is 30–45° downward."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.camera_angle_deg}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                camera_angle_deg: Math.min(90, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 90, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Camera overlap (%)"
-                                info="Typical overlap for patrol verification imagery is 40–60%."
-                              />
-                            }
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.camera_overlap_pct}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                camera_overlap_pct: Math.min(95, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 95, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Max segment length (m)"
-                                info="Smaller segments create smoother perimeter tracking."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.max_segment_length_m}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                max_segment_length_m: Math.min(300, Math.max(2, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 2, max: 300, step: 1 }}
-                          />
-                        </>
-                      )}
-                      {gridParams.task_type === "waypoint_patrol" && (
-                        <>
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Hover time (s)"
-                                info="Hold 10-20 seconds at each key checkpoint for verification."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.hover_time_s}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                hover_time_s: Math.min(300, Math.max(1, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 1, max: 300, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Camera scan yaw (°)"
-                                info="Set to 360° for full panorama scan at each key point."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.camera_scan_yaw_deg}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                camera_scan_yaw_deg: Math.min(360, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 360, step: 5 }}
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                size="small"
-                                checked={gridParams.zoom_capture}
-                                onChange={(e) =>
-                                  setGridParams((p) => ({
-                                    ...p,
-                                    zoom_capture: e.target.checked,
-                                  }))
-                                }
-                              />
-                            }
-                            label={
-                              <Typography variant="body2">Zoom capture at checkpoints</Typography>
-                            }
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                size="small"
-                                checked={gridParams.return_to_start}
-                                onChange={(e) =>
-                                  setGridParams((p) => ({
-                                    ...p,
-                                    return_to_start: e.target.checked,
-                                  }))
-                                }
-                              />
-                            }
-                            label={<Typography variant="body2">Return to start key point</Typography>}
-                          />
-                        </>
-                      )}
-                      {gridParams.task_type === "grid_surveillance" && (
-                        <>
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Grid spacing (m)"
-                                info="Typical spacing is 30-50m for wide surveillance coverage."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.grid_spacing_m}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                grid_spacing_m: Math.min(300, Math.max(2, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 2, max: 300, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label={
-                              <InfoLabel
-                                label="Grid angle (°)"
-                                info="Adjust heading of grid lanes to align with site shape."
-                              />
-                            }
-                            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.grid_angle_deg}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                grid_angle_deg: Math.min(179, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 179, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label="Safety inset (m)"
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.safety_inset_m}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                safety_inset_m: Math.min(100, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 100, step: 0.5 }}
-                          />
-                        </>
-                      )}
-                      {gridParams.task_type === "event_triggered_patrol" && (
-                        <>
-                          <TextField
-                            variant="filled"
-                            select
-                            label="Trigger type"
-                            size="small"
-                            fullWidth
-                            value={gridParams.trigger_type}
-                            onChange={(e) =>
-                              setGridParams((p) => ({
-                                ...p,
-                                trigger_type: e.target.value as PatrolTriggerType,
-                              }))
-                            }
-                          >
-                            <MenuItem value="motion_sensor">Motion sensor</MenuItem>
-                            <MenuItem value="fence_alarm">Fence alarm</MenuItem>
-                            <MenuItem value="camera_detection">Camera detection</MenuItem>
-                            <MenuItem value="night_schedule">Night schedule</MenuItem>
-                            <MenuItem value="unknown_vehicle">Unknown vehicle</MenuItem>
-                          </TextField>
-                          <TextField
-                            variant="filled"
-                            label="Verification loiter (s)"
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.verification_loiter_s}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                verification_loiter_s: Math.min(600, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 600, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label="Verification radius (m)"
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={gridParams.verification_radius_m}
-                            onChange={(e) => {
-                              const value = Number(e.target.value);
-                              if (!Number.isFinite(value)) return;
-                              setGridParams((p) => ({
-                                ...p,
-                                verification_radius_m: Math.min(150, Math.max(0, value)),
-                              }));
-                            }}
-                            inputProps={{ min: 0, max: 150, step: 1 }}
-                          />
-                          <TextField
-                            variant="filled"
-                            label="Target label (optional)"
-                            size="small"
-                            fullWidth
-                            value={gridParams.target_label}
-                            onChange={(e) =>
-                              setGridParams((p) => ({
-                                ...p,
-                                target_label: e.target.value,
-                              }))
-                            }
-                            placeholder="e.g. unknown vehicle"
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                size="small"
-                                checked={gridParams.track_target}
-                                onChange={(e) =>
-                                  setGridParams((p) => ({
-                                    ...p,
-                                    track_target: e.target.checked,
-                                  }))
-                                }
-                              />
-                            }
-                            label={<Typography variant="body2">Track target</Typography>}
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                size="small"
-                                checked={gridParams.auto_stream_video}
-                                onChange={(e) =>
-                                  setGridParams((p) => ({
-                                    ...p,
-                                    auto_stream_video: e.target.checked,
-                                  }))
-                                }
-                              />
-                            }
-                            label={<Typography variant="body2">Stream video to operator</Typography>}
-                          />
-                        </>
-                      )}
-                      <Box sx={{ gridColumn: "1 / -1" }}>
-                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                          AI Tasks During Flight
-                        </Typography>
-                        <Stack
-                          direction={{ xs: "column", md: "row" }}
-                          spacing={1}
-                          sx={{ mt: 0.5, flexWrap: "wrap", rowGap: 1 }}
-                        >
-                          {[
-                            ["intruder_detection", "Intruder detection"],
-                            ["vehicle_detection", "Vehicle detection"],
-                            ["fence_breach_detection", "Fence breach detection"],
-                            ["motion_detection", "Motion detection"],
-                          ].map(([taskId, label]) => {
-                            const task = taskId as GridParams["ai_tasks"][number];
-                            const checked = gridParams.ai_tasks.includes(task);
-                            return (
-                              <FormControlLabel
-                                key={task}
-                                control={
-                                  <Switch
-                                    size="small"
-                                    checked={checked}
-                                    onChange={(e) => {
-                                      setGridParams((p) => {
-                                        if (e.target.checked) {
-                                          if (p.ai_tasks.includes(task)) return p;
-                                          return { ...p, ai_tasks: [...p.ai_tasks, task] };
-                                        }
-                                        const next = p.ai_tasks.filter((t) => t !== task);
-                                        return {
-                                          ...p,
-                                          ai_tasks: next.length > 0 ? next : p.ai_tasks,
-                                        };
-                                      });
-                                    }}
-                                  />
-                                }
-                                label={<Typography variant="caption">{label}</Typography>}
-                              />
-                            );
-                          })}
-                        </Stack>
-                      </Box>
-                      {isGridSurveillance && (alt < 20 || alt > 35) && (
-                        <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          Grid surveillance typically runs at 20-35m altitude for stable wide-area monitoring.
-                        </Alert>
-                      )}
-                      {!hasRequiredTaskGeometry && (
-                        <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          {isWaypointPatrol
-                            ? "Add key points on the map (Gate, Parking, Storage, etc.) to generate a waypoint patrol preview."
-                            : isEventTriggeredPatrol
-                              ? "Set an event location point on the map. For night schedule trigger, a property polygon can be used as fallback."
-                            : "Draw or select a property polygon above to generate a patrol preview."}
-                        </Alert>
-                      )}
-                      {isEventTriggeredPatrol && eventLocation && (
-                        <Chip
+                        }
+                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        value={gridParams.grid_angle_deg ?? ""}
+                        onChange={(e) =>
+                          setGridParams((p) => ({
+                            ...p,
+                            grid_angle_deg:
+                              e.target.value === "" ? null : Number(e.target.value),
+                          }))
+                        }
+                        inputProps={{ min: 0, max: 179, step: 1 }}
+                      />
+                      {gridParams.pattern_mode === "crosshatch" && (
+                        <TextField variant="filled"
+                          label={
+                            <InfoLabel
+                              label="Crosshatch angle offset (°)"
+                              info="90° gives an orthogonal second pass."
+                            />
+                          }
+                          InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                          type="number"
                           size="small"
-                          color="error"
-                          variant="outlined"
-                          sx={{ gridColumn: "1 / -1", width: "fit-content" }}
-                          label={`Event at ${eventLocation.lat.toFixed(5)}, ${eventLocation.lon.toFixed(5)}`}
+                          fullWidth
+                          value={gridParams.crosshatch_angle_offset_deg}
+                          onChange={(e) => {
+                            const value = Number(e.target.value);
+                            if (!Number.isFinite(value)) return;
+                            setGridParams((p) => ({
+                              ...p,
+                              crosshatch_angle_offset_deg: Math.min(
+                                179,
+                                Math.max(1, value)
+                              ),
+                            }));
+                          }}
+                          inputProps={{ min: 1, max: 179, step: 1 }}
                         />
                       )}
-                      {hasRequiredTaskGeometry && gridPreview && (
+                      <TextField variant="filled"
+                        label="Safety inset (m)"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        value={gridParams.safety_inset_m}
+                        onChange={(e) =>
+                          setGridParams((p) => ({
+                            ...p,
+                            safety_inset_m: Math.max(0, Number(e.target.value)),
+                          }))
+                        }
+                        inputProps={{ min: 0, max: 20, step: 0.5 }}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={gridParams.slope_aware}
+                            onChange={(e) =>
+                              setGridParams((p) => ({
+                                ...p,
+                                slope_aware: e.target.checked,
+                              }))
+                            }
+                          />
+                        }
+                        label={<Typography variant="caption">Slope-aware angle</Typography>}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={gridParams.terrain_follow}
+                            onChange={(e) =>
+                              setGridParams((p) => ({
+                                ...p,
+                                terrain_follow: e.target.checked,
+                              }))
+                            }
+                          />
+                        }
+                        label={
+                          <Typography variant="caption">
+                            Terrain following (AGL)
+                          </Typography>
+                        }
+                      />
+                      {gridParams.terrain_follow && (
+                        <TextField variant="filled"
+                          label="AGL height (m)"
+                          type="number"
+                          size="small"
+                          fullWidth
+                          value={gridParams.agl_m}
+                          onChange={(e) =>
+                            setGridParams((p) => ({
+                              ...p,
+                              agl_m: Math.max(1, Number(e.target.value)),
+                            }))
+                          }
+                          inputProps={{ min: 1, max: 200, step: 1 }}
+                        />
+                      )}
+                      {!fieldBorder && (
+                        <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
+                          Draw or select a field polygon above to generate a
+                          grid preview.
+                        </Alert>
+                      )}
+                      {fieldBorder && gridPreview && (
                         <Stack
                           direction="row"
                           spacing={1}
@@ -2561,83 +2020,45 @@ useEffect(() => {
                           <Chip
                             size="small"
                             color="success"
-                            label={`${gridPreview.length} patrol waypoints`}
+                            label={`${gridPreview.length} waypoints previewed`}
                           />
-                          {typeof gridPreviewStats?.total_route_m === "number" && (
+                          {typeof gridPreviewStats?.route_m === "number" && (
                             <Chip
                               size="small"
                               color="primary"
                               variant="outlined"
-                              label={`Route ${gridPreviewStats.total_route_m.toFixed(1)} m`}
-                            />
-                          )}
-                          {typeof gridPreviewStats?.patrol_loops === "number" && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`${gridPreviewStats.patrol_loops} loop(s)`}
-                            />
-                          )}
-                          {typeof gridPreviewStats?.key_points === "number" && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`${gridPreviewStats.key_points} checkpoints`}
+                              label={`Route ${gridPreviewStats.route_m.toFixed(1)} m`}
                             />
                           )}
                           {typeof gridPreviewStats?.rows === "number" && (
                             <Chip
                               size="small"
                               variant="outlined"
-                              label={`${gridPreviewStats.rows} grid rows`}
+                              label={`${gridPreviewStats.rows} rows`}
                             />
                           )}
-                          {typeof gridPreviewStats?.grid_spacing_m === "number" && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`Spacing ${gridPreviewStats.grid_spacing_m.toFixed(1)} m`}
-                            />
-                          )}
-                          {gridPreviewStats?.trigger_type && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`Trigger ${gridPreviewStats.trigger_type}`}
-                            />
-                          )}
-                          {gridPreviewStats?.trigger_action && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`Action ${gridPreviewStats.trigger_action}`}
-                            />
-                          )}
-                          {typeof gridPreviewStats?.path_offset_applied_m === "number" && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`Offset ${gridPreviewStats.path_offset_applied_m.toFixed(
-                                1
-                              )} m`}
-                            />
-                          )}
-                          {typeof gridPreviewStats?.estimated_duration_s === "number" && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`ETA ${(gridPreviewStats.estimated_duration_s / 60).toFixed(
-                                1
-                              )} min`}
-                            />
+                          {previewLegStats && (
+                            <>
+                              <Chip
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                label={`${previewLegStats.workLegs} work legs`}
+                              />
+                              <Chip
+                                size="small"
+                                variant="outlined"
+                                label={`${previewLegStats.transitLegs} transit legs`}
+                              />
+                            </>
                           )}
                         </Stack>
                       )}
-                      {gridPreviewTooDense && !isWaypointPatrol && (
+                      {gridPreviewTooDense && (
                         <Alert severity="warning" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          Patrol preview is too dense ({gridPreview?.length}/
-                          {MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase segment
-                          length or reduce patrol loops before launch.
+                          Grid preview is too dense ({gridPreview?.length}/
+                          {MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row
+                          spacing or row stride before starting the survey.
                         </Alert>
                       )}
                       {gridPreviewError && (
@@ -2661,19 +2082,13 @@ useEffect(() => {
                 </Box>
 
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  {isWaypointPatrol
-                    ? "Add sensitive checkpoints (Gate, Parking, Warehouse doors, Roof), tune waypoint actions, and preview the verification route before launch."
-                    : isGridSurveillance
-                      ? "Draw a property polygon, configure coverage spacing, and preview the full-area surveillance grid before launch."
-                      : isEventTriggeredPatrol
-                        ? "Select a trigger profile, set an event location, and preview rapid verification flow (takeoff, goto, verify/track, stream)."
-                      : "Draw a property polygon, tune perimeter parameters, and preview the generated patrol route before launch."}
+                  Click on the map to add waypoints.
                 </Typography>
 
                 <MissionVideoPanel
-                  title="Patrol Camera"
-                  imgAlt="Private patrol camera stream"
-                  disconnectedMessage="Connect the drone to view the patrol stream."
+                  title="Survey Camera"
+                  imgAlt="Survey camera stream"
+                  disconnectedMessage="Connect the drone to view the survey stream."
                   apiBase={API_BASE_CLEAN}
                   streamKey={streamKey}
                   videoToken={videoToken}
@@ -2695,7 +2110,7 @@ useEffect(() => {
                 <Stack spacing={2}>
                   <MissionPreflightPanel
                     apiBase={API_BASE_CLEAN}
-                    missionType="perimeter_patrol"
+                    missionType="grid"
                     preflightRun={preflightRun}
                     telemetry={telemetry}
                   />
@@ -2742,13 +2157,14 @@ useEffect(() => {
                     disabled={
                       sending ||
                       previewLoading ||
-                      (gridPreviewTooDense && !isWaypointPatrol) ||
+                      gridPreviewTooDense ||
                       !!gridPreviewError ||
                       !name.trim() ||
                       altInput === "" ||
                       Number(altInput) < 1 ||
                       Number(altInput) > 500 ||
-                      !hasRequiredTaskGeometry
+                      !fieldBorder ||
+                      fieldBorder.length < 3
                     }
                     fullWidth
                     sx={{ mt: 1 }}
@@ -2757,22 +2173,10 @@ useEffect(() => {
                     {sending ? (
                       <>
                         <CircularProgress size={20} sx={{ mr: 1 }} />
-                        {isWaypointPatrol
-                          ? "Starting Waypoint Patrol..."
-                          : isGridSurveillance
-                            ? "Starting Grid Surveillance..."
-                            : isEventTriggeredPatrol
-                              ? "Starting Event-Triggered Patrol..."
-                            : "Starting Perimeter Patrol..."}
+                        Starting Grid Survey...
                       </>
                     ) : (
-                      isWaypointPatrol
-                        ? "Start Waypoint Patrol"
-                        : isGridSurveillance
-                          ? "Start Grid Surveillance"
-                          : isEventTriggeredPatrol
-                            ? "Start Event-Triggered Patrol"
-                          : "Start Perimeter Patrol"
+                      "Start Grid Survey"
                     )}
                   </Button>
 
@@ -2787,10 +2191,10 @@ useEffect(() => {
 
             <Divider sx={{ mb: 2 }} />
 
-            {isWaypointPatrol && waypoints.length > 0 && (
+            {waypoints.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
-                  Key Points
+                  Waypoints
                 </Typography>
                 <Stack spacing={1}>
                   {waypoints.map((wp, idx) => (
@@ -2803,21 +2207,7 @@ useEffect(() => {
               </Box>
             )}
 
-            {isEventTriggeredPatrol && eventLocation && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Trigger Event
-                </Typography>
-                <Typography variant="body2">
-                  Location: {eventLocation.lat.toFixed(6)}, {eventLocation.lon.toFixed(6)}
-                </Typography>
-                <Typography variant="body2">
-                  Trigger: {gridParams.trigger_type} | Track: {gridParams.track_target ? "yes" : "no"} | Stream: {gridParams.auto_stream_video ? "yes" : "no"}
-                </Typography>
-              </Box>
-            )}
-
-            {missionStatus && (activeFlightId || waypoints.length > 0 || !!eventLocation) && (
+            {missionStatus && (activeFlightId || waypoints.length > 0) && (
               <Box sx={{ mt: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
                   Flight Status
@@ -2881,16 +2271,6 @@ useEffect(() => {
           </Button>
         </DialogActions>
       </Dialog>
-      <Snackbar
-        open={uiNotice.open}
-        autoHideDuration={4000}
-        onClose={handleUiNoticeClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert onClose={handleUiNoticeClose} severity={uiNotice.severity} sx={{ width: "100%" }}>
-          {uiNotice.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

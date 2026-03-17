@@ -46,8 +46,8 @@ export const brand = {
 };
 
 export const gray = {
-  50: 'hsl(36, 33%, 97%)',
-  100: 'hsl(34, 20%, 93%)',
+  50: 'hsl(40, 40%, 98%)',
+  100: 'hsl(36, 26%, 94%)',
   200: 'hsl(32, 18%, 85%)',
   300: 'hsl(30, 14%, 72%)',
   400: 'hsl(28, 10%, 58%)',
@@ -165,8 +165,8 @@ export const getDesignTokens = (mode: PaletteMode) => {
       },
       divider: mode === 'dark' ? alpha(gray[700], 0.7) : alpha(gray[300], 0.55),
       background: {
-        default: 'hsl(36, 33%, 97%)',
-        paper: 'hsl(34, 24%, 95%)',
+        default: 'hsl(42, 42%, 98%)',
+        paper: 'hsl(38, 32%, 96%)',
         ...(mode === 'dark' && {
           default: 'hsl(22, 28%, 6%)',
           paper: 'hsl(22, 24%, 8%)',
@@ -194,62 +194,74 @@ export const getDesignTokens = (mode: PaletteMode) => {
       fontFamily: '"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
       h1: {
         fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: defaultTheme.typography.pxToRem(48),
-        fontWeight: 600,
-        lineHeight: 1.1,
-        letterSpacing: -0.8,
+        fontSize: 'clamp(3rem, 5vw, 4.75rem)',
+        fontWeight: 700,
+        lineHeight: 1.02,
+        letterSpacing: -1.6,
       },
       h2: {
         fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: defaultTheme.typography.pxToRem(36),
-        fontWeight: 600,
-        lineHeight: 1.15,
+        fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+        fontWeight: 700,
+        lineHeight: 1.08,
+        letterSpacing: -1.2,
       },
       h3: {
         fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: defaultTheme.typography.pxToRem(30),
-        lineHeight: 1.2,
+        fontSize: 'clamp(1.8rem, 3vw, 2.75rem)',
+        fontWeight: 700,
+        lineHeight: 1.12,
+        letterSpacing: -0.9,
       },
       h4: {
         fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: defaultTheme.typography.pxToRem(24),
-        fontWeight: 600,
-        lineHeight: 1.25,
+        fontSize: 'clamp(1.5rem, 2vw, 2.1rem)',
+        fontWeight: 700,
+        lineHeight: 1.16,
       },
       h5: {
         fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: defaultTheme.typography.pxToRem(20),
-        fontWeight: 600,
+        fontSize: 'clamp(1.2rem, 1.4vw, 1.55rem)',
+        fontWeight: 700,
       },
       h6: {
         fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
         fontSize: defaultTheme.typography.pxToRem(18),
-        fontWeight: 600,
+        fontWeight: 700,
       },
       subtitle1: {
         fontSize: defaultTheme.typography.pxToRem(18),
+        fontWeight: 500,
       },
       subtitle2: {
         fontSize: defaultTheme.typography.pxToRem(14),
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: 0.1,
       },
       body1: {
         fontSize: defaultTheme.typography.pxToRem(15),
-        lineHeight: 1.6,
+        lineHeight: 1.7,
       },
       body2: {
         fontSize: defaultTheme.typography.pxToRem(14),
         fontWeight: 400,
-        lineHeight: 1.6,
+        lineHeight: 1.65,
       },
       caption: {
         fontSize: defaultTheme.typography.pxToRem(12),
         fontWeight: 500,
-        letterSpacing: 0.2,
+        letterSpacing: 0.32,
+        textTransform: 'uppercase',
+      },
+      overline: {
+        fontSize: defaultTheme.typography.pxToRem(11),
+        fontWeight: 700,
+        letterSpacing: 2.4,
+        textTransform: 'uppercase',
       },
     },
     shape: {
-      borderRadius: 8,
+      borderRadius: 18,
     },
     shadows: customShadows,
   };
@@ -290,8 +302,8 @@ export const colorSchemes = {
       },
       divider: alpha(gray[300], 0.4),
       background: {
-        default: 'hsl(36, 33%, 97%)',
-        paper: 'hsl(34, 24%, 95%)',
+        default: 'hsl(42, 42%, 98%)',
+        paper: 'hsl(38, 32%, 96%)',
       },
       text: {
         primary: gray[800],
@@ -303,7 +315,7 @@ export const colorSchemes = {
         selected: `${alpha(gray[200], 0.3)}`,
       },
       baseShadow:
-        'hsla(26, 25%, 10%, 0.08) 0px 6px 18px 0px, hsla(22, 20%, 12%, 0.12) 0px 14px 26px -12px',
+        'hsla(24, 26%, 12%, 0.08) 0px 10px 28px -12px, hsla(24, 26%, 12%, 0.12) 0px 24px 48px -28px',
     },
   },
   dark: {
@@ -352,7 +364,7 @@ export const colorSchemes = {
         selected: alpha(gray[600], 0.3),
       },
       baseShadow:
-        'hsla(20, 40%, 4%, 0.7) 0px 6px 18px 0px, hsla(20, 35%, 6%, 0.85) 0px 18px 32px -14px',
+        'hsla(20, 40%, 4%, 0.7) 0px 10px 26px -12px, hsla(20, 35%, 6%, 0.85) 0px 26px 54px -26px',
     },
   },
 };
@@ -361,63 +373,75 @@ export const typography = {
   fontFamily: '"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
   h1: {
     fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: defaultTheme.typography.pxToRem(48),
-    fontWeight: 600,
-    lineHeight: 1.1,
-    letterSpacing: -0.8,
+    fontSize: 'clamp(3rem, 5vw, 4.75rem)',
+    fontWeight: 700,
+    lineHeight: 1.02,
+    letterSpacing: -1.6,
   },
   h2: {
     fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: defaultTheme.typography.pxToRem(36),
-    fontWeight: 600,
-    lineHeight: 1.15,
+    fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+    fontWeight: 700,
+    lineHeight: 1.08,
+    letterSpacing: -1.2,
   },
   h3: {
     fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: defaultTheme.typography.pxToRem(30),
-    lineHeight: 1.2,
+    fontSize: 'clamp(1.8rem, 3vw, 2.75rem)',
+    fontWeight: 700,
+    lineHeight: 1.12,
+    letterSpacing: -0.9,
   },
   h4: {
     fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: defaultTheme.typography.pxToRem(24),
-    fontWeight: 600,
-    lineHeight: 1.25,
+    fontSize: 'clamp(1.5rem, 2vw, 2.1rem)',
+    fontWeight: 700,
+    lineHeight: 1.16,
   },
   h5: {
     fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: defaultTheme.typography.pxToRem(20),
-    fontWeight: 600,
+    fontSize: 'clamp(1.2rem, 1.4vw, 1.55rem)',
+    fontWeight: 700,
   },
   h6: {
     fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
     fontSize: defaultTheme.typography.pxToRem(18),
-    fontWeight: 600,
+    fontWeight: 700,
   },
   subtitle1: {
     fontSize: defaultTheme.typography.pxToRem(18),
+    fontWeight: 500,
   },
   subtitle2: {
     fontSize: defaultTheme.typography.pxToRem(14),
-    fontWeight: 500,
+    fontWeight: 600,
+    letterSpacing: 0.1,
   },
   body1: {
     fontSize: defaultTheme.typography.pxToRem(15),
-    lineHeight: 1.6,
+    lineHeight: 1.7,
   },
   body2: {
     fontSize: defaultTheme.typography.pxToRem(14),
     fontWeight: 400,
-    lineHeight: 1.6,
+    lineHeight: 1.65,
   },
   caption: {
     fontSize: defaultTheme.typography.pxToRem(12),
     fontWeight: 500,
-    letterSpacing: 0.2,
+    letterSpacing: 0.32,
+    textTransform: 'uppercase',
+  },
+  overline: {
+    fontSize: defaultTheme.typography.pxToRem(11),
+    fontWeight: 700,
+    letterSpacing: 2.4,
+    textTransform: 'uppercase',
   },
 };
 
 export const shape = {
-  borderRadius: 8,
+  borderRadius: 18,
 };
 
 // @ts-ignore

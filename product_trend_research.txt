@@ -1,0 +1,229 @@
+Drone App Product Trend Research
+Date: March 16, 2026
+
+Summary
+
+The best path to make this app one of the strongest drone platforms in the market is not adding more generic flight controls.
+The product already has solid building blocks for missions, telemetry, video, photogrammetry, private patrol, livestock workflows, alerts, geofencing, and preflight.
+The biggest opportunity is to turn it into a remote operations + compliance + vertical AI platform.
+
+Current product strengths observed in the codebase
+
+- Mission execution and telemetry foundation
+- Live video and websocket-based runtime
+- Photogrammetry and mapping workflows
+- Private patrol and event-driven security concepts
+- Livestock / animal farm workflows
+- Alerts and preflight validation
+
+Highest-priority features to add
+
+P0: Airspace and Compliance Center
+- LAANC-aware airspace planning
+- TFR / NOTAM overlays
+- Remote ID health and compliance status
+- Authorization logbook per flight
+- Airspace-aware preflight go/no-go checks
+- Post-flight compliance bundle export
+
+Why this matters:
+Enterprise drone customers increasingly expect compliance automation, not just flight control.
+FAA requirements like Remote ID and authorization workflows are now table stakes for serious operations.
+
+P0: Docked Remote Operations
+- Dock health dashboard
+- Scheduled autonomous launch / land windows
+- Weather station integration
+- Dock readiness checks
+- Remote takeover / browser pilot handoff
+- Multi-site dock monitoring
+- Mission queueing for recurring patrols and surveys
+
+Why this matters:
+The market is moving from pilot-operated missions to persistent remote operations.
+Dock-based autonomy is a major differentiator in enterprise drone software.
+
+P0: Event-to-Flight Automation
+- Trigger patrol flights from fence alarms, motion sensors, livestock anomalies, or external systems
+- Incident timeline with evidence, video, map context, and alerts
+- Automated verification loops after an alert
+- Escalation routing to operators
+- API/webhook ingestion for third-party alarms
+
+Why this matters:
+Your app already has strong patrol and alert foundations. Converting alerts into autonomous workflows is one of the most valuable upgrades available.
+
+P1: Real Fleet Command
+- Multi-aircraft view instead of mostly single-stream monitoring
+- Fleet readiness, charging state, battery health, and availability
+- Mission assignment and dispatch queue
+- Pilot / observer assignment
+- Cross-site operations board
+- Fleet utilization analytics
+- Flight deconfliction logic
+
+Why this matters:
+The current product has a fleet page, but market leaders differentiate with operational fleet orchestration, not just status display.
+
+P1: AI Operations Copilot
+- Explain alerts in plain language
+- Summarize completed missions automatically
+- Recommend next actions when missions fail or telemetry degrades
+- Natural-language search across flights, alerts, incidents, and mapping jobs
+- Generate operator reports and after-action summaries
+- Detect unusual patterns across repeated missions
+
+Why this matters:
+Current insights are mostly rule-based. Market direction is moving toward AI-assisted decision support rather than dashboards alone.
+
+P1: Asset-Aware 3D Inspection
+- Asset registry for towers, roofs, solar arrays, fences, warehouses, turbines, or farm equipment
+- Repeatable inspection templates
+- Defect annotations tied to assets
+- Compare-over-time 2D/3D change analysis
+- Measurements, comments, issue tracking, and evidence export
+- Thermal / RGB alignment workflows
+
+Why this matters:
+Inspection software is becoming asset-centric. Users want findings tied to real-world assets, not just maps and models.
+
+P1: Precision Agriculture Decision Layer
+- Prescription map generation
+- Spot-spray zone export
+- RTK-grade field boundary refinement
+- Crop stress / weed / stand-count detection
+- Multi-layer agronomy map comparison
+- Satellite + drone fusion
+- Seasonal field history
+
+Why this matters:
+Your field, mapping, and livestock modules create a strong base for a differentiated ag platform, especially if outputs become action-oriented instead of visualization-only.
+
+P2: Collaboration and Enterprise Control
+- Organization / team / role permissions
+- Approval workflows for mission launch
+- Shared comments and annotations on flights and models
+- Share links for customers or field teams
+- Audit logs across flight commands and incident actions
+- SSO / enterprise identity
+- Customer-facing API and webhooks
+
+Why this matters:
+Enterprise buyers care about control, traceability, and integration as much as technical drone capability.
+
+P2: Offline and Emergency Mode
+- Offline field packs
+- Local map tile cache
+- Rapid orthomosaic generation path for emergency response
+- Edge inference when cloud services are unavailable
+- Sync-on-reconnect for logs, alerts, and evidence
+
+Why this matters:
+Drone workflows often happen in rural, industrial, or emergency environments with unstable connectivity.
+
+Best feature bets for this specific app
+
+Because this app already has patrol, livestock, mapping, and preflight foundations, the most strategic feature combinations are:
+
+1. Compliance + remote ops
+- Airspace / LAANC / Remote ID
+- Dock scheduling
+- Event-triggered missions
+
+2. Security operations platform
+- Alarm ingestion
+- Autonomous patrol dispatch
+- Incident evidence workspace
+- Compare-before / after patrol intelligence
+
+3. Agriculture intelligence platform
+- Prescription outputs
+- Multi-layer crop analysis
+- Livestock anomaly response
+- Seasonal farm memory
+
+What is already strong vs. what is missing
+
+Already strong
+- Mission planning and execution
+- Geofence support
+- Websocket telemetry
+- Video streaming
+- Mapping / photogrammetry pipeline
+- Patrol planning logic
+- Alerting engine
+- Domain-specific livestock workflows
+
+Missing or weak relative to market leaders
+- Compliance automation
+- Dock / autonomous infrastructure support
+- Fleet-wide orchestration
+- Rich collaboration
+- Enterprise permissions model
+- External integrations and webhooks
+- Asset-centric inspection workflows
+- AI-generated operational intelligence
+- Offline-first workflows
+
+If only 3 initiatives are funded next
+
+1. Airspace and compliance center
+2. Docked remote operations
+3. Event-to-flight automation
+
+Those three would move the product from a capable drone dashboard into a real enterprise operations platform.
+
+Suggested roadmap order
+
+Phase 1
+- Airspace / compliance center
+- Webhook-based event ingestion
+- Incident timeline and evidence model
+
+Phase 2
+- Dock operations layer
+- Mission queue / dispatch system
+- Multi-aircraft fleet board
+
+Phase 3
+- AI copilot
+- Asset-aware inspection workflows
+- Ag prescription and field intelligence outputs
+
+Primary sources used
+
+FAA Remote ID
+https://www.faa.gov/uas/getting_started/remote_id
+
+FAA LAANC
+https://www.faa.gov/uas/getting_started/laanc
+
+Aloft Air Control
+https://www.aloft.ai/air-control/
+
+Aloft Air Aware
+https://www.aloft.ai/air-aware/
+
+Skydio Remote Flight Deck Overview
+https://support.skydio.com/hc/en-us/articles/45239266036251-Remote-Flight-Deck-Overview
+
+DJI FlightHub 2 update, February 13, 2026
+https://enterprise-insights.dji.com/blog/blog/dji-flighthub-2-new-version-zenmuse-l3-2026
+
+DJI Dock 3 release, February 27, 2025
+https://enterprise.dji.com/mobile/news/detail/dock-3-release
+
+DroneDeploy Dock Automation
+https://dronedeploy.com/product/dock-automation
+
+DroneDeploy Robotic Industrial Inspection
+https://dronedeploy.com/product/robotic-industrial-inspection
+
+DroneDeploy Aerial Asset Inspection beta, updated November 11, 2025
+https://help.dronedeploy.com/hc/en-us/articles/33102979065879-Aerial-Asset-Inspection-Closed-Beta
+
+PIX4Dfields AI/object selection
+https://www.pix4d.com/blog/pix4dfields-AI-object-selection/
+
+PIX4Dreact
+https://www.pix4d.com/product/pix4dreact/
