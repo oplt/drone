@@ -132,6 +132,9 @@ class SettingsRepository:
         # updated_at should be DB-derived, not stored
         data.pop("updated_at", None)
 
+        existing_data, _ = await self._read_row()
+        data = _deep_merge(existing_data, data)
+
         data = _deep_merge(
             {
                 "telemetry": {},

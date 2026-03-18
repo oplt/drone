@@ -285,10 +285,11 @@ class Orchestrator:
             alt: float,
             *,
             raise_on_fail: bool = True,
+            mission_data: dict | None = None,
             **kwargs,
     ):
 
-        mission_data = {
+        mission_data = mission_data or {
             "type": "route",
             "waypoints": [
                 {"lat": w.lat, "lon": w.lon, "alt": getattr(w, "alt", None) or alt}
@@ -407,6 +408,70 @@ class Orchestrator:
 
         return report
 
+    async def _resolve_flight_record_anchor(
+            self,
+            *,
+            waypoints: list[Coordinate],
+            alt: float,
+    ) -> tuple[Coordinate, Coordinate, str]:
+        if waypoints:
+            return waypoints[0], waypoints[-1], "mission_waypoints"
+
+        try:
+            telemetry = await asyncio.to_thread(self.drone.get_telemetry)
+        except Exception:
+            logger.exception("Failed to read telemetry while resolving local-mission flight anchor")
+            telemetry = None
+
+        candidates: list[tuple[str, object, object, object]] = []
+        if telemetry is not None:
+            candidates.extend(
+                [
+                    (
+                        "telemetry_position",
+                        getattr(telemetry, "lat", None),
+                        getattr(telemetry, "lon", None),
+                        getattr(telemetry, "alt", None),
+                    ),
+                    (
+                        "telemetry_home",
+                        getattr(telemetry, "home_lat", None),
+                        getattr(telemetry, "home_lon", None),
+                        getattr(telemetry, "alt", None),
+                    ),
+                ]
+            )
+
+        home_location = getattr(self.drone, "home_location", None)
+        if home_location is not None:
+            candidates.append(
+                (
+                    "drone_home",
+                    getattr(home_location, "lat", None),
+                    getattr(home_location, "lon", None),
+                    getattr(home_location, "alt", None),
+                )
+            )
+
+        for source, lat, lon, anchor_alt in candidates:
+            if lat is None or lon is None:
+                continue
+            try:
+                start = Coordinate(
+                    lat=float(lat),
+                    lon=float(lon),
+                    alt=float(anchor_alt) if anchor_alt is not None else float(alt),
+                )
+            except (TypeError, ValueError):
+                continue
+            return start, start, source
+
+        logger.warning(
+            "No GPS/home anchor available for local-frame mission; using placeholder flight coordinates."
+        )
+        placeholder = Coordinate(lat=0.0, lon=0.0, alt=float(alt))
+        return placeholder, placeholder, "placeholder"
+
 
     async def run_mission(self, mission: "Mission", alt: float = 30.0, flight_fn=None):
         self._flight_id = None
@@ -416,11 +481,11 @@ class Orchestrator:
         cruise_alt = alt
 
         async def _finalize_started_flight(
-            *,
-            status: FlightStatus,
-            note: str,
-            event_type: str | None = None,
-            event_data: dict | None = None,
+                *,
+                status: FlightStatus,
+                note: str,
+                event_type: str | None = None,
+                event_data: dict | None = None,
         ) -> None:
             if self._flight_id is None:
                 return
@@ -435,7 +500,7 @@ class Orchestrator:
                         self._flight_id,
                         event_type,
                         event_data or {},
-                    )
+                        )
                 except Exception:
                     logger.exception(
                         "Failed to persist '%s' event for flight_id=%s",
@@ -478,8 +543,10 @@ class Orchestrator:
             # STEP 2: Create flight record
             # ------------------------------------------------------------------
             try:
-                start = waypoints[0]
-                dest = waypoints[-1]
+                start, dest, anchor_source = await self._resolve_flight_record_anchor(
+                    waypoints=waypoints,
+                    alt=alt,
+                )
                 self._flight_id = await self.repo.create_flight(
                     start_lat=start.lat,
                     start_lon=start.lon,
@@ -492,7 +559,11 @@ class Orchestrator:
                 await self.repo.add_event(
                     self._flight_id,
                     "mission_created",
-                    {"alt": cruise_alt, "waypoints": len(waypoints)},
+                    {
+                        "alt": cruise_alt,
+                        "waypoints": len(waypoints),
+                        "flight_record_anchor": anchor_source,
+                    },
                 )
                 await self.repo.add_event(
                     self._flight_id,
@@ -510,7 +581,8 @@ class Orchestrator:
             # ------------------------------------------------------------------
             try:
                 logger.info("🔍 Running preflight checks...")
-                await self._run_preflight_checks(waypoints, alt)
+                mission_data = mission.get_preflight_mission_data() if hasattr(mission, "get_preflight_mission_data") else None
+                await self._run_preflight_checks(waypoints, alt, mission_data=mission_data)
                 logger.info("✅ Preflight checks passed")
             except Exception as e:  # FIX (Bug 2)
                 logger.exception(f"❌ Preflight checks failed: {e}")

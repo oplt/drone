@@ -1,418 +1,332 @@
-import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
+  InputAdornment,
+  MenuItem,
   Paper,
   Stack,
-  Typography,
-  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
-  Alert,
-  CircularProgress,
-  Chip,
-  MenuItem,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
+  Typography,
 } from "@mui/material";
 import Header from "../../../components/dashboard/Header";
-import InfoLabel from "../../../components/dashboard/InfoLabel";
-import type { TerraDraw } from "terra-draw";
-import {  Polyline,  Polygon,  OverlayView,} from "@react-google-maps/api";
-import { getToken } from "../../../auth";
-import DroneSvg from "../../../assets/Drone.svg?react";
-import SvgIcon from "@mui/material/SvgIcon";
-import RoomIcon from "@mui/icons-material/Room";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import { GoogleMapsContext } from "../../../utils/googleMaps";
-import ChangeHistoryOutlinedIcon from "@mui/icons-material/ChangeHistoryOutlined";
-import ShowChartIcon from "@mui/icons-material/ShowChart";
-import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
-import CropSquareOutlinedIcon from "@mui/icons-material/CropSquareOutlined";
-import RadioButtonUncheckedOutlinedIcon from "@mui/icons-material/RadioButtonUncheckedOutlined";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import PanToolAltOutlinedIcon from "@mui/icons-material/PanToolAltOutlined";
-import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
-import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
-import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
-import { SavedFieldsPanel } from "../../../components/dashboard/tasks/SavedFieldsPanel";
-import { FieldBorderPanel } from "../../../components/dashboard/tasks/FieldBorderPanel";
-import {
-  TerraDrawController,
-  type TerraDrawEditorMode,
-  type TerraDrawFeature,
-  type TerraDrawToolMode,
-} from "../../../components/dashboard/tasks/TerraDrawController";
-import { useDroneCenter } from "../../../hooks/useDroneCenter";
-import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
-import { useErrors } from "../../../hooks/useErrors";
+import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
+import { getToken } from "../../../auth";
 import { useAutoStartVideo } from "../../../hooks/useAutoStartVideo";
-import { useMissionCommandMetrics } from "../../../hooks/useMissionCommandMetrics";
+import { useErrors } from "../../../hooks/useErrors";
 import { useMissionWebsocketRuntime } from "../../../hooks/useMissionWebsocketRuntime";
-import { type LatLng } from "../../../lib/extractLatLng";
-import type { DrawResult as CesiumDrawResult } from "../../../utils/CesiumMap";
 import {
-  startMissionWithPreflight,
-  type PreflightRunResponse,
+  getWarehouseMissionDefaults,
+  listWarehouseScannedMaps,
+  startWarehouseScan,
+  type MissionLifecycleState,
+  type WarehouseMissionDefaultsResponse,
+  type WarehouseScannedMapResponse,
+  updateWarehouseMissionDefaults,
 } from "../../../utils/api";
 
-type Waypoint = { lat: number; lon: number; alt: number };
-type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
-type DrawMode = "none" | "point" | "polyline" | "polygon";
-type TerraFeature = TerraDrawFeature;
-type LonLat = [number, number];
-type GridParams = {
-  row_spacing_m: number;
-  grid_angle_deg: number | null;
-  slope_aware: boolean;
-  safety_inset_m: number;
-  terrain_follow: boolean;
-  agl_m: number;
-  pattern_mode: "boustrophedon" | "crosshatch";
-  crosshatch_angle_offset_deg: number;
-  start_corner: "auto" | "nw" | "ne" | "sw" | "se";
-  lane_strategy: "serpentine" | "one_way";
-  row_stride: number;
-  row_phase_m: number;
-};
-type GridPreviewWaypoint = { lat: number; lon: number };
-type GridPreviewStats = {
-  rows?: number;
-  waypoints?: number;
-  route_m?: number;
-  area_m2?: number;
-  passes?: number;
-  start_corner?: string;
-  lane_strategy?: string;
-  row_stride?: number;
-  row_phase_m?: number;
-};
-type FieldSummary = {
+type WarehouseMapOut = {
   id: number;
-  owner_id?: number;
   name: string;
-  area_ha?: number | null;
+  area_m2: number | null;
+  created_at: string;
+  polygon_local_m: [number, number][];
 };
-type FieldFeature = FieldSummary & {
-  ring: LonLat[];
-  path: LatLng[];
+
+type CreateMapForm = {
+  name: string;
+  width_m: string;
+  length_m: string;
 };
-interface MissionStatus {
+
+type WarehouseMissionStatus = {
   flight_id?: string;
   mission_name?: string;
   telemetry?: {
-    running: boolean;
+    running?: boolean;
     active_connections?: number;
     has_position_data?: boolean;
     position?: {
       lat?: number;
       lon?: number;
-      lng?: number;
       alt?: number;
-      relative_alt?: number;
     };
   };
   orchestrator?: {
-    drone_connected: boolean;
+    drone_connected?: boolean;
   };
-}
+  mission_lifecycle?: {
+    flight_id?: string | null;
+    state?: MissionLifecycleState;
+    mission_name?: string;
+    mission_type?: string;
+    updated_at?: number;
+    last_error?: string | null;
+  } | null;
+  command_capabilities?: {
+    pause?: boolean;
+    resume?: boolean;
+    abort?: boolean;
+  } | null;
+};
 
-const MAX_GRID_PREVIEW_WAYPOINTS = 2200;
-const GRID_PREVIEW_DEBOUNCE_MS = 250;
-const CESIUM_MAX_SAFE_ZOOM = 16;
-const INFO_INPUT_LABEL_PROPS = {
-  shrink: true,
-  sx: { pointerEvents: "auto" },
-} as const;
+const VIDEO_RETRY_DELAY_MS = 5000;
+const SCANNED_MAP_REFRESH_MS = 30000;
+
+const getWarehouseMapId = (map: unknown): number | null => {
+  const raw = (map as any)?.warehouse_map_id ?? (map as any)?.field_id ?? null;
+  return typeof raw === "number" ? raw : raw ? Number(raw) : null;
+};
+
+const getWarehouseName = (map: unknown): string => {
+  const raw = (map as any)?.warehouse_name ?? (map as any)?.field_name ?? null;
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : "Warehouse";
+};
+
+const toMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : "Request failed";
+
+const formatTimestamp = (value?: string | null): string => {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
+type WarehouseMissionDefaultsKey = keyof WarehouseMissionDefaultsResponse;
+
+type WarehouseMissionDefaultsDraft = {
+  [K in WarehouseMissionDefaultsKey]: string;
+};
+
+type WarehouseMissionDefaultsRow =
+  | {
+      key: WarehouseMissionDefaultsKey;
+      label: string;
+      kind: "number";
+      min?: number;
+      step?: number;
+      placeholder?: string;
+    }
+  | {
+      key: WarehouseMissionDefaultsKey;
+      label: string;
+      kind: "select";
+      options: ReadonlyArray<{ value: string; label: string }>;
+    };
+
+const WAREHOUSE_MISSION_DEFAULT_ROWS: WarehouseMissionDefaultsRow[] = [
+  { key: "cruise_alt", label: "Base Layer Altitude (m)", kind: "number", min: 0.1, step: 0.1 },
+  { key: "corridor_spacing_m", label: "Corridor Spacing (m)", kind: "number", min: 0.1, step: 0.1 },
+  {
+    key: "aisle_axis_deg",
+    label: "Aisle Axis (deg)",
+    kind: "number",
+    min: -180,
+    step: 1,
+    placeholder: "Auto",
+  },
+  { key: "clearance_m", label: "Clearance (m)", kind: "number", min: 0.1, step: 0.1 },
+  { key: "perimeter_offset_m", label: "Perimeter Offset (m)", kind: "number", min: 0, step: 0.1 },
+  {
+    key: "scan_pattern",
+    label: "Scan Pattern",
+    kind: "select",
+    options: [
+      { value: "aisle_serpentine", label: "Aisle Serpentine" },
+      { value: "stacked_passes", label: "Stacked Passes" },
+      { value: "crosshatch", label: "Crosshatch" },
+      { value: "perimeter_aisle_hybrid", label: "Perimeter + Aisles" },
+    ],
+  },
+  {
+    key: "lane_strategy",
+    label: "Lane Strategy",
+    kind: "select",
+    options: [
+      { value: "serpentine", label: "Serpentine" },
+      { value: "one_way", label: "One Way" },
+    ],
+  },
+  {
+    key: "view_mode",
+    label: "View Mode",
+    kind: "select",
+    options: [
+      { value: "forward", label: "Forward" },
+      { value: "left_face", label: "Left Face" },
+      { value: "right_face", label: "Right Face" },
+      { value: "dual_face", label: "Dual Face" },
+    ],
+  },
+  { key: "layer_count", label: "Layer Count", kind: "number", min: 1, step: 1 },
+  { key: "layer_spacing_m", label: "Layer Spacing (m)", kind: "number", min: 0, step: 0.1 },
+  { key: "ceiling_height_m", label: "Ceiling Height (m)", kind: "number", min: 0.1, step: 0.1 },
+  { key: "ceiling_margin_m", label: "Ceiling Margin (m)", kind: "number", min: 0, step: 0.1 },
+  { key: "work_speed_mps", label: "Work Speed (m/s)", kind: "number", min: 0.1, step: 0.1 },
+  {
+    key: "transit_speed_mps",
+    label: "Transit Speed (m/s)",
+    kind: "number",
+    min: 0.1,
+    step: 0.1,
+  },
+  { key: "scan_pause_s", label: "Scan Pause (s)", kind: "number", min: 0, step: 0.1 },
+  {
+    key: "interpolate_steps_work_leg",
+    label: "Work Leg Interpolation",
+    kind: "number",
+    min: 0,
+    step: 1,
+  },
+  {
+    key: "interpolate_steps_transit_leg",
+    label: "Transit Leg Interpolation",
+    kind: "number",
+    min: 0,
+    step: 1,
+  },
+];
+
+const WAREHOUSE_MISSION_DEFAULT_COLUMN_ROWS = (() => {
+  const splitIndex = Math.ceil(WAREHOUSE_MISSION_DEFAULT_ROWS.length / 2);
+  return [
+    WAREHOUSE_MISSION_DEFAULT_ROWS.slice(0, splitIndex),
+    WAREHOUSE_MISSION_DEFAULT_ROWS.slice(splitIndex),
+  ];
+})();
+
+const toWarehouseMissionDefaultsDraft = (
+  defaults: WarehouseMissionDefaultsResponse,
+): WarehouseMissionDefaultsDraft => ({
+  cruise_alt: String(defaults.cruise_alt),
+  corridor_spacing_m: String(defaults.corridor_spacing_m),
+  aisle_axis_deg: defaults.aisle_axis_deg == null ? "" : String(defaults.aisle_axis_deg),
+  clearance_m: String(defaults.clearance_m),
+  perimeter_offset_m: String(defaults.perimeter_offset_m),
+  scan_pattern: defaults.scan_pattern,
+  lane_strategy: defaults.lane_strategy,
+  view_mode: defaults.view_mode,
+  layer_count: String(defaults.layer_count),
+  layer_spacing_m: String(defaults.layer_spacing_m),
+  ceiling_height_m: String(defaults.ceiling_height_m),
+  ceiling_margin_m: String(defaults.ceiling_margin_m),
+  work_speed_mps: String(defaults.work_speed_mps),
+  transit_speed_mps: String(defaults.transit_speed_mps),
+  scan_pause_s: String(defaults.scan_pause_s),
+  interpolate_steps_work_leg: String(defaults.interpolate_steps_work_leg),
+  interpolate_steps_transit_leg: String(defaults.interpolate_steps_transit_leg),
+});
+
+const parseRequiredNumber = (
+  label: string,
+  raw: string,
+  integer = false,
+): number => {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new Error(`${label} is required.`);
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${label} must be a valid number.`);
+  }
+  if (integer && !Number.isInteger(parsed)) {
+    throw new Error(`${label} must be a whole number.`);
+  }
+  return parsed;
+};
+
+const parseOptionalNumber = (label: string, raw: string): number | null => {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${label} must be a valid number.`);
+  }
+  return parsed;
+};
+
+const toWarehouseMissionDefaultsPayload = (
+  draft: WarehouseMissionDefaultsDraft,
+): WarehouseMissionDefaultsResponse => ({
+  cruise_alt: parseRequiredNumber("Cruise altitude", draft.cruise_alt),
+  corridor_spacing_m: parseRequiredNumber("Corridor spacing", draft.corridor_spacing_m),
+  aisle_axis_deg: parseOptionalNumber("Aisle axis", draft.aisle_axis_deg),
+  clearance_m: parseRequiredNumber("Clearance", draft.clearance_m),
+  perimeter_offset_m: parseRequiredNumber("Perimeter offset", draft.perimeter_offset_m),
+  scan_pattern: draft.scan_pattern as WarehouseMissionDefaultsResponse["scan_pattern"],
+  lane_strategy: draft.lane_strategy as WarehouseMissionDefaultsResponse["lane_strategy"],
+  view_mode: draft.view_mode as WarehouseMissionDefaultsResponse["view_mode"],
+  layer_count: parseRequiredNumber("Layer count", draft.layer_count, true),
+  layer_spacing_m: parseRequiredNumber("Layer spacing", draft.layer_spacing_m),
+  ceiling_height_m: parseRequiredNumber("Ceiling height", draft.ceiling_height_m),
+  ceiling_margin_m: parseRequiredNumber("Ceiling margin", draft.ceiling_margin_m),
+  work_speed_mps: parseRequiredNumber("Work speed", draft.work_speed_mps),
+  transit_speed_mps: parseRequiredNumber("Transit speed", draft.transit_speed_mps),
+  scan_pause_s: parseRequiredNumber("Scan pause", draft.scan_pause_s),
+  interpolate_steps_work_leg: parseRequiredNumber(
+    "Work leg interpolation",
+    draft.interpolate_steps_work_leg,
+    true,
+  ),
+  interpolate_steps_transit_leg: parseRequiredNumber(
+    "Transit leg interpolation",
+    draft.interpolate_steps_transit_leg,
+    true,
+  ),
+});
+
 
 export default function WarehousePage() {
-  const [fieldName, setFieldName] = useState("Field A");
-  const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
-  const [fields, setFields] = useState<FieldFeature[]>([]);
-  const [loadingFields, setLoadingFields] = useState(false);
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [fieldsRefreshNonce, setFieldsRefreshNonce] = useState(0);
-  const [savingField, setSavingField] = useState(false);
-  const [deletingField, setDeletingField] = useState(false);
-  const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(null);
-  const containerStyle = { width: "100%", height: "400px" };
-  const defaultCenter = { lat: 50.8503, lng: 4.3517 };
-  const [drawMode, setDrawMode] = useState<DrawMode>("none");
-  // TerraDraw refs and state
-  const terraDrawRef = useRef<TerraDraw | null>(null);
-  const [terraDrawReady, setTerraDrawReady] = useState(false);
-  const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("static");
+  const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>([]);
+  const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
+  const [selectedMapJobId, setSelectedMapJobId] = useState<number | null>(null);
 
-  const isTerraGuidanceFeature = useCallback((feature: TerraFeature): boolean => {
-    const props = (feature?.properties ?? {}) as Record<string, unknown>;
-    return Boolean(
-      feature?.geometry?.type === "Point" &&
-        (props.coordinatePoint ||
-          props.closingPoint ||
-          props.snappingPoint ||
-          props.selectionPoint ||
-          props.midPoint)
-    );
-  }, []);
+  // Warehouse maps (footprints) — separate from scanned results
+  const [warehouseMaps, setWarehouseMaps] = useState<WarehouseMapOut[]>([]);
+  const [loadingWarehouseMaps, setLoadingWarehouseMaps] = useState(false);
+  const [selectedWarehouseMapId, setSelectedWarehouseMapId] = useState<number | null>(null);
+  const [createMapForm, setCreateMapForm] = useState<CreateMapForm>({ name: "", width_m: "", length_m: "" });
+  const [creatingMap, setCreatingMap] = useState(false);
+  const [showCreateMap, setShowCreateMap] = useState(false);
+  const [tilesetUrl, setTilesetUrl] = useState<string | null>(null);
+  const [loadingTileset, setLoadingTileset] = useState(false);
+  const [missionDefaultsDraft, setMissionDefaultsDraft] =
+    useState<WarehouseMissionDefaultsDraft | null>(null);
+  const [loadingMissionDefaults, setLoadingMissionDefaults] = useState(false);
+  const [savingMissionDefaults, setSavingMissionDefaults] = useState(false);
+  const [missionDefaultsMessage, setMissionDefaultsMessage] = useState<string | null>(null);
 
-  const isRemovableUserDrawingFeature = useCallback((feature: TerraFeature): boolean => {
-    if (!feature || feature.id == null) return false;
-    const mode =
-      typeof feature?.properties?.mode === "string"
-        ? feature.properties.mode
-        : undefined;
-    return mode !== "static" && !isTerraGuidanceFeature(feature);
-  }, [isTerraGuidanceFeature]);
+  const [startingScan, setStartingScan] = useState(false);
+  const [scanLaunchMessage, setScanLaunchMessage] = useState<string | null>(null);
 
-  const syncFieldBorderFromSnapshot = useCallback((snapshot: TerraFeature[]) => {
-    const polygons = snapshot.filter(
-      (f) =>
-        isRemovableUserDrawingFeature(f) &&
-        f?.geometry?.type === "Polygon" &&
-        Array.isArray(
-          ((f?.geometry as { coordinates?: unknown[] } | undefined)?.coordinates ??
-            [])[0]
-        )
-    );
-
-    if (polygons.length > 0) {
-      const latest = polygons[polygons.length - 1];
-      const coords = (latest.geometry?.coordinates as [number, number][][])[0];
-      const ring: LonLat[] = coords.map(([lon, lat]) => [lon, lat]);
-      setFieldBorder(ring);
-      return;
-    }
-
-    // Allow saving a closed linestring as a field border as a fallback.
-    const lines = snapshot.filter(
-      (f) =>
-        isRemovableUserDrawingFeature(f) &&
-        f?.geometry?.type === "LineString" &&
-        Array.isArray(f?.geometry?.coordinates)
-    );
-    if (lines.length > 0) {
-      const latestLine = lines[lines.length - 1];
-      const coords = latestLine.geometry?.coordinates as [number, number][];
-      if (coords.length >= 3) {
-        const ring: LonLat[] = coords.map(([lon, lat]) => [lon, lat]);
-        setFieldBorder(ring);
-        return;
-      }
-    }
-
-    setFieldBorder(null);
-  }, [isRemovableUserDrawingFeature]);
-
-  const polygonPathToLonLat = (poly: google.maps.Polygon): LonLat[] => {
-    const path = poly.getPath();
-    const pts: LonLat[] = [];
-    for (let i = 0; i < path.getLength(); i++) {
-      const p = path.getAt(i);
-      pts.push([p.lng(), p.lat()]);
-    }
-    return pts;
-  };
-
-  const wirePolygonEditListeners = (poly: google.maps.Polygon) => {
-    const path = poly.getPath();
-
-    const update = () => setFieldBorder(polygonPathToLonLat(poly));
-
-    update();
-
-    path.addListener("set_at", update);
-    path.addListener("insert_at", update);
-    path.addListener("remove_at", update);
-  };
-
-  const clearFieldBorder = () => {
-    if (fieldPolygonRef.current) {
-      fieldPolygonRef.current.setMap(null);
-      fieldPolygonRef.current = null;
-    }
-    // Clear only non-static user drawings; keep saved/static features.
-    if (terraDrawRef.current) {
-      try {
-        const snapshot = terraDrawRef.current.getSnapshot();
-        const idsToRemove = snapshot
-          .filter((f) => isRemovableUserDrawingFeature(f))
-          .map((f) => String(f.id));
-        if (idsToRemove.length > 0) {
-          terraDrawRef.current.removeFeatures(idsToRemove);
-        }
-      } catch {
-        // ignore
-      }
-    }
-    setFieldBorder(null);
-    setSelectedFieldId(null);
-  };
-
-  const saveFieldBorder = async () => {
-    const token = getToken();
-    if (!token) {
-      addError("Not authenticated");
-      return;
-    }
-    if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw a field polygon (min 3 points) before saving.");
-      return;
-    }
-    if (!fieldName.trim()) {
-      addError("Please enter a field name.");
-      return;
-    }
-    setSavingField(true);
-    try {
-      const res = await fetch(`${API_BASE_CLEAN}/fields`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: fieldName.trim(),
-          coordinates: fieldBorder,
-          metadata: {},
-        }),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || "Failed to save field");
-      }
-
-      const data = await res.json();
-      alert(`Saved field "${data.name}" (id=${data.id})`);
-      setFieldsRefreshNonce((n) => n + 1);
-      setSelectedFieldId(data?.id ?? null);
-    } catch (e: any) {
-      addError(e?.message ?? "Failed to save field");
-    } finally {
-      setSavingField(false);
-    }
-  };
-
-  const updateFieldBorder = async () => {
-    const token = getToken();
-    if (!token) {
-      addError("Not authenticated");
-      return;
-    }
-    if (selectedFieldId == null) {
-      addError("Select a field to update.");
-      return;
-    }
-    if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw/edit a field polygon (min 3 points) before updating.");
-      return;
-    }
-    if (!fieldName.trim()) {
-      addError("Please enter a field name.");
-      return;
-    }
-    setSavingField(true);
-    try {
-      const res = await fetch(`${API_BASE_CLEAN}/fields/${selectedFieldId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: fieldName.trim(),
-          coordinates: fieldBorder,
-        }),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || "Failed to update field");
-      }
-
-      const data = await res.json();
-      alert(`Updated field "${data.name}" (id=${data.id})`);
-      setFieldsRefreshNonce((n) => n + 1);
-    } catch (e: any) {
-      addError(e?.message ?? "Failed to update field");
-    } finally {
-      setSavingField(false);
-    }
-  };
-
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const fieldPolygonRef = useRef<google.maps.Polygon | null>(null);
-  const missionLaunchInFlightRef = useRef(false);
-  const gridPreviewAbortRef = useRef<AbortController | null>(null);
-  const [userCenter, setUserCenter] = useState<LatLng | null>(null);
-  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [alt, setAlt] = useState(30);
-  const [altInput, setAltInput] = useState("30");
-  const [name, setName] = useState("field-plan-1");
-  const [sending, setSending] = useState(false);
-  const [preflightRun, setPreflightRun] =
-    useState<PreflightRunResponse | null>(null);
-  const [gridParams, setGridParams] = useState<GridParams>({
-    row_spacing_m: 7.5,
-    grid_angle_deg: null,
-    slope_aware: false,
-    safety_inset_m: 1.5,
-    terrain_follow: false,
-    agl_m: 30,
-    pattern_mode: "boustrophedon",
-    crosshatch_angle_offset_deg: 90,
-    start_corner: "auto",
-    lane_strategy: "serpentine",
-    row_stride: 1,
-    row_phase_m: 0,
-  });
-  const [gridPreview, setGridPreview] = useState<GridPreviewWaypoint[] | null>(
-    null
-  );
-  const [gridPreviewMask, setGridPreviewMask] = useState<boolean[] | null>(
-    null
-  );
-  const [gridPreviewStats, setGridPreviewStats] = useState<GridPreviewStats | null>(
-    null
-  );
-  const [gridPreviewError, setGridPreviewError] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [center, setCenter] = useState(defaultCenter);
-  const [loadingLocation, setLoadingLocation] = useState(true);
-  const { errors, addError, clearErrors, dismissError } = useErrors();
-  const [exclusionZones, setExclusionZones] = useState<LonLat[][]>([]);
-  const [fieldTilesetUrl, setFieldTilesetUrl] = useState<string | null>(null);
-  const [mapZoom, setMapZoom] = useState(12);
-  const [streamKey, setStreamKey] = useState(Date.now());
-  const [mapReady, setMapReady] = useState(false);
-  const videoToken = getToken();
-  const waypointMarkersRef = useRef<any[]>([]);
-  const [useCesium, setUseCesium] = useState(false);
-  const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
-  const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
-  const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
-    /\/$/,
-    ""
-  );
-  const toAbsoluteAssetUrl = useCallback(
-    (url: string) => {
-      if (/^https?:\/\//i.test(url)) return url;
-      return `${API_BASE_CLEAN}${url.startsWith("/") ? "" : "/"}${url}`;
-    },
-    [API_BASE_CLEAN]
-  );
-  const [videoError, setVideoError] = useState<string | null>(null);
+  const [manualStreamKey, setManualStreamKey] = useState<{
+    flightId: string | null;
+    key: number;
+  } | null>(null);
+  const [videoErrorMessage, setVideoErrorMessage] = useState<string | null>(null);
+  const [videoErrorStreamKey, setVideoErrorStreamKey] = useState<number | null>(null);
   const [videoRetryCount, setVideoRetryCount] = useState(0);
+
+  const retryTimerRef = useRef<number | null>(null);
+  const { errors, addError, clearErrors, dismissError } = useErrors();
+
+  const apiBaseRaw = import.meta.env.VITE_API_BASE_URL ?? "";
+  const apiBase = (apiBaseRaw || "http://localhost:8000").replace(/\/$/, "");
+  const videoToken = getToken();
+
   const {
     missionStatus,
     activeFlightId,
@@ -421,856 +335,368 @@ export default function WarehousePage() {
     wsConnected,
     disconnect,
     droneConnected,
-  } = useMissionWebsocketRuntime<MissionStatus>({
-    apiBase: API_BASE_CLEAN,
+  } = useMissionWebsocketRuntime<WarehouseMissionStatus>({
+    apiBase,
     getTokenFn: getToken,
     onError: addError,
   });
-  const droneCenter = useDroneCenter(telemetry);
-  const { heading, armed } = useMissionCommandMetrics(telemetry);
 
-  const handleCesiumPick = useCallback(
-    (p: { lat: number; lng: number }) => {
-      setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
-    },
-    [alt]
-  );
-
-  const droneReady = Boolean(wsConnected && droneCenter);
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
-    apiBase: API_BASE_CLEAN,
+    apiBase,
     getToken,
-    enabled: droneReady,
+    enabled: Boolean(activeFlightId && droneConnected),
     onError: addError,
     resetKey: activeFlightId ?? "none",
   });
 
-  const { isLoaded, loadError } = useContext(GoogleMapsContext);
-
-  useEffect(() => {
-    if (autoStreamKey) setStreamKey(autoStreamKey);
-  }, [autoStreamKey]);
-
-const onMapLoad = useCallback((map: google.maps.Map) => {
-  mapRef.current = map;
-  setMapReady(true);
-}, []);
-
-
-  const onMapUnmount = useCallback(() => {
-    if (fieldPolygonRef.current) {
-      fieldPolygonRef.current.setMap(null);
-      fieldPolygonRef.current = null;
-    }
-    mapRef.current = null;
-    setMapReady(false);
-  }, []);
-
-  const onMapZoomChanged = useCallback(() => {
-    if (!mapRef.current) return;
-    const zoom = mapRef.current.getZoom();
-    if (typeof zoom === "number" && Number.isFinite(zoom)) {
-      setMapZoom(zoom);
-    }
-  }, []);
-
-  // Add this ref near your other refs (around line ~280)
-  const lastSyncedCenterRef = useRef<LatLng | null>(null);
-
-  // Replace the existing onMapCenterChanged with this:
-  const onMapCenterChanged = useCallback(() => {
-    if (!mapRef.current) return;
-
-    const center = mapRef.current.getCenter();
-    if (!center) return;
-
-    const newCenter = { lat: center.lat(), lng: center.lng() };
-    const last = lastSyncedCenterRef.current;
-
-    // Only update if center changed significantly (> 0.00001° ≈ 1 meter)
-    const hasChanged = !last ||
-      Math.abs(last.lat - newCenter.lat) > 0.00001 ||
-      Math.abs(last.lng - newCenter.lng) > 0.00001;
-
-    if (hasChanged) {
-      lastSyncedCenterRef.current = newCenter;
-      setCenter(newCenter);
-    }
-  }, []);
-
-  const selectedField = useMemo(
+  const selectedScannedMap = useMemo(
     () =>
-      selectedFieldId == null
-        ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
-    [fields, selectedFieldId]
+      scannedMaps.find((map) => map.job_id === selectedMapJobId) ??
+      scannedMaps[0] ??
+      null,
+    [scannedMaps, selectedMapJobId],
   );
 
-  const lonLatRingToPath = useCallback((ring: LonLat[]): LatLng[] => {
-    return ring.map(([lon, lat]) => ({ lat, lng: lon }));
-  }, []);
-
-  const stripClosedRing = useCallback((ring: LonLat[]): LonLat[] => {
-    if (ring.length >= 2) {
-      const a = ring[0];
-      const b = ring[ring.length - 1];
-      if (a[0] === b[0] && a[1] === b[1]) return ring.slice(0, -1);
-    }
-    return ring;
-  }, []);
-
-  const computeCentroid = useCallback(
-    (ring: LonLat[]): LatLng | null => {
-      const pts = stripClosedRing(ring);
-      if (pts.length < 3) return null;
-      let twiceArea = 0;
-      let cx = 0;
-      let cy = 0;
-
-      for (let i = 0; i < pts.length; i++) {
-        const [x0, y0] = pts[i];
-        const [x1, y1] = pts[(i + 1) % pts.length];
-        const f = x0 * y1 - x1 * y0;
-        twiceArea += f;
-        cx += (x0 + x1) * f;
-        cy += (y0 + y1) * f;
-      }
-
-      if (Math.abs(twiceArea) < 1e-12) {
-        const avg = pts.reduce(
-          (acc, [x, y]) => ({ x: acc.x + x, y: acc.y + y }),
-          { x: 0, y: 0 }
-        );
-        return { lng: avg.x / pts.length, lat: avg.y / pts.length };
-      }
-
-      const area6 = twiceArea * 3;
-      return { lng: cx / area6, lat: cy / area6 };
+  const toAbsoluteAssetUrl = useCallback(
+    (rawUrl: string): string => {
+      if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
+      const normalizedPath = rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`;
+      return `${apiBase}${normalizedPath}`;
     },
-    [stripClosedRing]
+    [apiBase],
   );
 
-  const computeAreaHa = useCallback(
-    (ring: LonLat[]): number | null => {
-      const pts = stripClosedRing(ring);
-      if (pts.length < 3) return null;
-      if (!(window as any).google?.maps?.geometry?.spherical) return null;
-      const latLngs = pts.map(([lon, lat]) => new google.maps.LatLng(lat, lon));
-      const m2 = google.maps.geometry.spherical.computeArea(latLngs);
-      return m2 / 10000;
-    },
-    [stripClosedRing]
-  );
+  const resolveTilesetUrlFromAssets = useCallback(
+    async (assets: WarehouseScannedMapResponse["assets"]): Promise<string | null> => {
+      const tilesetAsset = assets.find(
+        (asset) => asset.type === "TILESET_3D" && typeof asset.url === "string",
+      );
+      if (!tilesetAsset?.url) return null;
 
-  const loadRingIntoEditor = useCallback(
-    (ring: LonLat[]) => {
-      if (!mapRef.current || !(window as any).google?.maps) return;
-
-      if (fieldPolygonRef.current) {
-        fieldPolygonRef.current.setMap(null);
-        fieldPolygonRef.current = null;
-      }
-
-      const pts = stripClosedRing(ring);
-
-      const poly = new google.maps.Polygon({
-        paths: pts.map(([lon, lat]) => ({ lat, lng: lon })),
-        editable: true,
-        draggable: false,
-        fillColor: "#000000",
-        fillOpacity: 0,
-        strokeOpacity: 0.9,
-        strokeWeight: 2,
-        zIndex: 20,
-      });
-
-      poly.setMap(mapRef.current);
-      fieldPolygonRef.current = poly;
-      wirePolygonEditListeners(poly);
-    },
-    [stripClosedRing]
-  );
-
-  const focusRingOnMap = useCallback(
-    (ring: LonLat[]) => {
-      if (!mapRef.current || !(window as any).google?.maps || ring.length < 3) return;
-
-      const pts = stripClosedRing(ring);
-      const bounds = new google.maps.LatLngBounds();
-      pts.forEach(([lon, lat]) => bounds.extend({ lat, lng: lon }));
-
-      if (!bounds.isEmpty()) {
-        mapRef.current.fitBounds(bounds);
-      }
-    },
-    [stripClosedRing]
-  );
-
-  const fetchFields = useCallback(async () => {
-    setLoadingFields(true);
-    try {
       const token = getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      const res = await fetch(`${API_BASE_CLEAN}/fields/features`, {
-        headers,
-      });
-      if (!res.ok)
-        throw new Error((await res.text()) || "Failed to fetch fields");
-      const fc = await res.json();
-
-      const features: FieldFeature[] = [];
-      for (const feat of fc.features ?? []) {
-        const props = feat.properties ?? {};
-        const coords: LonLat[] | undefined = feat?.geometry?.coordinates?.[0];
-        if (!coords || coords.length < 4) continue;
-        const ring = stripClosedRing(coords);
-        features.push({
-          id: props.id,
-          owner_id: props.owner_id,
-          name: props.name,
-          area_ha: props.area_ha ?? null,
-          ring,
-          path: lonLatRingToPath(ring),
-        });
-      }
-
-      features.sort((a, b) => b.id - a.id);
-      setFields(features);
-    } catch (e: any) {
-      addError(e?.message ?? "Failed to load fields");
-    } finally {
-      setLoadingFields(false);
-    }
-  }, [addError, lonLatRingToPath, stripClosedRing]);
-
-  useEffect(() => {
-    fetchFields();
-  }, [fetchFields, fieldsRefreshNonce]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE_CLEAN}/geofences?active=true&limit=200`);
-        if (!res.ok) return;
-        const geofences = await res.json();
-        const zones: LonLat[][] = [];
-
-        await Promise.all(
-          (geofences ?? []).map(async (g: any) => {
-            const id = g?.id;
-            if (typeof id !== "number") return;
-            const detailRes = await fetch(`${API_BASE_CLEAN}/geofences/${id}/geojson`);
-            if (!detailRes.ok) return;
-            const feature = await detailRes.json();
-            const ring: LonLat[] | undefined = feature?.geometry?.coordinates?.[0];
-            if (Array.isArray(ring) && ring.length >= 4) {
-              zones.push(stripClosedRing(ring));
-            }
-          })
-        );
-
-        if (!cancelled) setExclusionZones(zones);
-      } catch {
-        if (!cancelled) setExclusionZones([]);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [API_BASE_CLEAN, stripClosedRing]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fieldId = selectedFieldId;
-    if (fieldId == null) {
-      setFieldTilesetUrl(null);
-      return;
-    }
-
-    const token = getToken();
-    if (!token) {
-      setFieldTilesetUrl(null);
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE_CLEAN}/mapping/fields/${fieldId}/latest-ready`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          if (!cancelled) setFieldTilesetUrl(null);
-          return;
-        }
-
-        const payload = await res.json();
-        const assets = Array.isArray(payload?.assets) ? payload.assets : [];
-        const tilesetAsset = assets.find((a: any) => a?.type === "TILESET_3D");
-        const rawUrl = typeof tilesetAsset?.url === "string" ? tilesetAsset.url : "";
-        if (!cancelled) {
-          if (rawUrl) {
-            setFieldTilesetUrl(toAbsoluteAssetUrl(rawUrl));
-            setUseCesium(true);
-            setCesiumViewMode("top");
-          } else {
-            setFieldTilesetUrl(null);
-          }
-        }
-      } catch {
-        if (!cancelled) setFieldTilesetUrl(null);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [API_BASE_CLEAN, selectedFieldId, toAbsoluteAssetUrl]);
-
-  const selectField = useCallback(
-    (f: FieldFeature) => {
-      setUseCesium(false);
-      setSelectedFieldId(f.id);
-      setFieldName(f.name);
-      setFieldBorder(f.ring);
-      loadRingIntoEditor(f.ring);
-      focusRingOnMap(f.ring);
-    },
-    [focusRingOnMap, loadRingIntoEditor]
-  );
-
-  const handleSavedFieldSelect = useCallback(
-    (fieldId: number | null) => {
-      if (fieldId == null) {
-        clearFieldBorder();
-        return;
-      }
-      const field = fields.find((f) => f.id === fieldId);
-      if (field) selectField(field);
-    },
-    [clearFieldBorder, fields, selectField]
-  );
-
-  const handleNewField = useCallback(() => {
-    setSelectedFieldId(null);
-    setFieldName("Field A");
-    clearFieldBorder();
-  }, [clearFieldBorder]);
-
-  const requestDeleteSelectedField = useCallback(() => {
-    const token = getToken();
-    if (!token) {
-      addError("Not authenticated");
-      return;
-    }
-    if (selectedFieldId == null) {
-      addError("Select a saved field to delete.");
-      return;
-    }
-
-    const targetField = fields.find((f) => f.id === selectedFieldId) ?? null;
-    if (!targetField) {
-      addError("Selected field could not be resolved.");
-      return;
-    }
-    setPendingDeleteField(targetField);
-  }, [addError, fields, selectedFieldId]);
-
-  const closeDeleteFieldDialog = useCallback(() => {
-    if (deletingField) return;
-    setPendingDeleteField(null);
-  }, [deletingField]);
-
-  const confirmDeleteSelectedField = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      addError("Not authenticated");
-      return;
-    }
-    if (!pendingDeleteField) {
-      return;
-    }
-
-    setDeletingField(true);
-    try {
-      const res = await fetch(`${API_BASE_CLEAN}/fields/${pendingDeleteField.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || "Failed to delete field");
-      }
-
-      setFields((prev) => prev.filter((f) => f.id !== pendingDeleteField.id));
-      setFieldsRefreshNonce((n) => n + 1);
-      clearFieldBorder();
-      setFieldName("Field A");
-      setPendingDeleteField(null);
-    } catch (e: any) {
-      addError(e?.message ?? "Failed to delete field");
-    } finally {
-      setDeletingField(false);
-    }
-  }, [API_BASE_CLEAN, addError, clearFieldBorder, pendingDeleteField]);
-
-  useEffect(() => {
-    if (useCesium) return;
-    if (!mapReady || !selectedField) return;
-    loadRingIntoEditor(selectedField.ring);
-    focusRingOnMap(selectedField.ring);
-  }, [
-    focusRingOnMap,
-    loadRingIntoEditor,
-    mapReady,
-    selectedField,
-    useCesium,
-  ]);
-
-  const metrics = useMemo(() => {
-    if (!fieldBorder || fieldBorder.length < 3) return null;
-    const areaHa = computeAreaHa(fieldBorder);
-    const centroid = computeCentroid(fieldBorder);
-    return { areaHa, centroid };
-  }, [computeAreaHa, computeCentroid, fieldBorder]);
-
-  const previewLegStats = useMemo(() => {
-    if (!gridPreview || !gridPreviewMask) return null;
-    const workLegs = gridPreviewMask.filter(Boolean).length;
-    const transitLegs = gridPreviewMask.length - workLegs;
-    return { workLegs, transitLegs };
-  }, [gridPreview, gridPreviewMask]);
-  const gridPreviewTooDense =
-    !!gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS;
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported by this browser.");
-      setLoadingLocation(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserCenter(userLocation);
-        setCenter(userLocation);
-        setLoadingLocation(false);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        addError(`Failed to get location: ${error.message}`);
-        setLoadingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
-    );
-  }, [addError]);
-
-  const handleVideoError = useCallback(() => {
-    setVideoError("Failed to load video stream");
-    setVideoRetryCount((prev) => prev + 1);
-
-    setTimeout(() => {
-      setStreamKey(Date.now());
-      setVideoError(null);
-    }, 5000);
-  }, []);
-
-  const handleVideoLoad = useCallback(() => {
-    setVideoError(null);
-    setVideoRetryCount(0);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded || !mapReady) return;
-    if (!mapRef.current) return;
-    const markerLib = (google.maps as any)?.marker;
-    if (!markerLib?.AdvancedMarkerElement) {
-      return;
-    }
-
-    waypointMarkersRef.current.forEach((marker) => {
-      try {
-        if (marker) {
-          if ("map" in marker) marker.map = null;
-          else if (typeof marker.setMap === "function") marker.setMap(null);
-        }
-      } catch {
-        // ignore cleanup errors
-      }
-    });
-    waypointMarkersRef.current = [];
-
-    if (terraDrawMode !== "static") return;
-    if (waypoints.length === 0) return;
-
-    waypoints.forEach((p) => {
-      const content = document.createElement("div");
-      content.style.width = "12px";
-      content.style.height = "12px";
-      content.style.borderRadius = "50%";
-      content.style.background = "#1976d2";
-      content.style.border = "2px solid #ffffff";
-      content.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
-
-      const marker = new markerLib.AdvancedMarkerElement({
-        map: mapRef.current,
-        position: { lat: p.lat, lng: p.lon },
-        content,
-        title: "Waypoint",
-      });
-
-      waypointMarkersRef.current.push(marker);
-    });
-
-    return () => {
-      waypointMarkersRef.current.forEach((marker) => {
+      if (token && Number.isFinite(tilesetAsset.id)) {
         try {
-          if (marker) {
-            if ("map" in marker) marker.map = null;
-            else if (typeof marker.setMap === "function") marker.setMap(null);
+          const signedRes = await fetch(
+            `${apiBase}/mapping/assets/${tilesetAsset.id}/signed-url?ttl_seconds=3600&path=tileset.json`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          if (signedRes.ok) {
+            const signedData = (await signedRes.json()) as { url?: string };
+            if (typeof signedData?.url === "string" && signedData.url.trim()) {
+              return signedData.url;
+            }
           }
         } catch {
-          // ignore cleanup errors
+          // Fallback to the stored asset URL when signing fails.
         }
+      }
+
+      const absolute = toAbsoluteAssetUrl(tilesetAsset.url);
+      if (/\.json(\?|$)/i.test(absolute)) {
+        return absolute;
+      }
+      return `${absolute.replace(/\/+$/, "")}/tileset.json`;
+    },
+    [apiBase, toAbsoluteAssetUrl],
+  );
+
+  const loadScannedMaps = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
+    setLoadingScannedMaps(true);
+    try {
+      const records = await listWarehouseScannedMaps(token, apiBase);
+      setScannedMaps(records);
+      setSelectedMapJobId((current) => {
+        if (current != null && records.some((record) => record.job_id === current)) {
+          return current;
+        }
+        return records[0]?.job_id ?? null;
       });
-      waypointMarkersRef.current = [];
-    };
-  }, [isLoaded, mapReady, terraDrawMode, waypoints]);
+    } catch (error) {
+      addError(`Scanned warehouse maps could not be loaded: ${toMessage(error)}`);
+    } finally {
+      setLoadingScannedMaps(false);
+    }
+  }, [addError, apiBase]);
 
-useEffect(() => {
-  if (useCesium) return;
+  const loadMissionDefaults = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
 
-  const modeMap: Record<DrawMode, TerraDrawEditorMode> = {
-    polygon: "polygon",
-    polyline: "linestring",
-    point: "point",
-    none: "static",
-  };
+    setLoadingMissionDefaults(true);
+    try {
+      const defaults = await getWarehouseMissionDefaults(token, apiBase);
+      setMissionDefaultsDraft(toWarehouseMissionDefaultsDraft(defaults));
+    } catch (error) {
+      addError(`Warehouse mission defaults could not be loaded: ${toMessage(error)}`);
+    } finally {
+      setLoadingMissionDefaults(false);
+    }
+  }, [addError, apiBase]);
 
-  const tdMode = modeMap[drawMode];
-  if (tdMode) setTerraDrawMode(tdMode);
-}, [drawMode, useCesium]);
+  const loadWarehouseMaps = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setLoadingWarehouseMaps(true);
+    try {
+      const res = await fetch(`${apiBase}/warehouse/maps`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const maps = (await res.json()) as WarehouseMapOut[];
+      setWarehouseMaps(maps);
+      // Auto-select the first map if nothing is selected yet
+      setSelectedWarehouseMapId((current) => {
+        if (current != null && maps.some((m) => m.id === current)) return current;
+        return maps[0]?.id ?? null;
+      });
+    } catch (error) {
+      addError(`Warehouse maps could not be loaded: ${toMessage(error)}`);
+    } finally {
+      setLoadingWarehouseMaps(false);
+    }
+  }, [addError, apiBase]);
+
+  const handleCreateWarehouseMap = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    const name = createMapForm.name.trim();
+    if (!name) { addError("Map name is required."); return; }
+    const width = Number(createMapForm.width_m);
+    const length = Number(createMapForm.length_m);
+    if (!Number.isFinite(width) || width <= 0) { addError("Width must be a positive number."); return; }
+    if (!Number.isFinite(length) || length <= 0) { addError("Length must be a positive number."); return; }
+    setCreatingMap(true);
+    try {
+      const res = await fetch(`${apiBase}/warehouse/maps`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name, width_m: width, length_m: length }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error((detail as any)?.detail ?? `HTTP ${res.status}`);
+      }
+      const created = (await res.json()) as WarehouseMapOut;
+      setCreateMapForm({ name: "", width_m: "", length_m: "" });
+      setShowCreateMap(false);
+      await loadWarehouseMaps();
+      setSelectedWarehouseMapId(created.id);
+    } catch (error) {
+      addError(`Could not create warehouse map: ${toMessage(error)}`);
+    } finally {
+      setCreatingMap(false);
+    }
+  }, [addError, apiBase, createMapForm, loadWarehouseMaps]);
 
   useEffect(() => {
     return () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
       disconnect();
     };
   }, [disconnect]);
 
-  useDroneMapFollow({
-    mapRef,
-    droneCenter,
-    wsConnected,
-    onInitialSnap: () => setMapZoom(18),
-  });
-
-  const onMapClick = useCallback(
-    (e: google.maps.MapMouseEvent) => {
-      if (terraDrawMode !== "static") return;
-      if (!e.latLng) return;
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-      setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
-    },
-    [alt, terraDrawMode]
-  );
-  const handleDrawingToolSelection = useCallback(
-    (toolMode: TerraDrawToolMode) => {
-      if (useCesium) {
-        const cesiumModeMap: Record<TerraDrawToolMode, DrawMode> = {
-          polygon: "polygon",
-          linestring: "polyline",
-          point: "point",
-          rectangle: "polygon",
-          circle: "polygon",
-          freehand: "polygon",
-          select: "none",
-        };
-        setDrawMode(cesiumModeMap[toolMode] ?? "none");
-        return;
-      }
-
-      setTerraDrawMode(toolMode);
-    },
-    [useCesium]
-  );
-  const handleCesiumDrawComplete = useCallback(
-    (result: CesiumDrawResult) => {
-      if (result.type === "polygon") {
-        const ring = stripClosedRing(
-          result.coordinates.map(([lon, lat]) => [lon, lat] as LonLat)
-        );
-        if (ring.length >= 3) {
-          setFieldBorder(ring);
-          setSelectedFieldId(null);
-        }
-      } else if (result.type === "polyline") {
-        setWaypoints(
-          result.coordinates.map(([lon, lat]) => ({
-            lat,
-            lon,
-            alt,
-          }))
-        );
-      } else if (result.type === "point") {
-        const [lon, lat] = result.coordinates;
-        setWaypoints((prev) => [...prev, { lat, lon, alt }]);
-      }
-
-      setDrawMode("none");
-    },
-    [alt, stripClosedRing]
-  );
-
-  const handleAltitudeInputChange = (value: string) => {
-    if (value === "") {
-      setAltInput("");
-      return;
-    }
-    if (!/^\d+$/.test(value)) return;
-    setAltInput(value);
-  };
-
-  const normalizeAltitude = () => {
-    if (altInput === "") {
-      setAltInput(String(alt));
-      return;
-    }
-    const num = Number(altInput);
-    if (!Number.isFinite(num)) {
-      setAltInput(String(alt));
-      return;
-    }
-    if (num < 1 || num > 500) {
-      addError("Altitude must be between 1 and 500 meters");
-      return;
-    }
-    setAlt(num);
-  };
-
-  const fetchGridPreview = useCallback(
-    async (signal: AbortSignal) => {
-      if (!useCesium && terraDrawMode !== "static" && terraDrawMode !== "select") {
-        setPreviewLoading(false);
-        return;
-      }
-      if (!fieldBorder || fieldBorder.length < 3) {
-        setGridPreview(null);
-        setGridPreviewMask(null);
-        setGridPreviewStats(null);
-        setGridPreviewError(null);
-        setPreviewLoading(false);
-        return;
-      }
-      const token = getToken();
-      if (!token) return;
-      setPreviewLoading(true);
-      try {
-        const res = await fetch(`${API_BASE_CLEAN}/tasks/missions/grid-preview`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          signal,
-          body: JSON.stringify({
-            field_polygon_lonlat: fieldBorder,
-            row_spacing_m: gridParams.row_spacing_m,
-            grid_angle_deg: gridParams.grid_angle_deg,
-            safety_inset_m: gridParams.safety_inset_m,
-            pattern_mode: gridParams.pattern_mode,
-            crosshatch_angle_offset_deg: gridParams.crosshatch_angle_offset_deg,
-            start_corner: gridParams.start_corner,
-            lane_strategy: gridParams.lane_strategy,
-            row_stride: gridParams.row_stride,
-            row_phase_m: gridParams.row_phase_m,
-          }),
-        });
-        if (!res.ok) {
-          const raw = await res.text();
-          let detail = raw;
-          try {
-            const parsed = JSON.parse(raw);
-            if (parsed?.detail) detail = String(parsed.detail);
-          } catch {
-            // keep raw text fallback
-          }
-          setGridPreview(null);
-          setGridPreviewMask(null);
-          setGridPreviewStats(null);
-          setGridPreviewError(detail || `Grid preview failed (HTTP ${res.status})`);
-          return;
-        }
-        const data = await res.json();
-        if (signal.aborted) return;
-        setGridPreview(data.waypoints);
-        setGridPreviewMask(data.work_leg_mask);
-        setGridPreviewStats(data.stats ?? null);
-        setGridPreviewError(null);
-      } catch {
-        if (signal.aborted) return;
-        setGridPreview(null);
-        setGridPreviewMask(null);
-        setGridPreviewStats(null);
-        setGridPreviewError("Grid preview failed. Please try again.");
-      } finally {
-        if (!signal.aborted) setPreviewLoading(false);
-      }
-    },
-    [API_BASE_CLEAN, fieldBorder, gridParams, terraDrawMode, useCesium]
-  );
+  useEffect(() => {
+    void loadScannedMaps();
+  }, [loadScannedMaps]);
 
   useEffect(() => {
-    if (gridPreviewAbortRef.current) {
-      gridPreviewAbortRef.current.abort();
-    }
-    const controller = new AbortController();
-    gridPreviewAbortRef.current = controller;
-    const timer = setTimeout(() => {
-      void fetchGridPreview(controller.signal);
-    }, GRID_PREVIEW_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-      if (gridPreviewAbortRef.current === controller) {
-        gridPreviewAbortRef.current = null;
-      }
-    };
-  }, [fetchGridPreview]);
+    void loadMissionDefaults();
+  }, [loadMissionDefaults]);
 
-  const sendMission = async () => {
-    if (missionLaunchInFlightRef.current) return;
+  useEffect(() => {
+    void loadWarehouseMaps();
+  }, [loadWarehouseMaps]);
+
+  useEffect(() => {
+    const handle = window.setInterval(() => {
+      void loadScannedMaps();
+    }, SCANNED_MAP_REFRESH_MS);
+    return () => window.clearInterval(handle);
+  }, [loadScannedMaps]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    if (!selectedScannedMap) {
+      setTilesetUrl(null);
+      return () => {
+        ignore = true;
+      };
+    }
+
+    setLoadingTileset(true);
+    void resolveTilesetUrlFromAssets(selectedScannedMap.assets)
+      .then((url) => {
+        if (!ignore) {
+          setTilesetUrl(url);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setTilesetUrl(null);
+          addError(`Selected 3D warehouse map could not be opened: ${toMessage(error)}`);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoadingTileset(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [addError, resolveTilesetUrlFromAssets, selectedScannedMap]);
+
+  const streamKey =
+    manualStreamKey?.flightId === (activeFlightId ?? null)
+      ? manualStreamKey.key
+      : autoStreamKey;
+
+  const videoError =
+    videoErrorStreamKey !== null && videoErrorStreamKey === streamKey
+      ? videoErrorMessage
+      : null;
+
+  const handleVideoError = useCallback(() => {
+    setVideoErrorMessage("Failed to load video stream");
+    setVideoErrorStreamKey(streamKey || null);
+    setVideoRetryCount((prev) => prev + 1);
+
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+    }
+
+    retryTimerRef.current = window.setTimeout(() => {
+      setManualStreamKey({
+        flightId: activeFlightId ?? null,
+        key: Date.now(),
+      });
+      setVideoErrorMessage(null);
+      setVideoErrorStreamKey(null);
+      retryTimerRef.current = null;
+    }, VIDEO_RETRY_DELAY_MS);
+  }, [activeFlightId, streamKey]);
+
+  const handleVideoLoad = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    setVideoErrorMessage(null);
+    setVideoErrorStreamKey(null);
+    setVideoRetryCount(0);
+  }, []);
+
+  const handleStartWarehouseScan = useCallback(async () => {
     const token = getToken();
     if (!token) {
-      addError("Not authenticated");
+      addError("You must be authenticated to start a warehouse scan.");
       return;
     }
-    if (!name.trim()) {
-      addError("Please enter a mission name");
-      return;
-    }
-
-    const altToUse = altInput === "" ? NaN : Number(altInput);
-    if (!Number.isFinite(altToUse) || altToUse < 1 || altToUse > 500) {
-      addError("Altitude must be between 1 and 500 meters");
+    if (!selectedWarehouseMapId) {
+      addError("Select a warehouse map to define the scan area.");
       return;
     }
 
-    if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw or select a field polygon before starting a grid survey");
-      return;
-    }
-    if (gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS) {
-      addError(
-        `Grid preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row spacing, increase row stride, or split the field.`
-      );
-      return;
-    }
-    if (gridPreviewError) {
-      addError(gridPreviewError);
-      return;
-    }
+    const warehouseMap = warehouseMaps.find((m) => m.id === selectedWarehouseMapId);
 
-    missionLaunchInFlightRef.current = true;
-    setSending(true);
-    clearErrors();
-
+    setStartingScan(true);
+    setScanLaunchMessage(null);
     try {
-      const payload: Record<string, unknown> = {
-        name: name.trim(),
-        cruise_alt: altToUse,
-        mission_type: "grid",
-        grid: {
-          field_polygon_lonlat: fieldBorder,
-          row_spacing_m: gridParams.row_spacing_m,
-          grid_angle_deg: gridParams.grid_angle_deg,
-          slope_aware: gridParams.slope_aware,
-          safety_inset_m: gridParams.safety_inset_m,
-          terrain_follow: gridParams.terrain_follow,
-          agl_m: gridParams.agl_m,
-          pattern_mode: gridParams.pattern_mode,
-          crosshatch_angle_offset_deg: gridParams.crosshatch_angle_offset_deg,
-          start_corner: gridParams.start_corner,
-          lane_strategy: gridParams.lane_strategy,
-          row_stride: gridParams.row_stride,
-          row_phase_m: gridParams.row_phase_m,
+      const launch = await startWarehouseScan(
+        {
+          warehouse_map_id: selectedWarehouseMapId,
+          mission_name: `Warehouse Scan${warehouseMap ? ` - ${warehouseMap.name}` : ""}`,
+          // Link to the most recent scanned result for this map as reference, if available
+          reference_mapping_job_id: scannedMaps.find(
+            (m) => getWarehouseMapId(m) === selectedWarehouseMapId
+          )?.job_id ?? undefined,
         },
-      };
-
-      const { preflight, mission: data } = await startMissionWithPreflight(
-        payload,
         token,
-        API_BASE_CLEAN,
+        apiBase,
       );
-      setPreflightRun(preflight);
-      alert(`Grid Survey: "${data.mission_name}" started! Tracking flight...`);
 
-      setPendingFlightId(data.flight_id ?? null);
-
-      setAlt(altToUse);
-      setAltInput(String(altToUse));
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Error creating flight plan";
-      addError(message);
+      setPendingFlightId(launch.mission.flight_id);
+      setScanLaunchMessage(
+        `Started ${launch.mission.mission_name} in ${getWarehouseName(launch)}. Preflight ${launch.preflight.overall_status}.`,
+      );
+      void loadScannedMaps();
+    } catch (error) {
+      addError(`Warehouse scan could not be started: ${toMessage(error)}`);
     } finally {
-      setSending(false);
-      missionLaunchInFlightRef.current = false;
+      setStartingScan(false);
     }
-  };
+  }, [addError, apiBase, loadScannedMaps, scannedMaps, selectedWarehouseMapId, warehouseMaps, setPendingFlightId]);
 
-  const polylinePath = useMemo(
-    () => waypoints.map((p) => ({ lat: p.lat, lng: p.lon })),
-    [waypoints]
-  );
-  const cesiumFieldBoundary = useMemo(
-    () => (fieldBorder && fieldBorder.length >= 3 ? fieldBorder : null),
-    [fieldBorder]
-  );
-  const cesiumPlannedRoute = useMemo(() => {
-    if (gridPreview && gridPreview.length >= 2) {
-      return gridPreview.map((p) => [p.lon, p.lat] as LonLat);
-    }
-    if (waypoints.length >= 2) {
-      return waypoints.map((p) => [p.lon, p.lat] as LonLat);
-    }
-    return null;
-  }, [gridPreview, waypoints]);
-
-  const mapCenter = useMemo(() => userCenter || center, [userCenter, center]);
-  const cesiumZoom = useMemo(
-    () => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
-    [mapZoom]
+  const handleMissionDefaultsDraftChange = useCallback(
+    (key: WarehouseMissionDefaultsKey, value: string) => {
+      setMissionDefaultsDraft((current) =>
+        current
+          ? {
+              ...current,
+              [key]: value,
+            }
+          : current,
+      );
+      setMissionDefaultsMessage(null);
+    },
+    [],
   );
 
-  const mapOptions = useMemo(
-    () => ({
-      streetViewControl: false,
-      mapTypeControl: false,
-      fullscreenControl: true,
-      clickableIcons: false,
-      keyboardShortcuts: false,
-      gestureHandling: "greedy" as const,
-      maxZoom: 20,
-      minZoom: 3,
-      ...(mapId ? { mapId } : {}),
-    }),
-    [mapId]
-  );
+  const handleUpdateMissionDefaults = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      addError("You must be authenticated to update warehouse mission defaults.");
+      return;
+    }
+    if (!missionDefaultsDraft) {
+      addError("Warehouse mission defaults are not available yet.");
+      return;
+    }
+
+    let payload: WarehouseMissionDefaultsResponse;
+    try {
+      payload = toWarehouseMissionDefaultsPayload(missionDefaultsDraft);
+    } catch (error) {
+      addError(toMessage(error));
+      return;
+    }
+
+    setSavingMissionDefaults(true);
+    setMissionDefaultsMessage(null);
+    try {
+      const saved = await updateWarehouseMissionDefaults(payload, token, apiBase);
+      setMissionDefaultsDraft(toWarehouseMissionDefaultsDraft(saved));
+      setMissionDefaultsMessage("Warehouse mission defaults updated.");
+    } catch (error) {
+      addError(`Warehouse mission defaults could not be updated: ${toMessage(error)}`);
+    } finally {
+      setSavingMissionDefaults(false);
+    }
+  }, [addError, apiBase, missionDefaultsDraft]);
+
+  const missionName =
+    missionStatus?.mission_lifecycle?.mission_name ??
+    missionStatus?.mission_name ??
+    "No active warehouse mission";
+  const missionState = missionStatus?.mission_lifecycle?.state ?? "idle";
+  const telemetryConnections = missionStatus?.telemetry?.active_connections;
+  const videoStatus = startingVideo
+    ? "Starting"
+    : videoError
+      ? "Unavailable"
+      : droneConnected
+        ? "Ready"
+        : "Offline";
+
+  const dronePosition =
+    (telemetry as any)?.position ?? missionStatus?.telemetry?.position ?? null;
 
   return (
     <>
@@ -1279,7 +705,7 @@ useEffect(() => {
         sx={{
           width: "100%",
           p: 3,
-          borderRadius: 3,
+          borderRadius: 1,
           background:
             "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
           border: "1px solid hsla(174, 30%, 40%, 0.2)",
@@ -1295,16 +721,19 @@ useEffect(() => {
           alignItems={{ xs: "flex-start", md: "center" }}
           justifyContent="space-between"
           sx={{ mb: 2 }}
-          spacing={2}
+          spacing={1}
         >
-          <div>
-            <Typography variant="h5">Field Operations</Typography>
+          <Box>
+            <Typography variant="h5">Warehouse Operations</Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Configure field routes, stream telemetry, and monitor imagery in
-              real time.
+              Launch warehouse scans, monitor mission state, stream the live
+              camera, and review recorded 3D warehouse maps.
             </Typography>
-          </div>
-          <MissionStatusChips droneConnected={droneConnected} wsConnected={wsConnected} />
+          </Box>
+          <MissionStatusChips
+            droneConnected={droneConnected}
+            wsConnected={wsConnected}
+          />
         </Stack>
 
         <ErrorAlerts
@@ -1313,964 +742,637 @@ useEffect(() => {
           onClearAll={clearErrors}
         />
 
-        {!apiKey ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Missing Google Maps API Key. Please set
-            VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY in your .env file.
+        {scanLaunchMessage && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {scanLaunchMessage}
           </Alert>
-        ) : loadError ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Failed to load Google Maps. {loadError.message} Ensure the Maps
-            JavaScript API is enabled, billing is active, and the key allows
-            your domain.
-          </Alert>
-        ) : !mapId ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Google Maps Map ID is not set. Advanced markers require a Map ID.
-            Set VITE_GOOGLE_MAPS_MAP_ID to remove this warning.
-          </Alert>
-        ) : (
-          <>
-            <TerraDrawController
-              map={mapReady ? mapRef.current : null}
-              enabled={!useCesium}
-              mode={terraDrawMode}
-              drawRef={terraDrawRef}
-              onReadyChange={setTerraDrawReady}
-              onSnapshotChange={syncFieldBorderFromSnapshot}
-              onError={addError}
-            />
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={3}
-              sx={{ mb: 3 }}
-            >
-              <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
-                <Box
-                  sx={{
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    border: "1px solid hsla(174, 30%, 40%, 0.2)",
-                    backgroundColor: "background.paper",
-                  }}
+        )}
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md: "minmax(0, 1.15fr) minmax(340px, 0.85fr)",
+            },
+            gap: 3,
+            alignItems: "start",
+          }}
+        >
+          <Stack sx={{ minWidth: 0 }} spacing={2}>
+            <Stack spacing={1}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  borderColor: "hsla(174, 30%, 40%, 0.25)",
+                  background: "hsla(0, 0%, 100%, 0.72)",
+                  '[data-mui-color-scheme="dark"] &': {
+                    background: "hsla(20, 16%, 12%, 0.92)",
+                    borderColor: "hsla(168, 22%, 36%, 0.3)",
+                  },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ mb: 1.5 }}
                 >
-                  <MissionMapViewport
-                    loadingLocation={loadingLocation}
-                    isLoaded={isLoaded}
-                    useCesium={useCesium}
-                    googleMapProps={{
-                      mapContainerStyle: containerStyle,
-                      center: mapCenter,
-                      zoom: mapZoom,
-                      onClick: onMapClick,
-                      onLoad: onMapLoad,
-                      onUnmount: onMapUnmount,
-                      onZoomChanged: onMapZoomChanged,
-                      onCenterChanged: onMapCenterChanged,
-                      options: mapOptions,
+                  <Typography variant="subtitle1">Warehouse 3D Map</Typography>
+                  {loadingTileset && <CircularProgress size={16} />}
+                </Stack>
+
+                {tilesetUrl ? (
+                  <Box
+                    sx={{
+                      height: 400,
+                      borderRadius: 1,
+                      bgcolor: "rgba(0,0,0,0.86)",
+                      color: "common.white",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center",
+                      px: 3,
+                      gap: 1,
                     }}
-                    cesiumMapProps={{
-                      center: mapCenter,
-                      zoom: cesiumZoom,
-                      viewMode: cesiumViewMode,
-                      waypoints,
-                      fieldBoundary: cesiumFieldBoundary,
-                      plannedRoute: cesiumPlannedRoute,
-                      exclusionZones,
-                      fieldTilesetUrl,
-                      droneCenter,
-                      headingDeg: typeof heading === "number" ? heading : null,
-                      onPickLatLng: handleCesiumPick,
-                      drawMode,
-                      onDrawComplete: handleCesiumDrawComplete,
-                    }}
-                    googleWrapperSx={{ position: "relative" }}
-                    googleChildren={
-                      <>
-                        {fields.map((f) => (
-                          <Polygon
-                            key={f.id}
-                            paths={f.path}
-                            onClick={() => selectField(f)}
-                            options={{
-                              clickable: true,
-                              fillColor: "#000000",
-                              fillOpacity: 0,
-                              strokeOpacity: 0.85,
-                              strokeWeight: selectedFieldId === f.id ? 3 : 2,
-                              zIndex: selectedFieldId === f.id ? 15 : 5,
-                            }}
-                          />
-                        ))}
-
-                        {droneCenter && (
-                          <OverlayView
-                            position={droneCenter}
-                            mapPaneName={OverlayView.OVERLAY_LAYER}
-                          >
-                            <div
-                              style={{
-                                transform: `translate(-50%, -50%) rotate(${
-                                  typeof heading === "number" ? heading : 0
-                                }deg)`,
-                                transformOrigin: "center",
-                                color: armed ? "#1976d2" : "#9aa0a6",
-                                zIndex: 9999,
-                              }}
-                            >
-                              <SvgIcon
-                                component={DroneSvg}
-                                inheritViewBox
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
-                                }}
-                              />
-                              {activeFlightId && (
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    top: "-28px",
-                                    left: "50%",
-                                    transform: "translateX(-50%)",
-                                    background: "white",
-                                    padding: "2px 6px",
-                                    borderRadius: "3px",
-                                    fontSize: "10px",
-                                    whiteSpace: "nowrap",
-                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                                  }}
-                                >
-                                  Flight: {activeFlightId.substring(0, 8)}...
-                                </div>
-                              )}
-                            </div>
-                          </OverlayView>
-                        )}
-
-                        {userCenter && (
-                          <OverlayView
-                            position={userCenter}
-                            mapPaneName={OverlayView.OVERLAY_LAYER}
-                          >
-                            <div
-                              style={{
-                                transform: "translate(-50%, -50%)",
-                                color: "#4caf50",
-                              }}
-                            >
-                              <RoomIcon fontSize="large" />
-                            </div>
-                          </OverlayView>
-                        )}
-
-                        {gridPreview && gridPreview.length >= 2 && (
-                          <>
-                            {gridPreview.slice(0, -1).map((wp, i) =>
-                              gridPreviewMask?.[i] ? (
-                                <Polyline
-                                  key={`work-${i}`}
-                                  path={[
-                                    { lat: wp.lat, lng: wp.lon },
-                                    {
-                                      lat: gridPreview[i + 1].lat,
-                                      lng: gridPreview[i + 1].lon,
-                                    },
-                                  ]}
-                                  options={{
-                                    strokeColor: "#2e7d32",
-                                    strokeOpacity: 0.85,
-                                    strokeWeight: 2,
-                                  }}
-                                />
-                              ) : (
-                                <Polyline
-                                  key={`turn-${i}`}
-                                  path={[
-                                    { lat: wp.lat, lng: wp.lon },
-                                    {
-                                      lat: gridPreview[i + 1].lat,
-                                      lng: gridPreview[i + 1].lon,
-                                    },
-                                  ]}
-                                  options={{
-                                    strokeColor: "#f57c00",
-                                    strokeOpacity: 0.6,
-                                    strokeWeight: 1.5,
-                                    icons: [
-                                      {
-                                        icon: {
-                                          path: "M 0,-1 0,1",
-                                          strokeOpacity: 1,
-                                          scale: 2,
-                                        },
-                                        offset: "0",
-                                        repeat: "10px",
-                                      },
-                                    ],
-                                  }}
-                                />
-                              )
-                            )}
-                          </>
-                        )}
-
-                        {terraDrawMode === "static" && waypoints.length >= 2 && (
-                          <Polyline
-                            path={polylinePath}
-                            options={{
-                              strokeColor: "#1976d2",
-                              strokeOpacity: 0.8,
-                              strokeWeight: 3,
-                            }}
-                          />
-                        )}
-                      </>
-                    }
-                    googleOverlay={
-                      <Paper
-                        elevation={2}
-                        sx={{
-                          position: "absolute",
-                          left: 10,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          zIndex: 1300,
-                          pointerEvents: "auto",
-                          p: 0.5,
-                          borderRadius: 1.5,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          bgcolor: "background.paper",
-                          backdropFilter: "blur(2px)",
-                        }}
-                      >
-                        <Stack direction="column" spacing={0.5}>
-                          {[
-                            {
-                              mode: "polygon",
-                              label: "Polygon",
-                              icon: <ChangeHistoryOutlinedIcon fontSize="small" />,
-                            },
-                            {
-                              mode: "linestring",
-                              label: "Line",
-                              icon: <ShowChartIcon fontSize="small" />,
-                            },
-                            {
-                              mode: "point",
-                              label: "Point",
-                              icon: <PlaceOutlinedIcon fontSize="small" />,
-                            },
-                            {
-                              mode: "rectangle",
-                              label: "Rectangle",
-                              icon: <CropSquareOutlinedIcon fontSize="small" />,
-                            },
-                            {
-                              mode: "circle",
-                              label: "Circle",
-                              icon: <RadioButtonUncheckedOutlinedIcon fontSize="small" />,
-                            },
-                            {
-                              mode: "freehand",
-                              label: "Freehand",
-                              icon: <EditOutlinedIcon fontSize="small" />,
-                            },
-                            {
-                              mode: "select",
-                              label: "Select",
-                              icon: <PanToolAltOutlinedIcon fontSize="small" />,
-                            },
-                          ].map((tool) => {
-                            const selected = useCesium
-                              ? (drawMode === "point" && tool.mode === "point") ||
-                                (drawMode === "polyline" && tool.mode === "linestring") ||
-                                (drawMode === "polygon" &&
-                                  ["polygon", "rectangle", "circle", "freehand"].includes(
-                                    tool.mode
-                                  )) ||
-                                (drawMode === "none" && tool.mode === "select")
-                              : terraDrawMode === tool.mode;
-                            return (
-                              <Tooltip key={tool.mode} title={tool.label} placement="right" arrow>
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      handleDrawingToolSelection(
-                                        tool.mode as TerraDrawToolMode
-                                      )
-                                    }
-                                    sx={{
-                                      border: "1px solid",
-                                      borderColor: "divider",
-                                      bgcolor: selected ? "primary.main" : "background.paper",
-                                      color: selected
-                                        ? "primary.contrastText"
-                                        : "text.primary",
-                                      "&:hover": {
-                                        bgcolor: selected
-                                          ? "primary.dark"
-                                          : "action.hover",
-                                      },
-                                    }}
-                                  >
-                                    {tool.icon}
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                            );
-                          })}
-
-                          <Tooltip title="Delete latest drawing" placement="right" arrow>
-                            <span>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => {
-                                  if (useCesium) {
-                                    if (drawMode !== "none") {
-                                      setDrawMode("none");
-                                      return;
-                                    }
-                                    if (fieldBorder && fieldBorder.length > 0) {
-                                      setFieldBorder((prev) => {
-                                        if (!prev || prev.length <= 1) return null;
-                                        return prev.slice(0, -1) as LonLat[];
-                                      });
-                                      return;
-                                    }
-                                    setWaypoints((prev) => prev.slice(0, -1));
-                                    return;
-                                  }
-
-                                  if (!terraDrawRef.current) return;
-                                  const snapshot = terraDrawRef.current.getSnapshot();
-                                  const latestFeature = [...snapshot]
-                                    .reverse()
-                                    .find((f) => isRemovableUserDrawingFeature(f));
-                                  if (!latestFeature) return;
-
-                                  terraDrawRef.current.removeFeatures([
-                                    String(latestFeature.id),
-                                  ]);
-
-                                  const remaining = terraDrawRef.current.getSnapshot();
-                                  syncFieldBorderFromSnapshot(remaining);
-                                }}
-                                disabled={
-                                  useCesium
-                                    ? drawMode === "none" &&
-                                      (!fieldBorder || fieldBorder.length === 0) &&
-                                      waypoints.length === 0
-                                    : !terraDrawReady
-                                }
-                                sx={{
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  bgcolor: "background.paper",
-                                  "&:hover": { bgcolor: "action.hover" },
-                                }}
-                              >
-                                <DeleteOutlineOutlinedIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </Stack>
-                      </Paper>
-                    }
-                  />
-                </Box>
-
-                <Paper
-                                    variant="outlined"
-                                    sx={{
-                                      p: 1.5,
-                                      borderRadius: 2,
-                                      flexShrink: 0,
-                                      alignSelf: { xs: "stretch", lg: "flex-start" },
-                                    }}
-                                  >
-
-                                    <CesiumViewControls
-                                      useCesium={useCesium}
-                                      onUseCesiumChange={setUseCesium}
-                                      viewMode={cesiumViewMode}
-                                      onViewModeChange={setCesiumViewMode}
-                                    />
-                                  </Paper>
-
-                <Box
-                  sx={{
-                    mt: 1,
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      lg: "minmax(280px, 0.9fr) minmax(0, 1.6fr)",
-                    },
-                    gap: 2,
-                  }}
-                >
-                  <SavedFieldsPanel
-                    fields={fields}
-                    selectedFieldId={selectedFieldId}
-                    selectedField={selectedField}
-                    loadingFields={loadingFields}
-                    deletingField={deletingField}
-                    onSelectField={handleSavedFieldSelect}
-                    onRefresh={() => setFieldsRefreshNonce((n) => n + 1)}
-                    onFocusSelected={() => selectedField && focusRingOnMap(selectedField.ring)}
-                    onDeleteSelected={requestDeleteSelectedField}
-                  />
-
-                  <Stack
-                    direction={{ xs: "column", lg: "row" }}
-                    spacing={1}
-                    alignItems={{ xs: "stretch", lg: "flex-start" }}
                   >
-                    <FieldBorderPanel
-                      fieldName={fieldName}
-                      selectedFieldId={selectedFieldId}
-                      fieldBorder={fieldBorder}
-                      metrics={metrics}
-                      selectedFieldDisplayId={selectedField?.id ?? null}
-                      savingField={savingField}
-                      onFieldNameChange={setFieldName}
-                      onSaveOrUpdate={
-                        selectedFieldId ? updateFieldBorder : saveFieldBorder
-                      }
-                      onClearBorder={clearFieldBorder}
-                      onNewField={handleNewField}
-                    />
-                  </Stack>
-                </Box>
+                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                      3D tileset ready
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.5, wordBreak: "break-all" }}>
+                      {tilesetUrl}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      height: 160,
+                      borderRadius: 1,
+                      bgcolor: "rgba(0, 0, 0, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center",
+                      px: 3,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      {loadingScannedMaps || loadingTileset
+                        ? "Loading 3D map..."
+                        : "No 3D scan result selected."}
+                    </Typography>
+                  </Box>
+                )}
 
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Grid Survey Parameters
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1.25 }}
+                >
+                  {selectedScannedMap
+                    ? `${getWarehouseName(selectedScannedMap)} • model v${selectedScannedMap.model_version} • ${formatTimestamp(
+                        selectedScannedMap.created_at,
+                      )}`
+                    : "No scanned warehouse map selected."}
+                </Typography>
+              </Paper>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  borderColor: "hsla(174, 30%, 40%, 0.25)",
+                  background: "hsla(0, 0%, 100%, 0.72)",
+                  '[data-mui-color-scheme="dark"] &': {
+                    background: "hsla(20, 16%, 12%, 0.92)",
+                    borderColor: "hsla(168, 22%, 36%, 0.3)",
+                  },
+                }}
+              >
+                <Stack spacing={1.2}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography variant="subtitle1">Warehouse Map</Typography>
+                    {loadingWarehouseMaps && <CircularProgress size={16} />}
+                  </Stack>
+
+                  <Typography variant="caption" color="text.secondary">
+                    Select the warehouse footprint. The drone scans the area using
+                    local metric coordinates — no GPS required.
                   </Typography>
-                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Warehouse Map"
+                    value={selectedWarehouseMapId != null ? String(selectedWarehouseMapId) : ""}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      setSelectedWarehouseMapId(raw ? Number(raw) : null);
+                    }}
+                    disabled={loadingWarehouseMaps}
+                    helperText={
+                      warehouseMaps.length === 0
+                        ? "No maps yet — create one below."
+                        : selectedWarehouseMapId
+                          ? (() => {
+                              const m = warehouseMaps.find((x) => x.id === selectedWarehouseMapId);
+                              return m
+                                ? `${m.area_m2 != null ? `${Math.round(m.area_m2)} m²` : "area unknown"}`
+                                : `Map #${selectedWarehouseMapId}`;
+                            })()
+                          : "Choose a warehouse footprint"
+                    }
+                  >
+                    {warehouseMaps.length === 0 && (
+                      <MenuItem value="" disabled>
+                        No warehouse maps registered
+                      </MenuItem>
+                    )}
+                    {warehouseMaps.map((m) => (
+                      <MenuItem key={m.id} value={String(m.id)}>
+                        {`${m.name}${m.area_m2 != null ? ` • ${Math.round(m.area_m2)} m²` : ""}`}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      disabled={loadingWarehouseMaps}
+                      onClick={() => { void loadWarehouseMaps(); }}
+                      sx={{ flex: "none" }}
+                    >
+                      Refresh
+                    </Button>
+                    <Button
+                      variant={showCreateMap ? "contained" : "outlined"}
+                      size="small"
+                      onClick={() => setShowCreateMap((v) => !v)}
+                      sx={{ flex: 1 }}
+                    >
+                      {showCreateMap ? "Cancel" : "+ New Map"}
+                    </Button>
+                  </Stack>
+
+                  {showCreateMap && (
+                    <Stack
+                      spacing={1}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        Enter the physical dimensions of the warehouse floor. The
+                        origin (0, 0) will be the drone's takeoff position.
+                      </Typography>
+                      <TextField
+                        size="small"
+                        label="Map name"
+                        fullWidth
+                        value={createMapForm.name}
+                        onChange={(e) =>
+                          setCreateMapForm((f) => ({ ...f, name: e.target.value }))
+                        }
+                        placeholder="e.g. Aisle A–F"
+                      />
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          size="small"
+                          label="Width"
+                          type="number"
+                          inputProps={{ min: 0.1, step: 0.5 }}
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">m</InputAdornment>,
+                          }}
+                          value={createMapForm.width_m}
+                          onChange={(e) =>
+                            setCreateMapForm((f) => ({ ...f, width_m: e.target.value }))
+                          }
+                        />
+                        <TextField
+                          size="small"
+                          label="Length"
+                          type="number"
+                          inputProps={{ min: 0.1, step: 0.5 }}
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">m</InputAdornment>,
+                          }}
+                          value={createMapForm.length_m}
+                          onChange={(e) =>
+                            setCreateMapForm((f) => ({ ...f, length_m: e.target.value }))
+                          }
+                        />
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        disabled={creatingMap}
+                        onClick={() => { void handleCreateWarehouseMap(); }}
+                        fullWidth
+                      >
+                        {creatingMap ? (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <CircularProgress size={14} color="inherit" />
+                            <span>Creating…</span>
+                          </Stack>
+                        ) : (
+                          "Create Map"
+                        )}
+                      </Button>
+                    </Stack>
+                  )}
+                </Stack>
+              </Paper>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  borderColor: "hsla(174, 30%, 40%, 0.25)",
+                  background: "hsla(0, 0%, 100%, 0.72)",
+                  '[data-mui-color-scheme="dark"] &': {
+                    background: "hsla(20, 16%, 12%, 0.92)",
+                    borderColor: "hsla(168, 22%, 36%, 0.3)",
+                  },
+                }}
+              >
+                <Stack spacing={1.2}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Typography variant="subtitle1">Previous Scan Results</Typography>
+                    {loadingScannedMaps && <CircularProgress size={16} />}
+                  </Stack>
+                  <TextField
+                    select
+                    fullWidth
+                    disabled={!loadingScannedMaps && scannedMaps.length === 0}
+                    size="small"
+                    label="Scanned Maps"
+                    value={selectedScannedMap ? String(selectedScannedMap.job_id) : ""}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      setSelectedMapJobId(raw ? Number(raw) : null);
+                    }}
+                    helperText={
+                      selectedScannedMap
+                        ? `Area ${getWarehouseName(selectedScannedMap)} (#${getWarehouseMapId(selectedScannedMap) ?? "?"})`
+                        : "Select a stored 3D result to view in the map above."
+                    }
+                  >
+                    {scannedMaps.length === 0 && (
+                      <MenuItem value="" disabled>
+                        No scanned maps available
+                      </MenuItem>
+                    )}
+                    {scannedMaps.map((map) => (
+                      <MenuItem key={map.job_id} value={String(map.job_id)}>
+                        {`${getWarehouseName(map)} • v${map.model_version} • ${formatTimestamp(map.created_at)}`}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    disabled={loadingScannedMaps}
+                    onClick={() => {
+                      void loadScannedMaps();
+                    }}
+                  >
+                    Refresh Scan Results
+                  </Button>
+                </Stack>
+              </Paper>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  borderColor: "hsla(174, 30%, 40%, 0.25)",
+                  background: "hsla(0, 0%, 100%, 0.72)",
+                  '[data-mui-color-scheme="dark"] &': {
+                    background: "hsla(20, 16%, 12%, 0.92)",
+                    borderColor: "hsla(168, 22%, 36%, 0.3)",
+                  },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ mb: 1 }}
+                >
+                  <Typography variant="subtitle1">
+                    Default Flight Parameters
+                  </Typography>
+                  {loadingMissionDefaults && <CircularProgress size={16} />}
+                </Stack>
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mb: 1.5 }}
+                >
+                  These values control aisle spacing, scan layers, ceiling
+                  clearance, and rack-facing view behavior for new warehouse
+                  scan missions.
+                </Typography>
+
+                {missionDefaultsDraft ? (
+                  <>
                     <Box
                       sx={{
                         display: "grid",
                         gridTemplateColumns: {
                           xs: "1fr",
-                          md: "repeat(2, minmax(0, 1fr))",
-                          xl: "repeat(3, minmax(0, 1fr))",
+                          lg: "repeat(2, minmax(0, 1fr))",
                         },
-                        gap: 1.5,
-                        alignItems: "start",
+                        gap: 1,
                       }}
                     >
-                      <TextField variant="filled"
-                        select
-                        label={
-                          <InfoLabel
-                            label="Pattern mode"
-                            info="Boustrophedon is a classic lawnmower sweep. Crosshatch adds a second pass."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        size="small"
-                        fullWidth
-                        value={gridParams.pattern_mode}
-                        onChange={(e) =>
-                          setGridParams((p) => ({
-                            ...p,
-                            pattern_mode: e.target.value as GridParams["pattern_mode"],
-                          }))
-                        }
-                      >
-                        <MenuItem value="boustrophedon">Boustrophedon (single pass)</MenuItem>
-                        <MenuItem value="crosshatch">Crosshatch (two passes)</MenuItem>
-                      </TextField>
-                      <TextField variant="filled"
-                        select
-                        label={
-                          <InfoLabel
-                            label="Lane strategy"
-                            info="Serpentine is efficient (classic lawnmower). One-way keeps each lane in the same direction."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        size="small"
-                        fullWidth
-                        value={gridParams.lane_strategy}
-                        onChange={(e) =>
-                          setGridParams((p) => ({
-                            ...p,
-                            lane_strategy: e.target.value as GridParams["lane_strategy"],
-                          }))
-                        }
-                      >
-                        <MenuItem value="serpentine">Serpentine (recommended)</MenuItem>
-                        <MenuItem value="one_way">One-way lanes</MenuItem>
-                      </TextField>
-                      <TextField variant="filled"
-                        select
-                        label={
-                          <InfoLabel
-                            label="Start corner"
-                            info="Choose where lane sequencing starts. Auto keeps the default planner behavior."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        size="small"
-                        fullWidth
-                        value={gridParams.start_corner}
-                        onChange={(e) =>
-                          setGridParams((p) => ({
-                            ...p,
-                            start_corner: e.target.value as GridParams["start_corner"],
-                          }))
-                        }
-                      >
-                        <MenuItem value="auto">Auto</MenuItem>
-                        <MenuItem value="sw">South-West</MenuItem>
-                        <MenuItem value="se">South-East</MenuItem>
-                        <MenuItem value="nw">North-West</MenuItem>
-                        <MenuItem value="ne">North-East</MenuItem>
-                      </TextField>
-                      <TextField variant="filled"
-                        label="Row spacing (m)"
-                        type="number"
-                        size="small"
-                        fullWidth
-                        value={gridParams.row_spacing_m}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          if (!Number.isFinite(value)) return;
-                          setGridParams((p) => ({
-                            ...p,
-                            row_spacing_m: Math.max(1, value),
-                          }));
-                        }}
-                        inputProps={{ min: 1, max: 200, step: 0.5 }}
-                      />
-                      <TextField variant="filled"
-                        label={
-                          <InfoLabel
-                            label="Row stride (every Nth line)"
-                            info="1 uses every line. 2 flies every second line (wider effective spacing)."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        type="number"
-                        size="small"
-                        fullWidth
-                        value={gridParams.row_stride}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          if (!Number.isFinite(value)) return;
-                          setGridParams((p) => ({
-                            ...p,
-                            row_stride: Math.min(20, Math.max(1, Math.round(value))),
-                          }));
-                        }}
-                        inputProps={{ min: 1, max: 20, step: 1 }}
-                      />
-                      <TextField variant="filled"
-                        label={
-                          <InfoLabel
-                            label="Row phase offset (m)"
-                            info="Shifts line placement to align passes with crop rows."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        type="number"
-                        size="small"
-                        fullWidth
-                        value={gridParams.row_phase_m}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          if (!Number.isFinite(value)) return;
-                          setGridParams((p) => ({
-                            ...p,
-                            row_phase_m: Math.max(0, value),
-                          }));
-                        }}
-                        inputProps={{ min: 0, max: 500, step: 0.5 }}
-                      />
-                      <TextField variant="filled"
-                        label={
-                          <InfoLabel
-                            label="Grid angle (°, blank = auto)"
-                            info="Leave blank to auto-align with terrain."
-                          />
-                        }
-                        InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                        type="number"
-                        size="small"
-                        fullWidth
-                        value={gridParams.grid_angle_deg ?? ""}
-                        onChange={(e) =>
-                          setGridParams((p) => ({
-                            ...p,
-                            grid_angle_deg:
-                              e.target.value === "" ? null : Number(e.target.value),
-                          }))
-                        }
-                        inputProps={{ min: 0, max: 179, step: 1 }}
-                      />
-                      {gridParams.pattern_mode === "crosshatch" && (
-                        <TextField variant="filled"
-                          label={
-                            <InfoLabel
-                              label="Crosshatch angle offset (°)"
-                              info="90° gives an orthogonal second pass."
-                            />
-                          }
-                          InputLabelProps={INFO_INPUT_LABEL_PROPS}
-                          type="number"
-                          size="small"
-                          fullWidth
-                          value={gridParams.crosshatch_angle_offset_deg}
-                          onChange={(e) => {
-                            const value = Number(e.target.value);
-                            if (!Number.isFinite(value)) return;
-                            setGridParams((p) => ({
-                              ...p,
-                              crosshatch_angle_offset_deg: Math.min(
-                                179,
-                                Math.max(1, value)
-                              ),
-                            }));
-                          }}
-                          inputProps={{ min: 1, max: 179, step: 1 }}
-                        />
-                      )}
-                      <TextField variant="filled"
-                        label="Safety inset (m)"
-                        type="number"
-                        size="small"
-                        fullWidth
-                        value={gridParams.safety_inset_m}
-                        onChange={(e) =>
-                          setGridParams((p) => ({
-                            ...p,
-                            safety_inset_m: Math.max(0, Number(e.target.value)),
-                          }))
-                        }
-                        inputProps={{ min: 0, max: 20, step: 0.5 }}
-                      />
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            size="small"
-                            checked={gridParams.slope_aware}
-                            onChange={(e) =>
-                              setGridParams((p) => ({
-                                ...p,
-                                slope_aware: e.target.checked,
-                              }))
-                            }
-                          />
-                        }
-                        label={<Typography variant="caption">Slope-aware angle</Typography>}
-                      />
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            size="small"
-                            checked={gridParams.terrain_follow}
-                            onChange={(e) =>
-                              setGridParams((p) => ({
-                                ...p,
-                                terrain_follow: e.target.checked,
-                              }))
-                            }
-                          />
-                        }
-                        label={
-                          <Typography variant="caption">
-                            Terrain following (AGL)
-                          </Typography>
-                        }
-                      />
-                      {gridParams.terrain_follow && (
-                        <TextField variant="filled"
-                          label="AGL height (m)"
-                          type="number"
-                          size="small"
-                          fullWidth
-                          value={gridParams.agl_m}
-                          onChange={(e) =>
-                            setGridParams((p) => ({
-                              ...p,
-                              agl_m: Math.max(1, Number(e.target.value)),
-                            }))
-                          }
-                          inputProps={{ min: 1, max: 200, step: 1 }}
-                        />
-                      )}
-                      {!fieldBorder && (
-                        <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          Draw or select a field polygon above to generate a
-                          grid preview.
-                        </Alert>
-                      )}
-                      {fieldBorder && gridPreview && (
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          sx={{ flexWrap: "wrap", rowGap: 1, gridColumn: "1 / -1" }}
-                        >
-                          <Chip
-                            size="small"
-                            color="success"
-                            label={`${gridPreview.length} waypoints previewed`}
-                          />
-                          {typeof gridPreviewStats?.route_m === "number" && (
-                            <Chip
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                              label={`Route ${gridPreviewStats.route_m.toFixed(1)} m`}
-                            />
-                          )}
-                          {typeof gridPreviewStats?.rows === "number" && (
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={`${gridPreviewStats.rows} rows`}
-                            />
-                          )}
-                          {previewLegStats && (
-                            <>
-                              <Chip
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                                label={`${previewLegStats.workLegs} work legs`}
-                              />
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={`${previewLegStats.transitLegs} transit legs`}
-                              />
-                            </>
-                          )}
-                        </Stack>
-                      )}
-                      {gridPreviewTooDense && (
-                        <Alert severity="warning" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          Grid preview is too dense ({gridPreview?.length}/
-                          {MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row
-                          spacing or row stride before starting the survey.
-                        </Alert>
-                      )}
-                      {gridPreviewError && (
-                        <Alert severity="warning" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
-                          {gridPreviewError}
-                        </Alert>
-                      )}
-                      {previewLoading && (
+                      {WAREHOUSE_MISSION_DEFAULT_COLUMN_ROWS.map((columnRows, columnIndex) => (
                         <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            gridColumn: "1 / -1",
-                          }}
+                          key={`warehouse-default-column-${columnIndex}`}
+                          sx={{ minWidth: 0, overflowX: "hidden" }}
                         >
-                          <CircularProgress size={20} />
+                          <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell sx={{ width: "56%", pr: 1, whiteSpace: "nowrap" }}>
+                                  Parameter
+                                </TableCell>
+                                <TableCell sx={{ width: "44%", pl: 1 }}>Value</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {columnRows.map((row) => (
+                                <TableRow key={row.key}>
+                                  <TableCell
+                                    sx={{
+                                      width: "56%",
+                                      py: 0.9,
+                                      pr: 1,
+                                      whiteSpace: "normal",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {row.label}
+                                  </TableCell>
+                                  <TableCell sx={{ width: "44%", minWidth: 0, py: 0.9, pl: 1 }}>
+                                    {row.kind === "select" ? (
+                                      <TextField
+                                        select
+                                        size="small"
+                                        value={missionDefaultsDraft[row.key]}
+                                        onChange={(event) => {
+                                          handleMissionDefaultsDraftChange(
+                                            row.key,
+                                            event.target.value,
+                                          );
+                                        }}
+                                        sx={{ width: "100%", maxWidth: 148, ml: "auto" }}
+                                      >
+                                        {row.options.map((option) => (
+                                          <MenuItem
+                                            key={option.value}
+                                            value={option.value}
+                                          >
+                                            {option.label}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                    ) : (
+                                      <TextField
+                                        size="small"
+                                        type="number"
+                                        value={missionDefaultsDraft[row.key]}
+                                        placeholder={row.placeholder}
+                                        onChange={(event) => {
+                                          handleMissionDefaultsDraftChange(
+                                            row.key,
+                                            event.target.value,
+                                          );
+                                        }}
+                                        inputProps={{
+                                          min: row.min,
+                                          step: row.step,
+                                        }}
+                                        sx={{ width: "100%", maxWidth: 148, ml: "auto" }}
+                                      />
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
                         </Box>
-                      )}
+                      ))}
                     </Box>
-                  </Paper>
+
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      disabled={savingMissionDefaults}
+                      onClick={() => {
+                        void handleUpdateMissionDefaults();
+                      }}
+                      sx={{ mt: 1.5 }}
+                    >
+                      {savingMissionDefaults ? (
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <CircularProgress size={18} color="inherit" />
+                          <span>Updating Parameters</span>
+                        </Stack>
+                      ) : (
+                        "Update"
+                      )}
+                    </Button>
+
+                    {missionDefaultsMessage && (
+                      <Alert severity="success" sx={{ mt: 1.5 }}>
+                        {missionDefaultsMessage}
+                      </Alert>
+                    )}
+                  </>
+                ) : (
+                  <Alert severity="info">
+                    Warehouse mission defaults are unavailable right now.
+                  </Alert>
+                )}
+              </Paper>
+
+              <MissionVideoPanel
+                title="Warehouse Camera"
+                imgAlt="Warehouse camera stream"
+                disconnectedMessage="Connect the drone to view the warehouse stream."
+                apiBase={apiBase}
+                streamKey={streamKey}
+                videoToken={videoToken}
+                startingVideo={startingVideo}
+                videoError={videoError}
+                videoRetryCount={videoRetryCount}
+                droneConnected={droneConnected}
+                telemetry={telemetry}
+                onVideoError={handleVideoError}
+                onVideoLoad={handleVideoLoad}
+                onRetry={() => {
+                  setManualStreamKey({
+                    flightId: activeFlightId ?? null,
+                    key: Date.now(),
+                  });
+                  setVideoErrorMessage(null);
+                  setVideoErrorStreamKey(null);
+                }}
+              />
+            </Stack>
+          </Stack>
+
+          <Stack sx={{ minWidth: 0 }} spacing={2}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  borderColor: "hsla(174, 30%, 40%, 0.25)",
+                  background: "hsla(0, 0%, 100%, 0.72)",
+                  '[data-mui-color-scheme="dark"] &': {
+                    background: "hsla(20, 16%, 12%, 0.92)",
+                    borderColor: "hsla(168, 22%, 36%, 0.3)",
+                  },
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
+                  Mission Status
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      sm: "repeat(2, minmax(0, 1fr))",
+                    },
+                    gap: 1.5,
+                  }}
+                >
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Mission
+                    </Typography>
+                    <Typography variant="body1">{missionName}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      State
+                    </Typography>
+                    <Typography variant="body1" sx={{ textTransform: "capitalize" }}>
+                      {missionState.replace(/_/g, " ")}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Active Flight
+                    </Typography>
+                    <Typography variant="body1">{activeFlightId ?? "--"}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Telemetry Connections
+                    </Typography>
+                    <Typography variant="body1">
+                      {typeof telemetryConnections === "number"
+                        ? telemetryConnections
+                        : "--"}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Telemetry
+                    </Typography>
+                    <Typography variant="body1">
+                      {missionStatus?.telemetry?.running ? "Running" : "Stopped"}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Camera Feed
+                    </Typography>
+                    <Typography variant="body1">{videoStatus}</Typography>
+                  </Box>
                 </Box>
 
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Click on the map to add waypoints.
-                </Typography>
+                {!activeFlightId && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    No active warehouse mission is currently being tracked.
+                  </Alert>
+                )}
 
-                <MissionVideoPanel
-                  title="Survey Camera"
-                  imgAlt="Survey camera stream"
-                  disconnectedMessage="Connect the drone to view the survey stream."
-                  apiBase={API_BASE_CLEAN}
-                  streamKey={streamKey}
-                  videoToken={videoToken}
-                  startingVideo={startingVideo}
-                  videoError={videoError}
-                  videoRetryCount={videoRetryCount}
-                  droneConnected={droneConnected}
-                  telemetry={telemetry}
-                  onVideoError={handleVideoError}
-                  onVideoLoad={handleVideoLoad}
-                  onRetry={() => {
-                    setStreamKey(Date.now());
-                    setVideoError(null);
-                  }}
-                />
-              </Stack>
+                {missionStatus?.mission_lifecycle?.last_error && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {missionStatus.mission_lifecycle.last_error}
+                  </Alert>
+                )}
 
-              <Box sx={{ width: { xs: "100%", md: 300 } }}>
-                <Stack spacing={2}>
-                  <MissionPreflightPanel
-                    apiBase={API_BASE_CLEAN}
-                    missionType="grid"
-                    preflightRun={preflightRun}
-                    telemetry={telemetry}
-                  />
-                  <MissionCommandPanel
-                    telemetry={telemetry}
-                    droneConnected={droneConnected}
-                    missionStatus={missionStatus}
-                    activeFlightId={activeFlightId}
-                    apiBase={API_BASE_CLEAN}
-                  />
-                  <TextField variant="filled"
-                    label="Mission name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    size="small"
-                    fullWidth
-                    required
-                    error={!name.trim()}
-                    helperText={!name.trim() ? "Mission name is required" : " "}
-                  />
-
-                  <TextField variant="filled"
-                    label="Cruise altitude (m)"
-                    type="text"
-                    value={altInput}
-                    onChange={(e) => handleAltitudeInputChange(e.target.value)}
-                    onBlur={normalizeAltitude}
-                    size="small"
-                    fullWidth
-                    inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
-                    error={
-                      altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
-                    }
-                    helperText={
-                      altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
-                        ? "Must be between 1–500m"
-                        : " "
-                    }
-                  />
-
+                <Stack sx={{ mt: 2 }} spacing={1.25}>
                   <Button
                     variant="contained"
-                    onClick={sendMission}
-                    disabled={
-                      sending ||
-                      previewLoading ||
-                      gridPreviewTooDense ||
-                      !!gridPreviewError ||
-                      !name.trim() ||
-                      altInput === "" ||
-                      Number(altInput) < 1 ||
-                      Number(altInput) > 500 ||
-                      !fieldBorder ||
-                      fieldBorder.length < 3
-                    }
+                    size="large"
+                    disabled={startingScan || !selectedWarehouseMapId}
+                    onClick={() => {
+                      void handleStartWarehouseScan();
+                    }}
                     fullWidth
-                    sx={{ mt: 1 }}
-                    color="success"
                   >
-                    {sending ? (
-                      <>
-                        <CircularProgress size={20} sx={{ mr: 1 }} />
-                        Starting Grid Survey...
-                      </>
+                    {startingScan ? (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <CircularProgress size={18} color="inherit" />
+                        <span>Starting Flight &amp; Scan</span>
+                      </Stack>
                     ) : (
-                      "Start Grid Survey"
+                      "Start Flight & Scan"
                     )}
                   </Button>
-
-                  {activeFlightId && (
-                    <Alert severity="info" sx={{ mt: 2 }}>
-                      Active flight: {missionStatus?.mission_name || "Loading..."}
-                    </Alert>
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
-
-            <Divider sx={{ mb: 2 }} />
-
-            {waypoints.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Waypoints
-                </Typography>
-                <Stack spacing={1}>
-                  {waypoints.map((wp, idx) => (
-                    <Typography key={idx} variant="body2">
-                      {idx + 1}. Lat: {wp.lat.toFixed(6)}, Lon: {wp.lon.toFixed(6)}, Alt:{" "}
-                      {wp.alt ?? alt}m
-                    </Typography>
-                  ))}
-                </Stack>
-              </Box>
-            )}
-
-            {missionStatus && (activeFlightId || waypoints.length > 0) && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-                  Flight Status
-                </Typography>
-                <Stack spacing={0.5}>
-                  {missionStatus.flight_id && (
-                    <Typography variant="caption" component="div">
-                      Flight ID: {missionStatus.flight_id}
-                    </Typography>
-                  )}
-                  {missionStatus.mission_name && (
-                    <Typography variant="caption" component="div">
-                      Plan: {missionStatus.mission_name}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" component="div">
-                    Telemetry:{" "}
-                    {missionStatus.telemetry?.running ? (
-                      <span style={{ color: "green" }}>Running</span>
-                    ) : (
-                      <span style={{ color: "red" }}>Stopped</span>
-                    )}
-                  </Typography>
-                  {missionStatus.telemetry?.active_connections !== undefined && (
-                    <Typography variant="caption" component="div">
-                      WS Connections: {missionStatus.telemetry.active_connections}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" component="div">
-                    Drone Connected:{" "}
-                    {missionStatus.orchestrator?.drone_connected ? (
-                      <span style={{ color: "green" }}>Yes</span>
-                    ) : (
-                      <span style={{ color: "red" }}>No</span>
-                    )}
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedWarehouseMapId
+                      ? `Will scan warehouse map #${selectedWarehouseMapId}.`
+                      : "Select a warehouse map above to enable launch."}
                   </Typography>
                 </Stack>
-              </Box>
-            )}
-          </>
-        )}
+              </Paper>
+
+              <MissionPreflightPanel
+                apiBase={apiBase}
+                missionType="warehouse_scan"
+                preflightRun={null}
+                telemetry={telemetry}
+                title="Warehouse Preflight"
+              />
+
+              <MissionCommandPanel
+                telemetry={telemetry}
+                droneConnected={droneConnected}
+                missionStatus={missionStatus}
+                activeFlightId={activeFlightId}
+                apiBase={apiBase}
+                title="Warehouse Commands"
+              />
+          </Stack>
+        </Box>
       </Paper>
-      <Dialog open={Boolean(pendingDeleteField)} onClose={closeDeleteFieldDialog}>
-        <DialogTitle>Delete Field</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Delete field "{pendingDeleteField?.name}"? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDeleteFieldDialog} disabled={deletingField}>
-            Cancel
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={confirmDeleteSelectedField}
-            disabled={deletingField}
-          >
-            {deletingField ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 }

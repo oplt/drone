@@ -1,11 +1,12 @@
 import collections.abc
+import math
 
 for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
     if not hasattr(collections, _name):
         setattr(collections, _name, getattr(collections.abc, _name))
 import time
 import threading
-from .models import Coordinate, Telemetry
+from .models import Coordinate, LocalCoordinate, Telemetry
 from .drone_base import DroneClient, MissionAbortRequested
 import logging
 from dronekit import connect, VehicleMode, LocationGlobalRelative
@@ -44,6 +45,14 @@ class MavlinkDrone(DroneClient):
         logger.info("Waiting for home location...")
         tries = 0
         while not getattr(self.vehicle, "home_location", None) and tries < 30:
+            local = getattr(getattr(self.vehicle, "location", None), "local_frame", None)
+            if (
+                local is not None
+                and getattr(local, "north", None) is not None
+                and getattr(local, "east", None) is not None
+            ):
+                logger.info("Local indoor frame is available; proceeding without GPS home")
+                break
             time.sleep(1)
             tries += 1
 
@@ -52,7 +61,14 @@ class MavlinkDrone(DroneClient):
         else:
             # Fallback: use current global frame as a provisional "home"
             loc = self.vehicle.location.global_frame
-            self.home_location = loc
+            if (
+                loc is not None
+                and getattr(loc, "lat", None) is not None
+                and getattr(loc, "lon", None) is not None
+            ):
+                self.home_location = loc
+            else:
+                self.home_location = None
 
         # print(f"Home location set: {self.home_location}")
         logger.info(f"Home location set: {self.home_location}")
@@ -161,7 +177,67 @@ class MavlinkDrone(DroneClient):
             except:
                 pass
 
+    def _current_takeoff_height_m(
+            self,
+            *,
+            baseline_local_down: float | None,
+            baseline_global_alt: float | None,
+    ) -> tuple[float | None, str, dict[str, float]]:
+        if not self.vehicle:
+            return None, "unavailable", {}
+
+        location = getattr(self.vehicle, "location", None)
+        candidates: dict[str, float] = {}
+
+        local = getattr(location, "local_frame", None)
+        local_down = getattr(local, "down", None)
+        if local_down is not None:
+            baseline = float(baseline_local_down) if baseline_local_down is not None else 0.0
+            # NED down becomes more negative as the drone climbs.
+            candidates["local_ned"] = max(0.0, float(baseline) - float(local_down))
+
+        rangefinder = getattr(self.vehicle, "rangefinder", None)
+        rangefinder_distance = getattr(rangefinder, "distance", None)
+        if rangefinder_distance is not None:
+            candidates["rangefinder"] = max(0.0, float(rangefinder_distance))
+
+        rel = getattr(location, "global_relative_frame", None)
+        rel_alt = getattr(rel, "alt", None)
+        if rel_alt is not None:
+            candidates["global_relative"] = max(0.0, float(rel_alt))
+
+        glob = getattr(location, "global_frame", None)
+        glob_alt = getattr(glob, "alt", None)
+        if glob_alt is not None and baseline_global_alt is not None:
+            candidates["global_frame"] = max(0.0, float(glob_alt) - float(baseline_global_alt))
+
+        if not candidates:
+            return None, "unavailable", {}
+
+        # Indoor-first source priority.
+        for preferred in ("local_ned", "rangefinder", "global_relative", "global_frame"):
+            if preferred in candidates:
+                return float(candidates[preferred]), preferred, candidates
+
+        return None, "unavailable", candidates
+
+
     def arm_and_takeoff(self, alt: float) -> None:
+        if not self.vehicle:
+            raise RuntimeError("Vehicle not connected")
+
+        target_alt_m = float(alt)
+        baseline_local_down = getattr(
+            getattr(getattr(self.vehicle, "location", None), "local_frame", None),
+            "down",
+            None,
+        )
+        baseline_global_alt = getattr(
+            getattr(getattr(self.vehicle, "location", None), "global_frame", None),
+            "alt",
+            None,
+        )
+
         while not self.vehicle.is_armable:
             time.sleep(1)
 
@@ -171,16 +247,70 @@ class MavlinkDrone(DroneClient):
         while not self.vehicle.armed:
             time.sleep(1)
 
-        self.vehicle.simple_takeoff(alt)
+        self.vehicle.simple_takeoff(target_alt_m)
+
+        source_name = "unavailable"
+        started_at = time.monotonic()
+        timeout_s = max(45.0, target_alt_m * 15.0)
+        last_candidates: dict[str, float] = {}
+        next_progress_log_at = started_at + 5.0
+
+        # More tolerant for indoor missions:
+        # for 4.0m this becomes 3.68m, which would have passed your logged case.
+        required_alt_m = max(target_alt_m * 0.92, target_alt_m - 0.35)
+
+        # Require a few consecutive confirmations to avoid one-sample spikes.
+        stable_hits = 0
+        stable_hits_required = 3
 
         while True:
-            # Send heartbeat during takeoff
-            # self.send_heartbeat()
+            if self._mission_abort_requested.is_set():
+                raise MissionAbortRequested("Operator abort requested during takeoff")
 
-            current_alt = self.vehicle.location.global_relative_frame.alt
-            if current_alt >= alt * 0.95:
-                break
-            time.sleep(1)
+            current_alt, source_name, last_candidates = self._current_takeoff_height_m(
+                baseline_local_down=baseline_local_down,
+                baseline_global_alt=baseline_global_alt,
+            )
+
+            if current_alt is not None and current_alt >= required_alt_m:
+                stable_hits += 1
+                if stable_hits >= stable_hits_required:
+                    logger.info(
+                        "Takeoff reached %.2fm using %s altitude feedback "
+                        "(target=%.2fm, required=%.2fm)",
+                        current_alt,
+                        source_name,
+                        target_alt_m,
+                        required_alt_m,
+                    )
+                    break
+            else:
+                stable_hits = 0
+
+            now = time.monotonic()
+            if now >= next_progress_log_at:
+                logger.info(
+                    "Takeoff progress %.2fm / %.2fm via %s | required=%.2fm | candidates=%s",
+                    float(current_alt or 0.0),
+                    target_alt_m,
+                    source_name,
+                    required_alt_m,
+                    {key: round(value, 2) for key, value in last_candidates.items()},
+                )
+                next_progress_log_at = now + 5.0
+
+            if now - started_at > timeout_s:
+                mode_name = getattr(getattr(self.vehicle, "mode", None), "name", None) or "UNKNOWN"
+                raise TimeoutError(
+                    "Timed out waiting for takeoff completion "
+                    f"(target={target_alt_m:.2f}m, required={required_alt_m:.2f}m, "
+                    f"source={source_name}, best={float(current_alt or 0.0):.2f}m, "
+                    f"mode={mode_name}, "
+                    f"candidates={{{', '.join(f'{key}: {value:.2f}' for key, value in last_candidates.items())}}})"
+                )
+
+            time.sleep(0.2)
+
 
     def goto(self, coord: Coordinate) -> None:
         # Send heartbeat before major operations
@@ -244,18 +374,66 @@ class MavlinkDrone(DroneClient):
 
         loc = getattr(v, "location", None)
         rel = getattr(loc, "global_relative_frame", None)
-        if rel is None:
-            raise RuntimeError("Vehicle location not ready yet")
+        glob = getattr(loc, "global_frame", None)
+        local = getattr(loc, "local_frame", None)
         bat = getattr(v, "battery", None)
         gps = getattr(v, "gps_0", None)
         home = getattr(v, "home_location", None) or self.home_location
+        local_north = getattr(local, "north", None)
+        local_east = getattr(local, "east", None)
+        local_down = getattr(local, "down", None)
+        local_position_ok = (
+            local_north is not None
+            and local_east is not None
+            and local_down is not None
+        )
+        rangefinder = getattr(v, "rangefinder", None)
+        obstacle_distance = getattr(rangefinder, "distance", None)
+        lat = (
+            getattr(rel, "lat", None)
+            if rel is not None
+            else None
+        )
+        lon = (
+            getattr(rel, "lon", None)
+            if rel is not None
+            else None
+        )
+        alt = (
+            getattr(rel, "alt", None)
+            if rel is not None
+            else None
+        )
+        if lat is None:
+            lat = getattr(glob, "lat", None)
+        if lon is None:
+            lon = getattr(glob, "lon", None)
+        if alt is None:
+            alt = getattr(glob, "alt", None)
+        if alt is None and local_down is not None:
+            alt = -float(local_down)
+        home_lat = getattr(home, "lat", None) if home is not None else None
+        home_lon = getattr(home, "lon", None) if home is not None else None
+        if lat is None:
+            lat = home_lat if home_lat is not None else 0.0
+        if lon is None:
+            lon = home_lon if home_lon is not None else 0.0
+        if alt is None:
+            alt = 0.0
+        if home_lat is None or home_lon is None:
+            home_set = None if local_position_ok else False
+        else:
+            home_set = True
+        heading = getattr(v, "heading", None)
+        groundspeed = getattr(v, "groundspeed", None)
+        mode_name = getattr(getattr(v, "mode", None), "name", None) or "UNKNOWN"
         return Telemetry(
-            lat=rel.lat,
-            lon=rel.lon,
-            alt=rel.alt,
-            heading=v.heading,
-            groundspeed=v.groundspeed,
-            mode=v.mode.name,
+            lat=float(lat),
+            lon=float(lon),
+            alt=float(alt),
+            heading=float(heading) if heading is not None else 0.0,
+            groundspeed=float(groundspeed) if groundspeed is not None else 0.0,
+            mode=str(mode_name),
             battery_voltage=getattr(bat, "voltage", None),
             battery_current=getattr(bat, "current", None),
             battery_remaining=getattr(bat, "level", None),
@@ -264,10 +442,26 @@ class MavlinkDrone(DroneClient):
             satellites_visible=getattr(gps, "satellites_visible", None),
             heartbeat_age_s=getattr(v, "last_heartbeat", None),
             is_armable=getattr(v, "is_armable", None),
-            home_set=home is not None,
-            home_lat=getattr(home, "lat", None) if home is not None else None,
-            home_lon=getattr(home, "lon", None) if home is not None else None,
+            home_set=home_set,
+            home_lat=home_lat,
+            home_lon=home_lon,
             ekf_ok=getattr(v, "ekf_ok", None),
+            local_north_m=float(local_north) if local_north is not None else None,
+            local_east_m=float(local_east) if local_east is not None else None,
+            local_down_m=float(local_down) if local_down is not None else None,
+            local_position_ok=local_position_ok,
+            local_origin_ok=local_position_ok or home_set is True,
+            odometry_healthy=local_position_ok,
+            odometry_drift_m=None,
+            lidar_healthy=(
+                bool(obstacle_distance > 0.0)
+                if obstacle_distance is not None
+                else None
+            ),
+            obstacle_distance_m=(
+                float(obstacle_distance) if obstacle_distance is not None else None
+            ),
+            ceiling_distance_m=None,
         )
 
     def set_groundspeed(self, speed_mps: float) -> bool:
@@ -474,6 +668,107 @@ class MavlinkDrone(DroneClient):
                     )
 
                 time.sleep(1)
+
+    def _send_local_position_target(self, coord: LocalCoordinate) -> None:
+        if not self.vehicle:
+            raise RuntimeError("Vehicle not connected")
+
+        master = getattr(self.vehicle, "_master", None)
+        target_system = int(getattr(master, "target_system", 1) or 1)
+        target_component = int(getattr(master, "target_component", 1) or 1)
+        type_mask = (
+            mavutil.mavlink.POSITION_TARGET_TYPEMASK_VX_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_VY_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_VZ_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AX_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AY_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AZ_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_RATE_IGNORE
+        )
+        yaw_rad = 0.0
+        if coord.yaw_deg is None:
+            type_mask |= mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
+        else:
+            yaw_rad = math.radians(float(coord.yaw_deg))
+
+        msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
+            0,
+            target_system,
+            target_component,
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+            int(type_mask),
+            float(coord.north_m),
+            float(coord.east_m),
+            float(coord.down_m),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            float(yaw_rad),
+            0.0,
+        )
+        self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
+
+    def _local_distance_to_target(self, coord: LocalCoordinate) -> float:
+        if not self.vehicle:
+            raise RuntimeError("Vehicle not connected")
+        local = getattr(getattr(self.vehicle, "location", None), "local_frame", None)
+        if local is None:
+            raise RuntimeError("Vehicle local frame is not available")
+        north = getattr(local, "north", None)
+        east = getattr(local, "east", None)
+        down = getattr(local, "down", None)
+        if north is None or east is None or down is None:
+            raise RuntimeError("Vehicle local position is incomplete")
+        return math.sqrt(
+            (float(north) - float(coord.north_m)) ** 2
+            + (float(east) - float(coord.east_m)) ** 2
+            + (float(down) - float(coord.down_m)) ** 2
+        )
+
+    def follow_local_setpoints(self, path):
+        self._mission_abort_requested.clear()
+        self._mission_pause_requested.clear()
+        for coord in path:
+            self._send_local_position_target(coord)
+
+            start_time = time.monotonic()
+            paused_started_at = None
+            paused_total_s = 0.0
+            was_paused = False
+            max_active_leg_s = 180.0
+            while True:
+                if self._mission_abort_requested.is_set():
+                    raise MissionAbortRequested("Operator abort requested")
+
+                if self._mission_pause_requested.is_set():
+                    if paused_started_at is None:
+                        paused_started_at = time.monotonic()
+                        was_paused = True
+                    time.sleep(0.2)
+                    continue
+
+                if paused_started_at is not None:
+                    paused_total_s += time.monotonic() - paused_started_at
+                    paused_started_at = None
+                if was_paused:
+                    self._send_local_position_target(coord)
+                    was_paused = False
+
+                distance = self._local_distance_to_target(coord)
+                if distance < 0.8:
+                    break
+
+                active_elapsed_s = (time.monotonic() - start_time) - paused_total_s
+                if active_elapsed_s > max_active_leg_s:
+                    raise RuntimeError(
+                        f"Local setpoint leg timeout after {max_active_leg_s:.0f}s active flight time"
+                    )
+
+                time.sleep(0.2)
 
     def _distance_to_target(self, current_loc, target_coord):
         """Calculate distance to target coordinate"""

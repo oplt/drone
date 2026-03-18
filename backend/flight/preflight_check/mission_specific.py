@@ -3,12 +3,14 @@ from math import tan, radians, atan, sqrt, pi, sin, cos
 from typing import List, Optional, Any, Dict, Iterable, Tuple, Sequence
 from ..missions.schemas import (
     Mission, GridMission, OrbitMission, TerrainFollowMission,
-    PerimeterPatrolMission, AdaptiveAltitudeMission, Waypoint
+    PerimeterPatrolMission, AdaptiveAltitudeMission, Waypoint,
+    WarehouseScanMission,
 )
 from .preflight_context import PreflightContext
 import math
 from backend.drone.models import Coordinate
 from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
+from shapely.geometry import LineString, Point, Polygon
 
 
 
@@ -884,12 +886,281 @@ class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
         results.append(self.check_agl_envelope())
         return results
 
+
+class WarehouseScanMissionPreflight(MissionPreflightBase):
+    """Indoor warehouse scan checks for local-frame navigation and corridor geometry."""
+
+    def __init__(self, context: PreflightContext):
+        super().__init__(context)
+        self.mission: WarehouseScanMission = context.mission
+
+    def check_local_origin(self) -> CheckResult:
+        origin = getattr(self.mission, "local_origin", None)
+        if origin is None:
+            return CheckResult(
+                name="Warehouse Local Origin",
+                status=CheckStatus.FAIL,
+                message="No local warehouse origin was defined",
+            )
+        lat = getattr(origin, "lat", None)
+        lon = getattr(origin, "lon", None)
+        if lat is None or lon is None:
+            return CheckResult(
+                name="Warehouse Local Origin",
+                status=CheckStatus.PASS,
+                message="Origin defined in local warehouse frame",
+            )
+        return CheckResult(
+            name="Warehouse Local Origin",
+            status=CheckStatus.PASS,
+            message=f"Origin locked at ({float(lat):.6f}, {float(lon):.6f})",
+        )
+
+    def check_local_position_lock(self) -> CheckResult:
+        local_ok = getattr(self.v, "local_position_ok", None)
+        if local_ok is True:
+            return CheckResult(
+                name="Warehouse Local Position",
+                status=CheckStatus.PASS,
+                message="Vehicle local position is available",
+            )
+        if local_ok is False:
+            return CheckResult(
+                name="Warehouse Local Position",
+                status=CheckStatus.FAIL,
+                message="Vehicle local position is unavailable",
+            )
+        north = getattr(self.v, "local_north_m", None)
+        east = getattr(self.v, "local_east_m", None)
+        down = getattr(self.v, "local_down_m", None)
+        if north is not None and east is not None and down is not None:
+            return CheckResult(
+                name="Warehouse Local Position",
+                status=CheckStatus.PASS,
+                message="Vehicle local position is populated",
+            )
+        return CheckResult(
+            name="Warehouse Local Position",
+            status=CheckStatus.FAIL,
+            message="Warehouse missions require a valid local frame before launch",
+        )
+
+    def check_odometry_health(self) -> CheckResult:
+        odometry_healthy = getattr(self.v, "odometry_healthy", None)
+        max_drift_m = float(self._thr("WAREHOUSE_ODOMETRY_DRIFT_MAX_M", 0.75))
+        drift_m = getattr(self.v, "odometry_drift_m", None)
+        if odometry_healthy is False:
+            return CheckResult(
+                name="Warehouse Odometry",
+                status=CheckStatus.FAIL,
+                message="Vehicle odometry is unhealthy",
+            )
+        if drift_m is not None and float(drift_m) > max_drift_m:
+            return CheckResult(
+                name="Warehouse Odometry",
+                status=CheckStatus.FAIL,
+                message=f"Odometry drift {float(drift_m):.2f}m > {max_drift_m:.2f}m",
+            )
+        if odometry_healthy is True or drift_m is not None:
+            detail = (
+                f"Drift {float(drift_m):.2f}m"
+                if drift_m is not None
+                else "Odometry healthy"
+            )
+            return CheckResult(
+                name="Warehouse Odometry",
+                status=CheckStatus.PASS,
+                message=detail,
+            )
+        return CheckResult(
+            name="Warehouse Odometry",
+            status=CheckStatus.WARN,
+            message="Odometry health could not be verified from telemetry",
+        )
+
+    def check_lidar_health(self) -> CheckResult:
+        lidar_healthy = getattr(self.v, "lidar_healthy", None)
+        obstacle_distance_m = getattr(self.v, "obstacle_distance_m", None)
+        clearance_m = float(getattr(self.mission, "clearance_m", 0.6))
+        if lidar_healthy is False:
+            return CheckResult(
+                name="Warehouse LiDAR",
+                status=CheckStatus.FAIL,
+                message="LiDAR/range input is unhealthy",
+            )
+        if (
+            obstacle_distance_m is not None
+            and float(obstacle_distance_m) < clearance_m
+        ):
+            return CheckResult(
+                name="Warehouse LiDAR",
+                status=CheckStatus.FAIL,
+                message=(
+                    f"Obstacle distance {float(obstacle_distance_m):.2f}m is inside "
+                    f"the required clearance {clearance_m:.2f}m"
+                ),
+            )
+        if lidar_healthy is True:
+            message = (
+                f"Obstacle distance {float(obstacle_distance_m):.2f}m"
+                if obstacle_distance_m is not None
+                else "Range stream healthy"
+            )
+            return CheckResult(
+                name="Warehouse LiDAR",
+                status=CheckStatus.PASS,
+                message=message,
+            )
+        return CheckResult(
+            name="Warehouse LiDAR",
+            status=CheckStatus.WARN,
+            message="LiDAR/range health is unknown from current telemetry",
+        )
+
+    def check_scan_layers(self) -> CheckResult:
+        layers = list(getattr(self.mission, "scan_layers", []) or [])
+        if not layers:
+            return CheckResult(
+                name="Warehouse Scan Layers",
+                status=CheckStatus.FAIL,
+                message="No scan layers were generated",
+            )
+        top_z = max(float(layer.z_m) for layer in layers)
+        ceiling_height = getattr(self.mission, "ceiling_height_m", None)
+        ceiling_margin = float(getattr(self.mission, "ceiling_margin_m", 0.0))
+        if ceiling_height is not None and top_z + ceiling_margin > float(ceiling_height):
+            return CheckResult(
+                name="Warehouse Scan Layers",
+                status=CheckStatus.FAIL,
+                message=(
+                    f"Top scan layer {top_z:.2f}m plus margin {ceiling_margin:.2f}m "
+                    f"exceeds ceiling {float(ceiling_height):.2f}m"
+                ),
+            )
+        ceiling_distance = getattr(self.v, "ceiling_distance_m", None)
+        if ceiling_distance is not None and float(ceiling_distance) < ceiling_margin:
+            return CheckResult(
+                name="Warehouse Scan Layers",
+                status=CheckStatus.FAIL,
+                message=(
+                    f"Measured ceiling distance {float(ceiling_distance):.2f}m is below "
+                    f"required margin {ceiling_margin:.2f}m"
+                ),
+            )
+        return CheckResult(
+            name="Warehouse Scan Layers",
+            status=CheckStatus.PASS,
+            message=f"{len(layers)} layers, top altitude {top_z:.2f}m",
+        )
+
+    def check_corridor_geometry(self) -> CheckResult:
+        corridors = list(getattr(self.mission, "corridors", []) or [])
+        if not corridors:
+            return CheckResult(
+                name="Warehouse Corridors",
+                status=CheckStatus.FAIL,
+                message="No warehouse corridors were generated",
+            )
+        clearance_m = float(getattr(self.mission, "clearance_m", 0.6))
+        narrow = []
+        short = []
+        for corridor in corridors:
+            start = corridor.start
+            end = corridor.end
+            length_m = math.hypot(end.x_m - start.x_m, end.y_m - start.y_m)
+            if float(corridor.width_m) < clearance_m * 2.0:
+                narrow.append(corridor.corridor_id)
+            if length_m < clearance_m * 2.0:
+                short.append(corridor.corridor_id)
+        if narrow:
+            return CheckResult(
+                name="Warehouse Corridors",
+                status=CheckStatus.FAIL,
+                message=f"Corridors too narrow for clearance: {', '.join(narrow[:5])}",
+            )
+        if short:
+            return CheckResult(
+                name="Warehouse Corridors",
+                status=CheckStatus.FAIL,
+                message=f"Corridors too short for stable scan passes: {', '.join(short[:5])}",
+            )
+        return CheckResult(
+            name="Warehouse Corridors",
+            status=CheckStatus.PASS,
+            message=f"{len(corridors)} corridors satisfy clearance and length checks",
+        )
+
+    def check_keepout_conflicts(self) -> CheckResult:
+        keepouts = list(getattr(self.mission, "keepout_zones", []) or [])
+        obstacles = list(getattr(self.mission, "obstacles_3d", []) or [])
+        corridors = list(getattr(self.mission, "corridors", []) or [])
+        clearance_m = float(getattr(self.mission, "clearance_m", 0.6))
+
+        if not keepouts and not obstacles:
+            return CheckResult(
+                name="Warehouse Keepouts",
+                status=CheckStatus.PASS,
+                message="No keepout or obstacle conflicts were declared",
+            )
+
+        corridor_geoms = [
+            LineString(
+                [
+                    (float(c.start.x_m), float(c.start.y_m)),
+                    (float(c.end.x_m), float(c.end.y_m)),
+                ]
+            ).buffer(clearance_m)
+            for c in corridors
+        ]
+        for zone in keepouts:
+            zone_poly = Polygon([(pt.x_m, pt.y_m) for pt in zone.footprint])
+            for geom in corridor_geoms:
+                if geom.intersects(zone_poly):
+                    return CheckResult(
+                        name="Warehouse Keepouts",
+                        status=CheckStatus.FAIL,
+                        message=f"Corridor path intersects keepout zone '{zone.zone_id}'",
+                    )
+        for obstacle in obstacles:
+            half_x = float(obstacle.size_x_m) / 2.0
+            half_y = float(obstacle.size_y_m) / 2.0
+            obstacle_poly = Point(
+                float(obstacle.center.x_m),
+                float(obstacle.center.y_m),
+            ).buffer(max(half_x, half_y), cap_style=3)
+            for geom in corridor_geoms:
+                if geom.intersects(obstacle_poly):
+                    return CheckResult(
+                        name="Warehouse Keepouts",
+                        status=CheckStatus.FAIL,
+                        message=f"Corridor path intersects obstacle '{obstacle.obstacle_id}'",
+                    )
+        return CheckResult(
+            name="Warehouse Keepouts",
+            status=CheckStatus.PASS,
+            message="Corridors clear all declared keepouts and obstacles",
+        )
+
+    async def run(self) -> List[CheckResult]:
+        results: List[CheckResult] = []
+        results.append(self.check_waypoint_count_limit())
+        results.append(self.check_speed_limits())
+        results.append(self.check_local_origin())
+        results.append(self.check_local_position_lock())
+        results.append(self.check_odometry_health())
+        results.append(self.check_lidar_health())
+        results.append(self.check_scan_layers())
+        results.append(self.check_corridor_geometry())
+        results.append(self.check_keepout_conflicts())
+        return results
+
 def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
 
     mission_type = context.mission.type.lower() if hasattr(context.mission, 'type') else ""
 
     mission_classes = {
         'grid': GridMissionPreflight,
+        'warehouse_scan': WarehouseScanMissionPreflight,
         'terrain_follow': TerrainFollowMissionPreflight,
         'orbit': OrbitMissionPreflight,
         'perimeter_patrol': PerimeterPatrolMissionPreflight,

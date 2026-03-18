@@ -332,6 +332,11 @@ class BasePreflightChecks:
 
     async def check_home_position(self) -> List[CheckResult]:
         results: List[CheckResult] = []
+        home_required = self.ctx.get_config("HOME_POSITION_REQUIRED", True)
+        if not bool(home_required):
+            results.append(self._skip("Home Set", "Home position not required for this mission"))
+            results.append(self._skip("Distance to Home", "Home position check disabled"))
+            return results
 
         home_set = self._value("home_set")
         if home_set is None:

@@ -19,6 +19,7 @@ from backend.api.routes.routes_geofence import router as geofence_router
 from backend.api.routes.routes_animal_farm import router as animal_farm_router
 from backend.api.routes.routes_field import router as fields_router
 from backend.api.routes.routes_mapping import router as mapping_router
+from backend.api.routes.routes_warehouse import router as warehouse_router
 from backend.api.routes.routes_alerts import router as alerts_router
 from backend.api.routes.routes_ml import router as ml_router
 from backend.api.routes.routes_patrol_debug import router as patrol_debug_router
@@ -95,6 +96,7 @@ app.include_router(geofence_router)
 app.include_router(animal_farm_router)
 app.include_router(fields_router)
 app.include_router(mapping_router)
+app.include_router(warehouse_router)
 app.include_router(alerts_router)
 app.include_router(ml_router)
 app.include_router(patrol_debug_router)

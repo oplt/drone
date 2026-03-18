@@ -1,12 +1,12 @@
 from typing import List, Optional, Union, Literal, Annotated
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from enum import Enum
-from math import tan, radians
 
 
 class MissionType(str, Enum):
     GRID = "grid"
     PHOTOGRAMMETRY = "photogrammetry"
+    WAREHOUSE_SCAN = "warehouse_scan"
     ORBIT = "orbit"
     TERRAIN_FOLLOW = "terrain_follow"
     PERIMETER_PATROL = "perimeter_patrol"
@@ -210,11 +210,107 @@ class PhotogrammetryMission(BaseMission):
     max_flight_time_min: Optional[float] = None
 
 
+class WarehouseLocalPoint(BaseModel):
+    x_m: float
+    y_m: float
+    z_m: float = 0.0
+
+
+class WarehouseLocalOrigin(BaseModel):
+    lat: Optional[float] = Field(default=None, ge=-90.0, le=90.0)
+    lon: Optional[float] = Field(default=None, ge=-180.0, le=180.0)
+    alt_m: float = 0.0
+
+    @model_validator(mode="after")
+    def validate_coordinate_pair(self):
+        if (self.lat is None) != (self.lon is None):
+            raise ValueError("Warehouse local_origin lat and lon must both be set or both be omitted")
+        return self
+
+
+class WarehouseCorridor(BaseModel):
+    corridor_id: str = Field(..., min_length=1, max_length=128)
+    start: WarehouseLocalPoint
+    end: WarehouseLocalPoint
+    width_m: float = Field(..., gt=0.0, le=100.0)
+    heading_deg: float = Field(..., ge=-180.0, le=360.0)
+    axis_deg: float = Field(..., ge=-180.0, le=360.0)
+    source: str = Field(default="derived", min_length=1, max_length=64)
+
+
+class WarehouseObstacleBox(BaseModel):
+    obstacle_id: str = Field(..., min_length=1, max_length=128)
+    center: WarehouseLocalPoint
+    size_x_m: float = Field(..., gt=0.0, le=500.0)
+    size_y_m: float = Field(..., gt=0.0, le=500.0)
+    size_z_m: float = Field(..., gt=0.0, le=500.0)
+
+
+class WarehouseKeepoutZone(BaseModel):
+    zone_id: str = Field(..., min_length=1, max_length=128)
+    footprint: List[WarehouseLocalPoint] = Field(..., min_length=3)
+    min_z_m: Optional[float] = None
+    max_z_m: Optional[float] = None
+
+    @model_validator(mode="after")
+    def validate_z_range(self):
+        if (
+            self.min_z_m is not None
+            and self.max_z_m is not None
+            and self.max_z_m <= self.min_z_m
+        ):
+            raise ValueError("max_z_m must be greater than min_z_m")
+        return self
+
+
+class WarehouseScanLayer(BaseModel):
+    layer_index: int = Field(..., ge=0, le=100)
+    label: str = Field(..., min_length=1, max_length=64)
+    z_m: float = Field(..., ge=0.0, le=500.0)
+
+
+class WarehouseScanMission(BaseMission):
+    type: Literal["warehouse_scan"]
+    waypoints: List[Waypoint] = Field(default_factory=list)
+    polygon: List[Waypoint] = Field(default_factory=list)
+    speed: Optional[float] = Field(default=0.8, gt=0.0, le=50.0)
+    altitude_agl: Optional[float] = Field(default=None, ge=0.0, le=500.0)
+    local_origin: Optional[WarehouseLocalOrigin] = None
+    local_polygon: List[WarehouseLocalPoint] = Field(..., min_length=3)
+    corridors: List[WarehouseCorridor] = Field(default_factory=list)
+    obstacles_3d: List[WarehouseObstacleBox] = Field(default_factory=list)
+    keepout_zones: List[WarehouseKeepoutZone] = Field(default_factory=list)
+    scan_layers: List[WarehouseScanLayer] = Field(default_factory=list, min_length=1)
+    corridor_spacing_m: float = Field(default=2.0, gt=0.1, le=50.0)
+    aisle_axis_deg: Optional[float] = Field(default=None, ge=-180.0, le=360.0)
+    clearance_m: float = Field(default=0.6, gt=0.1, le=20.0)
+    perimeter_offset_m: float = Field(default=0.5, ge=0.0, le=20.0)
+    scan_pattern: Literal[
+        "aisle_serpentine",
+        "stacked_passes",
+        "crosshatch",
+        "perimeter_aisle_hybrid",
+    ] = "aisle_serpentine"
+    lane_strategy: Literal["serpentine", "one_way"] = "serpentine"
+    view_mode: Literal["forward", "left_face", "right_face", "dual_face"] = "forward"
+    layer_count: int = Field(default=1, ge=1, le=20)
+    layer_spacing_m: float = Field(default=1.2, ge=0.0, le=20.0)
+    ceiling_height_m: Optional[float] = Field(default=8.0, gt=0.0, le=100.0)
+    ceiling_margin_m: float = Field(default=0.7, ge=0.0, le=20.0)
+    work_speed_mps: float = Field(default=0.8, gt=0.0, le=20.0)
+    transit_speed_mps: float = Field(default=1.4, gt=0.0, le=30.0)
+    scan_pause_s: float = Field(default=0.0, ge=0.0, le=30.0)
+    interpolate_steps_work_leg: int = Field(default=4, ge=0, le=100)
+    interpolate_steps_transit_leg: int = Field(default=1, ge=0, le=100)
+    local_control_mode: Literal["local_setpoint"] = "local_setpoint"
+
+
 Mission = Annotated[
     Union[
         WaypointMission,
         GridMission,
         PhotogrammetryMission,
+        WarehouseScanMission,
         OrbitMission,
         TerrainFollowMission,
         PerimeterPatrolMission,
@@ -233,6 +329,7 @@ def create_mission_from_dict(data: dict) -> Mission:
         'grid':              GridMission,
         'survey':            GridMission,
         'photogrammetry':    PhotogrammetryMission,
+        'warehouse_scan':    WarehouseScanMission,
         'orbit':             OrbitMission,
         'circle':            OrbitMission,
         'poi':               OrbitMission,

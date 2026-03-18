@@ -36,6 +36,9 @@ export default function AppTheme(props: AppThemeProps) {
             MuiCssBaseline: {
               styleOverrides: {
                 '*': { boxSizing: 'border-box' },
+                ':root': {
+                  '--app-radius': '1rem',
+                },
                 html: {
                   scrollBehavior: 'smooth',
                 },
@@ -63,12 +66,15 @@ export default function AppTheme(props: AppThemeProps) {
                 },
                 '*::-webkit-scrollbar-thumb': {
                   backgroundColor: 'hsla(174, 24%, 40%, 0.28)',
-                  borderRadius: 999,
+                  borderRadius: 'var(--app-radius)',
                   border: '2px solid transparent',
                   backgroundClip: 'content-box',
                 },
                 '*::-webkit-scrollbar-track': {
                   background: 'transparent',
+                },
+                '.MuiPaper-root, .MuiCard-root, .MuiButton-root, .MuiOutlinedInput-root, .MuiAlert-root, .MuiAccordion-root, .MuiAccordionSummary-root, .MuiMenu-paper, .MuiPopover-paper, .MuiDialog-paper, .MuiDrawer-paper, .MuiChip-root': {
+                  borderRadius: 'var(--app-radius) !important',
                 },
                 '@keyframes riseIn': {
                   '0%': { opacity: 0, transform: 'translateY(12px)' },

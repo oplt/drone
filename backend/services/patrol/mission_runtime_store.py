@@ -40,6 +40,7 @@ class MissionRuntimeRecord:
     state: MissionLifecycleState
     created_at: float
     updated_at: float
+    mission_task_type: Optional[str] = None
     db_flight_id: Optional[int] = None
     last_error: Optional[str] = None
 

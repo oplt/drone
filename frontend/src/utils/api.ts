@@ -117,6 +117,77 @@ export type MissionCommandAuditResponse = {
   reason?: string | null;
 };
 
+export type WarehouseScanStartRequest = {
+  field_id: number;
+  mission_name?: string;
+  cruise_alt?: number;
+  reference_mapping_job_id?: number | null;
+  corridor_spacing_m?: number;
+  aisle_axis_deg?: number | null;
+  clearance_m?: number;
+  perimeter_offset_m?: number;
+  scan_pattern?: "aisle_serpentine" | "stacked_passes" | "crosshatch" | "perimeter_aisle_hybrid";
+  lane_strategy?: "serpentine" | "one_way";
+  view_mode?: "forward" | "left_face" | "right_face" | "dual_face";
+  layer_count?: number;
+  layer_spacing_m?: number;
+  ceiling_height_m?: number;
+  ceiling_margin_m?: number;
+  work_speed_mps?: number;
+  transit_speed_mps?: number;
+  scan_pause_s?: number;
+  interpolate_steps_work_leg?: number;
+  interpolate_steps_transit_leg?: number;
+};
+
+export type WarehouseMissionLaunchResponse = {
+  field_id: number;
+  field_name: string;
+  preflight: PreflightRunResponse;
+  mission: MissionCreateResponse;
+};
+
+export type WarehouseScannedMapAssetResponse = {
+  id: number;
+  type: string;
+  url: string;
+  created_at: string;
+  meta_data?: Record<string, unknown>;
+};
+
+export type WarehouseScannedMapResponse = {
+  job_id: number;
+  model_id: number;
+  model_version: number;
+  field_id: number;
+  field_name: string;
+  status: string;
+  created_at: string;
+  finished_at?: string | null;
+  boundary_lonlat: Array<[number, number] | number[]>;
+  assets: WarehouseScannedMapAssetResponse[];
+};
+
+export type WarehouseMissionDefaultsResponse = {
+  cruise_alt: number;
+  corridor_spacing_m: number;
+  aisle_axis_deg: number | null;
+  clearance_m: number;
+  perimeter_offset_m: number;
+  scan_pattern: "aisle_serpentine" | "stacked_passes" | "crosshatch" | "perimeter_aisle_hybrid";
+  lane_strategy: "serpentine" | "one_way";
+  view_mode: "forward" | "left_face" | "right_face" | "dual_face";
+  layer_count: number;
+  layer_spacing_m: number;
+  ceiling_height_m: number;
+  ceiling_margin_m: number;
+  work_speed_mps: number;
+  transit_speed_mps: number;
+  scan_pause_s: number;
+  interpolate_steps_work_leg: number;
+  interpolate_steps_transit_leg: number;
+};
+
 const parseErrorText = (bodyText: string): string => {
   const trimmed = bodyText.trim();
   if (!trimmed) return "";
@@ -246,6 +317,80 @@ export async function getMissionCommandAudit(
       headers: { Authorization: `Bearer ${token}` },
     },
   );
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res));
+  }
+  return res.json();
+}
+
+export async function startWarehouseScan(
+  payload: WarehouseScanStartRequest,
+  token: string,
+  apiBase: string = API_BASE_URL,
+): Promise<WarehouseMissionLaunchResponse> {
+  const normalizedBase = apiBase.replace(/\/$/, "");
+  const res = await fetch(`${normalizedBase}/warehouse/missions/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res));
+  }
+  return res.json();
+}
+
+export async function listWarehouseScannedMaps(
+  token: string,
+  apiBase: string = API_BASE_URL,
+  fieldId?: number | null,
+): Promise<WarehouseScannedMapResponse[]> {
+  const normalizedBase = apiBase.replace(/\/$/, "");
+  const params = new URLSearchParams();
+  if (typeof fieldId === "number" && Number.isFinite(fieldId)) {
+    params.set("field_id", String(fieldId));
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`${normalizedBase}/warehouse/scanned-maps${suffix}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res));
+  }
+  return res.json();
+}
+
+export async function getWarehouseMissionDefaults(
+  token: string,
+  apiBase: string = API_BASE_URL,
+): Promise<WarehouseMissionDefaultsResponse> {
+  const normalizedBase = apiBase.replace(/\/$/, "");
+  const res = await fetch(`${normalizedBase}/warehouse/mission-defaults`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res));
+  }
+  return res.json();
+}
+
+export async function updateWarehouseMissionDefaults(
+  payload: WarehouseMissionDefaultsResponse,
+  token: string,
+  apiBase: string = API_BASE_URL,
+): Promise<WarehouseMissionDefaultsResponse> {
+  const normalizedBase = apiBase.replace(/\/$/, "");
+  const res = await fetch(`${normalizedBase}/warehouse/mission-defaults`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
   if (!res.ok) {
     throw new Error(await readErrorMessage(res));
   }

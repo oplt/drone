@@ -261,7 +261,7 @@ export const getDesignTokens = (mode: PaletteMode) => {
       },
     },
     shape: {
-      borderRadius: 18,
+      borderRadius: 5
     },
     shadows: customShadows,
   };
@@ -441,7 +441,7 @@ export const typography = {
 };
 
 export const shape = {
-  borderRadius: 18,
+  borderRadius: 5,
 };
 
 // @ts-ignore

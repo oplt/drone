@@ -39,6 +39,10 @@ from backend.flight.missions.private_patrol import (
 from backend.flight.missions.photogrammetry_mission import (
     PhotogrammetryMission as FlightPhotogrammetryMission,
 )
+from backend.flight.missions.warehouse_mission import (
+                                    WarehouseScanMissionParams,
+                                    build_warehouse_scan_mission,
+                                )
 from backend.flight.preflight_check.schemas import PreflightReport
 from backend.flight.missions.waypoints_mission import WaypointsMission
 from backend.main import _build_orchestrator
@@ -46,7 +50,6 @@ from backend.messaging.websocket import telemetry_manager
 from backend.flight.missions.schemas import MissionType, Waypoint
 from backend.services.patrol.mission_runtime_store import (
     MissionRuntimeRecord,
-    MissionCommandAuditRecord,
     mission_runtime_store,
 )
 
@@ -236,6 +239,7 @@ class MissionCreateIn(BaseModel):
 
     # Grid mission data
     grid: Optional[GridMissionParams] = None
+    warehouse_scan: Optional[WarehouseScanMissionParams] = None
     private_patrol: Optional[PrivatePatrolMissionParams] = None
     mission_profile: Optional[PhotogrammetryMissionProfile] = None
     preflight_run_id: Optional[str] = Field(
@@ -263,6 +267,11 @@ class MissionCreateIn(BaseModel):
             if len(self.grid.field_polygon_lonlat) < 3:
                 raise ValueError(
                     "field_polygon_lonlat must have at least 3 coordinate pairs."
+                )
+        elif self.mission_type == MissionType.WAREHOUSE_SCAN:
+            if self.warehouse_scan is None:
+                raise ValueError(
+                    "mission_type='warehouse_scan' requires a 'warehouse_scan' object."
                 )
         elif self.mission_type in {MissionType.PERIMETER_PATROL, MissionType.PRIVATE_PATROL}:
             if self.private_patrol is None:
@@ -462,11 +471,13 @@ def _db_status_for_runtime_state(state: MissionLifecycleState) -> FlightStatus:
 
 
 def _runtime_to_out(rec: _MissionRuntimeRecord) -> MissionRuntimeOut:
+    private_patrol_task_type = getattr(rec, "private_patrol_task_type", None)
+    mission_task_type = getattr(rec, "mission_task_type", None)
     return MissionRuntimeOut(
         flight_id=rec.client_flight_id,
         mission_name=rec.mission_name,
         mission_type=rec.mission_type,
-        mission_task_type=(rec.private_patrol_task_type or rec.mission_task_type or None),
+        mission_task_type=(private_patrol_task_type or mission_task_type or None),
         state=rec.state,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
@@ -690,7 +701,7 @@ def _resolve_trigger_event_location(
 # Mission factory
 # ---------------------------------------------------------------------------
 
-def _build_mission(payload: MissionCreateIn) -> Any:
+def _build_mission(payload: MissionCreateIn, *, owner_id: Optional[int] = None) -> Any:
     """Return the appropriate mission object for the given payload."""
     if payload.mission_type == MissionType.WAYPOINT:
         coords = [
@@ -776,6 +787,14 @@ def _build_mission(payload: MissionCreateIn) -> Any:
             row_phase_m=g.row_phase_m,
         )
         return mission, len(poly)
+
+    if payload.mission_type == MissionType.WAREHOUSE_SCAN:
+        scan = payload.warehouse_scan  # validated non-None by model validator
+        return build_warehouse_scan_mission(
+            base_height_m=float(payload.cruise_alt),
+            scan=scan,
+            owner_id=owner_id,
+        )
 
     if payload.mission_type in {MissionType.PERIMETER_PATROL, MissionType.PRIVATE_PATROL}:
         patrol = payload.private_patrol  # validated non-None by model_validator
@@ -1182,7 +1201,7 @@ async def run_preflight(
 ):
     """Run preflight checks as a first-class API call and store a short-lived run token."""
     try:
-        mission, _ = _build_mission(payload)
+        mission, _ = _build_mission(payload, owner_id=int(user.id))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1196,10 +1215,17 @@ async def run_preflight(
 
     try:
         await _ensure_drone_ready_for_preflight(orch)
+        preflight_data_fn = getattr(mission, "get_preflight_mission_data", None)
+        mission_data_override = (
+            preflight_data_fn()
+            if callable(preflight_data_fn)
+            else None
+        )
         report = await orch._run_preflight_checks(
             mission.get_waypoints(),
             payload.cruise_alt,
             raise_on_fail=False,
+            mission_data=mission_data_override,
         )
     except HTTPException:
         raise
@@ -1280,7 +1306,7 @@ async def create_mission(
         )
 
     try:
-        mission, wps_count = _build_mission(payload)
+        mission, wps_count = _build_mission(payload, owner_id=int(user.id))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1313,21 +1339,16 @@ async def create_mission(
     orch.current_client_flight_id = client_flight_id
 
     now = time.time()
-    patrol_task_type = None
-    patrol_ai_tasks: list[str] = []
-    patrol_trigger_type = None
-    patrol_target_label = None
-    if payload.private_patrol is not None:
-        patrol_task_type = str(payload.private_patrol.task_type)
-        patrol_ai_tasks = [str(x) for x in normalize_ai_tasks(payload.private_patrol.ai_tasks)]
-        patrol_trigger_type = str(payload.private_patrol.trigger_type)
-        patrol_target_label = payload.private_patrol.target_label
-
     runtime = MissionRuntimeRecord(
         client_flight_id=client_flight_id,
         user_id=int(user.id),
         mission_name=payload.name,
         mission_type=payload.mission_type.value,
+        mission_task_type=(
+            getattr(payload.private_patrol, "task_type", None)
+            if payload.private_patrol is not None
+            else None
+        ),
         preflight_run_id=preflight_run_id or None,
         state="queued",
         created_at=now,

@@ -1,10 +1,53 @@
+from __future__ import annotations
+
+from collections import OrderedDict
+import threading
+
 import googlemaps
 from backend.drone.models import Coordinate
 
 
 class GoogleMapsClient:
-    def __init__(self, api_key: str):
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        elevation_cache_precision_deg: float = 1e-5,
+        elevation_cache_max_entries: int = 20_000,
+        elevation_batch_size: int = 250,
+    ):
         self.client = googlemaps.Client(api_key)
+        self._elevation_cache_precision_deg = max(1e-7, float(elevation_cache_precision_deg))
+        self._elevation_cache_max_entries = max(1, int(elevation_cache_max_entries))
+        self._elevation_batch_size = max(1, int(elevation_batch_size))
+        self._elevation_cache: OrderedDict[tuple[int, int], float] = OrderedDict()
+        self._elevation_cache_lock = threading.Lock()
+
+    def _elevation_cache_key(self, lat: float, lon: float) -> tuple[int, int]:
+        precision = self._elevation_cache_precision_deg
+        return (
+            int(round(float(lat) / precision)),
+            int(round(float(lon) / precision)),
+        )
+
+    def _elevation_cache_get(self, key: tuple[int, int]) -> float | None:
+        with self._elevation_cache_lock:
+            value = self._elevation_cache.get(key)
+            if value is None:
+                return None
+            self._elevation_cache.move_to_end(key)
+            return value
+
+    def _elevation_cache_set(self, key: tuple[int, int], value: float) -> None:
+        with self._elevation_cache_lock:
+            self._elevation_cache[key] = value
+            self._elevation_cache.move_to_end(key)
+            while len(self._elevation_cache) > self._elevation_cache_max_entries:
+                self._elevation_cache.popitem(last=False)
+
+    def _chunked(self, coords: list[tuple[float, float]]):
+        for idx in range(0, len(coords), self._elevation_batch_size):
+            yield coords[idx:idx + self._elevation_batch_size]
 
     def geocode(self, address: str) -> Coordinate:
         res = self.client.geocode(address)
@@ -25,21 +68,47 @@ class GoogleMapsClient:
 
     # ✅ NEW: Google Elevation API (single)
     def elevation_m(self, lat: float, lon: float) -> float:
-        res = self.client.elevation((lat, lon))
-        if not res:
-            raise RuntimeError("No elevation result from Google Elevation API")
-        return float(res[0]["elevation"])  # meters AMSL
+        return self.elevations_m([(lat, lon)])[0]
 
     # ✅ NEW: Google Elevation API (batch)
     def elevations_m(self, coords: list[tuple[float, float]]) -> list[float]:
         # coords: [(lat, lon), ...]
         if not coords:
             return []
-        res = self.client.elevation(coords)
-        if not res or len(res) != len(coords):
-            # Google may still respond, but be defensive.
-            raise RuntimeError("Elevation batch returned unexpected result length")
-        return [float(r["elevation"]) for r in res]
+
+        out: list[float | None] = [None] * len(coords)
+        missing_by_key: dict[tuple[int, int], list[int]] = {}
+        missing_coords: list[tuple[float, float]] = []
+
+        for idx, (lat, lon) in enumerate(coords):
+            key = self._elevation_cache_key(lat, lon)
+            cached = self._elevation_cache_get(key)
+            if cached is not None:
+                out[idx] = cached
+                continue
+            if key not in missing_by_key:
+                missing_by_key[key] = [idx]
+                missing_coords.append((float(lat), float(lon)))
+            else:
+                missing_by_key[key].append(idx)
+
+        for chunk in self._chunked(missing_coords):
+            res = self.client.elevation(chunk)
+            if not res or len(res) != len(chunk):
+                raise RuntimeError("Elevation batch returned unexpected result length")
+
+            for local_idx, row in enumerate(res):
+                value = float(row["elevation"])
+                lat, lon = chunk[local_idx]
+                key = self._elevation_cache_key(lat, lon)
+                self._elevation_cache_set(key, value)
+                for original_idx in missing_by_key[key]:
+                    out[original_idx] = value
+
+        if any(value is None for value in out):
+            raise RuntimeError("Elevation lookup left unresolved coordinates")
+
+        return [float(value) for value in out]
 
     # Compatibility aliases used in older mission and preflight flows.
     def get_elevation(self, lat: float, lon: float) -> float:

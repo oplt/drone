@@ -100,6 +100,7 @@ class MappingJobStatusOut(BaseModel):
     model_id: int
     status: str
     progress: int
+    created_at: datetime
     error: Optional[str] = None
     processor: str
     processor_task_id: Optional[str] = None
@@ -394,6 +395,7 @@ def _to_job_status(job: MappingJob, assets: List[Asset]) -> MappingJobStatusOut:
         model_id=job.model_id,
         status=job.status,
         progress=job.progress,
+        created_at=job.created_at,
         error=job.error,
         processor=job.processor,
         processor_task_id=job.processor_task_id,

@@ -2,32 +2,35 @@ import time
 import asyncio
 import logging
 from typing import Dict, Any, List, Optional, Union
+
 from .preflight_context import PreflightContext
 from .schemas import PreflightReport, CheckResult, CheckStatus
 from .base import BasePreflightChecks
 from .mission_specific import create_mission_preflight
 from .cache import TerrainCache
-from .models import PrecomputedMissionData, MissionDataPreprocessor
+from .models import MissionDataPreprocessor
 from ..missions.schemas import create_mission_from_dict, Mission
 
 logger = logging.getLogger(__name__)
 
-
-# Define critical checks that should cause early termination
 CRITICAL_BASE_CHECKS = [
     "MAVLink Link",
     "GPS Lock",
-    "Heartbeat Age",  # From enhanced checks
-    "GPS Fix Type",    # From enhanced checks
-    "Vehicle Armable", # Can't proceed if vehicle isn't armable
-    "EKF Health",      # Navigation solution is critical
+    "Heartbeat Age",
+    "GPS Fix Type",
+    "Vehicle Armable",
+    "EKF Health",
 ]
 
 CRITICAL_MISSION_CHECKS = [
-    "Grid Camera Footprint",  # Mission feasibility
-    "Orbit Bank Angle",       # Safety-critical
-    "Orbit Lateral Acceleration",  # Safety-critical
-    "Cornering Limits",       # Mission feasibility
+    "Grid Camera Footprint",
+    "Orbit Bank Angle",
+    "Orbit Lateral Acceleration",
+    "Cornering Limits",
+    "Warehouse Local Position",
+    "Warehouse Corridors",
+    "Warehouse Scan Layers",
+    "Warehouse Keepouts",
 ]
 
 
@@ -35,42 +38,18 @@ class PreflightOrchestrator:
     """Orchestrates all preflight checks."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the orchestrator.
-
-        Args:
-            config: Configuration dictionary
-        """
         self.config = config or {}
 
-        # Initialize caches
         self.terrain_cache = TerrainCache(
             precision=self.config.get('terrain_cache_precision', 1e-5),
             ttl_seconds=self.config.get('terrain_cache_ttl', 300)
         )
 
-        # Critical checks
-        self.critical_base_checks = self.config.get(
-            'critical_base_checks',
-            CRITICAL_BASE_CHECKS
-        )
-        self.critical_mission_checks = self.config.get(
-            'critical_mission_checks',
-            CRITICAL_MISSION_CHECKS
-        )
-        self.early_terminate_on_fail = self.config.get(
-            'early_terminate_on_fail',
-            True
-        )
+        self.critical_base_checks = self.config.get('critical_base_checks', CRITICAL_BASE_CHECKS)
+        self.critical_mission_checks = self.config.get('critical_mission_checks', CRITICAL_MISSION_CHECKS)
+        self.early_terminate_on_fail = self.config.get('early_terminate_on_fail', True)
 
-
-    async def _build_context(
-            self,
-            vehicle_state: Any,
-            mission: Mission,
-            **kwargs
-    ) -> PreflightContext:
-        """Build context with concurrent terrain prefetch."""
+    async def _build_context(self, vehicle_state: Any, mission: Mission, **kwargs) -> PreflightContext:
         precomputed = None
         if mission.waypoints:
             preprocessor = MissionDataPreprocessor(terrain_cache=self.terrain_cache)
@@ -91,60 +70,60 @@ class PreflightOrchestrator:
             ]}
         )
 
-
-    def _check_for_critical_fails(
-            self,
-            results: List[CheckResult],
-            check_type: str = "base"
-    ) -> tuple[bool, List[CheckResult]]:
-        """Check if any critical checks have failed."""
-        critical_list = (self.critical_base_checks if check_type == "base"
-                         else self.critical_mission_checks)
-
-        failed_critical = []
-        for result in results:
-            if result.name in critical_list and result.status == CheckStatus.FAIL:
-                failed_critical.append(result)
-
+    def _check_for_critical_fails(self, results: List[CheckResult], check_type: str = "base") -> tuple[bool, List[CheckResult]]:
+        critical_list = self.critical_base_checks if check_type == "base" else self.critical_mission_checks
+        failed_critical = [r for r in results if r.name in critical_list and r.status == CheckStatus.FAIL]
         return len(failed_critical) > 0, failed_critical
 
-
     def _determine_overall_status(self, results: List[CheckResult]) -> CheckStatus:
-        """Determine overall status from results."""
         has_fail = any(r.status == CheckStatus.FAIL for r in results)
         has_warn = any(r.status == CheckStatus.WARN for r in results)
-
         if has_fail:
             return CheckStatus.FAIL
-        elif has_warn:
+        if has_warn:
             return CheckStatus.WARN
-        else:
-            return CheckStatus.PASS
+        return CheckStatus.PASS
 
     def _generate_summary(self, results: List[CheckResult]) -> Dict[str, Any]:
-        """Generate summary statistics."""
-        summary = {
+        return {
             'total_checks': len(results),
             'passed': sum(1 for r in results if r.status == CheckStatus.PASS),
             'failed': sum(1 for r in results if r.status == CheckStatus.FAIL),
             'warned': sum(1 for r in results if r.status == CheckStatus.WARN),
             'skipped': sum(1 for r in results if r.status == CheckStatus.SKIP),
         }
-        return summary
 
-
-    async def run(
-            self,
-            vehicle_state: Any,
-            mission_data: Union[Dict, Mission],
-            **kwargs
-    ) -> PreflightReport:
-        """Async preflight run — base and mission checks run concurrently."""
+    async def run(self, vehicle_state: Any, mission_data: Union[Dict, Mission], **kwargs) -> PreflightReport:
         # Validate mission
-        if isinstance(mission_data, dict):
-            mission = create_mission_from_dict(mission_data)
-        else:
-            mission = mission_data
+        mission = create_mission_from_dict(mission_data) if isinstance(mission_data, dict) else mission_data
+
+        # ✅ Warehouse-scan overrides (indoors)
+        mission_type = getattr(mission, "type", "") or ""
+        mission_type = str(mission_type).lower()
+
+        overrides = dict(kwargs.get("config_overrides") or {})
+        gps_timeout_s = float(kwargs.get("gps_timeout_s") or 30.0)
+
+        if mission_type == "warehouse_scan":
+            # Relax GNSS gates; allow indoor operation.
+            overrides.update({
+                "GPS_FIX_TYPE_MIN": 0,
+                "SAT_MIN": 0,
+                "HDOP_MAX": 99.0,
+                # Indoor typically short: keep range enforcement soft
+                "ENFORCE_PREFLIGHT_RANGE": False,
+                "HOME_POSITION_REQUIRED": False,
+                # Make preflight faster
+                "HEARTBEAT_MAX_AGE": overrides.get("HEARTBEAT_MAX_AGE", 3.0),
+                "MAX_WAYPOINTS": overrides.get("MAX_WAYPOINTS", 2500),
+                "WAREHOUSE_ODOMETRY_DRIFT_MAX_M": overrides.get(
+                    "WAREHOUSE_ODOMETRY_DRIFT_MAX_M",
+                    0.75,
+                ),
+            })
+            gps_timeout_s = float(kwargs.get("gps_timeout_s") or 3.0)
+
+        kwargs["config_overrides"] = overrides
 
         # Build context (fetches terrain concurrently)
         context = await self._build_context(vehicle_state, mission, **kwargs)
@@ -161,37 +140,40 @@ class PreflightOrchestrator:
             mission_waypoints=mission.waypoints,
             expected_mission_count=len(mission.waypoints),
             mission_crc=kwargs.get('mission_crc'),
+            gps_timeout_s=gps_timeout_s,
+            fail_fast=self.early_terminate_on_fail,
         )
 
-        # Early exit on critical base failures
-        has_critical_fail, failed_critical = self._check_for_critical_fails(
-            base_results, "base"
-        )
-
-        mission_results = []
-        if not (has_critical_fail and self.early_terminate_on_fail):
-            mission_checker = create_mission_preflight(context)
-            mission_results = await mission_checker.run()
-
-            has_cm_fail, failed_cm = self._check_for_critical_fails(
-                mission_results, "mission"
+        has_critical_fail, failed_critical = self._check_for_critical_fails(base_results, "base")
+        if has_critical_fail and self.early_terminate_on_fail:
+            overall = self._determine_overall_status(base_results)
+            return PreflightReport(
+                mission_type=mission_type,
+                overall_status=overall,
+                base_checks=base_results,
+                mission_checks=[],
+                critical_failures=failed_critical,
+                summary=self._generate_summary(base_results),
+                timestamp=time.time(),
+                vehicle_id=kwargs.get("vehicle_id"),
             )
-            has_critical_fail = has_critical_fail or has_cm_fail
-            failed_critical.extend(failed_cm)
+
+        # Run mission-specific checks
+        mission_checker = create_mission_preflight(context)
+        mission_results = await mission_checker.run()
 
         all_results = base_results + mission_results
-        overall = self._determine_overall_status(all_results)
-        summary = self._generate_summary(all_results)
-        summary['cache_stats'] = context.cache_stats
+        overall_status = self._determine_overall_status(all_results)
+
+        critical_fail2, failed_critical2 = self._check_for_critical_fails(mission_results, "mission")
 
         return PreflightReport(
-            mission_type=getattr(mission, 'type', 'unknown'),
-            overall_status=overall,
+            mission_type=mission_type,
+            overall_status=overall_status,
             base_checks=base_results,
             mission_checks=mission_results,
-            summary=summary,
-            timestamp=context.timestamp,
-            vehicle_id=context.vehicle_id,
-            critical_failures=failed_critical or None,
-            mission_checks_skipped=(has_critical_fail and self.early_terminate_on_fail)
+            critical_failures=(failed_critical2 if critical_fail2 else None),
+            summary=self._generate_summary(all_results),
+            timestamp=time.time(),
+            vehicle_id=kwargs.get("vehicle_id"),
         )

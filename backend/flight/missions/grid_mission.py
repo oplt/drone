@@ -132,6 +132,31 @@ def _maybe_get_elevation_provider(
     return None
 
 
+def _maybe_get_batch_elevation_provider(
+        orch: "Orchestrator",
+) -> Optional["BatchElevationProvider"]:
+    """Best-effort batch elevation provider from the orchestrator's maps client."""
+    maps = getattr(orch, "maps", None)
+    if maps is None:
+        return None
+
+    for attr in ("elevations_m", "get_elevations", "elevation_many_m"):
+        fn = getattr(maps, attr, None)
+        if not callable(fn):
+            continue
+
+        def _prov(coords: list[tuple[float, float]], _fn=fn) -> list[float]:
+            try:
+                values = _fn(list(coords))
+            except TypeError:
+                values = _fn(coords=list(coords))
+            return [float(v) for v in values]
+
+        return _prov
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Protocol
 # ---------------------------------------------------------------------------
@@ -140,6 +165,12 @@ class ElevationProvider(Protocol):
     """Callable: (lat, lon) → metres above MSL."""
 
     def __call__(self, lat: float, lon: float) -> float: ...
+
+
+class BatchElevationProvider(Protocol):
+    """Callable: [(lat, lon), ...] → [metres above MSL, ...]."""
+
+    def __call__(self, coords: list[tuple[float, float]]) -> list[float]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +374,67 @@ class GridPlanner:
         return sum(gxs) / len(gxs), sum(gys) / len(gys)
 
     @staticmethod
+    def estimate_mean_gradient_batched(
+            poly_lonlat: list[Tuple[float, float]],
+            elev_many: BatchElevationProvider,
+            sample_n: int = 120,
+            delta_m: float = 8.0,
+    ) -> Tuple[float, float]:
+        """Estimate mean terrain gradient using batched elevation lookups."""
+        lon0, lat0 = _poly_centroid_lonlat(poly_lonlat)
+        poly = GridPlanner._poly_xy(poly_lonlat, lon0, lat0)
+
+        pts = GridPlanner._sample_points_in_poly(poly, sample_n)
+        if not pts:
+            return 0.0, 0.0
+
+        sample_indexes: list[tuple[int, int, int, int]] = []
+        coords: list[tuple[float, float]] = []
+        for x, y in pts:
+            lon_p, lat_p = _xy_m_to_lonlat(x + delta_m, y, lon0, lat0)
+            lon_m, lat_m = _xy_m_to_lonlat(x - delta_m, y, lon0, lat0)
+            x_plus_idx = len(coords)
+            coords.append((lat_p, lon_p))
+            x_minus_idx = len(coords)
+            coords.append((lat_m, lon_m))
+
+            lon_p, lat_p = _xy_m_to_lonlat(x, y + delta_m, lon0, lat0)
+            lon_m, lat_m = _xy_m_to_lonlat(x, y - delta_m, lon0, lat0)
+            y_plus_idx = len(coords)
+            coords.append((lat_p, lon_p))
+            y_minus_idx = len(coords)
+            coords.append((lat_m, lon_m))
+            sample_indexes.append((x_plus_idx, x_minus_idx, y_plus_idx, y_minus_idx))
+
+        values = elev_many(coords)
+        if len(values) != len(coords):
+            raise ValueError(
+                f"Batched gradient lookup returned {len(values)} values for {len(coords)} coordinates."
+            )
+
+        gxs: list[float] = []
+        gys: list[float] = []
+        for x_plus_idx, x_minus_idx, y_plus_idx, y_minus_idx in sample_indexes:
+            dzdx = (values[x_plus_idx] - values[x_minus_idx]) / (2.0 * delta_m)
+            dzdy = (values[y_plus_idx] - values[y_minus_idx]) / (2.0 * delta_m)
+
+            if math.isfinite(dzdx) and math.isfinite(dzdy):
+                gxs.append(dzdx)
+                gys.append(dzdy)
+
+        if not gxs:
+            return 0.0, 0.0
+        return sum(gxs) / len(gxs), sum(gys) / len(gys)
+
+    @staticmethod
+    def contour_aligned_angle_deg(mean_gradient: Tuple[float, float]) -> float:
+        gx, gy = mean_gradient
+        if abs(gx) < 1e-6 and abs(gy) < 1e-6:
+            return 0.0
+        ux, uy = -gy, gx
+        return math.degrees(math.atan2(uy, ux)) % 180.0
+
+    @staticmethod
     def slope_aware_angle_deg(
             poly_lonlat: list[Tuple[float, float]],
             elev: ElevationProvider,
@@ -352,11 +444,8 @@ class GridPlanner:
         Row direction u = rot90(∇z) = (−dz/dy, dz/dx) minimises
         altitude change along each work leg.
         """
-        gx, gy = GridPlanner.estimate_mean_gradient(poly_lonlat, elev)
-        if abs(gx) < 1e-6 and abs(gy) < 1e-6:
-            return 0.0
-        ux, uy = -gy, gx
-        return math.degrees(math.atan2(uy, ux)) % 180.0
+        gxgy = GridPlanner.estimate_mean_gradient(poly_lonlat, elev)
+        return GridPlanner.contour_aligned_angle_deg(gxgy)
 
     @staticmethod
     def slope_corrected_spacing_m(
@@ -618,6 +707,7 @@ class GridMission:
     async def _plan_grid(self, orch: "Orchestrator") -> None:
         """Run GridPlanner and (optionally) apply terrain following."""
         elev = _maybe_get_elevation_provider(orch)
+        batch_elev = _maybe_get_batch_elevation_provider(orch)
         angle: Optional[float] = self.grid_angle_deg
         spacing = float(self.row_spacing_m)
 
@@ -629,13 +719,17 @@ class GridMission:
                 )
                 angle = angle if angle is not None else 0.0
             else:
-                if angle is None:
-                    angle = GridPlanner.slope_aware_angle_deg(
+                if batch_elev is not None:
+                    gxgy = GridPlanner.estimate_mean_gradient_batched(
+                        self.field_polygon_lonlat,
+                        batch_elev,
+                    )
+                else:
+                    gxgy = GridPlanner.estimate_mean_gradient(
                         self.field_polygon_lonlat, elev
                     )
-                gxgy = GridPlanner.estimate_mean_gradient(
-                    self.field_polygon_lonlat, elev
-                )
+                if angle is None:
+                    angle = GridPlanner.contour_aligned_angle_deg(gxgy)
                 spacing = GridPlanner.slope_corrected_spacing_m(
                     spacing, float(angle), gxgy
                 )

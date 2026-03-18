@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Iterable
-from .models import Coordinate, Telemetry
+from .models import Coordinate, LocalCoordinate, Telemetry
 
 
 class MissionAbortRequested(RuntimeError):
@@ -23,6 +23,8 @@ class DroneClient(ABC):
     def get_telemetry(self) -> Telemetry: ...
     @abstractmethod
     def follow_waypoints(self, path: Iterable[Coordinate]) -> None: ...
+    def follow_local_setpoints(self, path: Iterable[LocalCoordinate]) -> None:
+        raise NotImplementedError
     @abstractmethod
     def land(self) -> None: ...
     def wait_until_disarmed(self, timeout_s: float = 900) -> None:
@@ -66,4 +68,11 @@ class DroneClient(ABC):
     # Optional direct image retrieval hook for adapters that can pull images
     # from the vehicle/camera storage after flight.
     def download_captured_images(self, *, destination_dir: str) -> list[str]:
+        return []
+
+    # Optional warehouse/LiDAR capture retrieval hooks.
+    def download_mapping_capture(self, *, destination_dir: str) -> list[str]:
+        return []
+
+    def download_lidar_capture(self, *, destination_dir: str) -> list[str]:
         return []

@@ -11,6 +11,14 @@ class Coordinate:
 
 
 @dataclass
+class LocalCoordinate:
+    north_m: float
+    east_m: float
+    down_m: float
+    yaw_deg: Optional[float] = None
+
+
+@dataclass
 class Telemetry:
     lat: float
     lon: float
@@ -31,6 +39,16 @@ class Telemetry:
     home_lat: Optional[float] = None
     home_lon: Optional[float] = None
     ekf_ok: Optional[bool] = None
+    local_north_m: Optional[float] = None
+    local_east_m: Optional[float] = None
+    local_down_m: Optional[float] = None
+    local_position_ok: Optional[bool] = None
+    local_origin_ok: Optional[bool] = None
+    odometry_healthy: Optional[bool] = None
+    odometry_drift_m: Optional[float] = None
+    lidar_healthy: Optional[bool] = None
+    obstacle_distance_m: Optional[float] = None
+    ceiling_distance_m: Optional[float] = None
     system_time: Optional[datetime] = None  # UTC timestamp
 
 
