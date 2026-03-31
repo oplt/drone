@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 import cv2
 import httpx
+import numpy as np
 import paramiko
 from fastapi import Request
 
@@ -91,19 +92,8 @@ def _ensure_gazebo_streaming_enabled() -> None:
             logger.warning("Failed to enable Gazebo topic %s: %s", topic, exc)
 
 
-async def gazebo_gst_fallback_stream(request: Request) -> AsyncIterator[bytes]:
-    try:
-        udp_port = _get_gazebo_udp_port()
-    except Exception as exc:
-        logger.error("Gazebo fallback source error: %s", exc)
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: text/plain\r\n\r\n"
-            b"Invalid Gazebo video source configuration\r\n\r\n"
-        )
-        return
-
-    cmd = [
+def _gazebo_gst_mjpeg_command(udp_port: int) -> list[str]:
+    return [
         "gst-launch-1.0",
         "-q",
         "udpsrc",
@@ -129,52 +119,6 @@ async def gazebo_gst_fallback_stream(request: Request) -> AsyncIterator[bytes]:
         "fdsink",
         "fd=1",
     ]
-
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-    except FileNotFoundError:
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: text/plain\r\n\r\n"
-            b"gst-launch-1.0 is not installed\r\n\r\n"
-        )
-        return
-
-    try:
-        if proc.stdout is None:
-            raise RuntimeError("Missing stdout pipe for gst-launch fallback")
-        while True:
-            if await request.is_disconnected():
-                break
-
-            try:
-                chunk = await asyncio.wait_for(proc.stdout.read(64 * 1024), timeout=1.0)
-            except asyncio.TimeoutError:
-                if proc.returncode is not None:
-                    raise RuntimeError(f"gst-launch fallback exited with code {proc.returncode}")
-                continue
-
-            if chunk:
-                yield chunk
-                continue
-
-            if proc.returncode is not None:
-                raise RuntimeError(f"gst-launch fallback exited with code {proc.returncode}")
-
-            await asyncio.sleep(0.01)
-
-    finally:
-        if proc.returncode is None:
-            proc.terminate()
-            try:
-                await asyncio.wait_for(proc.wait(), timeout=2.0)
-            except asyncio.TimeoutError:
-                proc.kill()
-                await proc.wait()
 
 
 def _start_streaming_server_via_ssh() -> None:
@@ -217,6 +161,10 @@ def _recording_root_from_path(recording_path: str | None) -> Path:
     return path
 
 
+def _recording_filename(recording_format: str = "mp4") -> str:
+    return f"drone_video_{time.strftime('%Y%m%d_%H%M%S')}.{recording_format}"
+
+
 class SharedVideoRuntime:
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
@@ -227,6 +175,9 @@ class SharedVideoRuntime:
         self._frame_seq = 0
         self._last_error: Optional[str] = None
         self._source_url: Optional[str] = None
+        self._fallback_video_writer: Optional[cv2.VideoWriter] = None
+        self._fallback_recording_filename: Optional[str] = None
+        self._fallback_recording_path: Optional[str] = None
 
     def source_url(self) -> str:
         if settings.drone_video_use_gazebo:
@@ -300,6 +251,143 @@ class SharedVideoRuntime:
             detail = self._last_error or "Timed out waiting for first video frame."
             raise RuntimeError(detail)
 
+    async def _publish_jpeg_frame(self, encoded_frame: bytes) -> None:
+        async with self._condition:
+            self._latest_frame = encoded_frame
+            self._frame_seq += 1
+            self._condition.notify_all()
+        await self._write_fallback_recording_frame(encoded_frame)
+
+    async def _write_fallback_recording_frame(self, encoded_frame: bytes) -> None:
+        async with self._lock:
+            writer = self._fallback_video_writer
+
+        if writer is None or not writer.isOpened():
+            return
+
+        frame = cv2.imdecode(np.frombuffer(encoded_frame, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            return
+
+        async with self._lock:
+            writer = self._fallback_video_writer
+            if writer is not None and writer.isOpened():
+                writer.write(frame)
+
+    def _start_fallback_recording_locked(self, *, recording_root: Path) -> tuple[str, str]:
+        writer = self._fallback_video_writer
+        if writer is not None and writer.isOpened():
+            return (
+                self._fallback_recording_filename or "",
+                self._fallback_recording_path or "",
+            )
+
+        latest_frame = self._latest_frame
+        if latest_frame is None:
+            raise RuntimeError("No video frame is available for Gazebo recording yet.")
+
+        frame = cv2.imdecode(np.frombuffer(latest_frame, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise RuntimeError("Failed to decode current Gazebo video frame.")
+
+        filename = _recording_filename("mp4")
+        full_path = recording_root / filename
+        fps = max(1.0, float(settings.drone_video_fps or 30))
+        writer = cv2.VideoWriter(
+            str(full_path),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            fps,
+            (int(frame.shape[1]), int(frame.shape[0])),
+        )
+        if not writer.isOpened():
+            writer.release()
+            raise RuntimeError(f"Failed to open video writer for {full_path}")
+
+        writer.write(frame)
+        self._fallback_video_writer = writer
+        self._fallback_recording_filename = filename
+        self._fallback_recording_path = str(full_path)
+        logger.info("Started Gazebo fallback recording: %s", full_path)
+        return filename, str(full_path)
+
+    def _stop_fallback_recording_locked(self) -> tuple[str | None, str | None]:
+        filename = self._fallback_recording_filename
+        full_path = self._fallback_recording_path
+        writer = self._fallback_video_writer
+        self._fallback_video_writer = None
+        if writer is not None:
+            writer.release()
+            if full_path:
+                logger.info("Stopped Gazebo fallback recording: %s", full_path)
+        return filename, full_path
+
+    async def _worker_loop_gazebo_fallback(self) -> None:
+        try:
+            udp_port = _get_gazebo_udp_port()
+        except Exception as exc:
+            raise RuntimeError(f"Invalid Gazebo video source configuration: {exc}") from exc
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *_gazebo_gst_mjpeg_command(udp_port),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError("gst-launch-1.0 is not installed") from exc
+
+        buffer = bytearray()
+        try:
+            if proc.stdout is None:
+                raise RuntimeError("Missing stdout pipe for gst-launch fallback")
+
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(proc.stdout.read(64 * 1024), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if proc.returncode is not None:
+                        raise RuntimeError(
+                            f"gst-launch fallback exited with code {proc.returncode}"
+                        )
+                    continue
+
+                if not chunk:
+                    if proc.returncode is not None:
+                        raise RuntimeError(
+                            f"gst-launch fallback exited with code {proc.returncode}"
+                        )
+                    await asyncio.sleep(0.01)
+                    continue
+
+                buffer.extend(chunk)
+                while True:
+                    start = buffer.find(b"\xff\xd8")
+                    if start < 0:
+                        if len(buffer) > 2_000_000:
+                            del buffer[:-1024]
+                        break
+
+                    if start > 0:
+                        del buffer[:start]
+
+                    end = buffer.find(b"\xff\xd9", 2)
+                    if end < 0:
+                        if len(buffer) > 4_000_000:
+                            del buffer[:-2_000_000]
+                        break
+
+                    frame_bytes = bytes(buffer[: end + 2])
+                    del buffer[: end + 2]
+                    await self._publish_jpeg_frame(frame_bytes)
+        finally:
+            if proc.returncode is None:
+                proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()
+
     async def ensure_running(self) -> dict[str, Any]:
         already_running = False
         async with self._lock:
@@ -328,6 +416,10 @@ class SharedVideoRuntime:
     async def _worker_loop(self, source: str) -> None:
         video: Optional[DroneVideoStream] = None
         try:
+            if gazebo_subprocess_fallback_required():
+                await self._worker_loop_gazebo_fallback()
+                return
+
             video = DroneVideoStream(
                 source=source,
                 width=settings.drone_video_width,
@@ -351,10 +443,7 @@ class SharedVideoRuntime:
                 ok, encoded = cv2.imencode(".jpg", frame)
                 if not ok:
                     continue
-                async with self._condition:
-                    self._latest_frame = encoded.tobytes()
-                    self._frame_seq += 1
-                    self._condition.notify_all()
+                await self._publish_jpeg_frame(encoded.tobytes())
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
             raise
@@ -369,6 +458,7 @@ class SharedVideoRuntime:
             async with self._lock:
                 if self._video is video:
                     self._video = None
+                self._stop_fallback_recording_locked()
                 if self._worker_task is asyncio.current_task():
                     self._worker_task = None
 
@@ -377,42 +467,46 @@ class SharedVideoRuntime:
             task = self._worker_task
             video = self._video
             source = self._source_url or self.source_url()
+            fallback_recording = bool(
+                self._fallback_video_writer is not None and self._fallback_video_writer.isOpened()
+            )
+            fallback_recording_file = self._fallback_recording_filename
+            fallback_recording_path = self._fallback_recording_path
+            frame_seq = self._frame_seq
 
         started = task is not None and not task.done()
         state = video.get_connection_status() if video is not None else {}
         recording_path = video.recording_full_path() if video is not None else None
         return {
             "started": started,
-            "healthy": bool(state.get("healthy")) if state else False,
-            "frame_count": int(state.get("frame_count") or 0),
-            "recording": bool(state.get("recording")) if state else False,
-            "recording_file": state.get("recording_file") if state else None,
-            "recording_path": recording_path,
+            "healthy": (
+                bool(state.get("healthy"))
+                if state
+                else bool(started and frame_seq > 0 and not self._last_error)
+            ),
+            "frame_count": int(state.get("frame_count") or frame_seq),
+            "recording": bool(state.get("recording")) if state else fallback_recording,
+            "recording_file": (
+                state.get("recording_file") if state else fallback_recording_file
+            ),
+            "recording_path": recording_path or fallback_recording_path,
             "source": source,
             "error": self._last_error,
         }
 
     async def start_recording(self, *, recording_path: str | None = None) -> dict[str, Any]:
-        if gazebo_subprocess_fallback_required():
-            return {
-                "recording": False,
-                "recording_file": None,
-                "recording_path": None,
-                "error": (
-                    "Backend video recording is unavailable for Gazebo UDP streams "
-                    "because this OpenCV build has no GStreamer support."
-                ),
-            }
-
         await self.ensure_running()
         recording_root = _recording_root_from_path(recording_path)
 
         async with self._lock:
-            if self._video is None:
-                raise RuntimeError("Shared video stream is not available.")
-            self._video.recording_path = str(recording_root)
-            filename = self._video.start_recording()
-            full_path = self._video.recording_full_path()
+            if self._video is not None:
+                self._video.recording_path = str(recording_root)
+                filename = self._video.start_recording()
+                full_path = self._video.recording_full_path()
+            else:
+                filename, full_path = self._start_fallback_recording_locked(
+                    recording_root=recording_root
+                )
 
         status = await self.status()
         status.update(
@@ -426,14 +520,17 @@ class SharedVideoRuntime:
 
     async def stop_recording(self) -> dict[str, Any]:
         async with self._lock:
-            if self._video is None:
-                return {
-                    "recording": False,
-                    "recording_file": None,
-                    "recording_path": None,
-                }
-            full_path = self._video.recording_full_path()
-            filename = self._video.stop_recording()
+            if self._video is not None:
+                full_path = self._video.recording_full_path()
+                filename = self._video.stop_recording()
+            else:
+                filename, full_path = self._stop_fallback_recording_locked()
+                if filename is None and full_path is None:
+                    return {
+                        "recording": False,
+                        "recording_file": None,
+                        "recording_path": None,
+                    }
 
         status = await self.status()
         status.update(

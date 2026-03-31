@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Dict
 
 from backend.config import RuntimeSettings as EnvSettings
 from backend.db.repository.settings_repo import SettingsRepository
 
 _env = EnvSettings()  # env defaults / bootstrap
+logger = logging.getLogger(__name__)
 
 
 def _env_string(value: Any) -> str:
@@ -172,6 +174,16 @@ async def get_runtime_settings(repo: SettingsRepository) -> EnvSettings:
     flattens to EnvSettings, merges with env defaults, and updates backend.config.settings in-place.
     """
     effective_doc = await repo.get_effective_settings_doc()
+    camera_doc = effective_doc.setdefault("camera", {})
+    save_path = camera_doc.get("drone_video_save_path")
+    default_save_path = (_env.drone_video_save_path or "").strip()
+    if default_save_path and not str(save_path or "").strip():
+        camera_doc["drone_video_save_path"] = default_save_path
+        await repo.put_settings_doc(effective_doc)
+        logger.info(
+            "Backfilled missing camera.drone_video_save_path from runtime defaults: %s",
+            default_save_path,
+        )
     overlay = _flatten_for_env(effective_doc)
 
     merged = _env.model_dump()

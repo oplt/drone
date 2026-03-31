@@ -47,6 +47,14 @@ class Telemetry:
     odometry_healthy: Optional[bool] = None
     odometry_drift_m: Optional[float] = None
     lidar_healthy: Optional[bool] = None
+    estimator_ready: Optional[bool] = None
+    rangefinder_healthy: Optional[bool] = None
+    proximity_healthy: Optional[bool] = None
+    slam_ready: Optional[bool] = None
+    slam_tracking_ok: Optional[bool] = None
+    localization_confidence: Optional[float] = None
+    dock_reference_ready: Optional[bool] = None
+    takeoff_clearance_m: Optional[float] = None
     obstacle_distance_m: Optional[float] = None
     ceiling_distance_m: Optional[float] = None
     system_time: Optional[datetime] = None  # UTC timestamp

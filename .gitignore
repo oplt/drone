@@ -354,6 +354,10 @@ Thumbs.db
 
 /backend/certs
 /backend/storage
+/backend/video/recordings
+
 
 TODO.txt
 
+
+backend/video/recordings/*.mp4

@@ -411,9 +411,25 @@ class Orchestrator:
     async def _resolve_flight_record_anchor(
             self,
             *,
+            mission=None,
             waypoints: list[Coordinate],
             alt: float,
     ) -> tuple[Coordinate, Coordinate, str]:
+        if mission is not None:
+            anchor_fn = getattr(mission, "get_flight_record_anchor", None)
+            if callable(anchor_fn):
+                try:
+                    anchor = anchor_fn(float(alt))
+                    if (
+                        isinstance(anchor, tuple)
+                        and len(anchor) == 3
+                        and isinstance(anchor[0], Coordinate)
+                        and isinstance(anchor[1], Coordinate)
+                    ):
+                        return anchor
+                except Exception:
+                    logger.exception("Failed resolving mission-specific flight record anchor")
+
         if waypoints:
             return waypoints[0], waypoints[-1], "mission_waypoints"
 
@@ -477,6 +493,7 @@ class Orchestrator:
         self._flight_id = None
         self._running = True
         tasks: list[asyncio.Task] = []
+        shared_runtime_recording_active = False
         waypoints = mission.get_waypoints()
         cruise_alt = alt
 
@@ -544,6 +561,7 @@ class Orchestrator:
             # ------------------------------------------------------------------
             try:
                 start, dest, anchor_source = await self._resolve_flight_record_anchor(
+                    mission=mission,
                     waypoints=waypoints,
                     alt=alt,
                 )
@@ -620,7 +638,51 @@ class Orchestrator:
                 raise
 
             # ------------------------------------------------------------------
-            # STEP 5: Start background tasks and run flight.
+            # STEP 5: Start video recording
+            # ------------------------------------------------------------------
+            if (
+                settings.drone_video_use_gazebo
+                and settings.drone_video_save_stream
+                and getattr(mission, "mission_type", None) != "warehouse_scan"
+            ):
+                try:
+                    from backend.video.runtime import shared_video_runtime
+
+                    logger.info("Starting shared Gazebo video recording...")
+                    recording_status = await shared_video_runtime.start_recording()
+                    shared_runtime_recording_active = bool(recording_status.get("recording"))
+                    if shared_runtime_recording_active:
+                        logger.info(
+                            "✅ Shared Gazebo video recording started: %s",
+                            recording_status.get("recording_path"),
+                        )
+                        if self._flight_id is not None:
+                            await self.repo.add_event(
+                                self._flight_id,
+                                "video_recording_started",
+                                {
+                                    "source": "shared_runtime",
+                                    "recording_file": recording_status.get("recording_file"),
+                                    "recording_path": recording_status.get("recording_path"),
+                                },
+                            )
+                    else:
+                        logger.warning(
+                            "Shared Gazebo video recording was requested but not started: %s",
+                            recording_status.get("error") or "unknown error",
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to start shared Gazebo video recording: {e}")
+            elif self.video and getattr(self.video, "enable_recording", False):
+                try:
+                    logger.info("Starting video recording...")
+                    await asyncio.to_thread(self.video.start_recording)
+                    logger.info("✅ Video recording started")
+                except Exception as e:
+                    logger.error(f"Failed to start video recording: {e}")
+
+            # ------------------------------------------------------------------
+            # STEP 6: Start background tasks and run flight.
             # ------------------------------------------------------------------
             try:
                 tasks = [
@@ -669,6 +731,24 @@ class Orchestrator:
 
             if pending_tasks:
                 await asyncio.gather(*pending_tasks, return_exceptions=True)
+
+            if shared_runtime_recording_active:
+                try:
+                    from backend.video.runtime import shared_video_runtime
+
+                    recording_status = await shared_video_runtime.stop_recording()
+                    if self._flight_id is not None:
+                        await self.repo.add_event(
+                            self._flight_id,
+                            "video_recording_stopped",
+                            {
+                                "source": "shared_runtime",
+                                "recording_file": recording_status.get("recording_file"),
+                                "recording_path": recording_status.get("recording_path"),
+                            },
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to stop shared Gazebo video recording: {e}")
 
             try:
                 await self._cleanup()

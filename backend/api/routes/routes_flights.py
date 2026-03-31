@@ -43,6 +43,10 @@ from backend.flight.missions.warehouse_mission import (
                                     WarehouseScanMissionParams,
                                     build_warehouse_scan_mission,
                                 )
+from backend.flight.missions.warehouse_exploration_mission import (
+    WarehouseExplorationMissionParams,
+    build_unknown_warehouse_exploration_mission,
+)
 from backend.flight.preflight_check.schemas import PreflightReport
 from backend.flight.missions.waypoints_mission import WaypointsMission
 from backend.main import _build_orchestrator
@@ -240,6 +244,7 @@ class MissionCreateIn(BaseModel):
     # Grid mission data
     grid: Optional[GridMissionParams] = None
     warehouse_scan: Optional[WarehouseScanMissionParams] = None
+    warehouse_exploration: Optional[WarehouseExplorationMissionParams] = None
     private_patrol: Optional[PrivatePatrolMissionParams] = None
     mission_profile: Optional[PhotogrammetryMissionProfile] = None
     preflight_run_id: Optional[str] = Field(
@@ -272,6 +277,11 @@ class MissionCreateIn(BaseModel):
             if self.warehouse_scan is None:
                 raise ValueError(
                     "mission_type='warehouse_scan' requires a 'warehouse_scan' object."
+                )
+        elif self.mission_type == MissionType.INDOOR_EXPLORATION:
+            if self.warehouse_exploration is None:
+                raise ValueError(
+                    "mission_type='indoor_exploration' requires a 'warehouse_exploration' object."
                 )
         elif self.mission_type in {MissionType.PERIMETER_PATROL, MissionType.PRIVATE_PATROL}:
             if self.private_patrol is None:
@@ -793,6 +803,14 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: Optional[int] = None) 
         return build_warehouse_scan_mission(
             base_height_m=float(payload.cruise_alt),
             scan=scan,
+            owner_id=owner_id,
+        )
+
+    if payload.mission_type == MissionType.INDOOR_EXPLORATION:
+        exploration = payload.warehouse_exploration  # validated non-None by model validator
+        return build_unknown_warehouse_exploration_mission(
+            hover_alt_m=float(payload.cruise_alt),
+            exploration=exploration,
             owner_id=owner_id,
         )
 

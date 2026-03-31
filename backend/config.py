@@ -248,7 +248,7 @@ class RuntimeSettings(BaseSettings):
     drone_video_fps: int = 30
     drone_video_timeout: float = 10.0
     drone_video_fallback: str = ""
-    drone_video_save_stream: bool = False
+    drone_video_save_stream: bool = True
     drone_video_save_path: str = "./backend/video/recordings/"
 
     # Wireless streaming network configuration

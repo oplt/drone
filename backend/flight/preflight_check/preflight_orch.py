@@ -6,9 +6,15 @@ from typing import Dict, Any, List, Optional, Union
 from .preflight_context import PreflightContext
 from .schemas import PreflightReport, CheckResult, CheckStatus
 from .base import BasePreflightChecks
+from .indoor_checks import IndoorWarehouseBasePreflightChecks
 from .mission_specific import create_mission_preflight
 from .cache import TerrainCache
 from .models import MissionDataPreprocessor
+from .profiles import (
+    INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS,
+    INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS,
+    indoor_warehouse_overrides,
+)
 from ..missions.schemas import create_mission_from_dict, Mission
 
 logger = logging.getLogger(__name__)
@@ -122,6 +128,11 @@ class PreflightOrchestrator:
                 ),
             })
             gps_timeout_s = float(kwargs.get("gps_timeout_s") or 3.0)
+        elif mission_type == "indoor_exploration":
+            overrides.update(indoor_warehouse_overrides())
+            self.critical_base_checks = INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS
+            self.critical_mission_checks = INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS
+            gps_timeout_s = 0.0
 
         kwargs["config_overrides"] = overrides
 
@@ -131,10 +142,18 @@ class PreflightOrchestrator:
         # Calculate estimated time
         total_distance = context.total_distance()
         speed = getattr(mission, 'speed', None) or 10
-        estimated_time_s = kwargs.get('estimated_time_s') or (total_distance / speed)
+        estimated_time_s = (
+            kwargs.get('estimated_time_s')
+            or getattr(mission, 'max_mission_time_s', None)
+            or (total_distance / speed)
+        )
 
         # Run base checks
-        base_checker = BasePreflightChecks(context)
+        base_checker = (
+            IndoorWarehouseBasePreflightChecks(context)
+            if mission_type == "indoor_exploration"
+            else BasePreflightChecks(context)
+        )
         base_results = await base_checker.run(
             estimated_time_s=estimated_time_s,
             mission_waypoints=mission.waypoints,

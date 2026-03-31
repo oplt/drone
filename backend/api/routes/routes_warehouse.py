@@ -19,6 +19,9 @@ from backend.flight.missions.warehouse_mission import (
     WarehouseScanMissionParams,
     merge_warehouse_mission_defaults,
 )
+from backend.flight.missions.warehouse_exploration_mission import (
+    WarehouseExplorationMissionParams,
+)
 from backend.auth.deps import require_user
 from backend.db.models import SettingsRow, WarehouseAsset, WarehouseMap, WarehouseMappingJob, WarehouseModel
 from backend.db.repository.warehouse_mapping_repo import WarehouseMappingRepository
@@ -44,6 +47,16 @@ class WarehouseScanStartIn(WarehouseMissionDefaultsPatch):
     warehouse_map_id: int = Field(..., ge=1)
     mission_name: str = Field(default="Warehouse Scan", min_length=1, max_length=120)
     reference_mapping_job_id: Optional[int] = Field(default=None, ge=1)
+
+
+class WarehouseExplorationStartIn(BaseModel):
+    warehouse_map_id: int = Field(..., ge=1)
+    mission_name: str = Field(default="Warehouse Exploration", min_length=1, max_length=120)
+    hover_alt_m: float = Field(default=2.5, gt=0.2, le=20.0)
+    dock_id: Optional[int] = Field(default=None, ge=1)
+    exploration: WarehouseExplorationMissionParams = Field(
+        default_factory=WarehouseExplorationMissionParams,
+    )
 
 
 class WarehouseMissionLaunchOut(BaseModel):
@@ -229,6 +242,34 @@ def _dock_config_from_station(dock) -> WarehouseDockConfig:
         marker_id=dock.marker_id,
         dock_yaw_deg=dock.pose_local_json.get("yaw_deg"),
         precision_required=bool(dock.meta_data.get("precision_required", True)),
+    )
+
+
+def _dock_config_params(dock_config: Optional[WarehouseDockConfig]) -> Optional[WarehouseDockConfigParams]:
+    if dock_config is None:
+        return None
+    return WarehouseDockConfigParams(
+        dock_pose=WarehouseDockPoseParams(
+            x_m=float(dock_config.dock_pose.x_m),
+            y_m=float(dock_config.dock_pose.y_m),
+            z_m=float(dock_config.dock_pose.z_m),
+            yaw_deg=dock_config.dock_pose.yaw_deg,
+        ),
+        entry_pose=WarehouseDockPoseParams(
+            x_m=float(dock_config.entry_pose.x_m),
+            y_m=float(dock_config.entry_pose.y_m),
+            z_m=float(dock_config.entry_pose.z_m),
+            yaw_deg=dock_config.entry_pose.yaw_deg,
+        ),
+        exit_pose=WarehouseDockPoseParams(
+            x_m=float(dock_config.exit_pose.x_m),
+            y_m=float(dock_config.exit_pose.y_m),
+            z_m=float(dock_config.exit_pose.z_m),
+            yaw_deg=dock_config.exit_pose.yaw_deg,
+        ),
+        marker_id=dock_config.marker_id,
+        dock_yaw_deg=dock_config.dock_yaw_deg,
+        precision_required=bool(dock_config.precision_required),
     )
 
 
@@ -424,33 +465,7 @@ async def start_warehouse_scan(
             warehouse_map_id=int(warehouse_map.id),
             warehouse_name=warehouse_map.name,
             reference_mapping_job_id=payload.reference_mapping_job_id,
-            dock_config=(
-                WarehouseDockConfigParams(
-                    dock_pose=WarehouseDockPoseParams(
-                        x_m=float(dock_config.dock_pose.x_m),
-                        y_m=float(dock_config.dock_pose.y_m),
-                        z_m=float(dock_config.dock_pose.z_m),
-                        yaw_deg=dock_config.dock_pose.yaw_deg,
-                    ),
-                    entry_pose=WarehouseDockPoseParams(
-                        x_m=float(dock_config.entry_pose.x_m),
-                        y_m=float(dock_config.entry_pose.y_m),
-                        z_m=float(dock_config.entry_pose.z_m),
-                        yaw_deg=dock_config.entry_pose.yaw_deg,
-                    ),
-                    exit_pose=WarehouseDockPoseParams(
-                        x_m=float(dock_config.exit_pose.x_m),
-                        y_m=float(dock_config.exit_pose.y_m),
-                        z_m=float(dock_config.exit_pose.z_m),
-                        yaw_deg=dock_config.exit_pose.yaw_deg,
-                    ),
-                    marker_id=dock_config.marker_id,
-                    dock_yaw_deg=dock_config.dock_yaw_deg,
-                    precision_required=bool(dock_config.precision_required),
-                )
-                if dock_config is not None
-                else None
-            ),
+            dock_config=_dock_config_params(dock_config),
             corridor_spacing_m=float(mission_defaults.corridor_spacing_m),
             aisle_axis_deg=mission_defaults.aisle_axis_deg,
             clearance_m=float(mission_defaults.clearance_m),
@@ -476,6 +491,75 @@ async def start_warehouse_scan(
             status_code=412,
             detail=(
                 f"Warehouse preflight {preflight.overall_status}. "
+                "Mission start blocked."
+            ),
+        )
+
+    mission_payload.preflight_run_id = preflight.preflight_run_id
+    mission = await routes_flights.create_mission(mission_payload, user=user)
+    return WarehouseMissionLaunchOut(
+        warehouse_map_id=int(warehouse_map.id),
+        warehouse_name=warehouse_map.name,
+        preflight=preflight,
+        mission=mission,
+    )
+
+
+@router.post("/missions/exploration/start", response_model=WarehouseMissionLaunchOut)
+async def start_warehouse_exploration(
+        payload: WarehouseExplorationStartIn,
+        db: AsyncSession = Depends(get_db),
+        user=Depends(require_user),
+) -> WarehouseMissionLaunchOut:
+    warehouse_map = await _get_owned_warehouse_map(
+        db,
+        warehouse_map_id=int(payload.warehouse_map_id),
+        owner_id=int(user.id),
+    )
+
+    docks = await repo.list_dock_stations(db, warehouse_map_id=int(warehouse_map.id))
+    selected_station = None
+    if payload.dock_id is not None:
+        for dock in docks:
+            if int(dock.id) == int(payload.dock_id):
+                selected_station = dock
+                break
+        if selected_station is None:
+            raise HTTPException(status_code=404, detail="Requested dock station not found")
+    elif docks:
+        selected_station = docks[0]
+
+    dock_config = payload.exploration.dock_config
+    if dock_config is None and selected_station is not None:
+        dock_config = _dock_config_params(_dock_config_from_station(selected_station))
+    if dock_config is None:
+        raise HTTPException(
+            status_code=412,
+            detail="Indoor warehouse exploration requires a registered dock station or explicit dock_config.",
+        )
+
+    exploration_payload = WarehouseExplorationMissionParams.model_validate(
+        {
+            **payload.exploration.model_dump(mode="python", exclude={"warehouse_map_id", "warehouse_name", "dock_config"}),
+            "warehouse_map_id": int(warehouse_map.id),
+            "warehouse_name": warehouse_map.name,
+            "dock_config": dock_config.model_dump(mode="python"),
+        }
+    )
+
+    mission_payload = routes_flights.MissionCreateIn(
+        name=payload.mission_name.strip(),
+        cruise_alt=float(payload.hover_alt_m),
+        mission_type=MissionType.INDOOR_EXPLORATION,
+        warehouse_exploration=exploration_payload,
+    )
+
+    preflight = await routes_flights.run_preflight(mission_payload, user=user)
+    if not preflight.can_start_mission:
+        raise HTTPException(
+            status_code=412,
+            detail=(
+                f"Warehouse exploration preflight {preflight.overall_status}. "
                 "Mission start blocked."
             ),
         )

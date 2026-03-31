@@ -7,6 +7,7 @@ class MissionType(str, Enum):
     GRID = "grid"
     PHOTOGRAMMETRY = "photogrammetry"
     WAREHOUSE_SCAN = "warehouse_scan"
+    INDOOR_EXPLORATION = "indoor_exploration"
     ORBIT = "orbit"
     TERRAIN_FOLLOW = "terrain_follow"
     PERIMETER_PATROL = "perimeter_patrol"
@@ -305,12 +306,70 @@ class WarehouseScanMission(BaseMission):
     local_control_mode: Literal["local_setpoint"] = "local_setpoint"
 
 
+class IndoorLocalPose(BaseModel):
+    x_m: float
+    y_m: float
+    z_m: float = 0.0
+    yaw_deg: Optional[float] = Field(default=None, ge=-180.0, le=360.0)
+    frame_id: str = Field(default="map", min_length=1, max_length=32)
+
+
+class IndoorDockPose(BaseModel):
+    dock_id: str = Field(..., min_length=1, max_length=128)
+    pose: IndoorLocalPose
+    entry_pose: IndoorLocalPose
+    exit_pose: IndoorLocalPose
+    marker_id: Optional[str] = Field(default=None, max_length=128)
+    precision_required: bool = True
+
+
+class IndoorExplorationMission(BaseMission):
+    type: Literal["indoor_exploration"]
+    waypoints: List[Waypoint] = Field(default_factory=list)
+    speed: Optional[float] = Field(default=0.8, gt=0.0, le=20.0)
+    altitude_agl: Optional[float] = Field(default=None, ge=0.0, le=500.0)
+    dock: IndoorDockPose
+    safe_takeoff_bubble_radius_m: float = Field(default=1.5, gt=0.1, le=20.0)
+    battery_return_reserve_pct: float = Field(default=30.0, ge=5.0, le=95.0)
+    battery_emergency_land_reserve_pct: float = Field(default=20.0, ge=5.0, le=95.0)
+    localization_confidence_min: float = Field(default=0.65, ge=0.0, le=1.0)
+    localization_confidence_return_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    obstacle_clearance_m: float = Field(default=0.8, gt=0.1, le=20.0)
+    minimum_corridor_clearance_m: float = Field(default=1.0, gt=0.1, le=20.0)
+    max_mission_time_s: float = Field(default=900.0, gt=10.0, le=86_400.0)
+    max_exploration_radius_m: float = Field(default=80.0, gt=1.0, le=2_000.0)
+    max_path_length_m: float = Field(default=600.0, gt=1.0, le=10_000.0)
+    frontier_min_gain: float = Field(default=1.0, ge=0.0, le=1_000.0)
+    skeleton_build_radius_m: float = Field(default=12.0, gt=0.5, le=500.0)
+    force_loop_closure_every_n_segments: int = Field(default=3, ge=1, le=100)
+    max_unknown_penetration_m: float = Field(default=2.0, ge=0.0, le=100.0)
+    dock_search_radius_m: float = Field(default=1.5, gt=0.1, le=25.0)
+    dock_approach_speed_mps: float = Field(default=0.3, gt=0.05, le=5.0)
+    dock_descent_speed_mps: float = Field(default=0.15, gt=0.01, le=2.0)
+    docking_timeout_s: float = Field(default=90.0, gt=5.0, le=3_600.0)
+    occupancy_resolution_m: float = Field(default=0.5, gt=0.05, le=5.0)
+    map_update_hz: float = Field(default=2.0, gt=0.1, le=50.0)
+    loop_closure_preference_weight: float = Field(default=1.0, ge=0.0, le=10.0)
+    backtrack_node_limit: int = Field(default=6, ge=1, le=100)
+    local_control_mode: Literal["local_setpoint"] = "local_setpoint"
+
+    @model_validator(mode="after")
+    def validate_reserves(self) -> "IndoorExplorationMission":
+        if self.battery_return_reserve_pct <= self.battery_emergency_land_reserve_pct:
+            raise ValueError(
+                "battery_return_reserve_pct must be greater than "
+                "battery_emergency_land_reserve_pct"
+            )
+        return self
+
+
 Mission = Annotated[
     Union[
         WaypointMission,
         GridMission,
         PhotogrammetryMission,
         WarehouseScanMission,
+        IndoorExplorationMission,
         OrbitMission,
         TerrainFollowMission,
         PerimeterPatrolMission,
@@ -330,6 +389,7 @@ def create_mission_from_dict(data: dict) -> Mission:
         'survey':            GridMission,
         'photogrammetry':    PhotogrammetryMission,
         'warehouse_scan':    WarehouseScanMission,
+        'indoor_exploration': IndoorExplorationMission,
         'orbit':             OrbitMission,
         'circle':            OrbitMission,
         'poi':               OrbitMission,

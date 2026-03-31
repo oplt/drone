@@ -86,7 +86,7 @@ class CameraSettings(BaseModel):
     drone_video_save_path: str
     drone_video_fallback: str = ""
     drone_video_enabled: bool = True
-    drone_video_save_stream: bool = False
+    drone_video_save_stream: bool = True
 
 
 class PhotogrammetrySettings(BaseModel):
