@@ -324,8 +324,6 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Build output
-dist/
-build/
 .out/
 .next/
 .vite/
@@ -336,7 +334,6 @@ build/
 .eslintcache
 
 # Env files
-.env
 .env.local
 .env.*.local
 
@@ -360,4 +357,5 @@ Thumbs.db
 TODO.txt
 
 
-backend/video/recordings/*.mp4
+backend/video/recordings
+backend/logs

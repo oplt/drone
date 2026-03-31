@@ -1,6 +1,6 @@
-# TerraField Drone Operations Platform
+# Drone Operations Platform
 
-TerraField is a full-stack drone operations platform for planning, launching, and monitoring autonomous missions from a single operator console. This repository combines a FastAPI backend that talks to vehicles, telemetry, video, mapping, and alerting services with a React dashboard for field teams.
+Ths app is a full-stack drone operations platform for planning, launching, and monitoring autonomous missions from a single operator console. This repository combines a FastAPI backend that talks to vehicles, telemetry, video, mapping, and alerting services with a React dashboard for field teams.
 
 The product direction is agronomy-first, but the codebase also includes warehouse scanning, indoor warehouse exploration, private patrol, and animal monitoring workflows.
 
@@ -157,8 +157,5 @@ Additional modules cover auth, analytics, geofences, fields, settings, alerts, v
 - Photogrammetry is intentionally offloaded to worker processes rather than the API server.
 - Some UI copy is agronomy-specific, while the backend supports broader drone operations use cases.
 
-## Documentation
 
-- `docs/indoor_warehouse_exploration_mission.md`
-- `backend/tasks/README.md`
 
