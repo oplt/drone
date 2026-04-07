@@ -7,14 +7,37 @@ from backend.auth.deps import require_user
 from backend.db.repository.alerts_repo import AlertRepository
 from backend.db.session import get_db
 from backend.messaging.websocket import telemetry_manager
+from backend.runtime import (
+    AlertEventEnvelopeV1,
+    AlertEventPayloadV1,
+    AlertSnapshotV1,
+    mission_context_from_runtime,
+    next_runtime_sequence,
+    utc_now,
+)
 from backend.schemas.alerts import AlertCountResponse, AlertListResponse, OperationalAlertOut
+from backend.services.patrol.mission_runtime_store import mission_runtime_store
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 repo = AlertRepository()
 
 
-def _alert_payload(alert) -> dict:
-    return OperationalAlertOut.model_validate(alert).model_dump(mode="json")
+async def _alert_event_message(*, action: str, alert) -> dict:
+    active_runtime = await mission_runtime_store.get_active_context()
+    snapshot = AlertSnapshotV1.from_alert(alert)
+    envelope = AlertEventEnvelopeV1(
+        mission_runtime_id=getattr(active_runtime, "client_flight_id", None),
+        db_flight_id=getattr(active_runtime, "db_flight_id", None),
+        sequence=next_runtime_sequence(
+            getattr(active_runtime, "client_flight_id", None),
+            "alerts.api",
+        ),
+        emitted_at=utc_now(),
+        source="alerts.api",
+        mission=mission_context_from_runtime(active_runtime),
+        payload=AlertEventPayloadV1(action=action, alert=snapshot),
+    )
+    return envelope.to_legacy_websocket_message()
 
 
 @router.get("", response_model=AlertListResponse)
@@ -58,11 +81,7 @@ async def acknowledge_alert(
     await db.commit()
     await db.refresh(alert)
     await telemetry_manager.broadcast(
-        {
-            "type": "alert_event",
-            "action": "acknowledged",
-            "alert": _alert_payload(alert),
-        }
+        await _alert_event_message(action="acknowledged", alert=alert)
     )
     return alert
 
@@ -84,10 +103,6 @@ async def resolve_alert(
     await db.commit()
     await db.refresh(alert)
     await telemetry_manager.broadcast(
-        {
-            "type": "alert_event",
-            "action": "resolved",
-            "alert": _alert_payload(alert),
-        }
+        await _alert_event_message(action="resolved", alert=alert)
     )
     return alert

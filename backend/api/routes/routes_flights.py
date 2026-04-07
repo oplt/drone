@@ -6,10 +6,10 @@ import json
 import logging
 import math
 import os
-import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, List, Literal, Optional, Union, Annotated
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field, model_validator
@@ -51,10 +51,24 @@ from backend.flight.preflight_check.schemas import PreflightReport
 from backend.flight.missions.waypoints_mission import WaypointsMission
 from backend.main import _build_orchestrator
 from backend.messaging.websocket import telemetry_manager
+from backend.runtime import (
+    FlightEventEnvelopeV1,
+    FlightEventPayloadV1,
+    FlightEventSeverityV1,
+    MissionLifecycleEnvelopeV1,
+    MissionLifecyclePayloadV1,
+    mission_context_from_runtime,
+    next_runtime_sequence,
+    utc_now,
+)
 from backend.flight.missions.schemas import MissionType, Waypoint
-from backend.services.patrol.mission_runtime_store import (
-    MissionRuntimeRecord,
-    mission_runtime_store,
+from backend.db.repository.mission_runtime_repo import mission_runtime_repo
+from backend.db.repository.operator_command_repo import operator_command_repo
+from backend.db.repository.preflight_run_repo import preflight_run_repo
+from backend.flight.state_machine import (
+    allowed_command_target,
+    is_terminal as _sm_is_terminal,
+    TERMINAL_STATES as _SM_TERMINAL_STATES,
 )
 
 
@@ -320,6 +334,29 @@ class MissionRuntimeOut(BaseModel):
     last_error: Optional[str] = None
 
 
+class StateTransitionOut(BaseModel):
+    """Single entry in a mission's reconstructed state timeline."""
+    state: str
+    entered_at: float   # Unix timestamp
+    trigger: str        # "mission_created" | "execution_started" | "command:<cmd>" | "execution_ended"
+    command_id: Optional[str] = None
+    command: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class ResumableMissionOut(BaseModel):
+    """Terminal mission that has checkpointed progress and can be re-launched."""
+    flight_id: str
+    mission_name: str
+    mission_type: str
+    mission_task_type: Optional[str] = None
+    state: str
+    ended_at: Optional[float] = None
+    failure_reason: Optional[str] = None
+    resume_metadata: dict
+    mission_params: dict
+
+
 class MissionCommandIn(BaseModel):
     idempotency_key: Optional[str] = Field(
         default=None,
@@ -375,17 +412,57 @@ class _PreflightRunRecord:
     expires_at: float
     report: dict
 
+    @classmethod
+    def from_db(cls, row: Any) -> "_PreflightRunRecord":
+        """Build a value-object DTO from a PreflightRun ORM row."""
+        created_ts = (
+            row.created_at.timestamp()
+            if isinstance(row.created_at, datetime)
+            else float(row.created_at or 0)
+        )
+        expires_ts = (
+            row.expires_at.timestamp()
+            if isinstance(row.expires_at, datetime)
+            else (created_ts + PREFLIGHT_RUN_TTL_SECONDS)
+        )
+        report_raw = {
+            "mission_type": row.mission_type,
+            "overall_status": row.overall_status,
+            "base_checks": row.base_checks or [],
+            "mission_checks": row.mission_checks or [],
+            "critical_failures": [
+                {"name": n, "status": "FAIL", "message": None}
+                for n in (row.critical_failures or [])
+            ],
+            "summary": row.summary or {},
+        }
+        return cls(
+            run_id=row.run_uuid,
+            user_id=row.user_id or 0,
+            mission_fingerprint=row.mission_fingerprint or "",
+            overall_status=row.overall_status,
+            created_at=created_ts,
+            expires_at=expires_ts,
+            report=report_raw,
+        )
+
 
 MissionLifecycleState = Literal[
+    "planned",
+    "preflight",
     "queued",
-    "running",
+    "arming",
+    "airborne",
+    "running",   # legacy alias for airborne
     "paused",
+    "resumed",
+    "aborting",
     "aborted",
     "completed",
     "failed",
 ]
-MissionCommand = Literal["pause", "resume", "abort"]
-TERMINAL_MISSION_STATES = {"aborted", "completed", "failed"}
+MissionCommand = Literal["pause", "resume", "abort", "rth", "land"]
+TERMINAL_MISSION_STATES = _SM_TERMINAL_STATES
 
 
 @dataclass
@@ -422,10 +499,52 @@ class _MissionRuntimeRecord:
     idempotency_results: dict[str, dict] = field(default_factory=dict)
     private_patrol_ai_tasks: List[str] = field(default_factory=list)
 
+    @classmethod
+    def from_db(cls, row: Any) -> "_MissionRuntimeRecord":
+        """Build a value-object DTO from a MissionRuntime ORM row."""
+        created_ts = (
+            row.created_at.timestamp()
+            if isinstance(row.created_at, datetime)
+            else float(row.created_at or 0)
+        )
+        updated_ts = (
+            row.updated_at.timestamp()
+            if isinstance(row.updated_at, datetime)
+            else created_ts
+        )
+        audit_records = [
+            _MissionCommandAudit(
+                command_id=e.get("command_id", ""),
+                command=e.get("command", ""),
+                idempotency_key=e.get("idempotency_key", ""),
+                requested_by_user_id=int(e.get("requested_by_user_id", 0)),
+                requested_at=float(e.get("requested_at", 0)),
+                state_before=e.get("state_before", ""),
+                state_after=e.get("state_after", ""),
+                accepted=bool(e.get("accepted", False)),
+                message=e.get("message", ""),
+                reason=e.get("reason"),
+            )
+            for e in (row.command_audit or [])
+        ]
+        return cls(
+            client_flight_id=row.client_flight_id,
+            user_id=row.user_id or 0,
+            mission_name=row.mission_name,
+            mission_type=row.mission_type,
+            mission_task_type=row.mission_task_type,
+            private_patrol_task_type=row.private_patrol_task_type,
+            preflight_run_id=row.preflight_run_uuid,
+            state=row.state,
+            created_at=created_ts,
+            updated_at=updated_ts,
+            db_flight_id=row.flight_id,
+            last_error=row.failure_reason,
+            command_audit=audit_records,
+            idempotency_results=dict(row.idempotency_results or {}),
+            private_patrol_ai_tasks=list(row.ai_tasks or []),
+        )
 
-
-_preflight_runs_lock = threading.Lock()
-_preflight_runs: dict[str, _PreflightRunRecord] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -450,34 +569,36 @@ async def get_orchestrator() -> Any:
 # Mission runtime lifecycle store
 # ---------------------------------------------------------------------------
 
+# Legacy TTL / history constants kept so any external env vars still parse cleanly.
+# They are no longer used for in-memory eviction — the DB is authoritative.
 MISSION_RUNTIME_TTL_SECONDS = max(
-    600,
-    int(os.getenv("MISSION_RUNTIME_TTL_SECONDS", "86400")),
+    600, int(os.getenv("MISSION_RUNTIME_TTL_SECONDS", "86400"))
 )
 MISSION_RUNTIME_MAX_HISTORY = max(
-    20,
-    int(os.getenv("MISSION_RUNTIME_MAX_HISTORY", "200")),
+    20, int(os.getenv("MISSION_RUNTIME_MAX_HISTORY", "200"))
 )
-
-_mission_runtime_lock = asyncio.Lock()
-_active_mission_runtime_id: Optional[str] = None
-_mission_runtimes: dict[str, _MissionRuntimeRecord] = {}
 
 
 def _is_terminal_state(state: str) -> bool:
-    return str(state).lower() in TERMINAL_MISSION_STATES
+    return _sm_is_terminal(str(state).lower())
 
 
 def _db_status_for_runtime_state(state: MissionLifecycleState) -> FlightStatus:
-    if state == "running":
-        return FlightStatus.ACTIVE
-    if state == "paused":
-        return FlightStatus.PAUSED
-    if state == "aborted":
-        return FlightStatus.INTERRUPTED
-    if state == "completed":
-        return FlightStatus.COMPLETED
-    return FlightStatus.FAILED
+    _map = {
+        "planned":   FlightStatus.ACTIVE,
+        "preflight": FlightStatus.ACTIVE,
+        "queued":    FlightStatus.ACTIVE,
+        "arming":    FlightStatus.ACTIVE,
+        "airborne":  FlightStatus.ACTIVE,
+        "running":   FlightStatus.ACTIVE,   # legacy
+        "paused":    FlightStatus.PAUSED,
+        "resumed":   FlightStatus.ACTIVE,
+        "aborting":  FlightStatus.INTERRUPTED,
+        "aborted":   FlightStatus.INTERRUPTED,
+        "completed": FlightStatus.COMPLETED,
+        "failed":    FlightStatus.FAILED,
+    }
+    return _map.get(str(state), FlightStatus.FAILED)
 
 
 def _runtime_to_out(rec: _MissionRuntimeRecord) -> MissionRuntimeOut:
@@ -512,63 +633,37 @@ def _audit_to_out(audit: _MissionCommandAudit) -> MissionCommandAuditOut:
     )
 
 
-def _cleanup_stale_mission_runtimes(now_s: float) -> None:
-    if len(_mission_runtimes) <= MISSION_RUNTIME_MAX_HISTORY:
-        return
-    removable = sorted(
-        _mission_runtimes.values(),
-        key=lambda rec: rec.updated_at,
-    )
-    for rec in removable:
-        if len(_mission_runtimes) <= MISSION_RUNTIME_MAX_HISTORY:
-            break
-        if _active_mission_runtime_id == rec.client_flight_id:
-            continue
-        age = now_s - rec.updated_at
-        if age < MISSION_RUNTIME_TTL_SECONDS and not _is_terminal_state(rec.state):
-            continue
-        _mission_runtimes.pop(rec.client_flight_id, None)
+# Stale in-memory cleanup is no longer needed — DB is the store.
 
 
 def _allowed_command_transition(
     current: MissionLifecycleState,
     command: MissionCommand,
 ) -> Optional[MissionLifecycleState]:
-    transitions: dict[tuple[MissionLifecycleState, MissionCommand], MissionLifecycleState] = {
-        ("queued", "abort"): "aborted",
-        ("running", "pause"): "paused",
-        ("running", "abort"): "aborted",
-        ("paused", "resume"): "running",
-        ("paused", "abort"): "aborted",
-    }
-    return transitions.get((current, command))
-
-
-def _record_command_audit(
-    runtime: _MissionRuntimeRecord,
-    audit: _MissionCommandAudit,
-    response_payload: dict,
-) -> None:
-    runtime.command_audit.append(audit)
-    runtime.idempotency_results[audit.idempotency_key] = response_payload
-    runtime.updated_at = max(runtime.updated_at, audit.requested_at)
-    if len(runtime.command_audit) > 400:
-        runtime.command_audit = runtime.command_audit[-400:]
+    return allowed_command_target(current, command)
 
 
 async def _sync_runtime_flight_id_from_orchestrator(
     runtime: _MissionRuntimeRecord,
     orch: Any,
 ) -> None:
+    """If the orch has a DB flight_id the DTO doesn't know about yet, persist it."""
     if runtime.db_flight_id is not None:
         return
     raw = getattr(orch, "_flight_id", None)
     if raw is None:
         return
     try:
-        runtime.db_flight_id = int(raw)
+        fid = int(raw)
     except Exception:
-        runtime.db_flight_id = None
+        return
+    runtime.db_flight_id = fid
+    try:
+        await mission_runtime_repo.set_flight_id(runtime.client_flight_id, flight_id=fid)
+    except Exception:
+        logger.exception(
+            "Failed persisting flight_id=%s for runtime %s", fid, runtime.client_flight_id
+        )
 
 
 async def _set_runtime_state(
@@ -577,31 +672,11 @@ async def _set_runtime_state(
     state: MissionLifecycleState,
     error: Optional[str] = None,
 ) -> None:
-    global _active_mission_runtime_id
-    now = time.time()
-    async with _mission_runtime_lock:
-        runtime = _mission_runtimes.get(runtime_id)
-        if runtime is None:
-            return
-        runtime.state = state
-        runtime.updated_at = now
-        if error:
-            runtime.last_error = error
-        if _active_mission_runtime_id == runtime_id and _is_terminal_state(state):
-            # keep record for audit/history; just clear active pointer
-            _active_mission_runtime_id = None
-        _cleanup_stale_mission_runtimes(now)
+    await mission_runtime_repo.set_state(runtime_id, state=state, error=error)
 
 # ---------------------------------------------------------------------------
-# Preflight store helpers
+# Preflight store helpers (DB-backed)
 # ---------------------------------------------------------------------------
-
-def _cleanup_expired_preflight_runs(now_s: Optional[float] = None) -> None:
-    now = time.time() if now_s is None else now_s
-    expired = [run_id for run_id, rec in _preflight_runs.items() if rec.expires_at <= now]
-    for run_id in expired:
-        _preflight_runs.pop(run_id, None)
-
 
 def _mission_fingerprint(payload: MissionCreateIn) -> str:
     canonical = payload.model_dump(mode="json", exclude={"preflight_run_id"})
@@ -609,33 +684,43 @@ def _mission_fingerprint(payload: MissionCreateIn) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
-def _store_preflight_run(
+async def _store_preflight_run(
     *,
     user_id: int,
     mission_fingerprint: str,
     report: PreflightReport,
 ) -> _PreflightRunRecord:
     now = time.time()
-    run_id = f"pf_{int(now)}_{uuid.uuid4().hex[:10]}"
-    rec = _PreflightRunRecord(
-        run_id=run_id,
+    run_uuid = f"pf_{int(now)}_{uuid.uuid4().hex[:10]}"
+    report_dump = report.model_dump(mode="json")
+    expires_at_dt = datetime.fromtimestamp(now + PREFLIGHT_RUN_TTL_SECONDS, tz=timezone.utc)
+    db_row = await preflight_run_repo.create(
+        run_uuid=run_uuid,
         user_id=user_id,
+        mission_type=str(report.mission_type or ""),
+        mission_name=None,
         mission_fingerprint=mission_fingerprint,
         overall_status=str(report.overall_status),
-        created_at=now,
-        expires_at=now + PREFLIGHT_RUN_TTL_SECONDS,
-        report=report.model_dump(mode="json"),
+        base_checks=report_dump.get("base_checks", []),
+        mission_checks=report_dump.get("mission_checks", []),
+        critical_failures=[
+            c["name"] for c in (report_dump.get("critical_failures") or [])
+        ],
+        summary=report_dump.get("summary") or {},
+        expires_at=expires_at_dt,
+        completed_at=datetime.now(timezone.utc),
     )
-    with _preflight_runs_lock:
-        _cleanup_expired_preflight_runs(now)
-        _preflight_runs[run_id] = rec
-    return rec
+    return _PreflightRunRecord.from_db(db_row)
 
 
-def _get_preflight_run(run_id: str) -> Optional[_PreflightRunRecord]:
-    with _preflight_runs_lock:
-        _cleanup_expired_preflight_runs()
-        return _preflight_runs.get(run_id)
+async def _get_preflight_run(run_id: str) -> Optional[_PreflightRunRecord]:
+    db_row = await preflight_run_repo.get_by_uuid(run_id)
+    if db_row is None:
+        return None
+    # Enforce TTL in application layer for safety.
+    if db_row.expires_at and db_row.expires_at < datetime.now(timezone.utc):
+        return None
+    return _PreflightRunRecord.from_db(db_row)
 
 
 def _preflight_allows_start(overall_status: str) -> bool:
@@ -921,31 +1006,26 @@ async def execute_mission(
         runtime_id: str,
 ) -> None:
     """Run any mission that implements .execute(orch, *, alt)."""
-    global _active_mission_runtime_id
     reconcile_db_flight_id: Optional[int] = None
     reconcile_db_status: Optional[FlightStatus] = None
     reconcile_note: str = ""
-    await _set_runtime_state(runtime_id, state="running")
+    await _set_runtime_state(runtime_id, state="airborne")
     try:
         await mission.execute(orch, alt=cruise_alt)
-        async with _mission_runtime_lock:
-            runtime = _mission_runtimes.get(runtime_id)
-            if runtime is not None:
-                await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
-                if runtime.state != "aborted":
-                    runtime.state = "completed"
-                    runtime.updated_at = time.time()
-                if _active_mission_runtime_id == runtime_id and _is_terminal_state(runtime.state):
-                    _active_mission_runtime_id = None
+        db_row = await mission_runtime_repo.get_by_client_id(runtime_id)
+        if db_row is not None:
+            runtime = _MissionRuntimeRecord.from_db(db_row)
+            await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+            if runtime.state != "aborted":
+                await _set_runtime_state(runtime_id, state="completed")
         logger.info("✅ Mission '%s' completed successfully", mission_name)
         print(f"✅ Mission '{mission_name}' completed successfully")
     except MissionAbortRequested as exc:
         await _set_runtime_state(runtime_id, state="aborted", error=str(exc))
         logger.warning("🛑 Mission '%s' aborted: %s", mission_name, exc)
     except asyncio.CancelledError:
-        async with _mission_runtime_lock:
-            runtime = _mission_runtimes.get(runtime_id)
-            aborted = runtime is not None and runtime.state == "aborted"
+        db_row = await mission_runtime_repo.get_by_client_id(runtime_id)
+        aborted = db_row is not None and db_row.state == "aborted"
         if not aborted:
             await _set_runtime_state(
                 runtime_id,
@@ -956,29 +1036,25 @@ async def execute_mission(
         else:
             logger.info("Mission '%s' cancelled after abort command", mission_name)
     except Exception as exc:
-        async with _mission_runtime_lock:
-            runtime = _mission_runtimes.get(runtime_id)
-            already_aborted = runtime is not None and runtime.state == "aborted"
+        db_row = await mission_runtime_repo.get_by_client_id(runtime_id)
+        already_aborted = db_row is not None and db_row.state == "aborted"
         if not already_aborted:
             await _set_runtime_state(runtime_id, state="failed", error=str(exc))
         logger.exception("❌ Mission '%s' failed", mission_name)
         print(f"❌ Mission '{mission_name}' failed: {exc}")
     finally:
-        async with _mission_runtime_lock:
-            runtime = _mission_runtimes.get(runtime_id)
-            if runtime is not None:
-                await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
-                runtime.updated_at = time.time()
-                if _active_mission_runtime_id == runtime_id and _is_terminal_state(runtime.state):
-                    _active_mission_runtime_id = None
-                if runtime.db_flight_id is not None and _is_terminal_state(runtime.state):
-                    reconcile_db_flight_id = runtime.db_flight_id
-                    reconcile_db_status = _db_status_for_runtime_state(runtime.state)
-                    reconcile_note = (
-                        f"Mission {runtime.state}: {runtime.last_error}"
-                        if runtime.last_error
-                        else f"Mission {runtime.state}"
-                    )
+        db_row = await mission_runtime_repo.get_by_client_id(runtime_id)
+        if db_row is not None:
+            runtime = _MissionRuntimeRecord.from_db(db_row)
+            await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+            if runtime.db_flight_id is not None and _is_terminal_state(runtime.state):
+                reconcile_db_flight_id = runtime.db_flight_id
+                reconcile_db_status = _db_status_for_runtime_state(runtime.state)
+                reconcile_note = (
+                    f"Mission {runtime.state}: {runtime.last_error}"
+                    if runtime.last_error
+                    else f"Mission {runtime.state}"
+                )
 
         if reconcile_db_flight_id is not None and reconcile_db_status is not None:
             safe_note = reconcile_note[:250] if reconcile_note else f"Mission {reconcile_db_status.value}"
@@ -994,6 +1070,12 @@ async def execute_mission(
                     reconcile_db_status.value,
                     reconcile_db_flight_id,
                 )
+        if getattr(orch, "current_client_flight_id", None) == runtime_id:
+            orch.current_client_flight_id = None
+            orch.current_mission_name = None
+            orch.current_mission_type = None
+            orch.current_mission_task_type = None
+            orch.current_preflight_run_id = None
 
 
 async def _get_runtime_for_user(
@@ -1001,11 +1083,10 @@ async def _get_runtime_for_user(
     *,
     user_id: int,
 ) -> _MissionRuntimeRecord:
-    async with _mission_runtime_lock:
-        runtime = _mission_runtimes.get(flight_id)
-        if runtime is None or runtime.user_id != int(user_id):
-            raise HTTPException(status_code=404, detail="Mission not found")
-        return runtime
+    db_row = await mission_runtime_repo.get_by_client_id_for_user(flight_id, user_id)
+    if db_row is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return _MissionRuntimeRecord.from_db(db_row)
 
 
 def _resolve_idempotency_key(
@@ -1031,17 +1112,29 @@ def _resolve_idempotency_key(
     return key
 
 
+def _runtime_db_flight_id(runtime: _MissionRuntimeRecord) -> int | None:
+    try:
+        return int(runtime.db_flight_id) if runtime.db_flight_id is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 async def _persist_state_change_event(
     orch: Any,
     runtime: _MissionRuntimeRecord,
     *,
     event_type: str,
-    data: dict,
+    data: dict | BaseModel,
 ) -> None:
     if runtime.db_flight_id is None:
         return
     try:
-        await orch.repo.add_event(runtime.db_flight_id, event_type, data)
+        await orch.record_persisted_event(
+            event_type,
+            data=data,
+            flight_id=int(runtime.db_flight_id),
+            source="tasks.mission_control",
+        )
     except Exception:
         logger.exception(
             "Failed to persist mission event %s for db_flight_id=%s",
@@ -1059,126 +1152,200 @@ async def _apply_mission_command(
     requested_by_user_id: int,
     reason: Optional[str],
 ) -> MissionCommandOut:
-    global _active_mission_runtime_id
     now = time.time()
     normalized_reason = (reason or "").strip() or None
 
-    async with _mission_runtime_lock:
-        existing = runtime.idempotency_results.get(idempotency_key)
-        if existing is not None:
-            if str(existing.get("command")) != command:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Idempotency key already used for a different command.",
-                )
-            return MissionCommandOut.model_validate(existing)
+    existing = await mission_runtime_repo.get_idempotency_result(
+        runtime.client_flight_id, idempotency_key
+    )
+    if existing is not None:
+        if str(existing.get("command")) != command:
+            raise HTTPException(
+                status_code=409,
+                detail="Idempotency key already used for a different command.",
+            )
+        return MissionCommandOut.model_validate(existing)
 
-        await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
-        state_before = runtime.state
-        state_after = state_before
-        accepted = False
-        message = ""
+    await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+    state_before = runtime.state
+    state_after = state_before
+    accepted = False
+    message = ""
 
-        target_state = _allowed_command_transition(state_before, command)
-        if target_state is None:
-            if _is_terminal_state(state_before):
-                message = f"Mission already terminal ({state_before}); command ignored."
-            else:
-                message = f"Command '{command}' is invalid while mission is '{state_before}'."
+    target_state = _allowed_command_transition(state_before, command)
+    if target_state is None:
+        if _is_terminal_state(state_before):
+            message = f"Mission already terminal ({state_before}); command ignored."
         else:
-            success = False
-            if command == "pause":
-                success = await asyncio.to_thread(orch.drone.pause_mission)
-                message = (
-                    "Mission paused."
-                    if success
-                    else "Pause command could not be applied on current drone connection."
+            message = f"Command '{command}' is invalid while mission is '{state_before}'."
+    else:
+        success = False
+        if command == "pause":
+            success = await asyncio.to_thread(orch.drone.pause_mission)
+            message = (
+                "Mission paused."
+                if success
+                else "Pause command could not be applied on current drone connection."
+            )
+        elif command == "resume":
+            success = await asyncio.to_thread(orch.drone.resume_mission)
+            message = (
+                "Mission resumed."
+                if success
+                else "Resume command could not be applied on current drone connection."
+            )
+        elif command == "abort":
+            success = await asyncio.to_thread(orch.drone.abort_mission)
+            # Abort is stateful even if transport call fails; mission task checks abort flag.
+            # The adapter sets the abort flag before mode-switch attempts.
+            if not success:
+                logger.warning(
+                    "Abort mode switch failed for mission %s; marking mission aborted anyway",
+                    runtime.client_flight_id,
                 )
-            elif command == "resume":
-                success = await asyncio.to_thread(orch.drone.resume_mission)
-                message = (
-                    "Mission resumed."
-                    if success
-                    else "Resume command could not be applied on current drone connection."
-                )
-            elif command == "abort":
-                success = await asyncio.to_thread(orch.drone.abort_mission)
-                # Abort is stateful even if transport call fails; mission task checks abort flag.
-                # The adapter sets the abort flag before mode-switch attempts.
-                if not success:
-                    logger.warning(
-                        "Abort mode switch failed for mission %s; marking mission aborted anyway",
-                        runtime.client_flight_id,
-                    )
-                message = "Mission aborted by operator."
-            else:
-                raise HTTPException(status_code=400, detail=f"Unsupported command '{command}'")
+            message = "Mission aborted by operator."
+        elif command == "rth":
+            try:
+                await asyncio.to_thread(orch.drone.set_mode, "RTL")
+                success = True
+                message = "Return-to-home initiated."
+            except Exception as exc:
+                logger.warning("RTL mode switch failed for mission %s: %s", runtime.client_flight_id, exc)
+                message = f"RTH command failed: {exc}"
+        elif command == "land":
+            try:
+                await asyncio.to_thread(orch.drone.land)
+                success = True
+                message = "Land-in-place initiated."
+            except Exception as exc:
+                logger.warning("Land command failed for mission %s: %s", runtime.client_flight_id, exc)
+                message = f"Land command failed: {exc}"
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported command '{command}'")
 
-            if success or command == "abort":
-                accepted = True
-                state_after = target_state
-                runtime.state = target_state
-                runtime.updated_at = now
-                if (
-                    _active_mission_runtime_id == runtime.client_flight_id
-                    and _is_terminal_state(state_after)
-                ):
-                    _active_mission_runtime_id = None
+        if success or command == "abort":
+            accepted = True
+            state_after = target_state
 
-        command_id = f"cmd_{int(now)}_{uuid.uuid4().hex[:10]}"
-        response_payload = {
-            "flight_id": runtime.client_flight_id,
-            "command_id": command_id,
-            "command": command,
-            "idempotency_key": idempotency_key,
-            "state_before": state_before,
-            "state_after": state_after,
-            "accepted": accepted,
-            "message": message,
-            "requested_at": now,
-        }
+    command_id = f"cmd_{int(now)}_{uuid.uuid4().hex[:10]}"
+    response_payload = {
+        "flight_id": runtime.client_flight_id,
+        "command_id": command_id,
+        "command": command,
+        "idempotency_key": idempotency_key,
+        "state_before": state_before,
+        "state_after": state_after,
+        "accepted": accepted,
+        "message": message,
+        "requested_at": now,
+    }
 
-        audit = _MissionCommandAudit(
+    audit_entry = {
+        "command_id": command_id,
+        "command": command,
+        "idempotency_key": idempotency_key,
+        "requested_by_user_id": int(requested_by_user_id),
+        "requested_at": now,
+        "state_before": state_before,
+        "state_after": state_after,
+        "accepted": accepted,
+        "message": message,
+        "reason": normalized_reason,
+    }
+    updated_row = await mission_runtime_repo.apply_command(
+        runtime.client_flight_id,
+        new_state=state_after,
+        audit_entry=audit_entry,
+        idempotency_key=idempotency_key,
+        idempotency_response=response_payload,
+    )
+    runtime.state = state_after
+
+    # Persist to dedicated operator_commands table (async, non-blocking failure).
+    try:
+        requested_at_dt = datetime.fromtimestamp(now, tz=timezone.utc)
+        await operator_command_repo.create(
             command_id=command_id,
+            client_flight_id=runtime.client_flight_id,
+            mission_runtime_id=updated_row.id if updated_row is not None else None,
             command=command,
             idempotency_key=idempotency_key,
             requested_by_user_id=int(requested_by_user_id),
-            requested_at=now,
             state_before=state_before,
             state_after=state_after,
             accepted=accepted,
             message=message,
             reason=normalized_reason,
+            requested_at=requested_at_dt,
         )
-        _record_command_audit(runtime, audit, response_payload)
+    except Exception:
+        logger.exception(
+            "Failed persisting operator command record for %s / %s",
+            runtime.client_flight_id,
+            command_id,
+        )
 
     if accepted:
+        mission_context = mission_context_from_runtime(runtime)
+        runtime_db_flight_id = _runtime_db_flight_id(runtime)
+        flight_event_envelope = FlightEventEnvelopeV1(
+            mission_runtime_id=runtime.client_flight_id,
+            db_flight_id=runtime_db_flight_id,
+            sequence=next_runtime_sequence(
+                runtime.client_flight_id,
+                "tasks.mission_control",
+            ),
+            emitted_at=utc_now(),
+            source="tasks.mission_control",
+            mission=mission_context,
+            payload=FlightEventPayloadV1(
+                event_name="mission_command",
+                category="mission_control",
+                severity=FlightEventSeverityV1.INFO,
+                attributes={
+                    "command_id": command_id,
+                    "command": command,
+                    "idempotency_key": idempotency_key,
+                    "state_before": state_before,
+                    "state_after": state_after,
+                    "reason": normalized_reason,
+                    "requested_by_user_id": int(requested_by_user_id),
+                },
+            ),
+        )
         await _persist_state_change_event(
             orch,
             runtime,
             event_type="mission_command",
-            data={
-                "command_id": command_id,
-                "command": command,
-                "idempotency_key": idempotency_key,
-                "state_before": state_before,
-                "state_after": state_after,
-                "reason": normalized_reason,
-                "requested_by_user_id": int(requested_by_user_id),
-            },
+            data=flight_event_envelope.payload,
+        )
+        lifecycle_envelope = MissionLifecycleEnvelopeV1(
+            mission_runtime_id=runtime.client_flight_id,
+            db_flight_id=runtime_db_flight_id,
+            sequence=next_runtime_sequence(
+                runtime.client_flight_id,
+                "tasks.mission_control",
+            ),
+            emitted_at=utc_now(),
+            source="tasks.mission_control",
+            mission=mission_context,
+            payload=MissionLifecyclePayloadV1(
+                state=state_after,
+                previous_state=state_before,
+                trigger=f"command:{command}",
+                reason=normalized_reason,
+                command_id=command_id,
+                requested_by_user_id=int(requested_by_user_id),
+            ),
         )
         await _persist_state_change_event(
             orch,
             runtime,
             event_type="mission_state_changed",
-            data={
-                "state": state_after,
-                "trigger": f"command:{command}",
-                "command_id": command_id,
-            },
+            data=lifecycle_envelope.payload,
         )
         if runtime.db_flight_id is not None:
-            if state_after in {"running", "paused"}:
+            if state_after in {"airborne", "running", "paused", "resumed"}:
                 try:
                     db_status = _db_status_for_runtime_state(state_after)
                     await orch.repo.set_flight_status_if_active(
@@ -1192,7 +1359,7 @@ async def _apply_mission_command(
                         db_status.value,
                         runtime.db_flight_id,
                     )
-            elif state_after == "aborted":
+            elif state_after in {"aborting", "aborted"}:
                 try:
                     await orch.repo.finish_flight_if_in_progress(
                         runtime.db_flight_id,
@@ -1254,7 +1421,7 @@ async def run_preflight(
             detail=f"Preflight execution failed: {exc}",
         ) from exc
 
-    rec = _store_preflight_run(
+    rec = await _store_preflight_run(
         user_id=int(user.id),
         mission_fingerprint=_mission_fingerprint(payload),
         report=report,
@@ -1267,7 +1434,7 @@ async def get_preflight_run(
         preflight_run_id: str,
         user=Depends(require_user),
 ):
-    rec = _get_preflight_run(preflight_run_id)
+    rec = await _get_preflight_run(preflight_run_id)
     if rec is None or rec.user_id != int(user.id):
         raise HTTPException(status_code=404, detail="Preflight run not found")
     return _preflight_record_out(rec)
@@ -1287,10 +1454,9 @@ async def create_mission(
     ``"photogrammetry"`` – run survey with camera trigger + image staging flow.
     ``"perimeter_patrol"`` / ``"private_patrol"`` – persistent property-border patrol.
     """
-    global _active_mission_runtime_id
     preflight_run_id = (payload.preflight_run_id or "").strip()
     if preflight_run_id:
-        rec = _get_preflight_run(preflight_run_id)
+        rec = await _get_preflight_run(preflight_run_id)
         if rec is None or rec.user_id != int(user.id):
             raise HTTPException(
                 status_code=404,
@@ -1332,59 +1498,50 @@ async def create_mission(
 
     orch = await get_orchestrator()
     active_task = getattr(orch, "_active_mission_task", None)
-    async with _mission_runtime_lock:
-        active_runtime = (
-            _mission_runtimes.get(_active_mission_runtime_id)
-            if _active_mission_runtime_id
-            else None
+    active_db_row = await mission_runtime_repo.get_active()
+    if active_db_row is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Another mission is already active "
+                f"({active_db_row.client_flight_id}, state={active_db_row.state}). "
+                "Wait for it to complete before starting a new one."
+            ),
         )
-        if active_runtime is not None and not _is_terminal_state(active_runtime.state):
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "Another mission is already active "
-                    f"({active_runtime.client_flight_id}, state={active_runtime.state}). "
-                    "Wait for it to complete before starting a new one."
-                ),
-            )
-        if active_task is not None and not active_task.done():
-            raise HTTPException(
-                status_code=409,
-                detail="Another mission is already running. Wait for it to complete before starting a new one.",
-            )
+    if active_task is not None and not active_task.done():
+        raise HTTPException(
+            status_code=409,
+            detail="Another mission is already running. Wait for it to complete before starting a new one.",
+        )
 
     orch.current_mission_name = payload.name
     orch.current_client_flight_id = client_flight_id
+    orch.current_mission_type = payload.mission_type.value
+    orch.current_mission_task_type = (
+        getattr(payload.private_patrol, "task_type", None)
+        if payload.private_patrol is not None
+        else None
+    )
+    orch.current_preflight_run_id = preflight_run_id or None
 
-    now = time.time()
-    runtime = MissionRuntimeRecord(
+    patrol_task_type = (
+        getattr(payload.private_patrol, "task_type", None)
+        if payload.private_patrol is not None
+        else None
+    )
+    db_row = await mission_runtime_repo.create(
         client_flight_id=client_flight_id,
         user_id=int(user.id),
         mission_name=payload.name,
         mission_type=payload.mission_type.value,
-        mission_task_type=(
-            getattr(payload.private_patrol, "task_type", None)
-            if payload.private_patrol is not None
-            else None
-        ),
-        preflight_run_id=preflight_run_id or None,
+        mission_task_type=patrol_task_type,
+        private_patrol_task_type=patrol_task_type,
+        preflight_run_uuid=preflight_run_id or None,
+        ai_tasks=list(getattr(payload.private_patrol, "ai_tasks", None) or []),
         state="queued",
-        created_at=now,
-        updated_at=now,
-        private_patrol_task_type=(
-            getattr(payload.private_patrol, "task_type", None)
-            if payload.private_patrol is not None
-            else None
-        ),
-        ai_tasks=tuple(
-            getattr(payload.private_patrol, "ai_tasks", ()) or ()
-        ),
+        mission_params={},
     )
-    await mission_runtime_store.put(runtime, make_active=True)
-    async with _mission_runtime_lock:
-        _mission_runtimes[client_flight_id] = runtime
-        _active_mission_runtime_id = client_flight_id
-        _cleanup_stale_mission_runtimes(now)
+    runtime = _MissionRuntimeRecord.from_db(db_row)
 
     task = asyncio.create_task(
         execute_mission(
@@ -1413,6 +1570,148 @@ async def create_mission(
     )
 
 
+def _build_state_timeline(
+    row: Any,
+    commands: list,
+) -> list[StateTransitionOut]:
+    """Reconstruct a best-effort state timeline from a MissionRuntime DB row
+    and its ordered OperatorCommand records."""
+    events: list[tuple[float, StateTransitionOut]] = []
+
+    # Initial state at creation.
+    created_ts = (
+        row.created_at.timestamp() if isinstance(row.created_at, datetime) else 0.0
+    )
+    events.append((
+        created_ts,
+        StateTransitionOut(
+            state=row.state if row.started_at is None and row.ended_at is None else "queued",
+            entered_at=created_ts,
+            trigger="mission_created",
+        ),
+    ))
+
+    # Mission became airborne (started_at set on first running/airborne transition).
+    if row.started_at is not None:
+        started_ts = (
+            row.started_at.timestamp()
+            if isinstance(row.started_at, datetime)
+            else float(row.started_at)
+        )
+        events.append((
+            started_ts,
+            StateTransitionOut(
+                state="airborne",
+                entered_at=started_ts,
+                trigger="execution_started",
+            ),
+        ))
+
+    # Operator command-driven transitions (accepted only).
+    for cmd in commands:
+        if not cmd.accepted:
+            continue
+        ts = (
+            cmd.requested_at.timestamp()
+            if isinstance(cmd.requested_at, datetime)
+            else float(cmd.requested_at or 0)
+        )
+        events.append((
+            ts,
+            StateTransitionOut(
+                state=cmd.state_after,
+                entered_at=ts,
+                trigger=f"command:{cmd.command}",
+                command_id=cmd.command_id,
+                command=cmd.command,
+                reason=cmd.reason,
+            ),
+        ))
+
+    # Terminal state reached by execution path (not by a command).
+    if row.ended_at is not None and _is_terminal_state(row.state):
+        ended_ts = (
+            row.ended_at.timestamp()
+            if isinstance(row.ended_at, datetime)
+            else float(row.ended_at)
+        )
+        # Only add if not already recorded via a command.
+        last_cmd_states = {e.state for _, e in events if e.command_id}
+        if row.state not in last_cmd_states:
+            events.append((
+                ended_ts,
+                StateTransitionOut(
+                    state=row.state,
+                    entered_at=ended_ts,
+                    trigger="execution_ended",
+                    reason=row.failure_reason if row.failure_reason else None,
+                ),
+            ))
+
+    events.sort(key=lambda x: x[0])
+    return [e for _, e in events]
+
+
+@router.get("/missions", response_model=List[MissionRuntimeOut])
+async def list_missions(
+    limit: int = 50,
+    user=Depends(require_user),
+):
+    """List recent mission runtimes for the current user (newest first)."""
+    rows = await mission_runtime_repo.list_recent(user_id=int(user.id), limit=min(limit, 200))
+    return [
+        _runtime_to_out(_MissionRuntimeRecord.from_db(r))
+        for r in rows
+    ]
+
+
+@router.get("/missions/active", response_model=MissionRuntimeOut)
+async def get_active_mission(
+    user=Depends(require_user),
+):
+    """Return the currently active mission runtime, or 404 if none is running."""
+    db_row = await mission_runtime_repo.get_active()
+    if db_row is None:
+        raise HTTPException(status_code=404, detail="No active mission")
+    runtime = _MissionRuntimeRecord.from_db(db_row)
+    orch = await get_orchestrator()
+    await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+    return _runtime_to_out(runtime)
+
+
+@router.get("/missions/resumable", response_model=List[ResumableMissionOut])
+async def list_resumable_missions(
+    limit: int = 20,
+    user=Depends(require_user),
+):
+    """List terminal missions that have checkpointed progress and can be re-launched.
+
+    A mission is resumable when it ended in ``failed`` or ``aborted`` state and
+    its ``resume_metadata`` contains at least one checkpoint key that a mission
+    executor can use to skip already-completed work.
+    """
+    rows = await mission_runtime_repo.list_resumable(
+        user_id=int(user.id), limit=min(limit, 100)
+    )
+    result = []
+    for r in rows:
+        ended_ts = (
+            r.ended_at.timestamp() if isinstance(r.ended_at, datetime) else None
+        )
+        result.append(ResumableMissionOut(
+            flight_id=r.client_flight_id,
+            mission_name=r.mission_name,
+            mission_type=r.mission_type,
+            mission_task_type=r.mission_task_type or r.private_patrol_task_type,
+            state=r.state,
+            ended_at=ended_ts,
+            failure_reason=r.failure_reason,
+            resume_metadata=dict(r.resume_metadata or {}),
+            mission_params=dict(r.mission_params or {}),
+        ))
+    return result
+
+
 @router.get("/missions/{flight_id}", response_model=MissionRuntimeOut)
 async def get_mission_runtime(
     flight_id: str,
@@ -1420,9 +1719,28 @@ async def get_mission_runtime(
 ):
     runtime = await _get_runtime_for_user(flight_id, user_id=int(user.id))
     orch = await get_orchestrator()
-    async with _mission_runtime_lock:
-        await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
-        return _runtime_to_out(runtime)
+    await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+    return _runtime_to_out(runtime)
+
+
+@router.get("/missions/{flight_id}/transitions", response_model=List[StateTransitionOut])
+async def get_mission_state_transitions(
+    flight_id: str,
+    user=Depends(require_user),
+):
+    """Return a chronological timeline of state transitions for a mission.
+
+    The timeline is reconstructed from the mission's timestamps (``created_at``,
+    ``started_at``, ``ended_at``) and the accepted operator command records.
+    It is a best-effort view — internal transitions not driven by commands
+    (e.g. queued → airborne) are inferred from timestamps, not recorded as
+    discrete events.
+    """
+    db_row = await mission_runtime_repo.get_by_client_id_for_user(flight_id, int(user.id))
+    if db_row is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    commands = await operator_command_repo.list_for_mission(flight_id)
+    return _build_state_timeline(db_row, commands)
 
 
 @router.get("/missions/{flight_id}/commands", response_model=List[MissionCommandAuditOut])
@@ -1430,9 +1748,24 @@ async def get_mission_command_audit(
     flight_id: str,
     user=Depends(require_user),
 ):
-    runtime = await _get_runtime_for_user(flight_id, user_id=int(user.id))
-    async with _mission_runtime_lock:
-        return [_audit_to_out(item) for item in runtime.command_audit]
+    # Ownership check — raises 404 if not found or wrong user.
+    await _get_runtime_for_user(flight_id, user_id=int(user.id))
+    rows = await operator_command_repo.list_for_mission(flight_id)
+    return [
+        MissionCommandAuditOut(
+            command_id=row.command_id,
+            command=row.command,
+            idempotency_key=row.idempotency_key,
+            requested_by_user_id=row.requested_by_user_id or 0,
+            requested_at=row.requested_at.timestamp() if row.requested_at else 0.0,
+            state_before=row.state_before,
+            state_after=row.state_after,
+            accepted=row.accepted,
+            message=row.message,
+            reason=row.reason,
+        )
+        for row in rows
+    ]
 
 
 @router.post(
@@ -1462,7 +1795,7 @@ async def issue_mission_command(
         reason=payload.reason,
     )
 
-    if result.accepted and command == "abort" and result.state_before == "queued":
+    if result.accepted and command in {"abort", "rth", "land"} and result.state_before == "queued":
         active_task = getattr(orch, "_active_mission_task", None)
         if active_task is not None and not active_task.done():
             active_task.cancel()
@@ -1477,21 +1810,33 @@ async def get_flight_status():
     try:
         orch = await get_orchestrator()
         runtime_out: Optional[MissionRuntimeOut] = None
-        async with _mission_runtime_lock:
-            runtime = (
-                _mission_runtimes.get(_active_mission_runtime_id)
-                if _active_mission_runtime_id
-                else None
-            )
-            if runtime is not None:
-                await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
-                runtime_out = _runtime_to_out(runtime)
+        active_db_row = await mission_runtime_repo.get_active()
+        if active_db_row is not None:
+            runtime = _MissionRuntimeRecord.from_db(active_db_row)
+            await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+            runtime_out = _runtime_to_out(runtime)
 
         flight_id = runtime_out.flight_id if runtime_out is not None else None
         mission_name = getattr(orch, "current_mission_name", "Unknown")
-
-        position = telemetry_manager.last_telemetry.get("position", {})
-        has_position = bool(position.get("lat") or position.get("lon"))
+        telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
+        telemetry_payload = (
+            telemetry_envelope.payload if telemetry_envelope is not None else None
+        )
+        position = (
+            {
+                "lat": telemetry_payload.position.lat or 0,
+                "lon": telemetry_payload.position.lon or 0,
+                "alt": telemetry_payload.position.alt_m or 0,
+                "relative_alt": telemetry_payload.position.relative_alt_m or 0,
+            }
+            if telemetry_payload is not None
+            else telemetry_manager.last_telemetry.get("position", {})
+        )
+        has_position = (
+            telemetry_payload.has_position()
+            if telemetry_payload is not None
+            else bool(position.get("lat") or position.get("lon"))
+        )
 
         return {
             "flight_id": flight_id,
@@ -1500,7 +1845,7 @@ async def get_flight_status():
                 "running": telemetry_manager._running,
                 "active_connections": len(telemetry_manager.active_connections),
                 "has_position_data": has_position,
-                "last_update": telemetry_manager.last_telemetry.get("timestamp", 0),
+                "last_update": telemetry_manager.get_last_telemetry_timestamp(),
                 "position": position,
             },
             "orchestrator": {
@@ -1514,9 +1859,11 @@ async def get_flight_status():
             },
             "mission_lifecycle": runtime_out.model_dump() if runtime_out is not None else None,
             "command_capabilities": {
-                "pause": runtime_out is not None and runtime_out.state == "running",
+                "pause":  runtime_out is not None and runtime_out.state in {"airborne", "running"},
                 "resume": runtime_out is not None and runtime_out.state == "paused",
-                "abort": runtime_out is not None and runtime_out.state in {"queued", "running", "paused"},
+                "abort":  runtime_out is not None and runtime_out.state in {
+                    "queued", "arming", "airborne", "running", "paused", "resumed"
+                },
             },
         }
     except Exception as exc:
@@ -1533,16 +1880,26 @@ async def get_flight_status():
 @router.get("/drone/position")
 async def get_drone_position():
     """Current drone position from telemetry cache."""
-    position = telemetry_manager.last_telemetry.get("position", {})
-    lat = position.get("lat", 0)
-    lon = position.get("lon", 0)
+    telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
+    if telemetry_envelope is not None:
+        position = telemetry_envelope.payload.position
+        lat = position.lat or 0
+        lon = position.lon or 0
+        alt = position.alt_m or 0
+        relative_alt = position.relative_alt_m or 0
+    else:
+        legacy_position = telemetry_manager.last_telemetry.get("position", {})
+        lat = legacy_position.get("lat", 0)
+        lon = legacy_position.get("lon", 0)
+        alt = legacy_position.get("alt", 0)
+        relative_alt = legacy_position.get("relative_alt", 0)
     return {
         "has_position": lat != 0 or lon != 0,
         "lat": lat,
         "lng": lon,
-        "alt": position.get("alt", 0),
-        "relative_alt": position.get("relative_alt", 0),
-        "timestamp": telemetry_manager.last_telemetry.get("timestamp", 0),
+        "alt": alt,
+        "relative_alt": relative_alt,
+        "timestamp": telemetry_manager.get_last_telemetry_timestamp(),
     }
 
 
@@ -1551,7 +1908,8 @@ async def start_telemetry():
     if telemetry_manager._running:
         return {"status": "already_running", "message": "Telemetry already running"}
     try:
-        telemetry_manager.start_telemetry_stream()
+        orch = await get_orchestrator()
+        await orch.start_live_telemetry()
         return {"status": "started", "message": "Telemetry stream started"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to start telemetry: {exc}") from exc
@@ -1562,7 +1920,8 @@ async def stop_telemetry():
     if not telemetry_manager._running:
         return {"status": "already_stopped", "message": "Telemetry already stopped"}
     try:
-        telemetry_manager.stop_telemetry_stream()
+        orch = await get_orchestrator()
+        await orch.stop_live_telemetry()
         return {"status": "stopped", "message": "Telemetry stream stopped"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to stop telemetry: {exc}") from exc

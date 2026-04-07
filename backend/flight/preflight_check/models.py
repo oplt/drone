@@ -111,15 +111,45 @@ class MissionDataPreprocessor:
         precomputed = PrecomputedMissionData(waypoints=waypoints)
 
         if terrain_data and hasattr(terrain_data, 'get_elevation'):
-            # Fetch all elevations concurrently
-            tasks = [
-                self.terrain_cache.get_or_fetch(
-                    wp.lat, wp.lon,
-                    terrain_data.get_elevation
+            # Resolve cache hits first, then batch-fetch all misses in one API call.
+            elevations: list = [None] * len(waypoints)
+            miss_indices: list[int] = []
+            miss_coords: list[tuple[float, float]] = []
+
+            for i, wp in enumerate(waypoints):
+                cached = self.terrain_cache.get(wp.lat, wp.lon)
+                if cached is not None:
+                    elevations[i] = cached
+                else:
+                    miss_indices.append(i)
+                    miss_coords.append((wp.lat, wp.lon))
+
+            if miss_coords:
+                # Prefer the batch method (elevations_m / get_elevations) to collapse
+                # N misses into a single API request (≤ 250 coords per call).
+                batch_fn = (
+                    getattr(terrain_data, 'elevations_m', None)
+                    or getattr(terrain_data, 'get_elevations', None)
                 )
-                for wp in waypoints
-            ]
-            precomputed.terrain_elevations = await asyncio.gather(*tasks)
+                if batch_fn is not None:
+                    fetched = await asyncio.to_thread(batch_fn, miss_coords)
+                    for i, idx in enumerate(miss_indices):
+                        elevations[idx] = fetched[i]
+                        self.terrain_cache.set(waypoints[idx].lat, waypoints[idx].lon, fetched[i])
+                else:
+                    # Fallback: single fetches concurrently (no batch method available).
+                    tasks = [
+                        self.terrain_cache.get_or_fetch(
+                            waypoints[idx].lat, waypoints[idx].lon,
+                            terrain_data.get_elevation,
+                        )
+                        for idx in miss_indices
+                    ]
+                    fetched = await asyncio.gather(*tasks)
+                    for i, idx in enumerate(miss_indices):
+                        elevations[idx] = fetched[i]
+
+            precomputed.terrain_elevations = elevations
         else:
             precomputed.terrain_elevations = [None] * len(waypoints)
 

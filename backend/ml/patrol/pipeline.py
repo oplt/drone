@@ -173,7 +173,11 @@ class DroneAnomalyPipeline:
         except Exception:
             return telemetry
 
-        timestamp = self._to_float((telemetry_manager.last_telemetry or {}).get("timestamp"))
+        telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
+        if telemetry_envelope is None:
+            return telemetry
+
+        timestamp = self._to_float(telemetry_envelope.emitted_at.timestamp())
         if (
             not telemetry_manager._running
             or timestamp is None
@@ -181,16 +185,13 @@ class DroneAnomalyPipeline:
         ):
             return telemetry
 
-        cached = telemetry_manager.last_telemetry or {}
-        position = cached.get("position") or {}
-        status = cached.get("status") or {}
-        camera = cached.get("camera") or {}
+        payload = telemetry_envelope.payload
 
-        lat = self._to_float(position.get("lat"))
-        lon = self._to_float(position.get("lon"))
-        altitude_m = self._to_float(position.get("relative_alt"))
+        lat = self._to_float(payload.position.lat)
+        lon = self._to_float(payload.position.lon)
+        altitude_m = self._to_float(payload.position.relative_alt_m)
         if altitude_m is None or altitude_m <= 0:
-            altitude_m = self._to_float(position.get("alt"))
+            altitude_m = self._to_float(payload.position.alt_m)
 
         if lat is not None and not (-90.0 <= lat <= 90.0):
             lat = None
@@ -207,9 +208,9 @@ class DroneAnomalyPipeline:
                 "lat": lat,
                 "lon": lon,
                 "altitude_m": altitude_m,
-                "heading": self._to_float(status.get("heading")),
-                "groundspeed": self._to_float(status.get("groundspeed")),
-                "gimbal_pitch_deg": self._to_float(camera.get("gimbal_pitch_deg")),
+                "heading": self._to_float(payload.motion.heading_deg),
+                "groundspeed": self._to_float(payload.motion.groundspeed_mps),
+                "gimbal_pitch_deg": self._to_float(payload.camera.gimbal_pitch_deg),
                 "timestamp": timestamp,
                 "has_position": lat is not None and lon is not None and altitude_m is not None,
             }

@@ -1,8 +1,10 @@
-import { Suspense, lazy, useMemo } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
+import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -14,6 +16,7 @@ import useTelemetryWebSocket from '../../../hooks/useTelemetryWebsocket';
 const SessionsChart = lazy(() => import('../../../components/dashboard/SessionsChart'));
 const PageViewsBarChart = lazy(() => import('../../../components/dashboard/PageViewsBarChart'));
 const ChartUserByCountry = lazy(() => import('../../../components/dashboard/ChartUserByCountry'));
+const FlightReplayChart = lazy(() => import('../../../components/dashboard/FlightReplayChart'));
 
 const formatDateLabel = (iso: string) => {
   const dt = new Date(iso);
@@ -61,6 +64,12 @@ export default function InsightsPage() {
   const { data, loading, error } = useAnalyticsOverview();
   const wsEnabled = Boolean(data?.system?.mavlink_connected);
   const { telemetry, isConnected } = useTelemetryWebSocket({ enabled: wsEnabled });
+
+  const recentFlights = data?.recent_flights ?? [];
+  const [selectedFlightId, setSelectedFlightId] = useState<number | null>(null);
+  // Default to the most recent flight when data loads.
+  const activeFlightId =
+    selectedFlightId ?? (recentFlights.length > 0 ? recentFlights[0].id : null);
 
   const labels = useMemo(
     () => (data?.trends?.days ?? []).map(formatDateLabel),
@@ -241,6 +250,41 @@ export default function InsightsPage() {
           ) : (
             <Typography variant="body2" color="text.secondary">
               No events recorded in the current window.
+            </Typography>
+          )}
+        </PageSection>
+
+        {/* ---- Telemetry replay chart ---- */}
+        <PageSection
+          title="Flight telemetry replay"
+          description="Aggregated altitude, groundspeed, and battery across a completed flight at 1 s, 10 s, or 1-minute resolution."
+          action={
+            recentFlights.length > 0 ? (
+              <Select
+                size="small"
+                value={activeFlightId ?? ''}
+                onChange={(e) => setSelectedFlightId(Number(e.target.value))}
+                sx={{ minWidth: 160, fontSize: 13 }}
+              >
+                {recentFlights.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>
+                    Flight #{f.id} — {f.status}
+                  </MenuItem>
+                ))}
+              </Select>
+            ) : undefined
+          }
+        >
+          {activeFlightId != null ? (
+            <Suspense fallback={<PanelSkeleton height={340} />}>
+              <FlightReplayChart
+                flightId={activeFlightId}
+                title={`Flight #${activeFlightId}`}
+              />
+            </Suspense>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No completed flights available for replay.
             </Typography>
           )}
         </PageSection>

@@ -1,55 +1,15 @@
+"""Thin adapter that exposes active mission context to patrol/ML consumers.
+
+The authoritative store is now ``MissionRuntimeRepository`` (DB-backed).
+This module keeps the ``ActiveMissionRuntimeContext`` DTO and the
+``mission_runtime_store`` singleton so existing callers need no changes.
+"""
 from __future__ import annotations
 
-import asyncio
-import time
-from dataclasses import dataclass, field
-from typing import Optional, Literal, List
+from dataclasses import dataclass
+from typing import Optional
 
-
-MissionLifecycleState = Literal[
-    "queued",
-    "running",
-    "paused",
-    "aborted",
-    "completed",
-    "failed",
-]
-
-
-@dataclass
-class MissionCommandAuditRecord:
-    command_id: str
-    command: str
-    idempotency_key: str
-    requested_by_user_id: int
-    requested_at: float
-    state_before: str
-    state_after: str
-    accepted: bool
-    message: str
-    reason: Optional[str] = None
-
-
-@dataclass
-class MissionRuntimeRecord:
-    client_flight_id: str
-    user_id: int
-    mission_name: str
-    mission_type: str
-    preflight_run_id: Optional[str]
-    state: MissionLifecycleState
-    created_at: float
-    updated_at: float
-    mission_task_type: Optional[str] = None
-    db_flight_id: Optional[int] = None
-    last_error: Optional[str] = None
-
-    # add this so ML can distinguish actual patrol subtype
-    private_patrol_task_type: Optional[str] = None
-    ai_tasks: tuple[str, ...] = ()
-
-    command_audit: List[MissionCommandAuditRecord] = field(default_factory=list)
-    idempotency_results: dict[str, dict] = field(default_factory=dict)
+from backend.db.repository.mission_runtime_repo import mission_runtime_repo
 
 
 @dataclass(frozen=True)
@@ -64,74 +24,21 @@ class ActiveMissionRuntimeContext:
 
 
 class MissionRuntimeStore:
-    def __init__(self) -> None:
-        self._lock = asyncio.Lock()
-        self._active_runtime_id: Optional[str] = None
-        self._runtimes: dict[str, MissionRuntimeRecord] = {}
-
-    async def put(self, runtime: MissionRuntimeRecord, *, make_active: bool = False) -> None:
-        async with self._lock:
-            self._runtimes[runtime.client_flight_id] = runtime
-            if make_active:
-                self._active_runtime_id = runtime.client_flight_id
-
-    async def get(self, flight_id: str) -> Optional[MissionRuntimeRecord]:
-        async with self._lock:
-            return self._runtimes.get(flight_id)
-
-    async def get_active(self) -> Optional[MissionRuntimeRecord]:
-        async with self._lock:
-            if not self._active_runtime_id:
-                return None
-            return self._runtimes.get(self._active_runtime_id)
+    """Read-only view of the active mission runtime, backed by the DB repo."""
 
     async def get_active_context(self) -> Optional[ActiveMissionRuntimeContext]:
-        async with self._lock:
-            if not self._active_runtime_id:
-                return None
-            rec = self._runtimes.get(self._active_runtime_id)
-            if rec is None:
-                return None
-            return ActiveMissionRuntimeContext(
-                client_flight_id=rec.client_flight_id,
-                mission_name=rec.mission_name,
-                mission_type=rec.mission_type,
-                state=rec.state,
-                db_flight_id=rec.db_flight_id,
-                private_patrol_task_type=rec.private_patrol_task_type,
-                ai_tasks=tuple(rec.ai_tasks or ()),
-            )
-
-    async def set_db_flight_id(self, flight_id: str, db_flight_id: Optional[int]) -> None:
-        async with self._lock:
-            rec = self._runtimes.get(flight_id)
-            if rec is None:
-                return
-            rec.db_flight_id = db_flight_id
-            rec.updated_at = time.time()
-
-    async def set_state(
-            self,
-            flight_id: str,
-            *,
-            state: str,
-            error: Optional[str] = None,
-    ) -> None:
-        async with self._lock:
-            rec = self._runtimes.get(flight_id)
-            if rec is None:
-                return
-            rec.state = state
-            rec.updated_at = time.time()
-            if error:
-                rec.last_error = error
-            if state in {"aborted", "completed", "failed"} and self._active_runtime_id == flight_id:
-                self._active_runtime_id = None
-
-    async def clear_active_if_matches(self, flight_id: str) -> None:
-        async with self._lock:
-            if self._active_runtime_id == flight_id:
-                self._active_runtime_id = None
+        row = await mission_runtime_repo.get_active()
+        if row is None:
+            return None
+        return ActiveMissionRuntimeContext(
+            client_flight_id=row.client_flight_id,
+            mission_name=row.mission_name,
+            mission_type=row.mission_type,
+            state=row.state,
+            db_flight_id=row.flight_id,
+            private_patrol_task_type=row.private_patrol_task_type,
+            ai_tasks=tuple(row.ai_tasks or ()),
+        )
 
 
 mission_runtime_store = MissionRuntimeStore()

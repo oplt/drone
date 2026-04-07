@@ -4,13 +4,15 @@ from datetime import datetime, timedelta, timezone
 from statistics import mean
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import require_user
-from backend.db.models import Flight, TelemetryRecord, FlightEvent
+from backend.db.models import Flight, TelemetryRecord, FlightEvent, TelemetrySummary
 from backend.db.session import get_db
+from backend.db.repository.telemetry_repo import TelemetryRepository
+from backend.db.session import Session
 from backend.messaging.websocket import telemetry_manager
 
 
@@ -210,8 +212,8 @@ async def overview(
     system = {
         "telemetry_running": telemetry_manager._running,
         "active_connections": len(telemetry_manager.active_connections),
-        "last_update": telemetry_manager.last_telemetry.get("timestamp", 0),
-        "mavlink_connected": telemetry_manager.mav_conn is not None,
+        "last_update": telemetry_manager.get_last_telemetry_timestamp(),
+        "mavlink_connected": telemetry_manager.source_connected(),
     }
 
     return {
@@ -234,4 +236,50 @@ async def overview(
         "recent_flights": recent_flights,
         "events": recent_events,
         "system": system,
+    }
+
+
+_VALID_RESOLUTIONS = {1, 10, 60}
+
+@router.get("/flights/{flight_id}/telemetry/summary")
+async def flight_telemetry_summary(
+    flight_id: int,
+    resolution: int = Query(
+        10,
+        description="Bucket size in seconds. One of 1, 10, or 60.",
+    ),
+    _user=Depends(require_user),
+):
+    """
+    Return pre-aggregated telemetry buckets for a finished flight.
+
+    Each bucket contains averaged altitude, groundspeed, and battery-remaining
+    values at the requested resolution (1 s / 10 s / 60 s).  Data is read from
+    the ``telemetry_summary`` table populated at flight-end by the orchestrator.
+    """
+    if resolution not in _VALID_RESOLUTIONS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"resolution must be one of {sorted(_VALID_RESOLUTIONS)}",
+        )
+
+    repo = TelemetryRepository(Session)
+    rows = await repo.get_telemetry_summary(flight_id, resolution)
+
+    return {
+        "flight_id": flight_id,
+        "resolution_s": resolution,
+        "buckets": [
+            {
+                "ts": row.bucket_ts.isoformat(),
+                "avg_alt": row.avg_alt,
+                "min_alt": row.min_alt,
+                "max_alt": row.max_alt,
+                "avg_groundspeed": row.avg_groundspeed,
+                "avg_battery_remaining": row.avg_battery_remaining,
+                "min_battery_remaining": row.min_battery_remaining,
+                "sample_count": row.sample_count,
+            }
+            for row in rows
+        ],
     }

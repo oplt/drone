@@ -4,10 +4,9 @@ from backend.drone.mavlink_drone import MavlinkDrone
 from backend.drone.orchestrator import Orchestrator
 from backend.map.google_maps import GoogleMapsClient
 from backend.analysis.llm import LLMAnalyzer
-from backend.messaging.mqtt import MqttClient, MqttPublisher
+from backend.messaging.mqtt import MqttClient
 # from backend.messaging.opcua import DroneOpcUaServer
 from backend.config import settings, setup_logging
-from backend.video.stream import DroneVideoStream
 from backend.db.session import init_db, close_db
 from backend.db.repository.telemetry_repo import TelemetryRepository
 
@@ -58,54 +57,12 @@ async def _build_orchestrator() -> Orchestrator:
             )
         # opcua = DroneOpcUaServer()
 
+        # Video stream is initialized lazily when a flight starts (drone must be connected first).
         video = None
-        if settings.drone_video_enabled:
-            try:
-                if settings.drone_video_use_gazebo:
-                    # If using Gazebo, we let the API handle the stream to avoid port conflict
-                    # (UDP unicast port can usually only be opened by one process/thread)
-                    logger.info("Gazebo video mode enabled; stream will be handled by API on demand")
-                    video = None
-                else:
-                    cam_source = settings.drone_video_source
-                    try:
-                        cam_source = int(cam_source)
-                    except ValueError:
-                        pass
-
-                    video = DroneVideoStream(
-                        source=cam_source,
-                        width=settings.drone_video_width,
-                        height=settings.drone_video_height,
-                        fps=settings.drone_video_fps,
-                        open_timeout_s=settings.drone_video_timeout,
-                        probe_indices=5,
-                        fallback_file=settings.drone_video_fallback
-                        if settings.drone_video_fallback
-                        else None,
-                        fps_limit=None,
-                        enable_recording=settings.drone_video_save_stream,
-                        recording_path=settings.drone_video_save_path,
-                        recording_format="mp4",
-                    )
-                    logger.info("Drone video stream initialized successfully")
-            except Exception as e:
-                logger.error("Failed to initialize drone video stream: %s", e)
-                video = None
-        else:
-            logger.info("Drone video streaming disabled in configuration")
 
         repo = TelemetryRepository()
-        publisher = (
-            MqttPublisher(
-                mqtt_client=mqtt,
-                mqtt_topic=settings.telemetry_topic,
-            )
-            if mqtt is not None
-            else None
-        )
 
-        _orch = Orchestrator(drone, maps, analyzer, mqtt, video, repo, publisher)
+        _orch = Orchestrator(drone, maps, analyzer, mqtt, video, repo)
         return _orch
 
 

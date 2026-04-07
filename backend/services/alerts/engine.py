@@ -20,8 +20,17 @@ from backend.db.models import Geofence, Herd
 from backend.db.repository.alerts_repo import AlertRepository
 from backend.db.session import Session
 from backend.messaging.websocket import telemetry_manager
-from backend.schemas.alerts import OperationalAlertOut
+from backend.runtime import (
+    AlertEventEnvelopeV1,
+    AlertEventPayloadV1,
+    AlertSnapshotV1,
+    TelemetryPayloadV1,
+    mission_context_from_runtime,
+    next_runtime_sequence,
+    utc_now,
+)
 from backend.services.animal_farm.risk_engine import RiskEngine
+from backend.services.patrol.mission_runtime_store import mission_runtime_store
 
 logger = logging.getLogger(__name__)
 
@@ -99,8 +108,8 @@ class AlertEngine:
             active_by_key = {a.dedupe_key: a for a in active_alerts}
             signal_by_key = {signal.dedupe_key: signal for signal in signals}
 
-            events: list[tuple[str, dict, int]] = []
-            notify_queue: list[tuple[dict, int]] = []
+            events: list[tuple[str, AlertSnapshotV1, int]] = []
+            notify_queue: list[tuple[AlertSnapshotV1, int]] = []
 
             for signal in signals:
                 current = active_by_key.get(signal.dedupe_key)
@@ -116,10 +125,9 @@ class AlertEngine:
                         meta_data=signal.meta_data,
                         now=now,
                     )
-                    # ✅ Serialize while session is open
-                    payload = OperationalAlertOut.model_validate(created).model_dump(mode="json")
-                    events.append(("created", payload, created.id))
-                    notify_queue.append((payload, created.id))
+                    snapshot = AlertSnapshotV1.from_alert(created)
+                    events.append(("created", snapshot, created.id))
+                    notify_queue.append((snapshot, created.id))
                     continue
 
                 should_notify = False
@@ -148,10 +156,9 @@ class AlertEngine:
                         mark_notified=should_notify,
                     )
                     if should_notify:
-                        # ✅ Serialize while session is open
-                        payload = OperationalAlertOut.model_validate(updated).model_dump(mode="json")
-                        events.append(("updated", payload, updated.id))
-                        notify_queue.append((payload, updated.id))
+                        snapshot = AlertSnapshotV1.from_alert(updated)
+                        events.append(("updated", snapshot, updated.id))
+                        notify_queue.append((snapshot, updated.id))
 
             for dedupe_key, active in active_by_key.items():
                 if dedupe_key in signal_by_key:
@@ -159,12 +166,11 @@ class AlertEngine:
                 resolved = await self._repo.resolve_alert(db, alert=active, now=now)
                 # ✅ Force refresh the object to load all attributes while session is open
                 await db.refresh(resolved)
-                payload = OperationalAlertOut.model_validate(resolved).model_dump(mode="json")
-                events.append(("resolved", payload, resolved.id))
+                snapshot = AlertSnapshotV1.from_alert(resolved)
+                events.append(("resolved", snapshot, resolved.id))
 
             await db.commit()
 
-        # ✅ Now we only use the serialized dictionaries (payloads) after session is closed
         for action, payload, alert_id in events:
             await self._emit_in_app_event(action=action, payload=payload, alert_id=alert_id)
 
@@ -172,25 +178,30 @@ class AlertEngine:
             await self._route_external_notifications(payload=payload, alert_id=alert_id)
 
     async def _evaluate_signals(self, db: AsyncSession) -> list[AlertSignal]:
-        telemetry = telemetry_manager.last_telemetry or {}
+        telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
         signals: list[AlertSignal] = []
-        signals.extend(await self._evaluate_drone_signals(db, telemetry))
+        signals.extend(
+            await self._evaluate_drone_signals(
+                db,
+                telemetry_envelope.payload if telemetry_envelope else None,
+                telemetry_envelope.emitted_at.timestamp() if telemetry_envelope else None,
+            )
+        )
         signals.extend(await self._evaluate_herd_signals(db))
         return signals
 
     async def _evaluate_drone_signals(
         self,
         db: AsyncSession,
-        telemetry: Dict[str, Any],
+        telemetry: TelemetryPayloadV1 | None,
+        telemetry_timestamp_s: float | None,
     ) -> list[AlertSignal]:
         signals: list[AlertSignal] = []
-        telemetry_ts = self._to_float(telemetry.get("timestamp"))
-        if telemetry_ts is None or telemetry_ts <= 0:
+        telemetry_ts = self._to_float(telemetry_timestamp_s)
+        if telemetry is None or telemetry_ts is None or telemetry_ts <= 0:
             return signals
 
-        battery_remaining = self._to_float(
-            self._dig(telemetry, "battery", "remaining"),
-        )
+        battery_remaining = self._to_float(telemetry.battery.remaining_pct)
         low_battery_threshold = float(settings.alerts_low_battery_percent or 25.0)
         if battery_remaining is not None and battery_remaining >= 0 and battery_remaining <= low_battery_threshold:
             signals.append(
@@ -209,8 +220,8 @@ class AlertEngine:
             )
 
         link_values = [
-            self._to_float(self._dig(telemetry, "link", "rc")),
-            self._to_float(self._dig(telemetry, "link", "telemetry")),
+            self._to_float(telemetry.link.rc_quality_pct),
+            self._to_float(telemetry.link.telemetry_quality_pct),
         ]
         valid_link_values = [v for v in link_values if v is not None and v >= 0]
         weak_link_threshold = float(settings.alerts_weak_link_percent or 35.0)
@@ -228,12 +239,12 @@ class AlertEngine:
                         meta_data={
                             "link_quality_percent": weakest_link,
                             "threshold_percent": weak_link_threshold,
-                            "rc_quality_percent": valid_link_values[0] if valid_link_values else None,
+                            "rc_quality_percent": telemetry.link.rc_quality_pct,
                         },
                     )
                 )
 
-        wind_speed = self._to_float(self._dig(telemetry, "wind", "speed"))
+        wind_speed = self._to_float(telemetry.wind.speed_mps)
         high_wind_threshold = float(settings.alerts_high_wind_mps or 12.0)
         if wind_speed is not None and wind_speed >= high_wind_threshold:
             signals.append(
@@ -247,14 +258,16 @@ class AlertEngine:
                     meta_data={
                         "wind_speed_mps": wind_speed,
                         "threshold_mps": high_wind_threshold,
-                        "wind_direction_deg": self._to_float(self._dig(telemetry, "wind", "direction")),
+                        "wind_direction_deg": self._to_float(
+                            telemetry.wind.direction_deg
+                        ),
                     },
                 )
             )
 
         geofence_id = settings.alerts_operation_geofence_id
-        lat = self._to_float(self._dig(telemetry, "position", "lat"))
-        lon = self._to_float(self._dig(telemetry, "position", "lon"))
+        lat = self._to_float(telemetry.position.lat)
+        lon = self._to_float(telemetry.position.lon)
         if geofence_id and lat is not None and lon is not None and not (abs(lat) < 1e-8 and abs(lon) < 1e-8):
             geofence = (
                 await db.execute(
@@ -338,20 +351,33 @@ class AlertEngine:
 
         return signals
 
-    async def _emit_in_app_event(self, *, action: str, payload: dict, alert_id: int) -> None:
+    async def _emit_in_app_event(
+        self,
+        *,
+        action: str,
+        payload: AlertSnapshotV1,
+        alert_id: int,
+    ) -> None:
         if not settings.alerts_route_in_app:
             return
 
         status = "sent"
         error_msg = None
         try:
-            await telemetry_manager.broadcast(
-                {
-                    "type": "alert_event",
-                    "action": action,
-                    "alert": payload,
-                }
+            active_runtime = await mission_runtime_store.get_active_context()
+            envelope = AlertEventEnvelopeV1(
+                mission_runtime_id=getattr(active_runtime, "client_flight_id", None),
+                db_flight_id=getattr(active_runtime, "db_flight_id", None),
+                sequence=next_runtime_sequence(
+                    getattr(active_runtime, "client_flight_id", None),
+                    "alerts.engine",
+                ),
+                emitted_at=utc_now(),
+                source="alerts.engine",
+                mission=mission_context_from_runtime(active_runtime),
+                payload=AlertEventPayloadV1(action=action, alert=payload),
             )
+            await telemetry_manager.broadcast(envelope.to_legacy_websocket_message())
         except Exception as exc:
             status = "failed"
             error_msg = str(exc)
@@ -370,13 +396,19 @@ class AlertEngine:
             ],
         )
 
-    async def _route_external_notifications(self, *, payload: dict, alert_id: int) -> None:
+    async def _route_external_notifications(
+        self,
+        *,
+        payload: AlertSnapshotV1,
+        alert_id: int,
+    ) -> None:
         deliveries: list[dict] = []
+        legacy_payload = payload.to_legacy_alert_dict()
 
         if settings.alerts_route_email:
-            deliveries.extend(await self._send_email_notification(payload))
+            deliveries.extend(await self._send_email_notification(legacy_payload))
         if settings.alerts_route_sms:
-            deliveries.extend(await self._send_sms_notification(payload))
+            deliveries.extend(await self._send_sms_notification(legacy_payload))
 
         if deliveries:
             await self._record_deliveries(alert_id, deliveries)

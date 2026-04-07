@@ -27,6 +27,9 @@ from backend.config import setup_logging
 from backend.db.repository.settings_repo import SettingsRepository
 from backend.utils.config_runtime import get_runtime_settings
 from backend.services.alerts.engine import alert_engine
+from backend.main import _build_orchestrator
+from backend.flight.restart_recovery import recover_interrupted_missions
+from backend.flight.cleanup_jobs import start_cleanup_jobs, stop_cleanup_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +49,18 @@ async def lifespan(app: FastAPI):
     from backend.messaging.websocket import telemetry_manager
 
     await telemetry_manager.initialize()
-    telemetry_manager._event_loop = asyncio.get_running_loop()
     logger.info("WebSocket manager initialized")
+
+    orchestrator = await _build_orchestrator()
+    orchestrator.bind_event_loop(asyncio.get_running_loop())
+    orchestrator.start_background_workers()
+    logger.info("Orchestrator runtime loop and background workers initialized")
+
+    await recover_interrupted_missions(orchestrator)
+    logger.info("Restart recovery check complete")
+
+    start_cleanup_jobs()
+    logger.info("Cleanup jobs started")
 
     await alert_engine.start()
     logger.info("Operational alert engine started")
@@ -57,10 +70,21 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application...")
 
-    # Check if telemetry is running and stop it
-    if telemetry_manager._running:
-        telemetry_manager.stop_telemetry_stream()
-        logger.info("Telemetry WebSocket server stopped")
+    orchestrator = await _build_orchestrator()
+
+    # Mark any active mission as failed before the process exits so it isn't
+    # left in a non-terminal state that restart recovery must handle later.
+    await recover_interrupted_missions(orchestrator)
+
+    if orchestrator.telemetry_running():
+        await orchestrator.stop_live_telemetry()
+        logger.info("Orchestrator telemetry ingest stopped")
+
+    await orchestrator.stop_background_workers()
+    logger.info("Orchestrator background workers stopped")
+
+    await stop_cleanup_jobs()
+    logger.info("Cleanup jobs stopped")
 
     await alert_engine.stop()
     logger.info("Operational alert engine stopped")

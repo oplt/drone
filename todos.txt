@@ -1,0 +1,213 @@
+## 1. Executive summary
+- This repo already has the hard parts most drone MVPs never reach: a real mission orchestrator, mission-specific preflight, agriculture grid planning, telemetry/MQTT/video plumbing, alerts, and a credible photogrammetry pipeline. Preserve those foundations.
+- The main weaknesses are in the operational hot path, not feature breadth: telemetry is ingested in multiple places, runtime state is partly in memory/module globals, video delivery is MJPEG-heavy, and the main API/UI surfaces are too monolithic for low-latency field use.
+- The biggest opportunity is to turn the current mission/planning stack into a durable operations product: one telemetry bus, one persisted mission-runtime model, a premium live/replay workspace, and agriculture outputs that go beyond orthomosaic generation into action.
+
+## 2. Speed and performance improvements
+- [Quick win] Unified telemetry/event bus; problem: `backend/drone/orchestrator.py`, `backend/messaging/websocket.py`, and `backend/messaging/mqtt.py` each touch the live vehicle/event path differently; why it matters: duplicated MAVLink reads, inconsistent ordering, avoidable CPU/network load, harder backpressure; proposed solution: make `Orchestrator` the single ingest point and publish normalized telemetry/event envelopes to websocket, MQTT, alerts, DB, and ML consumers; expected impact: very high latency/reliability gain; implementation complexity: medium; likely code areas affected: `backend/drone/orchestrator.py`, `backend/messaging/websocket.py`, `backend/messaging/mqtt.py`.
+- [Quick win] Batch telemetry and event persistence; problem: bulk insert support exists but the live path underuses it, while event writes are still too chatty; why it matters: DB commit pressure will become a bottleneck before flight logic does; proposed solution: bounded ingest queues, periodic bulk writes, a hot telemetry table plus colder raw-event storage, and precomputed minute summaries for dashboards/replay; expected impact: high throughput and lower DB cost; implementation complexity: medium; likely code areas affected: `backend/db/repository/telemetry_repo.py`, `backend/db/models.py`, `backend/api/routes/routes_analytics.py`.
+- [Quick win] Persist mission/preflight runtime; problem: active preflight and mission runtime state lives in module globals and duplicated in-memory stores; why it matters: a process restart can lose operational state and break auditability; proposed solution: add durable `mission_runtime` and `preflight_run` records backed by DB, with Redis only as optional cache; expected impact: high robustness and better resumability; implementation complexity: medium; likely code areas affected: `backend/api/routes/routes_flights.py`, `backend/services/patrol/mission_runtime_store.py`, `backend/db/models.py`.
+- [Medium] Smooth mission execution for survey legs; problem: `MavlinkDrone.follow_waypoints()` advances point-by-point with coarse sleeps and a simple distance threshold; why it matters: dense survey paths fly less smoothly and waste battery/time; proposed solution: replace it with a segment follower using lookahead, turn anticipation, configurable acceptance radii, and optional streamed setpoints for survey segments; expected impact: medium-high mission speed and path quality gain; implementation complexity: medium-high; likely code areas affected: `backend/drone/mavlink_drone.py`, `backend/flight/missions/grid_mission.py`.
+- [Medium] Cache planner previews and make terrain sampling deterministic; problem: grid previews recompute too often and slope estimation still has random-sampling behavior; why it matters: planning UX will feel sluggish on large fields and operators will distrust small plan changes; proposed solution: hash mission inputs into a plan fingerprint, cache preview artifacts/stats, and replace random terrain sampling with deterministic grids or seeded samples; expected impact: high planning responsiveness and repeatability; implementation complexity: medium; likely code areas affected: `backend/flight/missions/grid_mission.py`, `backend/flight/missions/terrain_follow.py`, `backend/api/routes/routes_flights.py`, `frontend/src/pages/dashboard/tabs/PhotoGrammetry.tsx`.
+- [Medium] Separate preview video from recording/processing; problem: the current MJPEG path forces server-side JPEG work and is not a premium live-video transport; why it matters: video becomes the first visible bottleneck during live missions; proposed solution: introduce a media abstraction layer now, keep MJPEG as fallback, and add WebRTC or FFmpeg/GStreamer-backed low-latency preview with a metadata side channel later; expected impact: high operator-perceived quality and lower CPU; implementation complexity: high; likely code areas affected: `backend/video/stream.py`, `backend/video/runtime.py`, `backend/api/routes/routes_video.py`, `frontend/src/components/dashboard/tasks/MissionVideoPanel.tsx`.
+- [Quick win] Cut frontend polling and render churn; problem: live mission status still uses polling and some map-follow behavior is too eager, while large components recompute too much; why it matters: the UI will feel unstable exactly when the operator needs confidence; proposed solution: move live ops to websocket/React Query subscriptions, split the large planner/dashboard files, throttle auto-follow, and decimate telemetry for charts/maps; expected impact: high UI responsiveness; implementation complexity: medium; likely code areas affected: `frontend/src/pages/dashboard/tabs/TasksPage.tsx`, `frontend/src/pages/dashboard/tabs/PhotoGrammetry.tsx`, `frontend/src/hooks/useMissionStatusPolling.tsx`, `frontend/src/hooks/useDroneMapFollow.tsx`, `frontend/src/utils/CesiumMap.tsx`.
+- [Quick win] Build replay-oriented read models; problem: analytics are currently summary-oriented, not operationally replayable; why it matters: premium drone products win on debrief, incident analysis, and proof-of-work; proposed solution: add flight timeline endpoints, event/telemetry downsampling, and mission summary tables generated in the background; expected impact: medium-high; implementation complexity: medium; likely code areas affected: `backend/api/routes/routes_analytics.py`, `backend/services/patrol/patrol_persistence.py`, `backend/services/photogrammetry/service.py`.
+
+## 3. Product competitiveness
+- As of March 31, 2026, the market baseline is clear: serious platforms offer live map/video, durable fleet/site operations, replay/debrief, compliance surfaces, and increasing levels of remote automation. That is visible in DJI FlightHub 2, DJI Dock 3, DroneDeploy Dock Automation, and Skydio Remote Flight Deck.
+- Missing core capabilities for serious competition: persisted multi-flight runtime, mission templates/queues, low-latency video, replay/debrief, compliance-aware preflight, and a tighter fleet/site operations board. The repo has pieces of all of these, but not yet one cohesive operational product.
+- The best commercial differentiators here are not "be another generic fleet dashboard." They are terrain-aware agriculture planning, a closed photogrammetry-to-action loop, and incident-aware operational workflows built from existing alerts/ML. Agriculture competitors increasingly monetize decision outputs such as prescription maps and targeted operations, not just imagery.
+- Build now: unified runtime backbone, replay workspace, compliance-preflight package, planner caching/resume, and agriculture outputs. Build later: dock-grade remote autonomy, deep multi-tenant enterprise policy, and BVLOS-heavy workflows.
+- Where this product can realistically win: agriculture, rural land management, utility vegetation/inspection surveys, and repeatable site operations where terrain-aware planning plus mapping outputs matter more than proprietary dock hardware. US compliance should be treated as table stakes, starting with FAA Remote ID and airspace/TFR awareness.
+
+## 4. Features to add
+### Mission features
+- `Resumable survey missions`; user value: recover after battery swap, pause, or abort without reflighting completed swaths; business value: immediate time and battery savings; technical fit: strong, because `GridMission`, flight persistence, and runtime tracking already exist; MVP version: persist completed segment index and last-safe resume point per mission.
+- `Mission templates and recurring site runs`; user value: one-click repeat missions for fields/sites; business value: higher operator throughput and stronger retention; technical fit: strong via existing mission schemas and planner preview; MVP version: save field, camera, altitude, overlap, speed, and pattern presets and queue them from the dashboard.
+
+### Safety / compliance features
+- `Compliance-aware preflight`; user value: fewer bad launches and better operator confidence; business value: credibility for commercial deployments; technical fit: extend existing preflight orchestration; MVP version: Remote ID status, geofence/TFR/NOTAM checks, and a go/no-go summary in preflight.
+- `Alert playbooks and one-click emergency actions`; user value: faster response under weak link, battery, wind, or geofence events; business value: lower incident risk; technical fit: very strong because the alert engine already classifies these states; MVP version: map each alert severity to recommended actions and wire one-click pause/RTH/land.
+
+### Operator workflow features
+- `Live incident workspace`; user value: one place for active alerts, mission state, communications, and evidence; business value: better operational discipline and auditability; technical fit: use existing alerts, telemetry, video, and event persistence; MVP version: a single live-flight sidebar with alert timeline, notes, and command shortcuts.
+- `Shift handoff / mission handover`; user value: smooth operator transitions on long jobs; business value: better support for real operations teams; technical fit: depends on durable mission runtime; MVP version: assign operator, leave mission notes, and reopen the exact live state.
+
+### Agriculture-specific features
+- `Prescription map export and zone-based missions`; user value: convert mapping outputs into actionable spray/spread workflows; business value: this is a real commercial wedge; technical fit: very strong on top of the current photogrammetry asset pipeline; MVP version: define manual treatment zones on orthomosaic/COG and export shapefile/GeoJSON prescriptions.
+- `Temporal field comparison and coverage QA`; user value: compare field condition across dates and confirm survey/spray completeness; business value: repeat-use lock-in; technical fit: leverage stored orthomosaics and planned-vs-flown mission geometry; MVP version: field-to-field overlay with simple change heatmap and missed-area detection.
+
+### Analytics / AI features
+- `Flight replay with anomaly scoring`; user value: fast debrief and root-cause analysis; business value: premium differentiator and lower support cost; technical fit: high, using telemetry/events/video plus current alerts/ML; MVP version: scrubber-based replay with markers for alerts, link drops, wind spikes, and path deviations.
+- `Image quality and coverage-gap QA`; user value: know immediately if a mapping run is usable; business value: fewer reflights and better trust; technical fit: natural extension of photogrammetry capture/session data; MVP version: blur/exposure heuristics, image-count checks, and overlap gap flags.
+
+### Enterprise / fleet features
+- `Fleet and site health board`; user value: one view for drone availability, battery state, last mission, incidents, and mapping jobs; business value: necessary for multi-site deployments; technical fit: good because telemetry, jobs, and persistence already exist; MVP version: per-site cards with current status, last flight, open alerts, and queued work.
+- `Webhook/API automation`; user value: connect ERP/FMIS/work-order systems; business value: strong enterprise fit without overbuilding UI; technical fit: good, given the existing mission and mapping services; MVP version: outbound webhooks for mission state, alerts, and photogrammetry completion.
+
+## 5. Visualization and UX improvements
+- Most important first: a replay/debrief workspace that synchronizes map path, video, alerts, operator commands, and telemetry charts. That is the fastest path to a premium feel and a real operational differentiator; build from `backend/api/routes/routes_analytics.py`, `frontend/src/components/dashboard/tasks/MissionVideoPanel.tsx`, and `frontend/src/utils/CesiumMap.tsx`.
+- Mission planning visuals should show camera footprint, overlap density, terrain/elevation profile, turn-radius stress points, wind-relative track direction, and completed-vs-unplanned swaths. The current planner already has the data model for this in `backend/flight/missions/grid_mission.py` and `frontend/src/pages/dashboard/tabs/PhotoGrammetry.tsx`.
+- The live-flight dashboard should become an operator console, not a long page: large health cards for battery/link/GPS/video, a compact command strip, a map/video split view, and a visible mission-phase ladder. `frontend/src/pages/dashboard/tabs/TasksPage.tsx` and `frontend/src/components/dashboard/tasks/TelemetryHud.tsx` are the right starting points.
+- Telemetry charts should be small, always-on ribbons with incident markers, not dense raw plots. Prioritize battery trend, link quality, altitude vs target, groundspeed, wind, and video latency; server-side decimation is mandatory before charting.
+- Camera/video overlays should show gimbal heading, altitude AGL, speed, GPS quality, recording state, and mission leg ID. The current video panel is functional but visually thin; adding overlays will make even MJPEG feel more operational until transport is upgraded.
+- Agricultural analytics layers should include orthomosaic/COG comparison, treatment zones, missed-coverage highlighting, and progress masks for live surveys. The repo already converts assets to usable geospatial formats, so the missing piece is UI composition, not core processing.
+- Use 3D only where it helps decisions: Cesium terrain for slope/line-of-sight, photogrammetry 3D tiles for debrief/inspection, and a pseudo-3D elevation strip in planning. Avoid decorative 3D.
+
+## 6. Prioritized roadmap
+### Next 2 weeks
+- `P0`; impact: very high; effort: medium; dependencies: none; unify telemetry ingest/fan-out and remove duplicate live vehicle readers.
+- `P0`; impact: very high; effort: medium; dependencies: small schema addition; persist mission/preflight runtime and remove module-global state from the flight API.
+- `P1`; impact: high; effort: medium; dependencies: telemetry bus shape; replace live polling with websocket/query subscriptions and split the biggest planner/live-ops UI components.
+
+### Next 6 weeks
+- `P0`; impact: very high; effort: medium-high; dependencies: durable telemetry/events; ship flight replay/debrief with synced map, timeline, alerts, and video.
+- `P1`; impact: high; effort: medium; dependencies: mission fingerprinting; add planner caching, deterministic terrain sampling, and resumable survey segments.
+- `P1`; impact: high; effort: medium; dependencies: external airspace/compliance feeds; extend preflight with Remote ID, TFR/NOTAM, and clearer go/no-go output.
+
+### Next 3 months
+- `P0`; impact: very high; effort: high; dependencies: replay and photogrammetry assets; ship agriculture decision outputs: prescription zones, field comparison, and coverage QA.
+- `P1`; impact: high; effort: medium; dependencies: durable runtime plus auth/workspace model; add fleet/site operations board, mission templates, and webhooks.
+- `P1`; impact: high; effort: high; dependencies: media service work; upgrade live video transport and add richer video overlays for remote inspection and supervision.
+
+## 7. Concrete engineering actions
+- Refactor `backend/drone/orchestrator.py` to own a normalized `TelemetryEnvelope`/`EventEnvelope` stream with bounded queues and explicit consumers; why: it becomes the system's single hot-path backbone; expected result: lower latency, simpler failure handling, consistent downstream behavior.
+- Strip direct MAVLink reads out of `backend/messaging/websocket.py` and `backend/messaging/mqtt.py`, and make both subscribe to orchestrator output; why: current duplication is architectural debt; expected result: one vehicle connection model and cleaner throughput control.
+- Extend `backend/db/models.py` and `backend/db/repository/telemetry_repo.py` with batch append, downsample/materialized summary support, and tighter indexing on flight/time; why: replay and analytics need storage designed for reads; expected result: scalable telemetry/event persistence.
+- Replace the module-global runtime structures in `backend/api/routes/routes_flights.py` with a dedicated mission-runtime service and persistent store; why: restart safety and auditability; expected result: resumable operations and cleaner API boundaries.
+- Add plan fingerprinting, cached preview artifacts, and resume metadata in `backend/flight/missions/grid_mission.py` and `backend/flight/missions/terrain_follow.py`; why: planning must feel instant and repeatable; expected result: faster previews and more trustworthy plans.
+- Rewrite the inner loop in `backend/drone/mavlink_drone.py` from waypoint blocking to segment following with better turn behavior; why: the current mission follower leaves efficiency on the table; expected result: smoother survey execution and better battery use.
+- Split `frontend/src/pages/dashboard/tabs/PhotoGrammetry.tsx`, `frontend/src/pages/dashboard/tabs/TasksPage.tsx`, and `frontend/src/utils/CesiumMap.tsx` into feature modules backed by React Query/live stores; why: current UI size will slow every premium workflow; expected result: faster renders and easier evolution.
+- Add replay/timeline endpoints in `backend/api/routes/routes_analytics.py` and a replay workspace in `frontend/src/components/dashboard/tasks/MissionVideoPanel.tsx`; why: this is the shortest path to a premium product feel; expected result: immediate improvement in operator value and product defensibility.
+
+## 8. Risks and tradeoffs
+- Unifying the telemetry/runtime backbone is the highest-value refactor, but it touches the most critical path. Mitigation: introduce it in shadow mode first and compare outputs before cutting over.
+- Persisted runtime state adds schema and migration complexity, but not doing it keeps the product in "demo reliability" territory. This is worth the operational cost.
+- Replay, downsampling, and richer analytics will increase storage volume. You need explicit retention and summary strategies, or the database will become the next bottleneck.
+- Upgrading video to WebRTC or a richer media stack adds deployment complexity. It should follow telemetry/runtime cleanup, not precede it.
+- Compliance and agronomy integrations create external dependencies and product-scope pressure. Keep the MVP narrow: preflight decision support first, decision-quality ag outputs second, full automation later.
+- The right market tradeoff is vertical focus. If you optimize for agriculture/rural commercial ops, you gain a real wedge; if you chase every generic fleet use case, you will dilute the roadmap and still trail hardware-led platforms.
+
+Top 10 highest-value improvements
+1. Unify telemetry/event ingest into a single orchestrator-owned runtime bus.
+2. Persist mission and preflight runtime state; remove module-global/in-memory operational state.
+3. Ship a replay/debrief workspace with synced map, alerts, telemetry, and video.
+4. Batch telemetry/event persistence and add replay-friendly read models.
+5. Add planner fingerprint caching, deterministic terrain sampling, and resumable survey segments.
+6. Refactor the live frontend from polling/monoliths into a real operations console.
+7. Upgrade video delivery from MJPEG-first to a media abstraction with low-latency preview.
+8. Add compliance-aware preflight with Remote ID, TFR/NOTAM, and clearer go/no-go output.
+9. Build agriculture decision outputs: prescription zones, field comparison, and coverage QA.
+10. Add mission templates, fleet/site health views, and webhook automation for repeat operations.
+
+Detailed fix checklist
+[x] Define one canonical live-ops architecture decision in an ADR covering telemetry ingest, mission runtime ownership, persistence boundaries, and downstream consumers.
+[x] Inventory every current MAVLink, telemetry, event, websocket, MQTT, alerts, ML, and DB write path so duplicate readers and duplicate transforms are explicit before refactoring.
+[x] Draw the current hot path from vehicle -> ingest -> orchestrator -> DB/websocket/MQTT/alerts/UI and mark where ordering, backpressure, and failure handling are currently inconsistent.
+[x] Decide the canonical runtime envelope schemas for telemetry, flight events, video health events, alert events, and mission lifecycle events.
+[x] Add typed envelope models in the backend so downstream systems consume normalized payloads instead of ad hoc dicts.
+[x] Refactor `backend/drone/orchestrator.py` to become the only live ingest and fan-out coordinator for telemetry and mission events.
+[x] Move any direct MAVLink stream ownership out of `backend/messaging/websocket.py` so websocket code only publishes already-normalized runtime envelopes.
+[x] Move any direct MAVLink stream ownership out of `backend/messaging/mqtt.py` so MQTT publishing becomes a subscriber to orchestrator output instead of another reader.
+[x] Add bounded async queues between ingest and downstream consumers so slow DB or websocket clients cannot block the control path.
+[x] Add explicit overflow policy for each queue type such as drop-oldest for high-frequency telemetry and never-drop for mission lifecycle events.
+[x] Add structured metrics for ingest rate, queue depth, consumer lag, dropped messages, and end-to-end telemetry latency.
+[x] Introduce a shadow-mode path that compares the old and new telemetry/event outputs before fully cutting over to the unified bus.
+[x] Remove dead or unused ingest code paths after the unified bus proves stable in shadow mode.
+
+[x] Design durable `mission_runtime` and `preflight_run` database models with lifecycle state, operator, timestamps, failure reason, resume metadata, and active-flight linkage.
+[ ] Add Alembic migrations for the new runtime and preflight tables instead of relying on startup schema creation.
+[x] Replace module-global runtime state in `backend/api/routes/routes_flights.py` with a service layer that loads and updates runtime state from durable storage.
+[x] Unify `backend/services/patrol/mission_runtime_store.py` with the new runtime model so patrol logic reads the same source of truth as flight execution.
+[x] Add runtime state transitions with validation rules for planned, preflight, arming, airborne, paused, resumed, aborting, completed, and failed.
+[x] Persist operator commands such as pause, resume, RTH, land, and abort as explicit mission command records tied to a mission runtime.
+[x] Add restart recovery so the backend can reconstruct the active mission context after a process restart or deployment.
+[x] Add TTL or cleanup jobs for stale preflight runs and abandoned mission runtimes.
+[x] Add API endpoints to query active mission runtime, historical runtime state transitions, and resumable missions.
+
+[x] Review `backend/db/models.py` for telemetry and raw event tables and add indexes optimized for `flight_id + timestamp` reads.
+[x] Split high-frequency telemetry storage from bulky raw MAVLink event storage so replay and dashboards do not scan oversized JSON payloads.
+[x] Batch event persistence with separate policies for telemetry, alerts, mission events, and raw MAVLink diagnostics.
+[x] Add downsampled summary tables or materialized aggregates for 1-second, 10-second, and 1-minute replay/dashboard reads.
+[x] Add retention rules for raw telemetry, downsampled telemetry, and raw MAVLink payloads so storage growth stays predictable.
+[x] Add ingestion and query benchmarks against realistic mission durations and telemetry rates before changing indexes further.
+[ ] Add failure tests for DB slowdown or unavailability to confirm queues degrade safely instead of blocking flight-critical logic.
+
+[ ] Refactor `backend/drone/mavlink_drone.py` waypoint-following logic into a segment-based survey follower with configurable lookahead and turn behavior.
+[ ] Replace coarse sleep-driven progress checks with a tighter control loop that can react faster to drift, pause, or abort commands.
+[ ] Add configurable acceptance radii that differ for transit legs, survey legs, and return-home flow.
+[ ] Add turn anticipation or curve smoothing for dense grid missions so the aircraft spends less time braking and re-acquiring each leg.
+[ ] Record mission progress per segment or swath so interrupted survey missions can resume from the right place.
+[ ] Expose mission progress, current segment, next segment, and path-deviation telemetry to the frontend for better operator visibility.
+[ ] Add simulation or SITL tests that compare mission duration, completion rate, and path error before and after the new follower.
+
+[ ] Add a deterministic mission-plan fingerprint for `backend/flight/missions/grid_mission.py` using polygon, camera, overlap, terrain, speed, and pattern parameters.
+[ ] Cache grid preview outputs, coverage stats, and terrain-analysis results keyed by the plan fingerprint.
+[ ] Replace random terrain/slope sampling with deterministic sampling or seeded sampling so repeated previews produce stable outputs.
+[ ] Store preview artifacts such as path lines, estimated duration, coverage metrics, and terrain summaries for fast UI reloads.
+[ ] Add invalidation rules so plan cache entries are refreshed when field geometry, DEM source, or mission parameters change.
+[ ] Surface planner quality metrics such as estimated overlap consistency, steep-slope warnings, turn count, and resume points in the API response.
+[ ] Add backend tests for large fields, crosshatch plans, terrain-follow mode, and slope-aware plans to verify preview latency and determinism.
+[ ] Update `frontend/src/pages/dashboard/tabs/PhotoGrammetry.tsx` to request preview data by fingerprint and avoid redundant recomputation while the operator tweaks settings.
+
+[ ] Introduce a media abstraction in the backend that separates frame acquisition, preview transport, recording, and overlay metadata emission.
+[ ] Audit `backend/video/stream.py` and `backend/video/runtime.py` for duplicate reads, blocking frame work, JPEG encode hot spots, and connection-health side effects.
+[ ] Fix any health-check logic that consumes frames from the same capture stream and causes dropped or delayed preview frames.
+[ ] Keep the existing MJPEG route as fallback but add a second low-latency transport path for future WebRTC or FFmpeg/GStreamer preview.
+[ ] Add a metadata channel for gimbal heading, AGL, speed, GPS state, and mission leg so overlays do not require image burn-in.
+[ ] Decouple recording from preview so a slow operator viewer cannot interfere with archival capture.
+[ ] Add stream health metrics such as FPS, dropped frames, reconnect count, decode errors, and preview latency.
+[ ] Upgrade `frontend/src/components/dashboard/tasks/MissionVideoPanel.tsx` to render live overlays and reconnect intelligently when the stream degrades.
+
+[ ] Replace polling in `frontend/src/hooks/useMissionStatusPolling.tsx` with websocket or push-driven mission runtime updates.
+[ ] Audit the biggest frontend files and split `PhotoGrammetry.tsx`, `TasksPage.tsx`, and `CesiumMap.tsx` into feature modules with clear state boundaries.
+[ ] Standardize live data fetching on React Query plus websocket subscriptions instead of manual `useEffect` fetch chains.
+[ ] Add throttling and operator-controlled follow modes in `frontend/src/hooks/useDroneMapFollow.tsx` so the map does not fight the user.
+[ ] Decimate or bucket high-frequency telemetry before sending it into charts and map markers to reduce render churn.
+[ ] Create a shared mission runtime store on the frontend that feeds HUD, map, command panel, alerts, and replay surfaces from one source.
+[ ] Lazy-load heavy planning and 3D map modules so dashboard startup stays responsive.
+[ ] Add render and interaction profiling for the planner and live dashboard using realistic telemetry and large-field scenarios.
+
+[ ] Add replay-oriented API endpoints in `backend/api/routes/routes_analytics.py` for timeline, telemetry series, event markers, operator commands, and mission summary data.
+[ ] Create a mission replay data model that aligns telemetry, alerts, video time, mission commands, and segment progress under one timeline.
+[ ] Downsample telemetry specifically for replay scrubbing so large flights remain interactive.
+[ ] Add event correlation logic that ties alerts, video health issues, and operator commands to exact mission timestamps.
+[ ] Build a replay workspace in the frontend with a single scrubber controlling map position, video position, alert timeline, and chart focus.
+[ ] Add mission debrief views for path deviation, battery curve, link quality, speed profile, and notable anomalies.
+[ ] Add exportable mission reports with map snapshots, alert summaries, and mission statistics for operational proof-of-work.
+
+[ ] Extend `backend/flight/preflight_check/preflight_orch.py` with compliance gates for Remote ID state, geofence integrity, and external airspace advisories.
+[ ] Add providers or adapters for TFR, NOTAM, and airspace advisory inputs so compliance logic is isolated from vendor-specific APIs.
+[ ] Add a single go/no-go preflight summary object that explains blocking failures, warnings, and required operator acknowledgements.
+[ ] Wire alert severity playbooks so active in-flight alerts present recommended actions and command shortcuts to the operator.
+[ ] Add explicit tests for failure combinations such as low battery plus weak GPS plus missing Remote ID so preflight and alerts stay interpretable.
+[ ] Log every preflight failure and operator override to support auditability and post-incident analysis.
+
+[ ] Add mission template persistence for reusable field missions including altitude, overlap, route pattern, terrain-follow, camera settings, and speed.
+[ ] Add recurring mission scheduling or queueing for repeated surveys at the same field or site.
+[ ] Add resumable survey support in `backend/flight/missions/grid_mission.py` and the corresponding flight APIs so completed swaths are not reflown after interruption.
+[ ] Persist mission notes, assigned operator, handoff notes, and site metadata so missions survive shift changes.
+[ ] Add a fleet and site health read model that combines drone availability, battery status, latest flight, mapping jobs, and open alerts.
+[ ] Add webhooks for mission state changes, alert triggers, and photogrammetry job completion so external systems can automate around operations.
+
+[ ] Extend the photogrammetry pipeline to publish richer job progress, artifact status, and post-processing quality states to the frontend.
+[ ] Add orthomosaic and COG comparison tooling so operators can compare field conditions across dates in the UI.
+[ ] Add manual treatment-zone authoring on top of orthomosaic or COG layers and export zones as GeoJSON or shapefile.
+[ ] Add coverage QA that compares planned path, flown path, image count, and overlap assumptions to identify missed or weak survey areas.
+[ ] Add image quality heuristics for blur, exposure, and capture completeness before launching expensive downstream processing.
+[ ] Add field-level change detection MVP outputs using aligned imagery products already produced by the mapping stack.
+[ ] Add agronomy-facing outputs only after mission replay and planner reliability are stable, so the core ops workflow is not buried by analytics work.
+
+[ ] Build a premium live-flight workspace with a map/video split, health cards, alert ladder, mission phase indicator, and compact command bar.
+[ ] Add mission planning visuals for camera footprint, overlap density, terrain profile, turn stress, and wind-relative route orientation.
+[ ] Add telemetry ribbons for battery, link quality, speed, altitude, wind, and video latency with incident markers instead of dense charts.
+[ ] Add synchronized alert-state visualization so degraded subsystems are obvious without scanning raw numbers.
+[ ] Add 3D terrain and 3D tiles views only where they improve slope understanding, line-of-sight review, or inspection debrief quality.
+[ ] Add polished empty, loading, reconnecting, and degraded-state UI treatments so the product still feels deliberate under failure.
+
+[ ] Remove `Base.metadata.create_all()` style production schema creation from startup flows and enforce migrations as the production schema path.
+[ ] Add deployment health checks that validate DB schema version, queue consumers, video worker readiness, and telemetry ingest readiness on startup.
+[ ] Add end-to-end tests for mission launch, pause, resume, RTH, alert generation, telemetry persistence, replay generation, and photogrammetry job completion.
+[ ] Add operational dashboards for queue lag, websocket fan-out, DB write rate, video stream health, and mission failure rates.
+[ ] Add feature flags for the telemetry bus rewrite, replay, media transport, and compliance integrations so rollout can be staged safely.
+[ ] Define retention, backup, and recovery policies for mission runtime, telemetry, events, and photogrammetry artifacts before scaling customer usage.

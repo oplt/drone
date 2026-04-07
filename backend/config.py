@@ -271,6 +271,11 @@ class RuntimeSettings(BaseSettings):
     CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
     PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: str = ""
 
+    # Shadow-mode: run old direct-DB-write path alongside new queued path so
+    # both can be compared before fully removing the legacy write. Set to False
+    # (disabled) once the queued path has proven stable in production.
+    orchestrator_shadow_mode: bool = False
+
 
 
 settings = RuntimeSettings()

@@ -38,6 +38,16 @@ backend/    FastAPI API, mission logic, telemetry, auth, data models, workers
 docs/       Architecture notes and mission design docs
 ```
 
+Architecture decisions live in `docs/adr/`. Runtime inventories live in
+`docs/architecture/`. Start with
+`docs/adr/ADR-001-canonical-live-ops-runtime-architecture.md` and
+`docs/adr/ADR-002-canonical-runtime-envelope-schemas.md`,
+`docs/architecture/runtime-envelope-schemas-v1.md`,
+`docs/architecture/live-ops-runtime-path-inventory.md` plus
+`docs/architecture/live-ops-hot-path-current-state.md` for the current
+live-operations boundary, canonical schema contract, path map, and hot-path
+drawing.
+
 Notable backend areas:
 
 - `backend/api/`: HTTP and websocket routes
@@ -156,6 +166,3 @@ Additional modules cover auth, analytics, geofences, fields, settings, alerts, v
 - The backend includes Alembic files in `backend/alembic/`, although the app also initializes tables on startup.
 - Photogrammetry is intentionally offloaded to worker processes rather than the API server.
 - Some UI copy is agronomy-specific, while the backend supports broader drone operations use cases.
-
-
-
