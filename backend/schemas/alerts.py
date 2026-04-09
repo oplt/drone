@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -17,20 +17,20 @@ class OperationalAlertOut(BaseModel):
     status: str
     title: str
     message: str
-    meta_data: Dict[str, Any]
+    meta_data: dict[str, Any]
     first_triggered_at: datetime
     last_triggered_at: datetime
-    last_notified_at: Optional[datetime] = None
-    resolved_at: Optional[datetime] = None
-    acknowledged_at: Optional[datetime] = None
-    acknowledged_by_user_id: Optional[int] = None
+    last_notified_at: datetime | None = None
+    resolved_at: datetime | None = None
+    acknowledged_at: datetime | None = None
+    acknowledged_by_user_id: int | None = None
     occurrences: int
     created_at: datetime
     updated_at: datetime
 
 
 class AlertListResponse(BaseModel):
-    items: List[OperationalAlertOut]
+    items: list[OperationalAlertOut]
     total: int
 
 

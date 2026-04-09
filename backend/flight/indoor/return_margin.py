@@ -36,19 +36,16 @@ class ReturnMarginEvaluator:
             float(self.battery_return_reserve_pct),
             float(self.battery_emergency_land_reserve_pct),
         )
-        time_for_plan_s = (
-            float(outbound_path_length_m + explore_buffer_m + return_path_length_m)
-            / max(0.1, float(self.nominal_speed_mps))
-        )
+        time_for_plan_s = float(
+            outbound_path_length_m + explore_buffer_m + return_path_length_m
+        ) / max(0.1, float(self.nominal_speed_mps))
         time_remaining_s = max(0.0, float(self.max_mission_time_s) - float(elapsed_s))
 
-        can_return = (
-            (float(battery_remaining_pct) - return_cost_pct)
-            >= float(self.battery_emergency_land_reserve_pct)
+        can_return = (float(battery_remaining_pct) - return_cost_pct) >= float(
+            self.battery_emergency_land_reserve_pct
         )
         can_continue = (
-            projected_remaining_pct >= required_reserve_pct
-            and time_for_plan_s <= time_remaining_s
+            projected_remaining_pct >= required_reserve_pct and time_for_plan_s <= time_remaining_s
         )
         should_return_now = not can_continue and can_return
 

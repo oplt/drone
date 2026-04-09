@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import base64
-import os
-from typing import Optional
-from backend.config import bootstrap as config
-
 from cryptography.fernet import Fernet, InvalidToken
+
+from backend.config import bootstrap as config
 
 
 class Vault:
@@ -15,7 +12,7 @@ class Vault:
     - Encrypt/decrypt secrets stored in DB
     """
 
-    def __init__(self, key: Optional[str] = None) -> None:
+    def __init__(self, key: str | None = None) -> None:
         key = key or config.settings_vault_key
         if not key:
             raise RuntimeError("Missing SETTINGS_VAULT_KEY environment variable (Fernet key).")

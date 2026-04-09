@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
 import logging
-from typing import Any, Dict
+import os
+from typing import Any
 
 from backend.config import RuntimeSettings as EnvSettings
 from backend.db.repository.settings_repo import SettingsRepository
@@ -22,7 +22,7 @@ def _apply_runtime_to_process_env(runtime: EnvSettings) -> None:
         os.environ[key] = _env_string(value)
 
 
-def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
+def _flatten_for_env(doc: dict[str, Any]) -> dict[str, Any]:
     """
     Convert SettingsDoc (nested) -> EnvSettings (flat) overlay.
     Only maps the fields that exist in your SettingsPage.tsx schema.
@@ -37,7 +37,7 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
     photo = doc.get("photogrammetry", {}) or {}
     al = doc.get("alerts", {}) or {}
 
-    flat: Dict[str, Any] = {
+    flat: dict[str, Any] = {
         # Telemetry
         "mqtt_broker": t.get("mqtt_broker"),
         "mqtt_port": t.get("mqtt_port"),
@@ -51,19 +51,16 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "opcua_key_path": t.get("opcua_key_path"),
         "telem_log_interval_sec": t.get("telem_log_interval_sec"),
         "telemetry_topic": t.get("telemetry_topic"),
-
         # AI
         "llm_provider": a.get("llm_provider"),
         "llm_api_base": a.get("llm_api_base"),
         "llm_model": a.get("llm_model"),
         "llm_api_key": a.get("llm_api_key"),
-
         # Credentials
         "google_maps_api_key": c.get("google_maps_api_key"),
         "drone_conn": c.get("drone_conn"),
         "admin_emails": c.get("admin_emails"),
         "admin_domains": c.get("admin_domains"),
-
         # Hardware
         "battery_capacity_wh": h.get("battery_capacity_wh"),
         "energy_reserve_frac": h.get("energy_reserve_frac"),
@@ -71,7 +68,6 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "cruise_power_w": h.get("cruise_power_w"),
         "heartbeat_timeout": h.get("heartbeat_timeout"),
         "enforce_preflight_range": h.get("enforce_preflight_range"),
-
         # Alerts
         "alerts_enabled": al.get("enabled"),
         "alerts_check_interval_sec": al.get("check_interval_sec"),
@@ -96,7 +92,6 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "alerts_twilio_account_sid": al.get("twilio_account_sid"),
         "alerts_twilio_auth_token": al.get("twilio_auth_token"),
         "alerts_twilio_from_number": al.get("twilio_from_number"),
-
         # Preflight
         "HDOP_MAX": p.get("HDOP_MAX"),
         "SAT_MIN": p.get("SAT_MIN"),
@@ -119,7 +114,6 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "BANK_MAX_DEG": p.get("BANK_MAX_DEG"),
         "TURN_PENALTY_S": p.get("TURN_PENALTY_S"),
         "WP_RADIUS_M": p.get("WP_RADIUS_M"),
-
         # Raspberry
         "raspberry_ip": r.get("raspberry_ip"),
         "raspberry_user": r.get("raspberry_user"),
@@ -127,7 +121,6 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "raspberry_password": r.get("raspberry_password"),
         "ssh_key_path": r.get("ssh_key_path"),
         "raspberry_streaming_script_path": r.get("raspberry_streaming_script_path"),
-
         # Camera
         "drone_video_source": cam.get("drone_video_source"),
         "drone_video_source_gazebo": cam.get("drone_video_source_gazebo"),
@@ -140,7 +133,6 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "drone_video_fallback": cam.get("drone_video_fallback"),
         "drone_video_enabled": cam.get("drone_video_enabled"),
         "drone_video_save_stream": cam.get("drone_video_save_stream"),
-
         # Photogrammetry
         "PHOTOGRAMMETRY_DRONE_SYNC_DIR": photo.get("PHOTOGRAMMETRY_DRONE_SYNC_DIR"),
         "PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR": photo.get(
@@ -150,18 +142,14 @@ def _flatten_for_env(doc: Dict[str, Any]) -> Dict[str, Any]:
         "PHOTOGRAMMETRY_STORAGE_DIR": photo.get("PHOTOGRAMMETRY_STORAGE_DIR"),
         "PHOTOGRAMMETRY_STORAGE_BASE_URL": photo.get("PHOTOGRAMMETRY_STORAGE_BASE_URL"),
         "PHOTOGRAMMETRY_3DTILES_CMD": photo.get("PHOTOGRAMMETRY_3DTILES_CMD"),
-        "PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET": photo.get(
-            "PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET"
-        ),
+        "PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET": photo.get("PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET"),
         "WEBODM_BASE_URL": photo.get("WEBODM_BASE_URL"),
         "WEBODM_API_TOKEN": photo.get("WEBODM_API_TOKEN"),
         "WEBODM_PROJECT_ID": photo.get("WEBODM_PROJECT_ID"),
         "WEBODM_MOCK_MODE": photo.get("WEBODM_MOCK_MODE"),
         "MAPPING_JOB_QUEUE_BACKEND": photo.get("MAPPING_JOB_QUEUE_BACKEND"),
         "CELERY_PHOTOGRAMMETRY_QUEUE": photo.get("CELERY_PHOTOGRAMMETRY_QUEUE"),
-        "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET": photo.get(
-            "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"
-        ),
+        "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET": photo.get("PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"),
     }
 
     # drop None so env defaults remain if DB lacks a value
@@ -193,6 +181,7 @@ async def get_runtime_settings(repo: SettingsRepository) -> EnvSettings:
 
     # Update shared singleton so existing imports see new values
     from backend import config as config_module
+
     for key, value in runtime.model_dump().items():
         setattr(config_module.settings, key, value)
     _apply_runtime_to_process_env(runtime)

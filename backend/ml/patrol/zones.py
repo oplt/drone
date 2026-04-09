@@ -52,5 +52,9 @@ class ZoneEngine:
     def find_zone_hits(self, point: GeoPoint) -> list[Zone]:
         if self._strtree is not None and Point is not None:
             matches = self._strtree.query(Point(point.lat, point.lon))
-            return [self.zones[int(idx)] for idx in matches if point_in_polygon(point, self.zones[int(idx)].polygon)]
+            return [
+                self.zones[int(idx)]
+                for idx in matches
+                if point_in_polygon(point, self.zones[int(idx)].polygon)
+            ]
         return [z for z in self.zones if point_in_polygon(point, z.polygon)]

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Mapping
-
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 TELEMETRY_MAVLINK_TYPES: list[str] = [
     "GLOBAL_POSITION_INT",
@@ -92,9 +92,7 @@ def process_mavlink_message(
 
         elif msg_type == "BATTERY_STATUS":
             voltages = msg_dict.get("voltages", [0])
-            voltage = (
-                float(voltages[0]) / 1000 if voltages and voltages[0] > 0 else 0.0
-            )
+            voltage = float(voltages[0]) / 1000 if voltages and voltages[0] > 0 else 0.0
             merge(
                 "battery",
                 {
@@ -230,7 +228,7 @@ def raw_event_from_mavlink_message(
         try:
             time_unix_usec = datetime.fromtimestamp(
                 float(time_unix_usec_raw) / 1_000_000,
-                tz=timezone.utc,
+                tz=UTC,
             )
         except Exception:
             time_unix_usec = None
@@ -240,6 +238,6 @@ def raw_event_from_mavlink_message(
         "msg_type": payload.get("mavpackettype"),
         "time_boot_ms": payload.get("time_boot_ms"),
         "time_unix_usec": time_unix_usec,
-        "timestamp": datetime.fromtimestamp(timestamp_s, tz=timezone.utc),
+        "timestamp": datetime.fromtimestamp(timestamp_s, tz=UTC),
         "payload": payload,
     }

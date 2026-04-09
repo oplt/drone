@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from statistics import mean
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import require_user
-from backend.db.models import Flight, TelemetryRecord, FlightEvent, TelemetrySummary
-from backend.db.session import get_db
+from backend.db.models import Flight, FlightEvent, TelemetryRecord
 from backend.db.repository.telemetry_repo import TelemetryRepository
-from backend.db.session import Session
+from backend.db.session import Session, get_db
 from backend.messaging.websocket import telemetry_manager
-
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -23,12 +21,12 @@ def _date_key(dt: datetime) -> str:
     return dt.date().isoformat()
 
 
-def _daterange(end: datetime, days: int) -> List[datetime]:
+def _daterange(end: datetime, days: int) -> list[datetime]:
     return [end - timedelta(days=i) for i in range(days - 1, -1, -1)]
 
 
 def _ensure_aware(dt: datetime) -> datetime:
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -40,10 +38,7 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi2 = math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dphi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    )
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -51,8 +46,8 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 async def overview(
     db: AsyncSession = Depends(get_db),
     user=Depends(require_user),
-) -> Dict[str, Any]:
-    now = datetime.now(timezone.utc)
+) -> dict[str, Any]:
+    now = datetime.now(UTC)
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
     last_30d = now - timedelta(days=30)
@@ -78,8 +73,8 @@ async def overview(
     )
 
     flights_last_7 = (
-        await db.execute(select(Flight).where(Flight.started_at >= last_7d))
-    ).scalars().all()
+        (await db.execute(select(Flight).where(Flight.started_at >= last_7d))).scalars().all()
+    )
     flight_hours_7d = 0.0
     for f in flights_last_7:
         start = _ensure_aware(f.started_at)
@@ -87,8 +82,8 @@ async def overview(
         flight_hours_7d += (end - start).total_seconds() / 3600
 
     flights_last_30 = (
-        await db.execute(select(Flight).where(Flight.started_at >= last_30d))
-    ).scalars().all()
+        (await db.execute(select(Flight).where(Flight.started_at >= last_30d))).scalars().all()
+    )
 
     # Build day buckets
     days = _daterange(now, 30)
@@ -152,10 +147,10 @@ async def overview(
 
     # Recent flights
     recent = (
-        await db.execute(
-            select(Flight).order_by(Flight.started_at.desc()).limit(12)
-        )
-    ).scalars().all()
+        (await db.execute(select(Flight).order_by(Flight.started_at.desc()).limit(12)))
+        .scalars()
+        .all()
+    )
 
     flight_ids = [f.id for f in recent]
     telemetry_counts = {}
@@ -174,9 +169,7 @@ async def overview(
         start = _ensure_aware(f.started_at)
         end = _ensure_aware(f.ended_at) if f.ended_at else now
         duration_min = max(0.0, (end - start).total_seconds() / 60)
-        distance_km = _haversine_km(
-            f.start_lat, f.start_lon, f.dest_lat, f.dest_lon
-        )
+        distance_km = _haversine_km(f.start_lat, f.start_lon, f.dest_lat, f.dest_lon)
         recent_flights.append(
             {
                 "id": f.id,
@@ -192,12 +185,10 @@ async def overview(
 
     # Recent events (best-effort)
     events = (
-        await db.execute(
-            select(FlightEvent)
-            .order_by(FlightEvent.created_at.desc())
-            .limit(10)
-        )
-    ).scalars().all()
+        (await db.execute(select(FlightEvent).order_by(FlightEvent.created_at.desc()).limit(10)))
+        .scalars()
+        .all()
+    )
     recent_events = [
         {
             "id": e.id,
@@ -240,6 +231,7 @@ async def overview(
 
 
 _VALID_RESOLUTIONS = {1, 10, 60}
+
 
 @router.get("/flights/{flight_id}/telemetry/summary")
 async def flight_telemetry_summary(

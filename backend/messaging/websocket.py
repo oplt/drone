@@ -1,17 +1,18 @@
 import asyncio
+import json
 import logging
 import threading
 import time
-from typing import Dict, Optional, Set
+from dataclasses import dataclass
+
+import orjson
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
+
 from backend.runtime import (
     TelemetryEnvelopeV1,
     TelemetryPayloadV1,
 )
-import orjson
-from dataclasses import dataclass
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,14 @@ class TelemetryWebSocketManager:
     """Manages WebSocket connections for real-time telemetry broadcasting"""
 
     def __init__(self):
-        self.active_connections: Set[WebSocket] = set()
+        self.active_connections: set[WebSocket] = set()
         self._running = False
         self._source_connected = False
         self._clients: dict[WebSocket, Client] = {}
         self._lock = threading.Lock()
 
         # Last telemetry data for new connections
-        self.last_telemetry: Dict = {
+        self.last_telemetry: dict = {
             "position": {"lat": 0, "lon": 0, "alt": 0, "relative_alt": 0},
             "attitude": {"roll": 0, "pitch": 0, "yaw": 0},
             "battery": {"voltage": 0, "current": 0, "remaining": 0, "temperature": 0},
@@ -96,9 +97,7 @@ class TelemetryWebSocketManager:
             timestamp_s=envelope.emitted_at.timestamp(),
         )
         if self._clients:
-            await self.broadcast_bytes(
-                orjson.dumps(envelope.to_legacy_websocket_message())
-            )
+            await self.broadcast_bytes(orjson.dumps(envelope.to_legacy_websocket_message()))
 
     # websocket.py (update the connect method)
     async def connect(self, websocket: WebSocket):
@@ -174,9 +173,7 @@ class TelemetryWebSocketManager:
 
             # Send initial telemetry data if available
             if self.last_telemetry["timestamp"] > 0:
-                payload = orjson.dumps(
-                    {"type": "telemetry", "data": self.last_telemetry}
-                )
+                payload = orjson.dumps({"type": "telemetry", "data": self.last_telemetry})
                 await q.put(payload)
 
             # Return the writer task so the route can monitor it
@@ -193,9 +190,7 @@ class TelemetryWebSocketManager:
             while True:
                 try:
                     # Wait for client message (with timeout)
-                    data = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=30.0
-                    )
+                    data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
 
                     # Handle ping messages
                     if data == "ping":
@@ -204,12 +199,10 @@ class TelemetryWebSocketManager:
                         except Exception:
                             break  # Connection is dead
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Send keep-alive ping
                     try:
-                        await websocket.send_json(
-                            {"type": "keepalive", "timestamp": time.time()}
-                        )
+                        await websocket.send_json({"type": "keepalive", "timestamp": time.time()})
                     except Exception:
                         break  # Connection is dead
 

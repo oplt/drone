@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import cv2
 import time
 from datetime import datetime
-from typing import Optional
+
+import cv2
 
 from backend.ml.patrol.models import FramePacket
 
@@ -22,7 +22,7 @@ class StreamReader:
         self.frame_stride = max(1, int(frame_stride))
         self.reopen_delay_s = max(0.01, float(reopen_delay_s))
 
-        self._cap: Optional[cv2.VideoCapture] = None
+        self._cap: cv2.VideoCapture | None = None
         self._frame_id = 0
         self._raw_id = 0
         self._opened = False
@@ -52,7 +52,7 @@ class StreamReader:
         self._cap = None
         self._opened = False
 
-    def read(self) -> Optional[FramePacket]:
+    def read(self) -> FramePacket | None:
         """
         Blocking read.
 

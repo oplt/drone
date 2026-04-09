@@ -1,23 +1,30 @@
 from __future__ import annotations
+
 import asyncio
+import logging
 import time
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, Dict, Any, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
+
 from pydantic import BaseModel
-from sqlalchemy import select, insert, delete, func, text
+from sqlalchemy import delete, func, insert, select, text
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+)  # also used as type in _aggregate_for_resolution
+
+from backend.drone.models import Telemetry as TelemetryDTO
+
 from ..models import (
-    TelemetryRecord,
-    TelemetrySummary,
     Flight,
     FlightEvent,
-    MavlinkEvent,
     FlightStatus,
+    MavlinkEvent,
+    TelemetryRecord,
+    TelemetrySummary,
     normalize_flight_status,
 )
-from backend.drone.models import Telemetry as TelemetryDTO
-import logging
 from ..session import Session
-from sqlalchemy.ext.asyncio import AsyncSession  # also used as type in _aggregate_for_resolution
 
 if TYPE_CHECKING:
     from backend.runtime.envelopes import TelemetryEnvelopeV1
@@ -62,20 +69,20 @@ class TelemetryRepository:
     # ---- New flight-aware methods ----
 
     async def create_flight(
-            self,
-            *,
-            started_at: Optional[datetime] = None,
-            start_lat: float,
-            start_lon: float,
-            start_alt: float,
-            dest_lat: float,
-            dest_lon: float,
-            dest_alt: float,
-            status: str | FlightStatus = FlightStatus.ACTIVE,
-            note: str = "",
+        self,
+        *,
+        started_at: datetime | None = None,
+        start_lat: float,
+        start_lon: float,
+        start_alt: float,
+        dest_lat: float,
+        dest_lon: float,
+        dest_alt: float,
+        status: str | FlightStatus = FlightStatus.ACTIVE,
+        note: str = "",
     ) -> int:
         normalized_status = _normalized_status_value(status)
-        started_at = started_at or datetime.now(timezone.utc)
+        started_at = started_at or datetime.now(UTC)
         async with self._session_factory() as s:
             f = Flight(
                 started_at=started_at,
@@ -95,16 +102,16 @@ class TelemetryRepository:
             return fid
 
     async def add_event(
-            self,
-            flight_id: Optional[int],
-            etype: str,
-            data: Dict[str, Any] | Mapping[str, Any] | BaseModel | None = None,
+        self,
+        flight_id: int | None,
+        etype: str,
+        data: dict[str, Any] | Mapping[str, Any] | BaseModel | None = None,
     ) -> None:
         if flight_id is None:
             logger.warning("Skipping flight event '%s': flight_id is None", etype)
             return
         if isinstance(data, BaseModel):
-            serialized_data: Dict[str, Any] = data.model_dump(
+            serialized_data: dict[str, Any] = data.model_dump(
                 mode="json",
                 exclude_none=True,
             )
@@ -126,8 +133,8 @@ class TelemetryRepository:
                 )
 
     async def add_flight_events_many(
-            self,
-            rows: Iterable[tuple[int, str, Dict[str, Any]]],
+        self,
+        rows: Iterable[tuple[int, str, dict[str, Any]]],
     ) -> int:
         """Batch insert flight events. Each row is (flight_id, etype, data_dict).
         Rows with flight_id=None are silently skipped.
@@ -147,9 +154,7 @@ class TelemetryRepository:
                 return len(payload)
             except Exception:
                 await s.rollback()
-                logger.exception(
-                    "Failed batch insert of %d flight events", len(payload)
-                )
+                logger.exception("Failed batch insert of %d flight events", len(payload))
                 return 0
 
     async def add_telemetry(self, flight_id: int, **fields) -> None:
@@ -164,9 +169,7 @@ class TelemetryRepository:
     _PG_MAX_PARAMS = 32_767
 
     # ------- Faster bulk ingest APIs -------
-    async def add_telemetry_many(
-            self, flight_id: int, rows: Iterable[Mapping[str, Any]]
-    ) -> int:
+    async def add_telemetry_many(self, flight_id: int, rows: Iterable[Mapping[str, Any]]) -> int:
         """Bulk insert telemetry. Each row is a dict of TelemetryRecord fields *excluding* id.
         Automatically chunks to stay within asyncpg's 32 767 bind-parameter limit.
         Returns total number of rows inserted.
@@ -192,7 +195,7 @@ class TelemetryRepository:
         return inserted
 
     async def finish_flight(
-            self, flight_id: int, *, status: str | FlightStatus, note: str = ""
+        self, flight_id: int, *, status: str | FlightStatus, note: str = ""
     ) -> None:
         normalized_status = _normalized_status_value(status)
         async with self._session_factory() as s:
@@ -200,11 +203,11 @@ class TelemetryRepository:
             f = q.scalar_one()
             f.status = normalized_status
             f.note = note
-            f.ended_at = datetime.now(timezone.utc)
+            f.ended_at = datetime.now(UTC)
             await s.commit()
 
     async def finish_flight_if_in_progress(
-            self, flight_id: int, *, status: str | FlightStatus, note: str = ""
+        self, flight_id: int, *, status: str | FlightStatus, note: str = ""
     ) -> bool:
         """
         Finish a flight only if it is still active and has no ended_at.
@@ -219,16 +222,16 @@ class TelemetryRepository:
 
             f.status = normalized_status
             f.note = note
-            f.ended_at = datetime.now(timezone.utc)
+            f.ended_at = datetime.now(UTC)
             await s.commit()
             return True
 
     async def set_flight_status_if_active(
-            self,
-            flight_id: int,
-            *,
-            status: str | FlightStatus,
-            note: str = "",
+        self,
+        flight_id: int,
+        *,
+        status: str | FlightStatus,
+        note: str = "",
     ) -> bool:
         """
         Update lifecycle status for an active flight.
@@ -245,17 +248,17 @@ class TelemetryRepository:
             if note:
                 f.note = note
             if normalized_status in TERMINAL_FLIGHT_STATUSES:
-                f.ended_at = datetime.now(timezone.utc)
+                f.ended_at = datetime.now(UTC)
             await s.commit()
             return True
 
     async def get_telemetry_for_replay(
-            self,
-            flight_id: int,
-            *,
-            since: Optional[datetime] = None,
-            until: Optional[datetime] = None,
-            limit: int = 10_000,
+        self,
+        flight_id: int,
+        *,
+        since: datetime | None = None,
+        until: datetime | None = None,
+        limit: int = 10_000,
     ) -> Sequence[TelemetryRecord]:
         """
         Return typed TelemetryRecord rows for replay and dashboard use.
@@ -280,7 +283,7 @@ class TelemetryRepository:
 
     # repository.py
     async def add_mavlink_events_many(
-            self, flight_id: int, rows: Iterable[Mapping[str, Any]]
+        self, flight_id: int, rows: Iterable[Mapping[str, Any]]
     ) -> int:
         """
         rows dict keys expected:
@@ -296,11 +299,7 @@ class TelemetryRepository:
             d = dict(r)
             d.setdefault("flight_id", flight_id)
             # derive msg_type if missing
-            msg_type = (
-                    d.get("msg_type")
-                    or d.get("payload", {}).get("mavpackettype")
-                    or "UNKNOWN"
-            )
+            msg_type = d.get("msg_type") or d.get("payload", {}).get("mavpackettype") or "UNKNOWN"
 
             # Normalize time_boot_ms (ms since boot)
             time_boot_ms = d.get("time_boot_ms")
@@ -317,11 +316,11 @@ class TelemetryRepository:
             if ts is not None and not isinstance(ts, datetime):
                 try:
                     # handle int/float epoch seconds
-                    ts = datetime.fromtimestamp(float(ts), tz=timezone.utc)
+                    ts = datetime.fromtimestamp(float(ts), tz=UTC)
                 except Exception:
-                    ts = datetime.now(timezone.utc)
+                    ts = datetime.now(UTC)
             elif ts is None:
-                ts = datetime.now(timezone.utc)
+                ts = datetime.now(UTC)
 
             payload.append(
                 {
@@ -354,9 +353,7 @@ class TelemetryRepository:
                             await s.execute(insert(MavlinkEvent).values(d))
                             inserted_total += 1
                         except Exception as single_e:
-                            logger.error(
-                                f"Single insert failed for flight {flight_id}: {single_e}"
-                            )
+                            logger.error(f"Single insert failed for flight {flight_id}: {single_e}")
                             await s.rollback()
             await s.commit()
         logger.info(
@@ -381,11 +378,7 @@ class TelemetryRepository:
         counts: dict[int, int] = {}
         async with self._session_factory() as s:
             # Clear stale summaries for this flight.
-            await s.execute(
-                delete(TelemetrySummary).where(
-                    TelemetrySummary.flight_id == flight_id
-                )
-            )
+            await s.execute(delete(TelemetrySummary).where(TelemetrySummary.flight_id == flight_id))
             await s.flush()
 
             for res_s in (1, 10, 60):
@@ -409,9 +402,7 @@ class TelemetryRepository:
         """
         # Bucket expression: floor(epoch / res_s) * res_s → back to timestamp.
         epoch_expr = func.extract("epoch", TelemetryRecord.created_at)
-        bucket_expr = func.to_timestamp(
-            func.floor(epoch_expr / res_s) * res_s
-        ).label("bucket_ts")
+        bucket_expr = func.to_timestamp(func.floor(epoch_expr / res_s) * res_s).label("bucket_ts")
 
         stmt = (
             select(
@@ -459,8 +450,7 @@ class TelemetryRepository:
         """
         if resolution_s not in self._VALID_RESOLUTIONS:
             raise ValueError(
-                f"resolution_s must be one of {sorted(self._VALID_RESOLUTIONS)}, "
-                f"got {resolution_s}"
+                f"resolution_s must be one of {sorted(self._VALID_RESOLUTIONS)}, got {resolution_s}"
             )
         async with self._session_factory() as s:
             stmt = (
@@ -534,7 +524,7 @@ class TelemetryBatcher:
     # Async context-manager support
     # ------------------------------------------------------------------
 
-    async def __aenter__(self) -> "TelemetryBatcher":
+    async def __aenter__(self) -> TelemetryBatcher:
         return self
 
     async def __aexit__(self, *_: object) -> None:
@@ -568,7 +558,7 @@ class TelemetryBatcher:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def row_from_envelope(envelope: "TelemetryEnvelopeV1") -> dict[str, Any] | None:
+    def row_from_envelope(envelope: TelemetryEnvelopeV1) -> dict[str, Any] | None:
         """
         Convert a ``TelemetryEnvelopeV1`` to a dict suitable for
         ``add_telemetry_many``.  Returns ``None`` when the envelope lacks the

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import (
     WarehouseAsset,
-    WarehouseMap,
     WarehouseDockStation,
+    WarehouseMap,
     WarehouseMappingJob,
     WarehouseModel,
 )
@@ -30,43 +30,47 @@ class WarehouseModelVersionEntry:
 
 class WarehouseMappingRepository:
     async def get_owned_warehouse_map(
-            self,
-            db: AsyncSession,
-            *,
-            warehouse_map_id: int,
-            owner_id: int,
-    ) -> Optional[WarehouseMap]:
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
+        owner_id: int,
+    ) -> WarehouseMap | None:
         return (
             await db.execute(
                 select(WarehouseMap).where(
                     WarehouseMap.id == warehouse_map_id,
                     WarehouseMap.owner_id == owner_id,
-                    )
+                )
             )
         ).scalar_one_or_none()
 
     async def list_warehouse_maps(
-            self,
-            db: AsyncSession,
-            *,
-            owner_id: int,
-            limit: int = 100,
+        self,
+        db: AsyncSession,
+        *,
+        owner_id: int,
+        limit: int = 100,
     ) -> list[WarehouseMap]:
         return (
-            await db.execute(
-                select(WarehouseMap)
-                .where(WarehouseMap.owner_id == owner_id)
-                .order_by(WarehouseMap.id.desc())
-                .limit(limit)
+            (
+                await db.execute(
+                    select(WarehouseMap)
+                    .where(WarehouseMap.owner_id == owner_id)
+                    .order_by(WarehouseMap.id.desc())
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     async def delete_warehouse_map(
-            self,
-            db: AsyncSession,
-            *,
-            warehouse_map_id: int,
-            owner_id: int,
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
+        owner_id: int,
     ) -> bool:
         """Returns True if a row was deleted, False if not found / not owned."""
         warehouse_map = await self.get_owned_warehouse_map(
@@ -80,34 +84,38 @@ class WarehouseMappingRepository:
     # ------------------------------------------------------------------ docks
 
     async def list_dock_stations(
-            self,
-            db: AsyncSession,
-            *,
-            warehouse_map_id: int,
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
     ) -> list[WarehouseDockStation]:
         return (
-            await db.execute(
-                select(WarehouseDockStation)
-                .where(
-                    WarehouseDockStation.warehouse_map_id == warehouse_map_id,
-                    WarehouseDockStation.active.is_(True),
+            (
+                await db.execute(
+                    select(WarehouseDockStation)
+                    .where(
+                        WarehouseDockStation.warehouse_map_id == warehouse_map_id,
+                        WarehouseDockStation.active.is_(True),
                     )
-                .order_by(WarehouseDockStation.id.asc())
+                    .order_by(WarehouseDockStation.id.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     async def create_dock_station(
-            self,
-            db: AsyncSession,
-            *,
-            warehouse_map_id: int,
-            name: str,
-            pose_local_json: Dict[str, Any],
-            entry_pose_local_json: Dict[str, Any],
-            exit_pose_local_json: Dict[str, Any],
-            marker_id: Optional[str] = None,
-            charger_type: Optional[str] = None,
-            meta_data: Optional[Dict[str, Any]] = None,
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
+        name: str,
+        pose_local_json: dict[str, Any],
+        entry_pose_local_json: dict[str, Any],
+        exit_pose_local_json: dict[str, Any],
+        marker_id: str | None = None,
+        charger_type: str | None = None,
+        meta_data: dict[str, Any] | None = None,
     ) -> WarehouseDockStation:
         dock = WarehouseDockStation(
             warehouse_map_id=warehouse_map_id,
@@ -125,18 +133,18 @@ class WarehouseMappingRepository:
         return dock
 
     async def deactivate_dock_station(
-            self,
-            db: AsyncSession,
-            *,
-            dock_id: int,
-            warehouse_map_id: int,
+        self,
+        db: AsyncSession,
+        *,
+        dock_id: int,
+        warehouse_map_id: int,
     ) -> bool:
         dock = (
             await db.execute(
                 select(WarehouseDockStation).where(
                     WarehouseDockStation.id == dock_id,
                     WarehouseDockStation.warehouse_map_id == warehouse_map_id,
-                    )
+                )
             )
         ).scalar_one_or_none()
         if dock is None:
@@ -145,19 +153,20 @@ class WarehouseMappingRepository:
         return True
 
     async def create_warehouse_map(
-            self,
-            db: AsyncSession,
-            *,
-            owner_id: int,
-            warehouse_name: str,
-            polygon_local_m: list[tuple[float, float]],
-            meta_data: Optional[Dict[str, Any]] = None,
+        self,
+        db: AsyncSession,
+        *,
+        owner_id: int,
+        warehouse_name: str,
+        polygon_local_m: list[tuple[float, float]],
+        meta_data: dict[str, Any] | None = None,
     ) -> WarehouseMap:
         """Create a warehouse map defined by a local metric polygon (no GPS)."""
         if len(polygon_local_m) < 3:
             raise WarehouseRepositoryError("Warehouse polygon requires at least 3 points.")
         # Compute area from the local polygon directly (metres²)
         from shapely.geometry import Polygon as _Polygon
+
         try:
             area_m2 = float(_Polygon(polygon_local_m).area)
         except Exception:
@@ -169,7 +178,7 @@ class WarehouseMappingRepository:
         warehouse_map = WarehouseMap(
             owner_id=owner_id,
             name=warehouse_name.strip(),
-            boundary=None,   # indoor — no GPS boundary
+            boundary=None,  # indoor — no GPS boundary
             centroid=None,
             area_m2=area_m2,
             meta_data=base_meta,
@@ -179,14 +188,14 @@ class WarehouseMappingRepository:
         return warehouse_map
 
     async def get_or_create_warehouse_map(
-            self,
-            db: AsyncSession,
-            *,
-            owner_id: int,
-            warehouse_map_id: Optional[int],
-            warehouse_name: Optional[str],
-            polygon_local_m: list[tuple[float, float]],
-            meta_data: Optional[Dict[str, Any]] = None,
+        self,
+        db: AsyncSession,
+        *,
+        owner_id: int,
+        warehouse_map_id: int | None,
+        warehouse_name: str | None,
+        polygon_local_m: list[tuple[float, float]],
+        meta_data: dict[str, Any] | None = None,
     ) -> WarehouseMap:
         if warehouse_map_id is not None:
             warehouse_map = await self.get_owned_warehouse_map(
@@ -217,13 +226,13 @@ class WarehouseMappingRepository:
         return int(max_version or 0) + 1
 
     async def create_mapping_job(
-            self,
-            db: AsyncSession,
-            *,
-            warehouse_map_id: int,
-            capture_result: Dict[str, Any],
-            reference_mapping_job_id: Optional[int],
-            flight_id: Optional[int],
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
+        capture_result: dict[str, Any],
+        reference_mapping_job_id: int | None,
+        flight_id: int | None,
     ) -> tuple[WarehouseModel, WarehouseMappingJob]:
         version = await self.next_model_version(db, warehouse_map_id=warehouse_map_id)
         model = WarehouseModel(
@@ -248,23 +257,23 @@ class WarehouseMappingRepository:
             progress=5,
             processor="warehouse_scan",
             params=params,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
         )
         db.add(job)
         await db.flush()
         return model, job
 
     async def add_assets(
-            self,
-            db: AsyncSession,
-            *,
-            model_id: int,
-            uploaded: Dict[str, str],
-            artifact_meta: Dict[str, Dict[str, Any]],
-            capture_result: Dict[str, Any],
-            reference_mapping_job_id: Optional[int],
-            flight_id: Optional[int],
-            job_id: int,
+        self,
+        db: AsyncSession,
+        *,
+        model_id: int,
+        uploaded: dict[str, str],
+        artifact_meta: dict[str, dict[str, Any]],
+        capture_result: dict[str, Any],
+        reference_mapping_job_id: int | None,
+        flight_id: int | None,
+        job_id: int,
     ) -> None:
         type_map = {
             "textured_mesh_3dtiles": "TILESET_3D",
@@ -287,27 +296,36 @@ class WarehouseMappingRepository:
                 )
             )
 
-    async def mark_job_ready(self, db: AsyncSession, *, job: WarehouseMappingJob, model: WarehouseModel) -> None:
+    async def mark_job_ready(
+        self, db: AsyncSession, *, job: WarehouseMappingJob, model: WarehouseModel
+    ) -> None:
         job.status = "ready"
         job.progress = 100
         job.error = None
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         model.status = "ready"
 
-    async def mark_job_failed(self, db: AsyncSession, *, job: WarehouseMappingJob, model: WarehouseModel, error: str) -> None:
+    async def mark_job_failed(
+        self,
+        db: AsyncSession,
+        *,
+        job: WarehouseMappingJob,
+        model: WarehouseModel,
+        error: str,
+    ) -> None:
         job.status = "failed"
         job.progress = 100
         job.error = error
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         model.status = "failed"
 
     async def list_ready_scanned_maps(
-            self,
-            db: AsyncSession,
-            *,
-            owner_id: int,
-            warehouse_map_id: Optional[int] = None,
-            limit: int = 50,
+        self,
+        db: AsyncSession,
+        *,
+        owner_id: int,
+        warehouse_map_id: int | None = None,
+        limit: int = 50,
     ) -> list[tuple[WarehouseMappingJob, WarehouseMap, WarehouseModel]]:
         stmt = (
             select(WarehouseMappingJob, WarehouseMap, WarehouseModel)
@@ -318,7 +336,7 @@ class WarehouseMappingRepository:
                 WarehouseMappingJob.processor == "warehouse_scan",
                 WarehouseMappingJob.status == "ready",
                 WarehouseModel.status == "ready",
-                )
+            )
             .order_by(WarehouseMappingJob.id.desc())
             .limit(limit)
         )
@@ -327,34 +345,42 @@ class WarehouseMappingRepository:
         return (await db.execute(stmt)).all()
 
     async def list_assets_for_models(
-            self,
-            db: AsyncSession,
-            *,
-            model_ids: list[int],
+        self,
+        db: AsyncSession,
+        *,
+        model_ids: list[int],
     ) -> list[WarehouseAsset]:
         if not model_ids:
             return []
         return (
-            await db.execute(
-                select(WarehouseAsset)
-                .where(WarehouseAsset.model_id.in_(model_ids))
-                .order_by(WarehouseAsset.model_id.asc(), WarehouseAsset.id.asc())
+            (
+                await db.execute(
+                    select(WarehouseAsset)
+                    .where(WarehouseAsset.model_id.in_(model_ids))
+                    .order_by(WarehouseAsset.model_id.asc(), WarehouseAsset.id.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     async def list_versions(
-            self,
-            db: AsyncSession,
-            *,
-            warehouse_map_id: int,
-    ) -> List[WarehouseModelVersionEntry]:
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
+    ) -> list[WarehouseModelVersionEntry]:
         models = (
-            await db.execute(
-                select(WarehouseModel)
-                .where(WarehouseModel.warehouse_map_id == warehouse_map_id)
-                .order_by(WarehouseModel.version.desc())
+            (
+                await db.execute(
+                    select(WarehouseModel)
+                    .where(WarehouseModel.warehouse_map_id == warehouse_map_id)
+                    .order_by(WarehouseModel.version.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [
             WarehouseModelVersionEntry(
                 id=m.id,
@@ -367,11 +393,11 @@ class WarehouseMappingRepository:
 
     @staticmethod
     def auto_warehouse_name() -> str:
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
         return f"Warehouse map {stamp}"
 
     @staticmethod
-    def polygon_from_local(warehouse_map: "WarehouseMap") -> list[list[float]]:
+    def polygon_from_local(warehouse_map: WarehouseMap) -> list[list[float]]:
         """Return the local polygon [[x_m, y_m], ...] stored in meta_data."""
         meta = warehouse_map.meta_data if isinstance(warehouse_map.meta_data, dict) else {}
         raw = meta.get("polygon_local_m")

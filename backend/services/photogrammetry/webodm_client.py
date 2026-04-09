@@ -5,15 +5,18 @@ import json
 import logging
 import mimetypes
 import os
-import shutil
 import zipfile
+from collections.abc import Awaitable, Callable, Iterable
 from contextlib import ExitStack
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Literal, Optional, TypeVar
+from typing import (
+    Any,
+    Literal,
+    TypeVar,
+)
 
 import httpx
-
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -37,7 +40,11 @@ class WebODMClient:
         self.base_url = os.getenv("WEBODM_BASE_URL", "http://localhost:8001").rstrip("/")
         self.api_token = os.getenv("WEBODM_API_TOKEN", "")
         self.project_id = int(os.getenv("WEBODM_PROJECT_ID", "1"))
-        self.mock_mode = os.getenv("WEBODM_MOCK_MODE", "0").lower() in {"1", "true", "yes"}
+        self.mock_mode = os.getenv("WEBODM_MOCK_MODE", "0").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
         self.mock_outputs_dir = Path(
             os.getenv("WEBODM_MOCK_OUTPUTS_DIR", "backend/mock/webodm_outputs")
         ).resolve()
@@ -46,7 +53,12 @@ class WebODMClient:
             os.getenv("PHOTOGRAMMETRY_INPUTS_DIR", "backend/storage/mapping_jobs_inputs")
         ).resolve()
         self.downloads_root = _ensure_dir(
-            Path(os.getenv("PHOTOGRAMMETRY_WEBODM_DOWNLOADS_DIR", "backend/storage/webodm_downloads")).resolve()
+            Path(
+                os.getenv(
+                    "PHOTOGRAMMETRY_WEBODM_DOWNLOADS_DIR",
+                    "backend/storage/webodm_downloads",
+                )
+            ).resolve()
         )
         self.http_timeout_s = float(os.getenv("WEBODM_HTTP_TIMEOUT_S", "120"))
         self.http_retry_attempts = self._parse_positive_int_env(
@@ -99,13 +111,13 @@ class WebODMClient:
             self.processor_backend,
         )
 
-    def _headers(self) -> Dict[str, str]:
-        headers: Dict[str, str] = {}
+    def _headers(self) -> dict[str, str]:
+        headers: dict[str, str] = {}
         if self.api_token:
             headers["Authorization"] = f"JWT {self.api_token}"
         return headers
 
-    def _nodeodm_auth_params(self) -> Dict[str, str]:
+    def _nodeodm_auth_params(self) -> dict[str, str]:
         if not self.api_token:
             return {}
         return {"token": self.api_token}
@@ -125,7 +137,9 @@ class WebODMClient:
         return (
             isinstance(payload, dict)
             and "version" in payload
-            and ("taskQueueCount" in payload or "engineVersion" in payload or "maxImages" in payload)
+            and (
+                "taskQueueCount" in payload or "engineVersion" in payload or "maxImages" in payload
+            )
         )
 
     async def _get_backend_kind(self) -> Literal["webodm", "nodeodm"]:
@@ -156,7 +170,9 @@ class WebODMClient:
         except Exception as exc:
             logger.debug("NodeODM backend probe failed for %s: %s", info_url, exc)
 
-        if self._looks_like_uuid_token(self.api_token) and not self._looks_like_jwt_token(self.api_token):
+        if self._looks_like_uuid_token(self.api_token) and not self._looks_like_jwt_token(
+            self.api_token
+        ):
             logger.info(
                 "Assuming NodeODM backend for base_url=%s because WEBODM_API_TOKEN looks like a NodeODM token",
                 self.base_url,
@@ -166,8 +182,8 @@ class WebODMClient:
         logger.info("Defaulting to WebODM backend for base_url=%s", self.base_url)
         return "webodm"
 
-    def _resolve_image_paths(self, image_paths: Optional[Iterable[str]]) -> List[Path]:
-        resolved: List[Path] = []
+    def _resolve_image_paths(self, image_paths: Iterable[str] | None) -> list[Path]:
+        resolved: list[Path] = []
         for raw in image_paths or []:
             s = str(raw).strip()
             if not s:
@@ -231,7 +247,9 @@ class WebODMClient:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                if attempt >= self.http_retry_attempts or not self._is_retryable_http_exception(exc):
+                if attempt >= self.http_retry_attempts or not self._is_retryable_http_exception(
+                    exc
+                ):
                     raise
                 delay = min(
                     self.http_retry_min_delay_s * (self.http_retry_backoff_factor ** (attempt - 1)),
@@ -252,7 +270,7 @@ class WebODMClient:
         self,
         *,
         job_id: int,
-        options: Dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None,
         image_paths: list[str] | None = None,
     ) -> str:
         if self.mock_mode:
@@ -292,8 +310,8 @@ class WebODMClient:
         self,
         *,
         job_id: int,
-        options: Dict[str, Any] | None,
-        resolved_images: List[Path],
+        options: dict[str, Any] | None,
+        resolved_images: list[Path],
     ) -> str:
 
         url = f"{self.base_url}/api/projects/{self.project_id}/tasks/"
@@ -326,7 +344,7 @@ class WebODMClient:
         return str(task_id)
 
     @staticmethod
-    def _nodeodm_options_payload(options: Dict[str, Any] | None) -> str:
+    def _nodeodm_options_payload(options: dict[str, Any] | None) -> str:
         if not options:
             return "[]"
         payload = []
@@ -340,8 +358,8 @@ class WebODMClient:
         self,
         *,
         job_id: int,
-        options: Dict[str, Any] | None,
-        resolved_images: List[Path],
+        options: dict[str, Any] | None,
+        resolved_images: list[Path],
     ) -> str:
         url = f"{self.base_url}/task/new"
         data = {
@@ -375,7 +393,7 @@ class WebODMClient:
         logger.info("NodeODM create_task success: job_id=%s task_id=%s", job_id, task_id)
         return str(task_id)
 
-    async def get_task_status(self, task_id: str) -> Dict[str, Any]:
+    async def get_task_status(self, task_id: str) -> dict[str, Any]:
         if self.mock_mode:
             return {"state": "COMPLETED", "progress": 100}
 
@@ -384,10 +402,10 @@ class WebODMClient:
             return await self._get_task_status_nodeodm(task_id)
         return await self._get_task_status_webodm(task_id)
 
-    async def _get_task_status_webodm(self, task_id: str) -> Dict[str, Any]:
+    async def _get_task_status_webodm(self, task_id: str) -> dict[str, Any]:
         url = f"{self.base_url}/api/projects/{self.project_id}/tasks/{task_id}/"
 
-        async def _fetch_status() -> Dict[str, Any]:
+        async def _fetch_status() -> dict[str, Any]:
             async with httpx.AsyncClient(timeout=self.http_timeout_s) as client:
                 resp = await client.get(url, headers=self._headers())
                 resp.raise_for_status()
@@ -400,10 +418,10 @@ class WebODMClient:
 
         return self._normalize_task_status(payload)
 
-    async def _get_task_status_nodeodm(self, task_id: str) -> Dict[str, Any]:
+    async def _get_task_status_nodeodm(self, task_id: str) -> dict[str, Any]:
         url = f"{self.base_url}/task/{task_id}/info"
 
-        async def _fetch_status() -> Dict[str, Any]:
+        async def _fetch_status() -> dict[str, Any]:
             async with httpx.AsyncClient(timeout=self.http_timeout_s) as client:
                 resp = await client.get(url, params=self._nodeodm_auth_params())
                 resp.raise_for_status()
@@ -426,7 +444,7 @@ class WebODMClient:
         return None
 
     @classmethod
-    def _normalize_task_status(cls, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_task_status(cls, payload: dict[str, Any]) -> dict[str, Any]:
         raw_status = payload.get("status")
         status_code = cls._status_code(raw_status)
         status_str = str(raw_status).lower()
@@ -446,7 +464,7 @@ class WebODMClient:
             progress = 0
         progress = max(0, min(100, progress))
 
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "state": state,
             "progress": progress,
         }
@@ -454,14 +472,13 @@ class WebODMClient:
             result["error"] = payload.get("last_error") or payload.get("error")
         return result
 
-    async def download_outputs(self, task_id: str) -> Dict[str, str]:
+    async def download_outputs(self, task_id: str) -> dict[str, str]:
         if self.mock_mode:
             logger.info("WebODM download_outputs mock mode: task_id=%s", task_id)
             return self._mock_outputs()
 
         task_dir = _ensure_dir(
-            self.downloads_root
-            / f"task_{task_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+            self.downloads_root / f"task_{task_id}_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
         )
         logger.info(
             "WebODM download_outputs start: task_id=%s destination=%s",
@@ -500,7 +517,7 @@ class WebODMClient:
                 endpoint = f"/{endpoint}"
             url = f"{self.base_url}{endpoint}"
             request_headers = self._headers()
-            request_params: Dict[str, str] = {}
+            request_params: dict[str, str] = {}
         logger.info(
             "WebODM archive download start: task_id=%s url=%s destination=%s",
             task_id,
@@ -546,14 +563,14 @@ class WebODMClient:
             zf.extractall(destination)
 
     @staticmethod
-    def _first_match(root: Path, patterns: List[str]) -> Optional[Path]:
+    def _first_match(root: Path, patterns: list[str]) -> Path | None:
         for pattern in patterns:
             for item in root.glob(pattern):
                 if item.exists() and item.is_file():
                     return item.resolve()
         return None
 
-    def _locate_outputs(self, extracted_root: Path) -> Dict[str, str]:
+    def _locate_outputs(self, extracted_root: Path) -> dict[str, str]:
         ortho = self._first_match(
             extracted_root,
             [
@@ -599,7 +616,7 @@ class WebODMClient:
                 f"Located: orthophoto={bool(ortho)}, dsm={bool(dsm)}, mesh={bool(mesh)}"
             )
 
-        outputs: Dict[str, str] = {
+        outputs: dict[str, str] = {
             "orthophoto": str(ortho),
             "dsm": str(dsm),
             "mesh": str(mesh),
@@ -615,7 +632,7 @@ class WebODMClient:
         )
         return outputs
 
-    def _mock_outputs(self) -> Dict[str, str]:
+    def _mock_outputs(self) -> dict[str, str]:
         ortho = self.mock_outputs_dir / "orthophoto.tif"
         dsm = self.mock_outputs_dir / "dsm.tif"
         dtm = self.mock_outputs_dir / "dtm.tif"
@@ -641,7 +658,7 @@ class WebODMClient:
                 f"Mock mesh not found (expected mesh.glb or mesh.obj in {self.mock_outputs_dir})"
             )
 
-        outputs: Dict[str, str] = {
+        outputs: dict[str, str] = {
             "orthophoto": str(ortho),
             "dsm": str(dsm),
             "mesh": str(mesh),

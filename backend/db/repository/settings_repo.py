@@ -1,15 +1,17 @@
 from __future__ import annotations
-from typing import Optional, Dict, Any
-from sqlalchemy import select, delete
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from ..models import SettingsRow, VaultSecret
+
 import logging
-from ..session import Session
+from typing import Any
+
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
 from backend.utils.vault import Vault
 
+from ..models import SettingsRow, VaultSecret
+from ..session import Session
 
 logger = logging.getLogger(__name__)
-
 
 
 MASK = "********"
@@ -38,11 +40,11 @@ SECRET_PATHS = {
 }
 
 
-def _ensure_dict(x: Any) -> Dict[str, Any]:
+def _ensure_dict(x: Any) -> dict[str, Any]:
     return x if isinstance(x, dict) else {}
 
 
-def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     """Merge override into base (dict-dict recursively)."""
     out = dict(base)
     for k, v in override.items():
@@ -53,14 +55,14 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     return out
 
 
-def _set_path(d: Dict[str, Any], path: tuple[str, str], value: Any) -> None:
+def _set_path(d: dict[str, Any], path: tuple[str, str], value: Any) -> None:
     a, b = path
     d.setdefault(a, {})
     if isinstance(d[a], dict):
         d[a][b] = value
 
 
-def _pop_path(d: Dict[str, Any], path: tuple[str, str]) -> Optional[Any]:
+def _pop_path(d: dict[str, Any], path: tuple[str, str]) -> Any | None:
     a, b = path
     if not isinstance(d.get(a), dict):
         return None
@@ -72,12 +74,14 @@ class SettingsRepository:
         self._session_factory = Session
         self._vault = Vault()
 
-    async def _read_row(self) -> tuple[Dict[str, Any], Optional[str]]:
+    async def _read_row(self) -> tuple[dict[str, Any], str | None]:
         async with self._session_factory() as db:
             res = await db.execute(select(SettingsRow).where(SettingsRow.id == 1))
             row = res.scalar_one_or_none()
             data = (row.data if row else {}) or {}
-            updated_at = row.updated_at.isoformat() if row and getattr(row, "updated_at", None) else None
+            updated_at = (
+                row.updated_at.isoformat() if row and getattr(row, "updated_at", None) else None
+            )
             return dict(data), updated_at
 
     async def _read_secret_names(self) -> set[str]:
@@ -85,7 +89,7 @@ class SettingsRepository:
             sec = await db.execute(select(VaultSecret.name))
             return {r[0] for r in sec.all()}
 
-    async def get_settings_doc(self) -> Dict[str, Any]:
+    async def get_settings_doc(self) -> dict[str, Any]:
         """
         Public (UI) shape:
         - returns SettingsDoc-compatible dict
@@ -119,7 +123,7 @@ class SettingsRepository:
 
         return data
 
-    async def put_settings_doc(self, incoming: Dict[str, Any]) -> Dict[str, Any]:
+    async def put_settings_doc(self, incoming: dict[str, Any]) -> dict[str, Any]:
         """
         - Upsert non-secret settings JSON into SettingsRow(id=1)
         - If incoming contains a non-masked secret, encrypt+store it in VaultSecret
@@ -161,7 +165,7 @@ class SettingsRepository:
 
         async with self._session_factory() as db:
 
-            async def upsert_secret(name: str, value: Optional[str]) -> None:
+            async def upsert_secret(name: str, value: str | None) -> None:
                 if value is None:
                     return
                 raw = str(value)
@@ -203,7 +207,7 @@ class SettingsRepository:
 
         return await self.get_settings_doc()
 
-    async def get_effective_settings_doc(self) -> Dict[str, Any]:
+    async def get_effective_settings_doc(self) -> dict[str, Any]:
         """
         Internal runtime shape:
         - returns SettingsDoc-compatible dict

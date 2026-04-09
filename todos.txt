@@ -131,10 +131,10 @@ Detailed fix checklist
 [x] Add downsampled summary tables or materialized aggregates for 1-second, 10-second, and 1-minute replay/dashboard reads.
 [x] Add retention rules for raw telemetry, downsampled telemetry, and raw MAVLink payloads so storage growth stays predictable.
 [x] Add ingestion and query benchmarks against realistic mission durations and telemetry rates before changing indexes further.
-[ ] Add failure tests for DB slowdown or unavailability to confirm queues degrade safely instead of blocking flight-critical logic.
+[x] Add failure tests for DB slowdown or unavailability to confirm queues degrade safely instead of blocking flight-critical logic.
 
-[ ] Refactor `backend/drone/mavlink_drone.py` waypoint-following logic into a segment-based survey follower with configurable lookahead and turn behavior.
-[ ] Replace coarse sleep-driven progress checks with a tighter control loop that can react faster to drift, pause, or abort commands.
+[x] Refactor `backend/drone/mavlink_drone.py` waypoint-following logic into a segment-based survey follower with configurable lookahead and turn behavior.
+[x] Replace coarse sleep-driven progress checks with a tighter control loop that can react faster to drift, pause, or abort commands.
 [ ] Add configurable acceptance radii that differ for transit legs, survey legs, and return-home flow.
 [ ] Add turn anticipation or curve smoothing for dense grid missions so the aircraft spends less time braking and re-acquiring each leg.
 [ ] Record mission progress per segment or swath so interrupted survey missions can resume from the right place.

@@ -1,0 +1,81 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "backend/.venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ERA", "RUF"]
+fixable = ["ALL"]
+ignore = [
+    "B008",   # FastAPI: function calls in default args (Depends, Query, etc.)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"backend/tests/**" = ["SIM", "ERA"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+exclude = [
+    "migrations/",
+    "\\.venv/",
+    "backend/\\.venv/",
+]
+
+# Third-party packages without bundled stubs or typeshed coverage
+[[tool.mypy.overrides]]
+module = [
+    "asyncua.*",
+    "argon2.*",
+    "celery.*",
+    "cv2.*",
+    "dronekit.*",
+    "flask.*",
+    "geoalchemy2.*",
+    "googlemaps.*",
+    "jose.*",
+    "kombu.*",
+    "paho.*",
+    "paramiko.*",
+    "picamera2.*",
+    "pymavlink.*",
+    "shapely.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["backend/tests"]
+
+[tool.vulture]
+paths = ["backend"]
+exclude = [".venv/", "backend/.venv/", "build/", "dist/"]
+min_confidence = 90
+sort_by_size = true
+ignore_decorators = ["@app.route", "@router.*", "@celery.task"]
+ignore_names = ["visit_*", "do_*", "test_*"]

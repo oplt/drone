@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
 
 from backend.ml.patrol.models import Detection, Track
 
@@ -35,7 +34,7 @@ class SimpleTracker:
         self.tracks: dict[int, Track] = {}
         self.missed: dict[int, int] = {}
 
-    def update(self, detections: List[Detection], now: datetime) -> List[Track]:
+    def update(self, detections: list[Detection], now: datetime) -> list[Track]:
         updated_ids: set[int] = set()
 
         for det in detections:

@@ -6,8 +6,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any
 
 from backend.db.repository.warehouse_mapping_repo import (
     WarehouseMappingRepository,
@@ -16,7 +17,6 @@ from backend.db.repository.warehouse_mapping_repo import (
 from backend.db.session import Session
 from backend.services.photogrammetry.storage import StorageService
 from backend.services.photogrammetry.tiling import convert_mesh_to_3dtiles
-
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +34,17 @@ class WarehouseScanMappingService:
         self.repo = WarehouseMappingRepository()
 
     async def persist_capture(
-            self,
-            *,
-            owner_id: int,
-            warehouse_map_id: Optional[int],
-            warehouse_name: Optional[str],
-            polygon_local_m: list[tuple[float, float]],
-            session_dir: str | Path,
-            capture_result: Dict[str, Any],
-            reference_mapping_job_id: Optional[int] = None,
-            flight_id: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        self,
+        *,
+        owner_id: int,
+        warehouse_map_id: int | None,
+        warehouse_name: str | None,
+        polygon_local_m: list[tuple[float, float]],
+        session_dir: str | Path,
+        capture_result: dict[str, Any],
+        reference_mapping_job_id: int | None = None,
+        flight_id: int | None = None,
+    ) -> dict[str, Any]:
         resolved_session_dir = Path(session_dir).resolve()
         if not resolved_session_dir.exists():
             raise WarehouseScanMappingError(
@@ -91,7 +91,9 @@ class WarehouseScanMappingService:
                 db_job = await db.get(type(job), int(job.id))
                 db_model = await db.get(type(model), int(model.id))
                 if db_job is None or db_model is None:
-                    raise WarehouseScanMappingError("Warehouse mapping job disappeared before asset registration.")
+                    raise WarehouseScanMappingError(
+                        "Warehouse mapping job disappeared before asset registration."
+                    )
                 await self.repo.add_assets(
                     db,
                     model_id=int(db_model.id),
@@ -119,7 +121,7 @@ class WarehouseScanMappingService:
                     await db.commit()
             raise
 
-    async def _upload_outputs(self, converted: Dict[str, str]) -> Dict[str, str]:
+    async def _upload_outputs(self, converted: dict[str, str]) -> dict[str, str]:
         async def _upload_one(key: str, path: str) -> tuple[str, str]:
             src = Path(path).resolve()
             if src.is_dir():
@@ -136,7 +138,7 @@ class WarehouseScanMappingService:
             *[_upload_one(key, path) for key, path in converted.items()],
             return_exceptions=True,
         )
-        uploaded: Dict[str, str] = {}
+        uploaded: dict[str, str] = {}
         errors: list[str] = []
         for result in results:
             if isinstance(result, BaseException):
@@ -161,7 +163,7 @@ class WarehouseScanMappingService:
 
     @staticmethod
     def _bbox_from_polygon_local_m(
-            polygon_local_m: list[tuple[float, float]],
+        polygon_local_m: list[tuple[float, float]],
     ) -> dict[str, float]:
         xs = [float(x) for x, _y in polygon_local_m]
         ys = [float(y) for _x, y in polygon_local_m]
@@ -173,17 +175,15 @@ class WarehouseScanMappingService:
         }
 
     @staticmethod
-    def _find_existing_tileset_dir(root: Path) -> Optional[Path]:
+    def _find_existing_tileset_dir(root: Path) -> Path | None:
         candidates = sorted(root.rglob("tileset.json"), key=lambda path: len(path.parts))
         return candidates[0].parent if candidates else None
 
     @staticmethod
-    def _find_first_file(root: Path, extensions: Iterable[str]) -> Optional[Path]:
+    def _find_first_file(root: Path, extensions: Iterable[str]) -> Path | None:
         allowed = {ext.lower() for ext in extensions}
         candidates = [
-            path
-            for path in root.rglob("*")
-            if path.is_file() and path.suffix.lower() in allowed
+            path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in allowed
         ]
         candidates.sort(key=lambda path: (len(path.parts), path.name.lower()))
         return candidates[0] if candidates else None
@@ -205,13 +205,13 @@ class WarehouseScanMappingService:
         return True
 
     def _prepare_artifacts(
-            self,
-            session_dir: Path,
-            work_dir: Path,
-            polygon_local_m: list[tuple[float, float]],
-    ) -> tuple[Dict[str, str], Dict[str, Dict[str, Any]]]:
-        converted: Dict[str, str] = {}
-        artifact_meta: Dict[str, Dict[str, Any]] = {}
+        self,
+        session_dir: Path,
+        work_dir: Path,
+        polygon_local_m: list[tuple[float, float]],
+    ) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
+        converted: dict[str, str] = {}
+        artifact_meta: dict[str, dict[str, Any]] = {}
 
         tileset_dir = self._find_existing_tileset_dir(session_dir)
         if tileset_dir is None:

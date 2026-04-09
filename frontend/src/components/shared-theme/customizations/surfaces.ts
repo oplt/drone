@@ -15,8 +15,8 @@ export const surfacesCustomizations: Components<Theme> = {
         padding: 4,
         overflow: 'clip',
         backgroundColor: (theme.vars || theme).palette.background.default,
-        border: '1px solid',
-        borderColor: (theme.vars || theme).palette.divider,
+        border: `1px solid ${gray[300]}`,
+        boxShadow: 'none',
         ':before': {
           backgroundColor: 'transparent',
         },
@@ -31,6 +31,9 @@ export const surfacesCustomizations: Components<Theme> = {
           borderBottomLeftRadius: (theme.vars || theme).shape.borderRadius,
           borderBottomRightRadius: (theme.vars || theme).shape.borderRadius,
         },
+        ...theme.applyStyles('dark', {
+          border: `1px solid ${alpha(gray[300], 0.12)}`,
+        }),
       }),
     },
   },
@@ -38,11 +41,11 @@ export const surfacesCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         border: 'none',
-        borderRadius: 8,
-        '&:hover': { backgroundColor: gray[50] },
+        borderRadius: (theme.vars || theme).shape.borderRadius,
+        '&:hover': { backgroundColor: gray[200] },
         '&:focus-visible': { backgroundColor: 'transparent' },
         ...theme.applyStyles('dark', {
-          '&:hover': { backgroundColor: gray[800] },
+          '&:hover': { backgroundColor: alpha(gray[300], 0.06) },
         }),
       }),
     },
@@ -60,51 +63,45 @@ export const surfacesCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         backgroundImage: 'none',
         borderRadius: (theme.vars || theme).shape.borderRadius,
+        boxShadow: 'none',
       }),
     },
   },
   MuiCard: {
     styleOverrides: {
       root: ({ theme }) => {
-        const cardRadius = (theme.vars || theme).shape.borderRadius;
         return {
           padding: 20,
           gap: 20,
-          transition: 'transform 160ms ease, box-shadow 200ms ease, border-color 160ms ease',
-          backgroundColor: alpha(gray[50], 0.95),
-          borderRadius: typeof cardRadius === 'number' ? cardRadius + 6 : cardRadius,
-          border: `1px solid ${alpha(gray[200], 0.8)}`,
-          boxShadow: (theme.vars || theme).palette.baseShadow,
+          transition: 'border-color 160ms ease',
+          backgroundColor: gray[50],
+          borderRadius: (theme.vars || theme).shape.borderRadius,
+          border: `1px solid ${gray[300]}`,
+          boxShadow: 'none',
           '@media (hover: hover)': {
             '&:hover': {
-              borderColor: alpha(gray[300], 0.9),
-              boxShadow: `0 18px 34px ${alpha(gray[700], 0.08)}`,
-              transform: 'translateY(-3px)',
+              borderColor: gray[400],
             },
           },
           ...theme.applyStyles('dark', {
-            backgroundColor: alpha(gray[800], 0.9),
-            borderColor: alpha(gray[700], 0.6),
+            backgroundColor: '#211916',
+            border: `1px solid ${alpha(gray[300], 0.12)}`,
             '@media (hover: hover)': {
               '&:hover': {
-                borderColor: alpha(gray[600], 0.7),
-                boxShadow: `0 18px 36px ${alpha(gray[900], 0.6)}`,
-                transform: 'translateY(-3px)',
+                borderColor: alpha(gray[300], 0.2),
               },
             },
           }),
           variants: [
             {
-              props: {
-                variant: 'outlined',
-              },
+              props: { variant: 'outlined' },
               style: {
-                border: `1px solid ${alpha(gray[200], 0.8)}`,
-                boxShadow: (theme.vars || theme).palette.baseShadow,
-                background: 'rgba(255, 255, 255, 0.82)',
-                backdropFilter: 'blur(12px)',
+                border: `1px solid ${gray[300]}`,
+                boxShadow: 'none',
+                background: gray[50],
                 ...theme.applyStyles('dark', {
-                  background: alpha(gray[900], 0.52),
+                  background: alpha('#211916', 0.9),
+                  border: `1px solid ${alpha(gray[300], 0.12)}`,
                 }),
               },
             },

@@ -1,8 +1,8 @@
 import asyncio
 import hashlib
 import json
-from typing import List, Dict, Optional, Any, Tuple
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -10,11 +10,12 @@ class PrecomputedMissionData:
     """
     Precomputed mission data to avoid repeated calculations.
     """
-    waypoints: List[Any]  # Original waypoints
-    segment_distances: List[float] = field(default_factory=list)
-    cumulative_distances: List[float] = field(default_factory=list)
-    terrain_elevations: List[Optional[float]] = field(default_factory=list)
-    bearings: List[float] = field(default_factory=list)
+
+    waypoints: list[Any]  # Original waypoints
+    segment_distances: list[float] = field(default_factory=list)
+    cumulative_distances: list[float] = field(default_factory=list)
+    terrain_elevations: list[float | None] = field(default_factory=list)
+    bearings: list[float] = field(default_factory=list)
     total_distance: float = 0.0
     estimated_duration: float = 0.0
 
@@ -35,6 +36,7 @@ class PrecomputedMissionData:
 
             # Use optimized distance calculation
             from .cache import optimized_distance
+
             dist = optimized_distance(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
             self.segment_distances.append(dist)
             self.cumulative_distances.append(self.cumulative_distances[-1] + dist)
@@ -43,7 +45,7 @@ class PrecomputedMissionData:
 
     def _compute_bearings(self):
         """Compute initial bearings for each segment."""
-        from math import atan2, sin, cos, radians
+        from math import atan2, cos, radians, sin
 
         self.bearings = []
         for i in range(len(self.waypoints) - 1):
@@ -68,16 +70,18 @@ class PrecomputedMissionData:
     def get_distance_between(self, start_idx: int, end_idx: int) -> float:
         """Get cumulative distance between two waypoint indices."""
         # BUG FIX: also guard start_idx against the upper bound
-        if (start_idx < 0
-                or start_idx >= len(self.cumulative_distances)
-                or end_idx >= len(self.cumulative_distances)):
+        if (
+            start_idx < 0
+            or start_idx >= len(self.cumulative_distances)
+            or end_idx >= len(self.cumulative_distances)
+        ):
             raise IndexError(
                 f"Index out of range: start={start_idx}, end={end_idx}, "
                 f"cumulative_distances length={len(self.cumulative_distances)}"
             )
         return abs(self.cumulative_distances[end_idx] - self.cumulative_distances[start_idx])
 
-    def get_terrain_at(self, idx: int) -> Optional[float]:
+    def get_terrain_at(self, idx: int) -> float | None:
         """Get terrain elevation at waypoint index."""
         if 0 <= idx < len(self.terrain_elevations):
             return self.terrain_elevations[idx]
@@ -91,18 +95,15 @@ class MissionDataPreprocessor:
 
     def __init__(self, terrain_cache=None):
         # BUG FIX: import at class level so clear() can also use DistanceCache
-        from .cache import TerrainCache, DistanceCache
+        from .cache import DistanceCache, TerrainCache
+
         self.terrain_cache = terrain_cache or TerrainCache()
         self.distance_cache = DistanceCache()
-        self._precomputed: Dict[str, PrecomputedMissionData] = {}
+        self._precomputed: dict[str, PrecomputedMissionData] = {}
 
-    async def preprocess(
-            self,
-            waypoints: List[Any],
-            terrain_data=None
-    ) -> PrecomputedMissionData:
+    async def preprocess(self, waypoints: list[Any], terrain_data=None) -> PrecomputedMissionData:
         """Async version: fetches terrain elevations concurrently."""
-        wp_summary = [(w.lat, w.lon, getattr(w, 'alt', 0)) for w in waypoints]
+        wp_summary = [(w.lat, w.lon, getattr(w, "alt", 0)) for w in waypoints]
         cache_key = hashlib.md5(json.dumps(wp_summary).encode()).hexdigest()
 
         if cache_key in self._precomputed:
@@ -110,7 +111,7 @@ class MissionDataPreprocessor:
 
         precomputed = PrecomputedMissionData(waypoints=waypoints)
 
-        if terrain_data and hasattr(terrain_data, 'get_elevation'):
+        if terrain_data and hasattr(terrain_data, "get_elevation"):
             # Resolve cache hits first, then batch-fetch all misses in one API call.
             elevations: list = [None] * len(waypoints)
             miss_indices: list[int] = []
@@ -127,9 +128,8 @@ class MissionDataPreprocessor:
             if miss_coords:
                 # Prefer the batch method (elevations_m / get_elevations) to collapse
                 # N misses into a single API request (≤ 250 coords per call).
-                batch_fn = (
-                    getattr(terrain_data, 'elevations_m', None)
-                    or getattr(terrain_data, 'get_elevations', None)
+                batch_fn = getattr(terrain_data, "elevations_m", None) or getattr(
+                    terrain_data, "get_elevations", None
                 )
                 if batch_fn is not None:
                     fetched = await asyncio.to_thread(batch_fn, miss_coords)
@@ -140,7 +140,8 @@ class MissionDataPreprocessor:
                     # Fallback: single fetches concurrently (no batch method available).
                     tasks = [
                         self.terrain_cache.get_or_fetch(
-                            waypoints[idx].lat, waypoints[idx].lon,
+                            waypoints[idx].lat,
+                            waypoints[idx].lon,
                             terrain_data.get_elevation,
                         )
                         for idx in miss_indices
@@ -160,9 +161,7 @@ class MissionDataPreprocessor:
         """Clear all caches."""
         # BUG FIX: import DistanceCache here so it is in scope
         from .cache import DistanceCache
+
         self.terrain_cache.clear()
         self.distance_cache = DistanceCache()
         self._precomputed.clear()
-
-
-

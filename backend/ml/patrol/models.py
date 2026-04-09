@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -27,8 +27,8 @@ class Track:
     bbox: tuple[int, int, int, int]
     centroid: tuple[int, int]
     age_frames: int = 0
-    first_seen: Optional[datetime] = None
-    last_seen: Optional[datetime] = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
 

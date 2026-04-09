@@ -9,10 +9,9 @@ import shutil
 import subprocess
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
 _UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _iso(dt: datetime) -> str:
@@ -55,9 +54,7 @@ class FlightCaptureSessionService:
         self.default_wait_timeout_s = float(
             os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_TIMEOUT_S", "120")
         )
-        self.default_poll_interval_s = float(
-            os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_POLL_S", "2")
-        )
+        self.default_poll_interval_s = float(os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_POLL_S", "2"))
         self.default_min_images = max(
             0, int(os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_MIN_IMAGES", "1"))
         )
@@ -80,7 +77,7 @@ class FlightCaptureSessionService:
     def _manifest_path(self, session: FlightCaptureSession) -> Path:
         return session.session_dir / "capture_session.json"
 
-    def _write_manifest(self, session: FlightCaptureSession, payload: Dict[str, Any]) -> None:
+    def _write_manifest(self, session: FlightCaptureSession, payload: dict[str, Any]) -> None:
         manifest_path = self._manifest_path(session)
         manifest_path.write_text(
             json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=True),
@@ -119,14 +116,10 @@ class FlightCaptureSessionService:
         return session
 
     @staticmethod
-    def _list_images(root: Path) -> List[Path]:
+    def _list_images(root: Path) -> list[Path]:
         if not root.exists():
             return []
-        files = [
-            p
-            for p in root.rglob("*")
-            if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-        ]
+        files = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS]
         return sorted(files)
 
     @staticmethod
@@ -173,7 +166,7 @@ class FlightCaptureSessionService:
         session: FlightCaptureSession,
         *,
         force: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         token = session.relative_source_dir
         if not self.capture_sync_cmd_template:
             return {
@@ -260,7 +253,7 @@ class FlightCaptureSessionService:
         self,
         session: FlightCaptureSession,
         *,
-        image_paths: List[str] | None,
+        image_paths: list[str] | None,
     ) -> int:
         copied = 0
         for raw in image_paths or []:
@@ -286,10 +279,10 @@ class FlightCaptureSessionService:
         self,
         session: FlightCaptureSession,
         *,
-        min_images: Optional[int] = None,
-        timeout_s: Optional[float] = None,
-        poll_interval_s: Optional[float] = None,
-    ) -> List[Path]:
+        min_images: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+    ) -> list[Path]:
         needed = self.default_min_images if min_images is None else max(0, int(min_images))
         timeout = self.default_wait_timeout_s if timeout_s is None else max(0.0, float(timeout_s))
         poll = (
@@ -347,11 +340,11 @@ class FlightCaptureSessionService:
         self,
         session: FlightCaptureSession,
         *,
-        min_images: Optional[int] = None,
-        timeout_s: Optional[float] = None,
-        poll_interval_s: Optional[float] = None,
-        extra_meta: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        min_images: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+        extra_meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         target_min = self.default_min_images if min_images is None else max(0, int(min_images))
         images = self.wait_for_images(
             session,
@@ -361,7 +354,7 @@ class FlightCaptureSessionService:
         )
         ended_at = _utc_now()
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "flight_id": session.flight_id,
             "source_dir": session.relative_source_dir,
             "absolute_dir": str(session.session_dir),
@@ -369,9 +362,7 @@ class FlightCaptureSessionService:
             "ended_at": _iso(ended_at),
             "image_count": len(images),
             "images": [str(p.relative_to(session.session_dir)) for p in images],
-            "status": "completed"
-            if len(images) >= target_min
-            else "completed_missing_images",
+            "status": "completed" if len(images) >= target_min else "completed_missing_images",
             "min_images_expected": target_min,
         }
         if extra_meta:

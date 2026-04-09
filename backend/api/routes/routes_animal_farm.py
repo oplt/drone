@@ -2,17 +2,20 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional, Dict, Any
 
+from backend.db.repository.animal_farm_repo import LivestockRepository
 from backend.db.session import get_db
 from backend.schemas.animal_farm import (
-                                        HerdCreate, HerdOut,
-                                        AnimalCreate, AnimalOut,
-                                        AnimalPositionIn, AnimalPositionOut,
-                                        HerdTaskCreate, HerdTaskOut,
-                                        MissionPlanOut,
-                                    )
-from backend.db.repository.animal_farm_repo import LivestockRepository
+    AnimalCreate,
+    AnimalOut,
+    AnimalPositionIn,
+    AnimalPositionOut,
+    HerdCreate,
+    HerdOut,
+    HerdTaskCreate,
+    HerdTaskOut,
+    MissionPlanOut,
+)
 from backend.services.animal_farm.risk_engine import RiskEngine
 
 router = APIRouter(prefix="/livestock", tags=["livestock"])
@@ -35,7 +38,7 @@ async def create_herd(payload: HerdCreate, db: AsyncSession = Depends(get_db)):
     return herd
 
 
-@router.get("/herds", response_model=List[HerdOut])
+@router.get("/herds", response_model=list[HerdOut])
 async def list_herds(limit: int = Query(100, ge=1, le=500), db: AsyncSession = Depends(get_db)):
     return await repo.list_herds(db, limit=limit)
 
@@ -58,11 +61,11 @@ async def create_animal(payload: AnimalCreate, db: AsyncSession = Depends(get_db
     )
 
 
-@router.get("/animals", response_model=List[AnimalOut])
+@router.get("/animals", response_model=list[AnimalOut])
 async def list_animals(
-        herd_id: Optional[int] = Query(None),
-        limit: int = Query(200, ge=1, le=500),
-        db: AsyncSession = Depends(get_db),
+    herd_id: int | None = Query(None),
+    limit: int = Query(200, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
 ):
     return await repo.list_animals(db, herd_id=herd_id, limit=limit)
 
@@ -100,9 +103,9 @@ async def latest_positions(herd_id: int, db: AsyncSession = Depends(get_db)):
 # -------------------------
 @router.get("/herds/{herd_id}/risk")
 async def herd_risk_snapshot(
-        herd_id: int,
-        isolation_threshold_m: float = Query(250.0, ge=10.0, le=5000.0),
-        db: AsyncSession = Depends(get_db),
+    herd_id: int,
+    isolation_threshold_m: float = Query(250.0, ge=10.0, le=5000.0),
+    db: AsyncSession = Depends(get_db),
 ):
     # Fetch herd to get pasture geofence id
     herds = await repo.list_herds(db, limit=500)
@@ -110,7 +113,9 @@ async def herd_risk_snapshot(
     if not herd:
         raise HTTPException(status_code=404, detail="Herd not found")
 
-    boundary = await risk.boundary_exit_alerts(db, herd_id=herd_id, pasture_geofence_id=herd.pasture_geofence_id)
+    boundary = await risk.boundary_exit_alerts(
+        db, herd_id=herd_id, pasture_geofence_id=herd.pasture_geofence_id
+    )
     isolation = await risk.isolation_alerts(db, herd_id=herd_id, threshold_m=isolation_threshold_m)
 
     return {"herd_id": herd_id, "alerts": boundary + isolation}
@@ -121,15 +126,17 @@ async def herd_risk_snapshot(
 # -------------------------
 @router.post("/tasks", response_model=HerdTaskOut)
 async def create_task(payload: HerdTaskCreate, db: AsyncSession = Depends(get_db)):
-    task = await repo.create_task(db, herd_id=payload.herd_id, type=payload.type, params=payload.params)
+    task = await repo.create_task(
+        db, herd_id=payload.herd_id, type=payload.type, params=payload.params
+    )
     return task
 
 
-@router.get("/herds/{herd_id}/tasks", response_model=List[HerdTaskOut])
+@router.get("/herds/{herd_id}/tasks", response_model=list[HerdTaskOut])
 async def list_tasks(
-        herd_id: int,
-        limit: int = Query(100, ge=1, le=500),
-        db: AsyncSession = Depends(get_db),
+    herd_id: int,
+    limit: int = Query(100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
 ):
     return await repo.list_tasks(db, herd_id=herd_id, limit=limit)
 
@@ -159,7 +166,10 @@ async def build_mission_plan(task_id: int, db: AsyncSession = Depends(get_db)):
     # Get latest positions
     latest = await repo.latest_positions_for_herd(db, herd_id=task.herd_id)
     if not latest:
-        raise HTTPException(status_code=400, detail="No positions for herd; ingest collar positions first.")
+        raise HTTPException(
+            status_code=400,
+            detail="No positions for herd; ingest collar positions first.",
+        )
 
     # Naive centroid for herd_sweep
     lat_c = sum(p["lat"] for p in latest) / len(latest)
@@ -170,7 +180,11 @@ async def build_mission_plan(task_id: int, db: AsyncSession = Depends(get_db)):
         mission = {
             "type": "route",
             "waypoints": [
-                {"lat": lat_c, "lon": lon_c, "alt": task.params.get("altitude_msl", 30.0)},
+                {
+                    "lat": lat_c,
+                    "lon": lon_c,
+                    "alt": task.params.get("altitude_msl", 30.0),
+                },
             ],
             "speed": task.params.get("speed", 8.0),
             "altitude_agl": task.params.get("altitude_agl", 30.0),

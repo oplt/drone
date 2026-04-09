@@ -5,14 +5,14 @@ import importlib.util
 import logging
 import os
 import threading
-from typing import Any, Coroutine
+from collections.abc import Coroutine
+from typing import Any
 
-from backend.tasks.celery_app import celery_app
 from backend.config import setup_logging
 from backend.db.repository.settings_repo import SettingsRepository
 from backend.services.photogrammetry.service import PhotogrammetryService
+from backend.tasks.celery_app import celery_app
 from backend.utils.config_runtime import get_runtime_settings
-
 
 logger = logging.getLogger(__name__)
 setup_logging()

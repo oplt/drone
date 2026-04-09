@@ -1,11 +1,13 @@
-import time
-import os
-from typing import Iterator, Union
-import cv2
-from datetime import datetime
 import logging
+import os
 import re
+import time
+from collections.abc import Iterator
+from datetime import datetime
 from functools import lru_cache
+
+import cv2
+
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -49,18 +51,18 @@ class DroneVideoStream:
     """
 
     def __init__(
-            self,
-            source: Union[int, str, None] = 0,
-            width: int = 640,
-            height: int = 480,
-            fps: int = 30,
-            open_timeout_s: float = 5.0,
-            probe_indices: int = 5,
-            fallback_file: str | None = None,
-            fps_limit: float | None = None,
-            enable_recording: bool = False,
-            recording_path: str = settings.drone_video_save_path,
-            recording_format: str = "mp4",
+        self,
+        source: int | str | None = 0,
+        width: int = 640,
+        height: int = 480,
+        fps: int = 30,
+        open_timeout_s: float = 5.0,
+        probe_indices: int = 5,
+        fallback_file: str | None = None,
+        fps_limit: float | None = None,
+        enable_recording: bool = False,
+        recording_path: str = settings.drone_video_save_path,
+        recording_format: str = "mp4",
     ):
         self.fps_limit = fps_limit
         self._last_ts = 0.0
@@ -233,9 +235,7 @@ class DroneVideoStream:
             frame_interval = now - self.last_frame_time
             expected_interval = 1.0 / self.fps
             if frame_interval > expected_interval * 2:
-                logging.warning(
-                    f"Video stream frame rate degraded: {1.0 / frame_interval:.1f} fps"
-                )
+                logging.warning(f"Video stream frame rate degraded: {1.0 / frame_interval:.1f} fps")
 
         self.last_frame_time = now
         self.connection_healthy = True

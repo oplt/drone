@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 from backend.ml.patrol.models import Detection, FramePacket
 
@@ -42,7 +41,7 @@ class ObjectDetector:
         self._model = YOLO(self.model_path)
         return self._model
 
-    def detect(self, packet: FramePacket) -> List[Detection]:
+    def detect(self, packet: FramePacket) -> list[Detection]:
         model = self._ensure_model()
         detections: list[Detection] = []
 

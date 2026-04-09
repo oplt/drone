@@ -15,7 +15,11 @@ from backend.runtime import (
     next_runtime_sequence,
     utc_now,
 )
-from backend.schemas.alerts import AlertCountResponse, AlertListResponse, OperationalAlertOut
+from backend.schemas.alerts import (
+    AlertCountResponse,
+    AlertListResponse,
+    OperationalAlertOut,
+)
 from backend.services.patrol.mission_runtime_store import mission_runtime_store
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
@@ -102,7 +106,5 @@ async def resolve_alert(
 
     await db.commit()
     await db.refresh(alert)
-    await telemetry_manager.broadcast(
-        await _alert_event_message(action="resolved", alert=alert)
-    )
+    await telemetry_manager.broadcast(await _alert_event_message(action="resolved", alert=alert))
     return alert

@@ -8,16 +8,16 @@ Recovery also restores the orchestrator's in-memory context fields so that
 any observability layer (WebSocket, metrics) reflects the correct mission
 information during the brief recovery window.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from backend.db.models import FlightStatus
 from backend.db.repository.mission_runtime_repo import mission_runtime_repo
 from backend.db.repository.operator_command_repo import operator_command_repo
-from backend.flight.state_machine import is_terminal
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +93,10 @@ async def recover_interrupted_missions(orchestrator: Any) -> None:
 
     # Persist a synthetic operator command record for auditability.
     try:
-        import uuid, time as _time
-        now_dt = datetime.now(timezone.utc)
+        import time as _time
+        import uuid
+
+        now_dt = datetime.now(UTC)
         cmd_id = f"cmd_recovery_{int(_time.time())}_{uuid.uuid4().hex[:8]}"
         await operator_command_repo.create(
             command_id=cmd_id,

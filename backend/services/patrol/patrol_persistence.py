@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Optional
-from backend.db.session import Session
+from typing import Any
+
 from backend.db.repository.patrol_repo import PatrolDetectionRepository
-from typing import Awaitable, Callable, Optional, Any
+from backend.db.session import Session
 from backend.services.patrol.mission_runtime_store import ActiveMissionRuntimeContext
 
 log = logging.getLogger(__name__)
 
-RuntimeContextProvider = Callable[[], Awaitable[Optional[ActiveMissionRuntimeContext]]]
+RuntimeContextProvider = Callable[[], Awaitable[ActiveMissionRuntimeContext | None]]
 
 
 @dataclass(frozen=True)
@@ -19,21 +20,20 @@ class PersistedAnomalyResult:
     detection_id: int
     incident_id: int
     incident_created: bool
-    alert_id: Optional[int]
+    alert_id: int | None
     mission_task_type: str
     ai_task: str
 
 
 class PatrolPersistenceService:
     def __init__(
-            self,
-            *,
-            runtime_context_provider: RuntimeContextProvider,
-            repo: Optional[PatrolDetectionRepository] = None,
+        self,
+        *,
+        runtime_context_provider: RuntimeContextProvider,
+        repo: PatrolDetectionRepository | None = None,
     ) -> None:
         self._runtime_context_provider = runtime_context_provider
         self._repo = repo or PatrolDetectionRepository()
-
 
     def _infer_patrol_task_type_from_runtime_mission_type(self, mission_type: str) -> str:
         mt = str(mission_type or "").strip().lower()
@@ -48,12 +48,12 @@ class PatrolPersistenceService:
         return ""
 
     def _normalize_ai_task(
-            self,
-            *,
-            anomaly_type: str,
-            object_class: str,
-            payload: dict[str, Any],
-            allowed_ai_tasks: list[str],
+        self,
+        *,
+        anomaly_type: str,
+        object_class: str,
+        payload: dict[str, Any],
+        allowed_ai_tasks: list[str],
     ) -> str:
         explicit = str(payload.get("ai_task") or "").strip()
         if explicit:
@@ -63,13 +63,25 @@ class PatrolPersistenceService:
         obj = object_class.strip().lower()
 
         if event_type in {"restricted_zone_entry", "intrusion_detected", "loitering"}:
-            guessed = "vehicle_detection" if obj in {"car", "truck", "bus", "motorcycle", "bicycle"} else "intruder_detection"
-        elif event_type in {"fence_line_crossing", "fence_breach", "fence_breach_detected"}:
+            guessed = (
+                "vehicle_detection"
+                if obj in {"car", "truck", "bus", "motorcycle", "bicycle"}
+                else "intruder_detection"
+            )
+        elif event_type in {
+            "fence_line_crossing",
+            "fence_breach",
+            "fence_breach_detected",
+        }:
             guessed = "fence_breach_detection"
         elif event_type in {"scene_motion", "motion_detected"}:
             guessed = "motion_detection"
         else:
-            guessed = "vehicle_detection" if obj in {"car", "truck", "bus", "motorcycle", "bicycle"} else "intruder_detection"
+            guessed = (
+                "vehicle_detection"
+                if obj in {"car", "truck", "bus", "motorcycle", "bicycle"}
+                else "intruder_detection"
+            )
 
         if allowed_ai_tasks and guessed not in allowed_ai_tasks:
             return allowed_ai_tasks[0]
@@ -77,15 +89,15 @@ class PatrolPersistenceService:
 
     def _normalize_object_class(self, payload: dict[str, Any]) -> str:
         value = (
-                payload.get("object_class")
-                or payload.get("label")
-                or payload.get("class")
-                or payload.get("target_label")
-                or "unknown"
+            payload.get("object_class")
+            or payload.get("label")
+            or payload.get("class")
+            or payload.get("target_label")
+            or "unknown"
         )
         return str(value).strip().lower() or "unknown"
 
-    def _normalize_track_id(self, payload: dict[str, Any]) -> Optional[str]:
+    def _normalize_track_id(self, payload: dict[str, Any]) -> str | None:
         value = payload.get("track_id")
         if value is None:
             return None
@@ -120,11 +132,10 @@ class PatrolPersistenceService:
             }
         return {}
 
-
-
-    async def _resolve_active_runtime_context(self) -> Optional[ActiveMissionRuntimeContext]:
+    async def _resolve_active_runtime_context(
+        self,
+    ) -> ActiveMissionRuntimeContext | None:
         return await self._runtime_context_provider()
-
 
     async def persist_anomaly(self, *, anomaly, packet, telemetry, motion_meta):
         runtime_ctx = await self._resolve_active_runtime_context()
@@ -132,16 +143,19 @@ class PatrolPersistenceService:
             return None
 
         mission_task_type = (
-                runtime_ctx.private_patrol_task_type
-                or runtime_ctx.mission_type
-                or "private_patrol"
+            runtime_ctx.private_patrol_task_type or runtime_ctx.mission_type or "private_patrol"
         )
 
         payload = anomaly.payload or {}
         ai_task = self._map_ai_task(anomaly.event_type, payload)
 
         async with Session() as db:
-            detection, incident, created, alert = await self._repo.persist_detection_pipeline_result(
+            (
+                detection,
+                incident,
+                created,
+                alert,
+            ) = await self._repo.persist_detection_pipeline_result(
                 db,
                 flight_id=int(runtime_ctx.db_flight_id),
                 mission_task_type=mission_task_type,
@@ -187,7 +201,12 @@ class PatrolPersistenceService:
         label = str(payload.get("label") or "").lower()
         if event_type in {"intrusion_detected", "loitering"}:
             return "intruder_detection"
-        if event_type == "restricted_zone_entry" and label in {"car", "truck", "motorcycle", "bicycle"}:
+        if event_type == "restricted_zone_entry" and label in {
+            "car",
+            "truck",
+            "motorcycle",
+            "bicycle",
+        }:
             return "vehicle_detection"
         if event_type == "restricted_zone_entry":
             return "fence_breach_detection"
@@ -195,7 +214,7 @@ class PatrolPersistenceService:
             return "motion_detection"
         return "intruder_detection"
 
-    def _extract_zone_name(self, payload: dict) -> Optional[str]:
+    def _extract_zone_name(self, payload: dict) -> str | None:
         zones = payload.get("zones")
         if isinstance(zones, list) and zones:
             return str(zones[0])

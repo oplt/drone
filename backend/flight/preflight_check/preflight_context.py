@@ -1,11 +1,10 @@
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Callable
-from datetime import datetime
 import time
-from ..missions.schemas import Mission, Waypoint
-from .cache import TerrainCache, DistanceCache, optimized_distance
-from .models import PrecomputedMissionData
+from dataclasses import dataclass, field
+from typing import Any
 
+from ..missions.schemas import Mission, Waypoint
+from .cache import DistanceCache, TerrainCache, optimized_distance
+from .models import PrecomputedMissionData
 
 
 @dataclass
@@ -17,34 +16,33 @@ class PreflightContext:
 
     # Core data
     vehicle_state: Any  # Vehicle telemetry snapshot
-    mission: Mission     # Validated mission object
+    mission: Mission  # Validated mission object
     timestamp: float = field(default_factory=time.time)
 
     # Optional data providers
-    terrain_provider: Optional[Any] = None  # Terrain data provider with get_elevation(lat, lon)
-    wind_data: Optional[Dict[str, float]] = None  # Wind speed, gust, direction
-    no_fly_zones: Optional[List[Any]] = None  # List of no-fly zones
-    obstacle_map: Optional[Any] = None  # Obstacle map data
-    geofence_polygon: Optional[List[Waypoint]] = None  # Geofence boundary
+    terrain_provider: Any | None = None  # Terrain data provider with get_elevation(lat, lon)
+    wind_data: dict[str, float] | None = None  # Wind speed, gust, direction
+    no_fly_zones: list[Any] | None = None  # List of no-fly zones
+    obstacle_map: Any | None = None  # Obstacle map data
+    geofence_polygon: list[Waypoint] | None = None  # Geofence boundary
 
     # Precomputed/cached data
-    precomputed: Optional[PrecomputedMissionData] = None
-    terrain_cache: Optional[TerrainCache] = None
-    distance_cache: Optional[DistanceCache] = None
+    precomputed: PrecomputedMissionData | None = None
+    terrain_cache: TerrainCache | None = None
+    distance_cache: DistanceCache | None = None
 
     # Configuration overrides
-    config_overrides: Dict[str, Any] = field(default_factory=dict)
+    config_overrides: dict[str, Any] = field(default_factory=dict)
 
     # Metadata
-    vehicle_id: Optional[str] = None
-    flight_id: Optional[str] = None
+    vehicle_id: str | None = None
+    flight_id: str | None = None
 
     # Internal caches (initialized if not provided)
     _terrain_cache: TerrainCache = field(init=False, repr=False)
     _distance_cache: DistanceCache = field(init=False, repr=False)
-    _computed_segment_distances: List[float] = field(default_factory=list, init=False, repr=False)
+    _computed_segment_distances: list[float] = field(default_factory=list, init=False, repr=False)
     _computed_total_distance: float = field(default=0.0, init=False, repr=False)
-
 
     def __post_init__(self):
         """Initialize internal caches if not provided."""
@@ -65,7 +63,6 @@ class PreflightContext:
         # Precompute distances if waypoints exist and no precomputed data
         if self.mission and self.mission.waypoints and self.precomputed is None:
             self._precompute_distances()
-
 
     def _precompute_distances(self):
         """Precompute all segment distances."""
@@ -137,8 +134,7 @@ class PreflightContext:
             return self.precomputed.total_distance
         return self._computed_total_distance
 
-
-    async def get_terrain_elevation(self, lat: float, lon: float) -> Optional[float]:
+    async def get_terrain_elevation(self, lat: float, lon: float) -> float | None:
         """Async terrain fetch with cache."""
         # Try precomputed first
         if self.precomputed:
@@ -152,7 +148,7 @@ class PreflightContext:
             return elev
 
         # Async fetch from provider
-        if self.terrain_provider and hasattr(self.terrain_provider, 'get_elevation'):
+        if self.terrain_provider and hasattr(self.terrain_provider, "get_elevation"):
             elev = await self.terrain_provider.get_elevation(lat, lon)
             if elev is not None:
                 self._terrain_cache.set(lat, lon, elev)
@@ -160,7 +156,7 @@ class PreflightContext:
 
         return None
 
-    def get_waypoint_terrain(self, idx: int) -> Optional[float]:
+    def get_waypoint_terrain(self, idx: int) -> float | None:
         """Get terrain elevation for a specific waypoint."""
         if idx >= len(self.mission.waypoints):
             return None
@@ -174,22 +170,22 @@ class PreflightContext:
 
     # ========== Wind methods ==========
 
-    def get_wind_speed(self) -> Optional[float]:
+    def get_wind_speed(self) -> float | None:
         """Get current wind speed."""
         if self.wind_data:
-            return self.wind_data.get('speed')
+            return self.wind_data.get("speed")
         return None
 
-    def get_wind_gust(self) -> Optional[float]:
+    def get_wind_gust(self) -> float | None:
         """Get wind gust speed."""
         if self.wind_data:
-            return self.wind_data.get('gust')
+            return self.wind_data.get("gust")
         return None
 
-    def get_wind_direction(self) -> Optional[float]:
+    def get_wind_direction(self) -> float | None:
         """Get wind direction in degrees."""
         if self.wind_data:
-            return self.wind_data.get('direction')
+            return self.wind_data.get("direction")
         return None
 
     # ========== No-fly zone methods ==========
@@ -205,7 +201,7 @@ class PreflightContext:
         # This would need actual geometry checking
         # Placeholder implementation
         for zone in self.no_fly_zones:
-            if hasattr(zone, 'contains') and zone.contains(lat, lon, buffer):
+            if hasattr(zone, "contains") and zone.contains(lat, lon, buffer):
                 return False
 
         return True
@@ -218,7 +214,7 @@ class PreflightContext:
             return self.config_overrides[key]
 
         # Check vehicle state for config
-        if hasattr(self.vehicle_state, 'config') and key in self.vehicle_state.config:
+        if hasattr(self.vehicle_state, "config") and key in self.vehicle_state.config:
             return self.vehicle_state.config[key]
 
         return default
@@ -230,11 +226,11 @@ class PreflightContext:
         return self.get_config(name, default)
 
     @property
-    def cache_stats(self) -> Dict[str, Any]:
+    def cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
-            'terrain_cache': self._terrain_cache.stats,
-            'distance_cache': self._distance_cache.stats
+            "terrain_cache": self._terrain_cache.stats,
+            "distance_cache": self._distance_cache.stats,
         }
 
     def clear_caches(self):

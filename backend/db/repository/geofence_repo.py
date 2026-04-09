@@ -1,30 +1,30 @@
 from __future__ import annotations
-from sqlalchemy import select, func
-import logging
-from ..session import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from backend.db.models import Geofence
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Polygon, Point
 
+import logging
+
+from geoalchemy2.shape import from_shape
+from shapely.geometry import Point, Polygon
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.db.models import Geofence
+
+from ..session import Session
 
 logger = logging.getLogger(__name__)
 
 
-
 class GeofenceRepository:
-
     def __init__(self) -> None:
         self._session_factory = Session
 
-
     async def save_geofence_geojson(
-            db: AsyncSession,
-            *,
-            name: str,
-            coordinates_lonlat: list[list[float]],
-            min_alt_m: float | None = None,
-            max_alt_m: float | None = None,
+        db: AsyncSession,
+        *,
+        name: str,
+        coordinates_lonlat: list[list[float]],
+        min_alt_m: float | None = None,
+        max_alt_m: float | None = None,
     ):
 
         # GeoJSON gives [lon, lat]
@@ -43,13 +43,12 @@ class GeofenceRepository:
 
         return geofence
 
-
     async def is_point_inside_geofence(
-            db: AsyncSession,
-            *,
-            geofence_name: str,
-            lat: float,
-            lon: float,
+        db: AsyncSession,
+        *,
+        geofence_name: str,
+        lat: float,
+        lon: float,
     ) -> bool:
 
         point = from_shape(Point(lon, lat), srid=4326)
@@ -64,11 +63,10 @@ class GeofenceRepository:
         result = await db.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-
     async def validate_mission_waypoints(
-            db: AsyncSession,
-            geofence_name: str,
-            waypoints: list[tuple[float, float]],
+        db: AsyncSession,
+        geofence_name: str,
+        waypoints: list[tuple[float, float]],
     ):
 
         for lat, lon in waypoints:

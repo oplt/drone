@@ -1,9 +1,11 @@
 # backend/auth/auth.py (add this function)
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from jose import jwt, JWTError
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
+from jose import JWTError, jwt
+
 from backend.config import settings
 
 ph = PasswordHasher()
@@ -21,7 +23,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     exp = now + timedelta(minutes=settings.jwt_exp_minutes)
     payload = {
         "sub": str(user_id),
@@ -31,7 +33,7 @@ def create_access_token(user_id: int) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str) -> Optional[int]:
+def decode_token(token: str) -> int | None:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         sub = payload.get("sub")
@@ -41,7 +43,7 @@ def decode_token(token: str) -> Optional[int]:
 
 
 # Add this function if you want verify_token that returns the full payload
-def verify_token(token: str) -> Optional[Dict[str, Any]]:
+def verify_token(token: str) -> dict[str, Any] | None:
     """Verify token and return full payload if valid"""
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])

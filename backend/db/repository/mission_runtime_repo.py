@@ -3,14 +3,14 @@
 Replaces the module-global in-memory dicts and locks in routes_flights.py.
 All methods are async and use the shared SQLAlchemy session factory.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import MissionRuntime
 from backend.db.session import Session
@@ -36,15 +36,15 @@ class MissionRuntimeRepository:
         self,
         *,
         client_flight_id: str,
-        user_id: Optional[int],
+        user_id: int | None,
         mission_name: str,
         mission_type: str,
-        mission_task_type: Optional[str] = None,
-        private_patrol_task_type: Optional[str] = None,
-        preflight_run_uuid: Optional[str] = None,
-        ai_tasks: List[str] | None = None,
+        mission_task_type: str | None = None,
+        private_patrol_task_type: str | None = None,
+        preflight_run_uuid: str | None = None,
+        ai_tasks: list[str] | None = None,
         state: str = "queued",
-        mission_params: Dict[str, Any] | None = None,
+        mission_params: dict[str, Any] | None = None,
     ) -> MissionRuntime:
         row = MissionRuntime(
             client_flight_id=client_flight_id,
@@ -71,20 +71,16 @@ class MissionRuntimeRepository:
     # Read
     # ------------------------------------------------------------------
 
-    async def get_by_client_id(
-        self, client_flight_id: str
-    ) -> Optional[MissionRuntime]:
+    async def get_by_client_id(self, client_flight_id: str) -> MissionRuntime | None:
         async with self._sf() as s:
             result = await s.execute(
-                select(MissionRuntime).where(
-                    MissionRuntime.client_flight_id == client_flight_id
-                )
+                select(MissionRuntime).where(MissionRuntime.client_flight_id == client_flight_id)
             )
             return result.scalar_one_or_none()
 
     async def get_by_client_id_for_user(
         self, client_flight_id: str, user_id: int
-    ) -> Optional[MissionRuntime]:
+    ) -> MissionRuntime | None:
         async with self._sf() as s:
             result = await s.execute(
                 select(MissionRuntime).where(
@@ -94,7 +90,7 @@ class MissionRuntimeRepository:
             )
             return result.scalar_one_or_none()
 
-    async def get_active(self) -> Optional[MissionRuntime]:
+    async def get_active(self) -> MissionRuntime | None:
         """Return the single non-terminal mission runtime, or None."""
         async with self._sf() as s:
             result = await s.execute(
@@ -106,8 +102,8 @@ class MissionRuntimeRepository:
             return result.scalar_one_or_none()
 
     async def list_recent(
-        self, *, user_id: Optional[int] = None, limit: int = 50
-    ) -> List[MissionRuntime]:
+        self, *, user_id: int | None = None, limit: int = 50
+    ) -> list[MissionRuntime]:
         async with self._sf() as s:
             q = select(MissionRuntime).order_by(MissionRuntime.created_at.desc()).limit(limit)
             if user_id is not None:
@@ -124,9 +120,9 @@ class MissionRuntimeRepository:
         client_flight_id: str,
         *,
         state: str,
-        error: Optional[str] = None,
-        started_at: Optional[datetime] = None,
-        ended_at: Optional[datetime] = None,
+        error: str | None = None,
+        started_at: datetime | None = None,
+        ended_at: datetime | None = None,
         skip_transition_validation: bool = False,
     ) -> bool:
         """Update lifecycle state. Returns True if the row existed.
@@ -134,8 +130,8 @@ class MissionRuntimeRepository:
         Raises ValueError if the transition is invalid according to the state
         machine, unless *skip_transition_validation* is True.
         """
-        now = datetime.now(timezone.utc)
-        values: Dict[str, Any] = {"state": state, "updated_at": now}
+        now = datetime.now(UTC)
+        values: dict[str, Any] = {"state": state, "updated_at": now}
         if error:
             values["failure_reason"] = error
         if started_at:
@@ -167,14 +163,12 @@ class MissionRuntimeRepository:
             await s.commit()
             return result.scalar_one_or_none() is not None
 
-    async def set_flight_id(
-        self, client_flight_id: str, *, flight_id: int
-    ) -> None:
+    async def set_flight_id(self, client_flight_id: str, *, flight_id: int) -> None:
         async with self._sf() as s:
             await s.execute(
                 update(MissionRuntime)
                 .where(MissionRuntime.client_flight_id == client_flight_id)
-                .values(flight_id=flight_id, updated_at=datetime.now(timezone.utc))
+                .values(flight_id=flight_id, updated_at=datetime.now(UTC))
             )
             await s.commit()
 
@@ -187,10 +181,10 @@ class MissionRuntimeRepository:
         client_flight_id: str,
         *,
         new_state: str,
-        audit_entry: Dict[str, Any],
+        audit_entry: dict[str, Any],
         idempotency_key: str,
-        idempotency_response: Dict[str, Any],
-    ) -> Optional[MissionRuntime]:
+        idempotency_response: dict[str, Any],
+    ) -> MissionRuntime | None:
         """Atomically transition state, append audit entry, and cache idempotency result.
 
         Returns the updated row, or None if not found.
@@ -201,7 +195,7 @@ class MissionRuntimeRepository:
                 .where(MissionRuntime.client_flight_id == client_flight_id)
                 .with_for_update()
             )
-            row: Optional[MissionRuntime] = result.scalar_one_or_none()
+            row: MissionRuntime | None = result.scalar_one_or_none()
             if row is None:
                 return None
 
@@ -212,7 +206,7 @@ class MissionRuntimeRepository:
                 )
 
             row.state = new_state
-            row.updated_at = datetime.now(timezone.utc)
+            row.updated_at = datetime.now(UTC)
             if is_terminal(new_state):
                 row.ended_at = row.updated_at
 
@@ -234,34 +228,32 @@ class MissionRuntimeRepository:
 
     async def get_idempotency_result(
         self, client_flight_id: str, idempotency_key: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         row = await self.get_by_client_id(client_flight_id)
         if row is None:
             return None
         return (row.idempotency_results or {}).get(idempotency_key)
 
-    async def update_operator_note(
-        self, client_flight_id: str, note: str
-    ) -> None:
+    async def update_operator_note(self, client_flight_id: str, note: str) -> None:
         async with self._sf() as s:
             await s.execute(
                 update(MissionRuntime)
                 .where(MissionRuntime.client_flight_id == client_flight_id)
-                .values(operator_note=note, updated_at=datetime.now(timezone.utc))
+                .values(operator_note=note, updated_at=datetime.now(UTC))
             )
             await s.commit()
-
 
     async def list_resumable(
         self,
         *,
-        user_id: Optional[int] = None,
+        user_id: int | None = None,
         limit: int = 50,
-    ) -> List[MissionRuntime]:
+    ) -> list[MissionRuntime]:
         """Return terminal missions that have non-empty resume_metadata and mission_params."""
         async with self._sf() as s:
             from sqlalchemy import cast
             from sqlalchemy.dialects.postgresql import JSONB
+
             q = (
                 select(MissionRuntime)
                 .where(

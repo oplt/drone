@@ -17,20 +17,19 @@ All timings are wall-clock (time.perf_counter).  The EXPLAIN ANALYZE tests
 print query plans so index usage can be confirmed without a separate psql
 session.
 """
+
 from __future__ import annotations
 
-import json
 import math
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select, text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db.models import Flight, FlightStatus, MavlinkEvent, TelemetryRecord
+from backend.db.models import Flight, FlightStatus, MavlinkEvent
 from backend.db.repository.telemetry_repo import TelemetryRepository
 from backend.db.session import Session
 
@@ -38,18 +37,18 @@ from backend.db.session import Session
 # Scenario sizes
 # ---------------------------------------------------------------------------
 
-HZ = 10                         # telemetry rate used in production
-MAVLINK_MULTIPLIER = 2          # MAVLink events arrive ~2× more often than telemetry
+HZ = 10  # telemetry rate used in production
+MAVLINK_MULTIPLIER = 2  # MAVLink events arrive ~2× more often than telemetry
 
-SHORT_ROWS  =  5 * 60 * HZ     # 3 000
-MEDIUM_ROWS = 30 * 60 * HZ     # 18 000
-LONG_ROWS   = 60 * 60 * HZ     # 36 000
+SHORT_ROWS = 5 * 60 * HZ  # 3 000
+MEDIUM_ROWS = 30 * 60 * HZ  # 18 000
+LONG_ROWS = 60 * 60 * HZ  # 36 000
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 
 MAVLINK_MSG_TYPES = [
     "GLOBAL_POSITION_INT",
@@ -70,9 +69,9 @@ def _telemetry_rows(flight_id: int, n: int) -> list[dict[str, Any]]:
     battery = 100.0
     for i in range(n):
         ts = _EPOCH + interval * i
-        alt = 50.0 + 10.0 * math.sin(i / (HZ * 30))          # gentle altitude wave
+        alt = 50.0 + 10.0 * math.sin(i / (HZ * 30))  # gentle altitude wave
         groundspeed = 8.0 + 2.0 * math.cos(i / (HZ * 20))
-        battery = max(10.0, 100.0 - (i / n) * 80.0)           # linear drain
+        battery = max(10.0, 100.0 - (i / n) * 80.0)  # linear drain
         rows.append(
             {
                 "flight_id": flight_id,
@@ -131,8 +130,12 @@ async def _create_flight(session_factory) -> int:
         f = Flight(
             started_at=_EPOCH,
             status=FlightStatus.ACTIVE.value,
-            start_lat=51.5, start_lon=-0.1, start_alt=0.0,
-            dest_lat=51.6,  dest_lon=-0.0, dest_alt=50.0,
+            start_lat=51.5,
+            start_lon=-0.1,
+            start_alt=0.0,
+            dest_lat=51.6,
+            dest_lon=-0.0,
+            dest_alt=50.0,
             note="benchmark",
         )
         s.add(f)
@@ -160,12 +163,16 @@ def _report(label: str, rows: int, elapsed_s: float) -> None:
 # Ingestion benchmarks
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("label,n", [
-    ("telemetry bulk-insert  SHORT  ( 5 min @ 10 Hz)", SHORT_ROWS),
-    ("telemetry bulk-insert  MEDIUM (30 min @ 10 Hz)", MEDIUM_ROWS),
-    ("telemetry bulk-insert  LONG   (60 min @ 10 Hz)", LONG_ROWS),
-])
+@pytest.mark.parametrize(
+    "label,n",
+    [
+        ("telemetry bulk-insert  SHORT  ( 5 min @ 10 Hz)", SHORT_ROWS),
+        ("telemetry bulk-insert  MEDIUM (30 min @ 10 Hz)", MEDIUM_ROWS),
+        ("telemetry bulk-insert  LONG   (60 min @ 10 Hz)", LONG_ROWS),
+    ],
+)
 async def test_telemetry_bulk_insert(label: str, n: int) -> None:
     """Benchmark add_telemetry_many at three flight durations."""
     repo = TelemetryRepository(Session)
@@ -183,11 +190,23 @@ async def test_telemetry_bulk_insert(label: str, n: int) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("label,n", [
-    ("mavlink bulk-insert  SHORT  ( 5 min @ 20 Hz)",  SHORT_ROWS  * MAVLINK_MULTIPLIER),
-    ("mavlink bulk-insert  MEDIUM (30 min @ 20 Hz)", MEDIUM_ROWS * MAVLINK_MULTIPLIER),
-    ("mavlink bulk-insert  LONG   (60 min @ 20 Hz)",  LONG_ROWS  * MAVLINK_MULTIPLIER),
-])
+@pytest.mark.parametrize(
+    "label,n",
+    [
+        (
+            "mavlink bulk-insert  SHORT  ( 5 min @ 20 Hz)",
+            SHORT_ROWS * MAVLINK_MULTIPLIER,
+        ),
+        (
+            "mavlink bulk-insert  MEDIUM (30 min @ 20 Hz)",
+            MEDIUM_ROWS * MAVLINK_MULTIPLIER,
+        ),
+        (
+            "mavlink bulk-insert  LONG   (60 min @ 20 Hz)",
+            LONG_ROWS * MAVLINK_MULTIPLIER,
+        ),
+    ],
+)
 async def test_mavlink_bulk_insert(label: str, n: int) -> None:
     """Benchmark add_mavlink_events_many at three flight durations."""
     repo = TelemetryRepository(Session)
@@ -207,6 +226,7 @@ async def test_mavlink_bulk_insert(label: str, n: int) -> None:
 # ---------------------------------------------------------------------------
 # Aggregation benchmark
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_build_telemetry_summaries() -> None:
@@ -231,9 +251,9 @@ async def test_build_telemetry_summaries() -> None:
             elapsed,
         )
         # At 10 Hz, each 1-s bucket contains 10 raw rows → MEDIUM_ROWS / HZ buckets.
-        assert counts[1]  == MEDIUM_ROWS // HZ            # 1 800
-        assert counts[10] == MEDIUM_ROWS // (10 * HZ)     # 180
-        assert counts[60] == MEDIUM_ROWS // (60 * HZ)     # 30
+        assert counts[1] == MEDIUM_ROWS // HZ  # 1 800
+        assert counts[10] == MEDIUM_ROWS // (10 * HZ)  # 180
+        assert counts[60] == MEDIUM_ROWS // (60 * HZ)  # 30
     finally:
         await _delete_flight(Session, flight_id)
 
@@ -241,6 +261,7 @@ async def test_build_telemetry_summaries() -> None:
 # ---------------------------------------------------------------------------
 # Query benchmarks (run on a pre-inserted MEDIUM flight)
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture(scope="session")
 async def medium_flight():
@@ -282,7 +303,7 @@ async def test_replay_windowed(medium_flight: int) -> None:
     )
     elapsed = time.perf_counter() - t0
 
-    expected = 5 * 60 * HZ   # 3 000 rows in a 5-min window
+    expected = 5 * 60 * HZ  # 3 000 rows in a 5-min window
     _report(
         f"get_telemetry_for_replay  MEDIUM  (5-min window, ~{expected} rows)",
         len(result),
@@ -312,6 +333,7 @@ async def test_summary_read(medium_flight: int, res_s: int) -> None:
 # ---------------------------------------------------------------------------
 # EXPLAIN ANALYZE — confirm index usage on hot queries
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_explain_replay_full(medium_flight: int) -> None:
@@ -365,7 +387,9 @@ async def test_explain_replay_windowed(medium_flight: int) -> None:
         )
         rows = plan.fetchall()
 
-    print(f"\n\n  [EXPLAIN] replay windowed — flight_id={medium_flight}  {since.isoformat()[:19]} → {until.isoformat()[:19]}")
+    print(
+        f"\n\n  [EXPLAIN] replay windowed — flight_id={medium_flight}  {since.isoformat()[:19]} → {until.isoformat()[:19]}"
+    )
     for row in rows:
         print(f"    {row[0]}")
 
@@ -411,9 +435,7 @@ async def test_explain_mavlink_type_filter(medium_flight: int) -> None:
     # Insert a small MAVLink dataset for this flight so the planner has data.
     async with Session() as s:
         count = await s.scalar(
-            select(MavlinkEvent.id)
-            .where(MavlinkEvent.flight_id == medium_flight)
-            .limit(1)
+            select(MavlinkEvent.id).where(MavlinkEvent.flight_id == medium_flight).limit(1)
         )
     if count is None:
         await repo.add_mavlink_events_many(
@@ -433,7 +455,9 @@ async def test_explain_mavlink_type_filter(medium_flight: int) -> None:
         )
         rows = plan.fetchall()
 
-    print(f"\n\n  [EXPLAIN] mavlink msg_type filter — flight_id={medium_flight}  msg_type=GLOBAL_POSITION_INT")
+    print(
+        f"\n\n  [EXPLAIN] mavlink msg_type filter — flight_id={medium_flight}  msg_type=GLOBAL_POSITION_INT"
+    )
     for row in rows:
         print(f"    {row[0]}")
 

@@ -1,25 +1,26 @@
 from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
-from geoalchemy2 import Geometry
-from typing import Optional, Dict, Any, List
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import (
-    String,
-    Integer,
-    Float,
-    DateTime,
-    ForeignKey,
-    JSON,
-    func,
-    UniqueConstraint,
-    BigInteger,
-    Index,
-    Boolean,
-    LargeBinary,
-    Text,
-)
+from typing import Any
 
+from geoalchemy2 import Geometry
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -67,11 +68,11 @@ class Flight(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(
         String(32), default=FlightStatus.ACTIVE.value, nullable=False
     )
-    note: Mapped[Optional[str]] = mapped_column(String(255))
+    note: Mapped[str | None] = mapped_column(String(255))
 
     start_lat: Mapped[float] = mapped_column(Float, nullable=False)
     start_lon: Mapped[float] = mapped_column(Float, nullable=False)
@@ -80,16 +81,16 @@ class Flight(Base):
     dest_lon: Mapped[float] = mapped_column(Float, nullable=False)
     dest_alt: Mapped[float] = mapped_column(Float, nullable=False)
 
-    telemetry: Mapped[list["TelemetryRecord"]] = relationship(
+    telemetry: Mapped[list[TelemetryRecord]] = relationship(
         back_populates="flight", cascade="all, delete-orphan"
     )
-    events: Mapped[list["FlightEvent"]] = relationship(
+    events: Mapped[list[FlightEvent]] = relationship(
         back_populates="flight", cascade="all, delete-orphan"
     )
-    patrol_detections: Mapped[list["PatrolDetection"]] = relationship(
+    patrol_detections: Mapped[list[PatrolDetection]] = relationship(
         back_populates="flight", cascade="all, delete-orphan"
     )
-    patrol_incidents: Mapped[list["PatrolIncident"]] = relationship(
+    patrol_incidents: Mapped[list[PatrolIncident]] = relationship(
         back_populates="flight", cascade="all, delete-orphan"
     )
 
@@ -97,16 +98,14 @@ class Flight(Base):
 class FlightEvent(Base):
     __tablename__ = "flight_events"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    flight_id: Mapped[int] = mapped_column(
-        ForeignKey("flights.id", ondelete="CASCADE"), index=True
-    )
+    flight_id: Mapped[int] = mapped_column(ForeignKey("flights.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     type: Mapped[str] = mapped_column(String(64), nullable=False)
-    data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
-    flight: Mapped["Flight"] = relationship(back_populates="events")
+    flight: Mapped[Flight] = relationship(back_populates="events")
 
     __table_args__ = (
         # optimised for flight_id + timestamp range reads
@@ -118,7 +117,7 @@ class TelemetryRecord(Base):
     __tablename__ = "telemetry"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    flight_id: Mapped[Optional[int]] = mapped_column(
+    flight_id: Mapped[int | None] = mapped_column(
         ForeignKey("flights.id", ondelete="SET NULL"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -132,15 +131,15 @@ class TelemetryRecord(Base):
     groundspeed: Mapped[float] = mapped_column(Float, nullable=False)
     # armed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     mode: Mapped[str] = mapped_column(String(32), nullable=False)
-    battery_voltage: Mapped[Optional[float]] = mapped_column(Float)
-    battery_current: Mapped[Optional[float]] = mapped_column(Float)
-    battery_remaining: Mapped[Optional[float]] = mapped_column(Float)
+    battery_voltage: Mapped[float | None] = mapped_column(Float)
+    battery_current: Mapped[float | None] = mapped_column(Float)
+    battery_remaining: Mapped[float | None] = mapped_column(Float)
     system_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
     )
 
-    flight: Mapped[Optional["Flight"]] = relationship(back_populates="telemetry")
-    frame_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    flight: Mapped[Flight | None] = relationship(back_populates="telemetry")
+    frame_id: Mapped[int | None] = mapped_column(Integer, index=True)
 
     __table_args__ = (
         # idempotency per flight/frame
@@ -163,15 +162,9 @@ class MavlinkEvent(Base):
     )
     payload: Mapped[dict] = mapped_column(JSON)
     # Boot time in milliseconds since vehicle boot (not a UTC timestamp).
-    time_boot_ms: Mapped[Optional[int]] = mapped_column(
-        BigInteger, nullable=True
-    )
-    time_unix_usec: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    timestamp: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    time_boot_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    time_unix_usec: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
         # Ingest-time ordering (written by _raw_event_ingest_worker)
@@ -185,9 +178,7 @@ class MavlinkEvent(Base):
             "timestamp",
             postgresql_include=["time_boot_ms", "time_unix_usec"],
         ),
-        UniqueConstraint(
-            "flight_id", "msg_type", "time_boot_ms", name="uq_evt_flt_type_frame"
-        ),
+        UniqueConstraint("flight_id", "msg_type", "time_boot_ms", name="uq_evt_flt_type_frame"),
     )
 
 
@@ -213,12 +204,12 @@ class TelemetrySummary(Base):
     # Start of the time bucket (UTC).
     bucket_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    avg_alt: Mapped[Optional[float]] = mapped_column(Float)
-    min_alt: Mapped[Optional[float]] = mapped_column(Float)
-    max_alt: Mapped[Optional[float]] = mapped_column(Float)
-    avg_groundspeed: Mapped[Optional[float]] = mapped_column(Float)
-    avg_battery_remaining: Mapped[Optional[float]] = mapped_column(Float)
-    min_battery_remaining: Mapped[Optional[float]] = mapped_column(Float)
+    avg_alt: Mapped[float | None] = mapped_column(Float)
+    min_alt: Mapped[float | None] = mapped_column(Float)
+    max_alt: Mapped[float | None] = mapped_column(Float)
+    avg_groundspeed: Mapped[float | None] = mapped_column(Float)
+    avg_battery_remaining: Mapped[float | None] = mapped_column(Float)
+    min_battery_remaining: Mapped[float | None] = mapped_column(Float)
     sample_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (
@@ -237,11 +228,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(
-        String(255), unique=True, index=True, nullable=False
-    )
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[Optional[str]] = mapped_column(String(255))
+    full_name: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -268,20 +257,26 @@ class Geofence(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
-
-
 class SettingsRow(Base):
     """
     Single-row settings document (id=1), non-secret config only.
     Secrets are stored in VaultSecret.
     """
+
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
 
 class VaultSecret(Base):
@@ -290,24 +285,33 @@ class VaultSecret(Base):
     - name: unique key (e.g. "llm_api_key", "mqtt_pass")
     - ciphertext: encrypted bytes (Fernet/AESGCM, etc.)
     """
+
     __tablename__ = "vault_secrets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
     ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     __table_args__ = (UniqueConstraint("name", name="uq_vault_secret_name"),)
-
 
 
 class Field(Base):
     __tablename__ = "fields"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    owner_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)  # link to users.id if you want
+    owner_id: Mapped[int | None] = mapped_column(
+        Integer, index=True
+    )  # link to users.id if you want
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
 
     # exact field border polygon (WGS84)
@@ -316,15 +320,19 @@ class Field(Base):
         nullable=False,
     )
 
-    area_ha: Mapped[Optional[float]] = mapped_column(Float)
-    centroid: Mapped[Optional[Geometry]] = mapped_column(
+    area_ha: Mapped[float | None] = mapped_column(Float)
+    centroid: Mapped[Geometry | None] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326, spatial_index=True),
         nullable=True,
     )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    models: Mapped[list["FieldModel"]] = relationship(back_populates="field", cascade="all, delete-orphan")
+    models: Mapped[list[FieldModel]] = relationship(
+        back_populates="field", cascade="all, delete-orphan"
+    )
 
 
 class FieldModel(Base):
@@ -334,17 +342,23 @@ class FieldModel(Base):
     field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), index=True)
 
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")  # pending|processing|ready|failed
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="pending"
+    )  # pending|processing|ready|failed
 
     # data quality
-    gsd_cm: Mapped[Optional[float]] = mapped_column(Float)
-    epsg: Mapped[Optional[int]] = mapped_column(Integer)
+    gsd_cm: Mapped[float | None] = mapped_column(Float)
+    epsg: Mapped[int | None] = mapped_column(Integer)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    field: Mapped["Field"] = relationship(back_populates="models")
-    jobs: Mapped[list["MappingJob"]] = relationship(back_populates="model", cascade="all, delete-orphan")
-    assets: Mapped[list["Asset"]] = relationship(back_populates="model", cascade="all, delete-orphan")
+    field: Mapped[Field] = relationship(back_populates="models")
+    jobs: Mapped[list[MappingJob]] = relationship(
+        back_populates="model", cascade="all, delete-orphan"
+    )
+    assets: Mapped[list[Asset]] = relationship(back_populates="model", cascade="all, delete-orphan")
 
     __table_args__ = (
         UniqueConstraint("field_id", "version", name="uq_field_model_version"),
@@ -357,23 +371,29 @@ class MappingJob(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), index=True)
-    model_id: Mapped[int] = mapped_column(ForeignKey("field_models.id", ondelete="CASCADE"), index=True)
+    model_id: Mapped[int] = mapped_column(
+        ForeignKey("field_models.id", ondelete="CASCADE"), index=True
+    )
 
-    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")  # pending|uploading|processing|ready|failed
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="pending"
+    )  # pending|uploading|processing|ready|failed
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # external processor (WebODM task id etc.)
     processor: Mapped[str] = mapped_column(String(32), nullable=False, default="webodm")
-    processor_task_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    processor_task_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
-    params: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    error: Mapped[Optional[str]] = mapped_column(Text)
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    model: Mapped["FieldModel"] = relationship(back_populates="jobs")
+    model: Mapped[FieldModel] = relationship(back_populates="jobs")
 
     __table_args__ = (Index("idx_mapping_job_status", "status"),)
 
@@ -382,23 +402,29 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    model_id: Mapped[int] = mapped_column(ForeignKey("field_models.id", ondelete="CASCADE"), index=True)
+    model_id: Mapped[int] = mapped_column(
+        ForeignKey("field_models.id", ondelete="CASCADE"), index=True
+    )
 
-    type: Mapped[str] = mapped_column(String(32), nullable=False)  # ORTHO_COG, DSM_COG, DTM_COG, TILESET_3D, POINTCLOUD, ...
+    type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # ORTHO_COG, DSM_COG, DTM_COG, TILESET_3D, POINTCLOUD, ...
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
-    size_bytes: Mapped[Optional[int]] = mapped_column(BigInteger)
-    checksum: Mapped[Optional[str]] = mapped_column(String(128))
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    checksum: Mapped[str | None] = mapped_column(String(128))
 
     # bbox for quick camera framing
-    bbox: Mapped[Optional[Geometry]] = mapped_column(
+    bbox: Mapped[Geometry | None] = mapped_column(
         Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
         nullable=True,
     )
 
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    model: Mapped["FieldModel"] = relationship(back_populates="assets")
+    model: Mapped[FieldModel] = relationship(back_populates="assets")
 
     __table_args__ = (Index("idx_asset_model_type", "model_id", "type"),)
 
@@ -408,6 +434,7 @@ class Obstacle(Base):
     Operator-annotated or imported obstacles (trees, poles, buildings) to mask routes.
     Use POINT for simple obstacles; you can add POLYGON later.
     """
+
     __tablename__ = "obstacles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -418,9 +445,11 @@ class Obstacle(Base):
         nullable=False,
     )
     radius_m: Mapped[float] = mapped_column(Float, nullable=False, default=5.0)
-    height_m: Mapped[Optional[float]] = mapped_column(Float)
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    height_m: Mapped[float | None] = mapped_column(Float)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 # backend/db/models.py  (APPEND)
@@ -428,17 +457,24 @@ class Obstacle(Base):
 from geoalchemy2 import Geometry
 from sqlalchemy import Text
 
+
 class Herd(Base):
     __tablename__ = "herds"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     # Optional: link herd to a pasture geofence you already manage
-    pasture_geofence_id: Mapped[Optional[int]] = mapped_column(ForeignKey("geofences.id", ondelete="SET NULL"), index=True)
+    pasture_geofence_id: Mapped[int | None] = mapped_column(
+        ForeignKey("geofences.id", ondelete="SET NULL"), index=True
+    )
 
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    animals: Mapped[List["Animal"]] = relationship(back_populates="herd", cascade="all, delete-orphan")
+    animals: Mapped[list[Animal]] = relationship(
+        back_populates="herd", cascade="all, delete-orphan"
+    )
 
 
 class Animal(Base):
@@ -449,15 +485,21 @@ class Animal(Base):
     # Collar identity (unique)
     collar_id: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
 
-    name: Mapped[Optional[str]] = mapped_column(String(128))
-    species: Mapped[str] = mapped_column(String(32), default="cow", nullable=False)  # cow/sheep/goat
+    name: Mapped[str | None] = mapped_column(String(128))
+    species: Mapped[str] = mapped_column(
+        String(32), default="cow", nullable=False
+    )  # cow/sheep/goat
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    herd: Mapped["Herd"] = relationship(back_populates="animals")
-    positions: Mapped[List["AnimalPosition"]] = relationship(back_populates="animal", cascade="all, delete-orphan")
+    herd: Mapped[Herd] = relationship(back_populates="animals")
+    positions: Mapped[list[AnimalPosition]] = relationship(
+        back_populates="animal", cascade="all, delete-orphan"
+    )
 
 
 class AnimalPosition(Base):
@@ -465,19 +507,22 @@ class AnimalPosition(Base):
     Time-series positions from collars.
     Use SRID 4326 point + lat/lon columns for convenience.
     """
+
     __tablename__ = "animal_positions"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     animal_id: Mapped[int] = mapped_column(ForeignKey("animals.id", ondelete="CASCADE"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     lat: Mapped[float] = mapped_column(Float, nullable=False)
     lon: Mapped[float] = mapped_column(Float, nullable=False)
-    alt: Mapped[Optional[float]] = mapped_column(Float)
+    alt: Mapped[float | None] = mapped_column(Float)
 
     # Optional: collar derived speed/activity
-    speed_mps: Mapped[Optional[float]] = mapped_column(Float)
-    activity: Mapped[Optional[float]] = mapped_column(Float)
+    speed_mps: Mapped[float | None] = mapped_column(Float)
+    activity: Mapped[float | None] = mapped_column(Float)
 
     # Geo point for PostGIS queries (distance, within pasture)
     point: Mapped[Geometry] = mapped_column(
@@ -486,13 +531,11 @@ class AnimalPosition(Base):
     )
 
     source: Mapped[str] = mapped_column(String(32), default="collar", nullable=False)
-    raw: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    raw: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
-    animal: Mapped["Animal"] = relationship(back_populates="positions")
+    animal: Mapped[Animal] = relationship(back_populates="positions")
 
-    __table_args__ = (
-        Index("idx_animal_pos_animal_time", "animal_id", "created_at"),
-    )
+    __table_args__ = (Index("idx_animal_pos_animal_time", "animal_id", "created_at"),)
 
 
 class HerdTask(Base):
@@ -500,21 +543,35 @@ class HerdTask(Base):
     “Task” is your domain object: census, herd sweep, search & locate, predator scan, etc.
     This lets the Livestock page show a task list and statuses.
     """
+
     __tablename__ = "herd_tasks"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     herd_id: Mapped[int] = mapped_column(ForeignKey("herds.id", ondelete="CASCADE"), index=True)
 
-    type: Mapped[str] = mapped_column(String(64), nullable=False)  # e.g. "census", "search_locate", "herd_sweep"
-    status: Mapped[str] = mapped_column(String(32), default="created", nullable=False)  # created/running/completed/failed
+    type: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )  # e.g. "census", "search_locate", "herd_sweep"
+    status: Mapped[str] = mapped_column(
+        String(32), default="created", nullable=False
+    )  # created/running/completed/failed
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     # optional link to your flights table if a drone mission is executed
-    flight_id: Mapped[Optional[int]] = mapped_column(ForeignKey("flights.id", ondelete="SET NULL"), index=True)
+    flight_id: Mapped[int | None] = mapped_column(
+        ForeignKey("flights.id", ondelete="SET NULL"), index=True
+    )
 
-    params: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    result: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
 
 class OperationalAlert(Base):
@@ -529,7 +586,7 @@ class OperationalAlert(Base):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     first_triggered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -537,10 +594,10 @@ class OperationalAlert(Base):
     last_triggered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    last_notified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    acknowledged_by_user_id: Mapped[Optional[int]] = mapped_column(
+    last_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    acknowledged_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         index=True,
     )
@@ -550,10 +607,13 @@ class OperationalAlert(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
 
-    deliveries: Mapped[List["AlertDelivery"]] = relationship(
+    deliveries: Mapped[list[AlertDelivery]] = relationship(
         back_populates="alert",
         cascade="all, delete-orphan",
     )
@@ -574,16 +634,16 @@ class AlertDelivery(Base):
         nullable=False,
     )
     channel: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
-    destination: Mapped[Optional[str]] = mapped_column(String(255))
+    destination: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(16), nullable=False)
-    provider_message_id: Mapped[Optional[str]] = mapped_column(String(128))
-    error: Mapped[Optional[str]] = mapped_column(Text)
-    payload: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    provider_message_id: Mapped[str | None] = mapped_column(String(128))
+    error: Mapped[str | None] = mapped_column(Text)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     attempted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    alert: Mapped["OperationalAlert"] = relationship(back_populates="deliveries")
+    alert: Mapped[OperationalAlert] = relationship(back_populates="deliveries")
 
 
 class PatrolDetection(Base):
@@ -596,7 +656,7 @@ class PatrolDetection(Base):
         index=True,
         nullable=False,
     )
-    telemetry_id: Mapped[Optional[int]] = mapped_column(
+    telemetry_id: Mapped[int | None] = mapped_column(
         ForeignKey("telemetry.id", ondelete="SET NULL"),
         index=True,
     )
@@ -608,42 +668,42 @@ class PatrolDetection(Base):
         index=True,
     )
 
-    frame_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    frame_id: Mapped[int | None] = mapped_column(Integer, index=True)
 
     mission_task_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     ai_task: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
 
     object_class: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    anomaly_type: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    track_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    anomaly_type: Mapped[str | None] = mapped_column(String(64), index=True)
+    track_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
-    zone_name: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    checkpoint_index: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    zone_name: Mapped[str | None] = mapped_column(String(128), index=True)
+    checkpoint_index: Mapped[int | None] = mapped_column(Integer, index=True)
 
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
 
-    bbox_xyxy: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    centroid_xy: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    bbox_xyxy: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    centroid_xy: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
-    lat: Mapped[Optional[float]] = mapped_column(Float)
-    lon: Mapped[Optional[float]] = mapped_column(Float)
-    alt: Mapped[Optional[float]] = mapped_column(Float)
+    lat: Mapped[float | None] = mapped_column(Float)
+    lon: Mapped[float | None] = mapped_column(Float)
+    alt: Mapped[float | None] = mapped_column(Float)
 
-    heading: Mapped[Optional[float]] = mapped_column(Float)
-    groundspeed: Mapped[Optional[float]] = mapped_column(Float)
+    heading: Mapped[float | None] = mapped_column(Float)
+    groundspeed: Mapped[float | None] = mapped_column(Float)
 
     source: Mapped[str] = mapped_column(String(32), default="rgb", nullable=False)
-    snapshot_path: Mapped[Optional[str]] = mapped_column(String(1024))
-    clip_path: Mapped[Optional[str]] = mapped_column(String(1024))
+    snapshot_path: Mapped[str | None] = mapped_column(String(1024))
+    clip_path: Mapped[str | None] = mapped_column(String(1024))
 
-    model_name: Mapped[Optional[str]] = mapped_column(String(128))
-    model_version: Mapped[Optional[str]] = mapped_column(String(64))
+    model_name: Mapped[str | None] = mapped_column(String(128))
+    model_version: Mapped[str | None] = mapped_column(String(64))
 
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
-    flight: Mapped["Flight"] = relationship(back_populates="patrol_detections")
-    telemetry: Mapped[Optional["TelemetryRecord"]] = relationship()
-    incident_links: Mapped[List["PatrolIncidentDetection"]] = relationship(
+    flight: Mapped[Flight] = relationship(back_populates="patrol_detections")
+    telemetry: Mapped[TelemetryRecord | None] = relationship()
+    incident_links: Mapped[list[PatrolIncidentDetection]] = relationship(
         back_populates="detection",
         cascade="all, delete-orphan",
     )
@@ -679,48 +739,48 @@ class PatrolIncident(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     status: Mapped[str] = mapped_column(String(32), default="open", index=True, nullable=False)
 
     mission_task_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     incident_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
 
-    primary_object_class: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    primary_track_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    primary_object_class: Mapped[str | None] = mapped_column(String(64), index=True)
+    primary_track_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
-    ai_task: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    ai_task: Mapped[str | None] = mapped_column(String(64), index=True)
 
-    zone_name: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    checkpoint_index: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    zone_name: Mapped[str | None] = mapped_column(String(128), index=True)
+    checkpoint_index: Mapped[int | None] = mapped_column(Integer, index=True)
 
-    start_lat: Mapped[Optional[float]] = mapped_column(Float)
-    start_lon: Mapped[Optional[float]] = mapped_column(Float)
-    end_lat: Mapped[Optional[float]] = mapped_column(Float)
-    end_lon: Mapped[Optional[float]] = mapped_column(Float)
+    start_lat: Mapped[float | None] = mapped_column(Float)
+    start_lon: Mapped[float | None] = mapped_column(Float)
+    end_lat: Mapped[float | None] = mapped_column(Float)
+    end_lon: Mapped[float | None] = mapped_column(Float)
 
-    peak_confidence: Mapped[Optional[float]] = mapped_column(Float)
+    peak_confidence: Mapped[float | None] = mapped_column(Float)
     detection_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    first_detection_id: Mapped[Optional[int]] = mapped_column(BigInteger, index=True)
-    last_detection_id: Mapped[Optional[int]] = mapped_column(BigInteger, index=True)
+    first_detection_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    last_detection_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
 
-    snapshot_path: Mapped[Optional[str]] = mapped_column(String(1024))
-    clip_path: Mapped[Optional[str]] = mapped_column(String(1024))
+    snapshot_path: Mapped[str | None] = mapped_column(String(1024))
+    clip_path: Mapped[str | None] = mapped_column(String(1024))
 
-    last_alert_id: Mapped[Optional[int]] = mapped_column(
+    last_alert_id: Mapped[int | None] = mapped_column(
         ForeignKey("operational_alerts.id", ondelete="SET NULL"),
         index=True,
     )
 
-    summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
-    flight: Mapped["Flight"] = relationship(back_populates="patrol_incidents")
-    detection_links: Mapped[List["PatrolIncidentDetection"]] = relationship(
+    flight: Mapped[Flight] = relationship(back_populates="patrol_incidents")
+    detection_links: Mapped[list[PatrolIncidentDetection]] = relationship(
         back_populates="incident",
         cascade="all, delete-orphan",
     )
-    last_alert: Mapped[Optional["OperationalAlert"]] = relationship()
+    last_alert: Mapped[OperationalAlert | None] = relationship()
 
     __table_args__ = (
         Index("idx_patrol_inc_flight_opened", "flight_id", "opened_at"),
@@ -746,34 +806,36 @@ class PatrolIncidentDetection(Base):
         nullable=False,
     )
 
-    incident: Mapped["PatrolIncident"] = relationship(back_populates="detection_links")
-    detection: Mapped["PatrolDetection"] = relationship(back_populates="incident_links")
+    incident: Mapped[PatrolIncident] = relationship(back_populates="detection_links")
+    detection: Mapped[PatrolDetection] = relationship(back_populates="incident_links")
 
 
 class WarehouseMap(Base):
     __tablename__ = "warehouse_maps"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    owner_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    owner_id: Mapped[int | None] = mapped_column(Integer, index=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     # nullable=True: indoor warehouse maps use polygon_local_m stored in meta_data
-    boundary: Mapped[Optional[Geometry]] = mapped_column(
+    boundary: Mapped[Geometry | None] = mapped_column(
         Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
         nullable=True,
     )
-    area_m2: Mapped[Optional[float]] = mapped_column(Float)
-    centroid: Mapped[Optional[Geometry]] = mapped_column(
+    area_m2: Mapped[float | None] = mapped_column(Float)
+    centroid: Mapped[Geometry | None] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326, spatial_index=True),
         nullable=True,
     )
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    models: Mapped[list["WarehouseModel"]] = relationship(
+    models: Mapped[list[WarehouseModel]] = relationship(
         back_populates="warehouse_map",
         cascade="all, delete-orphan",
     )
-    docks: Mapped[list["WarehouseDockStation"]] = relationship(
+    docks: Mapped[list[WarehouseDockStation]] = relationship(
         back_populates="warehouse_map",
         cascade="all, delete-orphan",
     )
@@ -789,16 +851,20 @@ class WarehouseDockStation(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(128), nullable=False)
-    marker_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    charger_type: Mapped[Optional[str]] = mapped_column(String(64))
-    pose_local_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    entry_pose_local_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    exit_pose_local_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    marker_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    charger_type: Mapped[str | None] = mapped_column(String(64))
+    pose_local_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    entry_pose_local_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    exit_pose_local_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    warehouse_map: Mapped["WarehouseMap"] = relationship(back_populates="docks")
+    warehouse_map: Mapped[WarehouseMap] = relationship(back_populates="docks")
 
     __table_args__ = (
         UniqueConstraint("warehouse_map_id", "name", name="uq_warehouse_dock_station_name"),
@@ -815,12 +881,18 @@ class WarehouseModel(Base):
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
-    epsg: Mapped[Optional[int]] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    epsg: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    warehouse_map: Mapped["WarehouseMap"] = relationship(back_populates="models")
-    jobs: Mapped[list["WarehouseMappingJob"]] = relationship(back_populates="model", cascade="all, delete-orphan")
-    assets: Mapped[list["WarehouseAsset"]] = relationship(back_populates="model", cascade="all, delete-orphan")
+    warehouse_map: Mapped[WarehouseMap] = relationship(back_populates="models")
+    jobs: Mapped[list[WarehouseMappingJob]] = relationship(
+        back_populates="model", cascade="all, delete-orphan"
+    )
+    assets: Mapped[list[WarehouseAsset]] = relationship(
+        back_populates="model", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint("warehouse_map_id", "version", name="uq_warehouse_model_version"),
@@ -843,14 +915,16 @@ class WarehouseMappingJob(Base):
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processor: Mapped[str] = mapped_column(String(32), nullable=False, default="warehouse_scan")
-    processor_task_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    params: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    error: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    processor_task_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    model: Mapped["WarehouseModel"] = relationship(back_populates="jobs")
+    model: Mapped[WarehouseModel] = relationship(back_populates="jobs")
 
     __table_args__ = (Index("idx_warehouse_mapping_job_status", "status"),)
 
@@ -865,16 +939,18 @@ class WarehouseAsset(Base):
     )
     type: Mapped[str] = mapped_column(String(32), nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
-    size_bytes: Mapped[Optional[int]] = mapped_column(BigInteger)
-    checksum: Mapped[Optional[str]] = mapped_column(String(128))
-    bbox: Mapped[Optional[Geometry]] = mapped_column(
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    checksum: Mapped[str | None] = mapped_column(String(128))
+    bbox: Mapped[Geometry | None] = mapped_column(
         Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
         nullable=True,
     )
-    meta_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    model: Mapped["WarehouseModel"] = relationship(back_populates="assets")
+    model: Mapped[WarehouseModel] = relationship(back_populates="assets")
 
     __table_args__ = (Index("idx_warehouse_asset_model_type", "model_id", "type"),)
 
@@ -882,6 +958,7 @@ class WarehouseAsset(Base):
 # ---------------------------------------------------------------------------
 # Mission runtime persistence
 # ---------------------------------------------------------------------------
+
 
 class MissionRuntime(Base):
     """Durable record of a single mission execution.
@@ -904,17 +981,17 @@ class MissionRuntime(Base):
     )
 
     # Operator who launched the mission (nullable: system-initiated missions).
-    user_id: Mapped[Optional[int]] = mapped_column(
+    user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
     # Link to the Flight record (created once the vehicle is armed / flight starts).
-    flight_id: Mapped[Optional[int]] = mapped_column(
+    flight_id: Mapped[int | None] = mapped_column(
         ForeignKey("flights.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
     # Link to the preflight run that cleared this mission (nullable: skipped preflight).
-    preflight_run_id: Mapped[Optional[int]] = mapped_column(
+    preflight_run_id: Mapped[int | None] = mapped_column(
         ForeignKey("preflight_runs.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
@@ -922,26 +999,22 @@ class MissionRuntime(Base):
     mission_name: Mapped[str] = mapped_column(String(255), nullable=False)
     mission_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     # Sub-type used by patrol / warehouse / animal-farm missions.
-    mission_task_type: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    mission_task_type: Mapped[str | None] = mapped_column(String(64), index=True)
     # Further sub-type distinguishing private-patrol modes (e.g. "perimeter").
-    private_patrol_task_type: Mapped[Optional[str]] = mapped_column(String(64))
+    private_patrol_task_type: Mapped[str | None] = mapped_column(String(64))
     # JSON array of AI task names active during this mission (e.g. ["person_detect"]).
-    ai_tasks: Mapped[List[Any]] = mapped_column(JSON, default=list, nullable=False)
+    ai_tasks: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
 
     # String UUID of the preflight run that cleared this mission — stored directly
     # so handlers can read it without a join (matches PreflightRun.run_uuid).
-    preflight_run_uuid: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    preflight_run_uuid: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Idempotency cache for operator commands: maps idempotency_key → response dict.
-    idempotency_results: Mapped[Dict[str, Any]] = mapped_column(
-        JSON, default=dict, nullable=False
-    )
+    idempotency_results: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     # --- Lifecycle ---
     # One of: queued | running | paused | aborted | completed | failed
-    state: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="queued", index=True
-    )
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default="queued", index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -952,14 +1025,14 @@ class MissionRuntime(Base):
         nullable=False,
     )
     # Set when the vehicle becomes airborne (first "running" transition).
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Set on terminal state (completed / aborted / failed).
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Human-readable reason for failure or abort.
-    failure_reason: Mapped[Optional[str]] = mapped_column(Text)
+    failure_reason: Mapped[str | None] = mapped_column(Text)
     # Free-form operator note (handoff notes, shift comments, etc.).
-    operator_note: Mapped[Optional[str]] = mapped_column(Text)
+    operator_note: Mapped[str | None] = mapped_column(Text)
 
     # --- Resume support ---
     # Opaque JSON blob written by the mission executor as it progresses.
@@ -967,24 +1040,20 @@ class MissionRuntime(Base):
     #   GridMission:       {"completed_segment_indices": [0,1,2], "last_safe_wp": 7}
     #   WaypointsMission:  {"last_completed_wp_index": 4}
     #   PrivatePatrol:     {"last_completed_checkpoint": "cp-3"}
-    resume_metadata: Mapped[Dict[str, Any]] = mapped_column(
-        JSON, default=dict, nullable=False
-    )
+    resume_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     # Original mission parameters snapshot (polygon, altitude, speed, overlap, …).
     # Stored so a resumed or re-run mission uses identical parameters.
-    mission_params: Mapped[Dict[str, Any]] = mapped_column(
-        JSON, default=dict, nullable=False
-    )
+    mission_params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     # Ordered audit trail of operator commands (pause, resume, RTH, abort, …).
     # Each entry matches the shape of MissionCommandAuditRecord.
-    command_audit: Mapped[List[Any]] = mapped_column(JSON, default=list, nullable=False)
+    command_audit: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
 
     # --- Relationships ---
-    user: Mapped[Optional["User"]] = relationship(foreign_keys=[user_id])
-    flight: Mapped[Optional["Flight"]] = relationship(foreign_keys=[flight_id])
-    preflight_run: Mapped[Optional["PreflightRun"]] = relationship(
+    user: Mapped[User | None] = relationship(foreign_keys=[user_id])
+    flight: Mapped[Flight | None] = relationship(foreign_keys=[flight_id])
+    preflight_run: Mapped[PreflightRun | None] = relationship(
         back_populates="mission_runtime", foreign_keys=[preflight_run_id]
     )
 
@@ -1008,50 +1077,46 @@ class PreflightRun(Base):
 
     # UUID assigned at run start; matches the ``preflight_run_id`` stored in
     # ``MissionRuntimeRecord`` and ``MissionRuntime``.
-    run_uuid: Mapped[str] = mapped_column(
-        String(64), unique=True, nullable=False, index=True
-    )
+    run_uuid: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
 
     # Optional link to the flight record if one already exists at preflight time.
-    flight_id: Mapped[Optional[int]] = mapped_column(
+    flight_id: Mapped[int | None] = mapped_column(
         ForeignKey("flights.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
     # Operator who triggered the preflight (nullable: automated runs).
-    user_id: Mapped[Optional[int]] = mapped_column(
+    user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
     # --- Mission context ---
     mission_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    mission_name: Mapped[Optional[str]] = mapped_column(String(255))
+    mission_name: Mapped[str | None] = mapped_column(String(255))
 
     # SHA-256 of the mission payload at the time of preflight — used to validate
     # that the mission launched matches the payload that was preflight-checked.
-    mission_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    mission_fingerprint: Mapped[str | None] = mapped_column(String(64))
 
     # Wall-clock expiry — preflight tokens are only valid for PREFLIGHT_RUN_TTL_SECONDS.
-    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Vehicle identifier reported by the drone at preflight time.
-    vehicle_id: Mapped[Optional[str]] = mapped_column(String(64))
+    vehicle_id: Mapped[str | None] = mapped_column(String(64))
 
     # --- Result ---
     # One of: PASS | WARN | FAIL
-    overall_status: Mapped[str] = mapped_column(
-        String(8), nullable=False, index=True
-    )
+    overall_status: Mapped[str] = mapped_column(String(8), nullable=False, index=True)
 
     # Structured check results — matches PreflightReport.base_checks / mission_checks.
     # Each item: {"name": str, "status": str, "message": str|null}
-    base_checks: Mapped[List[Any]] = mapped_column(JSON, default=list, nullable=False)
-    mission_checks: Mapped[List[Any]] = mapped_column(JSON, default=list, nullable=False)
+    base_checks: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
+    mission_checks: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
 
     # Names of checks with status FAIL that blocked launch.
-    critical_failures: Mapped[List[Any]] = mapped_column(JSON, default=list, nullable=False)
+    critical_failures: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
 
     # Aggregated counts: {passed, warned, failed, skipped}
-    summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     # Whether the operator explicitly acknowledged warnings and proceeded.
     operator_acknowledged_warnings: Mapped[bool] = mapped_column(
@@ -1062,14 +1127,14 @@ class PreflightRun(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     # --- Relationships ---
-    mission_runtime: Mapped[Optional["MissionRuntime"]] = relationship(
+    mission_runtime: Mapped[MissionRuntime | None] = relationship(
         back_populates="preflight_run",
         foreign_keys="MissionRuntime.preflight_run_id",
     )
@@ -1095,13 +1160,13 @@ class OperatorCommand(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     # Natural key generated by the API layer: "cmd_{ts}_{hex}".
-    command_id: Mapped[str] = mapped_column(
-        String(64), unique=True, nullable=False, index=True
-    )
+    command_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
 
     # FK to the owning mission runtime (set NULL on runtime delete for audit preservation).
-    mission_runtime_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("mission_runtimes.id", ondelete="SET NULL"), index=True, nullable=True
+    mission_runtime_id: Mapped[int | None] = mapped_column(
+        ForeignKey("mission_runtimes.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
     )
 
     # Denormalised so commands remain readable even if the runtime row is deleted.
@@ -1110,7 +1175,7 @@ class OperatorCommand(Base):
     # --- Command payload ---
     command: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
-    requested_by_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    requested_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # State snapshot at the moment the command was evaluated.
     state_before: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -1123,7 +1188,7 @@ class OperatorCommand(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
     # Optional operator-provided reason.
-    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -1131,9 +1196,7 @@ class OperatorCommand(Base):
     )
 
     # --- Relationship ---
-    mission_runtime: Mapped[Optional["MissionRuntime"]] = relationship(
-        foreign_keys=[mission_runtime_id]
-    )
+    mission_runtime: Mapped[MissionRuntime | None] = relationship(foreign_keys=[mission_runtime_id])
 
     __table_args__ = (
         Index("idx_operator_command_runtime", "mission_runtime_id", "requested_at"),

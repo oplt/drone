@@ -1,8 +1,9 @@
-from asyncua import ua, Server
-from backend.config import settings
-import os
 import logging
+import os
 
+from asyncua import Server, ua
+
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +67,7 @@ class DroneOpcUaServer:
         self.vars["lon"] = await drone.add_variable(self.idx, "Lon", 0.0)
         self.vars["alt"] = await drone.add_variable(self.idx, "Alt", 0.0)
         self.vars["heading"] = await drone.add_variable(self.idx, "Heading", 0.0)
-        self.vars["groundspeed"] = await drone.add_variable(
-            self.idx, "Groundspeed", 0.0
-        )
+        self.vars["groundspeed"] = await drone.add_variable(self.idx, "Groundspeed", 0.0)
         # self.vars["Armed"] = await drone.add_variable(self.idx, "Armed", False)
         # Initialize with concrete types to avoid VariantType.Null mismatches
         self.vars["battery_voltage"] = await drone.add_variable(

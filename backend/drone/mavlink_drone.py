@@ -4,13 +4,56 @@ import math
 for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
     if not hasattr(collections, _name):
         setattr(collections, _name, getattr(collections.abc, _name))
-import time
-import threading
-from .models import Coordinate, LocalCoordinate, Telemetry
-from .drone_base import DroneClient, MissionAbortRequested
 import logging
-from dronekit import connect, VehicleMode, LocationGlobalRelative
+import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+
+from dronekit import LocationGlobalRelative, VehicleMode, connect
 from pymavlink import mavutil
+
+from .drone_base import DroneClient, MissionAbortRequested
+from .models import Coordinate, LocalCoordinate, Telemetry
+
+
+@dataclass
+class WaypointFollowerConfig:
+    """
+    Tuning parameters for the segment-based waypoint follower.
+
+    acceptance_radius_m
+        Distance to the *current* target waypoint at which the follower
+        considers that waypoint reached and advances to the next one.
+        Default 3.0 m suits GPS-class outdoor surveys; tighten for dense
+        grid legs or loosen for fast transit legs.
+
+    lookahead_m
+        Distance to the current target at which the follower issues the
+        *next* waypoint command early.  This lets the autopilot begin
+        curving toward the turn before reaching the waypoint, reducing
+        braking and improving survey coverage on dense grid missions.
+        Must be >= acceptance_radius_m; if set to 0 lookahead is disabled.
+
+    poll_interval_s
+        How often (seconds) the position is checked inside the control
+        loop.  0.2 s gives a tighter reaction than the original 1 s loop.
+
+    max_active_leg_s
+        Wall-clock limit per waypoint leg (paused time not counted).
+        Raises RuntimeError when exceeded.
+
+    on_progress
+        Optional callback invoked each poll cycle:
+        ``on_progress(wp_index, total_waypoints, distance_m) -> None``.
+        Runs in the thread executing follow_waypoints; must not block.
+    """
+
+    acceptance_radius_m: float = 3.0
+    lookahead_m: float = 5.0
+    poll_interval_s: float = 0.2
+    max_active_leg_s: float = 300.0
+    on_progress: Callable[[int, int, float], None] | None = field(default=None, repr=False)
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +74,11 @@ class MavlinkDrone(DroneClient):
         self._capture_mode = None
         self._mission_pause_requested = threading.Event()
         self._mission_abort_requested = threading.Event()
+        self._mission_control_changed = threading.Event()
         self._mission_control_lock = threading.Lock()
+        # Segment-follower config; replace or mutate before calling follow_waypoints
+        # to tune acceptance radii, lookahead, or attach a progress callback.
+        self.follower_config: WaypointFollowerConfig = WaypointFollowerConfig()
 
     def connect(self) -> None:
         self.vehicle = connect(
@@ -76,7 +123,6 @@ class MavlinkDrone(DroneClient):
         """this function and heart beat flow should be added on raspberry pi on drone"""
         # Start the dead man's switch monitoring
         # self.start_dead_mans_switch()
-
 
     def get_home_amsl(self) -> float:
         # AMSL in meters (DroneKit global_frame.alt)
@@ -178,10 +224,10 @@ class MavlinkDrone(DroneClient):
                 pass
 
     def _current_takeoff_height_m(
-            self,
-            *,
-            baseline_local_down: float | None,
-            baseline_global_alt: float | None,
+        self,
+        *,
+        baseline_local_down: float | None,
+        baseline_global_alt: float | None,
     ) -> tuple[float | None, str, dict[str, float]]:
         if not self.vehicle:
             return None, "unavailable", {}
@@ -215,12 +261,16 @@ class MavlinkDrone(DroneClient):
             return None, "unavailable", {}
 
         # Indoor-first source priority.
-        for preferred in ("local_ned", "rangefinder", "global_relative", "global_frame"):
+        for preferred in (
+            "local_ned",
+            "rangefinder",
+            "global_relative",
+            "global_frame",
+        ):
             if preferred in candidates:
                 return float(candidates[preferred]), preferred, candidates
 
         return None, "unavailable", candidates
-
 
     def arm_and_takeoff(self, alt: float) -> None:
         if not self.vehicle:
@@ -309,8 +359,8 @@ class MavlinkDrone(DroneClient):
                     f"candidates={{{', '.join(f'{key}: {value:.2f}' for key, value in last_candidates.items())}}})"
                 )
 
-            time.sleep(0.2)
-
+            self._mission_control_changed.wait(timeout=0.2)
+            self._mission_control_changed.clear()
 
     def goto(self, coord: Coordinate) -> None:
         # Send heartbeat before major operations
@@ -344,6 +394,7 @@ class MavlinkDrone(DroneClient):
             return False
         with self._mission_control_lock:
             self._mission_pause_requested.set()
+            self._mission_control_changed.set()
             # Prefer LOITER; BRAKE as fallback where supported.
             return self._set_mode_best_effort("LOITER", "BRAKE")
 
@@ -352,6 +403,7 @@ class MavlinkDrone(DroneClient):
             return False
         with self._mission_control_lock:
             self._mission_pause_requested.clear()
+            self._mission_control_changed.set()
             # Guided mode allows simple_goto waypoint execution to continue.
             return self._set_mode_best_effort("GUIDED", "AUTO")
 
@@ -361,6 +413,7 @@ class MavlinkDrone(DroneClient):
         with self._mission_control_lock:
             self._mission_abort_requested.set()
             self._mission_pause_requested.clear()
+            self._mission_control_changed.set()
             # RTL first for safe recovery, LAND fallback.
             return self._set_mode_best_effort("RTL", "LAND")
 
@@ -383,27 +436,13 @@ class MavlinkDrone(DroneClient):
         local_east = getattr(local, "east", None)
         local_down = getattr(local, "down", None)
         local_position_ok = (
-            local_north is not None
-            and local_east is not None
-            and local_down is not None
+            local_north is not None and local_east is not None and local_down is not None
         )
         rangefinder = getattr(v, "rangefinder", None)
         obstacle_distance = getattr(rangefinder, "distance", None)
-        lat = (
-            getattr(rel, "lat", None)
-            if rel is not None
-            else None
-        )
-        lon = (
-            getattr(rel, "lon", None)
-            if rel is not None
-            else None
-        )
-        alt = (
-            getattr(rel, "alt", None)
-            if rel is not None
-            else None
-        )
+        lat = getattr(rel, "lat", None) if rel is not None else None
+        lon = getattr(rel, "lon", None) if rel is not None else None
+        alt = getattr(rel, "alt", None) if rel is not None else None
         if lat is None:
             lat = getattr(glob, "lat", None)
         if lon is None:
@@ -454,9 +493,7 @@ class MavlinkDrone(DroneClient):
             odometry_healthy=local_position_ok,
             odometry_drift_m=None,
             lidar_healthy=(
-                bool(obstacle_distance > 0.0)
-                if obstacle_distance is not None
-                else None
+                bool(obstacle_distance > 0.0) if obstacle_distance is not None else None
             ),
             obstacle_distance_m=(
                 float(obstacle_distance) if obstacle_distance is not None else None
@@ -536,9 +573,9 @@ class MavlinkDrone(DroneClient):
                 raise ValueError("interval_s must be > 0 for time capture mode")
             self._send_command_long(
                 command=mavutil.mavlink.MAV_CMD_IMAGE_START_CAPTURE,
-                p1=0.0,       # camera id
+                p1=0.0,  # camera id
                 p2=interval,  # capture interval (s)
-                p3=0.0,       # 0 => keep capturing until explicit stop
+                p3=0.0,  # 0 => keep capturing until explicit stop
                 p4=0.0,
             )
             self._capture_mode = "time"
@@ -622,19 +659,53 @@ class MavlinkDrone(DroneClient):
         )
         return []
 
-    def follow_waypoints(self, path):
+    def follow_waypoints(self, path) -> None:
+        """
+        Fly the drone through every Coordinate in *path* using the
+        segment-based follower.  Tune behaviour by setting
+        ``self.follower_config`` before calling.
+        """
         self._mission_abort_requested.clear()
         self._mission_pause_requested.clear()
-        for wp in path:
-            # self.send_heartbeat()  # Heartbeat before each waypoint
-            self.goto(wp)
+        self._fly_segment_path(list(path), self.follower_config)
 
-            # Wait for waypoint with mission-control awareness.
+    def _fly_segment_path(
+        self,
+        path: list[Coordinate],
+        config: WaypointFollowerConfig,
+    ) -> None:
+        """
+        Segment-based inner loop for follow_waypoints.
+
+        For each waypoint i:
+          1. Issue goto(path[i]).
+          2. Poll every config.poll_interval_s.
+          3. When distance < config.lookahead_m and the next waypoint exists,
+             issue goto(path[i+1]) once (turn anticipation — vehicle begins
+             curving before reaching the acceptance sphere).
+          4. When distance < config.acceptance_radius_m advance to i+1.
+          5. Track paused time so the per-leg timeout counts only active
+             flight time.
+          6. Raise MissionAbortRequested on operator abort.
+          7. Raise RuntimeError when a leg exceeds config.max_active_leg_s.
+        """
+        n = len(path)
+        if n == 0:
+            return
+
+        cfg = config
+        lookahead_m = max(0.0, cfg.lookahead_m)
+
+        for i, target in enumerate(path):
+            self.goto(target)
+            logger.debug("Segment follower: heading to wp %d/%d %s", i + 1, n, target)
+
             start_time = time.monotonic()
-            paused_started_at = None
+            paused_started_at: float | None = None
             paused_total_s = 0.0
             was_paused = False
-            max_active_leg_s = 300.0
+            lookahead_issued = False  # guard: only issue next-wp command once per leg
+
             while True:
                 if self._mission_abort_requested.is_set():
                     raise MissionAbortRequested("Operator abort requested")
@@ -643,31 +714,56 @@ class MavlinkDrone(DroneClient):
                     if paused_started_at is None:
                         paused_started_at = time.monotonic()
                         was_paused = True
-                    time.sleep(0.4)
+                    self._mission_control_changed.wait(timeout=cfg.poll_interval_s)
+                    self._mission_control_changed.clear()
                     continue
 
+                # Accumulate paused time after unpausing.
                 if paused_started_at is not None:
                     paused_total_s += time.monotonic() - paused_started_at
                     paused_started_at = None
                 if was_paused:
-                    # Re-send target after unpausing to continue route reliably.
-                    self.goto(wp)
+                    # Re-issue current target so autopilot resumes toward it.
+                    self.goto(target)
+                    lookahead_issued = False  # reset — drone may have drifted
                     was_paused = False
 
-                # Check if we're close enough to the waypoint
                 current = self.vehicle.location.global_relative_frame
-                distance = self._distance_to_target(current, wp)
+                dist = self._distance_to_target(current, target)
 
-                if distance < 2.0:  # Within 2 meters
+                if cfg.on_progress is not None:
+                    try:
+                        cfg.on_progress(i, n, dist)
+                    except Exception:
+                        logger.exception("WaypointFollowerConfig.on_progress raised")
+
+                # Lookahead: begin commanding the next waypoint early so the
+                # autopilot can start curving into the turn before reaching
+                # the acceptance sphere.
+                if not lookahead_issued and lookahead_m > 0 and dist < lookahead_m and i + 1 < n:
+                    self.goto(path[i + 1])
+                    lookahead_issued = True
+                    logger.debug(
+                        "Segment follower: lookahead fired at %.1f m — pre-commanding wp %d/%d",
+                        dist,
+                        i + 2,
+                        n,
+                    )
+
+                if dist < cfg.acceptance_radius_m:
+                    logger.debug("Segment follower: wp %d/%d accepted at %.1f m", i + 1, n, dist)
                     break
 
                 active_elapsed_s = (time.monotonic() - start_time) - paused_total_s
-                if active_elapsed_s > max_active_leg_s:
+                if active_elapsed_s > cfg.max_active_leg_s:
                     raise RuntimeError(
-                        f"Waypoint leg timeout after {max_active_leg_s:.0f}s active flight time"
+                        f"Waypoint leg {i + 1}/{n} timed out after "
+                        f"{cfg.max_active_leg_s:.0f}s active flight time "
+                        f"(dist={dist:.1f}m)"
                     )
 
-                time.sleep(1)
+                self._mission_control_changed.wait(timeout=cfg.poll_interval_s)
+                self._mission_control_changed.clear()
 
     def _send_local_position_target(self, coord: LocalCoordinate) -> None:
         if not self.vehicle:
@@ -748,7 +844,8 @@ class MavlinkDrone(DroneClient):
                     if paused_started_at is None:
                         paused_started_at = time.monotonic()
                         was_paused = True
-                    time.sleep(0.2)
+                    self._mission_control_changed.wait(timeout=0.2)
+                    self._mission_control_changed.clear()
                     continue
 
                 if paused_started_at is not None:
@@ -768,11 +865,12 @@ class MavlinkDrone(DroneClient):
                         f"Local setpoint leg timeout after {max_active_leg_s:.0f}s active flight time"
                     )
 
-                time.sleep(0.2)
+                self._mission_control_changed.wait(timeout=0.2)
+                self._mission_control_changed.clear()
 
     def _distance_to_target(self, current_loc, target_coord):
         """Calculate distance to target coordinate"""
-        from math import radians, sin, cos, sqrt, atan2
+        from math import atan2, cos, radians, sin, sqrt
 
         # Haversine formula for distance
         R = 6371000  # Earth's radius in meters

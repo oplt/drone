@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import heapq
 import math
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
-from typing import Iterable, Iterator, Optional
 
 from .enums import IndoorFrame, LocalizationConfidence, OccupancyState
 
@@ -13,17 +13,17 @@ class LocalPose:
     x_m: float
     y_m: float
     z_m: float = 0.0
-    yaw_deg: Optional[float] = None
+    yaw_deg: float | None = None
     frame_id: str = IndoorFrame.MAP.value
 
-    def distance_to(self, other: "LocalPose") -> float:
+    def distance_to(self, other: LocalPose) -> float:
         return math.sqrt(
             (float(other.x_m) - float(self.x_m)) ** 2
             + (float(other.y_m) - float(self.y_m)) ** 2
             + (float(other.z_m) - float(self.z_m)) ** 2
         )
 
-    def planar_distance_to(self, other: "LocalPose") -> float:
+    def planar_distance_to(self, other: LocalPose) -> float:
         return math.hypot(
             float(other.x_m) - float(self.x_m),
             float(other.y_m) - float(self.y_m),
@@ -35,8 +35,8 @@ class LocalPose:
         dx_m: float = 0.0,
         dy_m: float = 0.0,
         dz_m: float = 0.0,
-        frame_id: Optional[str] = None,
-    ) -> "LocalPose":
+        frame_id: str | None = None,
+    ) -> LocalPose:
         return LocalPose(
             x_m=float(self.x_m) + float(dx_m),
             y_m=float(self.y_m) + float(dy_m),
@@ -49,7 +49,7 @@ class LocalPose:
 @dataclass(frozen=True)
 class LocalWaypoint:
     pose: LocalPose
-    speed_mps: Optional[float] = None
+    speed_mps: float | None = None
     tolerance_m: float = 0.4
     purpose: str = "transit"
 
@@ -60,7 +60,7 @@ class DockPose:
     pose: LocalPose
     entry_pose: LocalPose
     exit_pose: LocalPose
-    marker_id: Optional[str] = None
+    marker_id: str | None = None
     precision_required: bool = True
     dock_frame_id: str = IndoorFrame.DOCK.value
 
@@ -108,7 +108,7 @@ class SLAMHealth:
     localization_confidence: float
     drift_estimate_m: float = 0.0
     loop_closure_quality: float = 0.0
-    last_loop_closure_s: Optional[float] = None
+    last_loop_closure_s: float | None = None
 
     @property
     def confidence_level(self) -> LocalizationConfidence:
@@ -140,8 +140,8 @@ class ReturnMarginEstimate:
 @dataclass(frozen=True)
 class DockingTarget:
     target_pose: LocalPose
-    approach_pose: Optional[LocalPose] = None
-    marker_id: Optional[str] = None
+    approach_pose: LocalPose | None = None
+    marker_id: str | None = None
     tolerance_m: float = 0.12
     approach_speed_mps: float = 0.3
     descent_speed_mps: float = 0.15
@@ -150,7 +150,7 @@ class DockingTarget:
 
 @dataclass(frozen=True)
 class MapSnapshot:
-    occupancy_grid: "OccupancyGrid"
+    occupancy_grid: OccupancyGrid
     timestamp_s: float
     map_frame: str = IndoorFrame.MAP.value
     explored_cells: int = 0
@@ -180,7 +180,7 @@ class OccupancyGrid:
     default_state: OccupancyState = OccupancyState.UNKNOWN
     cells: dict[tuple[int, int], OccupancyState] = field(default_factory=dict)
 
-    def clone(self) -> "OccupancyGrid":
+    def clone(self) -> OccupancyGrid:
         return OccupancyGrid(
             resolution_m=float(self.resolution_m),
             width=int(self.width),
@@ -227,8 +227,12 @@ class OccupancyGrid:
                 )
 
     def world_to_cell(self, pose: LocalPose) -> tuple[int, int]:
-        x_idx = int(math.floor((float(pose.x_m) - float(self.origin_x_m)) / float(self.resolution_m)))
-        y_idx = int(math.floor((float(pose.y_m) - float(self.origin_y_m)) / float(self.resolution_m)))
+        x_idx = int(
+            math.floor((float(pose.x_m) - float(self.origin_x_m)) / float(self.resolution_m))
+        )
+        y_idx = int(
+            math.floor((float(pose.y_m) - float(self.origin_y_m)) / float(self.resolution_m))
+        )
         return x_idx, y_idx
 
     def cell_to_pose(
@@ -292,7 +296,7 @@ class OccupancyGrid:
         *,
         clearance_m: float = 0.0,
         max_radius_m: float = 5.0,
-    ) -> Optional[tuple[int, int]]:
+    ) -> tuple[int, int] | None:
         start = self.world_to_cell(pose)
         max_radius_cells = max(1, int(math.ceil(float(max_radius_m) / float(self.resolution_m))))
         visited: set[tuple[int, int]] = set()
@@ -343,18 +347,18 @@ class OccupancyGrid:
                 cells.reverse()
                 result: list[LocalPose] = []
                 for idx, cell in enumerate(cells):
-                    z_m = (
-                        float(start_pose.z_m)
-                        if idx < len(cells) - 1
-                        else float(end_pose.z_m)
-                    )
+                    z_m = float(start_pose.z_m) if idx < len(cells) - 1 else float(end_pose.z_m)
                     result.append(self.cell_to_pose(cell[0], cell[1], z_m=z_m))
                 return result
 
             for neighbor in self.neighbors8(*current):
                 if not self.is_traversable(*neighbor, clearance_m=clearance_m):
                     continue
-                step_cost = math.sqrt(2.0) if neighbor[0] != current[0] and neighbor[1] != current[1] else 1.0
+                step_cost = (
+                    math.sqrt(2.0)
+                    if neighbor[0] != current[0] and neighbor[1] != current[1]
+                    else 1.0
+                )
                 tentative = g_score[current] + step_cost
                 if tentative >= g_score.get(neighbor, float("inf")):
                     continue
@@ -381,7 +385,9 @@ class OccupancyGrid:
                 if current in visited:
                     continue
                 visited.add(current)
-                if self.get_cell(*current) != OccupancyState.FREE or not self.adjacent_unknown(*current):
+                if self.get_cell(*current) != OccupancyState.FREE or not self.adjacent_unknown(
+                    *current
+                ):
                     continue
                 group.append(current)
                 for neighbor in self.neighbors8(*current):
@@ -393,7 +399,7 @@ class OccupancyGrid:
 
     def copy_visible_from(
         self,
-        other: "OccupancyGrid",
+        other: OccupancyGrid,
         *,
         center_pose: LocalPose,
         radius_m: float,
@@ -427,9 +433,7 @@ class OccupancyGrid:
         points = list(path)
         if len(points) < 2:
             return 0.0
-        return float(
-            sum(a.distance_to(b) for a, b in zip(points, points[1:]))
-        )
+        return float(sum(a.distance_to(b) for a, b in zip(points, points[1:])))
 
     def to_dict(self) -> dict[str, object]:
         return {

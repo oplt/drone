@@ -6,7 +6,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from backend.db.models import FlightStatus
 from backend.drone.models import Coordinate, LocalCoordinate
@@ -43,6 +43,7 @@ class WarehouseExecutionFrame:
     Offset between the planner's local origin (dock/polygon origin) and the
     drone's live NED frame measured at takeoff.  All values in metres.
     """
+
     north_offset_m: float
     east_offset_m: float
     down_offset_m: float
@@ -60,13 +61,13 @@ class WarehouseScanMission:
     """
 
     # Local metric footprint — [[x_m, y_m], ...] from dock origin
-    area_polygon_local_m: Optional[list[Tuple[float, float]]] = None
-    dock_config: Optional[WarehouseDockConfig] = None
+    area_polygon_local_m: list[tuple[float, float]] | None = None
+    dock_config: WarehouseDockConfig | None = None
 
     # Scan geometry — kept in sync with WarehouseMissionDefaults
-    base_height_m: float = 4.0          # first layer height above floor (m)
+    base_height_m: float = 4.0  # first layer height above floor (m)
     corridor_spacing_m: float = 2.0
-    aisle_axis_deg: Optional[float] = None
+    aisle_axis_deg: float | None = None
     clearance_m: float = 0.6
     perimeter_offset_m: float = 0.5
     scan_pattern: WarehouseScanPattern = "aisle_serpentine"
@@ -74,23 +75,23 @@ class WarehouseScanMission:
     view_mode: WarehouseViewMode = "forward"
     layer_count: int = 2
     layer_spacing_m: float = 1.2
-    ceiling_height_m: Optional[float] = 8.0
+    ceiling_height_m: float | None = 8.0
     ceiling_margin_m: float = 0.7
 
     # Flight behaviour — kept in sync with WarehouseMissionDefaults
     interpolate_steps_work_leg: int = 4
     interpolate_steps_transit_leg: int = 1
     scan_pause_s: float = 0.0
-    work_speed_mps: Optional[float] = 0.8
-    transit_speed_mps: Optional[float] = 1.4
+    work_speed_mps: float | None = 0.8
+    transit_speed_mps: float | None = 1.4
     max_path_points: int = 3000
 
     # Capture / persistence
     mission_kind: str = "warehouse_scan"
-    owner_id: Optional[int] = None
-    warehouse_map_id: Optional[int] = None
-    warehouse_name: Optional[str] = None
-    reference_mapping_job_id: Optional[int] = None
+    owner_id: int | None = None
+    warehouse_map_id: int | None = None
+    warehouse_name: str | None = None
+    reference_mapping_job_id: int | None = None
     await_capture_sync: bool = True
     capture_sync_wait_timeout_s: float = 60.0
     capture_sync_poll_interval_s: float = 1.0
@@ -104,11 +105,17 @@ class WarehouseScanMission:
     max_segments: int = 2500
     max_route_m: float = 15_000.0
 
-    _last_speed_mps: Optional[float] = field(
-        default=None, init=False, repr=False, compare=False,
+    _last_speed_mps: float | None = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
     )
-    _plan_cache: Optional[WarehousePlanResult] = field(
-        default=None, init=False, repr=False, compare=False,
+    _plan_cache: WarehousePlanResult | None = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
     )
 
     # ------------------------------------------------------------------
@@ -135,14 +142,21 @@ class WarehouseScanMission:
             "work_speed_mps": float(self.work_speed_mps or 0.8),
             "transit_speed_mps": float(self.transit_speed_mps or 1.4),
             "local_polygon": [
-                {"x_m": float(x), "y_m": float(y), "z_m": 0.0}
-                for x, y in plan.local_polygon
+                {"x_m": float(x), "y_m": float(y), "z_m": 0.0} for x, y in plan.local_polygon
             ],
             "corridors": [
                 {
                     "corridor_id": c.corridor_id,
-                    "start": {"x_m": float(c.start.x_m), "y_m": float(c.start.y_m), "z_m": float(c.start.z_m)},
-                    "end":   {"x_m": float(c.end.x_m),   "y_m": float(c.end.y_m),   "z_m": float(c.end.z_m)},
+                    "start": {
+                        "x_m": float(c.start.x_m),
+                        "y_m": float(c.start.y_m),
+                        "z_m": float(c.start.z_m),
+                    },
+                    "end": {
+                        "x_m": float(c.end.x_m),
+                        "y_m": float(c.end.y_m),
+                        "z_m": float(c.end.z_m),
+                    },
                     "width_m": float(c.width_m),
                     "heading_deg": float(c.heading_deg),
                     "axis_deg": float(c.axis_deg),
@@ -168,8 +182,7 @@ class WarehouseScanMission:
                 {
                     "zone_id": zone.zone_id,
                     "footprint": [
-                        {"x_m": float(x), "y_m": float(y), "z_m": 0.0}
-                        for x, y in zone.footprint
+                        {"x_m": float(x), "y_m": float(y), "z_m": 0.0} for x, y in zone.footprint
                     ],
                     "min_z_m": zone.min_z_m,
                     "max_z_m": zone.max_z_m,
@@ -177,7 +190,11 @@ class WarehouseScanMission:
                 for zone in plan.keepout_zones
             ],
             "scan_layers": [
-                {"layer_index": int(layer.layer_index), "label": layer.label, "z_m": float(layer.z_m)}
+                {
+                    "layer_index": int(layer.layer_index),
+                    "label": layer.label,
+                    "z_m": float(layer.z_m),
+                }
                 for layer in plan.scan_layers
             ],
             "corridor_spacing_m": float(self.corridor_spacing_m),
@@ -199,7 +216,7 @@ class WarehouseScanMission:
     # Execution entry point
     # ------------------------------------------------------------------
 
-    async def execute(self, orch: "Orchestrator", *, alt: float = 4.0) -> None:
+    async def execute(self, orch: Orchestrator, *, alt: float = 4.0) -> None:
         # alt is passed by the orchestrator framework; we treat it as base_height_m
         if alt != self.base_height_m:
             self.base_height_m = float(alt)
@@ -215,7 +232,7 @@ class WarehouseScanMission:
     # Main flight coroutine
     # ------------------------------------------------------------------
 
-    async def fly_scan(self, orch: "Orchestrator") -> None:
+    async def fly_scan(self, orch: Orchestrator) -> None:
         if not self.area_polygon_local_m:
             raise ValueError(
                 "WarehouseScanMission requires area_polygon_local_m "
@@ -281,7 +298,9 @@ class WarehouseScanMission:
         except Exception as exc:
             mission_error = exc
             await self._add_event_safe(
-                orch, "warehouse_scan_path_failed", {"error": str(exc)},
+                orch,
+                "warehouse_scan_path_failed",
+                {"error": str(exc)},
             )
             logger.exception("Warehouse scan path failed")
 
@@ -299,7 +318,9 @@ class WarehouseScanMission:
                     if mission_error is None:
                         mission_error = exc
                     await self._add_event_safe(
-                        orch, "warehouse_scan_landing_failed", {"error": str(exc)},
+                        orch,
+                        "warehouse_scan_landing_failed",
+                        {"error": str(exc)},
                     )
                     logger.exception("Warehouse scan landing failed")
 
@@ -310,7 +331,8 @@ class WarehouseScanMission:
         if mission_error is None:
             try:
                 capture_paths = await self._download_capture_if_supported(
-                    orch, destination_dir=str(session.session_dir),
+                    orch,
+                    destination_dir=str(session.session_dir),
                 )
                 imported_direct = await asyncio.to_thread(
                     capture_session_service.import_external_files,
@@ -318,12 +340,17 @@ class WarehouseScanMission:
                     capture_paths=capture_paths,
                 )
                 await self._add_event_safe(
-                    orch, "warehouse_scan_direct_download",
-                    {"downloaded_paths_count": len(capture_paths), "imported_count": imported_direct},
+                    orch,
+                    "warehouse_scan_direct_download",
+                    {
+                        "downloaded_paths_count": len(capture_paths),
+                        "imported_count": imported_direct,
+                    },
                 )
 
                 sync_trigger = await asyncio.to_thread(
-                    capture_session_service.trigger_external_sync, session,
+                    capture_session_service.trigger_external_sync,
+                    session,
                 )
                 await self._add_event_safe(orch, "warehouse_scan_external_sync", sync_trigger)
 
@@ -345,7 +372,8 @@ class WarehouseScanMission:
                     },
                 )
                 await self._add_event_safe(
-                    orch, "warehouse_scan_capture_staged",
+                    orch,
+                    "warehouse_scan_capture_staged",
                     {
                         "source_dir": sync_result.get("source_dir"),
                         "file_count": sync_result.get("file_count", 0),
@@ -383,12 +411,15 @@ class WarehouseScanMission:
             except Exception as exc:
                 mapping_error = exc
                 await self._add_event_safe(
-                    orch, "warehouse_scan_mapping_failed", {"error": str(exc)},
+                    orch,
+                    "warehouse_scan_mapping_failed",
+                    {"error": str(exc)},
                 )
                 logger.exception("Warehouse scan mapping persistence failed")
         else:
             await self._add_event_safe(
-                orch, "warehouse_scan_mapping_skipped",
+                orch,
+                "warehouse_scan_mapping_skipped",
                 {"reason": "flight_failed", "error": str(mission_error)},
             )
 
@@ -399,8 +430,8 @@ class WarehouseScanMission:
             final_note = "Warehouse scan flight completed and 3D map persisted"
         elif mapping_error is not None:
             final_note = (
-                    "Warehouse scan flight completed but 3D map persistence failed: "
-                    + str(mapping_error)[:180]
+                "Warehouse scan flight completed but 3D map persistence failed: "
+                + str(mapping_error)[:180]
             )
         else:
             final_note = "Warehouse scan flight completed"
@@ -408,7 +439,8 @@ class WarehouseScanMission:
         await self._finish_flight_safe(orch, status=final_status, note=final_note)
 
         await self._add_event_safe(
-            orch, "warehouse_scan_complete",
+            orch,
+            "warehouse_scan_complete",
             {
                 "segments": len(plan.segments),
                 "work_legs": sum(1 for s in plan.segments if s.work_leg),
@@ -434,9 +466,7 @@ class WarehouseScanMission:
             route_m = float(self._plan_cache.stats.get("route_m", 0.0) or 0.0)
             return self._plan_cache, route_m
         if not self.area_polygon_local_m:
-            raise ValueError(
-                "WarehouseScanMission requires area_polygon_local_m."
-            )
+            raise ValueError("WarehouseScanMission requires area_polygon_local_m.")
 
         plan = plan_warehouse_scan(
             polygon_local_m=list(self.area_polygon_local_m),
@@ -460,11 +490,12 @@ class WarehouseScanMission:
         route_m = float(plan.stats.get("route_m", 0.0) or 0.0)
         return plan, route_m
 
-    async def _plan_scan(self, orch: "Orchestrator") -> None:
+    async def _plan_scan(self, orch: Orchestrator) -> None:
         plan, route_m = self._build_plan()
         self._plan_cache = plan
         await self._add_event_safe(
-            orch, "warehouse_scan_planned",
+            orch,
+            "warehouse_scan_planned",
             {
                 "mission_kind": self.mission_kind,
                 "aisle_axis_deg": float(plan.stats.get("aisle_axis_deg", 0.0) or 0.0),
@@ -487,12 +518,12 @@ class WarehouseScanMission:
     # ------------------------------------------------------------------
 
     async def _fly_leg(
-            self,
-            orch: "Orchestrator",
-            segment: WarehousePlanSegment,
-            leg_index: int,
-            total_legs: int,
-            execution_frame: WarehouseExecutionFrame,
+        self,
+        orch: Orchestrator,
+        segment: WarehousePlanSegment,
+        leg_index: int,
+        total_legs: int,
+        execution_frame: WarehouseExecutionFrame,
     ) -> None:
         work_leg = bool(segment.work_leg)
         leg_type = segment.leg_type
@@ -503,7 +534,8 @@ class WarehouseScanMission:
         bounded_steps = self._bounded_steps(work_leg=work_leg, total_legs=total_legs)
 
         await self._add_event_safe(
-            orch, "warehouse_scan_leg_started",
+            orch,
+            "warehouse_scan_leg_started",
             {
                 "leg_index": leg_index,
                 "leg_type": leg_type,
@@ -512,8 +544,16 @@ class WarehouseScanMission:
                 "speed_mps": speed,
                 "control_mode": "local_setpoint",
                 "yaw_deg": yaw_deg,
-                "from": {"x_m": float(segment.local_start.x_m), "y_m": float(segment.local_start.y_m), "z_m": float(segment.local_start.z_m)},
-                "to":   {"x_m": float(segment.local_end.x_m),   "y_m": float(segment.local_end.y_m),   "z_m": float(segment.local_end.z_m)},
+                "from": {
+                    "x_m": float(segment.local_start.x_m),
+                    "y_m": float(segment.local_start.y_m),
+                    "z_m": float(segment.local_start.z_m),
+                },
+                "to": {
+                    "x_m": float(segment.local_end.x_m),
+                    "y_m": float(segment.local_end.y_m),
+                    "z_m": float(segment.local_end.z_m),
+                },
             },
         )
 
@@ -521,17 +561,25 @@ class WarehouseScanMission:
             try:
                 orch.mqtt.publish(
                     "drone/warehouse_scan/status",
-                    {"leg_index": leg_index, "leg_type": leg_type,
-                     "work_leg": bool(work_leg), "speed_mps": speed,
-                     "control_mode": "local_setpoint"},
+                    {
+                        "leg_index": leg_index,
+                        "leg_type": leg_type,
+                        "work_leg": bool(work_leg),
+                        "speed_mps": speed,
+                        "control_mode": "local_setpoint",
+                    },
                     qos=1,
                 )
             except Exception:
                 logger.exception("Failed to publish warehouse scan status to MQTT")
 
         local_segment = self._interpolate_local_segment(
-            self._local_point_to_setpoint(segment.local_start, execution_frame=execution_frame, yaw_deg=yaw_deg),
-            self._local_point_to_setpoint(segment.local_end,   execution_frame=execution_frame, yaw_deg=yaw_deg),
+            self._local_point_to_setpoint(
+                segment.local_start, execution_frame=execution_frame, yaw_deg=yaw_deg
+            ),
+            self._local_point_to_setpoint(
+                segment.local_end, execution_frame=execution_frame, yaw_deg=yaw_deg
+            ),
             steps=bounded_steps,
         )
 
@@ -547,7 +595,8 @@ class WarehouseScanMission:
             await asyncio.sleep(float(self.scan_pause_s))
 
         await self._add_event_safe(
-            orch, "warehouse_scan_leg_completed",
+            orch,
+            "warehouse_scan_leg_completed",
             {"leg_index": leg_index, "leg_type": leg_type, "work_leg": bool(work_leg)},
         )
 
@@ -565,10 +614,10 @@ class WarehouseScanMission:
     # ------------------------------------------------------------------
 
     async def _resolve_execution_frame(
-            self,
-            orch: "Orchestrator",
-            *,
-            plan: WarehousePlanResult,
+        self,
+        orch: Orchestrator,
+        *,
+        plan: WarehousePlanResult,
     ) -> WarehouseExecutionFrame:
         telemetry = await asyncio.to_thread(orch.drone.get_telemetry)
         north = getattr(telemetry, "local_north_m", None)
@@ -592,21 +641,34 @@ class WarehouseScanMission:
             down_offset_m=float(down) + float(dock_point.z_m),
         )
         await self._add_event_safe(
-            orch, "warehouse_scan_execution_frame_locked",
+            orch,
+            "warehouse_scan_execution_frame_locked",
             {
-                "dock_point_local": {"x_m": float(dock_point.x_m), "y_m": float(dock_point.y_m), "z_m": float(dock_point.z_m)},
-                "vehicle_local": {"north_m": float(north), "east_m": float(east), "down_m": float(down)},
-                "offset": {"north_m": float(frame.north_offset_m), "east_m": float(frame.east_offset_m), "down_m": float(frame.down_offset_m)},
+                "dock_point_local": {
+                    "x_m": float(dock_point.x_m),
+                    "y_m": float(dock_point.y_m),
+                    "z_m": float(dock_point.z_m),
+                },
+                "vehicle_local": {
+                    "north_m": float(north),
+                    "east_m": float(east),
+                    "down_m": float(down),
+                },
+                "offset": {
+                    "north_m": float(frame.north_offset_m),
+                    "east_m": float(frame.east_offset_m),
+                    "down_m": float(frame.down_offset_m),
+                },
             },
         )
         return frame
 
     def _local_point_to_setpoint(
-            self,
-            point: WarehouseLocalPoint,
-            *,
-            execution_frame: WarehouseExecutionFrame,
-            yaw_deg: Optional[float],
+        self,
+        point: WarehouseLocalPoint,
+        *,
+        execution_frame: WarehouseExecutionFrame,
+        yaw_deg: float | None,
     ) -> LocalCoordinate:
         return LocalCoordinate(
             north_m=float(point.y_m) + float(execution_frame.north_offset_m),
@@ -616,11 +678,11 @@ class WarehouseScanMission:
         )
 
     def _interpolate_local_segment(
-            self,
-            a: LocalCoordinate,
-            b: LocalCoordinate,
-            *,
-            steps: int,
+        self,
+        a: LocalCoordinate,
+        b: LocalCoordinate,
+        *,
+        steps: int,
     ) -> list[LocalCoordinate]:
         if steps <= 0:
             return [a, b]
@@ -648,15 +710,14 @@ class WarehouseScanMission:
     # ------------------------------------------------------------------
 
     async def _set_speed_if_supported(
-            self,
-            orch: "Orchestrator",
-            speed_mps: Optional[float],
+        self,
+        orch: Orchestrator,
+        speed_mps: float | None,
     ) -> None:
         if speed_mps is None:
             return
-        if (
-                self._last_speed_mps is not None
-                and math.isclose(float(self._last_speed_mps), float(speed_mps), abs_tol=1e-3)
+        if self._last_speed_mps is not None and math.isclose(
+            float(self._last_speed_mps), float(speed_mps), abs_tol=1e-3
         ):
             return
 
@@ -682,36 +743,51 @@ class WarehouseScanMission:
     # Capture hooks
     # ------------------------------------------------------------------
 
-    async def _start_capture_if_supported(self, orch: "Orchestrator") -> bool:
-        for name in ("start_mapping_capture", "start_scan_capture", "start_lidar_capture"):
+    async def _start_capture_if_supported(self, orch: Orchestrator) -> bool:
+        for name in (
+            "start_mapping_capture",
+            "start_scan_capture",
+            "start_lidar_capture",
+        ):
             fn = getattr(orch.drone, name, None)
             if not callable(fn):
                 continue
             try:
                 await asyncio.to_thread(fn)
-                await self._add_event_safe(orch, "warehouse_scan_capture_started", {"handler": name})
+                await self._add_event_safe(
+                    orch, "warehouse_scan_capture_started", {"handler": name}
+                )
                 return True
             except Exception:
                 logger.exception("Failed to call optional capture start hook %s", name)
         return False
 
-    async def _stop_capture_if_supported(self, orch: "Orchestrator") -> None:
+    async def _stop_capture_if_supported(self, orch: Orchestrator) -> None:
         for name in ("stop_mapping_capture", "stop_scan_capture", "stop_lidar_capture"):
             fn = getattr(orch.drone, name, None)
             if not callable(fn):
                 continue
             try:
                 await asyncio.to_thread(fn)
-                await self._add_event_safe(orch, "warehouse_scan_capture_stopped", {"handler": name})
+                await self._add_event_safe(
+                    orch, "warehouse_scan_capture_stopped", {"handler": name}
+                )
                 return
             except Exception:
                 logger.exception("Failed to call optional capture stop hook %s", name)
 
     async def _download_capture_if_supported(
-            self, orch: "Orchestrator", *, destination_dir: str,
+        self,
+        orch: Orchestrator,
+        *,
+        destination_dir: str,
     ) -> list[str]:
         downloaded: list[str] = []
-        for name in ("download_mapping_capture", "download_lidar_capture", "download_scan_capture"):
+        for name in (
+            "download_mapping_capture",
+            "download_lidar_capture",
+            "download_scan_capture",
+        ):
             fn = getattr(orch.drone, name, None)
             if not callable(fn):
                 continue
@@ -736,14 +812,14 @@ class WarehouseScanMission:
         root.mkdir(parents=True, exist_ok=True)
         return root / f"flight_{_safe_token(flight_id)}"
 
-    async def _start_video_recording(self, orch: "Orchestrator") -> dict[str, object]:
+    async def _start_video_recording(self, orch: Orchestrator) -> dict[str, object]:
         if not self.enable_video_recording:
             return {"enabled": False}
 
         flight_id = (
-                getattr(orch, "_flight_id", None)
-                or getattr(orch, "current_client_flight_id", None)
-                or "unknown"
+            getattr(orch, "_flight_id", None)
+            or getattr(orch, "current_client_flight_id", None)
+            or "unknown"
         )
         recording_dir = self._video_recording_dir(flight_id=flight_id)
         recording_dir.mkdir(parents=True, exist_ok=True)
@@ -754,7 +830,11 @@ class WarehouseScanMission:
                 recording_path=str(recording_dir)
             )
         except Exception as exc:
-            backend_result = {"recording": False, "recording_file": None, "error": str(exc)}
+            backend_result = {
+                "recording": False,
+                "recording_file": None,
+                "error": str(exc),
+            }
             logger.exception("Failed to start backend warehouse video recording")
 
         drone_started = False
@@ -774,7 +854,7 @@ class WarehouseScanMission:
         await self._add_event_safe(orch, "warehouse_scan_video_recording_started", payload)
         return payload
 
-    async def _stop_video_recording(self, orch: "Orchestrator") -> dict[str, object]:
+    async def _stop_video_recording(self, orch: Orchestrator) -> dict[str, object]:
         backend_result: dict[str, object]
         try:
             backend_result = await shared_video_runtime.stop_recording()
@@ -803,7 +883,11 @@ class WarehouseScanMission:
     # ------------------------------------------------------------------
 
     async def _finish_flight_safe(
-            self, orch: "Orchestrator", *, status: FlightStatus, note: str,
+        self,
+        orch: Orchestrator,
+        *,
+        status: FlightStatus,
+        note: str,
     ) -> bool:
         flight_id = getattr(orch, "_flight_id", None)
         if flight_id is None:
@@ -819,7 +903,10 @@ class WarehouseScanMission:
             return False
 
     async def _add_event_safe(
-            self, orch: "Orchestrator", event_type: str, data: Optional[dict] = None,
+        self,
+        orch: Orchestrator,
+        event_type: str,
+        data: dict | None = None,
     ) -> None:
         flight_id = getattr(orch, "_flight_id", None)
         if flight_id is None:
@@ -829,5 +916,6 @@ class WarehouseScanMission:
         except Exception:
             logger.exception(
                 "WarehouseScanMission: failed to persist event '%s' (flight_id=%s)",
-                event_type, flight_id,
+                event_type,
+                flight_id,
             )

@@ -7,9 +7,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
+from backend.db.repository.settings_repo import SettingsRepository
 from backend.schemas.settings import SettingsDoc
 from backend.utils.config_runtime import get_runtime_settings
-from backend.db.repository.settings_repo import SettingsRepository
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -54,7 +54,9 @@ async def upload_settings_file(
 
     suffix = Path(file.filename or "").suffix.lower()
     if not suffix or suffix not in allowed:
-        raise HTTPException(status_code=400, detail=f"Unsupported file extension for {section}.{field}.")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported file extension for {section}.{field}."
+        )
 
     payload = await file.read()
     if not payload:

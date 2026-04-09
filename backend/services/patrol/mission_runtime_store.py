@@ -4,10 +4,10 @@ The authoritative store is now ``MissionRuntimeRepository`` (DB-backed).
 This module keeps the ``ActiveMissionRuntimeContext`` DTO and the
 ``mission_runtime_store`` singleton so existing callers need no changes.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from backend.db.repository.mission_runtime_repo import mission_runtime_repo
 
@@ -18,15 +18,15 @@ class ActiveMissionRuntimeContext:
     mission_name: str
     mission_type: str
     state: str
-    db_flight_id: Optional[int]
-    private_patrol_task_type: Optional[str]
+    db_flight_id: int | None
+    private_patrol_task_type: str | None
     ai_tasks: tuple[str, ...]
 
 
 class MissionRuntimeStore:
     """Read-only view of the active mission runtime, backed by the DB repo."""
 
-    async def get_active_context(self) -> Optional[ActiveMissionRuntimeContext]:
+    async def get_active_context(self) -> ActiveMissionRuntimeContext | None:
         row = await mission_runtime_repo.get_active()
         if row is None:
             return None

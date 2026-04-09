@@ -33,20 +33,21 @@ Three independent loops run as asyncio Tasks inside the lifespan:
 All environment variables are read once at module import so they appear in
 startup logs alongside other config.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
+
 from backend.db.models import MavlinkEvent, TelemetryRecord, TelemetrySummary
-from backend.db.session import Session
 from backend.db.repository.mission_runtime_repo import mission_runtime_repo
 from backend.db.repository.operator_command_repo import operator_command_repo
 from backend.db.repository.preflight_run_repo import preflight_run_repo
+from backend.db.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -54,19 +55,13 @@ logger = logging.getLogger(__name__)
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
-PREFLIGHT_CLEANUP_INTERVAL_S: int = max(
-    60, int(os.getenv("PREFLIGHT_CLEANUP_INTERVAL_S", "300"))
-)
+PREFLIGHT_CLEANUP_INTERVAL_S: int = max(60, int(os.getenv("PREFLIGHT_CLEANUP_INTERVAL_S", "300")))
 """How often to sweep for expired preflight runs (seconds, default 5 min)."""
 
-MISSION_CLEANUP_INTERVAL_S: int = max(
-    300, int(os.getenv("MISSION_CLEANUP_INTERVAL_S", "3600"))
-)
+MISSION_CLEANUP_INTERVAL_S: int = max(300, int(os.getenv("MISSION_CLEANUP_INTERVAL_S", "3600")))
 """How often to sweep for old terminal mission runtimes (seconds, default 1 h)."""
 
-MISSION_RUNTIME_RETENTION_DAYS: int = max(
-    1, int(os.getenv("MISSION_RUNTIME_RETENTION_DAYS", "30"))
-)
+MISSION_RUNTIME_RETENTION_DAYS: int = max(1, int(os.getenv("MISSION_RUNTIME_RETENTION_DAYS", "30")))
 """Terminal mission runtimes older than this many days are deleted (default 30)."""
 
 # -- Telemetry retention -------------------------------------------------------
@@ -76,9 +71,7 @@ TELEMETRY_CLEANUP_INTERVAL_S: int = max(
 )
 """How often the telemetry retention sweep runs (seconds, default 6 h)."""
 
-TELEMETRY_RAW_RETENTION_DAYS: int = max(
-    1, int(os.getenv("TELEMETRY_RAW_RETENTION_DAYS", "90"))
-)
+TELEMETRY_RAW_RETENTION_DAYS: int = max(1, int(os.getenv("TELEMETRY_RAW_RETENTION_DAYS", "90")))
 """Raw ``telemetry`` rows older than this many days are deleted (default 90 d)."""
 
 TELEMETRY_SUMMARY_RETENTION_DAYS: int = max(
@@ -86,18 +79,14 @@ TELEMETRY_SUMMARY_RETENTION_DAYS: int = max(
 )
 """``telemetry_summary`` rows older than this many days are deleted (default 365 d)."""
 
-MAVLINK_RETENTION_DAYS: int = max(
-    1, int(os.getenv("MAVLINK_RETENTION_DAYS", "14"))
-)
+MAVLINK_RETENTION_DAYS: int = max(1, int(os.getenv("MAVLINK_RETENTION_DAYS", "14")))
 """Raw ``mavlink_event`` rows older than this many days are deleted (default 14 d).
 
 MAVLink rows carry large JSON payloads and are the most storage-expensive.
 14 days is enough for post-flight debugging while keeping disk predictable.
 """
 
-TELEMETRY_CLEANUP_BATCH: int = max(
-    100, int(os.getenv("TELEMETRY_CLEANUP_BATCH", "10000"))
-)
+TELEMETRY_CLEANUP_BATCH: int = max(100, int(os.getenv("TELEMETRY_CLEANUP_BATCH", "10000")))
 """Maximum rows deleted per table per sweep (default 10 000).
 
 Batching prevents long-held locks on high-volume tables and keeps each
@@ -109,10 +98,9 @@ DELETE transaction short enough to avoid WAL bloat.
 # Cleanup coroutines
 # ---------------------------------------------------------------------------
 
+
 async def _preflight_cleanup_loop(stop_event: asyncio.Event) -> None:
-    logger.info(
-        "preflight_cleanup_loop started (interval=%ds)", PREFLIGHT_CLEANUP_INTERVAL_S
-    )
+    logger.info("preflight_cleanup_loop started (interval=%ds)", PREFLIGHT_CLEANUP_INTERVAL_S)
     while not stop_event.is_set():
         try:
             deleted = await preflight_run_repo.cleanup_expired()
@@ -122,10 +110,8 @@ async def _preflight_cleanup_loop(stop_event: asyncio.Event) -> None:
             logger.exception("preflight_cleanup: error during sweep")
 
         try:
-            await asyncio.wait_for(
-                stop_event.wait(), timeout=PREFLIGHT_CLEANUP_INTERVAL_S
-            )
-        except asyncio.TimeoutError:
+            await asyncio.wait_for(stop_event.wait(), timeout=PREFLIGHT_CLEANUP_INTERVAL_S)
+        except TimeoutError:
             pass  # Normal — interval elapsed, loop again.
 
 
@@ -138,7 +124,7 @@ async def _mission_cleanup_loop(stop_event: asyncio.Event) -> None:
     )
     while not stop_event.is_set():
         try:
-            cutoff = datetime.now(timezone.utc) - retention
+            cutoff = datetime.now(UTC) - retention
             # Delete operator commands first (FK is SET NULL, but deleting
             # commands before runtimes avoids orphaned rows pointing to
             # NULL mission_runtime_id piling up indefinitely).
@@ -156,10 +142,8 @@ async def _mission_cleanup_loop(stop_event: asyncio.Event) -> None:
             logger.exception("mission_cleanup: error during sweep")
 
         try:
-            await asyncio.wait_for(
-                stop_event.wait(), timeout=MISSION_CLEANUP_INTERVAL_S
-            )
-        except asyncio.TimeoutError:
+            await asyncio.wait_for(stop_event.wait(), timeout=MISSION_CLEANUP_INTERVAL_S)
+        except TimeoutError:
             pass
 
 
@@ -185,9 +169,7 @@ async def _delete_batch(
             .limit(batch)
             .scalar_subquery()
         )
-        result = await s.execute(
-            delete(model).where(model.id.in_(subq))
-        )
+        result = await s.execute(delete(model).where(model.id.in_(subq)))
         await s.commit()
         return result.rowcount
 
@@ -206,7 +188,7 @@ async def _telemetry_cleanup_loop(stop_event: asyncio.Event) -> None:
     )
 
     while not stop_event.is_set():
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         try:
             raw_cutoff = now - raw_retention
             raw_deleted = await _delete_batch(
@@ -250,10 +232,8 @@ async def _telemetry_cleanup_loop(stop_event: asyncio.Event) -> None:
             logger.exception("telemetry_cleanup: error during sweep")
 
         try:
-            await asyncio.wait_for(
-                stop_event.wait(), timeout=TELEMETRY_CLEANUP_INTERVAL_S
-            )
-        except asyncio.TimeoutError:
+            await asyncio.wait_for(stop_event.wait(), timeout=TELEMETRY_CLEANUP_INTERVAL_S)
+        except TimeoutError:
             pass
 
 
@@ -261,7 +241,7 @@ async def _telemetry_cleanup_loop(stop_event: asyncio.Event) -> None:
 # Lifecycle helpers — called from api_main.py lifespan
 # ---------------------------------------------------------------------------
 
-_stop_event: Optional[asyncio.Event] = None
+_stop_event: asyncio.Event | None = None
 _tasks: list[asyncio.Task] = []
 
 
@@ -272,15 +252,9 @@ def start_cleanup_jobs() -> None:
         return  # Already started.
     _stop_event = asyncio.Event()
     _tasks = [
-        asyncio.create_task(
-            _preflight_cleanup_loop(_stop_event), name="preflight_cleanup"
-        ),
-        asyncio.create_task(
-            _mission_cleanup_loop(_stop_event), name="mission_cleanup"
-        ),
-        asyncio.create_task(
-            _telemetry_cleanup_loop(_stop_event), name="telemetry_cleanup"
-        ),
+        asyncio.create_task(_preflight_cleanup_loop(_stop_event), name="preflight_cleanup"),
+        asyncio.create_task(_mission_cleanup_loop(_stop_event), name="mission_cleanup"),
+        asyncio.create_task(_telemetry_cleanup_loop(_stop_event), name="telemetry_cleanup"),
     ]
     logger.info("Cleanup jobs started (%d tasks)", len(_tasks))
 
@@ -293,7 +267,7 @@ async def stop_cleanup_jobs() -> None:
     for task in _tasks:
         try:
             await asyncio.wait_for(task, timeout=10.0)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             task.cancel()
     _tasks = []
     logger.info("Cleanup jobs stopped")

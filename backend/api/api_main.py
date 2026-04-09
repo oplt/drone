@@ -1,35 +1,38 @@
-import os
-from pathlib import Path
-from contextlib import asynccontextmanager
-import logging
 import asyncio
+import logging
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.db.session import init_db, close_db
-from backend.api.routes.routes_auth import router as auth_router
-from backend.api.routes.routes_flights import router as missions_router
-from backend.api.routes.routes_websocket import router as websockets_router
-from backend.api.routes.routes_telemetry_control import router as telemetry_control_router
-from backend.api.routes.routes_video import router as video_router
-from backend.api.routes.routes_analytics import router as analytics_router
-from backend.api.routes.routes_settings import router as settings_router
-from backend.api.routes.routes_geofence import router as geofence_router
-from backend.api.routes.routes_animal_farm import router as animal_farm_router
-from backend.api.routes.routes_field import router as fields_router
-from backend.api.routes.routes_mapping import router as mapping_router
-from backend.api.routes.routes_warehouse import router as warehouse_router
+
 from backend.api.routes.routes_alerts import router as alerts_router
+from backend.api.routes.routes_analytics import router as analytics_router
+from backend.api.routes.routes_animal_farm import router as animal_farm_router
+from backend.api.routes.routes_auth import router as auth_router
+from backend.api.routes.routes_field import router as fields_router
+from backend.api.routes.routes_flights import router as missions_router
+from backend.api.routes.routes_geofence import router as geofence_router
+from backend.api.routes.routes_mapping import router as mapping_router
 from backend.api.routes.routes_ml import router as ml_router
 from backend.api.routes.routes_patrol_debug import router as patrol_debug_router
+from backend.api.routes.routes_settings import router as settings_router
+from backend.api.routes.routes_telemetry_control import (
+    router as telemetry_control_router,
+)
+from backend.api.routes.routes_video import router as video_router
+from backend.api.routes.routes_warehouse import router as warehouse_router
+from backend.api.routes.routes_websocket import router as websockets_router
 from backend.config import setup_logging
 from backend.db.repository.settings_repo import SettingsRepository
-from backend.utils.config_runtime import get_runtime_settings
-from backend.services.alerts.engine import alert_engine
-from backend.main import _build_orchestrator
-from backend.flight.restart_recovery import recover_interrupted_missions
+from backend.db.session import close_db, init_db
 from backend.flight.cleanup_jobs import start_cleanup_jobs, stop_cleanup_jobs
+from backend.flight.restart_recovery import recover_interrupted_missions
+from backend.main import _build_orchestrator
+from backend.services.alerts.engine import alert_engine
+from backend.utils.config_runtime import get_runtime_settings
 
 logger = logging.getLogger(__name__)
 
@@ -161,9 +164,11 @@ async def debug_routes():
     """List all registered routes (debug only)"""
     routes = []
     for route in app.routes:
-        routes.append({
-            "path": route.path,
-            "name": route.name,
-            "methods": list(route.methods) if hasattr(route, "methods") else None
-        })
+        routes.append(
+            {
+                "path": route.path,
+                "name": route.name,
+                "methods": list(route.methods) if hasattr(route, "methods") else None,
+            }
+        )
     return {"routes": routes}

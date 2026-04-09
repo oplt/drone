@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
+
 from .models import Coordinate, LocalCoordinate, Telemetry
 
 
@@ -25,10 +26,12 @@ class DroneClient(ABC):
     def follow_waypoints(self, path: Iterable[Coordinate]) -> None: ...
     def follow_local_setpoints(self, path: Iterable[LocalCoordinate]) -> None:
         raise NotImplementedError
+
     @abstractmethod
     def land(self) -> None: ...
     def wait_until_disarmed(self, timeout_s: float = 900) -> None:
         raise NotImplementedError
+
     @abstractmethod
     def close(self) -> None: ...
 

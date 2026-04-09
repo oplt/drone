@@ -2,20 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Iterable, List, Optional, Sequence, Tuple
+from typing import Any
 
-from .schemas import CheckResult, CheckStatus
-from .preflight_context import PreflightContext
 from backend.utils.geo import haversine_km
+
+from .preflight_context import PreflightContext
+from .schemas import CheckResult, CheckStatus
 
 
 class Priority(IntEnum):
-    CRITICAL = 0   # hard gates: link/arming/gps/ekf/battery basics
-    SAFETY = 1     # operational safety: fence/nfz/failsafe/terrain
-    QUALITY = 2    # quality/health: compass/imu/storage/gnss interference
-    INFO = 3       # informational / best-effort diagnostics
+    CRITICAL = 0  # hard gates: link/arming/gps/ekf/battery basics
+    SAFETY = 1  # operational safety: fence/nfz/failsafe/terrain
+    QUALITY = 2  # quality/health: compass/imu/storage/gnss interference
+    INFO = 3  # informational / best-effort diagnostics
 
 
 @dataclass(frozen=True)
@@ -23,7 +25,7 @@ class CheckSpec:
     name: str
     priority: Priority
     is_gate: bool  # if True and FAIL occurs, fail_fast may short-circuit
-    coro: Any      # awaitable factory (lambda returning coroutine)
+    coro: Any  # awaitable factory (lambda returning coroutine)
 
 
 class BasePreflightChecks:
@@ -69,8 +71,12 @@ class BasePreflightChecks:
         # RC + sensors + GNSS interference thresholds
         self.RC_RSSI_MIN = context.get_threshold("RC_RSSI_MIN", 35.0)  # percent
         self.COMPASS_HEALTH_REQUIRED = context.get_threshold("COMPASS_HEALTH_REQUIRED", True)
-        self.GNSS_INTERFERENCE_WARN = context.get_threshold("GNSS_INTERFERENCE_WARN", 0.6)  # 0..1 (if provided)
-        self.GNSS_INTERFERENCE_FAIL = context.get_threshold("GNSS_INTERFERENCE_FAIL", 0.85)  # 0..1 (if provided)
+        self.GNSS_INTERFERENCE_WARN = context.get_threshold(
+            "GNSS_INTERFERENCE_WARN", 0.6
+        )  # 0..1 (if provided)
+        self.GNSS_INTERFERENCE_FAIL = context.get_threshold(
+            "GNSS_INTERFERENCE_FAIL", 0.85
+        )  # 0..1 (if provided)
 
         # Storage
         self.LOG_FREE_MB_MIN = context.get_threshold("LOG_FREE_MB_MIN", 100.0)
@@ -88,7 +94,7 @@ class BasePreflightChecks:
                     return val
         return None
 
-    def _ok(self, name: str, message: Optional[str] = None) -> CheckResult:
+    def _ok(self, name: str, message: str | None = None) -> CheckResult:
         return CheckResult(name=name, status=CheckStatus.PASS, message=message)
 
     def _fail(self, name: str, message: str) -> CheckResult:
@@ -100,9 +106,8 @@ class BasePreflightChecks:
     def _skip(self, name: str, message: str) -> CheckResult:
         return CheckResult(name=name, status=CheckStatus.SKIP, message=message)
 
-
     @staticmethod
-    def _as_latlon(point: Any) -> Optional[Tuple[float, float]]:
+    def _as_latlon(point: Any) -> tuple[float, float] | None:
         """Best-effort extraction of (lat, lon) from tuples/dicts/objects."""
         try:
             if isinstance(point, (tuple, list)) and len(point) >= 2:
@@ -110,15 +115,15 @@ class BasePreflightChecks:
             if isinstance(point, dict) and "lat" in point and "lon" in point:
                 return float(point["lat"]), float(point["lon"])
             if hasattr(point, "lat") and hasattr(point, "lon"):
-                return float(getattr(point, "lat")), float(getattr(point, "lon"))
+                return float(point.lat), float(point.lon)
             if hasattr(point, "latitude") and hasattr(point, "longitude"):
-                return float(getattr(point, "latitude")), float(getattr(point, "longitude"))
+                return float(point.latitude), float(point.longitude)
         except Exception:
             return None
         return None
 
-    def _normalize_polygon(self, polygon: Iterable[Any]) -> List[Tuple[float, float]]:
-        pts: List[Tuple[float, float]] = []
+    def _normalize_polygon(self, polygon: Iterable[Any]) -> list[tuple[float, float]]:
+        pts: list[tuple[float, float]] = []
         for p in polygon:
             ll = self._as_latlon(p)
             if ll is not None:
@@ -128,7 +133,7 @@ class BasePreflightChecks:
         return pts
 
     @staticmethod
-    def _point_in_polygon(lat: float, lon: float, polygon: Sequence[Tuple[float, float]]) -> bool:
+    def _point_in_polygon(lat: float, lon: float, polygon: Sequence[tuple[float, float]]) -> bool:
         """Ray-casting point-in-polygon using lat/lon as local planar coordinates."""
         if len(polygon) < 3:
             return False
@@ -147,9 +152,9 @@ class BasePreflightChecks:
         return inside
 
     @staticmethod
-    def _dedupe_by_name(results: List[CheckResult]) -> List[CheckResult]:
+    def _dedupe_by_name(results: list[CheckResult]) -> list[CheckResult]:
         seen = set()
-        out: List[CheckResult] = []
+        out: list[CheckResult] = []
         for r in results:
             if getattr(r, "name", None) in seen:
                 continue
@@ -158,15 +163,15 @@ class BasePreflightChecks:
         return out
 
     @staticmethod
-    def _has_fail(results: List[CheckResult]) -> bool:
+    def _has_fail(results: list[CheckResult]) -> bool:
         return any(r.status == CheckStatus.FAIL for r in results)
 
     # -------------------------
     # Core checks (return List[CheckResult])
     # -------------------------
 
-    async def check_link_health(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def check_link_health(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         hb_age = self._value("heartbeat_age_s")
         if hb_age is None:
@@ -174,7 +179,9 @@ class BasePreflightChecks:
         elif hb_age <= self.HEARTBEAT_MAX_AGE:
             results.append(self._ok("Heartbeat Age", f"{hb_age:.2f}s"))
         else:
-            results.append(self._fail("Heartbeat Age", f"{hb_age:.2f}s > {self.HEARTBEAT_MAX_AGE:.2f}s"))
+            results.append(
+                self._fail("Heartbeat Age", f"{hb_age:.2f}s > {self.HEARTBEAT_MAX_AGE:.2f}s")
+            )
 
         msg_rate = self._value("msg_rate_hz")
         if msg_rate is None:
@@ -182,12 +189,16 @@ class BasePreflightChecks:
         elif msg_rate >= self.MSG_RATE_MIN_HZ:
             results.append(self._ok("Message Rate", f"{msg_rate:.2f} Hz"))
         else:
-            results.append(self._fail("Message Rate", f"{msg_rate:.2f} Hz < {self.MSG_RATE_MIN_HZ:.2f} Hz"))
+            results.append(
+                self._fail("Message Rate", f"{msg_rate:.2f} Hz < {self.MSG_RATE_MIN_HZ:.2f} Hz")
+            )
 
         return results
 
-    async def check_vehicle_readiness(self, allowed_modes: Optional[Sequence[str]] = None) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def check_vehicle_readiness(
+        self, allowed_modes: Sequence[str] | None = None
+    ) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         is_armable = self._value("is_armable")
         if is_armable is None:
@@ -195,7 +206,9 @@ class BasePreflightChecks:
         elif bool(is_armable):
             results.append(self._ok("Vehicle Armable"))
         else:
-            results.append(self._fail("Vehicle Armable", "Vehicle not armable (prearm/EKF checks failed)"))
+            results.append(
+                self._fail("Vehicle Armable", "Vehicle not armable (prearm/EKF checks failed)")
+            )
 
         if allowed_modes:
             mode = self._value("current_mode", "mode")
@@ -204,16 +217,21 @@ class BasePreflightChecks:
             elif mode in allowed_modes:
                 results.append(self._ok("Flight Mode", str(mode)))
             else:
-                results.append(self._fail("Flight Mode", f"Mode '{mode}' not in allowed modes {list(allowed_modes)}"))
+                results.append(
+                    self._fail(
+                        "Flight Mode",
+                        f"Mode '{mode}' not in allowed modes {list(allowed_modes)}",
+                    )
+                )
 
         return results
 
-    async def check_arming_checks(self) -> List[CheckResult]:
+    async def check_arming_checks(self) -> list[CheckResult]:
         """
         Best-effort arming checks flags / prearm status.
         Supports multiple common telemetry conventions.
         """
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
 
         # Common booleans / strings / lists
         ok_flag = self._value("arming_checks_ok", "prearm_ok")
@@ -236,23 +254,25 @@ class BasePreflightChecks:
             if int(mask) == 0:
                 results.append(self._ok("Arming Checks", "Flags=0"))
             else:
-                results.append(self._warn("Arming Checks", f"Flags={int(mask)} (decode not implemented)"))
+                results.append(
+                    self._warn("Arming Checks", f"Flags={int(mask)} (decode not implemented)")
+                )
             return results
 
         return [self._skip("Arming Checks", "Arming checks telemetry not available")]
 
     async def check_gps_quality(
-            self,
-            timeout_s: float = 30.0,
-            poll_interval_s: float = 1.0,
-            required_stable_reads: int = 3,
-    ) -> List[CheckResult]:
+        self,
+        timeout_s: float = 30.0,
+        poll_interval_s: float = 1.0,
+        required_stable_reads: int = 3,
+    ) -> list[CheckResult]:
         start = time.monotonic()
         stable = 0
-        last_results: List[CheckResult] = []
+        last_results: list[CheckResult] = []
 
-        def eval_once() -> List[CheckResult]:
-            r: List[CheckResult] = []
+        def eval_once() -> list[CheckResult]:
+            r: list[CheckResult] = []
 
             fix = self._value("gps_fix_type")
             if fix is None:
@@ -269,7 +289,12 @@ class BasePreflightChecks:
             elif float(hdop) <= float(self.HDOP_MAX):
                 r.append(self._ok("GPS HDOP", f"{float(hdop):.2f}"))
             else:
-                r.append(self._fail("GPS HDOP", f"HDOP {float(hdop):.2f} > {float(self.HDOP_MAX):.2f}"))
+                r.append(
+                    self._fail(
+                        "GPS HDOP",
+                        f"HDOP {float(hdop):.2f} > {float(self.HDOP_MAX):.2f}",
+                    )
+                )
 
             sats = self._value("satellites_visible")
             if sats is None:
@@ -286,11 +311,16 @@ class BasePreflightChecks:
                 if float(pos_unc) <= threshold:
                     r.append(self._ok("Position Uncertainty", f"{float(pos_unc):.2f}m"))
                 else:
-                    r.append(self._fail("Position Uncertainty", f"{float(pos_unc):.2f}m > {threshold:.2f}m"))
+                    r.append(
+                        self._fail(
+                            "Position Uncertainty",
+                            f"{float(pos_unc):.2f}m > {threshold:.2f}m",
+                        )
+                    )
 
             return r
 
-        def no_fail(r: List[CheckResult]) -> bool:
+        def no_fail(r: list[CheckResult]) -> bool:
             return not any(x.status == CheckStatus.FAIL for x in r)
 
         while True:
@@ -305,8 +335,8 @@ class BasePreflightChecks:
 
             await asyncio.sleep(poll_interval_s)
 
-    async def check_ekf_health(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def check_ekf_health(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         ekf_ok = self._value("ekf_ok")
         if ekf_ok is None:
@@ -324,14 +354,18 @@ class BasePreflightChecks:
             if innov_max is not None and float(innov) <= float(innov_max):
                 results.append(self._ok("EKF Innovation", f"{float(innov):.3f}"))
             elif innov_max is not None:
-                results.append(self._fail("EKF Innovation", f"{float(innov):.3f} > {float(innov_max):.3f}"))
+                results.append(
+                    self._fail("EKF Innovation", f"{float(innov):.3f} > {float(innov_max):.3f}")
+                )
             else:
-                results.append(self._warn("EKF Innovation", f"{float(innov):.3f} (no max threshold)"))
+                results.append(
+                    self._warn("EKF Innovation", f"{float(innov):.3f} (no max threshold)")
+                )
 
         return results
 
-    async def check_home_position(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def check_home_position(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
         home_required = self.ctx.get_config("HOME_POSITION_REQUIRED", True)
         if not bool(home_required):
             results.append(self._skip("Home Set", "Home position not required for this mission"))
@@ -359,12 +393,17 @@ class BasePreflightChecks:
         if dist_m <= float(self.HOME_MAX_DIST):
             results.append(self._ok("Distance to Home", f"{dist_m:.1f} m"))
         else:
-            results.append(self._fail("Distance to Home", f"{dist_m:.1f} m > {float(self.HOME_MAX_DIST):.1f} m"))
+            results.append(
+                self._fail(
+                    "Distance to Home",
+                    f"{dist_m:.1f} m > {float(self.HOME_MAX_DIST):.1f} m",
+                )
+            )
 
         return results
 
-    async def check_wind(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def check_wind(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         wind = self.ctx.get_wind_speed() if hasattr(self.ctx, "get_wind_speed") else None
         gust = self.ctx.get_wind_gust() if hasattr(self.ctx, "get_wind_gust") else None
@@ -374,23 +413,33 @@ class BasePreflightChecks:
         elif float(wind) <= float(self.WIND_MAX):
             results.append(self._ok("Wind Speed", f"{float(wind):.1f} m/s"))
         else:
-            results.append(self._fail("Wind Speed", f"{float(wind):.1f} m/s > {float(self.WIND_MAX):.1f} m/s"))
+            results.append(
+                self._fail(
+                    "Wind Speed",
+                    f"{float(wind):.1f} m/s > {float(self.WIND_MAX):.1f} m/s",
+                )
+            )
 
         if gust is None:
             results.append(self._skip("Wind Gust", "Wind gust not available"))
         elif float(gust) <= float(self.GUST_MAX):
             results.append(self._ok("Wind Gust", f"{float(gust):.1f} m/s"))
         else:
-            results.append(self._fail("Wind Gust", f"{float(gust):.1f} m/s > {float(self.GUST_MAX):.1f} m/s"))
+            results.append(
+                self._fail(
+                    "Wind Gust",
+                    f"{float(gust):.1f} m/s > {float(self.GUST_MAX):.1f} m/s",
+                )
+            )
 
         return results
 
     async def check_battery(
-            self,
-            estimated_time_s: Optional[float] = None,
-            mission_ah_req: Optional[float] = None,
-    ) -> List[CheckResult]:
-        results: List[CheckResult] = []
+        self,
+        estimated_time_s: float | None = None,
+        mission_ah_req: float | None = None,
+    ) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         v_batt = self._value("v_batt", "battery_voltage")
         v_min = self._value("v_min")
@@ -400,16 +449,22 @@ class BasePreflightChecks:
         if v_batt is None:
             results.append(self._skip("Battery Voltage", "Battery voltage not available"))
         elif v_min is None:
-            results.append(self._ok("Battery Voltage", f"{float(v_batt):.2f} V (no minimum threshold)"))
+            results.append(
+                self._ok("Battery Voltage", f"{float(v_batt):.2f} V (no minimum threshold)")
+            )
         elif float(v_batt) >= float(v_min):
             results.append(self._ok("Battery Voltage", f"{float(v_batt):.2f} V"))
         else:
-            results.append(self._fail("Battery Voltage", f"{float(v_batt):.2f} V < {float(v_min):.2f} V"))
+            results.append(
+                self._fail("Battery Voltage", f"{float(v_batt):.2f} V < {float(v_min):.2f} V")
+            )
 
         # Estimate mission time if possible
         if estimated_time_s is None and getattr(self.ctx, "mission", None) is not None:
             try:
-                total_dist = self.ctx.total_distance() if hasattr(self.ctx, "total_distance") else None
+                total_dist = (
+                    self.ctx.total_distance() if hasattr(self.ctx, "total_distance") else None
+                )
                 speed = getattr(self.ctx.mission, "speed", None)
                 if total_dist is not None and speed and float(speed) > 0:
                     estimated_time_s = float(total_dist) / float(speed)
@@ -425,9 +480,19 @@ class BasePreflightChecks:
             remaining = float(remaining_pct)
 
             if remaining >= needed:
-                results.append(self._ok("Battery Budget (%)", f"Remaining {remaining:.1f}% >= Needed {needed:.1f}%"))
+                results.append(
+                    self._ok(
+                        "Battery Budget (%)",
+                        f"Remaining {remaining:.1f}% >= Needed {needed:.1f}%",
+                    )
+                )
             else:
-                results.append(self._fail("Battery Budget (%)", f"Remaining {remaining:.1f}% < Needed {needed:.1f}%"))
+                results.append(
+                    self._fail(
+                        "Battery Budget (%)",
+                        f"Remaining {remaining:.1f}% < Needed {needed:.1f}%",
+                    )
+                )
         else:
             results.append(self._skip("Battery Budget (%)", "Insufficient data for % budget"))
 
@@ -437,14 +502,19 @@ class BasePreflightChecks:
             if margin >= float(self.BATTERY_RESERVE_AH):
                 results.append(self._ok("Battery Budget (Ah)", f"Margin {margin:.2f} Ah"))
             else:
-                results.append(self._fail("Battery Budget (Ah)", f"Margin {margin:.2f} Ah < {float(self.BATTERY_RESERVE_AH):.2f} Ah"))
+                results.append(
+                    self._fail(
+                        "Battery Budget (Ah)",
+                        f"Margin {margin:.2f} Ah < {float(self.BATTERY_RESERVE_AH):.2f} Ah",
+                    )
+                )
         elif mission_ah_req is not None:
             results.append(self._skip("Battery Budget (Ah)", "Ah data not available"))
 
         return results
 
-    async def check_failsafe_config(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def check_failsafe_config(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         rtl_alt = self._value("rtl_alt_m")
         if rtl_alt is None:
@@ -452,7 +522,12 @@ class BasePreflightChecks:
         elif float(rtl_alt) >= float(self.RTL_MIN_ALT):
             results.append(self._ok("RTL Altitude", f"{float(rtl_alt):.1f} m"))
         else:
-            results.append(self._fail("RTL Altitude", f"{float(rtl_alt):.1f} m < {float(self.RTL_MIN_ALT):.1f} m"))
+            results.append(
+                self._fail(
+                    "RTL Altitude",
+                    f"{float(rtl_alt):.1f} m < {float(self.RTL_MIN_ALT):.1f} m",
+                )
+            )
 
         batt_fs = self._value("battery_failsafe_enabled")
         if batt_fs is None:
@@ -472,7 +547,7 @@ class BasePreflightChecks:
 
         return results
 
-    async def check_geofence(self) -> List[CheckResult]:
+    async def check_geofence(self) -> list[CheckResult]:
         """
         Validate current position against a configured geofence polygon when available.
         If no polygon is configured for this run, treat as SKIP.
@@ -494,7 +569,7 @@ class BasePreflightChecks:
             return [self._ok("Geofence", "Current position inside")]
         return [self._fail("Geofence", "Current position outside geofence")]
 
-    async def check_terrain_clearance(self) -> List[CheckResult]:
+    async def check_terrain_clearance(self) -> list[CheckResult]:
         """
         Validate terrain clearance.
         Priority:
@@ -505,7 +580,12 @@ class BasePreflightChecks:
         if agl is not None:
             agl_f = float(agl)
             if agl_f < float(self.MIN_CLEARANCE):
-                return [self._fail("Terrain Clearance", f"{agl_f:.1f}m < {float(self.MIN_CLEARANCE):.1f}m")]
+                return [
+                    self._fail(
+                        "Terrain Clearance",
+                        f"{agl_f:.1f}m < {float(self.MIN_CLEARANCE):.1f}m",
+                    )
+                ]
             return [self._ok("Terrain Clearance", f"{agl_f:.1f}m")]
 
         waypoints = getattr(self.ctx.mission, "waypoints", None)
@@ -531,18 +611,22 @@ class BasePreflightChecks:
                 return [
                     self._fail(
                         "Terrain Clearance",
-                        f"WP{i} clearance {clearance:.1f}m < {float(self.MIN_CLEARANCE):.1f}m"
+                        f"WP{i} clearance {clearance:.1f}m < {float(self.MIN_CLEARANCE):.1f}m",
                     )
                 ]
 
-        return [self._ok("Terrain Clearance", f"Min clearance >= {float(self.MIN_CLEARANCE):.1f}m")]
-
+        return [
+            self._ok(
+                "Terrain Clearance",
+                f"Min clearance >= {float(self.MIN_CLEARANCE):.1f}m",
+            )
+        ]
 
     # -------------------------
     # Additional common checks
     # -------------------------
 
-    async def check_rc_link(self) -> List[CheckResult]:
+    async def check_rc_link(self) -> list[CheckResult]:
         """
         RC link presence/quality. Best-effort.
         Looks for:
@@ -550,7 +634,7 @@ class BasePreflightChecks:
           - rc_rssi (0..100) threshold
           - rc_failsafe boolean (FAIL if active)
         """
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
 
         rc_failsafe = self._value("rc_failsafe", "failsafe_rc")
         if rc_failsafe is not None and bool(rc_failsafe):
@@ -575,15 +659,17 @@ class BasePreflightChecks:
             if rssi_f >= float(self.RC_RSSI_MIN):
                 results.append(self._ok("RC RSSI", f"{rssi_f:.0f}%"))
             else:
-                results.append(self._warn("RC RSSI", f"{rssi_f:.0f}% < {float(self.RC_RSSI_MIN):.0f}%"))
+                results.append(
+                    self._warn("RC RSSI", f"{rssi_f:.0f}% < {float(self.RC_RSSI_MIN):.0f}%")
+                )
 
         return results
 
-    async def check_compass_health(self) -> List[CheckResult]:
+    async def check_compass_health(self) -> list[CheckResult]:
         """
         Compass health/calibration. Best-effort.
         """
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
 
         healthy = self._value("compass_healthy", "mag_healthy")
         if healthy is None:
@@ -607,11 +693,11 @@ class BasePreflightChecks:
 
         return results
 
-    async def check_imu_calibration(self) -> List[CheckResult]:
+    async def check_imu_calibration(self) -> list[CheckResult]:
         """
         IMU calibration / sensor readiness. Best-effort.
         """
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
 
         imu_cal = self._value("imu_calibrated")
         accel_cal = self._value("accel_calibrated")
@@ -629,17 +715,25 @@ class BasePreflightChecks:
             return results
 
         if accel_cal is not None:
-            results.append(self._ok("Accel Calibration") if bool(accel_cal) else self._fail("Accel Calibration", "Accel not calibrated"))
+            results.append(
+                self._ok("Accel Calibration")
+                if bool(accel_cal)
+                else self._fail("Accel Calibration", "Accel not calibrated")
+            )
         if gyro_cal is not None:
-            results.append(self._ok("Gyro Calibration") if bool(gyro_cal) else self._fail("Gyro Calibration", "Gyro not calibrated"))
+            results.append(
+                self._ok("Gyro Calibration")
+                if bool(gyro_cal)
+                else self._fail("Gyro Calibration", "Gyro not calibrated")
+            )
 
         return results
 
-    async def check_storage_logging(self) -> List[CheckResult]:
+    async def check_storage_logging(self) -> list[CheckResult]:
         """
         Storage/logging availability. Best-effort.
         """
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
 
         sd_present = self._value("sdcard_present", "log_storage_present")
         if sd_present is None:
@@ -665,16 +759,26 @@ class BasePreflightChecks:
             if free_mb_f >= float(self.LOG_FREE_MB_MIN):
                 results.append(self._ok("Log Free Space", f"{free_mb_f:.0f} MB"))
             else:
-                results.append(self._warn("Log Free Space", f"{free_mb_f:.0f} MB < {float(self.LOG_FREE_MB_MIN):.0f} MB"))
+                results.append(
+                    self._warn(
+                        "Log Free Space",
+                        f"{free_mb_f:.0f} MB < {float(self.LOG_FREE_MB_MIN):.0f} MB",
+                    )
+                )
 
         return results
 
-    async def check_gnss_interference(self) -> List[CheckResult]:
+    async def check_gnss_interference(self) -> list[CheckResult]:
         """
         GNSS jamming/interference. Best-effort.
         If provided, expects a normalized 0..1 interference metric, or a dB/ratio metric that your telemetry defines.
         """
-        metric = self._value("gnss_interference", "gps_interference", "gps_jamming_indicator", "gnss_jamming")
+        metric = self._value(
+            "gnss_interference",
+            "gps_interference",
+            "gps_jamming_indicator",
+            "gnss_jamming",
+        )
         if metric is None:
             # Some stacks provide "noise_per_ms" or "jamming_level"
             noise = self._value("noise_per_ms", "gps_noise")
@@ -689,9 +793,19 @@ class BasePreflightChecks:
             return [self._warn("GNSS Interference", f"Value={metric} (unparseable)")]
 
         if m >= float(self.GNSS_INTERFERENCE_FAIL):
-            return [self._fail("GNSS Interference", f"{m:.2f} >= {float(self.GNSS_INTERFERENCE_FAIL):.2f}")]
+            return [
+                self._fail(
+                    "GNSS Interference",
+                    f"{m:.2f} >= {float(self.GNSS_INTERFERENCE_FAIL):.2f}",
+                )
+            ]
         if m >= float(self.GNSS_INTERFERENCE_WARN):
-            return [self._warn("GNSS Interference", f"{m:.2f} >= {float(self.GNSS_INTERFERENCE_WARN):.2f}")]
+            return [
+                self._warn(
+                    "GNSS Interference",
+                    f"{m:.2f} >= {float(self.GNSS_INTERFERENCE_WARN):.2f}",
+                )
+            ]
         return [self._ok("GNSS Interference", f"{m:.2f}")]
 
     # -------------------------
@@ -699,17 +813,22 @@ class BasePreflightChecks:
     # -------------------------
 
     async def check_mission_integrity(
-            self,
-            mission_waypoints: Sequence[Any],
-            expected_count: int,
-            mission_crc: Optional[int],
-    ) -> List[CheckResult]:
-        results: List[CheckResult] = []
+        self,
+        mission_waypoints: Sequence[Any],
+        expected_count: int,
+        mission_crc: int | None,
+    ) -> list[CheckResult]:
+        results: list[CheckResult] = []
 
         if len(mission_waypoints) == int(expected_count):
             results.append(self._ok("Mission Count", f"{len(mission_waypoints)}"))
         else:
-            results.append(self._fail("Mission Count", f"Got {len(mission_waypoints)}, expected {int(expected_count)}"))
+            results.append(
+                self._fail(
+                    "Mission Count",
+                    f"Got {len(mission_waypoints)}, expected {int(expected_count)}",
+                )
+            )
 
         current_crc = getattr(self.v, "mission_crc", None)
         if mission_crc is None:
@@ -728,38 +847,83 @@ class BasePreflightChecks:
     # -------------------------
 
     def _specs(
-            self,
-            *,
-            estimated_time_s: Optional[float],
-            mission_ah_req: Optional[float],
-            allowed_modes: Optional[List[str]],
-            gps_timeout_s: float,
-            mission_waypoints: Optional[List[Any]],
-            expected_mission_count: Optional[int],
-            mission_crc: Optional[int],
-    ) -> List[CheckSpec]:
-        specs: List[CheckSpec] = [
+        self,
+        *,
+        estimated_time_s: float | None,
+        mission_ah_req: float | None,
+        allowed_modes: list[str] | None,
+        gps_timeout_s: float,
+        mission_waypoints: list[Any] | None,
+        expected_mission_count: int | None,
+        mission_crc: int | None,
+    ) -> list[CheckSpec]:
+        specs: list[CheckSpec] = [
             # ---- CRITICAL gates ----
             CheckSpec("Link Health", Priority.CRITICAL, True, lambda: self.check_link_health()),
-            CheckSpec("Arming Checks", Priority.CRITICAL, True, lambda: self.check_arming_checks()),
-            CheckSpec("Vehicle Readiness", Priority.CRITICAL, True, lambda: self.check_vehicle_readiness(allowed_modes=allowed_modes)),
-            CheckSpec("GPS Quality", Priority.CRITICAL, True, lambda: self.check_gps_quality(timeout_s=gps_timeout_s)),
+            CheckSpec(
+                "Arming Checks",
+                Priority.CRITICAL,
+                True,
+                lambda: self.check_arming_checks(),
+            ),
+            CheckSpec(
+                "Vehicle Readiness",
+                Priority.CRITICAL,
+                True,
+                lambda: self.check_vehicle_readiness(allowed_modes=allowed_modes),
+            ),
+            CheckSpec(
+                "GPS Quality",
+                Priority.CRITICAL,
+                True,
+                lambda: self.check_gps_quality(timeout_s=gps_timeout_s),
+            ),
             CheckSpec("EKF Health", Priority.CRITICAL, True, lambda: self.check_ekf_health()),
-            CheckSpec("Battery", Priority.CRITICAL, True, lambda: self.check_battery(estimated_time_s=estimated_time_s, mission_ah_req=mission_ah_req)),
-
+            CheckSpec(
+                "Battery",
+                Priority.CRITICAL,
+                True,
+                lambda: self.check_battery(
+                    estimated_time_s=estimated_time_s, mission_ah_req=mission_ah_req
+                ),
+            ),
             # ---- SAFETY checks ----
-            CheckSpec("Failsafe Config", Priority.SAFETY, True, lambda: self.check_failsafe_config()),
-            CheckSpec("Home Position", Priority.SAFETY, True, lambda: self.check_home_position()),
+            CheckSpec(
+                "Failsafe Config",
+                Priority.SAFETY,
+                True,
+                lambda: self.check_failsafe_config(),
+            ),
+            CheckSpec(
+                "Home Position",
+                Priority.SAFETY,
+                True,
+                lambda: self.check_home_position(),
+            ),
             CheckSpec("Wind", Priority.SAFETY, False, lambda: self.check_wind()),
             CheckSpec("Geofence", Priority.SAFETY, True, lambda: self.check_geofence()),
-            CheckSpec("Terrain Clearance", Priority.SAFETY, True, lambda: self.check_terrain_clearance()),
-
+            CheckSpec(
+                "Terrain Clearance",
+                Priority.SAFETY,
+                True,
+                lambda: self.check_terrain_clearance(),
+            ),
             # ---- QUALITY diagnostics ----
             CheckSpec("RC Link", Priority.QUALITY, False, lambda: self.check_rc_link()),
             CheckSpec("Compass", Priority.QUALITY, False, lambda: self.check_compass_health()),
             CheckSpec("IMU", Priority.QUALITY, False, lambda: self.check_imu_calibration()),
-            CheckSpec("Storage/Logging", Priority.QUALITY, False, lambda: self.check_storage_logging()),
-            CheckSpec("GNSS Interference", Priority.QUALITY, False, lambda: self.check_gnss_interference()),
+            CheckSpec(
+                "Storage/Logging",
+                Priority.QUALITY,
+                False,
+                lambda: self.check_storage_logging(),
+            ),
+            CheckSpec(
+                "GNSS Interference",
+                Priority.QUALITY,
+                False,
+                lambda: self.check_gnss_interference(),
+            ),
         ]
 
         if mission_waypoints is not None and expected_mission_count is not None:
@@ -780,17 +944,17 @@ class BasePreflightChecks:
         return sorted(specs, key=lambda s: int(s.priority))
 
     async def run(
-            self,
-            estimated_time_s: Optional[float] = None,
-            mission_waypoints: Optional[List[Any]] = None,
-            expected_mission_count: Optional[int] = None,
-            mission_crc: Optional[int] = None,
-            mission_ah_req: Optional[float] = None,
-            allowed_modes: Optional[List[str]] = None,
-            gps_timeout_s: float = 30.0,
-            fail_fast: bool = True,
-            concurrent_within_priority: bool = True,
-    ) -> List[CheckResult]:
+        self,
+        estimated_time_s: float | None = None,
+        mission_waypoints: list[Any] | None = None,
+        expected_mission_count: int | None = None,
+        mission_crc: int | None = None,
+        mission_ah_req: float | None = None,
+        allowed_modes: list[str] | None = None,
+        gps_timeout_s: float = 30.0,
+        fail_fast: bool = True,
+        concurrent_within_priority: bool = True,
+    ) -> list[CheckResult]:
         """
         Executes checks in priority order.
 
@@ -807,12 +971,12 @@ class BasePreflightChecks:
             mission_crc=mission_crc,
         )
 
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
         gates_failed = False
-        last_priority: Optional[Priority] = None
-        batch: List[CheckSpec] = []
+        last_priority: Priority | None = None
+        batch: list[CheckSpec] = []
 
-        async def run_spec(spec: CheckSpec) -> List[CheckResult]:
+        async def run_spec(spec: CheckSpec) -> list[CheckResult]:
             try:
                 out = await spec.coro()
                 return out if isinstance(out, list) else [out]
@@ -836,8 +1000,10 @@ class BasePreflightChecks:
                 return
 
             if concurrent_within_priority and len(batch) > 1:
-                groups = await asyncio.gather(*(run_spec(s) for s in batch), return_exceptions=False)
-                flat: List[CheckResult] = []
+                groups = await asyncio.gather(
+                    *(run_spec(s) for s in batch), return_exceptions=False
+                )
+                flat: list[CheckResult] = []
                 for g in groups:
                     flat.extend(g)
             else:
@@ -852,7 +1018,9 @@ class BasePreflightChecks:
                 for s in batch:
                     if s.is_gate:
                         # Determine if this spec produced any FAIL
-                        spec_results = [r for r in flat if r.name == s.name or r.name.startswith(s.name)]
+                        spec_results = [
+                            r for r in flat if r.name == s.name or r.name.startswith(s.name)
+                        ]
                         if any(r.status == CheckStatus.FAIL for r in spec_results):
                             gates_failed = True
                             break

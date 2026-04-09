@@ -15,7 +15,7 @@ def _ratio_to_float(value: Any) -> float | None:
     denominator = getattr(value, "denominator", None)
     if numerator is not None and denominator not in {None, 0}:
         return float(numerator) / float(denominator)
-    if isinstance(value, tuple) and len(value) == 2 and value[1] not in {0, 0.0}:
+    if isinstance(value, tuple) and len(value) == 2 and value[1] not in {0}:
         return float(value[0]) / float(value[1])
     return None
 
@@ -72,7 +72,9 @@ def extract_image_gps_location(image_path: str | Path) -> tuple[float, float] | 
         return None
 
 
-def collect_image_gps_locations(image_paths: Sequence[str | Path]) -> list[tuple[float, float]]:
+def collect_image_gps_locations(
+    image_paths: Sequence[str | Path],
+) -> list[tuple[float, float]]:
     points: list[tuple[float, float]] = []
     for image_path in image_paths:
         point = extract_image_gps_location(image_path)

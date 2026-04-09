@@ -1,13 +1,14 @@
 # routes_websocket.py (FIXED VERSION)
-import time
 import asyncio
 import logging
-from fastapi import WebSocket, WebSocketDisconnect, status
-from fastapi import APIRouter
-from backend.messaging.websocket import telemetry_manager
+import time
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from jose import JWTError, jwt
+
 from backend.auth.deps import get_user_from_token
 from backend.db.session import Session
-from jose import jwt, JWTError
+from backend.messaging.websocket import telemetry_manager
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ async def websocket_telemetry(websocket: WebSocket):
                     except:
                         break
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Send keepalive
                 try:
                     await websocket.send_json({"type": "keepalive", "timestamp": time.time()})

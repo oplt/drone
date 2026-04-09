@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from backend.config import settings
 from backend.db.models import Base
 
-
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

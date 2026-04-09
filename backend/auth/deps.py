@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import Depends, Header, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +10,7 @@ from backend.db.models import User
 from backend.db.session import get_db
 
 
-async def get_user_from_token(
-    token: str, db: AsyncSession
-) -> Optional[User]:
+async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
     user_id = decode_token(token)
     if not user_id:
         return None
@@ -23,7 +19,7 @@ async def get_user_from_token(
 
 
 async def require_user(
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     if not authorization or not authorization.startswith("Bearer "):
@@ -37,8 +33,8 @@ async def require_user(
 
 
 async def require_user_header_or_query(
-    token: Optional[str] = Query(default=None),
-    authorization: Optional[str] = Header(default=None),
+    token: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -69,7 +65,7 @@ def _split_list(value: str) -> set[str]:
 
 
 async def require_admin(
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     user = await require_user(authorization=authorization, db=db)
@@ -80,9 +76,7 @@ async def require_admin(
     email = (user.email or "").lower()
     domain = email.split("@", 1)[1] if "@" in email else ""
 
-    if (admin_emails and email in admin_emails) or (
-        admin_domains and domain in admin_domains
-    ):
+    if (admin_emails and email in admin_emails) or (admin_domains and domain in admin_domains):
         return user
 
     raise HTTPException(status_code=403, detail="Admin privileges required")

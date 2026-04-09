@@ -9,18 +9,26 @@ import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, List, Literal, Optional, Union, Annotated
+from datetime import UTC, datetime
+from typing import Annotated, Any, Literal
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field, model_validator
+
 from backend.auth.deps import require_user
 from backend.db.models import FlightStatus
-from backend.drone.models import Coordinate
+from backend.db.repository.mission_runtime_repo import mission_runtime_repo
+from backend.db.repository.operator_command_repo import operator_command_repo
+from backend.db.repository.preflight_run_repo import preflight_run_repo
 from backend.drone.drone_base import MissionAbortRequested
+from backend.drone.models import Coordinate
 from backend.flight.missions.grid_mission import GridMission
+from backend.flight.missions.photogrammetry_mission import (
+    PhotogrammetryMission as FlightPhotogrammetryMission,
+)
 from backend.flight.missions.private_patrol import (
-    EventTriggeredPatrolMission,
     PATROL_AI_TASKS,
+    EventTriggeredPatrolMission,
     GridSurveillanceMission,
     PrivatePatrolMission,
     WaypointPatrolMission,
@@ -36,19 +44,26 @@ from backend.flight.missions.private_patrol import (
     repeat_patrol_loops,
     trigger_action_profile,
 )
-from backend.flight.missions.photogrammetry_mission import (
-    PhotogrammetryMission as FlightPhotogrammetryMission,
-)
-from backend.flight.missions.warehouse_mission import (
-                                    WarehouseScanMissionParams,
-                                    build_warehouse_scan_mission,
-                                )
+from backend.flight.missions.schemas import MissionType, Waypoint
 from backend.flight.missions.warehouse_exploration_mission import (
     WarehouseExplorationMissionParams,
     build_unknown_warehouse_exploration_mission,
 )
-from backend.flight.preflight_check.schemas import PreflightReport
+from backend.flight.missions.warehouse_mission import (
+    WarehouseScanMissionParams,
+    build_warehouse_scan_mission,
+)
 from backend.flight.missions.waypoints_mission import WaypointsMission
+from backend.flight.preflight_check.schemas import PreflightReport
+from backend.flight.state_machine import (
+    TERMINAL_STATES as _SM_TERMINAL_STATES,
+)
+from backend.flight.state_machine import (
+    allowed_command_target,
+)
+from backend.flight.state_machine import (
+    is_terminal as _sm_is_terminal,
+)
 from backend.main import _build_orchestrator
 from backend.messaging.websocket import telemetry_manager
 from backend.runtime import (
@@ -61,16 +76,6 @@ from backend.runtime import (
     next_runtime_sequence,
     utc_now,
 )
-from backend.flight.missions.schemas import MissionType, Waypoint
-from backend.db.repository.mission_runtime_repo import mission_runtime_repo
-from backend.db.repository.operator_command_repo import operator_command_repo
-from backend.db.repository.preflight_run_repo import preflight_run_repo
-from backend.flight.state_machine import (
-    allowed_command_target,
-    is_terminal as _sm_is_terminal,
-    TERMINAL_STATES as _SM_TERMINAL_STATES,
-)
-
 
 logger = logging.getLogger(__name__)
 
@@ -78,27 +83,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 _BOOL_TRUE_TOKENS = {"1", "true", "yes", "on"}
-PREFLIGHT_RUN_TTL_SECONDS = max(
-    60, int(os.getenv("PREFLIGHT_RUN_TTL_SECONDS", "900"))
-)
+PREFLIGHT_RUN_TTL_SECONDS = max(60, int(os.getenv("PREFLIGHT_RUN_TTL_SECONDS", "900")))
 REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION = (
-    os.getenv("REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION", "0").strip().lower()
-    in _BOOL_TRUE_TOKENS
+    os.getenv("REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION", "0").strip().lower() in _BOOL_TRUE_TOKENS
 )
 ALLOW_WARN_PREFLIGHT_START = (
-    os.getenv("ALLOW_WARN_PREFLIGHT_START", "1").strip().lower()
-    in _BOOL_TRUE_TOKENS
+    os.getenv("ALLOW_WARN_PREFLIGHT_START", "1").strip().lower() in _BOOL_TRUE_TOKENS
 )
 
 
 class GridMissionParams(BaseModel):
     """Parameters for a GridMission (polygon-driven lawnmower)."""
+
     # [[lon, lat], …] – GeoJSON coordinate order
-    field_polygon_lonlat: List[List[float]] = Field(
+    field_polygon_lonlat: list[list[float]] = Field(
         ..., min_length=3, description="Polygon ring as [[lon, lat], …]"
     )
     row_spacing_m: float = Field(default=7.5, gt=0, le=200)
-    grid_angle_deg: Optional[float] = Field(default=None, ge=0, lt=180)
+    grid_angle_deg: float | None = Field(default=None, ge=0, lt=180)
     slope_aware: bool = False
     safety_inset_m: float = Field(default=1.5, ge=0)
     terrain_follow: bool = False
@@ -135,12 +137,12 @@ class PrivatePatrolMissionParams(BaseModel):
         "grid_surveillance",
         "event_triggered_patrol",
     ] = "perimeter_patrol"
-    property_polygon_lonlat: Optional[List[List[float]]] = Field(
+    property_polygon_lonlat: list[list[float]] | None = Field(
         default=None,
         min_length=3,
         description="Perimeter/Grid mode: property polygon ring as [[lon, lat], ...]",
     )
-    key_points_lonlat: Optional[List[List[float]]] = Field(
+    key_points_lonlat: list[list[float]] | None = Field(
         default=None,
         min_length=2,
         description="Waypoint mode: ordered key points as [[lon, lat], ...]",
@@ -160,21 +162,21 @@ class PrivatePatrolMissionParams(BaseModel):
     grid_angle_deg: float = Field(default=0.0, ge=0.0, lt=180.0)
     safety_inset_m: float = Field(default=2.0, ge=0.0, le=100.0)
     trigger_type: PatrolTriggerType = "fence_alarm"
-    trigger_event_location_lonlat: Optional[List[float]] = Field(
+    trigger_event_location_lonlat: list[float] | None = Field(
         default=None,
         min_length=2,
         max_length=2,
         description="Event task: trigger location as [lon, lat]",
     )
-    target_label: Optional[str] = Field(default=None, max_length=120)
+    target_label: str | None = Field(default=None, max_length=120)
     verification_loiter_s: float = Field(default=45.0, ge=0.0, le=600.0)
     verification_radius_m: float = Field(default=18.0, ge=0.0, le=150.0)
     track_target: bool = True
     auto_stream_video: bool = True
-    ai_tasks: List[PatrolTaskType] = Field(default_factory=lambda: list(PATROL_AI_TASKS))
+    ai_tasks: list[PatrolTaskType] = Field(default_factory=lambda: list(PATROL_AI_TASKS))
 
     @model_validator(mode="after")
-    def _validate_by_task(self) -> "PrivatePatrolMissionParams":
+    def _validate_by_task(self) -> PrivatePatrolMissionParams:
         if self.task_type in {"perimeter_patrol", "grid_surveillance"}:
             if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
                 raise ValueError(
@@ -187,9 +189,13 @@ class PrivatePatrolMissionParams(BaseModel):
                 )
         elif self.task_type == "event_triggered_patrol":
             _ = normalize_trigger_type(self.trigger_type)
-            has_event_loc = bool(self.trigger_event_location_lonlat and len(self.trigger_event_location_lonlat) == 2)
+            has_event_loc = bool(
+                self.trigger_event_location_lonlat and len(self.trigger_event_location_lonlat) == 2
+            )
             if self.trigger_type == "night_schedule":
-                if not has_event_loc and not (self.property_polygon_lonlat and len(self.property_polygon_lonlat) >= 3):
+                if not has_event_loc and not (
+                    self.property_polygon_lonlat and len(self.property_polygon_lonlat) >= 3
+                ):
                     raise ValueError(
                         "task_type='event_triggered_patrol' with trigger_type='night_schedule' "
                         "requires trigger_event_location_lonlat or property_polygon_lonlat."
@@ -219,7 +225,7 @@ class MissionProfileTriggerTime(BaseModel):
 
 
 MissionProfileTrigger = Annotated[
-    Union[MissionProfileTriggerDistance, MissionProfileTriggerTime],
+    MissionProfileTriggerDistance | MissionProfileTriggerTime,
     Field(discriminator="mode"),
 ]
 
@@ -248,20 +254,21 @@ class MissionCreateIn(BaseModel):
           - waypoint task uses `key_points_lonlat`
           - grid task uses `property_polygon_lonlat` + grid parameters
     """
+
     name: str = Field(default="mission", min_length=1, max_length=120)
     cruise_alt: float = Field(default=30.0, gt=0, le=500)
     mission_type: MissionType = MissionType.WAYPOINT
 
     # Waypoints mission data
-    waypoints: Optional[List[Waypoint]] = None
+    waypoints: list[Waypoint] | None = None
 
     # Grid mission data
-    grid: Optional[GridMissionParams] = None
-    warehouse_scan: Optional[WarehouseScanMissionParams] = None
-    warehouse_exploration: Optional[WarehouseExplorationMissionParams] = None
-    private_patrol: Optional[PrivatePatrolMissionParams] = None
-    mission_profile: Optional[PhotogrammetryMissionProfile] = None
-    preflight_run_id: Optional[str] = Field(
+    grid: GridMissionParams | None = None
+    warehouse_scan: WarehouseScanMissionParams | None = None
+    warehouse_exploration: WarehouseExplorationMissionParams | None = None
+    private_patrol: PrivatePatrolMissionParams | None = None
+    mission_profile: PhotogrammetryMissionProfile | None = None
+    preflight_run_id: str | None = Field(
         default=None,
         min_length=8,
         max_length=128,
@@ -272,21 +279,15 @@ class MissionCreateIn(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _check_payload(self) -> "MissionCreateIn":
+    def _check_payload(self) -> MissionCreateIn:
         if self.mission_type == MissionType.WAYPOINT:
             if not self.waypoints or len(self.waypoints) < 2:
-                raise ValueError(
-                    "mission_type='waypoints' requires at least 2 waypoints."
-                )
+                raise ValueError("mission_type='waypoints' requires at least 2 waypoints.")
         elif self.mission_type in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}:
             if self.grid is None:
-                raise ValueError(
-                    "mission_type requires a 'grid' object with field_polygon_lonlat."
-                )
+                raise ValueError("mission_type requires a 'grid' object with field_polygon_lonlat.")
             if len(self.grid.field_polygon_lonlat) < 3:
-                raise ValueError(
-                    "field_polygon_lonlat must have at least 3 coordinate pairs."
-                )
+                raise ValueError("field_polygon_lonlat must have at least 3 coordinate pairs.")
         elif self.mission_type == MissionType.WAREHOUSE_SCAN:
             if self.warehouse_scan is None:
                 raise ValueError(
@@ -297,15 +298,18 @@ class MissionCreateIn(BaseModel):
                 raise ValueError(
                     "mission_type='indoor_exploration' requires a 'warehouse_exploration' object."
                 )
-        elif self.mission_type in {MissionType.PERIMETER_PATROL, MissionType.PRIVATE_PATROL}:
+        elif self.mission_type in {
+            MissionType.PERIMETER_PATROL,
+            MissionType.PRIVATE_PATROL,
+        }:
             if self.private_patrol is None:
                 raise ValueError(
                     "mission_type='perimeter_patrol' requires a 'private_patrol' object."
                 )
-        if (
-            self.mission_profile is not None
-            and self.mission_type not in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}
-        ):
+        if self.mission_profile is not None and self.mission_type not in {
+            MissionType.GRID,
+            MissionType.PHOTOGRAMMETRY,
+        }:
             raise ValueError(
                 "mission_profile is supported only for mission_type='grid' or 'photogrammetry'."
             )
@@ -318,53 +322,55 @@ class MissionCreateOut(BaseModel):
     mission_name: str
     mission_type: str
     waypoints_count: int
-    preflight_run_id: Optional[str] = None
+    preflight_run_id: str | None = None
 
 
 class MissionRuntimeOut(BaseModel):
     flight_id: str
     mission_name: str
     mission_type: str
-    mission_task_type: Optional[str] = None
+    mission_task_type: str | None = None
     state: str
     created_at: float
     updated_at: float
-    preflight_run_id: Optional[str] = None
-    db_flight_id: Optional[str] = None
-    last_error: Optional[str] = None
+    preflight_run_id: str | None = None
+    db_flight_id: str | None = None
+    last_error: str | None = None
 
 
 class StateTransitionOut(BaseModel):
     """Single entry in a mission's reconstructed state timeline."""
+
     state: str
-    entered_at: float   # Unix timestamp
-    trigger: str        # "mission_created" | "execution_started" | "command:<cmd>" | "execution_ended"
-    command_id: Optional[str] = None
-    command: Optional[str] = None
-    reason: Optional[str] = None
+    entered_at: float  # Unix timestamp
+    trigger: str  # "mission_created" | "execution_started" | "command:<cmd>" | "execution_ended"
+    command_id: str | None = None
+    command: str | None = None
+    reason: str | None = None
 
 
 class ResumableMissionOut(BaseModel):
     """Terminal mission that has checkpointed progress and can be re-launched."""
+
     flight_id: str
     mission_name: str
     mission_type: str
-    mission_task_type: Optional[str] = None
+    mission_task_type: str | None = None
     state: str
-    ended_at: Optional[float] = None
-    failure_reason: Optional[str] = None
+    ended_at: float | None = None
+    failure_reason: str | None = None
     resume_metadata: dict
     mission_params: dict
 
 
 class MissionCommandIn(BaseModel):
-    idempotency_key: Optional[str] = Field(
+    idempotency_key: str | None = Field(
         default=None,
         min_length=8,
         max_length=128,
         description="Idempotency key. Can also be provided via Idempotency-Key header.",
     )
-    reason: Optional[str] = Field(default=None, max_length=240)
+    reason: str | None = Field(default=None, max_length=240)
 
 
 class MissionCommandOut(BaseModel):
@@ -389,7 +395,7 @@ class MissionCommandAuditOut(BaseModel):
     state_after: str
     accepted: bool
     message: str
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 class PreflightRunOut(BaseModel):
@@ -413,7 +419,7 @@ class _PreflightRunRecord:
     report: dict
 
     @classmethod
-    def from_db(cls, row: Any) -> "_PreflightRunRecord":
+    def from_db(cls, row: Any) -> _PreflightRunRecord:
         """Build a value-object DTO from a PreflightRun ORM row."""
         created_ts = (
             row.created_at.timestamp()
@@ -453,7 +459,7 @@ MissionLifecycleState = Literal[
     "queued",
     "arming",
     "airborne",
-    "running",   # legacy alias for airborne
+    "running",  # legacy alias for airborne
     "paused",
     "resumed",
     "aborting",
@@ -476,7 +482,7 @@ class _MissionCommandAudit:
     state_after: MissionLifecycleState
     accepted: bool
     message: str
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 @dataclass
@@ -485,22 +491,22 @@ class _MissionRuntimeRecord:
     user_id: int
     mission_name: str
     mission_type: str
-    mission_task_type: Optional[str]
-    private_patrol_task_type: Optional[str]
-    preflight_run_id: Optional[str]
+    mission_task_type: str | None
+    private_patrol_task_type: str | None
+    preflight_run_id: str | None
     state: MissionLifecycleState
     created_at: float
     updated_at: float
-    db_flight_id: Optional[int] = None
-    last_error: Optional[str] = None
-    private_patrol_trigger_type: Optional[str] = None
-    private_patrol_target_label: Optional[str] = None
-    command_audit: List[_MissionCommandAudit] = field(default_factory=list)
+    db_flight_id: int | None = None
+    last_error: str | None = None
+    private_patrol_trigger_type: str | None = None
+    private_patrol_target_label: str | None = None
+    command_audit: list[_MissionCommandAudit] = field(default_factory=list)
     idempotency_results: dict[str, dict] = field(default_factory=dict)
-    private_patrol_ai_tasks: List[str] = field(default_factory=list)
+    private_patrol_ai_tasks: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_db(cls, row: Any) -> "_MissionRuntimeRecord":
+    def from_db(cls, row: Any) -> _MissionRuntimeRecord:
         """Build a value-object DTO from a MissionRuntime ORM row."""
         created_ts = (
             row.created_at.timestamp()
@@ -508,9 +514,7 @@ class _MissionRuntimeRecord:
             else float(row.created_at or 0)
         )
         updated_ts = (
-            row.updated_at.timestamp()
-            if isinstance(row.updated_at, datetime)
-            else created_ts
+            row.updated_at.timestamp() if isinstance(row.updated_at, datetime) else created_ts
         )
         audit_records = [
             _MissionCommandAudit(
@@ -546,7 +550,6 @@ class _MissionRuntimeRecord:
         )
 
 
-
 # ---------------------------------------------------------------------------
 # Orchestrator singleton
 # ---------------------------------------------------------------------------
@@ -560,7 +563,7 @@ async def get_orchestrator() -> Any:
     if _orch is not None:
         return _orch
     async with _orch_lock:
-        if _orch is None:               # double-checked
+        if _orch is None:  # double-checked
             _orch = await _build_orchestrator()
     return _orch
 
@@ -571,12 +574,8 @@ async def get_orchestrator() -> Any:
 
 # Legacy TTL / history constants kept so any external env vars still parse cleanly.
 # They are no longer used for in-memory eviction — the DB is authoritative.
-MISSION_RUNTIME_TTL_SECONDS = max(
-    600, int(os.getenv("MISSION_RUNTIME_TTL_SECONDS", "86400"))
-)
-MISSION_RUNTIME_MAX_HISTORY = max(
-    20, int(os.getenv("MISSION_RUNTIME_MAX_HISTORY", "200"))
-)
+MISSION_RUNTIME_TTL_SECONDS = max(600, int(os.getenv("MISSION_RUNTIME_TTL_SECONDS", "86400")))
+MISSION_RUNTIME_MAX_HISTORY = max(20, int(os.getenv("MISSION_RUNTIME_MAX_HISTORY", "200")))
 
 
 def _is_terminal_state(state: str) -> bool:
@@ -585,18 +584,18 @@ def _is_terminal_state(state: str) -> bool:
 
 def _db_status_for_runtime_state(state: MissionLifecycleState) -> FlightStatus:
     _map = {
-        "planned":   FlightStatus.ACTIVE,
+        "planned": FlightStatus.ACTIVE,
         "preflight": FlightStatus.ACTIVE,
-        "queued":    FlightStatus.ACTIVE,
-        "arming":    FlightStatus.ACTIVE,
-        "airborne":  FlightStatus.ACTIVE,
-        "running":   FlightStatus.ACTIVE,   # legacy
-        "paused":    FlightStatus.PAUSED,
-        "resumed":   FlightStatus.ACTIVE,
-        "aborting":  FlightStatus.INTERRUPTED,
-        "aborted":   FlightStatus.INTERRUPTED,
+        "queued": FlightStatus.ACTIVE,
+        "arming": FlightStatus.ACTIVE,
+        "airborne": FlightStatus.ACTIVE,
+        "running": FlightStatus.ACTIVE,  # legacy
+        "paused": FlightStatus.PAUSED,
+        "resumed": FlightStatus.ACTIVE,
+        "aborting": FlightStatus.INTERRUPTED,
+        "aborted": FlightStatus.INTERRUPTED,
         "completed": FlightStatus.COMPLETED,
-        "failed":    FlightStatus.FAILED,
+        "failed": FlightStatus.FAILED,
     }
     return _map.get(str(state), FlightStatus.FAILED)
 
@@ -639,7 +638,7 @@ def _audit_to_out(audit: _MissionCommandAudit) -> MissionCommandAuditOut:
 def _allowed_command_transition(
     current: MissionLifecycleState,
     command: MissionCommand,
-) -> Optional[MissionLifecycleState]:
+) -> MissionLifecycleState | None:
     return allowed_command_target(current, command)
 
 
@@ -662,7 +661,9 @@ async def _sync_runtime_flight_id_from_orchestrator(
         await mission_runtime_repo.set_flight_id(runtime.client_flight_id, flight_id=fid)
     except Exception:
         logger.exception(
-            "Failed persisting flight_id=%s for runtime %s", fid, runtime.client_flight_id
+            "Failed persisting flight_id=%s for runtime %s",
+            fid,
+            runtime.client_flight_id,
         )
 
 
@@ -670,13 +671,15 @@ async def _set_runtime_state(
     runtime_id: str,
     *,
     state: MissionLifecycleState,
-    error: Optional[str] = None,
+    error: str | None = None,
 ) -> None:
     await mission_runtime_repo.set_state(runtime_id, state=state, error=error)
+
 
 # ---------------------------------------------------------------------------
 # Preflight store helpers (DB-backed)
 # ---------------------------------------------------------------------------
+
 
 def _mission_fingerprint(payload: MissionCreateIn) -> str:
     canonical = payload.model_dump(mode="json", exclude={"preflight_run_id"})
@@ -693,7 +696,7 @@ async def _store_preflight_run(
     now = time.time()
     run_uuid = f"pf_{int(now)}_{uuid.uuid4().hex[:10]}"
     report_dump = report.model_dump(mode="json")
-    expires_at_dt = datetime.fromtimestamp(now + PREFLIGHT_RUN_TTL_SECONDS, tz=timezone.utc)
+    expires_at_dt = datetime.fromtimestamp(now + PREFLIGHT_RUN_TTL_SECONDS, tz=UTC)
     db_row = await preflight_run_repo.create(
         run_uuid=run_uuid,
         user_id=user_id,
@@ -703,22 +706,20 @@ async def _store_preflight_run(
         overall_status=str(report.overall_status),
         base_checks=report_dump.get("base_checks", []),
         mission_checks=report_dump.get("mission_checks", []),
-        critical_failures=[
-            c["name"] for c in (report_dump.get("critical_failures") or [])
-        ],
+        critical_failures=[c["name"] for c in (report_dump.get("critical_failures") or [])],
         summary=report_dump.get("summary") or {},
         expires_at=expires_at_dt,
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(UTC),
     )
     return _PreflightRunRecord.from_db(db_row)
 
 
-async def _get_preflight_run(run_id: str) -> Optional[_PreflightRunRecord]:
+async def _get_preflight_run(run_id: str) -> _PreflightRunRecord | None:
     db_row = await preflight_run_repo.get_by_uuid(run_id)
     if db_row is None:
         return None
     # Enforce TTL in application layer for safety.
-    if db_row.expires_at and db_row.expires_at < datetime.now(timezone.utc):
+    if db_row.expires_at and db_row.expires_at < datetime.now(UTC):
         return None
     return _PreflightRunRecord.from_db(db_row)
 
@@ -756,7 +757,9 @@ async def _ensure_drone_ready_for_preflight(orch: Any) -> None:
     await asyncio.to_thread(orch.drone.get_telemetry)
 
 
-def _polygon_centroid_lonlat(polygon_lonlat: List[tuple[float, float]]) -> tuple[float, float]:
+def _polygon_centroid_lonlat(
+    polygon_lonlat: list[tuple[float, float]],
+) -> tuple[float, float]:
     if len(polygon_lonlat) < 3:
         raise ValueError("polygon must have at least 3 points")
     pts = list(polygon_lonlat)
@@ -770,8 +773,8 @@ def _polygon_centroid_lonlat(polygon_lonlat: List[tuple[float, float]]) -> tuple
 def _resolve_trigger_event_location(
     *,
     trigger_type: str,
-    trigger_event_location_lonlat: Optional[List[float]],
-    property_polygon_lonlat: Optional[List[List[float]]],
+    trigger_event_location_lonlat: list[float] | None,
+    property_polygon_lonlat: list[list[float]] | None,
 ) -> tuple[float, float]:
     normalized_trigger = normalize_trigger_type(trigger_type)
     if trigger_event_location_lonlat and len(trigger_event_location_lonlat) >= 2:
@@ -796,7 +799,8 @@ def _resolve_trigger_event_location(
 # Mission factory
 # ---------------------------------------------------------------------------
 
-def _build_mission(payload: MissionCreateIn, *, owner_id: Optional[int] = None) -> Any:
+
+def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> Any:
     """Return the appropriate mission object for the given payload."""
     if payload.mission_type == MissionType.WAYPOINT:
         coords = [
@@ -859,7 +863,10 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: Optional[int] = None) 
                 trigger_distance_m=trigger_distance_m
                 or max(float(profile.min_spacing_m), recommended["along_track_m"]),
                 trigger_interval_s=trigger_interval_s
-                or max(0.2, recommended["along_track_m"] / max(0.1, float(profile.speed_mps))),
+                or max(
+                    0.2,
+                    recommended["along_track_m"] / max(0.1, float(profile.speed_mps)),
+                ),
                 terrain_follow=bool(g.terrain_follow),
                 terrain_target_agl_m=float(agl_m) if g.terrain_follow else None,
             )
@@ -899,7 +906,10 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: Optional[int] = None) 
             owner_id=owner_id,
         )
 
-    if payload.mission_type in {MissionType.PERIMETER_PATROL, MissionType.PRIVATE_PATROL}:
+    if payload.mission_type in {
+        MissionType.PERIMETER_PATROL,
+        MissionType.PRIVATE_PATROL,
+    }:
         patrol = payload.private_patrol  # validated non-None by model_validator
         ai_tasks = normalize_ai_tasks(patrol.ai_tasks)
         if patrol.task_type == "event_triggered_patrol":
@@ -998,16 +1008,17 @@ def _compute_photogrammetry_spacing(profile: PhotogrammetryMissionProfile) -> di
 # Generic mission executor (thin wrapper — no type coupling)
 # ---------------------------------------------------------------------------
 
+
 async def execute_mission(
-        orch: Any,
-        mission: Any,       # Any object with .execute(orch, alt=…) method
-        cruise_alt: float,
-        mission_name: str,
-        runtime_id: str,
+    orch: Any,
+    mission: Any,  # Any object with .execute(orch, alt=…) method
+    cruise_alt: float,
+    mission_name: str,
+    runtime_id: str,
 ) -> None:
     """Run any mission that implements .execute(orch, *, alt)."""
-    reconcile_db_flight_id: Optional[int] = None
-    reconcile_db_status: Optional[FlightStatus] = None
+    reconcile_db_flight_id: int | None = None
+    reconcile_db_status: FlightStatus | None = None
     reconcile_note: str = ""
     await _set_runtime_state(runtime_id, state="airborne")
     try:
@@ -1057,7 +1068,9 @@ async def execute_mission(
                 )
 
         if reconcile_db_flight_id is not None and reconcile_db_status is not None:
-            safe_note = reconcile_note[:250] if reconcile_note else f"Mission {reconcile_db_status.value}"
+            safe_note = (
+                reconcile_note[:250] if reconcile_note else f"Mission {reconcile_db_status.value}"
+            )
             try:
                 await orch.repo.finish_flight_if_in_progress(
                     reconcile_db_flight_id,
@@ -1090,8 +1103,8 @@ async def _get_runtime_for_user(
 
 
 def _resolve_idempotency_key(
-    payload_key: Optional[str],
-    header_key: Optional[str],
+    payload_key: str | None,
+    header_key: str | None,
 ) -> str:
     payload = (payload_key or "").strip()
     header = (header_key or "").strip()
@@ -1150,7 +1163,7 @@ async def _apply_mission_command(
     command: MissionCommand,
     idempotency_key: str,
     requested_by_user_id: int,
-    reason: Optional[str],
+    reason: str | None,
 ) -> MissionCommandOut:
     now = time.time()
     normalized_reason = (reason or "").strip() or None
@@ -1210,7 +1223,11 @@ async def _apply_mission_command(
                 success = True
                 message = "Return-to-home initiated."
             except Exception as exc:
-                logger.warning("RTL mode switch failed for mission %s: %s", runtime.client_flight_id, exc)
+                logger.warning(
+                    "RTL mode switch failed for mission %s: %s",
+                    runtime.client_flight_id,
+                    exc,
+                )
                 message = f"RTH command failed: {exc}"
         elif command == "land":
             try:
@@ -1218,7 +1235,11 @@ async def _apply_mission_command(
                 success = True
                 message = "Land-in-place initiated."
             except Exception as exc:
-                logger.warning("Land command failed for mission %s: %s", runtime.client_flight_id, exc)
+                logger.warning(
+                    "Land command failed for mission %s: %s",
+                    runtime.client_flight_id,
+                    exc,
+                )
                 message = f"Land command failed: {exc}"
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported command '{command}'")
@@ -1263,7 +1284,7 @@ async def _apply_mission_command(
 
     # Persist to dedicated operator_commands table (async, non-blocking failure).
     try:
-        requested_at_dt = datetime.fromtimestamp(now, tz=timezone.utc)
+        requested_at_dt = datetime.fromtimestamp(now, tz=UTC)
         await operator_command_repo.create(
             command_id=command_id,
             client_flight_id=runtime.client_flight_id,
@@ -1379,10 +1400,11 @@ async def _apply_mission_command(
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/preflight/run", response_model=PreflightRunOut)
 async def run_preflight(
-        payload: MissionCreateIn,
-        user=Depends(require_user),
+    payload: MissionCreateIn,
+    user=Depends(require_user),
 ):
     """Run preflight checks as a first-class API call and store a short-lived run token."""
     try:
@@ -1401,11 +1423,7 @@ async def run_preflight(
     try:
         await _ensure_drone_ready_for_preflight(orch)
         preflight_data_fn = getattr(mission, "get_preflight_mission_data", None)
-        mission_data_override = (
-            preflight_data_fn()
-            if callable(preflight_data_fn)
-            else None
-        )
+        mission_data_override = preflight_data_fn() if callable(preflight_data_fn) else None
         report = await orch._run_preflight_checks(
             mission.get_waypoints(),
             payload.cruise_alt,
@@ -1431,8 +1449,8 @@ async def run_preflight(
 
 @router.get("/preflight/runs/{preflight_run_id}", response_model=PreflightRunOut)
 async def get_preflight_run(
-        preflight_run_id: str,
-        user=Depends(require_user),
+    preflight_run_id: str,
+    user=Depends(require_user),
 ):
     rec = await _get_preflight_run(preflight_run_id)
     if rec is None or rec.user_id != int(user.id):
@@ -1442,8 +1460,8 @@ async def get_preflight_run(
 
 @router.post("/missions", response_model=MissionCreateOut)
 async def create_mission(
-        payload: MissionCreateIn,
-        user=Depends(require_user),
+    payload: MissionCreateIn,
+    user=Depends(require_user),
 ):
     """Create and start a mission — returns flight_id for WebSocket tracking.
 
@@ -1579,17 +1597,17 @@ def _build_state_timeline(
     events: list[tuple[float, StateTransitionOut]] = []
 
     # Initial state at creation.
-    created_ts = (
-        row.created_at.timestamp() if isinstance(row.created_at, datetime) else 0.0
+    created_ts = row.created_at.timestamp() if isinstance(row.created_at, datetime) else 0.0
+    events.append(
+        (
+            created_ts,
+            StateTransitionOut(
+                state=row.state if row.started_at is None and row.ended_at is None else "queued",
+                entered_at=created_ts,
+                trigger="mission_created",
+            ),
+        )
     )
-    events.append((
-        created_ts,
-        StateTransitionOut(
-            state=row.state if row.started_at is None and row.ended_at is None else "queued",
-            entered_at=created_ts,
-            trigger="mission_created",
-        ),
-    ))
 
     # Mission became airborne (started_at set on first running/airborne transition).
     if row.started_at is not None:
@@ -1598,14 +1616,16 @@ def _build_state_timeline(
             if isinstance(row.started_at, datetime)
             else float(row.started_at)
         )
-        events.append((
-            started_ts,
-            StateTransitionOut(
-                state="airborne",
-                entered_at=started_ts,
-                trigger="execution_started",
-            ),
-        ))
+        events.append(
+            (
+                started_ts,
+                StateTransitionOut(
+                    state="airborne",
+                    entered_at=started_ts,
+                    trigger="execution_started",
+                ),
+            )
+        )
 
     # Operator command-driven transitions (accepted only).
     for cmd in commands:
@@ -1616,53 +1636,52 @@ def _build_state_timeline(
             if isinstance(cmd.requested_at, datetime)
             else float(cmd.requested_at or 0)
         )
-        events.append((
-            ts,
-            StateTransitionOut(
-                state=cmd.state_after,
-                entered_at=ts,
-                trigger=f"command:{cmd.command}",
-                command_id=cmd.command_id,
-                command=cmd.command,
-                reason=cmd.reason,
-            ),
-        ))
+        events.append(
+            (
+                ts,
+                StateTransitionOut(
+                    state=cmd.state_after,
+                    entered_at=ts,
+                    trigger=f"command:{cmd.command}",
+                    command_id=cmd.command_id,
+                    command=cmd.command,
+                    reason=cmd.reason,
+                ),
+            )
+        )
 
     # Terminal state reached by execution path (not by a command).
     if row.ended_at is not None and _is_terminal_state(row.state):
         ended_ts = (
-            row.ended_at.timestamp()
-            if isinstance(row.ended_at, datetime)
-            else float(row.ended_at)
+            row.ended_at.timestamp() if isinstance(row.ended_at, datetime) else float(row.ended_at)
         )
         # Only add if not already recorded via a command.
         last_cmd_states = {e.state for _, e in events if e.command_id}
         if row.state not in last_cmd_states:
-            events.append((
-                ended_ts,
-                StateTransitionOut(
-                    state=row.state,
-                    entered_at=ended_ts,
-                    trigger="execution_ended",
-                    reason=row.failure_reason if row.failure_reason else None,
-                ),
-            ))
+            events.append(
+                (
+                    ended_ts,
+                    StateTransitionOut(
+                        state=row.state,
+                        entered_at=ended_ts,
+                        trigger="execution_ended",
+                        reason=row.failure_reason if row.failure_reason else None,
+                    ),
+                )
+            )
 
     events.sort(key=lambda x: x[0])
     return [e for _, e in events]
 
 
-@router.get("/missions", response_model=List[MissionRuntimeOut])
+@router.get("/missions", response_model=list[MissionRuntimeOut])
 async def list_missions(
     limit: int = 50,
     user=Depends(require_user),
 ):
     """List recent mission runtimes for the current user (newest first)."""
     rows = await mission_runtime_repo.list_recent(user_id=int(user.id), limit=min(limit, 200))
-    return [
-        _runtime_to_out(_MissionRuntimeRecord.from_db(r))
-        for r in rows
-    ]
+    return [_runtime_to_out(_MissionRuntimeRecord.from_db(r)) for r in rows]
 
 
 @router.get("/missions/active", response_model=MissionRuntimeOut)
@@ -1679,7 +1698,7 @@ async def get_active_mission(
     return _runtime_to_out(runtime)
 
 
-@router.get("/missions/resumable", response_model=List[ResumableMissionOut])
+@router.get("/missions/resumable", response_model=list[ResumableMissionOut])
 async def list_resumable_missions(
     limit: int = 20,
     user=Depends(require_user),
@@ -1690,25 +1709,23 @@ async def list_resumable_missions(
     its ``resume_metadata`` contains at least one checkpoint key that a mission
     executor can use to skip already-completed work.
     """
-    rows = await mission_runtime_repo.list_resumable(
-        user_id=int(user.id), limit=min(limit, 100)
-    )
+    rows = await mission_runtime_repo.list_resumable(user_id=int(user.id), limit=min(limit, 100))
     result = []
     for r in rows:
-        ended_ts = (
-            r.ended_at.timestamp() if isinstance(r.ended_at, datetime) else None
+        ended_ts = r.ended_at.timestamp() if isinstance(r.ended_at, datetime) else None
+        result.append(
+            ResumableMissionOut(
+                flight_id=r.client_flight_id,
+                mission_name=r.mission_name,
+                mission_type=r.mission_type,
+                mission_task_type=r.mission_task_type or r.private_patrol_task_type,
+                state=r.state,
+                ended_at=ended_ts,
+                failure_reason=r.failure_reason,
+                resume_metadata=dict(r.resume_metadata or {}),
+                mission_params=dict(r.mission_params or {}),
+            )
         )
-        result.append(ResumableMissionOut(
-            flight_id=r.client_flight_id,
-            mission_name=r.mission_name,
-            mission_type=r.mission_type,
-            mission_task_type=r.mission_task_type or r.private_patrol_task_type,
-            state=r.state,
-            ended_at=ended_ts,
-            failure_reason=r.failure_reason,
-            resume_metadata=dict(r.resume_metadata or {}),
-            mission_params=dict(r.mission_params or {}),
-        ))
     return result
 
 
@@ -1723,7 +1740,7 @@ async def get_mission_runtime(
     return _runtime_to_out(runtime)
 
 
-@router.get("/missions/{flight_id}/transitions", response_model=List[StateTransitionOut])
+@router.get("/missions/{flight_id}/transitions", response_model=list[StateTransitionOut])
 async def get_mission_state_transitions(
     flight_id: str,
     user=Depends(require_user),
@@ -1743,7 +1760,7 @@ async def get_mission_state_transitions(
     return _build_state_timeline(db_row, commands)
 
 
-@router.get("/missions/{flight_id}/commands", response_model=List[MissionCommandAuditOut])
+@router.get("/missions/{flight_id}/commands", response_model=list[MissionCommandAuditOut])
 async def get_mission_command_audit(
     flight_id: str,
     user=Depends(require_user),
@@ -1776,7 +1793,7 @@ async def issue_mission_command(
     flight_id: str,
     command: MissionCommand,
     payload: MissionCommandIn,
-    idempotency_key_header: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key_header: str | None = Header(default=None, alias="Idempotency-Key"),
     user=Depends(require_user),
 ):
     runtime = await _get_runtime_for_user(flight_id, user_id=int(user.id))
@@ -1809,7 +1826,7 @@ async def get_flight_status():
     """Current flight status + telemetry summary."""
     try:
         orch = await get_orchestrator()
-        runtime_out: Optional[MissionRuntimeOut] = None
+        runtime_out: MissionRuntimeOut | None = None
         active_db_row = await mission_runtime_repo.get_active()
         if active_db_row is not None:
             runtime = _MissionRuntimeRecord.from_db(active_db_row)
@@ -1819,9 +1836,7 @@ async def get_flight_status():
         flight_id = runtime_out.flight_id if runtime_out is not None else None
         mission_name = getattr(orch, "current_mission_name", "Unknown")
         telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
-        telemetry_payload = (
-            telemetry_envelope.payload if telemetry_envelope is not None else None
-        )
+        telemetry_payload = telemetry_envelope.payload if telemetry_envelope is not None else None
         position = (
             {
                 "lat": telemetry_payload.position.lat or 0,
@@ -1852,18 +1867,18 @@ async def get_flight_status():
                 "ready": orch is not None,
                 "has_drone": getattr(orch, "drone", None) is not None,
                 "drone_connected": (
-                        hasattr(orch, "drone")
-                        and getattr(orch, "drone", None) is not None
-                        and getattr(getattr(orch, "drone", None), "vehicle", None) is not None
+                    hasattr(orch, "drone")
+                    and getattr(orch, "drone", None) is not None
+                    and getattr(getattr(orch, "drone", None), "vehicle", None) is not None
                 ),
             },
             "mission_lifecycle": runtime_out.model_dump() if runtime_out is not None else None,
             "command_capabilities": {
-                "pause":  runtime_out is not None and runtime_out.state in {"airborne", "running"},
+                "pause": runtime_out is not None and runtime_out.state in {"airborne", "running"},
                 "resume": runtime_out is not None and runtime_out.state == "paused",
-                "abort":  runtime_out is not None and runtime_out.state in {
-                    "queued", "arming", "airborne", "running", "paused", "resumed"
-                },
+                "abort": runtime_out is not None
+                and runtime_out.state
+                in {"queued", "arming", "airborne", "running", "paused", "resumed"},
             },
         }
     except Exception as exc:
@@ -1931,10 +1946,11 @@ async def stop_telemetry():
 # Grid preview endpoint (no drone required – useful for UI previews)
 # ---------------------------------------------------------------------------
 
+
 class GridPreviewIn(BaseModel):
-    field_polygon_lonlat: List[List[float]] = Field(..., min_length=3)
+    field_polygon_lonlat: list[list[float]] = Field(..., min_length=3)
     row_spacing_m: float = Field(default=7.5, gt=0, le=200)
-    grid_angle_deg: Optional[float] = Field(default=None, ge=0, lt=180)
+    grid_angle_deg: float | None = Field(default=None, ge=0, lt=180)
     safety_inset_m: float = Field(default=1.5, ge=0)
     pattern_mode: Literal["boustrophedon", "crosshatch"] = "boustrophedon"
     crosshatch_angle_offset_deg: float = Field(default=90.0, gt=0, lt=180)
@@ -1945,8 +1961,8 @@ class GridPreviewIn(BaseModel):
 
 
 class GridPreviewOut(BaseModel):
-    waypoints: List[dict]
-    work_leg_mask: List[bool]
+    waypoints: list[dict]
+    work_leg_mask: list[bool]
     angle_deg: float
     spacing_m: float
     stats: dict
@@ -1961,8 +1977,8 @@ async def preview_grid(payload: GridPreviewIn):
     """
     from backend.flight.missions.grid_mission import (
         GridPlanner,
-        combine_grid_plans,
         _validate_plan_limits,
+        combine_grid_plans,
     )
 
     try:
@@ -2013,12 +2029,12 @@ class PrivatePatrolTaskTemplateOut(BaseModel):
     purpose: str
     description: str
     default_params: dict
-    ai_tasks: List[str]
+    ai_tasks: list[str]
 
 
 class PrivatePatrolTaskCatalogOut(BaseModel):
     mission_category: str
-    tasks: List[PrivatePatrolTaskTemplateOut]
+    tasks: list[PrivatePatrolTaskTemplateOut]
 
 
 class PrivatePatrolPreviewIn(BaseModel):
@@ -2028,8 +2044,8 @@ class PrivatePatrolPreviewIn(BaseModel):
         "grid_surveillance",
         "event_triggered_patrol",
     ] = "perimeter_patrol"
-    property_polygon_lonlat: Optional[List[List[float]]] = Field(default=None, min_length=3)
-    key_points_lonlat: Optional[List[List[float]]] = Field(default=None, min_length=2)
+    property_polygon_lonlat: list[list[float]] | None = Field(default=None, min_length=3)
+    key_points_lonlat: list[list[float]] | None = Field(default=None, min_length=2)
     cruise_alt: float = Field(default=30.0, gt=0, le=500.0)
     path_offset_m: float = Field(default=15.0, ge=0.0, le=120.0)
     direction: Literal["clockwise", "counterclockwise"] = "clockwise"
@@ -2046,16 +2062,18 @@ class PrivatePatrolPreviewIn(BaseModel):
     grid_angle_deg: float = Field(default=0.0, ge=0.0, lt=180.0)
     safety_inset_m: float = Field(default=2.0, ge=0.0, le=100.0)
     trigger_type: PatrolTriggerType = "fence_alarm"
-    trigger_event_location_lonlat: Optional[List[float]] = Field(default=None, min_length=2, max_length=2)
-    target_label: Optional[str] = Field(default=None, max_length=120)
+    trigger_event_location_lonlat: list[float] | None = Field(
+        default=None, min_length=2, max_length=2
+    )
+    target_label: str | None = Field(default=None, max_length=120)
     verification_loiter_s: float = Field(default=45.0, ge=0.0, le=600.0)
     verification_radius_m: float = Field(default=18.0, ge=0.0, le=150.0)
     track_target: bool = True
     auto_stream_video: bool = True
-    ai_tasks: List[PatrolTaskType] = Field(default_factory=lambda: list(PATROL_AI_TASKS))
+    ai_tasks: list[PatrolTaskType] = Field(default_factory=lambda: list(PATROL_AI_TASKS))
 
     @model_validator(mode="after")
-    def _validate_by_task(self) -> "PrivatePatrolPreviewIn":
+    def _validate_by_task(self) -> PrivatePatrolPreviewIn:
         if self.task_type in {"perimeter_patrol", "grid_surveillance"}:
             if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
                 raise ValueError(
@@ -2068,9 +2086,13 @@ class PrivatePatrolPreviewIn(BaseModel):
                 )
         elif self.task_type == "event_triggered_patrol":
             _ = normalize_trigger_type(self.trigger_type)
-            has_event_loc = bool(self.trigger_event_location_lonlat and len(self.trigger_event_location_lonlat) == 2)
+            has_event_loc = bool(
+                self.trigger_event_location_lonlat and len(self.trigger_event_location_lonlat) == 2
+            )
             if self.trigger_type == "night_schedule":
-                if not has_event_loc and not (self.property_polygon_lonlat and len(self.property_polygon_lonlat) >= 3):
+                if not has_event_loc and not (
+                    self.property_polygon_lonlat and len(self.property_polygon_lonlat) >= 3
+                ):
                     raise ValueError(
                         "task_type='event_triggered_patrol' with trigger_type='night_schedule' "
                         "requires trigger_event_location_lonlat or property_polygon_lonlat."
@@ -2083,11 +2105,11 @@ class PrivatePatrolPreviewIn(BaseModel):
 
 
 class PrivatePatrolPreviewOut(BaseModel):
-    waypoints: List[dict]
-    work_leg_mask: List[bool]
+    waypoints: list[dict]
+    work_leg_mask: list[bool]
     stats: dict
     camera: dict
-    ai_tasks: List[str]
+    ai_tasks: list[str]
 
 
 @router.get(
@@ -2105,7 +2127,9 @@ async def get_private_patrol_tasks() -> PrivatePatrolTaskCatalogOut:
 
 
 @router.post("/missions/private-patrol/preview", response_model=PrivatePatrolPreviewOut)
-async def preview_private_patrol(payload: PrivatePatrolPreviewIn) -> PrivatePatrolPreviewOut:
+async def preview_private_patrol(
+    payload: PrivatePatrolPreviewIn,
+) -> PrivatePatrolPreviewOut:
     try:
         ai_tasks = normalize_ai_tasks(payload.ai_tasks)
         if payload.task_type == "event_triggered_patrol":

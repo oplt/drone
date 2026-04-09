@@ -34,7 +34,7 @@ class AssetGatewayService:
         )
 
     def _payload(self, *, asset_id: int, user_id: int, exp: int, path: str) -> bytes:
-        return f"{asset_id}:{user_id}:{exp}:{path}".encode("utf-8")
+        return f"{asset_id}:{user_id}:{exp}:{path}".encode()
 
     def sign(self, *, asset_id: int, user_id: int, exp: int, path: str = "") -> str:
         payload = self._payload(asset_id=asset_id, user_id=user_id, exp=exp, path=path)
@@ -70,7 +70,9 @@ class AssetGatewayService:
             qp += f"&path={quote(path)}"
         return f"/mapping/assets/{asset_id}/download?{qp}", exp
 
-    def resolve_local_target(self, *, asset_url: str, asset_type: str, path: str = "") -> Path | None:
+    def resolve_local_target(
+        self, *, asset_url: str, asset_type: str, path: str = ""
+    ) -> Path | None:
         """
         Resolve asset URL to a local file path when asset is served from local mapping storage.
         """

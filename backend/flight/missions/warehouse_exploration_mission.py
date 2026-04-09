@@ -5,15 +5,15 @@ import logging
 import math
 import time
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from backend.db.models import FlightStatus
 from backend.drone.models import Coordinate
 from backend.flight.indoor import (
-    DockPose,
     DockingController,
+    DockPose,
     DroneLocalNavigationAdapter,
     Frontier,
     FrontierExtractor,
@@ -44,9 +44,9 @@ logger = logging.getLogger(__name__)
 
 
 class WarehouseExplorationMissionParams(BaseModel):
-    warehouse_map_id: Optional[int] = Field(default=None, ge=1)
-    warehouse_name: Optional[str] = Field(default=None, min_length=1, max_length=128)
-    dock_config: Optional[WarehouseDockConfigParams] = None
+    warehouse_map_id: int | None = Field(default=None, ge=1)
+    warehouse_name: str | None = Field(default=None, min_length=1, max_length=128)
+    dock_config: WarehouseDockConfigParams | None = None
     frontier_selection_strategy: Literal["weighted_score"] = "weighted_score"
     max_mission_time_s: float = Field(default=900.0, gt=10.0, le=86_400.0)
     max_exploration_radius_m: float = Field(default=80.0, gt=1.0, le=2_000.0)
@@ -72,7 +72,7 @@ class WarehouseExplorationMissionParams(BaseModel):
     dock_descent_speed_mps: float = Field(default=0.15, gt=0.01, le=2.0)
     docking_timeout_s: float = Field(default=90.0, gt=5.0, le=3_600.0)
     occupancy_resolution_m: float = Field(default=0.5, gt=0.05, le=5.0)
-    voxel_resolution_m: Optional[float] = Field(default=None, gt=0.01, le=5.0)
+    voxel_resolution_m: float | None = Field(default=None, gt=0.01, le=5.0)
     map_update_hz: float = Field(default=2.0, gt=0.1, le=50.0)
     map_snapshot_interval_s: float = Field(default=5.0, gt=0.2, le=600.0)
     loop_closure_preference_weight: float = Field(default=1.0, ge=0.0, le=10.0)
@@ -80,11 +80,10 @@ class WarehouseExplorationMissionParams(BaseModel):
     transit_speed_mps: float = Field(default=1.1, gt=0.05, le=15.0)
 
     @model_validator(mode="after")
-    def validate_reserves(self) -> "WarehouseExplorationMissionParams":
+    def validate_reserves(self) -> WarehouseExplorationMissionParams:
         if self.battery_return_reserve_pct <= self.battery_emergency_land_reserve_pct:
             raise ValueError(
-                "battery_return_reserve_pct must exceed "
-                "battery_emergency_land_reserve_pct"
+                "battery_return_reserve_pct must exceed battery_emergency_land_reserve_pct"
             )
         return self
 
@@ -107,7 +106,7 @@ def build_unknown_warehouse_exploration_mission(
     *,
     hover_alt_m: float,
     exploration: WarehouseExplorationMissionParams,
-    owner_id: Optional[int] = None,
+    owner_id: int | None = None,
 ):
     if exploration.dock_config is None:
         raise ValueError(
@@ -143,7 +142,9 @@ def build_unknown_warehouse_exploration_mission(
         battery_return_reserve_pct=float(exploration.battery_return_reserve_pct),
         battery_emergency_land_reserve_pct=float(exploration.battery_emergency_land_reserve_pct),
         localization_confidence_min=float(exploration.localization_confidence_min),
-        localization_confidence_return_threshold=float(exploration.localization_confidence_return_threshold),
+        localization_confidence_return_threshold=float(
+            exploration.localization_confidence_return_threshold
+        ),
         obstacle_clearance_m=float(exploration.obstacle_clearance_m),
         relocalization_timeout_s=float(exploration.relocalization_timeout_s),
         backtrack_node_limit=int(exploration.backtrack_node_limit),
@@ -167,9 +168,9 @@ def build_unknown_warehouse_exploration_mission(
 @dataclass
 class UnknownWarehouseExplorationMission:
     dock: DockPose
-    warehouse_map_id: Optional[int] = None
-    warehouse_name: Optional[str] = None
-    owner_id: Optional[int] = None
+    warehouse_map_id: int | None = None
+    warehouse_name: str | None = None
+    owner_id: int | None = None
 
     indoor_hover_alt_m: float = 2.5
     frontier_selection_strategy: str = "weighted_score"
@@ -197,21 +198,23 @@ class UnknownWarehouseExplorationMission:
     dock_descent_speed_mps: float = 0.15
     docking_timeout_s: float = 90.0
     occupancy_resolution_m: float = 0.5
-    voxel_resolution_m: Optional[float] = None
+    voxel_resolution_m: float | None = None
     map_update_hz: float = 2.0
     map_snapshot_interval_s: float = 5.0
     loop_closure_preference_weight: float = 1.0
     explore_speed_mps: float = 0.8
     transit_speed_mps: float = 1.1
 
-    slam_provider: Optional[SLAMProvider] = field(default=None, repr=False, compare=False)
-    navigator: Optional[LocalNavigationAdapter] = field(default=None, repr=False, compare=False)
-    dock_controller: Optional[DockingController] = field(default=None, repr=False, compare=False)
+    slam_provider: SLAMProvider | None = field(default=None, repr=False, compare=False)
+    navigator: LocalNavigationAdapter | None = field(default=None, repr=False, compare=False)
+    dock_controller: DockingController | None = field(default=None, repr=False, compare=False)
 
     mission_type: str = field(default="indoor_exploration", init=False)
-    _state: IndoorMissionState = field(default=IndoorMissionState.IDLE_AT_DOCK, init=False, repr=False)
+    _state: IndoorMissionState = field(
+        default=IndoorMissionState.IDLE_AT_DOCK, init=False, repr=False
+    )
     _state_history: list[IndoorMissionState] = field(default_factory=list, init=False, repr=False)
-    _graph: "ExplorationGraph" | None = field(default=None, init=False, repr=False)
+    _graph: ExplorationGraph | None = field(default=None, init=False, repr=False)
     _mission_started_at: float = field(default=0.0, init=False, repr=False)
     _last_snapshot_event_at: float = field(default=0.0, init=False, repr=False)
     _segments_completed: int = field(default=0, init=False, repr=False)
@@ -247,7 +250,9 @@ class UnknownWarehouseExplorationMission:
             "battery_return_reserve_pct": float(self.battery_return_reserve_pct),
             "battery_emergency_land_reserve_pct": float(self.battery_emergency_land_reserve_pct),
             "localization_confidence_min": float(self.localization_confidence_min),
-            "localization_confidence_return_threshold": float(self.localization_confidence_return_threshold),
+            "localization_confidence_return_threshold": float(
+                self.localization_confidence_return_threshold
+            ),
             "obstacle_clearance_m": float(self.obstacle_clearance_m),
             "minimum_corridor_clearance_m": float(self.minimum_corridor_clearance_m),
             "max_mission_time_s": float(self.max_mission_time_s),
@@ -268,7 +273,7 @@ class UnknownWarehouseExplorationMission:
             "local_control_mode": "local_setpoint",
         }
 
-    async def execute(self, orch: "Orchestrator", *, alt: float = 2.5) -> None:
+    async def execute(self, orch: Orchestrator, *, alt: float = 2.5) -> None:
         if not math.isclose(float(alt), float(self.indoor_hover_alt_m), abs_tol=1e-6):
             self.indoor_hover_alt_m = float(alt)
         await orch.run_mission(
@@ -277,7 +282,7 @@ class UnknownWarehouseExplorationMission:
             flight_fn=lambda: self.fly_exploration(orch),
         )
 
-    async def fly_exploration(self, orch: "Orchestrator") -> None:
+    async def fly_exploration(self, orch: Orchestrator) -> None:
         self._mission_started_at = time.monotonic()
         self._last_snapshot_event_at = 0.0
         self._segments_completed = 0
@@ -326,7 +331,9 @@ class UnknownWarehouseExplorationMission:
                 },
             )
             await self._transition(orch, IndoorMissionState.INDOOR_PREFLIGHT)
-            await self._add_event_safe(orch, "indoor_preflight_passed", {"dock_id": self.dock.dock_id})
+            await self._add_event_safe(
+                orch, "indoor_preflight_passed", {"dock_id": self.dock.dock_id}
+            )
 
             await dock_controller.initialize_dock_reference(self.dock)
             self._graph.ensure_dock_node(self.dock)
@@ -357,7 +364,9 @@ class UnknownWarehouseExplorationMission:
                     timeout_s=float(self.frontier_reach_timeout_s),
                 )
             bootstrap_health = await slam.get_localization_health()
-            if float(bootstrap_health.localization_confidence) < float(self.localization_confidence_min):
+            if float(bootstrap_health.localization_confidence) < float(
+                self.localization_confidence_min
+            ):
                 raise RuntimeError(
                     "SLAM bootstrap did not reach the minimum localization confidence"
                 )
@@ -401,7 +410,9 @@ class UnknownWarehouseExplorationMission:
                     if not recovered:
                         if await self._can_return_to_dock(slam):
                             break
-                        raise RuntimeError("Localization could not be recovered and no safe return path remained")
+                        raise RuntimeError(
+                            "Localization could not be recovered and no safe return path remained"
+                        )
                     current_pose = await slam.get_pose()
                     health = await slam.get_localization_health()
 
@@ -494,7 +505,9 @@ class UnknownWarehouseExplorationMission:
                 self._segments_completed += 1
                 segments_since_loop += 1
 
-                if float(reached_health.localization_confidence) <= float(self.localization_confidence_return_threshold):
+                if float(reached_health.localization_confidence) <= float(
+                    self.localization_confidence_return_threshold
+                ):
                     await self._add_event_safe(
                         orch,
                         "return_margin_low",
@@ -546,7 +559,11 @@ class UnknownWarehouseExplorationMission:
 
         await self._finish_flight_safe(orch, status=final_status, note=final_note)
 
-        event_type = "indoor_mission_completed" if final_status == FlightStatus.COMPLETED else "indoor_mission_failed"
+        event_type = (
+            "indoor_mission_completed"
+            if final_status == FlightStatus.COMPLETED
+            else "indoor_mission_failed"
+        )
         await self._add_event_safe(
             orch,
             event_type,
@@ -562,13 +579,17 @@ class UnknownWarehouseExplorationMission:
         if mission_error is not None:
             raise mission_error
 
-    def _resolve_slam_provider(self, orch: "Orchestrator") -> SLAMProvider:
+    def _resolve_slam_provider(self, orch: Orchestrator) -> SLAMProvider:
         if self.slam_provider is not None:
             return self.slam_provider
         for target in (orch, getattr(orch, "drone", None)):
             if target is None:
                 continue
-            for attr in ("indoor_slam_provider", "slam_provider", "localization_provider"):
+            for attr in (
+                "indoor_slam_provider",
+                "slam_provider",
+                "localization_provider",
+            ):
                 provider = getattr(target, attr, None)
                 if provider is not None:
                     self.slam_provider = provider
@@ -580,7 +601,7 @@ class UnknownWarehouseExplorationMission:
 
     def _resolve_navigator(
         self,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         slam: SLAMProvider,
     ) -> LocalNavigationAdapter:
         if self.navigator is not None:
@@ -590,7 +611,9 @@ class UnknownWarehouseExplorationMission:
             self.navigator = SimulatedLocalNavigationAdapter(slam)
             return self.navigator
         if drone is None:
-            raise RuntimeError("Indoor exploration requires a local navigation adapter or an active drone")
+            raise RuntimeError(
+                "Indoor exploration requires a local navigation adapter or an active drone"
+            )
         self.navigator = DroneLocalNavigationAdapter(drone=drone, slam_provider=slam)
         return self.navigator
 
@@ -613,7 +636,9 @@ class UnknownWarehouseExplorationMission:
             max(0.4, float(self.safe_takeoff_bubble_radius_m) * 0.65),
             1.25,
         )
-        base = self.dock.exit_pose.translated(dz_m=float(self.indoor_hover_alt_m) - float(self.dock.exit_pose.z_m))
+        base = self.dock.exit_pose.translated(
+            dz_m=float(self.indoor_hover_alt_m) - float(self.dock.exit_pose.z_m)
+        )
         return [
             base,
             base.translated(dx_m=radius),
@@ -623,7 +648,7 @@ class UnknownWarehouseExplorationMission:
             base,
         ]
 
-    async def _emit_snapshot_status(self, orch: "Orchestrator", snapshot: "MapSnapshot") -> None:
+    async def _emit_snapshot_status(self, orch: Orchestrator, snapshot: MapSnapshot) -> None:
         now = time.monotonic()
         if (now - self._last_snapshot_event_at) < float(self.map_snapshot_interval_s):
             return
@@ -641,7 +666,7 @@ class UnknownWarehouseExplorationMission:
                 logger.exception("Failed publishing indoor exploration status to MQTT")
         await self._add_event_safe(orch, "indoor_map_snapshot", payload)
 
-    async def _transition(self, orch: "Orchestrator", state: IndoorMissionState) -> None:
+    async def _transition(self, orch: Orchestrator, state: IndoorMissionState) -> None:
         self._state = state
         self._state_history.append(state)
         await self._publish_status(
@@ -652,7 +677,7 @@ class UnknownWarehouseExplorationMission:
             },
         )
 
-    async def _publish_status(self, orch: "Orchestrator", payload: dict[str, object]) -> None:
+    async def _publish_status(self, orch: Orchestrator, payload: dict[str, object]) -> None:
         if getattr(orch, "mqtt", None):
             try:
                 orch.mqtt.publish("drone/indoor_exploration/status", payload, qos=1)
@@ -664,7 +689,7 @@ class UnknownWarehouseExplorationMission:
             return 0.0
         return max(0.0, time.monotonic() - self._mission_started_at)
 
-    async def _get_battery_remaining_pct(self, orch: "Orchestrator") -> float:
+    async def _get_battery_remaining_pct(self, orch: Orchestrator) -> float:
         telemetry = await asyncio.to_thread(orch.drone.get_telemetry)
         battery = getattr(telemetry, "battery_remaining", None)
         if battery is None:
@@ -680,7 +705,9 @@ class UnknownWarehouseExplorationMission:
         if nearest is not None:
             return
         neighbor = self._graph.nearest_node(pose, confirmed_only=True, max_distance_m=6.0)
-        dock_connected = pose.planar_distance_to(self.dock.pose) <= float(self.max_exploration_radius_m)
+        dock_connected = pose.planar_distance_to(self.dock.pose) <= float(
+            self.max_exploration_radius_m
+        )
         node = self._graph.add_node(
             pose,
             confidence=float(confidence),
@@ -697,11 +724,11 @@ class UnknownWarehouseExplorationMission:
     async def _select_frontier(
         self,
         *,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         slam: SLAMProvider,
-        snapshot: "MapSnapshot",
+        snapshot: MapSnapshot,
         current_pose: LocalPose,
-        health: "SLAMHealth",
+        health: SLAMHealth,
         frontier_extractor: FrontierExtractor,
         frontier_scorer: FrontierScorer,
         frontier_selector: FrontierSelector,
@@ -726,14 +753,22 @@ class UnknownWarehouseExplorationMission:
                 await self._add_event_safe(
                     orch,
                     "frontier_rejected",
-                    {"frontier_id": frontier.frontier_id, "reason": "low_information_gain"},
+                    {
+                        "frontier_id": frontier.frontier_id,
+                        "reason": "low_information_gain",
+                    },
                 )
                 continue
-            if frontier.centroid.planar_distance_to(self.dock.pose) > float(self.max_exploration_radius_m):
+            if frontier.centroid.planar_distance_to(self.dock.pose) > float(
+                self.max_exploration_radius_m
+            ):
                 await self._add_event_safe(
                     orch,
                     "frontier_rejected",
-                    {"frontier_id": frontier.frontier_id, "reason": "beyond_radius_limit"},
+                    {
+                        "frontier_id": frontier.frontier_id,
+                        "reason": "beyond_radius_limit",
+                    },
                 )
                 continue
             return_path = snapshot.occupancy_grid.astar_path(
@@ -745,7 +780,10 @@ class UnknownWarehouseExplorationMission:
                 await self._add_event_safe(
                     orch,
                     "frontier_rejected",
-                    {"frontier_id": frontier.frontier_id, "reason": "no_safe_return_path"},
+                    {
+                        "frontier_id": frontier.frontier_id,
+                        "reason": "no_safe_return_path",
+                    },
                 )
                 continue
             margin = return_evaluator.evaluate(
@@ -777,7 +815,9 @@ class UnknownWarehouseExplorationMission:
                 frontier_scorer.score(
                     enriched,
                     skeleton_phase=skeleton_phase,
-                    loop_closure_due=(self._segments_completed >= self.force_loop_closure_every_n_segments),
+                    loop_closure_due=(
+                        self._segments_completed >= self.force_loop_closure_every_n_segments
+                    ),
                 )
             )
 
@@ -802,7 +842,7 @@ class UnknownWarehouseExplorationMission:
     def _build_frontier_probe_path(
         self,
         *,
-        snapshot: "MapSnapshot",
+        snapshot: MapSnapshot,
         frontier: Frontier,
     ) -> list[LocalPose]:
         raw_cells = list(frontier.metadata.get("cells", []))
@@ -810,7 +850,12 @@ class UnknownWarehouseExplorationMission:
             return []
         limit = max(
             1,
-            int(math.ceil(float(self.max_unknown_penetration_m) / float(snapshot.occupancy_grid.resolution_m))),
+            int(
+                math.ceil(
+                    float(self.max_unknown_penetration_m)
+                    / float(snapshot.occupancy_grid.resolution_m)
+                )
+            ),
         )
         selected_cells = raw_cells[:limit]
         return [
@@ -821,10 +866,10 @@ class UnknownWarehouseExplorationMission:
     async def _run_loop_closure(
         self,
         *,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         slam: SLAMProvider,
         navigator: LocalNavigationAdapter,
-        snapshot: "MapSnapshot",
+        snapshot: MapSnapshot,
         current_pose: LocalPose,
     ) -> bool:
         if self._graph is None:
@@ -865,7 +910,7 @@ class UnknownWarehouseExplorationMission:
     async def _handle_localization_degradation(
         self,
         *,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         slam: SLAMProvider,
         navigator: LocalNavigationAdapter,
     ) -> bool:
@@ -922,16 +967,18 @@ class UnknownWarehouseExplorationMission:
             )
         )
 
-    def _should_force_return(self, orch: "Orchestrator", current_pose: LocalPose) -> bool:
+    def _should_force_return(self, orch: Orchestrator, current_pose: LocalPose) -> bool:
         del orch
         if self._flight_elapsed_s() >= float(self.max_mission_time_s):
             return True
-        return current_pose.planar_distance_to(self.dock.pose) >= float(self.max_exploration_radius_m)
+        return current_pose.planar_distance_to(self.dock.pose) >= float(
+            self.max_exploration_radius_m
+        )
 
     async def _return_to_dock(
         self,
         *,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         slam: SLAMProvider,
         navigator: LocalNavigationAdapter,
     ) -> bool:
@@ -986,7 +1033,7 @@ class UnknownWarehouseExplorationMission:
     async def _run_precision_docking(
         self,
         *,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         slam: SLAMProvider,
         dock_controller: DockingController,
         navigator: LocalNavigationAdapter,
@@ -1022,7 +1069,7 @@ class UnknownWarehouseExplorationMission:
     async def _safe_land(
         self,
         *,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         navigator: LocalNavigationAdapter,
         reason: str,
     ) -> bool:
@@ -1042,7 +1089,7 @@ class UnknownWarehouseExplorationMission:
 
     async def _finish_flight_safe(
         self,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         *,
         status: FlightStatus,
         note: str,
@@ -1057,14 +1104,17 @@ class UnknownWarehouseExplorationMission:
             await orch.repo.finish_flight(flight_id, status=status, note=safe_note)
             return True
         except Exception:
-            logger.exception("UnknownWarehouseExplorationMission: failed to finish flight_id=%s", flight_id)
+            logger.exception(
+                "UnknownWarehouseExplorationMission: failed to finish flight_id=%s",
+                flight_id,
+            )
             return False
 
     async def _add_event_safe(
         self,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         event_type: str,
-        data: Optional[dict] = None,
+        data: dict | None = None,
     ) -> None:
         flight_id = getattr(orch, "_flight_id", None)
         if flight_id is None:

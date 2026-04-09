@@ -23,12 +23,11 @@ export default function AppTheme(props: AppThemeProps) {
     return disableCustomTheme
       ? {}
       : createTheme({
-          // For more details about CSS variables configuration, see https://mui.com/material-ui/customization/css-theme-variables/configuration/
           cssVariables: {
             colorSchemeSelector: 'data-mui-color-scheme',
             cssVarPrefix: 'template',
           },
-          colorSchemes, // Recently added in v6 for building light & dark mode app, see https://mui.com/material-ui/customization/palette/#color-schemes
+          colorSchemes,
           typography,
           shadows,
           shape,
@@ -36,45 +35,36 @@ export default function AppTheme(props: AppThemeProps) {
             MuiCssBaseline: {
               styleOverrides: {
                 '*': { boxSizing: 'border-box' },
-                ':root': {
-                  '--app-radius': '1rem',
-                },
                 html: {
                   scrollBehavior: 'smooth',
                 },
                 body: {
                   minHeight: '100dvh',
-                  backgroundImage:
-                    'radial-gradient(circle at 12% 10%, hsla(174, 50%, 90%, 0.35), transparent 45%), radial-gradient(circle at 86% 14%, hsla(38, 80%, 85%, 0.35), transparent 40%), linear-gradient(135deg, hsla(40, 48%, 98%, 0.86), hsla(34, 38%, 96%, 0.9))',
-                  backgroundAttachment: 'fixed',
+                  backgroundColor: '#fffefb',
                   textRendering: 'optimizeLegibility',
                   WebkitFontSmoothing: 'antialiased',
                 },
                 '[data-mui-color-scheme="dark"] body': {
-                  backgroundImage:
-                    'radial-gradient(circle at 12% 10%, hsla(174, 60%, 30%, 0.18), transparent 45%), radial-gradient(circle at 86% 14%, hsla(38, 70%, 35%, 0.15), transparent 40%), linear-gradient(135deg, hsla(22, 28%, 8%, 0.9), hsla(22, 22%, 10%, 0.9))',
+                  backgroundColor: '#1a1210',
                 },
                 '#root': {
                   minHeight: '100dvh',
                 },
                 '::selection': {
-                  backgroundColor: 'hsla(174, 60%, 35%, 0.25)',
+                  backgroundColor: 'rgba(255, 79, 0, 0.15)',
                 },
                 '*::-webkit-scrollbar': {
                   width: 10,
                   height: 10,
                 },
                 '*::-webkit-scrollbar-thumb': {
-                  backgroundColor: 'hsla(174, 24%, 40%, 0.28)',
-                  borderRadius: 'var(--app-radius)',
+                  backgroundColor: 'rgba(197, 192, 177, 0.5)',
+                  borderRadius: 5,
                   border: '2px solid transparent',
                   backgroundClip: 'content-box',
                 },
                 '*::-webkit-scrollbar-track': {
                   background: 'transparent',
-                },
-                '.MuiPaper-root, .MuiCard-root, .MuiButton-root, .MuiOutlinedInput-root, .MuiAlert-root, .MuiAccordion-root, .MuiAccordionSummary-root, .MuiMenu-paper, .MuiPopover-paper, .MuiDialog-paper, .MuiDrawer-paper, .MuiChip-root': {
-                  borderRadius: 'var(--app-radius) !important',
                 },
                 '@keyframes riseIn': {
                   '0%': { opacity: 0, transform: 'translateY(12px)' },

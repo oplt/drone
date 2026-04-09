@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -22,9 +23,10 @@ class WarehouseMissionDefaults(BaseModel):
     cruise_alt is kept as the field name for API compatibility but semantically
     means 'base layer height above floor (m)' — NOT an altitude AGL.
     """
+
     cruise_alt: float = Field(default=4.0, gt=0.0, le=30.0)
     corridor_spacing_m: float = Field(default=2.0, gt=0.1, le=50.0)
-    aisle_axis_deg: Optional[float] = Field(default=None, ge=-180.0, le=360.0)
+    aisle_axis_deg: float | None = Field(default=None, ge=-180.0, le=360.0)
     clearance_m: float = Field(default=0.6, gt=0.1, le=20.0)
     perimeter_offset_m: float = Field(default=0.5, ge=0.0, le=20.0)
     scan_pattern: WarehouseScanPattern = "aisle_serpentine"
@@ -45,28 +47,28 @@ DEFAULT_WAREHOUSE_MISSION_DEFAULTS = WarehouseMissionDefaults()
 
 
 class WarehouseMissionDefaultsPatch(BaseModel):
-    cruise_alt: Optional[float] = Field(default=None, gt=0.0, le=30.0)
-    corridor_spacing_m: Optional[float] = Field(default=None, gt=0.1, le=50.0)
-    aisle_axis_deg: Optional[float] = Field(default=None, ge=-180.0, le=360.0)
-    clearance_m: Optional[float] = Field(default=None, gt=0.1, le=20.0)
-    perimeter_offset_m: Optional[float] = Field(default=None, ge=0.0, le=20.0)
-    scan_pattern: Optional[WarehouseScanPattern] = None
-    lane_strategy: Optional[WarehouseLaneStrategy] = None
-    view_mode: Optional[WarehouseViewMode] = None
-    layer_count: Optional[int] = Field(default=None, ge=1, le=20)
-    layer_spacing_m: Optional[float] = Field(default=None, ge=0.0, le=20.0)
-    ceiling_height_m: Optional[float] = Field(default=None, gt=0.1, le=100.0)
-    ceiling_margin_m: Optional[float] = Field(default=None, ge=0.0, le=20.0)
-    work_speed_mps: Optional[float] = Field(default=None, gt=0.0, le=20.0)
-    transit_speed_mps: Optional[float] = Field(default=None, gt=0.0, le=30.0)
-    scan_pause_s: Optional[float] = Field(default=None, ge=0.0, le=30.0)
-    interpolate_steps_work_leg: Optional[int] = Field(default=None, ge=0, le=100)
-    interpolate_steps_transit_leg: Optional[int] = Field(default=None, ge=0, le=100)
+    cruise_alt: float | None = Field(default=None, gt=0.0, le=30.0)
+    corridor_spacing_m: float | None = Field(default=None, gt=0.1, le=50.0)
+    aisle_axis_deg: float | None = Field(default=None, ge=-180.0, le=360.0)
+    clearance_m: float | None = Field(default=None, gt=0.1, le=20.0)
+    perimeter_offset_m: float | None = Field(default=None, ge=0.0, le=20.0)
+    scan_pattern: WarehouseScanPattern | None = None
+    lane_strategy: WarehouseLaneStrategy | None = None
+    view_mode: WarehouseViewMode | None = None
+    layer_count: int | None = Field(default=None, ge=1, le=20)
+    layer_spacing_m: float | None = Field(default=None, ge=0.0, le=20.0)
+    ceiling_height_m: float | None = Field(default=None, gt=0.1, le=100.0)
+    ceiling_margin_m: float | None = Field(default=None, ge=0.0, le=20.0)
+    work_speed_mps: float | None = Field(default=None, gt=0.0, le=20.0)
+    transit_speed_mps: float | None = Field(default=None, gt=0.0, le=30.0)
+    scan_pause_s: float | None = Field(default=None, ge=0.0, le=30.0)
+    interpolate_steps_work_leg: int | None = Field(default=None, ge=0, le=100)
+    interpolate_steps_transit_leg: int | None = Field(default=None, ge=0, le=100)
 
 
 def merge_warehouse_mission_defaults(
-        defaults: WarehouseMissionDefaults,
-        overrides: WarehouseMissionDefaultsPatch | Mapping[str, Any] | None = None,
+    defaults: WarehouseMissionDefaults,
+    overrides: WarehouseMissionDefaultsPatch | Mapping[str, Any] | None = None,
 ) -> WarehouseMissionDefaults:
     if overrides is None:
         return defaults
@@ -77,9 +79,7 @@ def merge_warehouse_mission_defaults(
     )
     if not update:
         return defaults
-    return WarehouseMissionDefaults.model_validate(
-        {**defaults.model_dump(mode="python"), **update}
-    )
+    return WarehouseMissionDefaults.model_validate({**defaults.model_dump(mode="python"), **update})
 
 
 class WarehouseScanMissionParams(BaseModel):
@@ -88,35 +88,64 @@ class WarehouseScanMissionParams(BaseModel):
     polygon_local_m defines the warehouse boundary in metres relative to the
     dock/takeoff origin.  No GPS coordinates.
     """
+
     polygon_local_m: list[list[float]] = Field(
         ...,
         min_length=3,
         description="Warehouse boundary ring as [[x_m, y_m], ...] in the local metric frame",
     )
-    warehouse_map_id: Optional[int] = Field(default=None, ge=1)
-    warehouse_name: Optional[str] = Field(default=None, min_length=1, max_length=128)
-    reference_mapping_job_id: Optional[int] = Field(default=None, ge=1)
+    warehouse_map_id: int | None = Field(default=None, ge=1)
+    warehouse_name: str | None = Field(default=None, min_length=1, max_length=128)
+    reference_mapping_job_id: int | None = Field(default=None, ge=1)
 
-    corridor_spacing_m: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.corridor_spacing_m, gt=0.1, le=50.0)
-    aisle_axis_deg: Optional[float] = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.aisle_axis_deg, ge=-180.0, le=360.0)
-    clearance_m: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.clearance_m, gt=0.1, le=20.0)
-    perimeter_offset_m: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.perimeter_offset_m, ge=0.0, le=20.0)
+    corridor_spacing_m: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.corridor_spacing_m, gt=0.1, le=50.0
+    )
+    aisle_axis_deg: float | None = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.aisle_axis_deg, ge=-180.0, le=360.0
+    )
+    clearance_m: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.clearance_m, gt=0.1, le=20.0
+    )
+    perimeter_offset_m: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.perimeter_offset_m, ge=0.0, le=20.0
+    )
     scan_pattern: WarehouseScanPattern = DEFAULT_WAREHOUSE_MISSION_DEFAULTS.scan_pattern
     lane_strategy: WarehouseLaneStrategy = DEFAULT_WAREHOUSE_MISSION_DEFAULTS.lane_strategy
     view_mode: WarehouseViewMode = DEFAULT_WAREHOUSE_MISSION_DEFAULTS.view_mode
     layer_count: int = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.layer_count, ge=1, le=20)
-    layer_spacing_m: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.layer_spacing_m, ge=0.0, le=20.0)
-    ceiling_height_m: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.ceiling_height_m, gt=0.1, le=100.0)
-    ceiling_margin_m: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.ceiling_margin_m, ge=0.0, le=20.0)
-    work_speed_mps: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.work_speed_mps, gt=0.0, le=20.0)
-    transit_speed_mps: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.transit_speed_mps, gt=0.0, le=30.0)
-    scan_pause_s: float = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.scan_pause_s, ge=0.0, le=30.0)
-    interpolate_steps_work_leg: int = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.interpolate_steps_work_leg, ge=0, le=100)
-    interpolate_steps_transit_leg: int = Field(default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.interpolate_steps_transit_leg, ge=0, le=100)
-    dock_config: Optional["WarehouseDockConfigParams"] = None
+    layer_spacing_m: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.layer_spacing_m, ge=0.0, le=20.0
+    )
+    ceiling_height_m: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.ceiling_height_m, gt=0.1, le=100.0
+    )
+    ceiling_margin_m: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.ceiling_margin_m, ge=0.0, le=20.0
+    )
+    work_speed_mps: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.work_speed_mps, gt=0.0, le=20.0
+    )
+    transit_speed_mps: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.transit_speed_mps, gt=0.0, le=30.0
+    )
+    scan_pause_s: float = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.scan_pause_s, ge=0.0, le=30.0
+    )
+    interpolate_steps_work_leg: int = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.interpolate_steps_work_leg,
+        ge=0,
+        le=100,
+    )
+    interpolate_steps_transit_leg: int = Field(
+        default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.interpolate_steps_transit_leg,
+        ge=0,
+        le=100,
+    )
+    dock_config: WarehouseDockConfigParams | None = None
 
     @model_validator(mode="after")
-    def _validate_warehouse_target(self) -> "WarehouseScanMissionParams":
+    def _validate_warehouse_target(self) -> WarehouseScanMissionParams:
         if self.warehouse_map_id is None and not (self.warehouse_name or "").strip():
             raise ValueError(
                 "warehouse_scan requires warehouse_map_id or warehouse_name "
@@ -129,15 +158,15 @@ class WarehouseDockPoseParams(BaseModel):
     x_m: float
     y_m: float
     z_m: float = 0.0
-    yaw_deg: Optional[float] = Field(default=None, ge=-180.0, le=360.0)
+    yaw_deg: float | None = Field(default=None, ge=-180.0, le=360.0)
 
 
 class WarehouseDockConfigParams(BaseModel):
     dock_pose: WarehouseDockPoseParams
     entry_pose: WarehouseDockPoseParams
     exit_pose: WarehouseDockPoseParams
-    marker_id: Optional[str] = Field(default=None, max_length=128)
-    dock_yaw_deg: Optional[float] = Field(default=None, ge=-180.0, le=360.0)
+    marker_id: str | None = Field(default=None, max_length=128)
+    dock_yaw_deg: float | None = Field(default=None, ge=-180.0, le=360.0)
     precision_required: bool = True
 
 
@@ -154,10 +183,10 @@ def _dock_pose_to_local_point(pose: WarehouseDockPoseParams) -> WarehouseLocalPo
 
 
 def build_warehouse_scan_mission(
-        *,
-        base_height_m: float,
-        scan: WarehouseScanMissionParams,
-        owner_id: Optional[int] = None,
+    *,
+    base_height_m: float,
+    scan: WarehouseScanMissionParams,
+    owner_id: int | None = None,
 ):
     poly = [tuple(pt) for pt in scan.polygon_local_m]
     dock_config = None

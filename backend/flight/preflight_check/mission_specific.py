@@ -1,17 +1,25 @@
-from .schemas import CheckResult, CheckStatus
-from math import tan, radians, atan, sqrt, pi, sin, cos
-from typing import List, Optional, Any, Dict, Iterable, Tuple, Sequence
-from ..missions.schemas import (
-    Mission, GridMission, OrbitMission, TerrainFollowMission,
-    PerimeterPatrolMission, AdaptiveAltitudeMission, Waypoint,
-    WarehouseScanMission, IndoorExplorationMission,
-)
-from .preflight_context import PreflightContext
 import math
-from backend.drone.models import Coordinate
-from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
+from collections.abc import Iterable, Sequence
+from math import atan, pi, radians, tan
+from typing import Any
+
 from shapely.geometry import LineString, Point, Polygon
 
+from backend.analysis.range_estimator import SimpleWhPerKmModel
+from backend.drone.models import Coordinate
+
+from ..missions.schemas import (
+    AdaptiveAltitudeMission,
+    GridMission,
+    IndoorExplorationMission,
+    OrbitMission,
+    PerimeterPatrolMission,
+    TerrainFollowMission,
+    WarehouseScanMission,
+    Waypoint,
+)
+from .preflight_context import PreflightContext
+from .schemas import CheckResult, CheckStatus
 
 
 class MissionPreflightBase:
@@ -33,17 +41,17 @@ class MissionPreflightBase:
         self.range_model = SimpleWhPerKmModel()
 
         # Default thresholds from context
-        self.A_LAT_MAX = context.get_threshold('A_LAT_MAX', 9.81)
-        self.BANK_MAX_DEG = context.get_threshold('BANK_MAX_DEG', 35)
-        self.TURN_PENALTY_S = context.get_threshold('TURN_PENALTY_S', 5)
-        self.AGL_MIN = context.get_threshold('AGL_MIN', 10)
-        self.AGL_MAX = context.get_threshold('AGL_MAX', 120)
+        self.A_LAT_MAX = context.get_threshold("A_LAT_MAX", 9.81)
+        self.BANK_MAX_DEG = context.get_threshold("BANK_MAX_DEG", 35)
+        self.TURN_PENALTY_S = context.get_threshold("TURN_PENALTY_S", 5)
+        self.AGL_MIN = context.get_threshold("AGL_MIN", 10)
+        self.AGL_MAX = context.get_threshold("AGL_MAX", 120)
 
     def _get_distance(self, idx1: int, idx2: int) -> float:
         """Get cached distance between waypoints."""
         return self.ctx.get_distance(idx1, idx2)
 
-    def _get_terrain(self, idx: int) -> Optional[float]:
+    def _get_terrain(self, idx: int) -> float | None:
         """Get cached terrain elevation."""
         return self.ctx.get_waypoint_terrain(idx)
 
@@ -63,7 +71,7 @@ class MissionPreflightBase:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return R * c
 
-    def _as_latlon(self, p: Any) -> Optional[Tuple[float, float]]:
+    def _as_latlon(self, p: Any) -> tuple[float, float] | None:
         """Best-effort extraction of (lat, lon) from waypoint/polygon point."""
         try:
             if isinstance(p, (tuple, list)) and len(p) >= 2:
@@ -71,15 +79,15 @@ class MissionPreflightBase:
             if isinstance(p, dict) and "lat" in p and "lon" in p:
                 return float(p["lat"]), float(p["lon"])
             if hasattr(p, "lat") and hasattr(p, "lon"):
-                return float(getattr(p, "lat")), float(getattr(p, "lon"))
+                return float(p.lat), float(p.lon)
             if hasattr(p, "latitude") and hasattr(p, "longitude"):
-                return float(getattr(p, "latitude")), float(getattr(p, "longitude"))
+                return float(p.latitude), float(p.longitude)
         except Exception:
             return None
         return None
 
-    def _normalize_polygon(self, poly: Iterable[Any]) -> List[Tuple[float, float]]:
-        pts: List[Tuple[float, float]] = []
+    def _normalize_polygon(self, poly: Iterable[Any]) -> list[tuple[float, float]]:
+        pts: list[tuple[float, float]] = []
         for p in poly:
             ll = self._as_latlon(p)
             if ll is not None:
@@ -89,7 +97,7 @@ class MissionPreflightBase:
         return pts
 
     @staticmethod
-    def _point_in_polygon(lat: float, lon: float, polygon: Sequence[Tuple[float, float]]) -> bool:
+    def _point_in_polygon(lat: float, lon: float, polygon: Sequence[tuple[float, float]]) -> bool:
         """Ray casting point-in-polygon (lat/lon treated as local planar coords)."""
         if len(polygon) < 3:
             return False
@@ -101,15 +109,15 @@ class MissionPreflightBase:
             y1, x1 = polygon[i]
             y2, x2 = polygon[(i + 1) % n]
             intersects = ((y1 > y) != (y2 > y)) and (
-                    x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-16) + x1
+                x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-16) + x1
             )
             if intersects:
                 inside = not inside
         return inside
 
-    def _mission_points(self) -> List[Tuple[float, float]]:
+    def _mission_points(self) -> list[tuple[float, float]]:
         """Representative mission points for containment/range checks."""
-        pts: List[Tuple[float, float]] = []
+        pts: list[tuple[float, float]] = []
         wps = getattr(self.mission, "waypoints", None)
         if wps:
             for wp in wps:
@@ -141,55 +149,95 @@ class MissionPreflightBase:
     def check_speed_limits(self) -> CheckResult:
         """Ensure mission speed is plausible and within vehicle limits (if available)."""
         if not hasattr(self.mission, "speed") or self.mission.speed is None:
-            return CheckResult(name="Mission Speed", status=CheckStatus.SKIP, message="No mission speed provided")
+            return CheckResult(
+                name="Mission Speed",
+                status=CheckStatus.SKIP,
+                message="No mission speed provided",
+            )
 
         v_cmd = float(self.mission.speed)
         v_max = getattr(self.v, "speed_max_mps", None)
         v_cruise = getattr(self.v, "cruise_speed_mps", None)
 
         if v_max is not None and v_cmd > float(v_max):
-            return CheckResult(name="Mission Speed", status=CheckStatus.FAIL, message=f"{v_cmd:.1f}m/s > max {float(v_max):.1f}m/s")
+            return CheckResult(
+                name="Mission Speed",
+                status=CheckStatus.FAIL,
+                message=f"{v_cmd:.1f}m/s > max {float(v_max):.1f}m/s",
+            )
 
         if v_cruise is not None and v_cmd < 0.3 * float(v_cruise):
-            return CheckResult(name="Mission Speed", status=CheckStatus.WARN, message=f"{v_cmd:.1f}m/s unusually low vs cruise {float(v_cruise):.1f}m/s")
+            return CheckResult(
+                name="Mission Speed",
+                status=CheckStatus.WARN,
+                message=f"{v_cmd:.1f}m/s unusually low vs cruise {float(v_cruise):.1f}m/s",
+            )
 
-        return CheckResult(name="Mission Speed", status=CheckStatus.PASS, message=f"{v_cmd:.1f} m/s")
+        return CheckResult(
+            name="Mission Speed", status=CheckStatus.PASS, message=f"{v_cmd:.1f} m/s"
+        )
 
     def check_waypoint_count_limit(self) -> CheckResult:
         """Guard against FC mission-item limits / upload issues."""
         wps = getattr(self.mission, "waypoints", None)
         if not wps:
-            return CheckResult(name="Waypoint Count", status=CheckStatus.SKIP, message="No waypoints")
+            return CheckResult(
+                name="Waypoint Count", status=CheckStatus.SKIP, message="No waypoints"
+            )
         max_wps = int(self._thr("MAX_WAYPOINTS", 700))
         if len(wps) > max_wps:
-            return CheckResult(name="Waypoint Count", status=CheckStatus.FAIL, message=f"{len(wps)} > {max_wps}")
+            return CheckResult(
+                name="Waypoint Count",
+                status=CheckStatus.FAIL,
+                message=f"{len(wps)} > {max_wps}",
+            )
         return CheckResult(name="Waypoint Count", status=CheckStatus.PASS, message=f"{len(wps)}")
 
     def check_agl_envelope_basic(self) -> CheckResult:
         """For missions with altitude_agl, enforce envelope."""
         agl = getattr(self.mission, "altitude_agl", None)
         if agl is None:
-            return CheckResult(name="AGL Envelope", status=CheckStatus.SKIP, message="No altitude_agl on mission")
+            return CheckResult(
+                name="AGL Envelope",
+                status=CheckStatus.SKIP,
+                message="No altitude_agl on mission",
+            )
         if float(agl) < float(self.AGL_MIN):
-            return CheckResult(name="AGL Envelope", status=CheckStatus.FAIL, message=f"AGL {agl}m < min {self.AGL_MIN}m")
+            return CheckResult(
+                name="AGL Envelope",
+                status=CheckStatus.FAIL,
+                message=f"AGL {agl}m < min {self.AGL_MIN}m",
+            )
         if float(agl) > float(self.AGL_MAX):
-            return CheckResult(name="AGL Envelope", status=CheckStatus.FAIL, message=f"AGL {agl}m > max {self.AGL_MAX}m")
+            return CheckResult(
+                name="AGL Envelope",
+                status=CheckStatus.FAIL,
+                message=f"AGL {agl}m > max {self.AGL_MAX}m",
+            )
         return CheckResult(name="AGL Envelope", status=CheckStatus.PASS, message=f"AGL {agl}m")
 
     def check_max_range_from_home(self) -> CheckResult:
         """Ensure mission remains within a max radius from home (if home known)."""
         pts = self._mission_points()
         if not pts:
-            return CheckResult(name="Max Range From Home", status=CheckStatus.SKIP, message="No mission points")
+            return CheckResult(
+                name="Max Range From Home",
+                status=CheckStatus.SKIP,
+                message="No mission points",
+            )
 
         home_lat = getattr(self.v, "home_lat", None)
         home_lon = getattr(self.v, "home_lon", None)
         if home_lat is None or home_lon is None:
-            return CheckResult(name="Max Range From Home", status=CheckStatus.SKIP, message="Home location not available")
+            return CheckResult(
+                name="Max Range From Home",
+                status=CheckStatus.SKIP,
+                message="Home location not available",
+            )
 
         max_range_m = float(self._thr("MAX_RANGE_M", 5000.0))
         worst = 0.0
-        for (lat, lon) in pts:
+        for lat, lon in pts:
             d_m = self._haversine_m(float(home_lat), float(home_lon), lat, lon)
             worst = max(worst, d_m)
 
@@ -200,27 +248,49 @@ class MissionPreflightBase:
             return CheckResult(
                 name="Max Range From Home",
                 status=status,
-                message=f"{worst:.0f}m > {max_range_m:.0f}m{detail}"
+                message=f"{worst:.0f}m > {max_range_m:.0f}m{detail}",
             )
-        return CheckResult(name="Max Range From Home", status=CheckStatus.PASS, message=f"{worst:.0f}m")
+        return CheckResult(
+            name="Max Range From Home", status=CheckStatus.PASS, message=f"{worst:.0f}m"
+        )
 
     def check_geofence_containment(self) -> CheckResult:
         """Validate mission points are inside ctx.geofence_polygon (if provided)."""
         raw_poly = getattr(self.ctx, "geofence_polygon", None)
         if not raw_poly:
-            return CheckResult(name="Geofence Containment", status=CheckStatus.SKIP, message="No geofence polygon")
+            return CheckResult(
+                name="Geofence Containment",
+                status=CheckStatus.SKIP,
+                message="No geofence polygon",
+            )
         poly = self._normalize_polygon(raw_poly)
         if len(poly) < 3:
-            return CheckResult(name="Geofence Containment", status=CheckStatus.FAIL, message="Invalid geofence polygon")
+            return CheckResult(
+                name="Geofence Containment",
+                status=CheckStatus.FAIL,
+                message="Invalid geofence polygon",
+            )
 
         pts = self._mission_points()
         if not pts:
-            return CheckResult(name="Geofence Containment", status=CheckStatus.SKIP, message="No mission points")
+            return CheckResult(
+                name="Geofence Containment",
+                status=CheckStatus.SKIP,
+                message="No mission points",
+            )
 
         for i, (lat, lon) in enumerate(pts):
             if not self._point_in_polygon(lat, lon, poly):
-                return CheckResult(name="Geofence Containment", status=CheckStatus.FAIL, message=f"Point {i} outside geofence")
-        return CheckResult(name="Geofence Containment", status=CheckStatus.PASS, message="All mission points inside")
+                return CheckResult(
+                    name="Geofence Containment",
+                    status=CheckStatus.FAIL,
+                    message=f"Point {i} outside geofence",
+                )
+        return CheckResult(
+            name="Geofence Containment",
+            status=CheckStatus.PASS,
+            message="All mission points inside",
+        )
 
     def check_no_fly_zones(self) -> CheckResult:
         """Validate mission points are not inside NFZ buffers (if ctx implements it)."""
@@ -228,46 +298,94 @@ class MissionPreflightBase:
         if not nfz:
             return CheckResult(name="No-Fly Zones", status=CheckStatus.SKIP, message="No NFZ data")
         if not hasattr(self.ctx, "check_no_fly_zones"):
-            return CheckResult(name="No-Fly Zones", status=CheckStatus.WARN, message="NFZ present but ctx.check_no_fly_zones not implemented")
+            return CheckResult(
+                name="No-Fly Zones",
+                status=CheckStatus.WARN,
+                message="NFZ present but ctx.check_no_fly_zones not implemented",
+            )
 
         buffer_m = float(self.ctx.get_threshold("NFZ_BUFFER_M", 50.0))
         pts = self._mission_points()
         if not pts:
-            return CheckResult(name="No-Fly Zones", status=CheckStatus.SKIP, message="No mission points")
+            return CheckResult(
+                name="No-Fly Zones",
+                status=CheckStatus.SKIP,
+                message="No mission points",
+            )
 
         for i, (lat, lon) in enumerate(pts):
             if not self.ctx.check_no_fly_zones(lat, lon, buffer_m):
-                return CheckResult(name="No-Fly Zones", status=CheckStatus.FAIL, message=f"Point {i} inside/near NFZ (buffer {buffer_m:.0f}m)")
-        return CheckResult(name="No-Fly Zones", status=CheckStatus.PASS, message=f"Buffer {buffer_m:.0f}m OK")
+                return CheckResult(
+                    name="No-Fly Zones",
+                    status=CheckStatus.FAIL,
+                    message=f"Point {i} inside/near NFZ (buffer {buffer_m:.0f}m)",
+                )
+        return CheckResult(
+            name="No-Fly Zones",
+            status=CheckStatus.PASS,
+            message=f"Buffer {buffer_m:.0f}m OK",
+        )
 
     def check_basic_terrain_clearance(self) -> CheckResult:
         """Generic clearance check using cached waypoint terrain (if available)."""
         wps = getattr(self.mission, "waypoints", None)
         if not wps:
-            return CheckResult(name="Terrain Clearance", status=CheckStatus.SKIP, message="No waypoints")
+            return CheckResult(
+                name="Terrain Clearance",
+                status=CheckStatus.SKIP,
+                message="No waypoints",
+            )
         if not hasattr(self.ctx, "get_waypoint_terrain"):
-            return CheckResult(name="Terrain Clearance", status=CheckStatus.SKIP, message="No cached terrain in context")
+            return CheckResult(
+                name="Terrain Clearance",
+                status=CheckStatus.SKIP,
+                message="No cached terrain in context",
+            )
 
         min_clearance = float(self.ctx.get_threshold("MIN_CLEARANCE_M", 5.0))
         for i, wp in enumerate(wps):
             terrain = self._get_terrain(i)
             if terrain is None:
-                return CheckResult(name="Terrain Clearance", status=CheckStatus.WARN, message=f"Terrain missing at waypoint {i}")
+                return CheckResult(
+                    name="Terrain Clearance",
+                    status=CheckStatus.WARN,
+                    message=f"Terrain missing at waypoint {i}",
+                )
             alt = getattr(wp, "alt", None)
             if alt is None:
-                return CheckResult(name="Terrain Clearance", status=CheckStatus.WARN, message=f"Waypoint {i} missing alt")
+                return CheckResult(
+                    name="Terrain Clearance",
+                    status=CheckStatus.WARN,
+                    message=f"Waypoint {i} missing alt",
+                )
             clearance = float(alt) - float(terrain)
             if clearance < min_clearance:
-                return CheckResult(name="Terrain Clearance", status=CheckStatus.FAIL, message=f"WP{i} clearance {clearance:.1f}m < {min_clearance:.1f}m")
-        return CheckResult(name="Terrain Clearance", status=CheckStatus.PASS, message=f"Min clearance >= {min_clearance:.1f}m")
+                return CheckResult(
+                    name="Terrain Clearance",
+                    status=CheckStatus.FAIL,
+                    message=f"WP{i} clearance {clearance:.1f}m < {min_clearance:.1f}m",
+                )
+        return CheckResult(
+            name="Terrain Clearance",
+            status=CheckStatus.PASS,
+            message=f"Min clearance >= {min_clearance:.1f}m",
+        )
 
     def check_grid_turn_margin(self) -> CheckResult:
         """Grid missions: approximate row-end turning feasibility based on spacing and speed."""
         if not hasattr(self.mission, "speed") or self.mission.speed is None:
-            return CheckResult(name="Grid Turn Margin", status=CheckStatus.SKIP, message="No mission speed")
+            return CheckResult(
+                name="Grid Turn Margin",
+                status=CheckStatus.SKIP,
+                message="No mission speed",
+            )
         spacing = getattr(self.mission, "line_spacing_m", None)
         if spacing is None:
-            return CheckResult(name="Grid Turn Margin", status=CheckStatus.SKIP, message="No line_spacing_m")
+            return CheckResult(
+                name="Grid Turn Margin",
+                status=CheckStatus.SKIP,
+                message="No line_spacing_m",
+            )
 
         v = float(self.mission.speed)
         bank_max = float(self.BANK_MAX_DEG)
@@ -278,14 +396,29 @@ class MissionPreflightBase:
         avail_r = 0.5 * float(spacing)
 
         if avail_r <= 0:
-            return CheckResult(name="Grid Turn Margin", status=CheckStatus.SKIP, message="Invalid spacing")
+            return CheckResult(
+                name="Grid Turn Margin",
+                status=CheckStatus.SKIP,
+                message="Invalid spacing",
+            )
 
         if avail_r < 0.8 * min_r:
-            return CheckResult(name="Grid Turn Margin", status=CheckStatus.FAIL, message=f"Avail R~{avail_r:.1f}m < min {min_r:.1f}m (bank {bank_max:.0f}°)")
+            return CheckResult(
+                name="Grid Turn Margin",
+                status=CheckStatus.FAIL,
+                message=f"Avail R~{avail_r:.1f}m < min {min_r:.1f}m (bank {bank_max:.0f}°)",
+            )
         if avail_r < min_r:
-            return CheckResult(name="Grid Turn Margin", status=CheckStatus.WARN, message=f"Avail R~{avail_r:.1f}m slightly < min {min_r:.1f}m")
-        return CheckResult(name="Grid Turn Margin", status=CheckStatus.PASS, message=f"Avail R~{avail_r:.1f}m, min {min_r:.1f}m")
-
+            return CheckResult(
+                name="Grid Turn Margin",
+                status=CheckStatus.WARN,
+                message=f"Avail R~{avail_r:.1f}m slightly < min {min_r:.1f}m",
+            )
+        return CheckResult(
+            name="Grid Turn Margin",
+            status=CheckStatus.PASS,
+            message=f"Avail R~{avail_r:.1f}m, min {min_r:.1f}m",
+        )
 
     def check_preflight_range(self) -> CheckResult:
         """Range check over the full clicked route."""
@@ -334,9 +467,8 @@ class MissionPreflightBase:
             if level_frac is None
             else max(
                 0.0,
-                settings.battery_capacity_wh
-                * max(0.0, level_frac - settings.energy_reserve_frac),
-                )
+                settings.battery_capacity_wh * max(0.0, level_frac - settings.energy_reserve_frac),
+            )
         )
 
         est_range_km = self.range_model.estimate_range_km(
@@ -371,23 +503,28 @@ class MissionPreflightBase:
             message=f"Est range {est_range_km:.2f} km >= mission distance {distance_km:.2f} km",
         )
 
-
-    async def run(self) -> List[CheckResult]:
-        return [CheckResult(name="Mission Type", status=CheckStatus.WARN, message="No mission-specific checks registered")]
+    async def run(self) -> list[CheckResult]:
+        return [
+            CheckResult(
+                name="Mission Type",
+                status=CheckStatus.WARN,
+                message="No mission-specific checks registered",
+            )
+        ]
 
 
 class WaypointMissionPreflight(MissionPreflightBase):
     """Generic waypoint-route mission (non-grid/orbit/patrol) checks."""
 
-    async def run(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def run(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
         results.append(self.check_waypoint_count_limit())
         results.append(self.check_speed_limits())
         results.append(self.check_max_range_from_home())
         results.append(self.check_geofence_containment())
         results.append(self.check_no_fly_zones())
         results.append(self.check_basic_terrain_clearance())
-        results.append(self.check_preflight_range()) #check parameters
+        results.append(self.check_preflight_range())  # check parameters
         return results
 
 
@@ -401,11 +538,11 @@ class GridMissionPreflight(MissionPreflightBase):
 
     def check_camera_footprint(self) -> CheckResult:
         """Check if line spacing is compatible with camera footprint."""
-        if not hasattr(self.mission, 'camera') or not self.mission.camera:
+        if not hasattr(self.mission, "camera") or not self.mission.camera:
             return CheckResult(
                 name="Grid Camera Footprint",
                 status=CheckStatus.SKIP,
-                message="No camera specifications provided"
+                message="No camera specifications provided",
             )
 
         camera = self.mission.camera
@@ -437,13 +574,13 @@ class GridMissionPreflight(MissionPreflightBase):
             return CheckResult(
                 name="Grid Camera Footprint",
                 status=CheckStatus.FAIL,
-                message="; ".join(issues)
+                message="; ".join(issues),
             )
 
         return CheckResult(
             name="Grid Camera Footprint",
             status=CheckStatus.PASS,
-            message=f"Footprint: {footprint_width_m:.1f}×{footprint_height_m:.1f}m"
+            message=f"Footprint: {footprint_width_m:.1f}×{footprint_height_m:.1f}m",
         )
 
     def check_mission_duration(self) -> CheckResult:
@@ -452,28 +589,28 @@ class GridMissionPreflight(MissionPreflightBase):
         flight_time_s = total_distance / self.mission.speed if self.mission.speed > 0 else 0
 
         # Add turn penalties
-        if hasattr(self.mission, 'grid_segments') and self.mission.grid_segments:
+        if hasattr(self.mission, "grid_segments") and self.mission.grid_segments:
             num_turns = len(self.mission.grid_segments) - 1
             flight_time_s += self.TURN_PENALTY_S * num_turns
 
-        if hasattr(self.v, 'max_flight_time_s') and self.v.max_flight_time_s:
+        if hasattr(self.v, "max_flight_time_s") and self.v.max_flight_time_s:
             if flight_time_s > self.v.max_flight_time_s:
                 return CheckResult(
                     name="Grid Duration",
                     status=CheckStatus.FAIL,
-                    message=f"Est. time {flight_time_s/60:.1f}min > "
-                            f"max {self.v.max_flight_time_s/60:.1f}min"
+                    message=f"Est. time {flight_time_s / 60:.1f}min > "
+                    f"max {self.v.max_flight_time_s / 60:.1f}min",
                 )
 
         return CheckResult(
             name="Grid Duration",
             status=CheckStatus.PASS,
-            message=f"Est. time: {flight_time_s/60:.1f}min"
+            message=f"Est. time: {flight_time_s / 60:.1f}min",
         )
 
-    async def run(self) -> List[CheckResult]:
+    async def run(self) -> list[CheckResult]:
         """Run all grid mission checks."""
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
         # Common mission-specific safety/validity checks
         results.append(self.check_waypoint_count_limit())
         results.append(self.check_speed_limits())
@@ -489,6 +626,7 @@ class GridMissionPreflight(MissionPreflightBase):
         results.append(self.check_mission_duration())
         return results
 
+
 class TerrainFollowMissionPreflight(MissionPreflightBase):
     """Terrain-following mission checks using context."""
 
@@ -496,16 +634,18 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
         super().__init__(context)
         self.mission: TerrainFollowMission = context.mission
 
-    def check_terrain_follow_feasibility(self) -> List[CheckResult]:
+    def check_terrain_follow_feasibility(self) -> list[CheckResult]:
         """Check if terrain following is feasible."""
         results = []
 
         if len(self.mission.waypoints) < 2:
-            return [CheckResult(
-                name="Terrain Follow",
-                status=CheckStatus.FAIL,
-                message="Insufficient waypoints"
-            )]
+            return [
+                CheckResult(
+                    name="Terrain Follow",
+                    status=CheckStatus.FAIL,
+                    message="Insufficient waypoints",
+                )
+            ]
 
         max_climb_rate = 0
         max_descent_rate = 0
@@ -513,10 +653,10 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
         for i in range(1, len(self.mission.waypoints)):
             # Get terrain from context (cached)
             current_terrain = self._get_terrain(i) or 0
-            prev_terrain = self._get_terrain(i-1) or 0
+            prev_terrain = self._get_terrain(i - 1) or 0
 
             # Get distance from context (cached)
-            segment_distance = self._get_distance(i-1, i)
+            segment_distance = self._get_distance(i - 1, i)
             segment_time = segment_distance / self.mission.speed if self.mission.speed > 0 else 0
 
             if segment_time > 0:
@@ -529,39 +669,47 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
                     max_descent_rate = max(max_descent_rate, abs(rate))
 
         # Check against vehicle limits
-        climb_rate_max = getattr(self.v, 'climb_rate_max', 5)
+        climb_rate_max = getattr(self.v, "climb_rate_max", 5)
         if max_climb_rate > climb_rate_max:
-            results.append(CheckResult(
-                name="Climb Rate",
-                status=CheckStatus.FAIL,
-                message=f"Required climb {max_climb_rate:.1f}m/s > max {climb_rate_max}m/s"
-            ))
+            results.append(
+                CheckResult(
+                    name="Climb Rate",
+                    status=CheckStatus.FAIL,
+                    message=f"Required climb {max_climb_rate:.1f}m/s > max {climb_rate_max}m/s",
+                )
+            )
         else:
-            results.append(CheckResult(
-                name="Climb Rate",
-                status=CheckStatus.PASS,
-                message=f"Max climb: {max_climb_rate:.1f}m/s"
-            ))
+            results.append(
+                CheckResult(
+                    name="Climb Rate",
+                    status=CheckStatus.PASS,
+                    message=f"Max climb: {max_climb_rate:.1f}m/s",
+                )
+            )
 
-        descent_rate_max = getattr(self.v, 'descent_rate_max', 3)
+        descent_rate_max = getattr(self.v, "descent_rate_max", 3)
         if max_descent_rate > descent_rate_max:
-            results.append(CheckResult(
-                name="Descent Rate",
-                status=CheckStatus.FAIL,
-                message=f"Required descent {max_descent_rate:.1f}m/s > max {descent_rate_max}m/s"
-            ))
+            results.append(
+                CheckResult(
+                    name="Descent Rate",
+                    status=CheckStatus.FAIL,
+                    message=f"Required descent {max_descent_rate:.1f}m/s > max {descent_rate_max}m/s",
+                )
+            )
         else:
-            results.append(CheckResult(
-                name="Descent Rate",
-                status=CheckStatus.PASS,
-                message=f"Max descent: {max_descent_rate:.1f}m/s"
-            ))
+            results.append(
+                CheckResult(
+                    name="Descent Rate",
+                    status=CheckStatus.PASS,
+                    message=f"Max descent: {max_descent_rate:.1f}m/s",
+                )
+            )
 
         return results
 
-    async def run(self) -> List[CheckResult]:
+    async def run(self) -> list[CheckResult]:
         """Run all terrain-following mission checks."""
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
         results.append(self.check_waypoint_count_limit())
         results.append(self.check_speed_limits())
         results.append(self.check_max_range_from_home())
@@ -571,6 +719,7 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
         results.extend(self.check_terrain_follow_feasibility())
         return results
 
+
 class OrbitMissionPreflight(MissionPreflightBase):
     """Orbit / POI mission preflight checks."""
 
@@ -578,7 +727,7 @@ class OrbitMissionPreflight(MissionPreflightBase):
         super().__init__(context)
         self.mission: OrbitMission = context.mission
 
-    def check_turn_feasibility(self) -> List[CheckResult]:
+    def check_turn_feasibility(self) -> list[CheckResult]:
         """Check both bank angle and lateral acceleration limits."""
         results = []
 
@@ -595,31 +744,39 @@ class OrbitMissionPreflight(MissionPreflightBase):
 
         # Bank angle check
         if bank_deg <= self.BANK_MAX_DEG:
-            results.append(CheckResult(
-                name="Orbit Bank Angle",
-                status=CheckStatus.PASS,
-                message=f"Bank: {bank_deg:.1f}° (max {self.BANK_MAX_DEG}°)"
-            ))
+            results.append(
+                CheckResult(
+                    name="Orbit Bank Angle",
+                    status=CheckStatus.PASS,
+                    message=f"Bank: {bank_deg:.1f}° (max {self.BANK_MAX_DEG}°)",
+                )
+            )
         else:
-            results.append(CheckResult(
-                name="Orbit Bank Angle",
-                status=CheckStatus.FAIL,
-                message=f"Bank angle {bank_deg:.1f}° > {self.BANK_MAX_DEG}°"
-            ))
+            results.append(
+                CheckResult(
+                    name="Orbit Bank Angle",
+                    status=CheckStatus.FAIL,
+                    message=f"Bank angle {bank_deg:.1f}° > {self.BANK_MAX_DEG}°",
+                )
+            )
 
         # Lateral acceleration check
         if a_lat <= self.A_LAT_MAX:
-            results.append(CheckResult(
-                name="Orbit Lateral Acceleration",
-                status=CheckStatus.PASS,
-                message=f"Lateral accel: {a_lat:.2f}m/s² (max {self.A_LAT_MAX}m/s²)"
-            ))
+            results.append(
+                CheckResult(
+                    name="Orbit Lateral Acceleration",
+                    status=CheckStatus.PASS,
+                    message=f"Lateral accel: {a_lat:.2f}m/s² (max {self.A_LAT_MAX}m/s²)",
+                )
+            )
         else:
-            results.append(CheckResult(
-                name="Orbit Lateral Acceleration",
-                status=CheckStatus.FAIL,
-                message=f"Lateral accel {a_lat:.2f}m/s² > {self.A_LAT_MAX}m/s²"
-            ))
+            results.append(
+                CheckResult(
+                    name="Orbit Lateral Acceleration",
+                    status=CheckStatus.FAIL,
+                    message=f"Lateral accel {a_lat:.2f}m/s² > {self.A_LAT_MAX}m/s²",
+                )
+            )
 
         return results
 
@@ -630,7 +787,7 @@ class OrbitMissionPreflight(MissionPreflightBase):
             return CheckResult(
                 name="POI Clearance",
                 status=CheckStatus.FAIL,
-                message=f"Orbit radius {self.mission.radius}m < min standoff {self.mission.min_standoff_m}m"
+                message=f"Orbit radius {self.mission.radius}m < min standoff {self.mission.min_standoff_m}m",
             )
 
         # Check AGL if POI location has terrain
@@ -640,18 +797,18 @@ class OrbitMissionPreflight(MissionPreflightBase):
                 return CheckResult(
                     name="Orbit AGL",
                     status=CheckStatus.WARN,
-                    message=f"Orbit AGL {agl}m may be outside safe envelope ({self.AGL_MIN}-{self.AGL_MAX}m)"
+                    message=f"Orbit AGL {agl}m may be outside safe envelope ({self.AGL_MIN}-{self.AGL_MAX}m)",
                 )
 
         return CheckResult(
             name="POI Clearance",
             status=CheckStatus.PASS,
-            message=f"Radius: {self.mission.radius}m, Standoff OK"
+            message=f"Radius: {self.mission.radius}m, Standoff OK",
         )
 
-    async def run(self) -> List[CheckResult]:
+    async def run(self) -> list[CheckResult]:
         """Run all orbit mission checks."""
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
         results.append(self.check_speed_limits())
         results.append(self.check_max_range_from_home())
         results.append(self.check_geofence_containment())
@@ -659,6 +816,7 @@ class OrbitMissionPreflight(MissionPreflightBase):
         results.extend(self.check_turn_feasibility())
         results.append(self.check_clearance())
         return results
+
 
 class PerimeterPatrolMissionPreflight(MissionPreflightBase):
     """Perimeter patrol (polygon follow) mission preflight checks."""
@@ -673,14 +831,14 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
             return CheckResult(
                 name="Polygon Validity",
                 status=CheckStatus.FAIL,
-                message=f"Polygon has {len(self.mission.polygon)} points, need at least 3"
+                message=f"Polygon has {len(self.mission.polygon)} points, need at least 3",
             )
 
         # Polygon is already validated by Pydantic
         return CheckResult(
             name="Polygon Validity",
             status=CheckStatus.PASS,
-            message=f"Polygon valid with {len(self.mission.polygon)} points"
+            message=f"Polygon valid with {len(self.mission.polygon)} points",
         )
 
     def _calculate_bearing(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -714,22 +872,22 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
 
     def check_cornering_limits(self) -> CheckResult:
         """Check if cornering is feasible given turn constraints."""
-        if not hasattr(self.mission, 'polygon') or len(self.mission.polygon) < 3:
+        if not hasattr(self.mission, "polygon") or len(self.mission.polygon) < 3:
             return CheckResult(
                 name="Cornering Limits",
                 status=CheckStatus.SKIP,
-                message="Insufficient polygon data"
+                message="Insufficient polygon data",
             )
 
-        v = getattr(self.mission, 'speed', getattr(self.v, 'cruise_speed_mps', 10))
-        max_turn_rate = getattr(self.v, 'max_turn_rate_rad_s', 0.5)
+        v = getattr(self.mission, "speed", getattr(self.v, "cruise_speed_mps", 10))
+        max_turn_rate = getattr(self.v, "max_turn_rate_rad_s", 0.5)
 
         # Calculate minimum turn radius from max turn rate
         # turn_rate = v / r  => r_min = v / max_turn_rate
-        r_min = v / max_turn_rate if max_turn_rate > 0 else float('inf')
+        r_min = v / max_turn_rate if max_turn_rate > 0 else float("inf")
 
         # Also check against max lateral acceleration
-        a_lat_max = getattr(self, 'A_LAT_MAX', 9.81)
+        a_lat_max = getattr(self, "A_LAT_MAX", 9.81)
         r_min_accel = v**2 / a_lat_max
         r_min = max(r_min, r_min_accel)
 
@@ -740,8 +898,8 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
         # Use all corners (including closing the loop)
         for i in range(len(polygon)):
             p1 = polygon[i]
-            p2 = polygon[(i+1) % len(polygon)]
-            p3 = polygon[(i+2) % len(polygon)]
+            p2 = polygon[(i + 1) % len(polygon)]
+            p3 = polygon[(i + 2) % len(polygon)]
 
             # Calculate turn angle at p2
             turn_angle = self._calculate_turn_angle(p1, p2, p3)
@@ -751,42 +909,42 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
                 continue
 
             # Calculate chord length (distance from p2 to p3)
-            p2 = polygon[(i+1) % len(polygon)]
-            p3 = polygon[(i+2) % len(polygon)]
+            p2 = polygon[(i + 1) % len(polygon)]
+            p3 = polygon[(i + 2) % len(polygon)]
             chord_length = self.ctx.get_distance_between_points(p2, p3)
 
             # For a given turn angle, the required radius can be estimated
             if turn_angle > 0:
                 # Required radius to make this turn at current speed
-                required_radius = chord_length / (2 * math.sin(turn_angle/2))
+                required_radius = chord_length / (2 * math.sin(turn_angle / 2))
 
                 if required_radius < r_min:
-                    tight_corners.append({
-                        'corner': i,
-                        'turn_angle_deg': math.degrees(turn_angle),
-                        'required_radius': required_radius,
-                        'chord_length': chord_length
-                    })
+                    tight_corners.append(
+                        {
+                            "corner": i,
+                            "turn_angle_deg": math.degrees(turn_angle),
+                            "required_radius": required_radius,
+                            "chord_length": chord_length,
+                        }
+                    )
 
         if tight_corners:
             # Sort by most severe
-            tight_corners.sort(key=lambda x: x['required_radius'])
+            tight_corners.sort(key=lambda x: x["required_radius"])
             worst = tight_corners[0]
 
-            message = (f"{len(tight_corners)} corners exceed turn limits. "
-                       f"Worst: corner {worst['corner']} requires {worst['required_radius']:.1f}m radius "
-                       f"(min {r_min:.1f}m), turn angle {worst['turn_angle_deg']:.1f}°")
-
-            return CheckResult(
-                name="Cornering Limits",
-                status=CheckStatus.FAIL,
-                message=message
+            message = (
+                f"{len(tight_corners)} corners exceed turn limits. "
+                f"Worst: corner {worst['corner']} requires {worst['required_radius']:.1f}m radius "
+                f"(min {r_min:.1f}m), turn angle {worst['turn_angle_deg']:.1f}°"
             )
+
+            return CheckResult(name="Cornering Limits", status=CheckStatus.FAIL, message=message)
 
         return CheckResult(
             name="Cornering Limits",
             status=CheckStatus.PASS,
-            message=f"All corners within turn limits (min radius {r_min:.1f}m)"
+            message=f"All corners within turn limits (min radius {r_min:.1f}m)",
         )
 
     def check_boundary_buffer(self) -> CheckResult:
@@ -795,18 +953,18 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
             return CheckResult(
                 name="Boundary Buffer",
                 status=CheckStatus.FAIL,
-                message=f"Path offset {self.mission.path_offset_m}m < min buffer {self.mission.boundary_buffer_min}m"
+                message=f"Path offset {self.mission.path_offset_m}m < min buffer {self.mission.boundary_buffer_min}m",
             )
 
         return CheckResult(
             name="Boundary Buffer",
             status=CheckStatus.PASS,
-            message=f"Buffer: {self.mission.path_offset_m}m (min {self.mission.boundary_buffer_min}m)"
+            message=f"Buffer: {self.mission.path_offset_m}m (min {self.mission.boundary_buffer_min}m)",
         )
 
-    async def run(self) -> List[CheckResult]:
+    async def run(self) -> list[CheckResult]:
         """Run all perimeter patrol checks."""
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
         results.append(self.check_polygon_validity())
         results.append(self.check_speed_limits())
         results.append(self.check_agl_envelope_basic())
@@ -817,6 +975,7 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
         results.append(self.check_cornering_limits())
         return results
 
+
 class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
     """Adaptive altitude over elevation models preflight checks."""
 
@@ -824,7 +983,7 @@ class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
         super().__init__(context)
         self.mission: AdaptiveAltitudeMission = context.mission
 
-    def check_altitude_limits(self) -> List[CheckResult]:
+    def check_altitude_limits(self) -> list[CheckResult]:
         """Check if commanded altitudes are within limits."""
         results = []
 
@@ -833,24 +992,30 @@ class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
             cmd_alt = terrain + self.mission.target_agl
 
             if cmd_alt > self.mission.alt_ceiling_msl:
-                results.append(CheckResult(
-                    name=f"Waypoint {i} Altitude",
-                    status=CheckStatus.FAIL,
-                    message=f"Altitude {cmd_alt}m > ceiling {self.mission.alt_ceiling_msl}m"
-                ))
+                results.append(
+                    CheckResult(
+                        name=f"Waypoint {i} Altitude",
+                        status=CheckStatus.FAIL,
+                        message=f"Altitude {cmd_alt}m > ceiling {self.mission.alt_ceiling_msl}m",
+                    )
+                )
             elif cmd_alt < self.mission.alt_floor_msl:
-                results.append(CheckResult(
-                    name=f"Waypoint {i} Altitude",
-                    status=CheckStatus.FAIL,
-                    message=f"Altitude {cmd_alt}m < floor {self.mission.alt_floor_msl}m"
-                ))
+                results.append(
+                    CheckResult(
+                        name=f"Waypoint {i} Altitude",
+                        status=CheckStatus.FAIL,
+                        message=f"Altitude {cmd_alt}m < floor {self.mission.alt_floor_msl}m",
+                    )
+                )
 
         if not results:
-            results.append(CheckResult(
-                name="Altitude Limits",
-                status=CheckStatus.PASS,
-                message="All altitudes within limits"
-            ))
+            results.append(
+                CheckResult(
+                    name="Altitude Limits",
+                    status=CheckStatus.PASS,
+                    message="All altitudes within limits",
+                )
+            )
 
         return results
 
@@ -865,18 +1030,18 @@ class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):
                     return CheckResult(
                         name="AGL Envelope",
                         status=CheckStatus.FAIL,
-                        message=f"Waypoint {i} AGL {agl:.1f}m outside envelope [{self.mission.agl_min}, {self.mission.agl_max}]m"
+                        message=f"Waypoint {i} AGL {agl:.1f}m outside envelope [{self.mission.agl_min}, {self.mission.agl_max}]m",
                     )
 
         return CheckResult(
             name="AGL Envelope",
             status=CheckStatus.PASS,
-            message=f"Target AGL {self.mission.target_agl}m within envelope"
+            message=f"Target AGL {self.mission.target_agl}m within envelope",
         )
 
-    async def run(self) -> List[CheckResult]:
+    async def run(self) -> list[CheckResult]:
         """Run all adaptive altitude checks."""
-        results: List[CheckResult] = []
+        results: list[CheckResult] = []
         results.append(self.check_waypoint_count_limit())
         results.append(self.check_speed_limits())
         results.append(self.check_max_range_from_home())
@@ -962,11 +1127,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 message=f"Odometry drift {float(drift_m):.2f}m > {max_drift_m:.2f}m",
             )
         if odometry_healthy is True or drift_m is not None:
-            detail = (
-                f"Drift {float(drift_m):.2f}m"
-                if drift_m is not None
-                else "Odometry healthy"
-            )
+            detail = f"Drift {float(drift_m):.2f}m" if drift_m is not None else "Odometry healthy"
             return CheckResult(
                 name="Warehouse Odometry",
                 status=CheckStatus.PASS,
@@ -988,10 +1149,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.FAIL,
                 message="LiDAR/range input is unhealthy",
             )
-        if (
-            obstacle_distance_m is not None
-            and float(obstacle_distance_m) < clearance_m
-        ):
+        if obstacle_distance_m is not None and float(obstacle_distance_m) < clearance_m:
             return CheckResult(
                 name="Warehouse LiDAR",
                 status=CheckStatus.FAIL,
@@ -1141,8 +1299,8 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             message="Corridors clear all declared keepouts and obstacles",
         )
 
-    async def run(self) -> List[CheckResult]:
-        results: List[CheckResult] = []
+    async def run(self) -> list[CheckResult]:
+        results: list[CheckResult] = []
         results.append(self.check_waypoint_count_limit())
         results.append(self.check_speed_limits())
         results.append(self.check_local_origin())
@@ -1169,7 +1327,9 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.FAIL,
                 message="max_mission_time_s must be positive",
             )
-        if float(self.mission.max_exploration_radius_m) <= float(self.mission.safe_takeoff_bubble_radius_m):
+        if float(self.mission.max_exploration_radius_m) <= float(
+            self.mission.safe_takeoff_bubble_radius_m
+        ):
             return CheckResult(
                 name="Indoor Mission Parameters",
                 status=CheckStatus.FAIL,
@@ -1181,7 +1341,9 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.FAIL,
                 message="max_path_length_m must exceed max_exploration_radius_m",
             )
-        if float(self.mission.occupancy_resolution_m) > float(self.mission.minimum_corridor_clearance_m):
+        if float(self.mission.occupancy_resolution_m) > float(
+            self.mission.minimum_corridor_clearance_m
+        ):
             return CheckResult(
                 name="Indoor Mission Parameters",
                 status=CheckStatus.FAIL,
@@ -1201,7 +1363,11 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
             dock.exit_pose.frame_id,
             getattr(self.mission, "local_control_mode", "local_setpoint"),
         }
-        if dock.pose.frame_id != "map" or dock.entry_pose.frame_id != "map" or dock.exit_pose.frame_id != "map":
+        if (
+            dock.pose.frame_id != "map"
+            or dock.entry_pose.frame_id != "map"
+            or dock.exit_pose.frame_id != "map"
+        ):
             return CheckResult(
                 name="Indoor Frames",
                 status=CheckStatus.FAIL,
@@ -1244,13 +1410,13 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
         return CheckResult(
             name="Indoor Dock Geometry",
             status=CheckStatus.PASS,
-            message=(
-                f"Dock entry {entry_distance:.1f}m, exit {exit_distance:.1f}m from dock"
-            ),
+            message=(f"Dock entry {entry_distance:.1f}m, exit {exit_distance:.1f}m from dock"),
         )
 
     def check_return_reserve(self) -> CheckResult:
-        if float(self.mission.battery_return_reserve_pct) <= float(self.mission.battery_emergency_land_reserve_pct):
+        if float(self.mission.battery_return_reserve_pct) <= float(
+            self.mission.battery_emergency_land_reserve_pct
+        ):
             return CheckResult(
                 name="Indoor Return Reserve",
                 status=CheckStatus.FAIL,
@@ -1266,7 +1432,9 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
         )
 
     def check_localization_thresholds(self) -> CheckResult:
-        if float(self.mission.localization_confidence_return_threshold) > float(self.mission.localization_confidence_min):
+        if float(self.mission.localization_confidence_return_threshold) > float(
+            self.mission.localization_confidence_min
+        ):
             return CheckResult(
                 name="Indoor Localization Thresholds",
                 status=CheckStatus.FAIL,
@@ -1281,7 +1449,7 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
             ),
         )
 
-    async def run(self) -> List[CheckResult]:
+    async def run(self) -> list[CheckResult]:
         return [
             self.check_speed_limits(),
             self.check_mission_parameters(),
@@ -1291,29 +1459,30 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
             self.check_localization_thresholds(),
         ]
 
+
 def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
 
-    mission_type = context.mission.type.lower() if hasattr(context.mission, 'type') else ""
+    mission_type = context.mission.type.lower() if hasattr(context.mission, "type") else ""
 
     mission_classes = {
-        'grid': GridMissionPreflight,
-        'warehouse_scan': WarehouseScanMissionPreflight,
-        'indoor_exploration': IndoorExplorationMissionPreflight,
-        'terrain_follow': TerrainFollowMissionPreflight,
-        'orbit': OrbitMissionPreflight,
-        'perimeter_patrol': PerimeterPatrolMissionPreflight,
-        'adaptive_altitude': AdaptiveAltitudeMissionPreflight,
-        'route': WaypointMissionPreflight,
+        "grid": GridMissionPreflight,
+        "warehouse_scan": WarehouseScanMissionPreflight,
+        "indoor_exploration": IndoorExplorationMissionPreflight,
+        "terrain_follow": TerrainFollowMissionPreflight,
+        "orbit": OrbitMissionPreflight,
+        "perimeter_patrol": PerimeterPatrolMissionPreflight,
+        "adaptive_altitude": AdaptiveAltitudeMissionPreflight,
+        "route": WaypointMissionPreflight,
     }
 
     # Handle aliases
     base_type = mission_type
-    if mission_type in ['survey']:
-        base_type = 'grid'
-    elif mission_type in ['circle', 'poi']:
-        base_type = 'orbit'
-    elif mission_type in ['private_patrol', 'polygon', 'patrol']:
-        base_type = 'perimeter_patrol'
+    if mission_type in ["survey"]:
+        base_type = "grid"
+    elif mission_type in ["circle", "poi"]:
+        base_type = "orbit"
+    elif mission_type in ["private_patrol", "polygon", "patrol"]:
+        base_type = "perimeter_patrol"
 
     mission_class = mission_classes.get(base_type) or mission_classes.get(mission_type)
 

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class TelemetrySettings(BaseModel):
     mqtt_broker: str = "localhost"
     mqtt_port: int = 1883
     mqtt_user: str = ""
-    mqtt_pass: Optional[str] = None  # SECRET (vault); masked in GET
+    mqtt_pass: str | None = None  # SECRET (vault); masked in GET
     mqtt_use_tls: bool = False
     mqtt_ca_certs: str = ""
     opcua_endpoint: str = ""
@@ -23,7 +22,7 @@ class AISettings(BaseModel):
     llm_provider: str = "ollama"
     llm_api_base: str = ""
     llm_model: str = ""
-    llm_api_key: Optional[str] = None  # SECRET (vault); masked in GET
+    llm_api_key: str | None = None  # SECRET (vault); masked in GET
 
 
 class CredentialsSettings(BaseModel):
@@ -70,7 +69,7 @@ class RaspberrySettings(BaseModel):
     raspberry_ip: str = ""
     raspberry_user: str = ""
     raspberry_host: str = ""
-    raspberry_password: Optional[str] = None  # SECRET (vault); masked in GET
+    raspberry_password: str | None = None  # SECRET (vault); masked in GET
     ssh_key_path: str = ""
     raspberry_streaming_script_path: str = ""
 
@@ -98,19 +97,19 @@ class PhotogrammetrySettings(BaseModel):
     PHOTOGRAMMETRY_3DTILES_CMD: str = ""
     PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: bool = False
     WEBODM_BASE_URL: str = ""
-    WEBODM_API_TOKEN: Optional[str] = None  # SECRET (vault); masked in GET
+    WEBODM_API_TOKEN: str | None = None  # SECRET (vault); masked in GET
     WEBODM_PROJECT_ID: int = 0
     WEBODM_MOCK_MODE: bool = False
     MAPPING_JOB_QUEUE_BACKEND: str = "celery"
     CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
-    PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: Optional[str] = None  # SECRET (vault); masked in GET
+    PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: str | None = None  # SECRET (vault); masked in GET
 
 
 class AlertSettings(BaseModel):
     enabled: bool = True
     check_interval_sec: int = 5
     dedupe_window_sec: int = 300
-    operation_geofence_id: Optional[int] = None
+    operation_geofence_id: int | None = None
     monitor_herd_ids: str = ""
     herd_isolation_threshold_m: float = 250.0
     low_battery_percent: float = 25.0
@@ -127,12 +126,12 @@ class AlertSettings(BaseModel):
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
-    smtp_password: Optional[str] = None  # SECRET (vault); masked in GET
+    smtp_password: str | None = None  # SECRET (vault); masked in GET
     smtp_from: str = ""
     smtp_use_tls: bool = True
 
     twilio_account_sid: str = ""
-    twilio_auth_token: Optional[str] = None  # SECRET (vault); masked in GET
+    twilio_auth_token: str | None = None  # SECRET (vault); masked in GET
     twilio_from_number: str = ""
 
 
@@ -146,4 +145,4 @@ class SettingsDoc(BaseModel):
     camera: CameraSettings = Field(default_factory=CameraSettings)
     photogrammetry: PhotogrammetrySettings = Field(default_factory=PhotogrammetrySettings)
     alerts: AlertSettings = Field(default_factory=AlertSettings)
-    updated_at: Optional[str] = None
+    updated_at: str | None = None

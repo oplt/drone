@@ -9,17 +9,16 @@ import shutil
 import subprocess
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 _UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _iso(dt: datetime) -> str:
@@ -55,9 +54,8 @@ class WarehouseCaptureSessionService:
     """
 
     def __init__(self) -> None:
-        sync_root_raw = (
-            os.getenv("WAREHOUSE_SCAN_SYNC_DIR", "").strip()
-            or os.getenv("PHOTOGRAMMETRY_DRONE_SYNC_DIR", "backend/storage/drone_sync")
+        sync_root_raw = os.getenv("WAREHOUSE_SCAN_SYNC_DIR", "").strip() or os.getenv(
+            "PHOTOGRAMMETRY_DRONE_SYNC_DIR", "backend/storage/drone_sync"
         )
         staging_raw = (
             os.getenv("WAREHOUSE_SCAN_CAPTURE_STAGING_DIR", "").strip()
@@ -66,12 +64,8 @@ class WarehouseCaptureSessionService:
 
         self.sync_root = Path(sync_root_raw).resolve()
         self.capture_staging_dir = Path(staging_raw).resolve() if staging_raw else None
-        self.default_wait_timeout_s = float(
-            os.getenv("WAREHOUSE_SCAN_SYNC_TIMEOUT_S", "300")
-        )
-        self.default_poll_interval_s = float(
-            os.getenv("WAREHOUSE_SCAN_SYNC_POLL_S", "2")
-        )
+        self.default_wait_timeout_s = float(os.getenv("WAREHOUSE_SCAN_SYNC_TIMEOUT_S", "300"))
+        self.default_poll_interval_s = float(os.getenv("WAREHOUSE_SCAN_SYNC_POLL_S", "2"))
         self.default_min_files = max(
             0,
             int(os.getenv("WAREHOUSE_SCAN_SYNC_MIN_FILES", "1")),
@@ -102,7 +96,7 @@ class WarehouseCaptureSessionService:
     def _write_manifest(
         self,
         session: WarehouseCaptureSession,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
     ) -> None:
         self._manifest_path(session).write_text(
             json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=True),
@@ -142,7 +136,7 @@ class WarehouseCaptureSessionService:
             return False
         return path.suffix.lower() in self.allowed_extensions
 
-    def _list_capture_files(self, root: Path) -> List[Path]:
+    def _list_capture_files(self, root: Path) -> list[Path]:
         if not root.exists():
             return []
         files = [p for p in root.rglob("*") if self._is_relevant_file(p)]
@@ -194,7 +188,7 @@ class WarehouseCaptureSessionService:
         session: WarehouseCaptureSession,
         *,
         force: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         token = session.relative_source_dir
         if not self.capture_sync_cmd_template:
             return {
@@ -267,7 +261,7 @@ class WarehouseCaptureSessionService:
         self,
         session: WarehouseCaptureSession,
         *,
-        capture_paths: List[str] | None,
+        capture_paths: list[str] | None,
     ) -> int:
         copied = 0
         for raw in capture_paths or []:
@@ -287,10 +281,10 @@ class WarehouseCaptureSessionService:
         self,
         session: WarehouseCaptureSession,
         *,
-        min_files: Optional[int] = None,
-        timeout_s: Optional[float] = None,
-        poll_interval_s: Optional[float] = None,
-    ) -> List[Path]:
+        min_files: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+    ) -> list[Path]:
         needed = self.default_min_files if min_files is None else max(0, int(min_files))
         timeout = self.default_wait_timeout_s if timeout_s is None else max(0.0, float(timeout_s))
         poll = (
@@ -335,11 +329,11 @@ class WarehouseCaptureSessionService:
         self,
         session: WarehouseCaptureSession,
         *,
-        min_files: Optional[int] = None,
-        timeout_s: Optional[float] = None,
-        poll_interval_s: Optional[float] = None,
-        extra_meta: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        min_files: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+        extra_meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         target_min = self.default_min_files if min_files is None else max(0, int(min_files))
         files = self.wait_for_files(
             session,
@@ -348,7 +342,7 @@ class WarehouseCaptureSessionService:
             poll_interval_s=poll_interval_s,
         )
         ended_at = _utc_now()
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "flight_id": session.flight_id,
             "source_dir": session.relative_source_dir,
             "absolute_dir": str(session.session_dir),

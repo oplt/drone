@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -15,7 +16,7 @@ class CheckResult(BaseModel):
 
     name: str
     status: CheckStatus
-    message: Optional[str] = None
+    message: str | None = None
 
 
 class PreflightReport(BaseModel):
@@ -23,11 +24,11 @@ class PreflightReport(BaseModel):
 
     mission_type: str
     overall_status: CheckStatus
-    base_checks: List[CheckResult]
-    mission_checks: List[CheckResult]
-    summary: Optional[Dict[str, Any]] = None
-    timestamp: Optional[float] = None
-    vehicle_id: Optional[str] = None
-    quick_check: Optional[bool] = False
-    critical_failures: Optional[List[CheckResult]] = None
-    mission_checks_skipped: Optional[bool] = False
+    base_checks: list[CheckResult]
+    mission_checks: list[CheckResult]
+    summary: dict[str, Any] | None = None
+    timestamp: float | None = None
+    vehicle_id: str | None = None
+    quick_check: bool | None = False
+    critical_failures: list[CheckResult] | None = None
+    mission_checks_skipped: bool | None = False

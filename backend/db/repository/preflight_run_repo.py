@@ -2,11 +2,12 @@
 
 Replaces the module-global _preflight_runs dict + threading.Lock in routes_flights.py.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import delete, select
 
@@ -24,20 +25,20 @@ class PreflightRunRepository:
         self,
         *,
         run_uuid: str,
-        user_id: Optional[int],
+        user_id: int | None,
         mission_type: str,
-        mission_name: Optional[str] = None,
-        mission_fingerprint: Optional[str] = None,
+        mission_name: str | None = None,
+        mission_fingerprint: str | None = None,
         overall_status: str,
-        base_checks: List[Dict[str, Any]],
-        mission_checks: List[Dict[str, Any]],
-        critical_failures: List[str],
-        summary: Dict[str, Any],
-        vehicle_id: Optional[str] = None,
-        expires_at: Optional[datetime] = None,
-        completed_at: Optional[datetime] = None,
+        base_checks: list[dict[str, Any]],
+        mission_checks: list[dict[str, Any]],
+        critical_failures: list[str],
+        summary: dict[str, Any],
+        vehicle_id: str | None = None,
+        expires_at: datetime | None = None,
+        completed_at: datetime | None = None,
     ) -> PreflightRun:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row = PreflightRun(
             run_uuid=run_uuid,
             user_id=user_id,
@@ -61,16 +62,12 @@ class PreflightRunRepository:
             await s.refresh(row)
         return row
 
-    async def get_by_uuid(self, run_uuid: str) -> Optional[PreflightRun]:
+    async def get_by_uuid(self, run_uuid: str) -> PreflightRun | None:
         async with self._sf() as s:
-            result = await s.execute(
-                select(PreflightRun).where(PreflightRun.run_uuid == run_uuid)
-            )
+            result = await s.execute(select(PreflightRun).where(PreflightRun.run_uuid == run_uuid))
             return result.scalar_one_or_none()
 
-    async def get_by_uuid_for_user(
-        self, run_uuid: str, user_id: int
-    ) -> Optional[PreflightRun]:
+    async def get_by_uuid_for_user(self, run_uuid: str, user_id: int) -> PreflightRun | None:
         async with self._sf() as s:
             result = await s.execute(
                 select(PreflightRun).where(
@@ -82,7 +79,7 @@ class PreflightRunRepository:
 
     async def cleanup_expired(self) -> int:
         """Delete expired preflight runs. Returns count deleted."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with self._sf() as s:
             result = await s.execute(
                 delete(PreflightRun).where(

@@ -1,27 +1,26 @@
 import json
+import logging
 import ssl
 import time
-import socket
+
 import paho.mqtt.client as mqtt
-from typing import Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class MqttClient:
     def __init__(
-            self,
-            host: str,
-            port: int = 1883,
-            username: str = "",
-            password: str = "",
-            use_tls: bool = False,
-            ca_certs: Optional[str] = None,
-            client_id: Optional[str] = None,
-            connect_timeout: int = 10,
-            max_retries: int = 10,
-            retry_backoff_s: float = 0.5,
+        self,
+        host: str,
+        port: int = 1883,
+        username: str = "",
+        password: str = "",
+        use_tls: bool = False,
+        ca_certs: str | None = None,
+        client_id: str | None = None,
+        connect_timeout: int = 10,
+        max_retries: int = 10,
+        retry_backoff_s: float = 0.5,
     ):
 
         self.client = mqtt.Client(
@@ -36,9 +35,7 @@ class MqttClient:
 
         if use_tls:
             if ca_certs:
-                self.client.tls_set(
-                    ca_certs=ca_certs, tls_version=ssl.PROTOCOL_TLS_CLIENT
-                )
+                self.client.tls_set(ca_certs=ca_certs, tls_version=ssl.PROTOCOL_TLS_CLIENT)
             else:
                 self.client.tls_set(tls_version=ssl.PROTOCOL_TLS_CLIENT)
             self.client.tls_insecure_set(False)
@@ -54,7 +51,7 @@ class MqttClient:
             try:
                 self.client.connect(host, port, keepalive=60)
                 break
-            except (ConnectionRefusedError, TimeoutError, socket.error) as e:
+            except (OSError, ConnectionRefusedError, TimeoutError) as e:
                 last_err = e
                 time.sleep(delay)
                 delay = min(delay * 2, 8.0)  # exponential backoff capped

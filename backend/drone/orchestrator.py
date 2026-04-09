@@ -2,27 +2,27 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import time
 import logging
 import threading
-from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+import time
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
+
 from pydantic import BaseModel
 from pymavlink import mavutil
-from .models import Coordinate
-from .drone_base import DroneClient, MissionAbortRequested
-from backend.map.google_maps import GoogleMapsClient
-from backend.video.stream import DroneVideoStream
+
 from backend.analysis.llm import LLMAnalyzer
-from backend.messaging.mqtt import MqttClient
+from backend.analysis.range_estimator import SimpleWhPerKmModel
+from backend.config import settings
+
 # from backend.messaging.opcua import DroneOpcUaServer
 from backend.db.models import FlightStatus
 from backend.db.repository.telemetry_repo import TelemetryBatcher, TelemetryRepository
-from backend.config import settings
-from backend.analysis.range_estimator import SimpleWhPerKmModel, RangeEstimateResult
-from backend.utils.geo import haversine_km, coord_from_home
 from backend.flight.preflight_check.preflight_orch import PreflightOrchestrator
 from backend.flight.preflight_check.schemas import CheckStatus
+from backend.map.google_maps import GoogleMapsClient
+from backend.messaging.mqtt import MqttClient
 from backend.runtime import (
     FlightEventEnvelopeV1,
     FlightEventPayloadV1,
@@ -43,6 +43,10 @@ from backend.runtime.mavlink import (
     process_mavlink_message,
     raw_event_from_mavlink_message,
 )
+from backend.video.stream import DroneVideoStream
+
+from .drone_base import DroneClient, MissionAbortRequested
+from .models import Coordinate
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +54,13 @@ logger = logging.getLogger(__name__)
 class _OrchestratorRepositoryAdapter:
     """Route event writes through orchestrator-owned fan-out while delegating everything else."""
 
-    def __init__(self, repo: TelemetryRepository, orchestrator: "Orchestrator") -> None:
+    def __init__(self, repo: TelemetryRepository, orchestrator: Orchestrator) -> None:
         self._repo = repo
         self._orchestrator = orchestrator
 
     async def add_event(
         self,
-        flight_id: Optional[int],
+        flight_id: int | None,
         etype: str,
         data: dict[str, Any] | Mapping[str, Any] | BaseModel | None = None,
     ) -> None:
@@ -72,14 +76,14 @@ class _OrchestratorRepositoryAdapter:
 
 class Orchestrator:
     def __init__(
-            self,
-            drone: DroneClient,
-            maps: GoogleMapsClient,
-            analyzer: LLMAnalyzer,
-            mqtt: MqttClient | None,
-            # opcua: DroneOpcUaServer,
-            video: DroneVideoStream | None,
-            telemetry_repo: TelemetryRepository,
+        self,
+        drone: DroneClient,
+        maps: GoogleMapsClient,
+        analyzer: LLMAnalyzer,
+        mqtt: MqttClient | None,
+        # opcua: DroneOpcUaServer,
+        video: DroneVideoStream | None,
+        telemetry_repo: TelemetryRepository,
     ):
         self.drone = drone
         self.maps = maps
@@ -125,17 +129,17 @@ class Orchestrator:
         self._telemetry_mav_conn: mavutil.mavlink_connection | None = None
         self._telemetry_conn_str = settings.drone_conn_mavproxy
         self._telemetry_broadcast_interval = 0.1
-        self._last_telemetry_snapshot: dict[str, Any] = (
-            TelemetryPayloadV1().to_legacy_snapshot(timestamp_s=0.0)
+        self._last_telemetry_snapshot: dict[str, Any] = TelemetryPayloadV1().to_legacy_snapshot(
+            timestamp_s=0.0
         )
         # Batcher for TelemetryRecord bulk inserts — created per flight.
-        self._telemetry_batcher: "TelemetryBatcher | None" = None
+        self._telemetry_batcher: TelemetryBatcher | None = None
 
     @property
     def flight_id(self):
         return self._flight_id
 
-    def _runtime_db_flight_id(self) -> Optional[int]:
+    def _runtime_db_flight_id(self) -> int | None:
         try:
             return int(self._flight_id) if self._flight_id is not None else None
         except (TypeError, ValueError):
@@ -181,9 +185,9 @@ class Orchestrator:
                 return
         future = asyncio.run_coroutine_threadsafe(coro, self._event_loop)
         future.add_done_callback(
-            lambda f: logger.error("Runtime fan-out failed: %s", f.exception())
-            if f.exception()
-            else None
+            lambda f: (
+                logger.error("Runtime fan-out failed: %s", f.exception()) if f.exception() else None
+            )
         )
 
     def _enqueue_raw_event(self, item: dict[str, Any]) -> None:
@@ -248,9 +252,7 @@ class Orchestrator:
     # Shadow-mode helpers
     # ------------------------------------------------------------------
 
-    async def _shadow_write_event(
-        self, flight_id: int, etype: str, data: dict[str, Any]
-    ) -> None:
+    async def _shadow_write_event(self, flight_id: int, etype: str, data: dict[str, Any]) -> None:
         """Fire-and-forget coroutine that runs the OLD direct DB write path.
 
         Called only when shadow mode is active. Runs concurrently with the new
@@ -284,7 +286,9 @@ class Orchestrator:
         attempted = self._metrics["shadow_writes_attempted"]
         ok = self._metrics["shadow_writes_ok"]
         failed = self._metrics["shadow_writes_failed"]
-        new_enqueued = self._metrics["flight_events_enqueued"] + self._metrics["lifecycle_events_enqueued"]
+        new_enqueued = (
+            self._metrics["flight_events_enqueued"] + self._metrics["lifecycle_events_enqueued"]
+        )
         new_written = (
             self._metrics["db_event_worker_batches"]  # each batch may contain many rows
         )
@@ -322,9 +326,7 @@ class Orchestrator:
         try:
             while self._running:
                 try:
-                    item = await asyncio.wait_for(
-                        self._db_event_queue.get(), timeout=INTERVAL_S
-                    )
+                    item = await asyncio.wait_for(self._db_event_queue.get(), timeout=INTERVAL_S)
                     buffer.append(item)
                     while len(buffer) < BATCH_SIZE:
                         try:
@@ -335,13 +337,16 @@ class Orchestrator:
                     await self._repo.add_flight_events_many(buffer)
                     self._metrics["db_event_worker_batches"] += 1
                     buffer.clear()
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     if buffer:
                         await self._repo.add_flight_events_many(buffer)
                         self._metrics["db_event_worker_batches"] += 1
                         buffer.clear()
                 except Exception:
-                    logger.exception("DB event worker error — batch may be lost (%d rows)", len(buffer))
+                    logger.exception(
+                        "DB event worker error — batch may be lost (%d rows)",
+                        len(buffer),
+                    )
                     buffer.clear()
         except asyncio.CancelledError:
             # Best-effort flush on shutdown
@@ -360,16 +365,14 @@ class Orchestrator:
         try:
             while self._running:
                 try:
-                    item = await asyncio.wait_for(
-                        self._db_lifecycle_queue.get(), timeout=1.0
-                    )
+                    item = await asyncio.wait_for(self._db_lifecycle_queue.get(), timeout=1.0)
                     flight_id, etype, data = item
                     try:
                         await self._repo.add_flight_events_many([(flight_id, etype, data)])
                         self._metrics["db_lifecycle_worker_writes"] += 1
                     except Exception:
                         logger.exception("DB lifecycle worker: failed to persist event '%s'", etype)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
                 except Exception:
                     logger.exception("DB lifecycle worker error")
@@ -386,7 +389,10 @@ class Orchestrator:
             asyncio.create_task(self._db_event_worker(), name="OrchestratorDbEventWorker"),
             asyncio.create_task(self._db_lifecycle_worker(), name="OrchestratorDbLifecycleWorker"),
         ]
-        logger.info("Orchestrator background DB workers started (%d tasks)", len(self._bg_workers))
+        logger.info(
+            "Orchestrator background DB workers started (%d tasks)",
+            len(self._bg_workers),
+        )
 
     async def stop_background_workers(self) -> None:
         """Cancel and await all background worker tasks."""
@@ -532,9 +538,7 @@ class Orchestrator:
                 target_flight_id, "mission_state_changed", serialized
             )
             # Shadow path: also run old direct write for comparison when enabled.
-            self._maybe_schedule_shadow_write(
-                target_flight_id, "mission_state_changed", serialized
-            )
+            self._maybe_schedule_shadow_write(target_flight_id, "mission_state_changed", serialized)
 
         return envelope
 
@@ -717,7 +721,7 @@ class Orchestrator:
                             mission_runtime_id=self._current_mission_runtime_id(),
                             db_flight_id=self._runtime_db_flight_id(),
                             sequence=self._sequence("orchestrator.telemetry"),
-                            emitted_at=datetime.fromtimestamp(emitted_s, tz=timezone.utc),
+                            emitted_at=datetime.fromtimestamp(emitted_s, tz=UTC),
                             source="orchestrator.telemetry",
                             mission=self._mission_context(),
                             payload=TelemetryPayloadV1.from_legacy_snapshot(
@@ -787,7 +791,9 @@ class Orchestrator:
                 fps=settings.drone_video_fps,
                 open_timeout_s=settings.drone_video_timeout,
                 probe_indices=5,
-                fallback_file=settings.drone_video_fallback if settings.drone_video_fallback else None,
+                fallback_file=settings.drone_video_fallback
+                if settings.drone_video_fallback
+                else None,
                 fps_limit=None,
                 enable_recording=settings.drone_video_save_stream,
                 recording_path=settings.drone_video_save_path,
@@ -900,9 +906,7 @@ class Orchestrator:
         try:
             while self._running:
                 try:
-                    item = await asyncio.wait_for(
-                        self._raw_event_queue.get(), timeout=INTERVAL_S
-                    )
+                    item = await asyncio.wait_for(self._raw_event_queue.get(), timeout=INTERVAL_S)
                     buffer.append(item)
 
                     # drain quickly
@@ -917,18 +921,39 @@ class Orchestrator:
                         continue
 
                     if buffer:
-                        await self.repo.add_mavlink_events_many(self._flight_id, buffer)
-                        # Only call task_done if you rely on queue.join()
-                        for _ in range(len(buffer)):
-                            self._raw_event_queue.task_done()
+                        try:
+                            await self.repo.add_mavlink_events_many(self._flight_id, buffer)
+                        except Exception:
+                            logger.exception(
+                                "Raw event ingest worker: DB write failed — batch of %d rows dropped",
+                                len(buffer),
+                            )
+                        else:
+                            # Only call task_done if you rely on queue.join()
+                            for _ in range(len(buffer)):
+                                self._raw_event_queue.task_done()
                         buffer.clear()
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     if buffer and self._flight_id is not None:
-                        await self.repo.add_mavlink_events_many(self._flight_id, buffer)
-                        for _ in range(len(buffer)):
-                            self._raw_event_queue.task_done()
+                        try:
+                            await self.repo.add_mavlink_events_many(self._flight_id, buffer)
+                        except Exception:
+                            logger.exception(
+                                "Raw event ingest worker (timeout flush): DB write failed — "
+                                "batch of %d rows dropped",
+                                len(buffer),
+                            )
+                        else:
+                            for _ in range(len(buffer)):
+                                self._raw_event_queue.task_done()
                         buffer.clear()
+                except Exception:
+                    logger.exception(
+                        "Raw event ingest worker: unexpected error — batch of %d rows dropped",
+                        len(buffer),
+                    )
+                    buffer.clear()
 
         except asyncio.CancelledError:
             # graceful exit: best effort flush
@@ -969,15 +994,14 @@ class Orchestrator:
                 logger.info(f"Error in emergency monitor: {e}")
                 await asyncio.sleep(1.0)
 
-
     async def _run_preflight_checks(
-            self,
-            waypoints: list[Coordinate],
-            alt: float,
-            *,
-            raise_on_fail: bool = True,
-            mission_data: dict | None = None,
-            **kwargs,
+        self,
+        waypoints: list[Coordinate],
+        alt: float,
+        *,
+        raise_on_fail: bool = True,
+        mission_data: dict | None = None,
+        **kwargs,
     ):
 
         mission_data = mission_data or {
@@ -1041,8 +1065,10 @@ class Orchestrator:
         )
         for result in report.base_checks + report.mission_checks:
             level = (
-                logging.WARNING if result.status == CheckStatus.WARN
-                else logging.ERROR if result.status == CheckStatus.FAIL
+                logging.WARNING
+                if result.status == CheckStatus.WARN
+                else logging.ERROR
+                if result.status == CheckStatus.FAIL
                 else logging.DEBUG
             )
             logger.log(level, f"  [{result.status}] {result.name}: {result.message or ''}")
@@ -1056,9 +1082,9 @@ class Orchestrator:
                     "overall": report.overall_status,
                     "summary": report.summary,
                     "critical_failures": (
-                        [{"name": c.name, "message": c.message}
-                         for c in report.critical_failures]
-                        if report.critical_failures else []
+                        [{"name": c.name, "message": c.message} for c in report.critical_failures]
+                        if report.critical_failures
+                        else []
                     ),
                 },
                 qos=1,
@@ -1073,7 +1099,8 @@ class Orchestrator:
                     "summary": report.summary,
                     "critical_failures": (
                         [c.name for c in report.critical_failures]
-                        if report.critical_failures else []
+                        if report.critical_failures
+                        else []
                     ),
                 },
                 flight_id=self._flight_id,
@@ -1086,13 +1113,15 @@ class Orchestrator:
             failed_names = (
                 [c.name for c in report.critical_failures]
                 if report.critical_failures
-                else [r.name for r in report.base_checks + report.mission_checks
-                      if r.status == CheckStatus.FAIL]
+                else [
+                    r.name
+                    for r in report.base_checks + report.mission_checks
+                    if r.status == CheckStatus.FAIL
+                ]
             )
             if raise_on_fail:
                 raise RuntimeError(
-                    f"Preflight FAILED - mission aborted. "
-                    f"Failed checks: {', '.join(failed_names)}"
+                    f"Preflight FAILED - mission aborted. Failed checks: {', '.join(failed_names)}"
                 )
 
         # WARN is non-fatal: mission continues but operator has been notified
@@ -1102,11 +1131,11 @@ class Orchestrator:
         return report
 
     async def _resolve_flight_record_anchor(
-            self,
-            *,
-            mission=None,
-            waypoints: list[Coordinate],
-            alt: float,
+        self,
+        *,
+        mission=None,
+        waypoints: list[Coordinate],
+        alt: float,
     ) -> tuple[Coordinate, Coordinate, str]:
         if mission is not None:
             anchor_fn = getattr(mission, "get_flight_record_anchor", None)
@@ -1181,8 +1210,7 @@ class Orchestrator:
         placeholder = Coordinate(lat=0.0, lon=0.0, alt=float(alt))
         return placeholder, placeholder, "placeholder"
 
-
-    async def run_mission(self, mission: "Mission", alt: float = 30.0, flight_fn=None):
+    async def run_mission(self, mission: Mission, alt: float = 30.0, flight_fn=None):
         self._flight_id = None
         self._running = True
         tasks: list[asyncio.Task] = []
@@ -1192,11 +1220,11 @@ class Orchestrator:
         cruise_alt = alt
 
         async def _finalize_started_flight(
-                *,
-                status: FlightStatus,
-                note: str,
-                event_type: str | None = None,
-                event_data: dict | None = None,
+            *,
+            status: FlightStatus,
+            note: str,
+            event_type: str | None = None,
+            event_data: dict | None = None,
         ) -> None:
             if self._flight_id is None:
                 return
@@ -1323,9 +1351,7 @@ class Orchestrator:
                     dest_alt=alt,
                     status=FlightStatus.ACTIVE,
                 )
-                self._telemetry_batcher = TelemetryBatcher(
-                    self._repo, self._flight_id
-                )
+                self._telemetry_batcher = TelemetryBatcher(self._repo, self._flight_id)
                 await self.record_flight_event(
                     "mission_created",
                     {
@@ -1364,7 +1390,11 @@ class Orchestrator:
             # ------------------------------------------------------------------
             try:
                 logger.info("🔍 Running preflight checks...")
-                mission_data = mission.get_preflight_mission_data() if hasattr(mission, "get_preflight_mission_data") else None
+                mission_data = (
+                    mission.get_preflight_mission_data()
+                    if hasattr(mission, "get_preflight_mission_data")
+                    else None
+                )
                 await self._run_preflight_checks(waypoints, alt, mission_data=mission_data)
                 logger.info("✅ Preflight checks passed")
             except Exception as e:  # FIX (Bug 2)
@@ -1531,7 +1561,6 @@ class Orchestrator:
                 await self._cleanup()
             except Exception as e:
                 logger.warning(f"Failed during mission cleanup: {e}")
-
 
     async def _cleanup(self):
         """Clean up orchestrator resources"""

@@ -1,11 +1,11 @@
 # backend/schemas/field.py
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 
-
-LonLat = List[float]  # [lon, lat]
+LonLat = list[float]  # [lon, lat]
 
 
 class FieldCreateGeoJSON(BaseModel):
@@ -14,24 +14,25 @@ class FieldCreateGeoJSON(BaseModel):
       coordinates = [[lon,lat], [lon,lat], ...]
     Ring can be open or closed; backend will close it.
     """
+
     name: str = Field(..., min_length=1, max_length=128)
-    coordinates: List[LonLat]
-    owner_id: Optional[int] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    coordinates: list[LonLat]
+    owner_id: int | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class FieldUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=128)
-    coordinates: Optional[List[LonLat]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    name: str | None = Field(None, min_length=1, max_length=128)
+    coordinates: list[LonLat] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class FieldOut(BaseModel):
     id: int
-    owner_id: Optional[int] = None
+    owner_id: int | None = None
     name: str
-    area_ha: Optional[float] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    area_ha: float | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         from_attributes = True

@@ -1,8 +1,10 @@
 import time
-import requests
-import paramiko
+
 import cv2
 import numpy as np
+import paramiko
+import requests
+
 from backend.config import settings
 
 # ---------- CONFIGURATION ----------

@@ -20,6 +20,7 @@ Bug fixes applied
 6. object.__setattr__ used on a non-frozen dataclass (was inconsistent);
    GridMission is now explicitly frozen=True and documented accordingly.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -27,7 +28,7 @@ import logging
 import math
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional, Protocol, Tuple
+from typing import TYPE_CHECKING, Literal, Protocol
 
 from shapely.geometry import LineString, Point, Polygon
 
@@ -54,6 +55,7 @@ MAX_GRID_PATH_POINTS = 4_000
 # Module-level geo helpers (equirectangular projection, small-area accurate)
 # ---------------------------------------------------------------------------
 
+
 def _meters_per_deg_lat() -> float:
     """Mean metres per degree of latitude (WGS-84 approximation)."""
     return 111_132.0
@@ -63,31 +65,27 @@ def _meters_per_deg_lon(lat_deg: float) -> float:
     return 111_320.0 * math.cos(math.radians(lat_deg))
 
 
-def _lonlat_to_xy_m(
-        lon: float, lat: float, lon0: float, lat0: float
-) -> Tuple[float, float]:
+def _lonlat_to_xy_m(lon: float, lat: float, lon0: float, lat0: float) -> tuple[float, float]:
     """Equirectangular projection centred at (lon0, lat0) → metres."""
     x = (lon - lon0) * _meters_per_deg_lon(lat0)
     y = (lat - lat0) * _meters_per_deg_lat()
     return x, y
 
 
-def _xy_m_to_lonlat(
-        x: float, y: float, lon0: float, lat0: float
-) -> Tuple[float, float]:
+def _xy_m_to_lonlat(x: float, y: float, lon0: float, lat0: float) -> tuple[float, float]:
     lon = lon0 + x / _meters_per_deg_lon(lat0)
     lat = lat0 + y / _meters_per_deg_lat()
     return lon, lat
 
 
-def _rot(x: float, y: float, ang_rad: float) -> Tuple[float, float]:
+def _rot(x: float, y: float, ang_rad: float) -> tuple[float, float]:
     c, s = math.cos(ang_rad), math.sin(ang_rad)
     return (c * x - s * y, s * x + c * y)
 
 
 def _poly_centroid_lonlat(
-        poly_lonlat: list[Tuple[float, float]],
-) -> Tuple[float, float]:
+    poly_lonlat: list[tuple[float, float]],
+) -> tuple[float, float]:
     """Simple mean centroid of an open or closed (lon, lat) ring."""
     if len(poly_lonlat) < 3:
         raise ValueError("Polygon must have ≥ 3 points")
@@ -102,8 +100,8 @@ def _poly_centroid_lonlat(
 
 
 def _maybe_get_elevation_provider(
-        orch: "Orchestrator",
-) -> Optional["ElevationProvider"]:
+    orch: Orchestrator,
+) -> ElevationProvider | None:
     """Best-effort elevation provider from the orchestrator's maps client.
 
     Tries the most common attribute names; wraps the callable so callers
@@ -133,8 +131,8 @@ def _maybe_get_elevation_provider(
 
 
 def _maybe_get_batch_elevation_provider(
-        orch: "Orchestrator",
-) -> Optional["BatchElevationProvider"]:
+    orch: Orchestrator,
+) -> BatchElevationProvider | None:
     """Best-effort batch elevation provider from the orchestrator's maps client."""
     maps = getattr(orch, "maps", None)
     if maps is None:
@@ -161,6 +159,7 @@ def _maybe_get_batch_elevation_provider(
 # Protocol
 # ---------------------------------------------------------------------------
 
+
 class ElevationProvider(Protocol):
     """Callable: (lat, lon) → metres above MSL."""
 
@@ -177,10 +176,11 @@ class BatchElevationProvider(Protocol):
 # Value objects
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class GridPlanResult:
     waypoints: list[Coordinate]
-    work_leg_mask: list[bool]   # len == len(waypoints) - 1
+    work_leg_mask: list[bool]  # len == len(waypoints) - 1
     angle_deg: float
     spacing_m: float
     stats: dict
@@ -191,19 +191,14 @@ def _coords_close(a: Coordinate, b: Coordinate, tol: float = 1e-7) -> bool:
 
 
 def _route_length_m(
-        waypoints: list[Coordinate],
-        lon0: float,
-        lat0: float,
+    waypoints: list[Coordinate],
+    lon0: float,
+    lat0: float,
 ) -> float:
     if len(waypoints) < 2:
         return 0.0
     xy = [_lonlat_to_xy_m(w.lon, w.lat, lon0, lat0) for w in waypoints]
-    return float(
-        sum(
-            math.hypot(x2 - x1, y2 - y1)
-            for (x1, y1), (x2, y2) in zip(xy, xy[1:])
-        )
-    )
+    return float(sum(math.hypot(x2 - x1, y2 - y1) for (x1, y1), (x2, y2) in zip(xy, xy[1:])))
 
 
 def _validate_plan_limits(plan: GridPlanResult) -> None:
@@ -229,9 +224,9 @@ def _validate_plan_limits(plan: GridPlanResult) -> None:
 
 
 def combine_grid_plans(
-        plans: list[GridPlanResult],
-        poly_lonlat: list[Tuple[float, float]],
-        pattern_mode: str,
+    plans: list[GridPlanResult],
+    poly_lonlat: list[tuple[float, float]],
+    pattern_mode: str,
 ) -> GridPlanResult:
     """Concatenate one or more grid plans into a single flyable route."""
     if not plans:
@@ -283,6 +278,7 @@ def combine_grid_plans(
 # GridPlanner – pure geometry, no I/O
 # ---------------------------------------------------------------------------
 
+
 class GridPlanner:
     """Field polygon → clipped lawnmower grid → ordered route.
 
@@ -296,8 +292,8 @@ class GridPlanner:
 
     @staticmethod
     def _ensure_closed(
-            poly_lonlat: list[Tuple[float, float]],
-    ) -> list[Tuple[float, float]]:
+        poly_lonlat: list[tuple[float, float]],
+    ) -> list[tuple[float, float]]:
         if len(poly_lonlat) < 3:
             raise ValueError("Polygon must have ≥ 3 points")
         if poly_lonlat[0] != poly_lonlat[-1]:
@@ -305,9 +301,7 @@ class GridPlanner:
         return poly_lonlat
 
     @staticmethod
-    def _poly_xy(
-            poly_lonlat: list[Tuple[float, float]], lon0: float, lat0: float
-    ) -> Polygon:
+    def _poly_xy(poly_lonlat: list[tuple[float, float]], lon0: float, lat0: float) -> Polygon:
         pts = GridPlanner._ensure_closed(poly_lonlat)
         pts_xy = [_lonlat_to_xy_m(lon, lat, lon0, lat0) for lon, lat in pts]
         poly = Polygon(pts_xy)
@@ -316,11 +310,9 @@ class GridPlanner:
         return poly
 
     @staticmethod
-    def _sample_points_in_poly(
-            poly: Polygon, n: int
-    ) -> list[Tuple[float, float]]:
+    def _sample_points_in_poly(poly: Polygon, n: int) -> list[tuple[float, float]]:
         minx, miny, maxx, maxy = poly.bounds
-        pts: list[Tuple[float, float]] = []
+        pts: list[tuple[float, float]] = []
         tries = 0
         while len(pts) < n and tries < n * 80:
             tries += 1
@@ -336,11 +328,11 @@ class GridPlanner:
 
     @staticmethod
     def estimate_mean_gradient(
-            poly_lonlat: list[Tuple[float, float]],
-            elev: ElevationProvider,
-            sample_n: int = 120,
-            delta_m: float = 8.0,
-    ) -> Tuple[float, float]:
+        poly_lonlat: list[tuple[float, float]],
+        elev: ElevationProvider,
+        sample_n: int = 120,
+        delta_m: float = 8.0,
+    ) -> tuple[float, float]:
         """Estimate mean terrain gradient (dz/dx, dz/dy) over the polygon.
 
         Uses central finite differences at random interior points:
@@ -375,11 +367,11 @@ class GridPlanner:
 
     @staticmethod
     def estimate_mean_gradient_batched(
-            poly_lonlat: list[Tuple[float, float]],
-            elev_many: BatchElevationProvider,
-            sample_n: int = 120,
-            delta_m: float = 8.0,
-    ) -> Tuple[float, float]:
+        poly_lonlat: list[tuple[float, float]],
+        elev_many: BatchElevationProvider,
+        sample_n: int = 120,
+        delta_m: float = 8.0,
+    ) -> tuple[float, float]:
         """Estimate mean terrain gradient using batched elevation lookups."""
         lon0, lat0 = _poly_centroid_lonlat(poly_lonlat)
         poly = GridPlanner._poly_xy(poly_lonlat, lon0, lat0)
@@ -427,7 +419,7 @@ class GridPlanner:
         return sum(gxs) / len(gxs), sum(gys) / len(gys)
 
     @staticmethod
-    def contour_aligned_angle_deg(mean_gradient: Tuple[float, float]) -> float:
+    def contour_aligned_angle_deg(mean_gradient: tuple[float, float]) -> float:
         gx, gy = mean_gradient
         if abs(gx) < 1e-6 and abs(gy) < 1e-6:
             return 0.0
@@ -436,8 +428,8 @@ class GridPlanner:
 
     @staticmethod
     def slope_aware_angle_deg(
-            poly_lonlat: list[Tuple[float, float]],
-            elev: ElevationProvider,
+        poly_lonlat: list[tuple[float, float]],
+        elev: ElevationProvider,
     ) -> float:
         """Pick grid orientation aligned with terrain contours.
 
@@ -449,9 +441,9 @@ class GridPlanner:
 
     @staticmethod
     def slope_corrected_spacing_m(
-            base_spacing_m: float,
-            angle_deg: float,
-            mean_gradient: Tuple[float, float],
+        base_spacing_m: float,
+        angle_deg: float,
+        mean_gradient: tuple[float, float],
     ) -> float:
         """Shrink horizontal spacing so *ground* spacing stays ≈ constant on slopes.
 
@@ -469,16 +461,16 @@ class GridPlanner:
 
     @staticmethod
     def generate(
-            poly_lonlat: list[Tuple[float, float]],
-            spacing_m: float,
-            angle_deg: float,
-            *,
-            inset_m: float = 1.5,
-            min_segment_m: float = 3.0,
-            start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto",
-            lane_strategy: Literal["serpentine", "one_way"] = "serpentine",
-            row_stride: int = 1,
-            row_phase_m: float = 0.0,
+        poly_lonlat: list[tuple[float, float]],
+        spacing_m: float,
+        angle_deg: float,
+        *,
+        inset_m: float = 1.5,
+        min_segment_m: float = 3.0,
+        start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto",
+        lane_strategy: Literal["serpentine", "one_way"] = "serpentine",
+        row_stride: int = 1,
+        row_phase_m: float = 0.0,
     ) -> GridPlanResult:
         """Generate a clipped lawnmower route inside *poly_lonlat*.
 
@@ -505,10 +497,10 @@ class GridPlanner:
 
         ang = math.radians(angle_deg)
 
-        def to_rot(x: float, y: float) -> Tuple[float, float]:
+        def to_rot(x: float, y: float) -> tuple[float, float]:
             return _rot(x, y, -ang)
 
-        def from_rot(xr: float, yr: float) -> Tuple[float, float]:
+        def from_rot(xr: float, yr: float) -> tuple[float, float]:
             return _rot(xr, yr, ang)
 
         poly_rot = Polygon([to_rot(x, y) for x, y in poly.exterior.coords])
@@ -517,7 +509,7 @@ class GridPlanner:
         # Sweep vertical scan-lines across the rotated polygon.
         phase_m = float(row_phase_m) % float(spacing_m)
         x = minx - spacing_m + phase_m
-        segments: list[Tuple[float, LineString]] = []
+        segments: list[tuple[float, LineString]] = []
         while x <= maxx + spacing_m:
             line = LineString([(x, miny - 10_000.0), (x, maxy + 10_000.0)])
             inter = poly_rot.intersection(line)
@@ -535,9 +527,7 @@ class GridPlanner:
             x += spacing_m
 
         if not segments:
-            raise ValueError(
-                "No grid segments generated — check spacing/inset vs field size"
-            )
+            raise ValueError("No grid segments generated — check spacing/inset vs field size")
 
         segments.sort(key=lambda t: t[0])
         if row_stride > 1:
@@ -548,7 +538,7 @@ class GridPlanner:
         if start_corner in ("ne", "se"):
             segments = list(reversed(segments))
 
-        waypoints_lonlat: list[Tuple[float, float]] = []
+        waypoints_lonlat: list[tuple[float, float]] = []
         work_mask: list[bool] = []
         first_top_to_bottom = start_corner in ("nw", "ne")
 
@@ -575,18 +565,15 @@ class GridPlanner:
             else:
                 # Turn leg then work leg.
                 waypoints_lonlat.append((alon, alat))
-                work_mask.append(False)     # connector / turn
+                work_mask.append(False)  # connector / turn
                 waypoints_lonlat.append((blon, blat))
-                work_mask.append(True)      # imaging / spray leg
+                work_mask.append(True)  # imaging / spray leg
 
         wps = [Coordinate(lat=lat, lon=lon) for lon, lat in waypoints_lonlat]
 
         # Compute total route length in metres.
         xy = [_lonlat_to_xy_m(w.lon, w.lat, lon0, lat0) for w in wps]
-        dist_m = sum(
-            math.hypot(x2 - x1, y2 - y1)
-            for (x1, y1), (x2, y2) in zip(xy, xy[1:])
-        )
+        dist_m = sum(math.hypot(x2 - x1, y2 - y1) for (x1, y1), (x2, y2) in zip(xy, xy[1:]))
 
         return GridPlanResult(
             waypoints=wps,
@@ -609,6 +596,7 @@ class GridPlanner:
 # ---------------------------------------------------------------------------
 # GridMission – frozen dataclass, compatible with BaseMission execute() path
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class GridMission:
@@ -639,9 +627,9 @@ class GridMission:
     work_leg_mask: list[bool] = field(default_factory=list)
 
     # --- Polygon-driven planning ---
-    field_polygon_lonlat: Optional[list[Tuple[float, float]]] = None  # [(lon, lat), …]
+    field_polygon_lonlat: list[tuple[float, float]] | None = None  # [(lon, lat), …]
     row_spacing_m: float = 7.5
-    grid_angle_deg: Optional[float] = None  # None + slope_aware → contour-aligned
+    grid_angle_deg: float | None = None  # None + slope_aware → contour-aligned
     slope_aware: bool = False
     safety_inset_m: float = 1.5
 
@@ -666,9 +654,7 @@ class GridMission:
             return list(self.waypoints)
 
         if not self.field_polygon_lonlat:
-            raise ValueError(
-                "GridMission requires at least 2 waypoints OR field_polygon_lonlat."
-            )
+            raise ValueError("GridMission requires at least 2 waypoints OR field_polygon_lonlat.")
 
         # Return a placeholder (centroid → centroid) so the orchestrator can
         # proceed; real waypoints are computed lazily inside fly_grid().
@@ -676,7 +662,7 @@ class GridMission:
         c = Coordinate(lat=lat0, lon=lon0, alt=self.cruise_alt_m)
         return [c, c]
 
-    async def execute(self, orch: "Orchestrator", *, alt: float = 30.0) -> None:
+    async def execute(self, orch: Orchestrator, *, alt: float = 30.0) -> None:
         """Entry point called by the generic execute_mission runner."""
         # Allow caller-supplied alt to override cruise_alt_m.
         if alt != self.cruise_alt_m:
@@ -692,23 +678,21 @@ class GridMission:
     # Planning + execution
     # ------------------------------------------------------------------
 
-    async def fly_grid(self, orch: "Orchestrator") -> None:
+    async def fly_grid(self, orch: Orchestrator) -> None:
         """Plan (if needed) and fly the lawnmower route."""
         if len(self.waypoints) < 2:
             if not self.field_polygon_lonlat:
-                raise ValueError(
-                    "GridMission needs ≥ 2 waypoints or field_polygon_lonlat."
-                )
+                raise ValueError("GridMission needs ≥ 2 waypoints or field_polygon_lonlat.")
             await self._plan_grid(orch)
 
         anchors = self._build_route(orch, cruise_alt=self.cruise_alt_m)
         await self._stitch_path(orch, anchors)
 
-    async def _plan_grid(self, orch: "Orchestrator") -> None:
+    async def _plan_grid(self, orch: Orchestrator) -> None:
         """Run GridPlanner and (optionally) apply terrain following."""
         elev = _maybe_get_elevation_provider(orch)
         batch_elev = _maybe_get_batch_elevation_provider(orch)
-        angle: Optional[float] = self.grid_angle_deg
+        angle: float | None = self.grid_angle_deg
         spacing = float(self.row_spacing_m)
 
         if self.slope_aware:
@@ -725,14 +709,10 @@ class GridMission:
                         batch_elev,
                     )
                 else:
-                    gxgy = GridPlanner.estimate_mean_gradient(
-                        self.field_polygon_lonlat, elev
-                    )
+                    gxgy = GridPlanner.estimate_mean_gradient(self.field_polygon_lonlat, elev)
                 if angle is None:
                     angle = GridPlanner.contour_aligned_angle_deg(gxgy)
-                spacing = GridPlanner.slope_corrected_spacing_m(
-                    spacing, float(angle), gxgy
-                )
+                spacing = GridPlanner.slope_corrected_spacing_m(spacing, float(angle), gxgy)
 
         if angle is None:
             angle = 0.0
@@ -797,10 +777,10 @@ class GridMission:
     # ------------------------------------------------------------------
 
     async def _add_event_safe(
-            self,
-            orch: "Orchestrator",
-            event_type: str,
-            data: Optional[dict] = None,
+        self,
+        orch: Orchestrator,
+        event_type: str,
+        data: dict | None = None,
     ) -> None:
         flight_id = getattr(orch, "_flight_id", None)
         if flight_id is None:
@@ -818,7 +798,7 @@ class GridMission:
                 flight_id,
             )
 
-    def _build_route(self, orch: "Orchestrator", *, cruise_alt: float) -> list:
+    def _build_route(self, orch: Orchestrator, *, cruise_alt: float) -> list:
         if len(self.waypoints) < 2:
             raise ValueError("GridMission requires at least 2 planned waypoints.")
 
@@ -834,7 +814,7 @@ class GridMission:
         orch._dest_coord = route[-2]
         return route
 
-    async def _stitch_path(self, orch: "Orchestrator", anchors: list) -> None:
+    async def _stitch_path(self, orch: Orchestrator, anchors: list) -> None:
         if len(anchors) < 2:
             raise ValueError("Grid route requires at least 2 anchors.")
 

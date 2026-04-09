@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
-from typing import Iterator, List, Tuple
+from collections.abc import Iterator
+from dataclasses import dataclass
 
 from backend.drone.models import Coordinate
 from backend.flight.missions.grid_mission import GridPlanner
@@ -11,7 +11,7 @@ from backend.utils.geo import haversine_km
 
 @dataclass(frozen=True)
 class PhotogrammetryPlan:
-    waypoints: List[Coordinate]
+    waypoints: list[Coordinate]
     along_track_m: float
     cross_track_m: float
 
@@ -28,7 +28,7 @@ def compute_spacings(
     front_overlap: float,
     side_overlap: float,
     min_spacing_m: float = 0.5,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     fp_w = _footprint_m(altitude_agl, fov_h)
     fp_h = _footprint_m(altitude_agl, fov_v)
     along = fp_h * (1.0 - front_overlap)
@@ -68,13 +68,13 @@ def _interpolate_segment(
 
 
 def build_lawnmower_path(
-    polygon_lonlat: List[Tuple[float, float]],
+    polygon_lonlat: list[tuple[float, float]],
     *,
     altitude_agl: float,
     along_track_m: float,
     cross_track_m: float,
     heading_deg: float = 0.0,
-) -> List[Coordinate]:
+) -> list[Coordinate]:
     """
     Build a clipped lawnmower route and densify work legs to along-track spacing.
     """
@@ -97,7 +97,7 @@ def build_lawnmower_path(
     for wp in waypoints:
         wp.alt = altitude_agl
 
-    dense: List[Coordinate] = [waypoints[0]]
+    dense: list[Coordinate] = [waypoints[0]]
     for i, (a, b) in enumerate(zip(waypoints, waypoints[1:])):
         is_work_leg = bool(work_leg_mask[i]) if i < len(work_leg_mask) else True
         if is_work_leg:
@@ -120,7 +120,7 @@ def build_lawnmower_path(
 
 def make_photogrammetry_plan(
     *,
-    polygon_lonlat: List[Tuple[float, float]],
+    polygon_lonlat: list[tuple[float, float]],
     altitude_agl: float,
     fov_h: float,
     fov_v: float,

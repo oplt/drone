@@ -3,17 +3,17 @@ import logging
 import shutil
 import subprocess
 import time
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 
+import cv2
 import httpx
 import paramiko
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-import cv2
 
-from backend.config import settings
 from backend.auth.deps import require_user, require_user_header_or_query
+from backend.config import settings
 from backend.video.stream import DroneVideoStream, opencv_has_gstreamer
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ _last_gazebo_enable_attempt = 0.0
 
 
 # -------------------- existing helpers (unchanged) --------------------
+
 
 def _discover_gazebo_enable_topics() -> list[str]:
     if shutil.which("gz") is None:
@@ -138,19 +139,12 @@ async def _gazebo_stream_generator():
             if not ret:
                 continue
             frame_bytes = buffer.tobytes()
-            yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
-            )
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
             await asyncio.sleep(0.01)
 
     except Exception as e:
         logger.error(f"Error in Gazebo stream generator: {e}")
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: text/plain\r\n\r\n"
-            b"Error streaming from Gazebo\r\n\r\n"
-        )
+        yield (b"--frame\r\nContent-Type: text/plain\r\n\r\nError streaming from Gazebo\r\n\r\n")
     finally:
         if video:
             video.close()
@@ -216,9 +210,7 @@ async def _gazebo_gst_fallback_stream_generator(request: Request):
         )
     except FileNotFoundError:
         yield (
-            b"--frame\r\n"
-            b"Content-Type: text/plain\r\n\r\n"
-            b"gst-launch-1.0 is not installed\r\n\r\n"
+            b"--frame\r\nContent-Type: text/plain\r\n\r\ngst-launch-1.0 is not installed\r\n\r\n"
         )
         return
 
@@ -231,7 +223,7 @@ async def _gazebo_gst_fallback_stream_generator(request: Request):
 
             try:
                 chunk = await asyncio.wait_for(proc.stdout.read(64 * 1024), timeout=1.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 if proc.returncode is not None:
                     raise RuntimeError(f"gst-launch fallback exited with code {proc.returncode}")
                 continue
@@ -250,15 +242,16 @@ async def _gazebo_gst_fallback_stream_generator(request: Request):
             proc.terminate()
             try:
                 await asyncio.wait_for(proc.wait(), timeout=2.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 await proc.wait()
+
 
 # -------------------- NEW: recording manager --------------------
 
 _recorder_lock = asyncio.Lock()
-_recorder: Optional[DroneVideoStream] = None
-_recorder_task: Optional[asyncio.Task] = None
+_recorder: DroneVideoStream | None = None
+_recorder_task: asyncio.Task | None = None
 
 
 def _recording_source_url() -> str:
@@ -280,7 +273,7 @@ async def _recorder_pump(video: DroneVideoStream):
                 asyncio.to_thread(next, frame_iter, None),
                 timeout=2.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # No frame in 2 s — check for cancellation then retry
             await asyncio.sleep(0)
             continue
@@ -297,7 +290,10 @@ async def start_recording(user=Depends(require_user)):
 
     async with _recorder_lock:
         if _recorder and _recorder.get_connection_status().get("recording"):
-            return {"status": "already_recording", "recording_file": _recorder.get_connection_status().get("recording_file")}
+            return {
+                "status": "already_recording",
+                "recording_file": _recorder.get_connection_status().get("recording_file"),
+            }
 
         if settings.drone_video_use_gazebo:
             await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
@@ -346,15 +342,24 @@ async def recording_status(user=Depends(require_user)):
         if not _recorder:
             return {"recording": False, "recording_file": None}
         st = _recorder.get_connection_status()
-        return {"recording": bool(st.get("recording")), "recording_file": st.get("recording_file")}
+        return {
+            "recording": bool(st.get("recording")),
+            "recording_file": st.get("recording_file"),
+        }
+
 
 # -------------------- existing routes (kept) --------------------
+
 
 @router.post("/start")
 async def start_pi_camera_server(user=Depends(require_user)):
     if settings.drone_video_use_gazebo:
         await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
-        return {"status": "started", "source": settings.drone_video_source_gazebo, "proxy": "/video/mjpeg"}
+        return {
+            "status": "started",
+            "source": settings.drone_video_source_gazebo,
+            "proxy": "/video/mjpeg",
+        }
 
     stream_src = f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
@@ -362,7 +367,11 @@ async def start_pi_camera_server(user=Depends(require_user)):
         async with httpx.AsyncClient(timeout=2.0) as client:
             r = await client.get(stream_src)
             if r.status_code == 200:
-                return {"status": "already_running", "source": stream_src, "proxy": "/video/mjpeg"}
+                return {
+                    "status": "already_running",
+                    "source": stream_src,
+                    "proxy": "/video/mjpeg",
+                }
     except Exception:
         pass
 
@@ -390,7 +399,9 @@ async def start_pi_camera_server(user=Depends(require_user)):
 
 
 @router.get("/mjpeg")
-async def mjpeg_proxy(request: Request, user=Depends(require_user_header_or_query)) -> StreamingResponse:
+async def mjpeg_proxy(
+    request: Request, user=Depends(require_user_header_or_query)
+) -> StreamingResponse:
     if settings.drone_video_use_gazebo:
         await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
         media_type = "multipart/x-mixed-replace; boundary=frame"
@@ -398,7 +409,11 @@ async def mjpeg_proxy(request: Request, user=Depends(require_user_header_or_quer
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache",
         }
-        return StreamingResponse(_gazebo_stream_generator_auto(request), media_type=media_type, headers=headers)
+        return StreamingResponse(
+            _gazebo_stream_generator_auto(request),
+            media_type=media_type,
+            headers=headers,
+        )
 
     src_url = f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS = [
     "Heartbeat Age",
     "Message Rate",

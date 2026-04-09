@@ -5,8 +5,9 @@ import logging
 import shutil
 import subprocess
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, AsyncIterator, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import cv2
@@ -17,7 +18,6 @@ from fastapi import Request
 
 from backend.config import settings
 from backend.video.stream import DroneVideoStream, opencv_has_gstreamer
-
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +58,7 @@ def _discover_gazebo_enable_topics() -> list[str]:
         topic = line.strip()
         if not topic:
             continue
-        if topic.endswith("/enable_streaming") and (
-            "camera" in topic or "sensor" in topic
-        ):
+        if topic.endswith("/enable_streaming") and ("camera" in topic or "sensor" in topic):
             topics.append(topic)
     return topics
 
@@ -169,15 +167,15 @@ class SharedVideoRuntime:
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
         self._condition = asyncio.Condition()
-        self._video: Optional[DroneVideoStream] = None
-        self._worker_task: Optional[asyncio.Task] = None
-        self._latest_frame: Optional[bytes] = None
+        self._video: DroneVideoStream | None = None
+        self._worker_task: asyncio.Task | None = None
+        self._latest_frame: bytes | None = None
         self._frame_seq = 0
-        self._last_error: Optional[str] = None
-        self._source_url: Optional[str] = None
-        self._fallback_video_writer: Optional[cv2.VideoWriter] = None
-        self._fallback_recording_filename: Optional[str] = None
-        self._fallback_recording_path: Optional[str] = None
+        self._last_error: str | None = None
+        self._source_url: str | None = None
+        self._fallback_video_writer: cv2.VideoWriter | None = None
+        self._fallback_recording_filename: str | None = None
+        self._fallback_recording_path: str | None = None
 
     def source_url(self) -> str:
         if settings.drone_video_use_gazebo:
@@ -244,7 +242,7 @@ class SharedVideoRuntime:
                     break
                 try:
                     await asyncio.wait_for(self._condition.wait(), timeout=remaining)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
 
         if self._frame_seq == 0:
@@ -344,7 +342,7 @@ class SharedVideoRuntime:
             while True:
                 try:
                     chunk = await asyncio.wait_for(proc.stdout.read(64 * 1024), timeout=1.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     if proc.returncode is not None:
                         raise RuntimeError(
                             f"gst-launch fallback exited with code {proc.returncode}"
@@ -384,7 +382,7 @@ class SharedVideoRuntime:
                 proc.terminate()
                 try:
                     await asyncio.wait_for(proc.wait(), timeout=2.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     proc.kill()
                     await proc.wait()
 
@@ -414,7 +412,7 @@ class SharedVideoRuntime:
         return await self.status()
 
     async def _worker_loop(self, source: str) -> None:
-        video: Optional[DroneVideoStream] = None
+        video: DroneVideoStream | None = None
         try:
             if gazebo_subprocess_fallback_required():
                 await self._worker_loop_gazebo_fallback()
@@ -486,9 +484,7 @@ class SharedVideoRuntime:
             ),
             "frame_count": int(state.get("frame_count") or frame_seq),
             "recording": bool(state.get("recording")) if state else fallback_recording,
-            "recording_file": (
-                state.get("recording_file") if state else fallback_recording_file
-            ),
+            "recording_file": (state.get("recording_file") if state else fallback_recording_file),
             "recording_path": recording_path or fallback_recording_path,
             "source": source,
             "error": self._last_error,
@@ -558,7 +554,7 @@ class SharedVideoRuntime:
                     yield (
                         b"--frame\r\n"
                         b"Content-Type: text/plain\r\n\r\n"
-                        + f"Video stream error: {error_message}\r\n\r\n".encode("utf-8")
+                        + f"Video stream error: {error_message}\r\n\r\n".encode()
                     )
                     return
 
@@ -569,10 +565,7 @@ class SharedVideoRuntime:
                 await asyncio.sleep(0.05)
                 continue
 
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
-            )
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
 
 
 shared_video_runtime = SharedVideoRuntime()

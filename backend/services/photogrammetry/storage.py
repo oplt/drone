@@ -19,9 +19,7 @@ class StorageService:
         self.storage_dir = Path(
             os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")
         ).resolve()
-        self.base_url = os.getenv("PHOTOGRAMMETRY_STORAGE_BASE_URL", "/mapping-assets").rstrip(
-            "/"
-        )
+        self.base_url = os.getenv("PHOTOGRAMMETRY_STORAGE_BASE_URL", "/mapping-assets").rstrip("/")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     async def upload_file(self, src_path: str) -> str:

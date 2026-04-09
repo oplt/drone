@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from backend.drone.models import LocalCoordinate
 
 from .enums import IndoorFrame
 from .models import DockingTarget, LocalPose
-from .slam import SLAMProvider, SimulatedSLAMProvider
+from .slam import SimulatedSLAMProvider, SLAMProvider
 
 
 class LocalNavigationAdapter(Protocol):

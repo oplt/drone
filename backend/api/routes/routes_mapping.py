@@ -5,18 +5,35 @@ import logging
 import os
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import require_user
-from backend.db.models import Asset, Field as FieldEntity, FieldModel, FlightEvent, MappingJob
+from backend.db.models import (
+    Asset,
+    FieldModel,
+    FlightEvent,
+    MappingJob,
+)
+from backend.db.models import (
+    Field as FieldEntity,
+)
 from backend.db.session import get_db
 from backend.services.photogrammetry.asset_gateway import AssetGatewayService
 from backend.services.photogrammetry.field_derivation import (
@@ -51,7 +68,7 @@ class MappingArtifactsIn(BaseModel):
 
 
 class MappingDroneSyncIn(BaseModel):
-    source_dir: Optional[str] = None
+    source_dir: str | None = None
     recursive: bool = True
 
 
@@ -59,13 +76,13 @@ class MappingJobCreateIn(BaseModel):
     field_id: int
     processor: str = "webodm"
     input_source: Literal["upload", "drone_sync"] = "upload"
-    drone_sync: Optional[MappingDroneSyncIn] = None
+    drone_sync: MappingDroneSyncIn | None = None
     artifacts: MappingArtifactsIn = Field(default_factory=MappingArtifactsIn)
-    webodm_options: Dict[str, Any] = Field(default_factory=dict)
+    webodm_options: dict[str, Any] = Field(default_factory=dict)
     start_immediately: bool = True
 
     @model_validator(mode="after")
-    def _validate_input_source(self) -> "MappingJobCreateIn":
+    def _validate_input_source(self) -> MappingJobCreateIn:
         if self.processor.strip().lower() != "webodm":
             raise ValueError("Only processor='webodm' is currently supported.")
         if self.input_source == "drone_sync" and self.start_immediately is False:
@@ -90,7 +107,7 @@ class MappingAssetOut(BaseModel):
     id: int
     type: str
     url: str
-    meta_data: Dict[str, Any] = Field(default_factory=dict)
+    meta_data: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
 
@@ -101,16 +118,16 @@ class MappingJobStatusOut(BaseModel):
     status: str
     progress: int
     created_at: datetime
-    error: Optional[str] = None
+    error: str | None = None
     processor: str
-    processor_task_id: Optional[str] = None
-    assets: List[MappingAssetOut] = Field(default_factory=list)
+    processor_task_id: str | None = None
+    assets: list[MappingAssetOut] = Field(default_factory=list)
 
 
 class MappingJobUploadOut(BaseModel):
     job_id: int
     uploaded_count: int
-    uploaded_paths: List[str]
+    uploaded_paths: list[str]
 
 
 class MappingJobDeleteOut(BaseModel):
@@ -131,7 +148,7 @@ class FieldRegistryOut(BaseModel):
     field_name: str
     owner_id: int
     coordinate_system: str = "EPSG:4326"
-    versions: List[FieldModelVersionOut]
+    versions: list[FieldModelVersionOut]
 
 
 class MappingSignedUrlOut(BaseModel):
@@ -140,7 +157,7 @@ class MappingSignedUrlOut(BaseModel):
     expires_at: datetime
     relative_url: str
     url: str
-    path: Optional[str] = None
+    path: str | None = None
 
 
 async def _get_owned_field_or_404(
@@ -194,10 +211,12 @@ async def _get_owned_asset_or_404(
     return asset, int(field_owner_id)
 
 
-async def _assets_for_model(db: AsyncSession, *, model_id: int) -> List[Asset]:
+async def _assets_for_model(db: AsyncSession, *, model_id: int) -> list[Asset]:
     return (
-        await db.execute(select(Asset).where(Asset.model_id == model_id).order_by(Asset.id.asc()))
-    ).scalars().all()
+        (await db.execute(select(Asset).where(Asset.model_id == model_id).order_by(Asset.id.asc())))
+        .scalars()
+        .all()
+    )
 
 
 async def _latest_photogrammetry_source_dir(db: AsyncSession) -> str | None:
@@ -242,12 +261,10 @@ def _mapping_max_upload_files() -> int:
 
 
 def _mapping_max_upload_file_bytes() -> int:
-    return int(
-        os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES", str(1024 * 1024 * 1024))
-    )
+    return int(os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES", str(1024 * 1024 * 1024)))
 
 
-def _parse_form_object(raw: str | None, *, field_name: str) -> Dict[str, Any]:
+def _parse_form_object(raw: str | None, *, field_name: str) -> dict[str, Any]:
     if raw is None or not raw.strip():
         return {}
     try:
@@ -260,10 +277,10 @@ def _parse_form_object(raw: str | None, *, field_name: str) -> Dict[str, Any]:
 
 
 async def _persist_upload_files(
-    files: List[UploadFile],
+    files: list[UploadFile],
     *,
     destination_dir: Path,
-) -> List[Path]:
+) -> list[Path]:
     max_upload_files = _mapping_max_upload_files()
     if len(files) > max_upload_files:
         raise HTTPException(
@@ -275,7 +292,7 @@ async def _persist_upload_files(
     allowed_exts = _mapping_allowed_extensions()
     destination_dir.mkdir(parents=True, exist_ok=True)
 
-    stored_paths: List[Path] = []
+    stored_paths: list[Path] = []
     for upload in files:
         safe_name = Path(upload.filename or "upload.bin").name
         if not safe_name:
@@ -290,9 +307,7 @@ async def _persist_upload_files(
                 detail=f"Unsupported file type '{ext}' for '{safe_name}'.",
             )
 
-        dst = destination_dir / (
-            f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
-        )
+        dst = destination_dir / (f"{datetime.now(UTC).strftime('%Y%m%d%H%M%S%f')}_{safe_name}")
         size = 0
         try:
             with dst.open("wb") as out:
@@ -325,24 +340,24 @@ async def _persist_upload_files(
     return stored_paths
 
 
-def _relative_input_paths(paths: List[Path], *, inputs_root: Path) -> List[str]:
+def _relative_input_paths(paths: list[Path], *, inputs_root: Path) -> list[str]:
     return [str(path.relative_to(inputs_root)) for path in paths]
 
 
 def _move_staged_uploads_into_job(
-    staged_paths: List[Path],
+    staged_paths: list[Path],
     *,
     inputs_root: Path,
     job_id: int,
-) -> List[Path]:
+) -> list[Path]:
     job_dir = inputs_root / str(job_id)
     job_dir.mkdir(parents=True, exist_ok=True)
 
-    moved_paths: List[Path] = []
+    moved_paths: list[Path] = []
     for src in staged_paths:
         dst = job_dir / src.name
         if dst.exists():
-            dst = job_dir / f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{src.name}"
+            dst = job_dir / f"{datetime.now(UTC).strftime('%Y%m%d%H%M%S%f')}_{src.name}"
         shutil.move(str(src), str(dst))
         moved_paths.append(dst)
     return moved_paths
@@ -353,7 +368,7 @@ async def _create_field_from_ring(
     *,
     owner_id: int,
     name: str,
-    ring: List[List[float]],
+    ring: list[list[float]],
 ) -> FieldEntity:
     polygon_wkt = ring_to_polygon_wkt(ring)
     row = await db.execute(
@@ -384,11 +399,11 @@ async def _create_field_from_ring(
 
 
 def _auto_generated_field_name() -> str:
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     return f"Uploaded field {stamp}"
 
 
-def _to_job_status(job: MappingJob, assets: List[Asset]) -> MappingJobStatusOut:
+def _to_job_status(job: MappingJob, assets: list[Asset]) -> MappingJobStatusOut:
     return MappingJobStatusOut(
         job_id=job.id,
         field_id=job.field_id,
@@ -490,8 +505,8 @@ async def create_mapping_job(
 
 @router.post("/jobs/upload", response_model=MappingJobStatusOut)
 async def create_mapping_job_from_uploaded_images(
-    files: List[UploadFile] = File(...),
-    field_name: Optional[str] = Form(default=None),
+    files: list[UploadFile] = File(...),
+    field_name: str | None = Form(default=None),
     processor: str = Form(default="webodm"),
     artifacts: str = Form(default=""),
     webodm_options: str = Form(default=""),
@@ -499,7 +514,9 @@ async def create_mapping_job_from_uploaded_images(
     user=Depends(require_user),
 ) -> MappingJobStatusOut:
     if processor.strip().lower() != "webodm":
-        raise HTTPException(status_code=400, detail="Only processor='webodm' is currently supported.")
+        raise HTTPException(
+            status_code=400, detail="Only processor='webodm' is currently supported."
+        )
 
     inputs_root = _mapping_inputs_root()
     staging_root = inputs_root / "_staging"
@@ -589,35 +606,43 @@ async def create_mapping_job_from_uploaded_images(
         shutil.rmtree(stage_dir, ignore_errors=True)
 
 
-@router.get("/jobs", response_model=List[MappingJobStatusOut])
+@router.get("/jobs", response_model=list[MappingJobStatusOut])
 async def list_mapping_jobs(
     limit: int = Query(default=100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     user=Depends(require_user),
-) -> List[MappingJobStatusOut]:
+) -> list[MappingJobStatusOut]:
     jobs = (
-        await db.execute(
-            select(MappingJob)
-            .join(FieldEntity, MappingJob.field_id == FieldEntity.id)
-            .where(FieldEntity.owner_id == user.id)
-            .order_by(MappingJob.id.desc())
-            .limit(limit)
+        (
+            await db.execute(
+                select(MappingJob)
+                .join(FieldEntity, MappingJob.field_id == FieldEntity.id)
+                .where(FieldEntity.owner_id == user.id)
+                .order_by(MappingJob.id.desc())
+                .limit(limit)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     if not jobs:
         return []
 
     model_ids = sorted({int(job.model_id) for job in jobs})
     assets = (
-        await db.execute(
-            select(Asset)
-            .where(Asset.model_id.in_(model_ids))
-            .order_by(Asset.model_id.asc(), Asset.id.asc())
+        (
+            await db.execute(
+                select(Asset)
+                .where(Asset.model_id.in_(model_ids))
+                .order_by(Asset.model_id.asc(), Asset.id.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
-    assets_by_model: Dict[int, List[Asset]] = {}
+    assets_by_model: dict[int, list[Asset]] = {}
     for asset in assets:
         assets_by_model.setdefault(int(asset.model_id), []).append(asset)
 
@@ -669,12 +694,12 @@ async def get_latest_ready_mapping_for_field(
     return _to_job_status(job, assets)
 
 
-@router.get("/fields/{field_id}/models", response_model=List[FieldModelVersionOut])
+@router.get("/fields/{field_id}/models", response_model=list[FieldModelVersionOut])
 async def list_field_model_versions(
     field_id: int,
     db: AsyncSession = Depends(get_db),
     user=Depends(require_user),
-) -> List[FieldModelVersionOut]:
+) -> list[FieldModelVersionOut]:
     field = await _get_owned_field_or_404(db, field_id=field_id, owner_id=user.id)
     versions = await field_registry.list_versions(db, field_id=field.id)
     return [
@@ -736,7 +761,7 @@ async def start_mapping_job(
 @router.post("/jobs/{job_id}/images", response_model=MappingJobUploadOut)
 async def upload_mapping_job_images(
     job_id: int,
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
     user=Depends(require_user),
 ) -> MappingJobUploadOut:
@@ -830,7 +855,7 @@ async def get_mapping_asset_signed_url(
     return MappingSignedUrlOut(
         asset_id=asset.id,
         asset_type=asset.type,
-        expires_at=datetime.fromtimestamp(exp, tz=timezone.utc),
+        expires_at=datetime.fromtimestamp(exp, tz=UTC),
         relative_url=relative_url,
         url=absolute_url,
         path=clean_path or None,

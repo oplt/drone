@@ -147,9 +147,7 @@ def generate_xyz_tiles(
 
     gdal2tiles = _which("gdal2tiles.py") or _which("gdal2tiles")
     if not gdal2tiles:
-        raise RuntimeError(
-            "gdal2tiles is required for xyz_tiles output but was not found in PATH."
-        )
+        raise RuntimeError("gdal2tiles is required for xyz_tiles output but was not found in PATH.")
 
     _run(
         [
@@ -224,9 +222,7 @@ def _write_single_tile_tileset(
         "asset": {"version": "1.1"},
         "geometricError": 500,
         "root": {
-            "boundingVolume": {
-                "region": region
-            },
+            "boundingVolume": {"region": region},
             "geometricError": 0,
             "refine": "ADD",
             "content": {"uri": dst_glb.name},
@@ -252,9 +248,7 @@ def convert_mesh_to_3dtiles(
       command template receives `{input_gltf}` and `{output_dir}`.
     """
     gltf_or_glb = Path(convert_mesh_to_gltf(mesh_path)).resolve()
-    target_dir = Path(
-        out_dir or gltf_or_glb.parent / f"{gltf_or_glb.stem}.3dtiles"
-    ).resolve()
+    target_dir = Path(out_dir or gltf_or_glb.parent / f"{gltf_or_glb.stem}.3dtiles").resolve()
 
     cmd_template = os.getenv("PHOTOGRAMMETRY_3DTILES_CMD", "").strip()
     if not cmd_template:

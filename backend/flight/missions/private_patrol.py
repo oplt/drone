@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any, Iterable, Literal, Sequence
+from typing import Any, Literal
 
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -167,6 +168,7 @@ class PatrolMLBinding:
 # Public helpers used by API endpoints
 # ---------------------------------------------------------------------------
 
+
 def private_patrol_task_catalog() -> list[dict[str, Any]]:
     """List available private patrol mission templates/tasks."""
     return [dict(item) for item in _PRIVATE_PATROL_TASK_CATALOG]
@@ -184,8 +186,7 @@ def normalize_ai_tasks(tasks: Iterable[str] | None) -> tuple[PatrolTask, ...]:
             continue
         if key not in PATROL_AI_TASKS:
             raise ValueError(
-                f"Unsupported patrol AI task '{raw}'. "
-                f"Supported tasks: {', '.join(PATROL_AI_TASKS)}"
+                f"Unsupported patrol AI task '{raw}'. Supported tasks: {', '.join(PATROL_AI_TASKS)}"
             )
         if key in seen:
             continue
@@ -197,7 +198,9 @@ def normalize_ai_tasks(tasks: Iterable[str] | None) -> tuple[PatrolTask, ...]:
     return tuple(normalized)
 
 
-def normalize_patrol_direction(direction: str | PatrolDirection | None) -> PatrolDirection:
+def normalize_patrol_direction(
+    direction: str | PatrolDirection | None,
+) -> PatrolDirection:
     raw = str(direction or "clockwise").strip().lower().replace("_", "-")
     if raw in {"clockwise", "cw"}:
         return "clockwise"
@@ -206,7 +209,9 @@ def normalize_patrol_direction(direction: str | PatrolDirection | None) -> Patro
     raise ValueError("direction must be 'clockwise' or 'counterclockwise'")
 
 
-def normalize_trigger_type(trigger_type: str | PatrolTriggerType | None) -> PatrolTriggerType:
+def normalize_trigger_type(
+    trigger_type: str | PatrolTriggerType | None,
+) -> PatrolTriggerType:
     raw = str(trigger_type or "fence_alarm").strip().lower().replace("-", "_")
     if raw not in _EVENT_TRIGGER_ACTION_MAP:
         supported = ", ".join(_EVENT_TRIGGER_ACTION_MAP.keys())
@@ -237,7 +242,9 @@ def estimate_camera_trigger_distance_m(
 ) -> float:
     """Estimate camera trigger distance from altitude and overlap target."""
     overlap_fraction = max(0.01, min(0.95, float(overlap_pct) / 100.0))
-    footprint_m = 2.0 * float(altitude_agl_m) * math.tan(math.radians(float(camera_fov_v_deg) / 2.0))
+    footprint_m = (
+        2.0 * float(altitude_agl_m) * math.tan(math.radians(float(camera_fov_v_deg) / 2.0))
+    )
     spacing_m = footprint_m * (1.0 - overlap_fraction)
     return max(float(min_spacing_m), min(float(max_spacing_m), float(spacing_m)))
 
@@ -290,9 +297,9 @@ def generate_private_patrol_plan(
         raise ValueError("Patrol route has fewer than 3 points after offset")
 
     clockwise = _is_clockwise_xy(ring_xy)
-    if direction == "clockwise" and not clockwise:
-        ring_xy = list(reversed(ring_xy))
-    elif direction == "counterclockwise" and clockwise:
+    if (direction == "clockwise" and not clockwise) or (
+        direction == "counterclockwise" and clockwise
+    ):
         ring_xy = list(reversed(ring_xy))
 
     dense_xy = _densify_ring_xy(ring_xy, max_segment_length_m=segment_len_m)
@@ -341,8 +348,7 @@ def generate_waypoint_patrol_plan(
         route_points.append(route_points[0])
 
     waypoints = [
-        Coordinate(lat=lat, lon=lon, alt=float(altitude_agl_m))
-        for lon, lat in route_points
+        Coordinate(lat=lat, lon=lon, alt=float(altitude_agl_m)) for lon, lat in route_points
     ]
     route_m = _route_length_for_coords(waypoints)
     return PrivatePatrolPlan(
@@ -499,10 +505,7 @@ def _build_zone_config(
     if not polygon_lonlat or len(polygon_lonlat) < 3:
         return []
 
-    polygon = [
-        {"lat": float(lat), "lon": float(lon)}
-        for lon, lat in polygon_lonlat
-    ]
+    polygon = [{"lat": float(lat), "lon": float(lon)} for lon, lat in polygon_lonlat]
     return [{"name": name, "polygon": polygon, "restricted": True}]
 
 
@@ -591,6 +594,7 @@ def _patrol_ml_runtime_payload(orch: Orchestrator) -> dict[str, Any]:
 # Mission implementation
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class PrivatePatrolMission:
     polygon_lonlat: list[tuple[float, float]]
@@ -625,7 +629,9 @@ class PrivatePatrolMission:
         if float(self.max_segment_length_m) <= 0:
             raise ValueError("max_segment_length_m must be > 0")
 
-        object.__setattr__(self, "patrol_direction", normalize_patrol_direction(self.patrol_direction))
+        object.__setattr__(
+            self, "patrol_direction", normalize_patrol_direction(self.patrol_direction)
+        )
         object.__setattr__(self, "ai_tasks", normalize_ai_tasks(self.ai_tasks))
 
     def _make_plan(self, *, altitude_agl: float | None = None) -> PrivatePatrolPlan:
@@ -1174,7 +1180,10 @@ class EventTriggeredPatrolMission:
             "private_patrol_trigger_received",
             {
                 **trigger_action_profile(self.trigger_type, target_label=self.target_label),
-                "event_location_lonlat": [float(event_point.lon), float(event_point.lat)],
+                "event_location_lonlat": [
+                    float(event_point.lon),
+                    float(event_point.lat),
+                ],
                 "verification_loiter_s": float(self.verification_loiter_s),
                 "auto_stream_video": bool(self.auto_stream_video),
                 "track_target": bool(self.track_target),
@@ -1230,7 +1239,10 @@ class EventTriggeredPatrolMission:
         await self._add_event_safe(
             orch,
             "private_patrol_stream_video_to_operator",
-            {"requested": bool(self.auto_stream_video), "started": bool(stream_started)},
+            {
+                "requested": bool(self.auto_stream_video),
+                "started": bool(stream_started),
+            },
         )
 
         tracking_started, tracking_method = (False, None)
@@ -1355,7 +1367,11 @@ class EventTriggeredPatrolMission:
         return False, None
 
     async def _stop_tracking(self, orch: Orchestrator) -> bool:
-        for method_name in ("stop_tracking", "stop_target_tracking", "stop_object_tracking"):
+        for method_name in (
+            "stop_tracking",
+            "stop_target_tracking",
+            "stop_object_tracking",
+        ):
             fn = getattr(orch.drone, method_name, None)
             if not callable(fn):
                 continue
@@ -1618,6 +1634,7 @@ class GridSurveillanceMission:
 # Internal geometry helpers
 # ---------------------------------------------------------------------------
 
+
 def _meters_per_deg_lat() -> float:
     return 111_132.0
 
@@ -1638,7 +1655,9 @@ def _xy_m_to_lonlat(x: float, y: float, lon0: float, lat0: float) -> tuple[float
     return lon, lat
 
 
-def _ensure_closed_ring(points: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
+def _ensure_closed_ring(
+    points: Sequence[tuple[float, float]],
+) -> list[tuple[float, float]]:
     if len(points) < 3:
         raise ValueError("polygon must have at least 3 points")
     out = list(points)
@@ -1647,14 +1666,18 @@ def _ensure_closed_ring(points: Sequence[tuple[float, float]]) -> list[tuple[flo
     return out
 
 
-def _strip_closed_ring(points: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
+def _strip_closed_ring(
+    points: Sequence[tuple[float, float]],
+) -> list[tuple[float, float]]:
     out = list(points)
     if len(out) >= 2 and out[0] == out[-1]:
         return out[:-1]
     return out
 
 
-def _poly_centroid_lonlat(poly_lonlat: Sequence[tuple[float, float]]) -> tuple[float, float]:
+def _poly_centroid_lonlat(
+    poly_lonlat: Sequence[tuple[float, float]],
+) -> tuple[float, float]:
     pts = _strip_closed_ring(poly_lonlat)
     if len(pts) < 3:
         raise ValueError("polygon must have at least 3 points")

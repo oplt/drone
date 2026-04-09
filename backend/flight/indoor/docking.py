@@ -5,13 +5,15 @@ from typing import Protocol
 
 from .enums import IndoorFrame
 from .local_navigation import LocalNavigationAdapter
-from .models import DockPose, DockingTarget, LocalPose
+from .models import DockingTarget, DockPose, LocalPose
 
 
 class DockingController(Protocol):
     async def initialize_dock_reference(self, dock: DockPose) -> bool: ...
 
-    async def compute_dock_approach(self, current_pose: LocalPose, dock: DockPose) -> DockingTarget: ...
+    async def compute_dock_approach(
+        self, current_pose: LocalPose, dock: DockPose
+    ) -> DockingTarget: ...
 
     async def run_precision_docking(self, current_pose: LocalPose, dock: DockPose) -> bool: ...
 

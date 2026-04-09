@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import math
-from typing import Any, Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any
 
 from backend.drone.models import Coordinate
 
-def _chunked(items: Sequence[tuple[float, float]], size: int) -> Iterable[Sequence[tuple[float, float]]]:
+
+def _chunked(
+    items: Sequence[tuple[float, float]], size: int
+) -> Iterable[Sequence[tuple[float, float]]]:
     if size <= 0:
         size = 1
     for i in range(0, len(items), size):
-        yield items[i:i + size]
+        yield items[i : i + size]
 
 
 def _call_single_elevation(fn: Callable[..., Any], lat: float, lon: float) -> float:
@@ -108,9 +112,7 @@ async def apply_terrain_follow_to_path(
         batch_size=batch_size,
     )
     if len(elevations_amsl) != len(path):
-        raise RuntimeError(
-            f"Elevation/path length mismatch: {len(elevations_amsl)} vs {len(path)}"
-        )
+        raise RuntimeError(f"Elevation/path length mismatch: {len(elevations_amsl)} vs {len(path)}")
 
     out: list[Coordinate] = []
     prev_alt: float | None = None

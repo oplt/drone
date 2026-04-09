@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Any, List, Literal, Tuple
+from typing import Any, Literal
 
 from backend.db.models import FlightStatus
 from backend.drone.models import Coordinate
@@ -16,14 +16,12 @@ from backend.services.photogrammetry.flight_capture import FlightCaptureSessionS
 from backend.services.photogrammetry.mission import make_photogrammetry_plan
 from backend.utils.geo import coord_from_home
 
-
 logger = logging.getLogger(__name__)
-
 
 
 @dataclass(frozen=True)
 class PhotogrammetryMission:
-    polygon_lonlat: List[Tuple[float, float]]  # [(lon,lat),...]
+    polygon_lonlat: list[tuple[float, float]]  # [(lon,lat),...]
     altitude_agl: float
     fov_h: float
     fov_v: float
@@ -188,9 +186,7 @@ class PhotogrammetryMission:
 
         planned_agl_m = float(self.altitude_agl)
         target_agl_m = float(
-            self.terrain_target_agl_m
-            if self.terrain_target_agl_m is not None
-            else planned_agl_m
+            self.terrain_target_agl_m if self.terrain_target_agl_m is not None else planned_agl_m
         )
         takeoff_alt_m = target_agl_m if self.terrain_follow else planned_agl_m
 
@@ -227,10 +223,14 @@ class PhotogrammetryMission:
             self.terrain_follow,
         )
         home = coord_from_home(orch.drone.home_location)
-        home.alt = float(waypoints[-1].alt if waypoints and waypoints[-1].alt is not None else takeoff_alt_m)
+        home.alt = float(
+            waypoints[-1].alt if waypoints and waypoints[-1].alt is not None else takeoff_alt_m
+        )
 
         capture_session_service = FlightCaptureSessionService()
-        session = capture_session_service.start_session(flight_id=getattr(orch, "_flight_id", "unknown"))
+        session = capture_session_service.start_session(
+            flight_id=getattr(orch, "_flight_id", "unknown")
+        )
         logger.info(
             "Photogrammetry capture session started: flight_id=%s source_dir=%s abs_dir=%s",
             session.flight_id,
@@ -407,11 +407,7 @@ class PhotogrammetryMission:
         )
 
         if not flight_finalized:
-            status = (
-                FlightStatus.COMPLETED
-                if mission_error is None
-                else FlightStatus.FAILED
-            )
+            status = FlightStatus.COMPLETED if mission_error is None else FlightStatus.FAILED
             await self._finish_flight_safe(
                 orch,
                 status=status,
@@ -420,7 +416,10 @@ class PhotogrammetryMission:
         if mission_error is not None:
             logger.error("Photogrammetry mission finished with error: %s", mission_error)
             raise mission_error
-        logger.info("Photogrammetry mission finished successfully: flight_id=%s", orch._flight_id)
+        logger.info(
+            "Photogrammetry mission finished successfully: flight_id=%s",
+            orch._flight_id,
+        )
 
     async def execute(self, orch: Orchestrator, alt: float) -> None:
         effective_alt = (

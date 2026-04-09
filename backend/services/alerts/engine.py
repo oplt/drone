@@ -7,7 +7,7 @@ import smtplib
 import time
 from dataclasses import dataclass
 from email.message import EmailMessage
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 from geoalchemy2.shape import to_shape
@@ -51,7 +51,7 @@ class AlertSignal:
     severity: str
     title: str
     message: str
-    meta_data: Dict[str, Any]
+    meta_data: dict[str, Any]
 
 
 class AlertEngine:
@@ -138,11 +138,11 @@ class AlertEngine:
                     should_notify = age >= dedupe_window_sec
 
                 should_update = (
-                        should_notify
-                        or current.severity != signal.severity
-                        or current.title != signal.title
-                        or current.message != signal.message
-                        or current.meta_data != signal.meta_data
+                    should_notify
+                    or current.severity != signal.severity
+                    or current.title != signal.title
+                    or current.message != signal.message
+                    or current.meta_data != signal.meta_data
                 )
                 if should_update:
                     updated = await self._repo.touch_alert(
@@ -203,7 +203,11 @@ class AlertEngine:
 
         battery_remaining = self._to_float(telemetry.battery.remaining_pct)
         low_battery_threshold = float(settings.alerts_low_battery_percent or 25.0)
-        if battery_remaining is not None and battery_remaining >= 0 and battery_remaining <= low_battery_threshold:
+        if (
+            battery_remaining is not None
+            and battery_remaining >= 0
+            and battery_remaining <= low_battery_threshold
+        ):
             signals.append(
                 AlertSignal(
                     rule_type="low_battery",
@@ -258,9 +262,7 @@ class AlertEngine:
                     meta_data={
                         "wind_speed_mps": wind_speed,
                         "threshold_mps": high_wind_threshold,
-                        "wind_direction_deg": self._to_float(
-                            telemetry.wind.direction_deg
-                        ),
+                        "wind_direction_deg": self._to_float(telemetry.wind.direction_deg),
                     },
                 )
             )
@@ -268,7 +270,12 @@ class AlertEngine:
         geofence_id = settings.alerts_operation_geofence_id
         lat = self._to_float(telemetry.position.lat)
         lon = self._to_float(telemetry.position.lon)
-        if geofence_id and lat is not None and lon is not None and not (abs(lat) < 1e-8 and abs(lon) < 1e-8):
+        if (
+            geofence_id
+            and lat is not None
+            and lon is not None
+            and not (abs(lat) < 1e-8 and abs(lon) < 1e-8)
+        ):
             geofence = (
                 await db.execute(
                     select(Geofence).where(
@@ -601,7 +608,7 @@ class AlertEngine:
             await db.commit()
 
     @staticmethod
-    def _dig(source: Dict[str, Any], *keys: str) -> Any:
+    def _dig(source: dict[str, Any], *keys: str) -> Any:
         current: Any = source
         for key in keys:
             if not isinstance(current, dict):

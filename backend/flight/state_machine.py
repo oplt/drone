@@ -34,33 +34,32 @@ aborting ───────────────────────�
 
 Terminal states: completed, aborted, failed
 """
-from __future__ import annotations
 
-from typing import FrozenSet, Optional
+from __future__ import annotations
 
 # ---------------------------------------------------------------------------
 # State sets
 # ---------------------------------------------------------------------------
 
-TERMINAL_STATES: FrozenSet[str] = frozenset({"completed", "aborted", "failed"})
+TERMINAL_STATES: frozenset[str] = frozenset({"completed", "aborted", "failed"})
 
 # States that are counted as "active" when checking whether a mission is in
 # progress (used for the single-active-mission guard and get_active() queries).
-ACTIVE_STATES: FrozenSet[str] = frozenset(
+ACTIVE_STATES: frozenset[str] = frozenset(
     {
         "planned",
         "preflight",
         "queued",
         "arming",
         "airborne",
-        "running",   # legacy alias kept for existing DB rows
+        "running",  # legacy alias kept for existing DB rows
         "paused",
         "resumed",
         "aborting",
     }
 )
 
-ALL_STATES: FrozenSet[str] = ACTIVE_STATES | TERMINAL_STATES
+ALL_STATES: frozenset[str] = ACTIVE_STATES | TERMINAL_STATES
 
 # ---------------------------------------------------------------------------
 # Transition graph
@@ -69,23 +68,23 @@ ALL_STATES: FrozenSet[str] = ACTIVE_STATES | TERMINAL_STATES
 # Maps each state to the set of states it may legally transition into.
 # Code paths that bypass this graph (e.g. direct DB admin writes) are not
 # prevented, but all API-driven transitions are validated here.
-_TRANSITIONS: dict[str, FrozenSet[str]] = {
+_TRANSITIONS: dict[str, frozenset[str]] = {
     # Pre-execution
-    "planned":   frozenset({"preflight", "queued", "failed"}),
+    "planned": frozenset({"preflight", "queued", "failed"}),
     "preflight": frozenset({"queued", "failed"}),
-    "queued":    frozenset({"arming", "airborne", "running", "aborted", "failed"}),
+    "queued": frozenset({"arming", "airborne", "running", "aborted", "failed"}),
     # Execution
-    "arming":    frozenset({"airborne", "running", "aborting", "failed"}),
-    "airborne":  frozenset({"paused", "aborting", "completed", "failed"}),
-    "running":   frozenset({"paused", "aborting", "airborne", "completed", "failed"}),  # legacy
+    "arming": frozenset({"airborne", "running", "aborting", "failed"}),
+    "airborne": frozenset({"paused", "aborting", "completed", "failed"}),
+    "running": frozenset({"paused", "aborting", "airborne", "completed", "failed"}),  # legacy
     # Operator control
-    "paused":    frozenset({"resumed", "airborne", "aborting", "failed"}),
-    "resumed":   frozenset({"airborne", "running", "aborting", "failed"}),
-    "aborting":  frozenset({"aborted", "failed"}),
+    "paused": frozenset({"resumed", "airborne", "aborting", "failed"}),
+    "resumed": frozenset({"airborne", "running", "aborting", "failed"}),
+    "aborting": frozenset({"aborted", "failed"}),
     # Terminal — no outbound transitions
     "completed": frozenset(),
-    "aborted":   frozenset(),
-    "failed":    frozenset(),
+    "aborted": frozenset(),
+    "failed": frozenset(),
 }
 
 # ---------------------------------------------------------------------------
@@ -95,31 +94,32 @@ _TRANSITIONS: dict[str, FrozenSet[str]] = {
 
 # Maps (current_state, operator_command) → next_state.
 COMMAND_TRANSITIONS: dict[tuple[str, str], str] = {
-    ("queued",   "abort"):  "aborted",
-    ("arming",   "abort"):  "aborting",
-    ("airborne", "pause"):  "paused",
-    ("airborne", "abort"):  "aborting",
-    ("airborne", "rth"):    "aborting",
-    ("airborne", "land"):   "aborting",
-    ("running",  "pause"):  "paused",    # legacy
-    ("running",  "abort"):  "aborting",  # legacy
-    ("running",  "rth"):    "aborting",  # legacy
-    ("running",  "land"):   "aborting",  # legacy
-    ("paused",   "resume"): "resumed",
-    ("paused",   "abort"):  "aborting",
-    ("paused",   "land"):   "aborting",
-    ("resumed",  "abort"):  "aborting",
-    ("resumed",  "rth"):    "aborting",
-    ("resumed",  "land"):   "aborting",
-    ("aborting", "abort"):  "aborting",  # idempotent
-    ("aborting", "rth"):    "aborting",  # idempotent
-    ("aborting", "land"):   "aborting",  # idempotent
+    ("queued", "abort"): "aborted",
+    ("arming", "abort"): "aborting",
+    ("airborne", "pause"): "paused",
+    ("airborne", "abort"): "aborting",
+    ("airborne", "rth"): "aborting",
+    ("airborne", "land"): "aborting",
+    ("running", "pause"): "paused",  # legacy
+    ("running", "abort"): "aborting",  # legacy
+    ("running", "rth"): "aborting",  # legacy
+    ("running", "land"): "aborting",  # legacy
+    ("paused", "resume"): "resumed",
+    ("paused", "abort"): "aborting",
+    ("paused", "land"): "aborting",
+    ("resumed", "abort"): "aborting",
+    ("resumed", "rth"): "aborting",
+    ("resumed", "land"): "aborting",
+    ("aborting", "abort"): "aborting",  # idempotent
+    ("aborting", "rth"): "aborting",  # idempotent
+    ("aborting", "land"): "aborting",  # idempotent
 }
 
 
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
 
 def is_terminal(state: str) -> bool:
     """Return True if *state* is a terminal (no further transitions) state."""
@@ -140,6 +140,6 @@ def validate_transition(from_state: str, to_state: str) -> bool:
     return to_state in allowed
 
 
-def allowed_command_target(current_state: str, command: str) -> Optional[str]:
+def allowed_command_target(current_state: str, command: str) -> str | None:
     """Return the target state for *command* from *current_state*, or None if invalid."""
     return COMMAND_TRANSITIONS.get((current_state, command))

@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from types import SimpleNamespace
 
 from backend.services.patrol.patrol_persistence import PatrolPersistenceService
 
@@ -32,7 +31,12 @@ async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Persist one simulated patrol anomaly through PatrolPersistenceService."
     )
-    parser.add_argument("--flight-id", type=int, required=True, help="DB flight_id to attach the simulated anomaly to.")
+    parser.add_argument(
+        "--flight-id",
+        type=int,
+        required=True,
+        help="DB flight_id to attach the simulated anomaly to.",
+    )
     parser.add_argument("--client-flight-id", type=str, default="sim-flight-001")
     parser.add_argument(
         "--mission-task-type",

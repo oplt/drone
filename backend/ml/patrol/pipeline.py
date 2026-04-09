@@ -4,20 +4,20 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
-from backend.ml.patrol.config import ml_settings
-from backend.ml.patrol.stream_reader import StreamReader
-from backend.ml.patrol.motion import MotionPrefilter
-from backend.ml.patrol.detector import ObjectDetector
-from backend.ml.patrol.tracker import SimpleTracker
-from backend.ml.patrol.geo import GeoProjector
-from backend.ml.patrol.zones import Zone, ZoneEngine
 from backend.ml.patrol.anomaly import AnomalyScorer
+from backend.ml.patrol.config import ml_settings
+from backend.ml.patrol.detector import ObjectDetector
 from backend.ml.patrol.events import EventSink
 from backend.ml.patrol.evidence import EvidenceRecorder
-from backend.services.patrol.patrol_persistence import PatrolPersistenceService
+from backend.ml.patrol.geo import GeoProjector
+from backend.ml.patrol.motion import MotionPrefilter
+from backend.ml.patrol.stream_reader import StreamReader
+from backend.ml.patrol.tracker import SimpleTracker
+from backend.ml.patrol.zones import Zone, ZoneEngine
 from backend.services.patrol.mission_runtime_store import mission_runtime_store
+from backend.services.patrol.patrol_persistence import PatrolPersistenceService
 
 try:
     from backend.services.patrol.patrol_persistence import PatrolPersistenceService
@@ -31,7 +31,7 @@ _MAX_TELEMETRY_AGE_S = 5.0
 
 class DroneAnomalyPipeline:
     def __init__(self) -> None:
-        self.reader: Optional[StreamReader] = None
+        self.reader: StreamReader | None = None
         self.motion = MotionPrefilter(min_motion_area=ml_settings.min_motion_area)
         self.detector = ObjectDetector(
             model_path=ml_settings.detector_model_path,
@@ -65,16 +65,20 @@ class DroneAnomalyPipeline:
             loitering_seconds=ml_settings.loitering_seconds,
         )
 
-        self.persistence = None if PatrolPersistenceService is None else PatrolPersistenceService(
-            runtime_context_provider=mission_runtime_store.get_active_context
+        self.persistence = (
+            None
+            if PatrolPersistenceService is None
+            else PatrolPersistenceService(
+                runtime_context_provider=mission_runtime_store.get_active_context
+            )
         )
 
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
         self._running = False
-        self._started_at: Optional[datetime] = None
-        self._last_frame_at: Optional[datetime] = None
-        self._last_error: Optional[str] = None
+        self._started_at: datetime | None = None
+        self._last_frame_at: datetime | None = None
+        self._last_error: str | None = None
         self._frames_processed = 0
         self._anomalies_emitted = 0
         self._stream_source: str | int | None = ml_settings.stream_source
@@ -84,7 +88,7 @@ class DroneAnomalyPipeline:
             raise RuntimeError("Pipeline reader is not initialized. Call start() first.")
         return await asyncio.to_thread(self.reader.read)
 
-    async def start(self, stream_source: Optional[str | int] = None) -> None:
+    async def start(self, stream_source: str | int | None = None) -> None:
         if self._task and not self._task.done():
             return
 
@@ -219,7 +223,6 @@ class DroneAnomalyPipeline:
 
     async def _next_packet(self, iterator):
         return await asyncio.to_thread(next, iterator, _SENTINEL)
-
 
     async def run_forever(self) -> None:
         if self.reader is None:

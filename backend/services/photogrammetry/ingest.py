@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from datetime import datetime, timezone
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
-
+from typing import Any
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
 logger = logging.getLogger(__name__)
@@ -37,8 +37,8 @@ class DroneSyncIngestService:
         *,
         job_id: int,
         field_id: int,
-        params: Dict[str, Any] | None,
-    ) -> List[str]:
+        params: dict[str, Any] | None,
+    ) -> list[str]:
         logger.info(
             "Ingest start: job_id=%s field_id=%s input_root=%s sync_root=%s",
             job_id,
@@ -79,9 +79,9 @@ class DroneSyncIngestService:
         job_dir = self.inputs_root / str(job_id)
         job_dir.mkdir(parents=True, exist_ok=True)
 
-        rel_paths: List[str] = []
+        rel_paths: list[str] = []
         for src in image_paths:
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+            stamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S%f")
             safe_name = f"{stamp}_{src.name}"
             dst = job_dir / safe_name
             shutil.copy2(src, dst)
@@ -94,10 +94,8 @@ class DroneSyncIngestService:
         )
         return rel_paths
 
-    def _resolve_source_dir(
-        self, *, source_dir: Any, field_id: int, job_id: int
-    ) -> Path | None:
-        candidates: List[Path] = []
+    def _resolve_source_dir(self, *, source_dir: Any, field_id: int, job_id: int) -> Path | None:
+        candidates: list[Path] = []
         if isinstance(source_dir, str) and source_dir.strip():
             raw = source_dir.strip()
             src = Path(raw)
@@ -138,9 +136,5 @@ class DroneSyncIngestService:
     @staticmethod
     def _list_images(source_dir: Path, *, recursive: bool) -> Sequence[Path]:
         walker = source_dir.rglob("*") if recursive else source_dir.glob("*")
-        files = [
-            p
-            for p in walker
-            if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-        ]
+        files = [p for p in walker if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS]
         return sorted(files)

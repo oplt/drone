@@ -1,6 +1,9 @@
 from __future__ import annotations
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from backend.config import settings, bootstrap
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from backend.config import bootstrap
+
 from .models import Base
 
 engine = create_async_engine(

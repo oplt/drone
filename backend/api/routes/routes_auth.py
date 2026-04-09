@@ -1,18 +1,18 @@
 # backend/routes_auth.py
-from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 
-from backend.db.session import Session
-from backend.db.models import User
+from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel, EmailStr
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.auth.auth import (
-    hash_password,
-    verify_password,
     create_access_token,
     decode_token,
+    hash_password,
+    verify_password,
 )
+from backend.db.models import User
+from backend.db.session import Session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -27,7 +27,7 @@ async def get_db() -> AsyncSession:
 class SignUpIn(BaseModel):
     email: EmailStr
     password: str
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 
 class LoginIn(BaseModel):
@@ -38,8 +38,8 @@ class LoginIn(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: EmailStr
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
 
 
 class AuthOut(BaseModel):
@@ -50,7 +50,7 @@ class AuthOut(BaseModel):
 # ---- Helpers ----
 async def get_current_user(
     db: AsyncSession,
-    authorization: Optional[str],
+    authorization: str | None,
 ) -> User:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
@@ -109,7 +109,7 @@ async def login(payload: LoginIn, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 async def me(
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     user = await get_current_user(db, authorization)

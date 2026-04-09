@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Iterable
 
-from backend.ml.patrol.models import Track, GeoPoint, AnomalyEvent
+from backend.ml.patrol.models import AnomalyEvent, GeoPoint, Track
 from backend.ml.patrol.zones import ZoneEngine
 
 
@@ -33,11 +33,11 @@ class AnomalyScorer:
     """
 
     def __init__(
-            self,
-            zone_engine: ZoneEngine,
-            loitering_seconds: int = 12,
-            person_min_confidence: float = 0.60,
-            vehicle_min_confidence: float = 0.60,
+        self,
+        zone_engine: ZoneEngine,
+        loitering_seconds: int = 12,
+        person_min_confidence: float = 0.60,
+        vehicle_min_confidence: float = 0.60,
     ):
         self.zone_engine = zone_engine
         self.loitering_seconds = int(loitering_seconds)
@@ -62,10 +62,10 @@ class AnomalyScorer:
         return state
 
     def score(
-            self,
-            tracks: Iterable[Track],
-            gps_lookup: dict[int, GeoPoint],
-            now: datetime,
+        self,
+        tracks: Iterable[Track],
+        gps_lookup: dict[int, GeoPoint],
+        now: datetime,
     ) -> list[AnomalyEvent]:
         out: list[AnomalyEvent] = []
 
@@ -81,16 +81,18 @@ class AnomalyScorer:
             state = self._get_state(track, now)
 
             zone_hits = self.zone_engine.find_zone_hits(point)
-            restricted_zone_names = {
-                z.name for z in zone_hits if getattr(z, "restricted", False)
-            }
+            restricted_zone_names = {z.name for z in zone_hits if getattr(z, "restricted", False)}
 
             entered_restricted_zones = restricted_zone_names - state.current_restricted_zones
             state.current_restricted_zones = restricted_zone_names
 
             # 1) restricted_zone_entry: emit only when entering a restricted zone
             if entered_restricted_zones and track.label in {
-                "person", "car", "truck", "motorcycle", "bicycle"
+                "person",
+                "car",
+                "truck",
+                "motorcycle",
+                "bicycle",
             }:
                 min_conf = (
                     self.person_min_confidence
@@ -118,11 +120,11 @@ class AnomalyScorer:
             # 2) intrusion_detected:
             # only for person + only in restricted zone + only once per track lifetime
             if (
-                    track.label == "person"
-                    and restricted_zone_names
-                    and not state.loitering_emitted
-                    and track.first_seen is not None
-                    and (now - track.first_seen).total_seconds() >= self.loitering_seconds
+                track.label == "person"
+                and restricted_zone_names
+                and not state.loitering_emitted
+                and track.first_seen is not None
+                and (now - track.first_seen).total_seconds() >= self.loitering_seconds
             ):
                 out.append(
                     AnomalyEvent(
@@ -142,10 +144,10 @@ class AnomalyScorer:
             # 3) loitering:
             # only once per track and only if the track is in a restricted zone
             if (
-                    restricted_zone_names
-                    and not state.loitering_emitted
-                    and track.first_seen is not None
-                    and (now - track.first_seen).total_seconds() >= self.loitering_seconds
+                restricted_zone_names
+                and not state.loitering_emitted
+                and track.first_seen is not None
+                and (now - track.first_seen).total_seconds() >= self.loitering_seconds
             ):
                 out.append(
                     AnomalyEvent(

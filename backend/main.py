@@ -1,14 +1,16 @@
 import asyncio
 import logging
+
+from backend.analysis.llm import LLMAnalyzer
+
+# from backend.messaging.opcua import DroneOpcUaServer
+from backend.config import settings, setup_logging
+from backend.db.repository.telemetry_repo import TelemetryRepository
+from backend.db.session import close_db, init_db
 from backend.drone.mavlink_drone import MavlinkDrone
 from backend.drone.orchestrator import Orchestrator
 from backend.map.google_maps import GoogleMapsClient
-from backend.analysis.llm import LLMAnalyzer
 from backend.messaging.mqtt import MqttClient
-# from backend.messaging.opcua import DroneOpcUaServer
-from backend.config import settings, setup_logging
-from backend.db.session import init_db, close_db
-from backend.db.repository.telemetry_repo import TelemetryRepository
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +29,7 @@ async def _build_orchestrator() -> Orchestrator:
         if _orch is not None:
             return _orch
 
-        drone = MavlinkDrone(
-            settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout
-        )
+        drone = MavlinkDrone(settings.drone_conn, heartbeat_timeout=settings.heartbeat_timeout)
         maps = GoogleMapsClient(settings.google_maps_api_key)
         analyzer = LLMAnalyzer(
             api_base=settings.llm_api_base,
@@ -71,9 +71,7 @@ async def main():
     setup_logging()
     await init_db()
     orch = await _build_orchestrator()
-    await orch.run(
-        "Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35
-    )
+    await orch.run("Jerrabomberra Grassland Nature Reserve", "Alexander Maconochie Centre", alt=35)
     await close_db()
 
 

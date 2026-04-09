@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from .enums import IndoorFrame, OccupancyState
-from .models import DockPose, Frontier, LocalPose, MapSnapshot, OccupancyGrid, SLAMHealth
+from .models import (
+    DockPose,
+    Frontier,
+    LocalPose,
+    MapSnapshot,
+    OccupancyGrid,
+    SLAMHealth,
+)
 
 
 class SLAMProvider(Protocol):
@@ -19,7 +27,9 @@ class SLAMProvider(Protocol):
 
     async def optimize_map(self) -> bool: ...
 
-    async def to_control_frame(self, pose: LocalPose, *, frame_id: str = IndoorFrame.ODOM.value) -> LocalPose: ...
+    async def to_control_frame(
+        self, pose: LocalPose, *, frame_id: str = IndoorFrame.ODOM.value
+    ) -> LocalPose: ...
 
     async def get_frontiers(self) -> list[Frontier] | None: ...
 

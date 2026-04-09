@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Iterable, Literal, Optional, Sequence
+from typing import Literal
 
 from shapely.affinity import rotate as rotate_geometry
-from shapely.geometry import GeometryCollection, LineString, MultiLineString, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import nearest_points
 
 WarehouseScanPattern = Literal[
@@ -22,22 +23,19 @@ WarehouseViewMode = Literal["forward", "left_face", "right_face", "dual_face"]
 # Pure-metric helpers (no lon/lat anywhere)
 # ---------------------------------------------------------------------------
 
-def _distance_2d(a: "WarehouseLocalPoint", b: "WarehouseLocalPoint") -> float:
+
+def _distance_2d(a: WarehouseLocalPoint, b: WarehouseLocalPoint) -> float:
     return math.hypot(b.x_m - a.x_m, b.y_m - a.y_m)
 
 
-def _distance_3d(a: "WarehouseLocalPoint", b: "WarehouseLocalPoint") -> float:
-    return math.sqrt(
-        (b.x_m - a.x_m) ** 2
-        + (b.y_m - a.y_m) ** 2
-        + (b.z_m - a.z_m) ** 2
-    )
+def _distance_3d(a: WarehouseLocalPoint, b: WarehouseLocalPoint) -> float:
+    return math.sqrt((b.x_m - a.x_m) ** 2 + (b.y_m - a.y_m) ** 2 + (b.z_m - a.z_m) ** 2)
 
 
 def _points_close(
-        a: "WarehouseLocalPoint",
-        b: "WarehouseLocalPoint",
-        tol_m: float = 1e-3,
+    a: WarehouseLocalPoint,
+    b: WarehouseLocalPoint,
+    tol_m: float = 1e-3,
 ) -> bool:
     return _distance_3d(a, b) <= tol_m
 
@@ -97,12 +95,13 @@ def _collect_lines(geometry: object) -> list[LineString]:
 # Data structures — all coordinates in metres, local drone frame
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class WarehouseLocalPoint:
     x_m: float
     y_m: float
     z_m: float
-    yaw_deg: Optional[float] = None
+    yaw_deg: float | None = None
 
 
 @dataclass(frozen=True)
@@ -110,8 +109,8 @@ class WarehouseDockConfig:
     dock_pose: WarehouseLocalPoint
     entry_pose: WarehouseLocalPoint
     exit_pose: WarehouseLocalPoint
-    marker_id: Optional[str] = None
-    dock_yaw_deg: Optional[float] = None
+    marker_id: str | None = None
+    dock_yaw_deg: float | None = None
     precision_required: bool = True
 
 
@@ -147,21 +146,22 @@ class WarehouseObstacleBox:
 class WarehouseKeepoutZone:
     zone_id: str
     footprint: list[tuple[float, float]]
-    min_z_m: Optional[float] = None
-    max_z_m: Optional[float] = None
+    min_z_m: float | None = None
+    max_z_m: float | None = None
 
 
 @dataclass(frozen=True)
 class WarehousePlanSegment:
     """A single flight leg in the local metric frame — no GPS coordinates."""
+
     segment_id: str
     local_start: WarehouseLocalPoint
     local_end: WarehouseLocalPoint
     work_leg: bool
     leg_type: str
-    yaw_deg: Optional[float] = None
-    layer_index: Optional[int] = None
-    corridor_id: Optional[str] = None
+    yaw_deg: float | None = None
+    layer_index: int | None = None
+    corridor_id: str | None = None
     source: str = "derived"
 
     @property
@@ -172,19 +172,20 @@ class WarehousePlanSegment:
 @dataclass(frozen=True)
 class WarehousePlanResult:
     """Plan output — entirely in metres, local drone frame."""
+
     local_polygon: list[tuple[float, float]]
     flyable_polygon: list[tuple[float, float]]
-    dock_point: Optional[WarehouseLocalPoint]
-    staging_point: Optional[WarehouseLocalPoint]
+    dock_point: WarehouseLocalPoint | None
+    staging_point: WarehouseLocalPoint | None
     corridors: list[WarehouseCorridor]
     obstacles_3d: list[WarehouseObstacleBox]
     keepout_zones: list[WarehouseKeepoutZone]
     scan_layers: list[WarehouseScanLayer]
     segments: list[WarehousePlanSegment]
-    dock_entry_point: Optional[WarehouseLocalPoint] = None
-    dock_exit_point: Optional[WarehouseLocalPoint] = None
-    dock_yaw_deg: Optional[float] = None
-    dock_marker_id: Optional[str] = None
+    dock_entry_point: WarehouseLocalPoint | None = None
+    dock_exit_point: WarehouseLocalPoint | None = None
+    dock_yaw_deg: float | None = None
+    dock_marker_id: str | None = None
     precision_dock_required: bool = False
     dock_inferred: bool = False
     stats: dict[str, object] = field(default_factory=dict)
@@ -194,10 +195,11 @@ class WarehousePlanResult:
 # Internal helpers — geometry only
 # ---------------------------------------------------------------------------
 
+
 def _clip_segment_endpoints(
-        start_xy: tuple[float, float],
-        end_xy: tuple[float, float],
-        trim_m: float,
+    start_xy: tuple[float, float],
+    end_xy: tuple[float, float],
+    trim_m: float,
 ) -> tuple[tuple[float, float], tuple[float, float]] | None:
     segment_len = math.hypot(end_xy[0] - start_xy[0], end_xy[1] - start_xy[1])
     if segment_len <= 0:
@@ -215,8 +217,8 @@ def _clip_segment_endpoints(
 
 
 def _nearest_boundary_point(
-        polygon: Polygon,
-        target_xy: tuple[float, float],
+    polygon: Polygon,
+    target_xy: tuple[float, float],
 ) -> tuple[float, float]:
     boundary = polygon.exterior
     nearest = nearest_points(boundary, Point(target_xy))[0]
@@ -224,9 +226,9 @@ def _nearest_boundary_point(
 
 
 def _point_towards(
-        start_xy: tuple[float, float],
-        target_xy: tuple[float, float],
-        distance_m: float,
+    start_xy: tuple[float, float],
+    target_xy: tuple[float, float],
+    distance_m: float,
 ) -> tuple[float, float]:
     dx = float(target_xy[0]) - float(start_xy[0])
     dy = float(target_xy[1]) - float(start_xy[1])
@@ -241,13 +243,13 @@ def _point_towards(
 
 
 def _dock_entry_points(
-        *,
-        footprint: Polygon,
-        flyable_polygon: Polygon,
-        first_scan_point: WarehouseLocalPoint,
-        z_m: float,
-        corridor_spacing_m: float,
-        clearance_m: float,
+    *,
+    footprint: Polygon,
+    flyable_polygon: Polygon,
+    first_scan_point: WarehouseLocalPoint,
+    z_m: float,
+    corridor_spacing_m: float,
+    clearance_m: float,
 ) -> tuple[WarehouseLocalPoint, WarehouseLocalPoint]:
     target_xy = (float(first_scan_point.x_m), float(first_scan_point.y_m))
     dock_xy = _nearest_boundary_point(footprint, target_xy)
@@ -264,16 +266,16 @@ def _dock_entry_points(
 
 
 def _segment_from_local_points(
-        *,
-        segment_id: str,
-        start_point: WarehouseLocalPoint,
-        end_point: WarehouseLocalPoint,
-        leg_type: str,
-        work_leg: bool,
-        layer_index: Optional[int],
-        corridor_id: Optional[str],
-        source: str,
-        yaw_deg: Optional[float] = None,
+    *,
+    segment_id: str,
+    start_point: WarehouseLocalPoint,
+    end_point: WarehouseLocalPoint,
+    leg_type: str,
+    work_leg: bool,
+    layer_index: int | None,
+    corridor_id: str | None,
+    source: str,
+    yaw_deg: float | None = None,
 ) -> WarehousePlanSegment:
     return WarehousePlanSegment(
         segment_id=segment_id,
@@ -289,10 +291,10 @@ def _segment_from_local_points(
 
 
 def _perimeter_segments(
-        *,
-        flyable_polygon: Polygon,
-        z_m: float,
-        layer_index: int,
+    *,
+    flyable_polygon: Polygon,
+    z_m: float,
+    layer_index: int,
 ) -> list[WarehousePlanSegment]:
     ring = list(flyable_polygon.exterior.coords)
     if len(ring) >= 2 and ring[0] == ring[-1]:
@@ -300,10 +302,7 @@ def _perimeter_segments(
     if len(ring) < 3:
         return []
 
-    points = [
-        WarehouseLocalPoint(x_m=float(x), y_m=float(y), z_m=float(z_m))
-        for x, y in ring
-    ]
+    points = [WarehouseLocalPoint(x_m=float(x), y_m=float(y), z_m=float(z_m)) for x, y in ring]
     segments: list[WarehousePlanSegment] = []
     for idx, (a, b) in enumerate(zip(points, points[1:] + points[:1])):
         yaw = _normalize_angle_deg(_heading_deg((a.x_m, a.y_m), (b.x_m, b.y_m)))
@@ -324,13 +323,13 @@ def _perimeter_segments(
 
 
 def _generate_corridors_for_axis(
-        *,
-        flyable_polygon: Polygon,
-        axis_deg: float,
-        corridor_spacing_m: float,
-        clearance_m: float,
-        width_m: float,
-        source: str,
+    *,
+    flyable_polygon: Polygon,
+    axis_deg: float,
+    corridor_spacing_m: float,
+    clearance_m: float,
+    width_m: float,
+    source: str,
 ) -> list[WarehouseCorridor]:
     rotated = rotate_geometry(flyable_polygon, -axis_deg, origin=(0, 0))
     minx, miny, maxx, maxy = rotated.bounds
@@ -377,9 +376,7 @@ def _generate_corridors_for_axis(
                 origin=(0, 0),
             )
             local_start_xy, local_end_xy = list(local_line.coords)
-            heading = _normalize_angle_deg(
-                _heading_deg(local_start_xy, local_end_xy)
-            )
+            heading = _normalize_angle_deg(_heading_deg(local_start_xy, local_end_xy))
             corridors.append(
                 WarehouseCorridor(
                     corridor_id=f"{source}_{len(corridors)}_{idx}_{part_index}",
@@ -404,10 +401,10 @@ def _generate_corridors_for_axis(
 
 
 def _with_z(
-        point: WarehouseLocalPoint,
-        *,
-        z_m: float,
-        yaw_deg: Optional[float] = None,
+    point: WarehouseLocalPoint,
+    *,
+    z_m: float,
+    yaw_deg: float | None = None,
 ) -> WarehouseLocalPoint:
     return WarehouseLocalPoint(
         x_m=float(point.x_m),
@@ -418,12 +415,12 @@ def _with_z(
 
 
 def _pass_segments_for_corridor(
-        *,
-        corridor: WarehouseCorridor,
-        z_m: float,
-        layer_index: int,
-        view_mode: WarehouseViewMode,
-        reverse: bool,
+    *,
+    corridor: WarehouseCorridor,
+    z_m: float,
+    layer_index: int,
+    view_mode: WarehouseViewMode,
+    reverse: bool,
 ) -> list[WarehousePlanSegment]:
     base_start = corridor.end if reverse else corridor.start
     base_end = corridor.start if reverse else corridor.end
@@ -432,11 +429,11 @@ def _pass_segments_for_corridor(
     )
 
     def _segment(
-            *,
-            segment_id: str,
-            start_point: WarehouseLocalPoint,
-            end_point: WarehouseLocalPoint,
-            yaw_deg: Optional[float],
+        *,
+        segment_id: str,
+        start_point: WarehouseLocalPoint,
+        end_point: WarehouseLocalPoint,
+        yaw_deg: float | None,
     ) -> WarehousePlanSegment:
         local_start = _with_z(start_point, z_m=z_m, yaw_deg=yaw_deg)
         local_end = _with_z(end_point, z_m=z_m, yaw_deg=yaw_deg)
@@ -488,14 +485,14 @@ def _pass_segments_for_corridor(
 
 
 def _append_segment_route(
-        *,
-        route_segments: list[WarehousePlanSegment],
-        new_segments: Iterable[WarehousePlanSegment],
+    *,
+    route_segments: list[WarehousePlanSegment],
+    new_segments: Iterable[WarehousePlanSegment],
 ) -> None:
     for segment in new_segments:
         if route_segments and not _points_close(
-                route_segments[-1].local_end,
-                segment.local_start,
+            route_segments[-1].local_end,
+            segment.local_start,
         ):
             transit = WarehousePlanSegment(
                 segment_id=f"transit_{len(route_segments)}",
@@ -513,8 +510,8 @@ def _append_segment_route(
 
 
 def _segment_intersects_keepout(
-        segment: WarehousePlanSegment,
-        zone: WarehouseKeepoutZone,
+    segment: WarehousePlanSegment,
+    zone: WarehouseKeepoutZone,
 ) -> bool:
     if len(zone.footprint) < 3:
         return False
@@ -526,17 +523,19 @@ def _segment_intersects_keepout(
         return False
     if max_z is not None and seg_min_z > max_z:
         return False
-    line = LineString([
-        (float(segment.local_start.x_m), float(segment.local_start.y_m)),
-        (float(segment.local_end.x_m), float(segment.local_end.y_m)),
-    ])
+    line = LineString(
+        [
+            (float(segment.local_start.x_m), float(segment.local_start.y_m)),
+            (float(segment.local_end.x_m), float(segment.local_end.y_m)),
+        ]
+    )
     poly = Polygon(zone.footprint)
     return line.intersects(poly)
 
 
 def _segment_intersects_obstacle(
-        segment: WarehousePlanSegment,
-        obstacle: WarehouseObstacleBox,
+    segment: WarehousePlanSegment,
+    obstacle: WarehouseObstacleBox,
 ) -> bool:
     half_x = float(obstacle.size_x_m) / 2.0
     half_y = float(obstacle.size_y_m) / 2.0
@@ -546,16 +545,20 @@ def _segment_intersects_obstacle(
     seg_max_z = max(float(segment.local_start.z_m), float(segment.local_end.z_m))
     if seg_max_z < min_z or seg_min_z > max_z:
         return False
-    line = LineString([
-        (float(segment.local_start.x_m), float(segment.local_start.y_m)),
-        (float(segment.local_end.x_m), float(segment.local_end.y_m)),
-    ])
-    box = Polygon([
-        (float(obstacle.center.x_m) - half_x, float(obstacle.center.y_m) - half_y),
-        (float(obstacle.center.x_m) + half_x, float(obstacle.center.y_m) - half_y),
-        (float(obstacle.center.x_m) + half_x, float(obstacle.center.y_m) + half_y),
-        (float(obstacle.center.x_m) - half_x, float(obstacle.center.y_m) + half_y),
-    ])
+    line = LineString(
+        [
+            (float(segment.local_start.x_m), float(segment.local_start.y_m)),
+            (float(segment.local_end.x_m), float(segment.local_end.y_m)),
+        ]
+    )
+    box = Polygon(
+        [
+            (float(obstacle.center.x_m) - half_x, float(obstacle.center.y_m) - half_y),
+            (float(obstacle.center.x_m) + half_x, float(obstacle.center.y_m) - half_y),
+            (float(obstacle.center.x_m) + half_x, float(obstacle.center.y_m) + half_y),
+            (float(obstacle.center.x_m) - half_x, float(obstacle.center.y_m) + half_y),
+        ]
+    )
     return line.intersects(box)
 
 
@@ -563,27 +566,28 @@ def _segment_intersects_obstacle(
 # Public entry point
 # ---------------------------------------------------------------------------
 
+
 def plan_warehouse_scan(
-        *,
-        polygon_local_m: list[tuple[float, float]],
-        base_height_m: float,
-        corridor_spacing_m: float,
-        aisle_axis_deg: Optional[float],
-        clearance_m: float,
-        perimeter_offset_m: float,
-        scan_pattern: WarehouseScanPattern,
-        lane_strategy: WarehouseLaneStrategy,
-        view_mode: WarehouseViewMode,
-        layer_count: int,
-        layer_spacing_m: float,
-        ceiling_height_m: Optional[float],
-        ceiling_margin_m: float,
-        max_waypoints: int,
-        max_route_m: float,
-        dock_config: Optional[WarehouseDockConfig] = None,
-        allow_inferred_dock: bool = True,
-        obstacles_3d: Optional[list[WarehouseObstacleBox]] = None,
-        keepout_zones: Optional[list[WarehouseKeepoutZone]] = None,
+    *,
+    polygon_local_m: list[tuple[float, float]],
+    base_height_m: float,
+    corridor_spacing_m: float,
+    aisle_axis_deg: float | None,
+    clearance_m: float,
+    perimeter_offset_m: float,
+    scan_pattern: WarehouseScanPattern,
+    lane_strategy: WarehouseLaneStrategy,
+    view_mode: WarehouseViewMode,
+    layer_count: int,
+    layer_spacing_m: float,
+    ceiling_height_m: float | None,
+    ceiling_margin_m: float,
+    max_waypoints: int,
+    max_route_m: float,
+    dock_config: WarehouseDockConfig | None = None,
+    allow_inferred_dock: bool = True,
+    obstacles_3d: list[WarehouseObstacleBox] | None = None,
+    keepout_zones: list[WarehouseKeepoutZone] | None = None,
 ) -> WarehousePlanResult:
     """
     Plan a warehouse corridor scan entirely in the local metric frame.
@@ -608,9 +612,7 @@ def plan_warehouse_scan(
         raise ValueError("Warehouse flyable footprint has zero area")
 
     local_ring = [(float(x), float(y)) for x, y in footprint.exterior.coords[:-1]]
-    flyable_ring = [
-        (float(x), float(y)) for x, y in flyable_polygon.exterior.coords[:-1]
-    ]
+    flyable_ring = [(float(x), float(y)) for x, y in flyable_polygon.exterior.coords[:-1]]
 
     base_axis = (
         _normalize_angle_deg(float(aisle_axis_deg))
@@ -653,10 +655,10 @@ def plan_warehouse_scan(
         for index in range(safe_layer_count)
     ]
     top_layer_z = max(layer.z_m for layer in scan_layers)
-    if ceiling_height_m is not None and top_layer_z + float(ceiling_margin_m) > float(ceiling_height_m):
-        raise ValueError(
-            "Warehouse scan layers exceed the configured ceiling clearance envelope"
-        )
+    if ceiling_height_m is not None and top_layer_z + float(ceiling_margin_m) > float(
+        ceiling_height_m
+    ):
+        raise ValueError("Warehouse scan layers exceed the configured ceiling clearance envelope")
 
     route_segments: list[WarehousePlanSegment] = []
     if scan_pattern == "perimeter_aisle_hybrid":
@@ -674,8 +676,8 @@ def plan_warehouse_scan(
     staging_point: WarehouseLocalPoint | None = None
     dock_entry_point: WarehouseLocalPoint | None = None
     dock_exit_point: WarehouseLocalPoint | None = None
-    dock_yaw_deg: Optional[float] = None
-    dock_marker_id: Optional[str] = None
+    dock_yaw_deg: float | None = None
+    dock_marker_id: str | None = None
     precision_dock_required = False
     dock_inferred = False
 
@@ -686,9 +688,9 @@ def plan_warehouse_scan(
         )
         for corridor_index, corridor in enumerate(ordered_corridors):
             reverse = (
-                    lane_strategy == "serpentine"
-                    and (corridor_index % 2 == 1)
-                    and view_mode != "dual_face"
+                lane_strategy == "serpentine"
+                and (corridor_index % 2 == 1)
+                and view_mode != "dual_face"
             )
             _append_segment_route(
                 route_segments=route_segments,
@@ -724,10 +726,16 @@ def plan_warehouse_scan(
             dock_exit_point = staging_point
             dock_inferred = True
         else:
-            raise ValueError("Warehouse dock pose is required when inferred dock planning is disabled")
+            raise ValueError(
+                "Warehouse dock pose is required when inferred dock planning is disabled"
+            )
 
         entry_segments: list[WarehousePlanSegment] = []
-        if dock_point is not None and dock_exit_point is not None and not _points_close(dock_point, dock_exit_point):
+        if (
+            dock_point is not None
+            and dock_exit_point is not None
+            and not _points_close(dock_point, dock_exit_point)
+        ):
             entry_segments.append(
                 _segment_from_local_points(
                     segment_id="dock_to_exit",
@@ -742,7 +750,9 @@ def plan_warehouse_scan(
                 )
             )
         exit_anchor = dock_exit_point or dock_point
-        if exit_anchor is not None and not _points_close(exit_anchor, first_work_segment.local_start):
+        if exit_anchor is not None and not _points_close(
+            exit_anchor, first_work_segment.local_start
+        ):
             entry_segments.append(
                 _segment_from_local_points(
                     segment_id="dock_exit_to_first_aisle",
@@ -774,7 +784,11 @@ def plan_warehouse_scan(
                     source="dock",
                 )
             )
-        if dock_point is not None and entry_anchor is not None and not _points_close(entry_anchor, dock_point):
+        if (
+            dock_point is not None
+            and entry_anchor is not None
+            and not _points_close(entry_anchor, dock_point)
+        ):
             return_segments.append(
                 _segment_from_local_points(
                     segment_id="entry_to_dock",

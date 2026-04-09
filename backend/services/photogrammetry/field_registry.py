@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +32,7 @@ class FieldRegistryService:
         *,
         field_id: int,
         owner_id: int,
-    ) -> Optional[FieldEntity]:
+    ) -> FieldEntity | None:
         return (
             await db.execute(
                 select(FieldEntity).where(
@@ -56,14 +55,18 @@ class FieldRegistryService:
         db: AsyncSession,
         *,
         field_id: int,
-    ) -> List[FieldVersionEntry]:
+    ) -> list[FieldVersionEntry]:
         models = (
-            await db.execute(
-                select(FieldModel)
-                .where(FieldModel.field_id == field_id)
-                .order_by(FieldModel.version.desc())
+            (
+                await db.execute(
+                    select(FieldModel)
+                    .where(FieldModel.field_id == field_id)
+                    .order_by(FieldModel.version.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [
             FieldVersionEntry(
                 id=m.id,

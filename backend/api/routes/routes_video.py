@@ -8,7 +8,6 @@ from backend.video.runtime import (
     shared_video_runtime,
 )
 
-
 router = APIRouter(prefix="/video", tags=["video"])
 
 

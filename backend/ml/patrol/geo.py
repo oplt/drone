@@ -53,11 +53,11 @@ class GeoProjector:
         normalized_x = ((float(cx) + 0.5) / float(image_width_px)) - 0.5
         normalized_y = 0.5 - ((float(cy) + 0.5) / float(image_height_px))
 
-        footprint_width_m = 2.0 * float(altitude_m) * math.tan(
-            math.radians(self.camera_fov_h_deg / 2.0)
+        footprint_width_m = (
+            2.0 * float(altitude_m) * math.tan(math.radians(self.camera_fov_h_deg / 2.0))
         )
-        footprint_height_m = 2.0 * float(altitude_m) * math.tan(
-            math.radians(self.camera_fov_v_deg / 2.0)
+        footprint_height_m = (
+            2.0 * float(altitude_m) * math.tan(math.radians(self.camera_fov_v_deg / 2.0))
         )
 
         right_m = normalized_x * footprint_width_m

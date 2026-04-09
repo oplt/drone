@@ -13,8 +13,6 @@ from backend.flight.missions.terrain_follow import (
     resolve_home_amsl_m,
 )
 
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,11 +20,9 @@ logger = logging.getLogger(__name__)
 class Mission(Protocol):
     mission_type: str
 
-    def get_waypoints(self) -> list[Coordinate]:
-        ...
+    def get_waypoints(self) -> list[Coordinate]: ...
 
-    async def execute(self, orch: "Orchestrator", alt: float) -> None:
-        ...
+    async def execute(self, orch: Orchestrator, alt: float) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -36,7 +32,7 @@ class BaseMission:
     def get_waypoints(self) -> list[Coordinate]:
         raise NotImplementedError
 
-    async def execute(self, orch: "Orchestrator", alt: float) -> None:
+    async def execute(self, orch: Orchestrator, alt: float) -> None:
         raise NotImplementedError
 
 
@@ -53,10 +49,9 @@ class WaypointsMission(BaseMission):
     def get_waypoints(self) -> list[Coordinate]:
         return self.waypoints
 
-
     async def fly_waypoints(
         self,
-        orch: "Orchestrator",
+        orch: Orchestrator,
         cruise_alt: float = 30.0,
         interpolate_steps: int = 6,
         terrain_mode: str = "REL_HOME",  # "REL_HOME" or "AMSL"
@@ -67,6 +62,7 @@ class WaypointsMission(BaseMission):
             raise ValueError("Need at least 2 waypoints (start & destination).")
 
         from backend.utils.geo import coord_from_home
+
         home_coord = coord_from_home(orch.drone.home_location)
 
         # Treat cruise_alt as TARGET AGL (meters above ground)
@@ -143,7 +139,7 @@ class WaypointsMission(BaseMission):
             note="Mission completed and returned home",
         )
 
-    async def execute(self, orch: "Orchestrator", alt: float) -> None:
+    async def execute(self, orch: Orchestrator, alt: float) -> None:
         logger.info(f"🚁 Starting mission type='waypoints' with {len(self.waypoints)} waypoint(s)")
 
         await orch.run_mission(

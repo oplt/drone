@@ -32,30 +32,32 @@ const defaultTheme = createTheme();
 
 const customShadows: Shadows = [...defaultTheme.shadows];
 
+// Zapier Orange scale — #ff4f00 is the signature accent
 export const brand = {
-  50: 'hsl(174, 52%, 96%)',
-  100: 'hsl(174, 45%, 90%)',
-  200: 'hsl(174, 40%, 80%)',
-  300: 'hsl(174, 38%, 66%)',
-  400: 'hsl(174, 45%, 50%)',
-  500: 'hsl(174, 55%, 38%)',
-  600: 'hsl(174, 62%, 30%)',
-  700: 'hsl(174, 68%, 24%)',
-  800: 'hsl(174, 72%, 16%)',
-  900: 'hsl(174, 75%, 11%)',
+  50: '#fff3ee',
+  100: '#ffe5d5',
+  200: '#ffc9a8',
+  300: '#ffaa7a',
+  400: '#ff7a40',
+  500: '#ff4f00',
+  600: '#e04600',
+  700: '#b83800',
+  800: '#8a2900',
+  900: '#5c1b00',
 };
 
+// Warm-tinted neutral scale — all values have reddish/yellowish warmth
 export const gray = {
-  50: 'hsl(40, 40%, 98%)',
-  100: 'hsl(36, 26%, 94%)',
-  200: 'hsl(32, 18%, 85%)',
-  300: 'hsl(30, 14%, 72%)',
-  400: 'hsl(28, 10%, 58%)',
-  500: 'hsl(26, 9%, 45%)',
-  600: 'hsl(24, 12%, 32%)',
-  700: 'hsl(22, 16%, 22%)',
-  800: 'hsl(20, 20%, 14%)',
-  900: 'hsl(20, 25%, 8%)',
+  50: '#fffefb',   // Cream White — page background
+  100: '#fffdf9',  // Off-White — subtle alternate surface
+  200: '#eceae3',  // Light Sand — secondary surfaces, ghost button bg
+  300: '#c5c0b1',  // Sand — primary border color
+  400: '#b5b2aa',  // Mid Warm — alternate borders
+  500: '#939084',  // Warm Gray — muted/tertiary text
+  600: '#36342e',  // Dark Charcoal — body text, footer text
+  700: '#2d2b25',  // Warm dark
+  800: '#201515',  // Zapier Black — headings, primary text
+  900: '#160f0f',  // Near black
 };
 
 export const green = {
@@ -98,23 +100,20 @@ export const red = {
 };
 
 export const getDesignTokens = (mode: PaletteMode) => {
-  customShadows[1] =
-    mode === 'dark'
-      ? 'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px'
-      : 'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px';
+  customShadows[1] = 'none';
 
   return {
     palette: {
       mode,
       primary: {
-        light: brand[200],
-        main: brand[400],
+        light: brand[300],
+        main: brand[500],
         dark: brand[700],
-        contrastText: brand[50],
+        contrastText: gray[50],
         ...(mode === 'dark' && {
-          contrastText: brand[50],
+          contrastText: gray[50],
           light: brand[300],
-          main: brand[400],
+          main: brand[500],
           dark: brand[700],
         }),
       },
@@ -124,9 +123,9 @@ export const getDesignTokens = (mode: PaletteMode) => {
         dark: brand[600],
         contrastText: gray[50],
         ...(mode === 'dark' && {
-          contrastText: brand[300],
-          light: brand[500],
-          main: brand[700],
+          contrastText: brand[200],
+          light: brand[400],
+          main: brand[600],
           dark: brand[900],
         }),
       },
@@ -163,13 +162,13 @@ export const getDesignTokens = (mode: PaletteMode) => {
       grey: {
         ...gray,
       },
-      divider: mode === 'dark' ? alpha(gray[700], 0.7) : alpha(gray[300], 0.55),
+      divider: mode === 'dark' ? alpha(gray[300], 0.15) : gray[300],
       background: {
-        default: 'hsl(42, 42%, 98%)',
-        paper: 'hsl(38, 32%, 96%)',
+        default: gray[50],
+        paper: gray[100],
         ...(mode === 'dark' && {
-          default: 'hsl(22, 28%, 6%)',
-          paper: 'hsl(22, 24%, 8%)',
+          default: '#1a1210',
+          paper: '#211916',
         }),
       },
       text: {
@@ -177,91 +176,97 @@ export const getDesignTokens = (mode: PaletteMode) => {
         secondary: gray[600],
         warning: orange[400],
         ...(mode === 'dark' && {
-          primary: 'hsl(0, 0%, 100%)',
+          primary: gray[50],
           secondary: gray[300],
         }),
       },
       action: {
-        hover: alpha(gray[200], 0.25),
-        selected: `${alpha(gray[200], 0.35)}`,
+        hover: alpha(gray[300], 0.2),
+        selected: alpha(gray[300], 0.3),
         ...(mode === 'dark' && {
-          hover: alpha(gray[700], 0.25),
-          selected: alpha(gray[700], 0.35),
+          hover: alpha(gray[300], 0.08),
+          selected: alpha(gray[300], 0.12),
         }),
       },
     },
     typography: {
-      fontFamily: '"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+      fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
       h1: {
-        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: 'clamp(3rem, 5vw, 4.75rem)',
-        fontWeight: 700,
-        lineHeight: 1.02,
-        letterSpacing: -1.6,
+        fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+        fontSize: 'clamp(2.5rem, 5vw, 5rem)',
+        fontWeight: 500,
+        lineHeight: 0.90,
+        letterSpacing: 0,
       },
       h2: {
-        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
-        fontWeight: 700,
-        lineHeight: 1.08,
-        letterSpacing: -1.2,
+        fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+        fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+        fontWeight: 500,
+        lineHeight: 1.00,
+        letterSpacing: 0,
       },
       h3: {
-        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: 'clamp(1.8rem, 3vw, 2.75rem)',
-        fontWeight: 700,
-        lineHeight: 1.12,
-        letterSpacing: -0.9,
+        fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+        fontSize: 'clamp(1.75rem, 3vw, 2.25rem)',
+        fontWeight: 500,
+        lineHeight: 1.04,
+        letterSpacing: -0.5,
       },
       h4: {
-        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: 'clamp(1.5rem, 2vw, 2.1rem)',
-        fontWeight: 700,
+        fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+        fontSize: 'clamp(1.5rem, 2vw, 1.75rem)',
+        fontWeight: 500,
         lineHeight: 1.16,
       },
       h5: {
-        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-        fontSize: 'clamp(1.2rem, 1.4vw, 1.55rem)',
-        fontWeight: 700,
+        fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+        fontSize: defaultTheme.typography.pxToRem(24),
+        fontWeight: 600,
+        letterSpacing: -0.48,
       },
       h6: {
-        fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
+        fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
         fontSize: defaultTheme.typography.pxToRem(18),
-        fontWeight: 700,
+        fontWeight: 600,
+        lineHeight: 1.00,
       },
       subtitle1: {
-        fontSize: defaultTheme.typography.pxToRem(18),
-        fontWeight: 500,
+        fontSize: defaultTheme.typography.pxToRem(20),
+        fontWeight: 400,
+        lineHeight: 1.20,
+        letterSpacing: -0.2,
       },
       subtitle2: {
-        fontSize: defaultTheme.typography.pxToRem(14),
+        fontSize: defaultTheme.typography.pxToRem(16),
         fontWeight: 600,
-        letterSpacing: 0.1,
+        lineHeight: 1.16,
       },
       body1: {
-        fontSize: defaultTheme.typography.pxToRem(15),
-        lineHeight: 1.7,
+        fontSize: defaultTheme.typography.pxToRem(16),
+        fontWeight: 400,
+        lineHeight: 1.25,
+        letterSpacing: -0.16,
       },
       body2: {
         fontSize: defaultTheme.typography.pxToRem(14),
-        fontWeight: 400,
-        lineHeight: 1.65,
+        fontWeight: 500,
+        lineHeight: 1.43,
       },
       caption: {
         fontSize: defaultTheme.typography.pxToRem(12),
-        fontWeight: 500,
-        letterSpacing: 0.32,
-        textTransform: 'uppercase',
+        fontWeight: 600,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase' as const,
       },
       overline: {
-        fontSize: defaultTheme.typography.pxToRem(11),
-        fontWeight: 700,
-        letterSpacing: 2.4,
-        textTransform: 'uppercase',
+        fontSize: defaultTheme.typography.pxToRem(14),
+        fontWeight: 600,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase' as const,
       },
     },
     shape: {
-      borderRadius: 5
+      borderRadius: 5,
     },
     shadows: customShadows,
   };
@@ -271,10 +276,10 @@ export const colorSchemes = {
   light: {
     palette: {
       primary: {
-        light: brand[200],
-        main: brand[400],
+        light: brand[300],
+        main: brand[500],
         dark: brand[700],
-        contrastText: brand[50],
+        contrastText: gray[50],
       },
       info: {
         light: brand[100],
@@ -300,10 +305,10 @@ export const colorSchemes = {
       grey: {
         ...gray,
       },
-      divider: alpha(gray[300], 0.4),
+      divider: gray[300],
       background: {
-        default: 'hsl(42, 42%, 98%)',
-        paper: 'hsl(38, 32%, 96%)',
+        default: gray[50],
+        paper: gray[100],
       },
       text: {
         primary: gray[800],
@@ -311,25 +316,24 @@ export const colorSchemes = {
         warning: orange[400],
       },
       action: {
-        hover: alpha(gray[200], 0.2),
-        selected: `${alpha(gray[200], 0.3)}`,
+        hover: alpha(gray[300], 0.2),
+        selected: alpha(gray[300], 0.3),
       },
-      baseShadow:
-        'hsla(24, 26%, 12%, 0.08) 0px 10px 28px -12px, hsla(24, 26%, 12%, 0.12) 0px 24px 48px -28px',
+      baseShadow: 'none',
     },
   },
   dark: {
     palette: {
       primary: {
-        contrastText: brand[50],
+        contrastText: gray[50],
         light: brand[300],
-        main: brand[400],
+        main: brand[500],
         dark: brand[700],
       },
       info: {
-        contrastText: brand[300],
-        light: brand[500],
-        main: brand[700],
+        contrastText: brand[200],
+        light: brand[400],
+        main: brand[600],
         dark: brand[900],
       },
       warning: {
@@ -350,93 +354,98 @@ export const colorSchemes = {
       grey: {
         ...gray,
       },
-      divider: alpha(gray[700], 0.6),
+      divider: alpha(gray[300], 0.15),
       background: {
-        default: 'hsl(22, 28%, 6%)',
-        paper: 'hsl(22, 24%, 8%)',
+        default: '#1a1210',
+        paper: '#211916',
       },
       text: {
-        primary: 'hsl(0, 0%, 100%)',
-        secondary: gray[400],
+        primary: gray[50],
+        secondary: gray[300],
       },
       action: {
-        hover: alpha(gray[600], 0.2),
-        selected: alpha(gray[600], 0.3),
+        hover: alpha(gray[300], 0.08),
+        selected: alpha(gray[300], 0.12),
       },
-      baseShadow:
-        'hsla(20, 40%, 4%, 0.7) 0px 10px 26px -12px, hsla(20, 35%, 6%, 0.85) 0px 26px 54px -26px',
+      baseShadow: 'none',
     },
   },
 };
 
 export const typography = {
-  fontFamily: '"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
   h1: {
-    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: 'clamp(3rem, 5vw, 4.75rem)',
-    fontWeight: 700,
-    lineHeight: 1.02,
-    letterSpacing: -1.6,
+    fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+    fontSize: 'clamp(2.5rem, 5vw, 5rem)',
+    fontWeight: 500,
+    lineHeight: 0.90,
+    letterSpacing: 0,
   },
   h2: {
-    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
-    fontWeight: 700,
-    lineHeight: 1.08,
-    letterSpacing: -1.2,
+    fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+    fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+    fontWeight: 500,
+    lineHeight: 1.00,
+    letterSpacing: 0,
   },
   h3: {
-    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: 'clamp(1.8rem, 3vw, 2.75rem)',
-    fontWeight: 700,
-    lineHeight: 1.12,
-    letterSpacing: -0.9,
+    fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+    fontSize: 'clamp(1.75rem, 3vw, 2.25rem)',
+    fontWeight: 500,
+    lineHeight: 1.04,
+    letterSpacing: -0.5,
   },
   h4: {
-    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: 'clamp(1.5rem, 2vw, 2.1rem)',
-    fontWeight: 700,
+    fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+    fontSize: 'clamp(1.5rem, 2vw, 1.75rem)',
+    fontWeight: 500,
     lineHeight: 1.16,
   },
   h5: {
-    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
-    fontSize: 'clamp(1.2rem, 1.4vw, 1.55rem)',
-    fontWeight: 700,
+    fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
+    fontSize: defaultTheme.typography.pxToRem(24),
+    fontWeight: 600,
+    letterSpacing: -0.48,
   },
   h6: {
-    fontFamily: '"Space Grotesk", "IBM Plex Sans", sans-serif',
+    fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
     fontSize: defaultTheme.typography.pxToRem(18),
-    fontWeight: 700,
+    fontWeight: 600,
+    lineHeight: 1.00,
   },
   subtitle1: {
-    fontSize: defaultTheme.typography.pxToRem(18),
-    fontWeight: 500,
+    fontSize: defaultTheme.typography.pxToRem(20),
+    fontWeight: 400,
+    lineHeight: 1.20,
+    letterSpacing: -0.2,
   },
   subtitle2: {
-    fontSize: defaultTheme.typography.pxToRem(14),
+    fontSize: defaultTheme.typography.pxToRem(16),
     fontWeight: 600,
-    letterSpacing: 0.1,
+    lineHeight: 1.16,
   },
   body1: {
-    fontSize: defaultTheme.typography.pxToRem(15),
-    lineHeight: 1.7,
+    fontSize: defaultTheme.typography.pxToRem(16),
+    fontWeight: 400,
+    lineHeight: 1.25,
+    letterSpacing: -0.16,
   },
   body2: {
     fontSize: defaultTheme.typography.pxToRem(14),
-    fontWeight: 400,
-    lineHeight: 1.65,
+    fontWeight: 500,
+    lineHeight: 1.43,
   },
   caption: {
     fontSize: defaultTheme.typography.pxToRem(12),
-    fontWeight: 500,
-    letterSpacing: 0.32,
-    textTransform: 'uppercase',
+    fontWeight: 600,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
   },
   overline: {
-    fontSize: defaultTheme.typography.pxToRem(11),
-    fontWeight: 700,
-    letterSpacing: 2.4,
-    textTransform: 'uppercase',
+    fontSize: defaultTheme.typography.pxToRem(14),
+    fontWeight: 600,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
   },
 };
 

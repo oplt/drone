@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 import threading
+from collections import OrderedDict
 
 import googlemaps
+
 from backend.drone.models import Coordinate
 
 
@@ -49,7 +50,7 @@ class GoogleMapsClient:
 
     def _chunked(self, coords: list[tuple[float, float]]):
         for idx in range(0, len(coords), self._elevation_batch_size):
-            yield coords[idx:idx + self._elevation_batch_size]
+            yield coords[idx : idx + self._elevation_batch_size]
 
     def geocode(self, address: str) -> Coordinate:
         key = address.strip().lower()

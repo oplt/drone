@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
 import threading
-from typing import Any, Literal, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
-
 
 RuntimeEnvelopeKind = Literal[
     "telemetry",
@@ -33,7 +33,7 @@ _SEQUENCE_COUNTERS: dict[str, int] = {}
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def next_runtime_sequence(mission_runtime_id: str | None, source: str) -> int:
@@ -214,7 +214,7 @@ class TelemetryPayloadV1(BaseModel):
         snapshot: Mapping[str, Any] | None,
         *,
         coalesced_message_count: int | None = None,
-    ) -> "TelemetryPayloadV1":
+    ) -> TelemetryPayloadV1:
         snap = dict(snapshot or {})
         position = snap.get("position") or {}
         attitude = snap.get("attitude") or {}
@@ -253,9 +253,7 @@ class TelemetryPayloadV1(BaseModel):
             battery=TelemetryBatteryV1(
                 voltage_v=_float_or_none(battery.get("voltage_v", battery.get("voltage"))),
                 current_a=_float_or_none(battery.get("current_a", battery.get("current"))),
-                remaining_pct=_int_or_none(
-                    battery.get("remaining_pct", battery.get("remaining"))
-                ),
+                remaining_pct=_int_or_none(battery.get("remaining_pct", battery.get("remaining"))),
                 temperature_c=_float_or_none(
                     battery.get("temperature_c", battery.get("temperature"))
                 ),
@@ -267,35 +265,23 @@ class TelemetryPayloadV1(BaseModel):
                 hdop=_float_or_none(gps.get("hdop")),
             ),
             link=TelemetryLinkV1(
-                rc_quality_pct=_int_or_none(
-                    link.get("rc_quality_pct", link.get("rc"))
-                ),
+                rc_quality_pct=_int_or_none(link.get("rc_quality_pct", link.get("rc"))),
                 telemetry_quality_pct=_int_or_none(
                     link.get("telemetry_quality_pct", link.get("telemetry"))
                 ),
-                lte_quality_pct=_int_or_none(
-                    link.get("lte_quality_pct", link.get("lte"))
-                ),
+                lte_quality_pct=_int_or_none(link.get("lte_quality_pct", link.get("lte"))),
             ),
             wind=TelemetryWindV1(
                 speed_mps=_float_or_none(wind.get("speed_mps", wind.get("speed"))),
-                direction_deg=_float_or_none(
-                    wind.get("direction_deg", wind.get("direction"))
-                ),
+                direction_deg=_float_or_none(wind.get("direction_deg", wind.get("direction"))),
             ),
             motion=TelemetryMotionV1(
                 groundspeed_mps=_float_or_none(
                     motion.get("groundspeed_mps", motion.get("groundspeed"))
                 ),
-                airspeed_mps=_float_or_none(
-                    motion.get("airspeed_mps", motion.get("airspeed"))
-                ),
-                heading_deg=_float_or_none(
-                    motion.get("heading_deg", motion.get("heading"))
-                ),
-                throttle_pct=_float_or_none(
-                    motion.get("throttle_pct", motion.get("throttle"))
-                ),
+                airspeed_mps=_float_or_none(motion.get("airspeed_mps", motion.get("airspeed"))),
+                heading_deg=_float_or_none(motion.get("heading_deg", motion.get("heading"))),
+                throttle_pct=_float_or_none(motion.get("throttle_pct", motion.get("throttle"))),
                 climb_mps=_float_or_none(motion.get("climb_mps", motion.get("climb"))),
             ),
             system=TelemetrySystemV1(status=system.get("status")),
@@ -420,7 +406,7 @@ class VideoHealthPayloadV1(BaseModel):
     error: str | None = None
 
     @classmethod
-    def from_status(cls, status: Mapping[str, Any] | None) -> "VideoHealthPayloadV1":
+    def from_status(cls, status: Mapping[str, Any] | None) -> VideoHealthPayloadV1:
         raw = dict(status or {})
         source = raw.get("source")
         return cls(
@@ -429,14 +415,10 @@ class VideoHealthPayloadV1(BaseModel):
             frame_count=_int_or_none(raw.get("frame_count")) or 0,
             fps=_float_or_none(raw.get("fps")),
             resolution=(
-                str(raw.get("resolution"))
-                if raw.get("resolution") not in (None, "")
-                else None
+                str(raw.get("resolution")) if raw.get("resolution") not in (None, "") else None
             ),
             source=str(source) if source not in (None, "") else None,
-            recording_active=bool(
-                raw.get("recording_active", raw.get("recording", False))
-            ),
+            recording_active=bool(raw.get("recording_active", raw.get("recording", False))),
             recording_file=raw.get("recording_file"),
             recording_path=raw.get("recording_path"),
             error=raw.get("error"),
@@ -482,7 +464,7 @@ class AlertSnapshotV1(BaseModel):
     updated_at: datetime | None = None
 
     @classmethod
-    def from_alert(cls, alert: Any) -> "AlertSnapshotV1":
+    def from_alert(cls, alert: Any) -> AlertSnapshotV1:
         from backend.schemas.alerts import OperationalAlertOut
 
         if isinstance(alert, BaseModel):
@@ -530,9 +512,7 @@ class AlertSnapshotV1(BaseModel):
                 self.last_notified_at.isoformat() if self.last_notified_at else None
             ),
             "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
-            "acknowledged_at": (
-                self.acknowledged_at.isoformat() if self.acknowledged_at else None
-            ),
+            "acknowledged_at": (self.acknowledged_at.isoformat() if self.acknowledged_at else None),
             "acknowledged_by_user_id": self.acknowledged_by_user_id,
             "occurrences": self.occurrences,
             "created_at": self.created_at.isoformat() if self.created_at else None,

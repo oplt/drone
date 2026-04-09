@@ -359,3 +359,6 @@ TODO.txt
 
 backend/video/recordings
 backend/logs
+.gitnexus
+.agents/
+.claude/skills/

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -8,8 +8,8 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import require_user
-from backend.db.session import get_db
 from backend.db.models import PatrolDetection, PatrolIncident
+from backend.db.session import get_db
 
 router = APIRouter(prefix="/api/patrol-debug", tags=["patrol-debug"])
 
@@ -17,35 +17,35 @@ router = APIRouter(prefix="/api/patrol-debug", tags=["patrol-debug"])
 class PatrolDetectionOut(BaseModel):
     id: int
     flight_id: int
-    telemetry_id: Optional[int] = None
+    telemetry_id: int | None = None
     created_at: Any
-    frame_id: Optional[int] = None
+    frame_id: int | None = None
 
     mission_task_type: str
     ai_task: str
     object_class: str
-    anomaly_type: Optional[str] = None
-    track_id: Optional[str] = None
+    anomaly_type: str | None = None
+    track_id: str | None = None
 
-    zone_name: Optional[str] = None
-    checkpoint_index: Optional[int] = None
+    zone_name: str | None = None
+    checkpoint_index: int | None = None
     confidence: float
 
     bbox_xyxy: dict[str, Any]
     centroid_xy: dict[str, Any]
 
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    alt: Optional[float] = None
-    heading: Optional[float] = None
-    groundspeed: Optional[float] = None
+    lat: float | None = None
+    lon: float | None = None
+    alt: float | None = None
+    heading: float | None = None
+    groundspeed: float | None = None
 
     source: str
-    snapshot_path: Optional[str] = None
-    clip_path: Optional[str] = None
+    snapshot_path: str | None = None
+    clip_path: str | None = None
 
-    model_name: Optional[str] = None
-    model_version: Optional[str] = None
+    model_name: str | None = None
+    model_version: str | None = None
     meta_data: dict[str, Any]
 
     class Config:
@@ -57,32 +57,32 @@ class PatrolIncidentOut(BaseModel):
     flight_id: int
     opened_at: Any
     updated_at: Any
-    closed_at: Optional[Any] = None
+    closed_at: Any | None = None
 
     status: str
     mission_task_type: str
     incident_type: str
-    primary_object_class: Optional[str] = None
-    primary_track_id: Optional[str] = None
-    ai_task: Optional[str] = None
+    primary_object_class: str | None = None
+    primary_track_id: str | None = None
+    ai_task: str | None = None
 
-    zone_name: Optional[str] = None
-    checkpoint_index: Optional[int] = None
+    zone_name: str | None = None
+    checkpoint_index: int | None = None
 
-    start_lat: Optional[float] = None
-    start_lon: Optional[float] = None
-    end_lat: Optional[float] = None
-    end_lon: Optional[float] = None
+    start_lat: float | None = None
+    start_lon: float | None = None
+    end_lat: float | None = None
+    end_lon: float | None = None
 
-    peak_confidence: Optional[float] = None
+    peak_confidence: float | None = None
     detection_count: int
 
-    first_detection_id: Optional[int] = None
-    last_detection_id: Optional[int] = None
+    first_detection_id: int | None = None
+    last_detection_id: int | None = None
 
-    snapshot_path: Optional[str] = None
-    clip_path: Optional[str] = None
-    last_alert_id: Optional[int] = None
+    snapshot_path: str | None = None
+    clip_path: str | None = None
+    last_alert_id: int | None = None
     summary: dict[str, Any]
 
     class Config:
@@ -105,11 +105,11 @@ class IncidentEvidenceOut(BaseModel):
     incident_type: str
     status: str
     opened_at: Any
-    snapshot_path: Optional[str] = None
-    clip_path: Optional[str] = None
-    zone_name: Optional[str] = None
-    checkpoint_index: Optional[int] = None
-    peak_confidence: Optional[float] = None
+    snapshot_path: str | None = None
+    clip_path: str | None = None
+    zone_name: str | None = None
+    checkpoint_index: int | None = None
+    peak_confidence: float | None = None
 
 
 class IncidentEvidenceListResponse(BaseModel):
@@ -122,9 +122,9 @@ async def list_detections_by_flight(
     flight_id: int,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    anomaly_type: Optional[str] = Query(default=None),
-    ai_task: Optional[str] = Query(default=None),
-    object_class: Optional[str] = Query(default=None),
+    anomaly_type: str | None = Query(default=None),
+    ai_task: str | None = Query(default=None),
+    object_class: str | None = Query(default=None),
     user=Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -160,8 +160,8 @@ async def list_incidents_by_status(
     status: str = Query(default="open"),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    flight_id: Optional[int] = Query(default=None),
-    incident_type: Optional[str] = Query(default=None),
+    flight_id: int | None = Query(default=None),
+    incident_type: str | None = Query(default=None),
     user=Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -195,7 +195,7 @@ async def list_incidents_by_status(
 @router.get("/incidents/latest-evidence", response_model=IncidentEvidenceListResponse)
 async def latest_incident_evidence_paths(
     limit: int = Query(default=50, ge=1, le=200),
-    flight_id: Optional[int] = Query(default=None),
+    flight_id: int | None = Query(default=None),
     status: str = Query(default="all"),
     with_files_only: bool = Query(default=True),
     user=Depends(require_user),
@@ -209,8 +209,7 @@ async def latest_incident_evidence_paths(
         filters.append(PatrolIncident.status == status)
     if with_files_only:
         filters.append(
-            (PatrolIncident.snapshot_path.is_not(None)) |
-            (PatrolIncident.clip_path.is_not(None))
+            (PatrolIncident.snapshot_path.is_not(None)) | (PatrolIncident.clip_path.is_not(None))
         )
 
     stmt = (

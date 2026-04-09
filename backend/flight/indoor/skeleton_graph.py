@@ -3,7 +3,6 @@ from __future__ import annotations
 import itertools
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .models import DockPose, ExplorationNode, LocalPose, MapSnapshot
 
@@ -13,7 +12,7 @@ class ExplorationGraph:
     nodes: dict[str, ExplorationNode] = field(default_factory=dict)
     edges: dict[str, dict[str, float]] = field(default_factory=dict)
     _node_counter: itertools.count = field(default_factory=lambda: itertools.count(1), repr=False)
-    dock_node_id: Optional[str] = None
+    dock_node_id: str | None = None
     visit_order: list[str] = field(default_factory=list)
 
     def ensure_dock_node(self, dock: DockPose) -> ExplorationNode:
@@ -36,7 +35,7 @@ class ExplorationGraph:
         confidence: float,
         connected_to_dock: bool,
         kind: str,
-        node_id: Optional[str] = None,
+        node_id: str | None = None,
     ) -> ExplorationNode:
         resolved_id = node_id or f"node_{next(self._node_counter)}"
         node = ExplorationNode(
@@ -71,7 +70,7 @@ class ExplorationGraph:
         pose: LocalPose,
         *,
         confirmed_only: bool = True,
-        max_distance_m: Optional[float] = None,
+        max_distance_m: float | None = None,
     ) -> ExplorationNode | None:
         best: ExplorationNode | None = None
         best_distance = float("inf")

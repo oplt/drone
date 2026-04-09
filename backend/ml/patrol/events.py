@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import httpx
-
 import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
+
+import httpx
+
 from backend.messaging.websocket import telemetry_manager
 from backend.ml.patrol.models import AnomalyEvent
-
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,13 @@ class PipelineEvent:
 
 
 class EventDispatcher:
-    def __init__(self, *, emit_websocket_events: bool = True, duplicate_window_s: float = 10.0, max_events_per_track: int = 8):
+    def __init__(
+        self,
+        *,
+        emit_websocket_events: bool = True,
+        duplicate_window_s: float = 10.0,
+        max_events_per_track: int = 8,
+    ):
         self.emit_websocket_events = emit_websocket_events
         self.duplicate_window_s = float(duplicate_window_s)
         self.max_events_per_track = int(max_events_per_track)
@@ -79,14 +85,13 @@ class EventDispatcher:
             log.exception("Failed broadcasting ML status message")
 
 
-
 class EventSink:
     def __init__(
-            self,
-            *,
-            mode: str = "http",
-            url: Optional[str] = None,
-            timeout_s: float = 5.0,
+        self,
+        *,
+        mode: str = "http",
+        url: str | None = None,
+        timeout_s: float = 5.0,
     ) -> None:
         self.mode = str(mode).strip().lower()
         self.url = url

@@ -38,21 +38,22 @@ Scenarios covered:
   • add() continues to buffer new rows after a failed flush.
   • Concurrent calls to add() and flush() do not deadlock.
 """
+
 from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from backend.db.repository.telemetry_repo import TelemetryBatcher, TelemetryRepository
 from backend.drone.orchestrator import Orchestrator
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_orchestrator() -> Orchestrator:
     """Return an Orchestrator with all external dependencies mocked out."""
@@ -84,8 +85,8 @@ def _flight_event(flight_id: int = 1) -> tuple[int, str, dict]:
 # Flight-event queue: drop-oldest on overflow
 # ---------------------------------------------------------------------------
 
-class TestFlightEventQueue:
 
+class TestFlightEventQueue:
     def test_enqueue_never_blocks_when_full(self):
         """Filling the queue past capacity must return instantly every time."""
         orch = _make_orchestrator()
@@ -138,8 +139,8 @@ class TestFlightEventQueue:
 # Lifecycle queue: never-drop, wait up to 5 s
 # ---------------------------------------------------------------------------
 
-class TestLifecycleQueue:
 
+class TestLifecycleQueue:
     @pytest.mark.asyncio
     async def test_lifecycle_queue_times_out_when_full_and_no_worker(self):
         """
@@ -179,8 +180,8 @@ class TestLifecycleQueue:
 # Raw MAVLink queue: drop-oldest on overflow
 # ---------------------------------------------------------------------------
 
-class TestRawEventQueue:
 
+class TestRawEventQueue:
     def test_enqueue_never_blocks_when_full(self):
         orch = _make_orchestrator()
         capacity = orch._raw_event_queue.maxsize  # 2000
@@ -204,8 +205,8 @@ class TestRawEventQueue:
 # DB event worker: survives DB errors
 # ---------------------------------------------------------------------------
 
-class TestDbEventWorker:
 
+class TestDbEventWorker:
     @pytest.mark.asyncio
     async def test_worker_continues_after_db_error(self):
         """
@@ -224,8 +225,12 @@ class TestDbEventWorker:
 
         repo.add_flight_events_many = flaky
         orch = Orchestrator(
-            drone=MagicMock(), maps=MagicMock(), analyzer=MagicMock(),
-            mqtt=None, video=None, telemetry_repo=repo,
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
         )
 
         orch._enqueue_db_event(1, "before_error", {})
@@ -261,8 +266,12 @@ class TestDbEventWorker:
 
         repo.add_flight_events_many = slow_write
         orch = Orchestrator(
-            drone=MagicMock(), maps=MagicMock(), analyzer=MagicMock(),
-            mqtt=None, video=None, telemetry_repo=repo,
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
         )
 
         task = asyncio.create_task(orch._db_event_worker())
@@ -273,7 +282,7 @@ class TestDbEventWorker:
         await asyncio.sleep(0.1)  # worker is now blocked on slow_write
 
         t0 = time.monotonic()
-        orch._enqueue_db_event(1, "hot_path", {})   # must return immediately
+        orch._enqueue_db_event(1, "hot_path", {})  # must return immediately
         elapsed = time.monotonic() - t0
 
         assert elapsed < 0.05, (
@@ -302,8 +311,8 @@ class TestDbEventWorker:
 # TelemetryBatcher: survives DB errors
 # ---------------------------------------------------------------------------
 
-class TestTelemetryBatcher:
 
+class TestTelemetryBatcher:
     def _repo(self, side_effect=None):
         repo = MagicMock(spec=TelemetryRepository)
         if side_effect is not None:
@@ -355,13 +364,13 @@ class TestTelemetryBatcher:
 
         # First auto-flush: triggers at max_size=2, DB fails.
         await batcher.add(self._row(0))
-        await batcher.add(self._row(1))   # hits max_size → auto-flush (fails)
+        await batcher.add(self._row(1))  # hits max_size → auto-flush (fails)
 
         assert call_count == 1
 
         # Subsequent rows must still be accepted.
         await batcher.add(self._row(2))
-        await batcher.add(self._row(3))   # hits max_size → auto-flush (succeeds)
+        await batcher.add(self._row(3))  # hits max_size → auto-flush (succeeds)
 
         assert call_count == 2
 
@@ -372,6 +381,7 @@ class TestTelemetryBatcher:
         This test ensures flush completes (even if slowly) and does not
         deadlock against a concurrent add().
         """
+
         async def slow_write(flight_id, rows):
             await asyncio.sleep(0.2)
             return len(rows)
@@ -417,11 +427,11 @@ class TestTelemetryBatcher:
     async def test_row_from_envelope_returns_none_for_incomplete_data(self):
         """row_from_envelope must return None when essential fields are missing."""
         from backend.runtime.envelopes import (
+            TelemetryBatteryV1,
             TelemetryEnvelopeV1,
+            TelemetryMotionV1,
             TelemetryPayloadV1,
             TelemetryPositionV1,
-            TelemetryMotionV1,
-            TelemetryBatteryV1,
         )
 
         envelope = MagicMock(spec=TelemetryEnvelopeV1)
@@ -436,3 +446,392 @@ class TestTelemetryBatcher:
 
         result = TelemetryBatcher.row_from_envelope(envelope)
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# DB lifecycle worker: survives DB errors
+# ---------------------------------------------------------------------------
+
+
+class TestLifecycleWorker:
+    """
+    _db_lifecycle_worker uses a never-drop queue (maxsize=200, 5-s timeout).
+    A DB failure on a single event must not crash the worker or stall future items.
+    """
+
+    @pytest.mark.asyncio
+    async def test_worker_continues_after_db_error(self):
+        """
+        When add_flight_events_many raises on a lifecycle event, the worker
+        must log and continue — not crash.  A subsequent event must be processed.
+        """
+        repo = MagicMock(spec=TelemetryRepository)
+        call_count = 0
+
+        async def flaky(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise RuntimeError("DB unavailable")
+            return 0
+
+        repo.add_flight_events_many = flaky
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+
+        # Enqueue one event that will fail, then one that should succeed.
+        await orch._db_lifecycle_queue.put((1, "first_event", {}))
+
+        task = asyncio.create_task(orch._db_lifecycle_worker())
+        await asyncio.sleep(0.3)
+
+        assert not task.done(), "Lifecycle worker crashed after DB error"
+
+        await orch._db_lifecycle_queue.put((1, "second_event", {}))
+        await asyncio.sleep(0.3)
+
+        assert call_count >= 2, "Lifecycle worker stopped after DB error"
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_metric_counts_only_successful_writes(self):
+        """
+        db_lifecycle_worker_writes must only increment on a successful DB write,
+        not on a DB exception.
+        """
+        repo = MagicMock(spec=TelemetryRepository)
+        call_count = 0
+
+        async def flaky(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise RuntimeError("transient error")
+            return 0
+
+        repo.add_flight_events_many = flaky
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+
+        await orch._db_lifecycle_queue.put((1, "fail_event", {}))
+        await orch._db_lifecycle_queue.put((1, "ok_event", {}))
+
+        task = asyncio.create_task(orch._db_lifecycle_worker())
+        await asyncio.sleep(0.5)
+
+        # One write failed, one succeeded → metric == 1.
+        assert orch._metrics["db_lifecycle_worker_writes"] == 1
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_slow_db_does_not_block_lifecycle_enqueue(self):
+        """
+        A slow lifecycle DB write must not prevent the hot path from being
+        able to enqueue new lifecycle events (queue has space).
+        """
+        repo = MagicMock(spec=TelemetryRepository)
+
+        async def slow_write(*_args, **_kwargs):
+            await asyncio.sleep(1.5)
+            return 0
+
+        repo.add_flight_events_many = slow_write
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+
+        # Put an item so the worker starts its slow write.
+        await orch._db_lifecycle_queue.put((1, "trigger", {}))
+        task = asyncio.create_task(orch._db_lifecycle_worker())
+        await asyncio.sleep(0.1)  # worker is now blocked in slow_write
+
+        # Enqueue a second lifecycle event — must complete immediately
+        # because the queue still has space (maxsize=200).
+        t0 = time.monotonic()
+        await orch._enqueue_lifecycle_event(1, "hot_path", {})
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 0.1, (
+            f"Lifecycle enqueue blocked for {elapsed * 1000:.1f}ms during slow DB write"
+        )
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+
+# ---------------------------------------------------------------------------
+# Raw event ingest worker: survives DB errors
+# ---------------------------------------------------------------------------
+
+
+class TestRawEventIngestWorker:
+    """
+    _raw_event_ingest_worker drains the raw MAVLink queue (drop-oldest,
+    maxsize=2000) and writes via add_mavlink_events_many.  A DB failure must
+    not crash the worker or block the hot-path enqueue.
+    """
+
+    def _make_orch_with_raw_mock(self, side_effect=None):
+        repo = MagicMock(spec=TelemetryRepository)
+        if side_effect is not None:
+            repo.add_mavlink_events_many = AsyncMock(side_effect=side_effect)
+        else:
+            repo.add_mavlink_events_many = AsyncMock(return_value=0)
+        repo.add_flight_events_many = AsyncMock(return_value=0)
+        repo.add_telemetry_many = AsyncMock(return_value=0)
+
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+        orch._flight_id = 1  # simulate active flight so worker doesn't skip writes
+        return orch
+
+    @pytest.mark.asyncio
+    async def test_worker_continues_after_db_error(self):
+        """
+        A DB exception on add_mavlink_events_many must not crash the worker.
+        Items enqueued after the failure must still be processed.
+        """
+        call_count = 0
+
+        async def flaky(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise RuntimeError("DB unavailable")
+            return 0
+
+        orch = self._make_orch_with_raw_mock()
+        orch.repo._repo.add_mavlink_events_many = flaky
+
+        orch._enqueue_raw_event(_raw_event())
+
+        task = asyncio.create_task(orch._raw_event_ingest_worker())
+        await asyncio.sleep(0.8)
+
+        assert not task.done(), "Raw event ingest worker crashed after DB error"
+
+        orch._enqueue_raw_event(_raw_event())
+        await asyncio.sleep(0.8)
+
+        assert call_count >= 2, "Raw event ingest worker stopped after DB error"
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_hot_path_enqueue_not_blocked_by_slow_db(self):
+        """
+        A slow add_mavlink_events_many must not prevent _enqueue_raw_event
+        from returning immediately.
+        """
+
+        async def slow_write(*_args, **_kwargs):
+            await asyncio.sleep(2.0)
+            return 0
+
+        orch = self._make_orch_with_raw_mock()
+        orch.repo._repo.add_mavlink_events_many = slow_write
+
+        orch._enqueue_raw_event(_raw_event())  # triggers worker to start slow write
+        task = asyncio.create_task(orch._raw_event_ingest_worker())
+        await asyncio.sleep(0.1)  # worker is now inside slow_write
+
+        t0 = time.monotonic()
+        orch._enqueue_raw_event(_raw_event())  # must return instantly
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 0.05, (
+            f"Raw event hot-path blocked for {elapsed * 1000:.1f}ms during slow DB write"
+        )
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_worker_stops_cleanly_on_cancel(self):
+        """Cancelling the raw ingest worker must raise CancelledError, not hang."""
+        orch = self._make_orch_with_raw_mock()
+        task = asyncio.create_task(orch._raw_event_ingest_worker())
+        await asyncio.sleep(0.05)
+
+        t0 = time.monotonic()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert time.monotonic() - t0 < 2.0, "Raw event worker did not stop within 2 s"
+
+
+# ---------------------------------------------------------------------------
+# Shutdown flush: workers clean up even when DB is down
+# ---------------------------------------------------------------------------
+
+
+class TestShutdownUnderDbFailure:
+    """
+    Workers perform a best-effort flush on shutdown.  That flush must not
+    block the process when the DB is unavailable or very slow.
+    """
+
+    @pytest.mark.asyncio
+    async def test_db_event_worker_shutdown_flush_does_not_hang(self):
+        """
+        stop_background_workers() must complete within a short wall-clock
+        window even when add_flight_events_many is very slow / unavailable.
+        """
+        repo = MagicMock(spec=TelemetryRepository)
+        repo.add_flight_events_many = AsyncMock(side_effect=RuntimeError("DB completely down"))
+        repo.add_telemetry_many = AsyncMock(return_value=0)
+        repo.add_mavlink_events_many = AsyncMock(return_value=0)
+
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+        orch.start_background_workers()
+
+        # Enqueue a few items that will be in-buffer on shutdown.
+        for i in range(5):
+            orch._enqueue_db_event(1, "pre_shutdown", {"i": i})
+
+        await asyncio.sleep(0.1)
+
+        t0 = time.monotonic()
+        await orch.stop_background_workers()
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 5.0, (
+            f"stop_background_workers() took {elapsed:.1f}s with DB down — "
+            "shutdown flush should not block"
+        )
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_worker_shutdown_does_not_hang(self):
+        """
+        stop_background_workers() must complete quickly even when the
+        lifecycle DB writes are failing.
+        """
+        repo = MagicMock(spec=TelemetryRepository)
+        repo.add_flight_events_many = AsyncMock(side_effect=RuntimeError("DB completely down"))
+        repo.add_telemetry_many = AsyncMock(return_value=0)
+        repo.add_mavlink_events_many = AsyncMock(return_value=0)
+
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+        orch.start_background_workers()
+
+        await orch._db_lifecycle_queue.put((1, "pre_shutdown", {}))
+        await asyncio.sleep(0.1)
+
+        t0 = time.monotonic()
+        await orch.stop_background_workers()
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 5.0, (
+            f"stop_background_workers() took {elapsed:.1f}s with lifecycle DB down"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Concurrent degradation: all DB writes failing simultaneously
+# ---------------------------------------------------------------------------
+
+
+class TestConcurrentQueueDegradation:
+    """
+    Simulate a total DB outage while the flight-critical hot path is active.
+    All three enqueue paths must remain non-blocking.
+    """
+
+    @pytest.mark.asyncio
+    async def test_all_queues_non_blocking_during_total_db_outage(self):
+        """
+        With all DB writers permanently failing, enqueuing into every queue
+        type must still return in < 50 ms per call.
+        """
+        repo = MagicMock(spec=TelemetryRepository)
+        repo.add_flight_events_many = AsyncMock(side_effect=RuntimeError("total DB outage"))
+        repo.add_telemetry_many = AsyncMock(side_effect=RuntimeError("total DB outage"))
+        repo.add_mavlink_events_many = AsyncMock(side_effect=RuntimeError("total DB outage"))
+
+        orch = Orchestrator(
+            drone=MagicMock(),
+            maps=MagicMock(),
+            analyzer=MagicMock(),
+            mqtt=None,
+            video=None,
+            telemetry_repo=repo,
+        )
+        orch._flight_id = 1
+        orch.start_background_workers()
+
+        await asyncio.sleep(0.1)  # give workers time to start
+
+        deadline = time.monotonic() + 3.0
+        for i in range(300):
+            # Flight events (drop-oldest)
+            orch._enqueue_db_event(1, "evt", {"i": i})
+            # Raw MAVLink events (drop-oldest)
+            orch._enqueue_raw_event(_raw_event())
+            assert time.monotonic() < deadline, (
+                f"Hot-path enqueue blocked during total DB outage at iteration {i}"
+            )
+
+        await orch.stop_background_workers()
+
+    @pytest.mark.asyncio
+    async def test_dropped_metric_grows_but_queue_depth_stays_bounded(self):
+        """
+        During a DB outage with sustained high-rate writes, the dropped_db_events
+        counter must grow (proving drops happened) and the queue depth must stay
+        within its declared maximum.
+        """
+        orch = _make_orchestrator()
+        capacity = orch._db_event_queue.maxsize
+
+        for i in range(capacity * 3):
+            orch._enqueue_db_event(1, "high_rate", {"i": i})
+
+        assert orch._db_event_queue.qsize() <= capacity
+        assert orch._metrics["dropped_db_events"] > 0

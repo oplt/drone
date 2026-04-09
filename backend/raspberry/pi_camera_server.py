@@ -1,6 +1,6 @@
+import cv2
 from flask import Flask, Response
 from picamera2 import Picamera2
-import cv2
 
 app = Flask(__name__)
 
@@ -30,19 +30,12 @@ def generate_frames():
 @app.route("/video_feed")
 def video_feed():
     # Browser/clients can read this as a MJPEG stream
-    return Response(
-        generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame"
-    )
+    return Response(generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
 @app.route("/")
 def index():
-    return (
-        "<html><body>"
-        "<h1>Raspberry Pi Camera Stream</h1>"
-        "<img src='/video_feed' />"
-        "</body></html>"
-    )
+    return "<html><body><h1>Raspberry Pi Camera Stream</h1><img src='/video_feed' /></body></html>"
 
 
 if __name__ == "__main__":

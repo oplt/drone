@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,36 +27,36 @@ class PatrolAlertDecision:
 
 class PatrolDetectionRepository:
     def utcnow(self) -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     async def add_patrol_detection(
-            self,
-            db: AsyncSession,
-            *,
-            flight_id: int,
-            mission_task_type: str,
-            ai_task: str,
-            object_class: str,
-            confidence: float,
-            bbox_xyxy: dict[str, Any],
-            centroid_xy: dict[str, Any],
-            anomaly_type: Optional[str] = None,
-            track_id: Optional[str] = None,
-            zone_name: Optional[str] = None,
-            checkpoint_index: Optional[int] = None,
-            telemetry_id: Optional[int] = None,
-            frame_id: Optional[int] = None,
-            lat: Optional[float] = None,
-            lon: Optional[float] = None,
-            alt: Optional[float] = None,
-            heading: Optional[float] = None,
-            groundspeed: Optional[float] = None,
-            source: str = "rgb",
-            snapshot_path: Optional[str] = None,
-            clip_path: Optional[str] = None,
-            model_name: Optional[str] = None,
-            model_version: Optional[str] = None,
-            meta_data: Optional[dict[str, Any]] = None,
+        self,
+        db: AsyncSession,
+        *,
+        flight_id: int,
+        mission_task_type: str,
+        ai_task: str,
+        object_class: str,
+        confidence: float,
+        bbox_xyxy: dict[str, Any],
+        centroid_xy: dict[str, Any],
+        anomaly_type: str | None = None,
+        track_id: str | None = None,
+        zone_name: str | None = None,
+        checkpoint_index: int | None = None,
+        telemetry_id: int | None = None,
+        frame_id: int | None = None,
+        lat: float | None = None,
+        lon: float | None = None,
+        alt: float | None = None,
+        heading: float | None = None,
+        groundspeed: float | None = None,
+        source: str = "rgb",
+        snapshot_path: str | None = None,
+        clip_path: str | None = None,
+        model_name: str | None = None,
+        model_version: str | None = None,
+        meta_data: dict[str, Any] | None = None,
     ) -> PatrolDetection:
         row = PatrolDetection(
             flight_id=flight_id,
@@ -90,12 +90,12 @@ class PatrolDetectionRepository:
         return row
 
     async def add_detection_summary_event(
-            self,
-            db: AsyncSession,
-            *,
-            flight_id: int,
-            event_type: str,
-            data: dict[str, Any],
+        self,
+        db: AsyncSession,
+        *,
+        flight_id: int,
+        event_type: str,
+        data: dict[str, Any],
     ) -> FlightEvent:
         row = FlightEvent(
             flight_id=flight_id,
@@ -107,12 +107,12 @@ class PatrolDetectionRepository:
         return row
 
     async def _find_candidate_open_incident(
-            self,
-            db: AsyncSession,
-            *,
-            detection: PatrolDetection,
-            window_seconds: int = 45,
-    ) -> Optional[PatrolIncident]:
+        self,
+        db: AsyncSession,
+        *,
+        detection: PatrolDetection,
+        window_seconds: int = 45,
+    ) -> PatrolIncident | None:
         cutoff = self.utcnow() - timedelta(seconds=window_seconds)
         incident_type = detection.anomaly_type or f"{detection.object_class}_detected"
 
@@ -122,7 +122,7 @@ class PatrolDetectionRepository:
             PatrolIncident.incident_type == incident_type,
             PatrolIncident.mission_task_type == detection.mission_task_type,
             PatrolIncident.opened_at >= cutoff,
-            ]
+        ]
 
         if detection.track_id:
             stmt = (
@@ -132,7 +132,7 @@ class PatrolDetectionRepository:
                     PatrolIncident.primary_track_id == detection.track_id,
                     PatrolIncident.zone_name == detection.zone_name,
                     PatrolIncident.checkpoint_index == detection.checkpoint_index,
-                    )
+                )
                 .order_by(desc(PatrolIncident.updated_at), desc(PatrolIncident.id))
                 .limit(1)
             )
@@ -148,24 +148,24 @@ class PatrolDetectionRepository:
                 PatrolIncident.primary_object_class == detection.object_class,
                 PatrolIncident.zone_name == detection.zone_name,
                 PatrolIncident.checkpoint_index == detection.checkpoint_index,
-                )
+            )
             .order_by(desc(PatrolIncident.updated_at), desc(PatrolIncident.id))
             .limit(1)
         )
         return await db.scalar(stmt)
 
     async def _link_incident_detection(
-            self,
-            db: AsyncSession,
-            *,
-            incident_id: int,
-            detection_id: int,
+        self,
+        db: AsyncSession,
+        *,
+        incident_id: int,
+        detection_id: int,
     ) -> None:
         exists = await db.scalar(
             select(PatrolIncidentDetection).where(
                 PatrolIncidentDetection.incident_id == incident_id,
                 PatrolIncidentDetection.detection_id == detection_id,
-                )
+            )
         )
         if exists is None:
             db.add(
@@ -177,12 +177,12 @@ class PatrolDetectionRepository:
             await db.flush()
 
     async def upsert_patrol_incident(
-            self,
-            db: AsyncSession,
-            *,
-            detection: PatrolDetection,
-            incident_summary: Optional[dict[str, Any]] = None,
-            window_seconds: int = 45,
+        self,
+        db: AsyncSession,
+        *,
+        detection: PatrolDetection,
+        incident_summary: dict[str, Any] | None = None,
+        window_seconds: int = 45,
     ) -> tuple[PatrolIncident, bool]:
         incident = await self._find_candidate_open_incident(
             db,
@@ -243,10 +243,10 @@ class PatrolDetectionRepository:
         return incident, created
 
     def decide_alert_for_incident(
-            self,
-            *,
-            incident: PatrolIncident,
-            detection: PatrolDetection,
+        self,
+        *,
+        incident: PatrolIncident,
+        detection: PatrolDetection,
     ) -> PatrolAlertDecision:
         incident_type = incident.incident_type
         if incident_type in {"restricted_zone_entry", "fence_line_crossing"}:
@@ -259,24 +259,31 @@ class PatrolDetectionRepository:
             severity = "low"
 
         should_alert = (
-                incident.detection_count >= 3
-                or incident_type in {"restricted_zone_entry", "fence_line_crossing"}
-                or float(incident.peak_confidence or 0.0) >= 0.90
+            incident.detection_count >= 3
+            or incident_type in {"restricted_zone_entry", "fence_line_crossing"}
+            or float(incident.peak_confidence or 0.0) >= 0.90
         )
 
-        zone_part = (
-                incident.zone_name
-                or (f"checkpoint-{incident.checkpoint_index}" if incident.checkpoint_index is not None else "general")
+        zone_part = incident.zone_name or (
+            f"checkpoint-{incident.checkpoint_index}"
+            if incident.checkpoint_index is not None
+            else "general"
         )
         track_part = incident.primary_track_id or "no-track"
 
         title = incident_type.replace("_", " ").title()
         message = (
-                f"{detection.object_class} detected during {incident.mission_task_type}"
-                + (f" in zone '{incident.zone_name}'" if incident.zone_name else "")
-                + (f" at checkpoint {incident.checkpoint_index}" if incident.checkpoint_index is not None else "")
+            f"{detection.object_class} detected during {incident.mission_task_type}"
+            + (f" in zone '{incident.zone_name}'" if incident.zone_name else "")
+            + (
+                f" at checkpoint {incident.checkpoint_index}"
+                if incident.checkpoint_index is not None
+                else ""
+            )
         )
-        dedupe_key = f"patrol:{incident.flight_id}:{incident.incident_type}:{zone_part}:{track_part}"
+        dedupe_key = (
+            f"patrol:{incident.flight_id}:{incident.incident_type}:{zone_part}:{track_part}"
+        )
 
         return PatrolAlertDecision(
             should_alert=should_alert,
@@ -287,12 +294,12 @@ class PatrolDetectionRepository:
         )
 
     async def upsert_operational_alert_for_incident(
-            self,
-            db: AsyncSession,
-            *,
-            incident: PatrolIncident,
-            detection: PatrolDetection,
-    ) -> Optional[OperationalAlert]:
+        self,
+        db: AsyncSession,
+        *,
+        incident: PatrolIncident,
+        detection: PatrolDetection,
+    ) -> OperationalAlert | None:
         decision = self.decide_alert_for_incident(incident=incident, detection=detection)
         if not decision.should_alert:
             return None
@@ -302,7 +309,7 @@ class PatrolDetectionRepository:
             select(OperationalAlert).where(
                 OperationalAlert.dedupe_key == decision.dedupe_key,
                 OperationalAlert.status == "open",
-                )
+            )
         )
 
         payload = {
@@ -350,34 +357,34 @@ class PatrolDetectionRepository:
         return alert
 
     async def persist_detection_pipeline_result(
-            self,
-            db: AsyncSession,
-            *,
-            flight_id: int,
-            mission_task_type: str,
-            ai_task: str,
-            object_class: str,
-            confidence: float,
-            bbox_xyxy: dict[str, Any],
-            centroid_xy: dict[str, Any],
-            anomaly_type: Optional[str] = None,
-            track_id: Optional[str] = None,
-            zone_name: Optional[str] = None,
-            checkpoint_index: Optional[int] = None,
-            telemetry_id: Optional[int] = None,
-            frame_id: Optional[int] = None,
-            lat: Optional[float] = None,
-            lon: Optional[float] = None,
-            alt: Optional[float] = None,
-            heading: Optional[float] = None,
-            groundspeed: Optional[float] = None,
-            source: str = "rgb",
-            snapshot_path: Optional[str] = None,
-            clip_path: Optional[str] = None,
-            model_name: Optional[str] = None,
-            model_version: Optional[str] = None,
-            meta_data: Optional[dict[str, Any]] = None,
-    ) -> tuple[PatrolDetection, PatrolIncident, bool, Optional[OperationalAlert]]:
+        self,
+        db: AsyncSession,
+        *,
+        flight_id: int,
+        mission_task_type: str,
+        ai_task: str,
+        object_class: str,
+        confidence: float,
+        bbox_xyxy: dict[str, Any],
+        centroid_xy: dict[str, Any],
+        anomaly_type: str | None = None,
+        track_id: str | None = None,
+        zone_name: str | None = None,
+        checkpoint_index: int | None = None,
+        telemetry_id: int | None = None,
+        frame_id: int | None = None,
+        lat: float | None = None,
+        lon: float | None = None,
+        alt: float | None = None,
+        heading: float | None = None,
+        groundspeed: float | None = None,
+        source: str = "rgb",
+        snapshot_path: str | None = None,
+        clip_path: str | None = None,
+        model_name: str | None = None,
+        model_version: str | None = None,
+        meta_data: dict[str, Any] | None = None,
+    ) -> tuple[PatrolDetection, PatrolIncident, bool, OperationalAlert | None]:
         detection = await self.add_patrol_detection(
             db,
             flight_id=flight_id,

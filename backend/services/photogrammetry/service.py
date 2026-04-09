@@ -5,9 +5,10 @@ import logging
 import os
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 from sqlalchemy import text
 
@@ -48,7 +49,7 @@ class PhotogrammetryService:
         self,
         *,
         job_id: int,
-        progress_cb: Optional[Callable[[dict], None]] = None,
+        progress_cb: Callable[[dict], None] | None = None,
     ) -> dict:
         try:
             async with Session() as db:
@@ -109,7 +110,7 @@ class PhotogrammetryService:
 
                 job.status = "processing"
                 job.progress = 1
-                job.started_at = datetime.now(timezone.utc)
+                job.started_at = datetime.now(UTC)
                 model.status = "processing"
                 await db.commit()
                 logger.info(
@@ -130,9 +131,7 @@ class PhotogrammetryService:
             try:
                 poll_s = float(os.getenv("WEBODM_POLL_INTERVAL_S", "5"))
             except ValueError:
-                logger.warning(
-                    "Invalid WEBODM_POLL_INTERVAL_S value; falling back to 5 seconds."
-                )
+                logger.warning("Invalid WEBODM_POLL_INTERVAL_S value; falling back to 5 seconds.")
                 poll_s = 5.0
 
             try:
@@ -144,9 +143,7 @@ class PhotogrammetryService:
                 max_poll_s = 30.0
 
             if poll_s <= 0:
-                logger.warning(
-                    "WEBODM_POLL_INTERVAL_S must be > 0; falling back to 5 seconds."
-                )
+                logger.warning("WEBODM_POLL_INTERVAL_S must be > 0; falling back to 5 seconds.")
                 poll_s = 5.0
             if max_poll_s <= 0:
                 logger.warning(
@@ -261,11 +258,11 @@ class PhotogrammetryService:
 
     def _convert_outputs(
         self,
-        outputs: Dict[str, str],
+        outputs: dict[str, str],
         work_dir: Path,
         *,
-        requested_artifacts: Optional[Dict[str, Any]] = None,
-    ) -> tuple[Dict[str, str], Dict[str, Dict[str, Any]]]:
+        requested_artifacts: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
         work_dir.mkdir(parents=True, exist_ok=True)
         logger.info(
             "Photogrammetry conversion started: work_dir=%s requested_artifacts=%s",
@@ -273,8 +270,8 @@ class PhotogrammetryService:
             requested_artifacts or {},
         )
 
-        converted: Dict[str, str] = {}
-        artifact_meta: Dict[str, Dict[str, Any]] = {}
+        converted: dict[str, str] = {}
+        artifact_meta: dict[str, dict[str, Any]] = {}
 
         requested_artifacts = requested_artifacts or {}
 
@@ -294,11 +291,11 @@ class PhotogrammetryService:
         ortho_src = outputs.get("orthophoto")
         dsm_src = outputs.get("dsm")
         dtm_src = outputs.get("dtm")
-        ortho_cog: Optional[str] = None
-        mesh_georef: Optional[dict[str, Any]] = None
-        ortho_georef: Optional[dict[str, Any]] = None
-        dsm_georef: Optional[dict[str, Any]] = None
-        dtm_georef: Optional[dict[str, Any]] = None
+        ortho_cog: str | None = None
+        mesh_georef: dict[str, Any] | None = None
+        ortho_georef: dict[str, Any] | None = None
+        dsm_georef: dict[str, Any] | None = None
+        dtm_georef: dict[str, Any] | None = None
 
         if ortho_src and (ortho_enabled or mesh_enabled):
             ortho_georef = inspect_raster_georeferencing(ortho_src)
@@ -372,9 +369,7 @@ class PhotogrammetryService:
                 "format": "3dtiles",
                 "georef": mesh_georef,
                 "bbox_wgs84": (
-                    mesh_georef.get("bbox_wgs84")
-                    if isinstance(mesh_georef, dict)
-                    else None
+                    mesh_georef.get("bbox_wgs84") if isinstance(mesh_georef, dict) else None
                 ),
             }
             logger.info("Generated textured mesh 3D tiles: %s", tileset_dir)
@@ -401,7 +396,7 @@ class PhotogrammetryService:
         )
         return converted, artifact_meta
 
-    async def _upload_outputs(self, converted: Dict[str, str]) -> Dict[str, str]:
+    async def _upload_outputs(self, converted: dict[str, str]) -> dict[str, str]:
         logger.info("Uploading converted artifacts: count=%s", len(converted))
 
         async def _upload_one(key: str, path: str) -> tuple[str, str]:
@@ -425,8 +420,8 @@ class PhotogrammetryService:
         *,
         job_id: int,
         model_id: int,
-        uploaded: Dict[str, str],
-        artifact_meta: Optional[Dict[str, Dict[str, Any]]] = None,
+        uploaded: dict[str, str],
+        artifact_meta: dict[str, dict[str, Any]] | None = None,
     ) -> None:
         type_map = {
             "orthomosaic_cog": "ORTHO_COG",
@@ -465,7 +460,7 @@ class PhotogrammetryService:
         self,
         *,
         job_id: int,
-        artifact_meta: Optional[Dict[str, Dict[str, Any]]] = None,
+        artifact_meta: dict[str, dict[str, Any]] | None = None,
     ) -> None:
         artifact_meta = artifact_meta or {}
         ring = None
@@ -528,8 +523,8 @@ class PhotogrammetryService:
         self,
         job_id: int,
         *,
-        processor_task_id: Optional[str] = None,
-        progress: Optional[int] = None,
+        processor_task_id: str | None = None,
+        progress: int | None = None,
     ) -> None:
         async with Session() as db:
             job = await db.get(MappingJob, job_id)
@@ -548,7 +543,7 @@ class PhotogrammetryService:
             if job:
                 job.status = "ready"
                 job.progress = 100
-                job.finished_at = datetime.now(timezone.utc)
+                job.finished_at = datetime.now(UTC)
             if model:
                 model.status = "ready"
             await db.commit()
@@ -561,6 +556,6 @@ class PhotogrammetryService:
                 return
             job.status = "failed"
             job.error = error
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
             await db.commit()
         logger.error("Marked mapping job failed: job_id=%s error=%s", job_id, error)

@@ -1,11 +1,11 @@
 import base64
 import json
-from typing import List, Dict, Any
+from typing import Any
+
 import aiohttp
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from backend.drone.models import Detection
-
 
 # Optional: use TurboJPEG if available (3-5x faster encode than OpenCV).
 # Fallback to OpenCV if not installed.
@@ -57,16 +57,14 @@ class LLMAnalyzer:
     If not pure JSON, we try to extract JSON via a naive fallback.
     """
 
-    def __init__(
-        self, api_base: str, api_key: str, model: str, provider: str = "ollama"
-    ):
+    def __init__(self, api_base: str, api_key: str, model: str, provider: str = "ollama"):
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key or ""
         self.model = model
         self.provider = provider
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-    async def detect_objects(self, frame) -> List[Detection]:
+    async def detect_objects(self, frame) -> list[Detection]:
         img_b64 = encode_jpeg(frame)
         system_prompt = (
             "You are a precise vision detector for urban cleanliness. "
@@ -136,12 +134,12 @@ class LLMAnalyzer:
         return [self._to_detection(it) for it in items]
 
     # ---------- parsers ----------
-    def _parse_ollama(self, data: Dict[str, Any]) -> str:
+    def _parse_ollama(self, data: dict[str, Any]) -> str:
         # Ollama returns: {"message":{"role":"assistant","content":"..."},"done":true,...}
         msg = data.get("message") or {}
         return (msg.get("content") or "").strip()
 
-    def _parse_openai_compat(self, data: Dict[str, Any]) -> str:
+    def _parse_openai_compat(self, data: dict[str, Any]) -> str:
         # OpenAI-compatible: choices[0].message.content
         choices = data.get("choices") or []
         if not choices:
@@ -149,7 +147,7 @@ class LLMAnalyzer:
         return (choices[0].get("message", {}).get("content") or "").strip()
 
     # ---------- helpers ----------
-    def _coerce_json_list(self, text: str) -> List[Dict[str, Any]]:
+    def _coerce_json_list(self, text: str) -> list[dict[str, Any]]:
         """
         Try to parse a JSON array. If the model added prose, extract the first array substring.
         """
@@ -167,11 +165,9 @@ class LLMAnalyzer:
                     return []
             return []
 
-    def _to_detection(self, it: Dict[str, Any]) -> Detection:
+    def _to_detection(self, it: dict[str, Any]) -> Detection:
         label = str(it.get("label", "object"))
         confidence = float(it.get("confidence", 0.0))
         bbox = it.get("bbox")
-        bbox_t = (
-            tuple(bbox) if isinstance(bbox, (list, tuple)) and len(bbox) == 4 else None
-        )
+        bbox_t = tuple(bbox) if isinstance(bbox, (list, tuple)) and len(bbox) == 4 else None
         return Detection(label=label, confidence=confidence, bbox=bbox_t, extra=it)

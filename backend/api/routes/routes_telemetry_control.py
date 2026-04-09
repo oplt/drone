@@ -1,9 +1,11 @@
 # backend/api/routes_telemetry_control.py
 import logging
-from fastapi import APIRouter, HTTPException, Depends
-from backend.messaging.websocket import telemetry_manager
+
+from fastapi import APIRouter, Depends, HTTPException
+
 from backend.auth.deps import require_admin, require_user
 from backend.main import _build_orchestrator
+from backend.messaging.websocket import telemetry_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
@@ -31,9 +33,7 @@ async def start_telemetry_stream(user=Depends(require_admin)):
         }
     except Exception as e:
         logger.error(f"Failed to start telemetry stream: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to start telemetry: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to start telemetry: {e!s}")
 
 
 @router.post("/stop")
@@ -58,9 +58,7 @@ async def stop_telemetry_stream(user=Depends(require_admin)):
         }
     except Exception as e:
         logger.error(f"Failed to stop telemetry stream: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to stop telemetry: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to stop telemetry: {e!s}")
 
 
 @router.get("/status")

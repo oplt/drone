@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from backend.db.session import get_db
-from backend.db.models import Geofence
-from shapely.geometry import Polygon, mapping
 from geoalchemy2.shape import from_shape, to_shape
-from backend.schemas.geofence import GeofenceCreateGeoJSON, GeofenceOut, GeofenceUpdate
+from shapely.geometry import Polygon, mapping
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.db.models import Geofence
+from backend.db.session import get_db
+from backend.schemas.geofence import GeofenceCreateGeoJSON, GeofenceOut, GeofenceUpdate
 
 router = APIRouter(prefix="/geofences", tags=["geofences"])
 
 
-def _ensure_closed_ring(coords: List[List[float]]) -> List[List[float]]:
+def _ensure_closed_ring(coords: list[list[float]]) -> list[list[float]]:
     if len(coords) < 3:
         raise ValueError("Polygon needs at least 3 points")
     if coords[0] != coords[-1]:
@@ -22,13 +21,13 @@ def _ensure_closed_ring(coords: List[List[float]]) -> List[List[float]]:
     return coords
 
 
-def _coords_to_polygon(coords_lonlat: List[List[float]]) -> Polygon:
+def _coords_to_polygon(coords_lonlat: list[list[float]]) -> Polygon:
     coords_lonlat = _ensure_closed_ring(coords_lonlat)
     # Shapely uses (x,y) = (lon,lat)
     return Polygon(coords_lonlat)
 
 
-def _geofence_to_geojson_coords(gf: Geofence) -> List[List[float]]:
+def _geofence_to_geojson_coords(gf: Geofence) -> list[list[float]]:
     poly = to_shape(gf.polygon)  # shapely Polygon
     # Return exterior ring as [[lon,lat], ...]
     return [[float(x), float(y)] for (x, y) in list(poly.exterior.coords)]
@@ -38,10 +37,11 @@ def _geofence_to_geojson_coords(gf: Geofence) -> List[List[float]]:
 # Routes
 # -------------------------
 
+
 @router.post("", response_model=GeofenceOut)
 async def create_geofence(
-        payload: GeofenceCreateGeoJSON,
-        db: AsyncSession = Depends(get_db),
+    payload: GeofenceCreateGeoJSON,
+    db: AsyncSession = Depends(get_db),
 ):
     try:
         poly = _coords_to_polygon(payload.coordinates)
@@ -65,12 +65,12 @@ async def create_geofence(
     return gf
 
 
-@router.get("", response_model=List[GeofenceOut])
+@router.get("", response_model=list[GeofenceOut])
 async def list_geofences(
-        active: Optional[bool] = Query(None, description="Filter by active status"),
-        q: Optional[str] = Query(None, description="Name search (ILIKE)"),
-        limit: int = Query(50, ge=1, le=500),
-        db: AsyncSession = Depends(get_db),
+    active: bool | None = Query(None, description="Filter by active status"),
+    q: str | None = Query(None, description="Name search (ILIKE)"),
+    limit: int = Query(50, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
 ):
     stmt = select(Geofence)
 
@@ -87,8 +87,8 @@ async def list_geofences(
 
 @router.get("/{geofence_id}", response_model=GeofenceOut)
 async def get_geofence(
-        geofence_id: int,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    db: AsyncSession = Depends(get_db),
 ):
     gf = (await db.execute(select(Geofence).where(Geofence.id == geofence_id))).scalar_one_or_none()
     if not gf:
@@ -98,8 +98,8 @@ async def get_geofence(
 
 @router.get("/{geofence_id}/geojson")
 async def get_geofence_geojson(
-        geofence_id: int,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    db: AsyncSession = Depends(get_db),
 ):
     gf = (await db.execute(select(Geofence).where(Geofence.id == geofence_id))).scalar_one_or_none()
     if not gf:
@@ -124,8 +124,8 @@ async def get_geofence_geojson(
 
 @router.get("/{geofence_id}/latlon")
 async def get_geofence_latlon_ring(
-        geofence_id: int,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Returns ring in the exact order your current preflight polygon code expects: [(lat,lon),...]
@@ -142,9 +142,9 @@ async def get_geofence_latlon_ring(
 
 @router.patch("/{geofence_id}", response_model=GeofenceOut)
 async def update_geofence(
-        geofence_id: int,
-        payload: GeofenceUpdate,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    payload: GeofenceUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     gf = (await db.execute(select(Geofence).where(Geofence.id == geofence_id))).scalar_one_or_none()
     if not gf:
@@ -179,8 +179,8 @@ async def update_geofence(
 
 @router.post("/{geofence_id}/activate", response_model=GeofenceOut)
 async def activate_geofence(
-        geofence_id: int,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    db: AsyncSession = Depends(get_db),
 ):
     gf = (await db.execute(select(Geofence).where(Geofence.id == geofence_id))).scalar_one_or_none()
     if not gf:
@@ -194,8 +194,8 @@ async def activate_geofence(
 
 @router.post("/{geofence_id}/deactivate", response_model=GeofenceOut)
 async def deactivate_geofence(
-        geofence_id: int,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    db: AsyncSession = Depends(get_db),
 ):
     gf = (await db.execute(select(Geofence).where(Geofence.id == geofence_id))).scalar_one_or_none()
     if not gf:
@@ -209,8 +209,8 @@ async def deactivate_geofence(
 
 @router.delete("/{geofence_id}")
 async def delete_geofence(
-        geofence_id: int,
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    db: AsyncSession = Depends(get_db),
 ):
     gf = (await db.execute(select(Geofence).where(Geofence.id == geofence_id))).scalar_one_or_none()
     if not gf:
@@ -223,10 +223,10 @@ async def delete_geofence(
 
 @router.post("/{geofence_id}/contains")
 async def contains_point(
-        geofence_id: int,
-        lat: float = Query(...),
-        lon: float = Query(...),
-        db: AsyncSession = Depends(get_db),
+    geofence_id: int,
+    lat: float = Query(...),
+    lon: float = Query(...),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Spatial containment check in PostGIS (fast + correct).

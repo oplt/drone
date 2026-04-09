@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Dict, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +37,7 @@ class AlertRepository:
         severity: str,
         title: str,
         message: str,
-        meta_data: Dict[str, Any],
+        meta_data: dict[str, Any],
         now: datetime,
     ) -> OperationalAlert:
         alert = OperationalAlert(
@@ -65,7 +66,7 @@ class AlertRepository:
         severity: str,
         title: str,
         message: str,
-        meta_data: Dict[str, Any],
+        meta_data: dict[str, Any],
         now: datetime,
         mark_notified: bool,
     ) -> OperationalAlert:
@@ -142,7 +143,7 @@ class AlertRepository:
         channel: str,
         destination: str | None,
         status: str,
-        payload: Dict[str, Any] | None = None,
+        payload: dict[str, Any] | None = None,
         provider_message_id: str | None = None,
         error: str | None = None,
     ) -> AlertDelivery:
@@ -201,4 +202,4 @@ class AlertRepository:
 
     @staticmethod
     def utcnow() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)

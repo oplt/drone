@@ -1,7 +1,8 @@
-from pathlib import Path
 import logging
 import threading
 from datetime import datetime
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -80,19 +81,13 @@ class DailyDateFileHandler(logging.Handler):
 
 def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -> None:
     """Centralized logging configuration with environment variable support"""
-    level = (
-        log_level
-        if isinstance(log_level, int)
-        else getattr(logging, log_level, logging.INFO)
-    )
+    level = log_level if isinstance(log_level, int) else getattr(logging, log_level, logging.INFO)
     log_dir = (log_file.parent if log_file else (BASE_DIR / "logs")).resolve()
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
 
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
     has_daily_file_handler = False
     has_stream_handler = False
@@ -103,7 +98,9 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
                 has_daily_file_handler = True
                 handler.setLevel(level)
                 handler.setFormatter(formatter)
-        elif isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+        elif isinstance(handler, logging.StreamHandler) and not isinstance(
+            handler, logging.FileHandler
+        ):
             has_stream_handler = True
             handler.setLevel(level)
             handler.setFormatter(formatter)
@@ -131,6 +128,7 @@ class BootstrapSettings(BaseSettings):
 
     database_url: str
     settings_vault_key: str
+
 
 bootstrap = BootstrapSettings()
 
@@ -168,7 +166,6 @@ class RuntimeSettings(BaseSettings):
 
     drone_conn: str
     drone_conn_mavproxy: str
-
 
     jwt_secret: str
     jwt_algorithm: str = "HS256"
@@ -263,7 +260,7 @@ class RuntimeSettings(BaseSettings):
     PHOTOGRAMMETRY_STORAGE_BASE_URL: str = "/mapping-assets"
     PHOTOGRAMMETRY_3DTILES_CMD: str = ""
     PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: bool = False
-    WEBODM_BASE_URL: str =""
+    WEBODM_BASE_URL: str = ""
     WEBODM_API_TOKEN: str = ""
     WEBODM_PROJECT_ID: int = 1
     WEBODM_MOCK_MODE: bool = False
@@ -275,7 +272,6 @@ class RuntimeSettings(BaseSettings):
     # both can be compared before fully removing the legacy write. Set to False
     # (disabled) once the queued path has proven stable in production.
     orchestrator_shadow_mode: bool = False
-
 
 
 settings = RuntimeSettings()

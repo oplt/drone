@@ -1,21 +1,20 @@
-import time
-import asyncio
 import logging
-from typing import Dict, Any, List, Optional, Union
+import time
+from typing import Any
 
-from .preflight_context import PreflightContext
-from .schemas import PreflightReport, CheckResult, CheckStatus
+from ..missions.schemas import Mission, create_mission_from_dict
 from .base import BasePreflightChecks
+from .cache import TerrainCache
 from .indoor_checks import IndoorWarehouseBasePreflightChecks
 from .mission_specific import create_mission_preflight
-from .cache import TerrainCache
 from .models import MissionDataPreprocessor
+from .preflight_context import PreflightContext
 from .profiles import (
     INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS,
     INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS,
     indoor_warehouse_overrides,
 )
-from ..missions.schemas import create_mission_from_dict, Mission
+from .schemas import CheckResult, CheckStatus, PreflightReport
 
 logger = logging.getLogger(__name__)
 
@@ -43,25 +42,28 @@ CRITICAL_MISSION_CHECKS = [
 class PreflightOrchestrator:
     """Orchestrates all preflight checks."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
 
         self.terrain_cache = TerrainCache(
-            precision=self.config.get('terrain_cache_precision', 1e-5),
-            ttl_seconds=self.config.get('terrain_cache_ttl', 300)
+            precision=self.config.get("terrain_cache_precision", 1e-5),
+            ttl_seconds=self.config.get("terrain_cache_ttl", 300),
         )
 
-        self.critical_base_checks = self.config.get('critical_base_checks', CRITICAL_BASE_CHECKS)
-        self.critical_mission_checks = self.config.get('critical_mission_checks', CRITICAL_MISSION_CHECKS)
-        self.early_terminate_on_fail = self.config.get('early_terminate_on_fail', True)
+        self.critical_base_checks = self.config.get("critical_base_checks", CRITICAL_BASE_CHECKS)
+        self.critical_mission_checks = self.config.get(
+            "critical_mission_checks", CRITICAL_MISSION_CHECKS
+        )
+        self.early_terminate_on_fail = self.config.get("early_terminate_on_fail", True)
 
-    async def _build_context(self, vehicle_state: Any, mission: Mission, **kwargs) -> PreflightContext:
+    async def _build_context(
+        self, vehicle_state: Any, mission: Mission, **kwargs
+    ) -> PreflightContext:
         precomputed = None
         if mission.waypoints:
             preprocessor = MissionDataPreprocessor(terrain_cache=self.terrain_cache)
             precomputed = await preprocessor.preprocess(
-                mission.waypoints,
-                terrain_data=kwargs.get('terrain_provider')
+                mission.waypoints, terrain_data=kwargs.get("terrain_provider")
             )
 
         return PreflightContext(
@@ -69,19 +71,33 @@ class PreflightOrchestrator:
             mission=mission,
             precomputed=precomputed,
             terrain_cache=self.terrain_cache,
-            **{k: kwargs.get(k) for k in [
-                'terrain_provider', 'wind_data', 'no_fly_zones',
-                'obstacle_map', 'geofence_polygon', 'config_overrides',
-                'vehicle_id', 'flight_id'
-            ]}
+            **{
+                k: kwargs.get(k)
+                for k in [
+                    "terrain_provider",
+                    "wind_data",
+                    "no_fly_zones",
+                    "obstacle_map",
+                    "geofence_polygon",
+                    "config_overrides",
+                    "vehicle_id",
+                    "flight_id",
+                ]
+            },
         )
 
-    def _check_for_critical_fails(self, results: List[CheckResult], check_type: str = "base") -> tuple[bool, List[CheckResult]]:
-        critical_list = self.critical_base_checks if check_type == "base" else self.critical_mission_checks
-        failed_critical = [r for r in results if r.name in critical_list and r.status == CheckStatus.FAIL]
+    def _check_for_critical_fails(
+        self, results: list[CheckResult], check_type: str = "base"
+    ) -> tuple[bool, list[CheckResult]]:
+        critical_list = (
+            self.critical_base_checks if check_type == "base" else self.critical_mission_checks
+        )
+        failed_critical = [
+            r for r in results if r.name in critical_list and r.status == CheckStatus.FAIL
+        ]
         return len(failed_critical) > 0, failed_critical
 
-    def _determine_overall_status(self, results: List[CheckResult]) -> CheckStatus:
+    def _determine_overall_status(self, results: list[CheckResult]) -> CheckStatus:
         has_fail = any(r.status == CheckStatus.FAIL for r in results)
         has_warn = any(r.status == CheckStatus.WARN for r in results)
         if has_fail:
@@ -90,18 +106,24 @@ class PreflightOrchestrator:
             return CheckStatus.WARN
         return CheckStatus.PASS
 
-    def _generate_summary(self, results: List[CheckResult]) -> Dict[str, Any]:
+    def _generate_summary(self, results: list[CheckResult]) -> dict[str, Any]:
         return {
-            'total_checks': len(results),
-            'passed': sum(1 for r in results if r.status == CheckStatus.PASS),
-            'failed': sum(1 for r in results if r.status == CheckStatus.FAIL),
-            'warned': sum(1 for r in results if r.status == CheckStatus.WARN),
-            'skipped': sum(1 for r in results if r.status == CheckStatus.SKIP),
+            "total_checks": len(results),
+            "passed": sum(1 for r in results if r.status == CheckStatus.PASS),
+            "failed": sum(1 for r in results if r.status == CheckStatus.FAIL),
+            "warned": sum(1 for r in results if r.status == CheckStatus.WARN),
+            "skipped": sum(1 for r in results if r.status == CheckStatus.SKIP),
         }
 
-    async def run(self, vehicle_state: Any, mission_data: Union[Dict, Mission], **kwargs) -> PreflightReport:
+    async def run(
+        self, vehicle_state: Any, mission_data: dict | Mission, **kwargs
+    ) -> PreflightReport:
         # Validate mission
-        mission = create_mission_from_dict(mission_data) if isinstance(mission_data, dict) else mission_data
+        mission = (
+            create_mission_from_dict(mission_data)
+            if isinstance(mission_data, dict)
+            else mission_data
+        )
 
         # ✅ Warehouse-scan overrides (indoors)
         mission_type = getattr(mission, "type", "") or ""
@@ -112,21 +134,23 @@ class PreflightOrchestrator:
 
         if mission_type == "warehouse_scan":
             # Relax GNSS gates; allow indoor operation.
-            overrides.update({
-                "GPS_FIX_TYPE_MIN": 0,
-                "SAT_MIN": 0,
-                "HDOP_MAX": 99.0,
-                # Indoor typically short: keep range enforcement soft
-                "ENFORCE_PREFLIGHT_RANGE": False,
-                "HOME_POSITION_REQUIRED": False,
-                # Make preflight faster
-                "HEARTBEAT_MAX_AGE": overrides.get("HEARTBEAT_MAX_AGE", 3.0),
-                "MAX_WAYPOINTS": overrides.get("MAX_WAYPOINTS", 2500),
-                "WAREHOUSE_ODOMETRY_DRIFT_MAX_M": overrides.get(
-                    "WAREHOUSE_ODOMETRY_DRIFT_MAX_M",
-                    0.75,
-                ),
-            })
+            overrides.update(
+                {
+                    "GPS_FIX_TYPE_MIN": 0,
+                    "SAT_MIN": 0,
+                    "HDOP_MAX": 99.0,
+                    # Indoor typically short: keep range enforcement soft
+                    "ENFORCE_PREFLIGHT_RANGE": False,
+                    "HOME_POSITION_REQUIRED": False,
+                    # Make preflight faster
+                    "HEARTBEAT_MAX_AGE": overrides.get("HEARTBEAT_MAX_AGE", 3.0),
+                    "MAX_WAYPOINTS": overrides.get("MAX_WAYPOINTS", 2500),
+                    "WAREHOUSE_ODOMETRY_DRIFT_MAX_M": overrides.get(
+                        "WAREHOUSE_ODOMETRY_DRIFT_MAX_M",
+                        0.75,
+                    ),
+                }
+            )
             gps_timeout_s = float(kwargs.get("gps_timeout_s") or 3.0)
         elif mission_type == "indoor_exploration":
             overrides.update(indoor_warehouse_overrides())
@@ -141,10 +165,10 @@ class PreflightOrchestrator:
 
         # Calculate estimated time
         total_distance = context.total_distance()
-        speed = getattr(mission, 'speed', None) or 10
+        speed = getattr(mission, "speed", None) or 10
         estimated_time_s = (
-            kwargs.get('estimated_time_s')
-            or getattr(mission, 'max_mission_time_s', None)
+            kwargs.get("estimated_time_s")
+            or getattr(mission, "max_mission_time_s", None)
             or (total_distance / speed)
         )
 
@@ -158,7 +182,7 @@ class PreflightOrchestrator:
             estimated_time_s=estimated_time_s,
             mission_waypoints=mission.waypoints,
             expected_mission_count=len(mission.waypoints),
-            mission_crc=kwargs.get('mission_crc'),
+            mission_crc=kwargs.get("mission_crc"),
             gps_timeout_s=gps_timeout_s,
             fail_fast=self.early_terminate_on_fail,
         )
@@ -184,7 +208,9 @@ class PreflightOrchestrator:
         all_results = base_results + mission_results
         overall_status = self._determine_overall_status(all_results)
 
-        critical_fail2, failed_critical2 = self._check_for_critical_fails(mission_results, "mission")
+        critical_fail2, failed_critical2 = self._check_for_critical_fails(
+            mission_results, "mission"
+        )
 
         return PreflightReport(
             mission_type=mission_type,

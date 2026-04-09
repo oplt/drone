@@ -15,9 +15,10 @@ Bug fixes / improvements
 5. Area computed server-side via PostGIS ST_Area so the DB is the source of
    truth; falls back to None if PostGIS extension is unavailable.
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2.shape import from_shape, to_shape
@@ -38,7 +39,8 @@ router = APIRouter(prefix="/fields", tags=["fields"])
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _ensure_closed_ring(coords: List[List[float]]) -> List[List[float]]:
+
+def _ensure_closed_ring(coords: list[list[float]]) -> list[list[float]]:
     if len(coords) < 3:
         raise ValueError("Polygon needs at least 3 points")
     if coords[0] != coords[-1]:
@@ -46,9 +48,9 @@ def _ensure_closed_ring(coords: List[List[float]]) -> List[List[float]]:
     return coords
 
 
-def _coords_to_polygon(coords_lonlat: List[List[float]]) -> Polygon:
+def _coords_to_polygon(coords_lonlat: list[list[float]]) -> Polygon:
     coords_lonlat = _ensure_closed_ring(coords_lonlat)
-    poly = Polygon(coords_lonlat)   # Shapely: (x, y) = (lon, lat)
+    poly = Polygon(coords_lonlat)  # Shapely: (x, y) = (lon, lat)
     if not poly.is_valid:
         raise ValueError(f"Invalid polygon: {explain_validity(poly)}")
     if poly.area == 0:
@@ -70,11 +72,12 @@ def _field_out(field: FieldModel) -> FieldOut:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("", response_model=FieldOut)
 async def create_field(
-        payload: FieldCreateGeoJSON,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    payload: FieldCreateGeoJSON,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     """Create a new field boundary for the authenticated user.
 
@@ -87,14 +90,14 @@ async def create_field(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     field = FieldModel(
-        owner_id=user.id,           # ← from auth, not payload
+        owner_id=user.id,  # ← from auth, not payload
         name=payload.name,
         boundary=from_shape(poly, srid=4326),
-        area_ha=None,               # computed below if PostGIS available
+        area_ha=None,  # computed below if PostGIS available
         centroid=from_shape(poly.centroid, srid=4326),
     )
     db.add(field)
-    await db.flush()    # get the PK so we can run the area query on it
+    await db.flush()  # get the PK so we can run the area query on it
 
     # Compute accurate geodesic area via PostGIS (optional — skipped if unavailable)
     try:
@@ -107,19 +110,19 @@ async def create_field(
         )
         field.area_ha = row.scalar()
     except Exception:
-        pass    # PostGIS not available — area stays None
+        pass  # PostGIS not available — area stays None
 
     await db.commit()
     await db.refresh(field)
     return _field_out(field)
 
 
-@router.get("", response_model=List[FieldOut])
+@router.get("", response_model=list[FieldOut])
 async def list_fields(
-        q: Optional[str] = Query(None, description="Name search (ILIKE)"),
-        limit: int = Query(50, ge=1, le=500),
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    q: str | None = Query(None, description="Name search (ILIKE)"),
+    limit: int = Query(50, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     """List fields owned by the authenticated user.
 
@@ -141,10 +144,10 @@ async def list_fields(
 
 @router.get("/features")
 async def list_fields_features(
-        q: Optional[str] = Query(None, description="Name search (ILIKE)"),
-        limit: int = Query(500, ge=1, le=5000),
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    q: str | None = Query(None, description="Name search (ILIKE)"),
+    limit: int = Query(500, ge=1, le=5000),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     """Return all fields as a GeoJSON FeatureCollection **in one call**.
 
@@ -162,7 +165,7 @@ async def list_fields_features(
 
     rows = (await db.execute(stmt)).scalars().all()
 
-    features: List[Dict[str, Any]] = []
+    features: list[dict[str, Any]] = []
     for f in rows:
         if not f.boundary:
             continue
@@ -185,9 +188,9 @@ async def list_fields_features(
 
 @router.get("/{field_id}", response_model=FieldOut)
 async def get_field(
-        field_id: int,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    field_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     field = await _get_owned_field(field_id, user.id, db)
     return _field_out(field)
@@ -195,9 +198,9 @@ async def get_field(
 
 @router.get("/{field_id}/geojson")
 async def get_field_geojson(
-        field_id: int,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    field_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     field = await _get_owned_field(field_id, user.id, db)
     poly = to_shape(field.boundary)
@@ -215,10 +218,10 @@ async def get_field_geojson(
 
 @router.patch("/{field_id}", response_model=FieldOut)
 async def update_field(
-        field_id: int,
-        payload: FieldUpdate,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    field_id: int,
+    payload: FieldUpdate,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     field = await _get_owned_field(field_id, user.id, db)
 
@@ -253,9 +256,9 @@ async def update_field(
 
 @router.delete("/{field_id}", status_code=204)
 async def delete_field(
-        field_id: int,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_user),
+    field_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_user),
 ):
     """Delete a field owned by the authenticated user."""
     field = await _get_owned_field(field_id, user.id, db)
@@ -267,15 +270,14 @@ async def delete_field(
 # Shared ownership guard
 # ---------------------------------------------------------------------------
 
-async def _get_owned_field(
-        field_id: int, owner_id: int, db: AsyncSession
-) -> FieldModel:
+
+async def _get_owned_field(field_id: int, owner_id: int, db: AsyncSession) -> FieldModel:
     field = (
         await db.execute(
             select(FieldModel).where(
                 FieldModel.id == field_id,
                 FieldModel.owner_id == owner_id,
-                )
+            )
         )
     ).scalar_one_or_none()
     if not field:

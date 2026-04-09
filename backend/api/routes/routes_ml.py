@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/ml", tags=["ml"])
 
 
 class MLStartIn(BaseModel):
-    stream_source: Optional[str | int] = Field(default=None)
+    stream_source: str | int | None = Field(default=None)
 
 
 class ZonePointIn(BaseModel):

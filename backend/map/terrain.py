@@ -1,12 +1,14 @@
 from __future__ import annotations
+
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
-import math
+
 
 @dataclass
 class TerrainProfile:
     # elevation above mean sea level (AMSL) in meters
     elevation_m: float
+
 
 class TerrainService:
     """
@@ -16,6 +18,7 @@ class TerrainService:
       - Copernicus/SRTM DEM tiles (more work, no API key)
       - Your own DSM from photogrammetry (best for fields)
     """
+
     def __init__(self, maps_client):
         self.maps = maps_client
 

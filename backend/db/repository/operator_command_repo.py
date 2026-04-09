@@ -1,9 +1,9 @@
 """Repository for OperatorCommand persistence."""
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 from sqlalchemy import delete, select
 
@@ -22,15 +22,15 @@ class OperatorCommandRepository:
         *,
         command_id: str,
         client_flight_id: str,
-        mission_runtime_id: Optional[int],
+        mission_runtime_id: int | None,
         command: str,
         idempotency_key: str,
-        requested_by_user_id: Optional[int],
+        requested_by_user_id: int | None,
         state_before: str,
         state_after: str,
         accepted: bool,
         message: str,
-        reason: Optional[str],
+        reason: str | None,
         requested_at: datetime,
     ) -> OperatorCommand:
         row = OperatorCommand(
@@ -58,7 +58,7 @@ class OperatorCommandRepository:
         client_flight_id: str,
         *,
         limit: int = 400,
-    ) -> List[OperatorCommand]:
+    ) -> list[OperatorCommand]:
         async with self._sf() as s:
             result = await s.execute(
                 select(OperatorCommand)
@@ -72,7 +72,7 @@ class OperatorCommandRepository:
         self,
         client_flight_id: str,
         idempotency_key: str,
-    ) -> Optional[OperatorCommand]:
+    ) -> OperatorCommand | None:
         async with self._sf() as s:
             result = await s.execute(
                 select(OperatorCommand).where(
@@ -81,7 +81,6 @@ class OperatorCommandRepository:
                 )
             )
             return result.scalar_one_or_none()
-
 
     async def cleanup_old(self, *, older_than: datetime) -> int:
         """Delete operator command records whose requested_at is older than *older_than*.
