@@ -79,7 +79,25 @@ class DailyDateFileHandler(logging.Handler):
                 super().close()
 
 
-def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -> None:
+def _make_formatter(log_format: str) -> logging.Formatter:
+    if log_format == "json":
+        try:
+            from pythonjsonlogger import jsonlogger
+
+            return jsonlogger.JsonFormatter(
+                "%(asctime)s %(levelname)s %(name)s %(message)s",
+                rename_fields={"asctime": "ts", "levelname": "level", "name": "logger"},
+            )
+        except ImportError:
+            pass
+    return logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+
+
+def setup_logging(
+    log_level: str | int = "INFO",
+    log_file: Path | None = None,
+    log_format: str = "json",
+) -> None:
     """Centralized logging configuration with environment variable support"""
     level = log_level if isinstance(log_level, int) else getattr(logging, log_level, logging.INFO)
     log_dir = (log_file.parent if log_file else (BASE_DIR / "logs")).resolve()
@@ -87,7 +105,7 @@ def setup_logging(log_level: str | int = "INFO", log_file: Path | None = None) -
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
 
-    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    formatter = _make_formatter(log_format)
 
     has_daily_file_handler = False
     has_stream_handler = False
@@ -139,6 +157,7 @@ class RuntimeSettings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        env_ignore_empty=True,
     )
 
     database_url: str
@@ -170,6 +189,11 @@ class RuntimeSettings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_exp_minutes: int = 60
+    jwt_access_exp_minutes: int = 15
+    jwt_refresh_exp_days: int = 30
+    cookie_secure: bool = False  # Set True in production with HTTPS
+    cookie_domain: str = ""
+    cookie_samesite: str = "lax"
     admin_emails: str = ""
     admin_domains: str = ""
 
@@ -268,10 +292,39 @@ class RuntimeSettings(BaseSettings):
     CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
     PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: str = ""
 
+    # Observability
+    log_format: str = "json"  # "json" | "text"
+    otel_enabled: bool = False
+    otel_endpoint: str = ""
+
     # Shadow-mode: run old direct-DB-write path alongside new queued path so
     # both can be compared before fully removing the legacy write. Set to False
     # (disabled) once the queued path has proven stable in production.
     orchestrator_shadow_mode: bool = False
+
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Google OIDC
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_oidc_redirect_uri: str = ""
+
+    # Object storage
+    storage_backend: str = "local"  # "local" | "s3"
+    s3_endpoint_url: str = ""
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_bucket_name: str = "drone-assets"
+    s3_region: str = "auto"
+    s3_public_base_url: str = ""
+
+    # Webhooks
+    webhook_delivery_timeout_sec: int = 10
+    webhook_max_retries: int = 5
+
+    # Analytics cache
+    analytics_cache_ttl_sec: int = 60
 
 
 settings = RuntimeSettings()

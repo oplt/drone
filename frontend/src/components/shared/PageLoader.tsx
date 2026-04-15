@@ -1,6 +1,5 @@
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
-import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
@@ -25,55 +24,50 @@ export default function PageLoader({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        backgroundColor: "background.default",
       }}
     >
-      <Stack spacing={2.5} sx={{ width: "100%", maxWidth: 1180 }}>
-        <Paper
-          variant="outlined"
-          sx={(theme) => ({
-            p: { xs: 3, md: 4 },
-            borderRadius: 5,
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.9), rgba(238,247,244,0.9))",
-            ...theme.applyStyles("dark", {
-              background:
-                "linear-gradient(145deg, rgba(15,20,24,0.9), rgba(17,29,27,0.88))",
-            }),
-          })}
+      <Stack spacing={3} sx={{ width: "100%", maxWidth: 480, textAlign: "center", alignItems: "center" }}>
+        <Typography
+          sx={{
+            fontFamily: '"Space Mono", monospace',
+            fontSize: '0.6875rem',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'text.secondary',
+          }}
         >
-          <Stack spacing={2}>
-            <Stack spacing={1}>
-              <Skeleton variant="rounded" width={140} height={22} />
-              <Typography variant="h5">{title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {subtitle}
-              </Typography>
-            </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-              <Skeleton variant="rounded" width={160} height={56} />
-              <Skeleton variant="rounded" width={160} height={56} />
-              <Skeleton variant="rounded" width={160} height={56} />
-            </Stack>
-          </Stack>
-        </Paper>
-
-        <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
-          <Paper variant="outlined" sx={{ flex: 1, p: 3, borderRadius: 5 }}>
-            <Stack spacing={2}>
-              <Skeleton variant="rounded" width="38%" height={24} />
-              <Skeleton variant="rounded" width="100%" height={220} />
-              <Skeleton variant="rounded" width="72%" height={18} />
-            </Stack>
-          </Paper>
-          <Paper variant="outlined" sx={{ width: { xs: "100%", lg: 320 }, p: 3, borderRadius: 5 }}>
-            <Stack spacing={1.5}>
-              <Skeleton variant="rounded" width="54%" height={24} />
-              <Skeleton variant="rounded" width="100%" height={84} />
-              <Skeleton variant="rounded" width="100%" height={84} />
-              <Skeleton variant="rounded" width="100%" height={84} />
-            </Stack>
-          </Paper>
-        </Stack>
+          [LOADING...]
+        </Typography>
+        <Typography variant="h4" sx={{ color: 'text.primary' }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {subtitle}
+        </Typography>
+        <Box
+          sx={{
+            width: 120,
+            height: 2,
+            backgroundColor: 'divider',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              height: '100%',
+              width: '40%',
+              backgroundColor: '#D71921',
+              animation: 'loadingBar 1.5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite',
+            },
+            '@keyframes loadingBar': {
+              '0%': { left: '-40%' },
+              '100%': { left: '100%' },
+            },
+          }}
+        />
       </Stack>
     </Box>
   );

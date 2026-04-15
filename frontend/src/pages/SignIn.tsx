@@ -56,8 +56,8 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
       nextErrors.email = 'Please enter a valid email address.';
     }
 
-    if (!form.password || form.password.length < 8) {
-      nextErrors.password = 'Password must be at least 8 characters long.';
+    if (!form.password) {
+      nextErrors.password = 'Password is required.';
     }
 
     setFieldErrors(nextErrors);
@@ -86,6 +86,7 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
       const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: form.email.trim(),

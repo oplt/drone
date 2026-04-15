@@ -182,8 +182,9 @@ class DroneAnomalyPipeline:
             return telemetry
 
         timestamp = self._to_float(telemetry_envelope.emitted_at.timestamp())
+        runtime = telemetry_manager.runtime_snapshot()
         if (
-            not telemetry_manager._running
+            not runtime["running"]
             or timestamp is None
             or (time.time() - timestamp) > _MAX_TELEMETRY_AGE_S
         ):

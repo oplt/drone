@@ -9,7 +9,6 @@ import { menuItemClasses } from '@mui/material/MenuItem';
 import { selectClasses } from '@mui/material/Select';
 import { tabClasses } from '@mui/material/Tab';
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
-import { gray, brand } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const navigationCustomizations: Components<Theme> = {
@@ -18,12 +17,13 @@ export const navigationCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         borderRadius: (theme.vars || theme).shape.borderRadius,
         padding: '6px 8px',
+        fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
         [`&.${menuItemClasses.focusVisible}`]: {
           backgroundColor: 'transparent',
         },
         [`&.${menuItemClasses.selected}`]: {
           [`&.${menuItemClasses.focusVisible}`]: {
-            backgroundColor: alpha(theme.palette.action.selected, 0.3),
+            backgroundColor: alpha('#999999', 0.12),
           },
         },
       }),
@@ -39,21 +39,17 @@ export const navigationCustomizations: Components<Theme> = {
       },
       paper: ({ theme }) => ({
         marginTop: '4px',
-        borderRadius: (theme.vars || theme).shape.borderRadius,
-        border: `1px solid ${gray[300]}`,
+        borderRadius: 8,
+        border: '1px solid',
+        borderColor: '#333333',
         backgroundImage: 'none',
-        background: gray[50],
+        background: (theme.vars || theme).palette.background.paper,
         boxShadow: 'none',
         [`& .${buttonBaseClasses.root}`]: {
           '&.Mui-selected': {
-            backgroundColor: alpha(theme.palette.action.selected, 0.3),
+            backgroundColor: alpha('#999999', 0.12),
           },
         },
-        ...theme.applyStyles('dark', {
-          background: '#211916',
-          border: `1px solid ${alpha(gray[300], 0.12)}`,
-          boxShadow: 'none',
-        }),
       }),
     },
   },
@@ -65,51 +61,27 @@ export const navigationCustomizations: Components<Theme> = {
     },
     styleOverrides: {
       root: ({ theme }) => ({
-        borderRadius: (theme.vars || theme).shape.borderRadius,
-        border: `1px solid ${gray[300]}`,
-        backgroundColor: gray[50],
+        borderRadius: 8,
+        border: '1px solid',
+        borderColor: '#333333',
+        backgroundColor: 'transparent',
         boxShadow: 'none',
         '&:hover': {
-          borderColor: gray[400],
-          backgroundColor: gray[50],
+          borderColor: (theme.vars || theme).palette.text.primary,
           boxShadow: 'none',
         },
         [`&.${selectClasses.focused}`]: {
           outlineOffset: 0,
-          borderColor: brand[500],
+          borderColor: (theme.vars || theme).palette.text.primary,
         },
         '&:before, &:after': {
           display: 'none',
         },
-        ...theme.applyStyles('dark', {
-          borderColor: alpha(gray[300], 0.15),
-          backgroundColor: alpha(gray[800], 0.5),
-          boxShadow: 'none',
-          '&:hover': {
-            borderColor: alpha(gray[300], 0.25),
-            backgroundColor: alpha(gray[800], 0.6),
-            boxShadow: 'none',
-          },
-          [`&.${selectClasses.focused}`]: {
-            outlineOffset: 0,
-            borderColor: brand[500],
-          },
-          '&:before, &:after': {
-            display: 'none',
-          },
-        }),
       }),
-      select: ({ theme }) => ({
+      select: {
         display: 'flex',
         alignItems: 'center',
-        ...theme.applyStyles('dark', {
-          display: 'flex',
-          alignItems: 'center',
-          '&:focus-visible': {
-            backgroundColor: 'transparent',
-          },
-        }),
-      }),
+      },
     },
   },
   MuiLink: {
@@ -130,15 +102,15 @@ export const navigationCustomizations: Components<Theme> = {
           height: '1px',
           bottom: 0,
           left: 0,
-          backgroundColor: gray[300],
-          opacity: 0.6,
-          transition: 'width 0.3s ease, opacity 0.3s ease',
+          backgroundColor: (theme.vars || theme).palette.text.secondary,
+          opacity: 0.4,
+          transition: 'width 200ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1)',
         },
         '&:hover::before': {
           width: 0,
         },
         '&:focus-visible': {
-          outline: `1px solid ${brand[500]}`,
+          outline: `1px solid ${(theme.vars || theme).palette.text.primary}`,
           outlineOffset: '4px',
           borderRadius: '2px',
         },
@@ -149,10 +121,8 @@ export const navigationCustomizations: Components<Theme> = {
     styleOverrides: {
       paper: ({ theme }) => ({
         backgroundColor: (theme.vars || theme).palette.background.default,
-        borderRight: `1px solid ${gray[300]}`,
-        ...theme.applyStyles('dark', {
-          borderRight: `1px solid ${alpha(gray[300], 0.12)}`,
-        }),
+        borderRight: '1px solid',
+        borderColor: (theme.vars || theme).palette.divider,
       }),
     },
   },
@@ -160,15 +130,9 @@ export const navigationCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         '&.Mui-selected': {
-          color: gray[50],
-          backgroundColor: gray[800],
+          color: (theme.vars || theme).palette.background.default,
+          backgroundColor: (theme.vars || theme).palette.text.primary,
         },
-        ...theme.applyStyles('dark', {
-          '&.Mui-selected': {
-            color: gray[800],
-            backgroundColor: gray[50],
-          },
-        }),
       }),
     },
   },
@@ -185,39 +149,27 @@ export const navigationCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         padding: '12px 16px',
         marginBottom: '0px',
-        textTransform: 'none',
+        textTransform: 'uppercase',
+        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
+        fontSize: '0.6875rem',
+        letterSpacing: '0.06em',
         minWidth: 'fit-content',
         minHeight: 'fit-content',
-        fontWeight: 500,
-        fontSize: '1rem',
-        color: (theme.vars || theme).palette.text.primary,
+        fontWeight: 400,
+        color: (theme.vars || theme).palette.text.secondary,
         borderRadius: 0,
         border: 'none',
         boxShadow: 'none',
-        // Hover: sand inset underline
         ':hover': {
           color: (theme.vars || theme).palette.text.primary,
           backgroundColor: 'transparent',
-          boxShadow: `rgb(197, 192, 177) 0px -4px 0px 0px inset`,
+          boxShadow: `${(theme.vars || theme).palette.text.secondary} 0px -2px 0px 0px inset`,
         },
-        // Active: orange inset underline
         [`&.${tabClasses.selected}`]: {
-          color: gray[800],
-          fontWeight: 600,
-          boxShadow: `rgb(255, 79, 0) 0px -4px 0px 0px inset`,
+          color: (theme.vars || theme).palette.text.primary,
+          fontWeight: 700,
+          boxShadow: `#D71921 0px -2px 0px 0px inset`,
         },
-        ...theme.applyStyles('dark', {
-          color: gray[300],
-          ':hover': {
-            color: gray[50],
-            backgroundColor: 'transparent',
-            boxShadow: `${alpha(gray[300], 0.3)} 0px -4px 0px 0px inset`,
-          },
-          [`&.${tabClasses.selected}`]: {
-            color: gray[50],
-            boxShadow: `rgb(255, 79, 0) 0px -4px 0px 0px inset`,
-          },
-        }),
       }),
     },
   },
@@ -235,7 +187,8 @@ export const navigationCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         color: 'transparent',
-        border: `1px solid ${gray[400]}`,
+        border: '1px solid',
+        borderColor: '#333333',
         width: 12,
         height: 12,
         borderRadius: '50%',
@@ -244,23 +197,12 @@ export const navigationCustomizations: Components<Theme> = {
         },
         '&.Mui-active': {
           border: 'none',
-          color: (theme.vars || theme).palette.primary.main,
+          color: '#D71921',
         },
         '&.Mui-completed': {
           border: 'none',
-          color: (theme.vars || theme).palette.success.main,
+          color: '#4A9E5C',
         },
-        ...theme.applyStyles('dark', {
-          border: `1px solid ${alpha(gray[300], 0.2)}`,
-          '&.Mui-active': {
-            border: 'none',
-            color: (theme.vars || theme).palette.primary.light,
-          },
-          '&.Mui-completed': {
-            border: 'none',
-            color: (theme.vars || theme).palette.success.light,
-          },
-        }),
         variants: [
           {
             props: { completed: true },

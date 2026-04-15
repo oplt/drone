@@ -1,4 +1,4 @@
-# routes_websocket.py (FIXED VERSION)
+# routes_websocket.py
 import asyncio
 import logging
 import time
@@ -18,15 +18,18 @@ router = APIRouter(prefix="/ws", tags=["websocket"])
 async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
     """
     Enforce auth for WebSocket connections.
+    1. Try Authorization: Bearer header
+    2. Try access_token cookie (browser WS upgrade sends cookies automatically)
     Returns (is_authorized, user_id_or_error_message)
     """
-    # Get token from query parameters or headers
-    token = websocket.query_params.get("token")
+    token: str | None = None
+
+    auth = websocket.headers.get("authorization")
+    if auth and auth.startswith("Bearer "):
+        token = auth.split(" ", 1)[1].strip()
 
     if not token:
-        auth = websocket.headers.get("authorization")
-        if auth and auth.startswith("Bearer "):
-            token = auth.split(" ", 1)[1].strip()
+        token = websocket.cookies.get("access_token")
 
     if not token:
         return False, "Missing authentication token"
@@ -36,7 +39,7 @@ async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
             user = await get_user_from_token(token, db)
             if not user:
                 return False, "Invalid authentication token"
-            return True, user.id
+            return True, str(user.id)
     except jwt.ExpiredSignatureError:
         return False, "Token expired"
     except JWTError as e:
@@ -51,10 +54,10 @@ async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
 async def websocket_telemetry(websocket: WebSocket):
     """
     Protected WebSocket endpoint for telemetry.
+    Auth via Authorization header or access_token cookie — no query-string token.
     """
     writer_task = None
 
-    # First, validate token BEFORE accepting connection
     is_authorized, user_id_or_error = await _authorize_websocket(websocket)
 
     if not is_authorized:
@@ -62,7 +65,6 @@ async def websocket_telemetry(websocket: WebSocket):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=user_id_or_error)
         return
 
-    # Now accept the connection
     try:
         await websocket.accept()
         logger.info(f"✅ WebSocket connection accepted for user {user_id_or_error}")
@@ -71,27 +73,22 @@ async def websocket_telemetry(websocket: WebSocket):
         return
 
     try:
-        # Register with telemetry manager
         writer_task = await telemetry_manager.connect(websocket)
 
-        # Keep connection alive and handle messages
         while True:
             try:
-                # Wait for messages with timeout
                 message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
 
-                # Handle ping/pong
                 if message == "ping" or (isinstance(message, str) and '"type":"ping"' in message):
                     try:
                         await websocket.send_text("pong")
-                    except:
+                    except Exception:
                         break
 
             except TimeoutError:
-                # Send keepalive
                 try:
                     await websocket.send_json({"type": "keepalive", "timestamp": time.time()})
-                except:
+                except Exception:
                     break
 
             except WebSocketDisconnect:
@@ -105,7 +102,6 @@ async def websocket_telemetry(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
-        # Cleanup
         try:
             if writer_task and not writer_task.done():
                 writer_task.cancel()

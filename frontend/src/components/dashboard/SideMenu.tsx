@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -12,20 +11,22 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import MenuContent from './MenuContent';
-import { clearToken } from '../../auth';
+import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
+import { logout } from '../../auth';
 import { useNavigate } from 'react-router-dom';
 
 type DashboardUser = {
   first_name?: string | null;
   last_name?: string | null;
   email: string;
+  role?: string | null;
 } | null;
 
-const expandedDrawerWidth = 280;
-const collapsedDrawerWidth = 84;
+const expandedDrawerWidth = 260;
+const collapsedDrawerWidth = 72;
 
 function getDisplayName(user: DashboardUser) {
-  return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Field Manager';
+  return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Operator';
 }
 
 function getInitials(user: DashboardUser) {
@@ -43,8 +44,8 @@ export default function SideMenu({ user }: { user: DashboardUser }) {
   const navigate = useNavigate();
   const drawerWidth = collapsed ? collapsedDrawerWidth : expandedDrawerWidth;
 
-  const handleLogout = () => {
-    clearToken();
+  const handleLogout = async () => {
+    await logout();
     navigate('/signin', { replace: true });
   };
 
@@ -57,90 +58,121 @@ export default function SideMenu({ user }: { user: DashboardUser }) {
         flexShrink: 0,
         whiteSpace: 'nowrap',
         transition: theme.transitions.create('width', {
-          duration: theme.transitions.duration.standard,
-          easing: theme.transitions.easing.sharp,
+          duration: 200,
+          easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
         }),
         [`& .${drawerClasses.paper}`]: {
-          backgroundColor: 'background.paper',
+          backgroundColor: 'background.default',
           width: drawerWidth,
           overflowX: 'hidden',
           boxSizing: 'border-box',
           borderRight: '1px solid',
           borderColor: 'divider',
           transition: theme.transitions.create('width', {
-            duration: theme.transitions.duration.standard,
-            easing: theme.transitions.easing.sharp,
+            duration: 200,
+            easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
           }),
         },
       })}
     >
-      <Box
-        sx={{
-          mt: 'calc(var(--template-frame-height, 0px) + 8px)',
-          p: 1.25,
-        }}
-      >
+      <Box sx={{ p: 2 }}>
         <Stack
-          spacing={1.5}
+          direction="row"
           sx={{
-            p: 1.5,
-            borderRadius: 4,
-            border: '1px solid',
-            borderColor: 'divider',
-            background:
-              'linear-gradient(160deg, rgba(255,255,255,0.82), rgba(242,249,246,0.78))',
-            '[data-mui-color-scheme="dark"] &': {
-              background:
-                'linear-gradient(160deg, rgba(15,20,24,0.92), rgba(17,29,27,0.88))',
-              borderColor: 'rgba(122, 160, 145, 0.18)',
-            },
+            gap: 1,
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'space-between',
           }}
         >
-          <Stack
-            direction="row"
-            sx={{
-              gap: 1.25,
-              alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'space-between',
-            }}
-          >
-            {!collapsed ? (
-              <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center', minWidth: 0 }}>
-                <Avatar sx={{ width: 42, height: 42 }}>{getInitials(user)}</Avatar>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: '18px' }} noWrap>
-                    {getDisplayName(user)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-                    {user?.email || 'Farm session'}
-                  </Typography>
-                </Box>
-              </Stack>
-            ) : (
-              <Avatar sx={{ width: 42, height: 42 }}>{getInitials(user)}</Avatar>
-            )}
-            <Tooltip title={collapsed ? 'Expand menu' : 'Collapse menu'} placement="right">
-              <IconButton
-                size="small"
-                onClick={() => setCollapsed((prev) => !prev)}
-                aria-label={collapsed ? 'Expand sidebar menu' : 'Collapse sidebar menu'}
-              >
-                {collapsed ? (
-                  <ChevronRightRoundedIcon fontSize="small" />
-                ) : (
-                  <ChevronLeftRoundedIcon fontSize="small" />
-                )}
-              </IconButton>
-            </Tooltip>
-          </Stack>
           {!collapsed ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Live operations, fleet telemetry, and route planning in one workspace.
-            </Typography>
-          ) : null}
+            <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center', minWidth: 0 }}>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontFamily: '"Space Mono", monospace',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: 'text.primary',
+                  }}
+                >
+                  {getInitials(user)}
+                </Typography>
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 500, lineHeight: '18px', color: 'text.primary' }}
+                  noWrap
+                >
+                  {getDisplayName(user)}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontFamily: '"Space Mono", monospace',
+                    fontSize: '0.625rem',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: 'text.secondary',
+                  }}
+                  noWrap
+                >
+                  {user?.role || 'OPERATOR'}
+                </Typography>
+              </Box>
+            </Stack>
+          ) : (
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography
+                sx={{
+                  fontFamily: '"Space Mono", monospace',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'text.primary',
+                }}
+              >
+                {getInitials(user)}
+              </Typography>
+            </Box>
+          )}
+          <Tooltip title={collapsed ? 'Expand menu' : 'Collapse menu'} placement="right">
+            <IconButton
+              size="small"
+              onClick={() => setCollapsed((prev) => !prev)}
+              aria-label={collapsed ? 'Expand sidebar menu' : 'Collapse sidebar menu'}
+              sx={{ border: 'none', '&:hover': { border: 'none' } }}
+            >
+              {collapsed ? (
+                <ChevronRightRoundedIcon fontSize="small" />
+              ) : (
+                <ChevronLeftRoundedIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Box>
-      <Divider />
+      <Divider sx={{ borderColor: 'divider' }} />
       <Box
         sx={{
           overflow: 'auto',
@@ -149,15 +181,23 @@ export default function SideMenu({ user }: { user: DashboardUser }) {
           flexDirection: 'column',
         }}
       >
-        <MenuContent collapsed={collapsed} />
-        <Box sx={{ mt: 'auto', p: 1.25 }}>
+        <MenuContent collapsed={collapsed} userRole={user?.role ?? undefined} />
+        <Box sx={{ mt: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <ColorModeIconDropdown />
           <Button
-            variant={collapsed ? 'outlined' : 'text'}
+            variant="text"
             color="inherit"
             fullWidth
             startIcon={collapsed ? undefined : <LogoutRoundedIcon />}
             onClick={handleLogout}
-            sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            sx={{
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              fontFamily: '"Space Mono", monospace',
+              fontSize: '0.6875rem',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'text.secondary',
+            }}
           >
             {collapsed ? <LogoutRoundedIcon fontSize="small" /> : 'Log out'}
           </Button>

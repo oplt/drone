@@ -82,6 +82,7 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
       const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
       const res = await fetch(`${API_BASE}/auth/signup`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: form.name.trim(),

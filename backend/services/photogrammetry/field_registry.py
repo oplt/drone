@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import Field as FieldEntity
 from backend.db.models import FieldModel
+from backend.db.models import User
+from backend.services.access_control import ownership_clause
 
 
 @dataclass
@@ -31,13 +33,18 @@ class FieldRegistryService:
         db: AsyncSession,
         *,
         field_id: int,
-        owner_id: int,
+        user: User,
     ) -> FieldEntity | None:
         return (
             await db.execute(
-                select(FieldEntity).where(
-                    FieldEntity.id == field_id,
-                    FieldEntity.owner_id == owner_id,
+                select(FieldEntity)
+                .where(FieldEntity.id == field_id)
+                .where(
+                    ownership_clause(
+                        user=user,
+                        owner_col=FieldEntity.owner_id,
+                        org_col=FieldEntity.org_id,
+                    )
                 )
             )
         ).scalar_one_or_none()

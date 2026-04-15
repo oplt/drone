@@ -1,7 +1,7 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { getToken } from "./auth";
+import { getToken, verifySession } from "./auth";
 import PageLoader from "./components/shared/PageLoader";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -17,15 +17,43 @@ const ProfilePage = lazy(() => import("./pages/dashboard/tabs/ProfilePage"));
 const InsightsPage = lazy(() => import("./pages/dashboard/tabs/InsightsPage"));
 const FleetPage = lazy(() => import("./pages/dashboard/tabs/FleetPage"));
 const TerrainPage = lazy(() => import("./pages/dashboard/tabs/TerrainPage"));
+const ControlledFlightPage = lazy(() => import("./pages/dashboard/tabs/ControlledFlightPage"));
 const PhotoGrammetryPage = lazy(() => import("./pages/dashboard/tabs/PhotoGrammetry"));
 const FieldPage = lazy(() => import("./pages/dashboard/tabs/FieldPage"));
 const WarehousePage = lazy(() => import("./pages/dashboard/tabs/Warehouse"));
 const AnimalFarmPage = lazy(() => import("./pages/dashboard/tabs/AnimalFarmPage"));
 const PrivatePatrolPage = lazy(() => import("./pages/dashboard/tabs/PrivatePatrolPage"));
+const MissionTimeline = lazy(() => import("./pages/dashboard/MissionTimeline"));
+const AdminPage = lazy(() => import("./pages/dashboard/tabs/AdminPage"));
+const TemplatesPage = lazy(() => import("./pages/dashboard/tabs/TemplatesPage"));
 
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
   const token = getToken();
-  if (token) {
+  const [status, setStatus] = useState<"checking" | "authed" | "guest">(
+    token ? "checking" : "guest",
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!token) {
+      setStatus("guest");
+      return;
+    }
+    (async () => {
+      const ok = await verifySession();
+      if (cancelled) return;
+      setStatus(ok ? "authed" : "guest");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  if (status === "checking") {
+    return <PageLoader fullScreen />;
+  }
+
+  if (status === "authed") {
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
@@ -83,6 +111,7 @@ export default function App() {
           <Route path="fleet" element={renderLazyRoute(<FleetPage />)} />
           <Route path="settings" element={renderLazyRoute(<SettingsPage />)} />
           <Route path="terrain" element={renderLazyRoute(<TerrainPage />)} />
+          <Route path="controlled" element={renderLazyRoute(<ControlledFlightPage />)} />
           <Route path="profile" element={renderLazyRoute(<ProfilePage />)} />
           <Route path="account" element={renderLazyRoute(<AccountPage />)} />
           <Route
@@ -96,7 +125,17 @@ export default function App() {
           />
           <Route path="field" element={renderLazyRoute(<FieldPage />)} />
           <Route path="warehouse" element={renderLazyRoute(<WarehousePage />)} />
+          <Route path="admin" element={renderLazyRoute(<AdminPage />)} />
+          <Route path="templates" element={renderLazyRoute(<TemplatesPage />)} />
         </Route>
+        <Route
+          path="/missions/:flightId/timeline"
+          element={
+            <ProtectedRoute>
+              {renderLazyRoute(<MissionTimeline />)}
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

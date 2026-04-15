@@ -1536,14 +1536,9 @@ useEffect(() => {
           width: "100%",
           p: 3,
           borderRadius: 3,
-          background:
-            "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
-          border: "1px solid hsla(174, 30%, 40%, 0.2)",
-          '[data-mui-color-scheme="dark"] &': {
-            background:
-              "linear-gradient(135deg, hsla(168, 24%, 14%, 0.94), hsla(28, 22%, 13%, 0.96))",
-            borderColor: "hsla(168, 22%, 36%, 0.3)",
-          },
+          backgroundColor: "background.paper",
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         <Stack
@@ -1603,11 +1598,31 @@ useEffect(() => {
               sx={{ mb: 3 }}
             >
               <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
+                <MissionVideoPanel
+                  title="Patrol Camera"
+                  imgAlt="Private patrol camera stream"
+                  disconnectedMessage="Connect the drone to view the patrol stream."
+                  apiBase={API_BASE_CLEAN}
+                  streamKey={streamKey}
+                  videoToken={videoToken}
+                  startingVideo={startingVideo}
+                  videoError={videoError}
+                  videoRetryCount={videoRetryCount}
+                  droneConnected={droneConnected}
+                  telemetry={telemetry}
+                  onVideoError={handleVideoError}
+                  onVideoLoad={handleVideoLoad}
+                  onRetry={() => {
+                    setStreamKey(Date.now());
+                    setVideoError(null);
+                  }}
+                />
                 <Box
                   sx={{
                     borderRadius: 2,
                     overflow: "hidden",
-                    border: "1px solid hsla(174, 30%, 40%, 0.2)",
+                    border: "1px solid",
+                    borderColor: "divider",
                     backgroundColor: "background.paper",
                   }}
                 >
@@ -1803,7 +1818,6 @@ useEffect(() => {
                           border: "1px solid",
                           borderColor: "divider",
                           bgcolor: "background.paper",
-                          backdropFilter: "blur(2px)",
                         }}
                       >
                         <Stack direction="column" spacing={0.5}>
@@ -2670,42 +2684,29 @@ useEffect(() => {
                       : "Draw a property polygon, tune perimeter parameters, and preview the generated patrol route before launch."}
                 </Typography>
 
-                <MissionVideoPanel
-                  title="Patrol Camera"
-                  imgAlt="Private patrol camera stream"
-                  disconnectedMessage="Connect the drone to view the patrol stream."
-                  apiBase={API_BASE_CLEAN}
-                  streamKey={streamKey}
-                  videoToken={videoToken}
-                  startingVideo={startingVideo}
-                  videoError={videoError}
-                  videoRetryCount={videoRetryCount}
-                  droneConnected={droneConnected}
-                  telemetry={telemetry}
-                  onVideoError={handleVideoError}
-                  onVideoLoad={handleVideoLoad}
-                  onRetry={() => {
-                    setStreamKey(Date.now());
-                    setVideoError(null);
-                  }}
-                />
               </Stack>
 
-              <Box sx={{ width: { xs: "100%", md: 300 } }}>
+              <Box sx={{ width: { xs: "100%", md: 620 } }}>
                 <Stack spacing={2}>
-                  <MissionPreflightPanel
-                    apiBase={API_BASE_CLEAN}
-                    missionType="perimeter_patrol"
-                    preflightRun={preflightRun}
-                    telemetry={telemetry}
-                  />
-                  <MissionCommandPanel
-                    telemetry={telemetry}
-                    droneConnected={droneConnected}
-                    missionStatus={missionStatus}
-                    activeFlightId={activeFlightId}
-                    apiBase={API_BASE_CLEAN}
-                  />
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <MissionPreflightPanel
+                        apiBase={API_BASE_CLEAN}
+                        missionType="perimeter_patrol"
+                        preflightRun={preflightRun}
+                        telemetry={telemetry}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <MissionCommandPanel
+                        telemetry={telemetry}
+                        droneConnected={droneConnected}
+                        missionStatus={missionStatus}
+                        activeFlightId={activeFlightId}
+                        apiBase={API_BASE_CLEAN}
+                      />
+                    </Box>
+                  </Stack>
                   <TextField variant="filled"
                     label="Mission name"
                     value={name}

@@ -706,14 +706,9 @@ export default function WarehousePage() {
           width: "100%",
           p: 3,
           borderRadius: 1,
-          background:
-            "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
-          border: "1px solid hsla(174, 30%, 40%, 0.2)",
-          '[data-mui-color-scheme="dark"] &': {
-            background:
-              "linear-gradient(135deg, hsla(168, 24%, 14%, 0.94), hsla(28, 22%, 13%, 0.96))",
-            borderColor: "hsla(168, 22%, 36%, 0.3)",
-          },
+          backgroundColor: "background.paper",
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         <Stack
@@ -760,18 +755,40 @@ export default function WarehousePage() {
           }}
         >
           <Stack sx={{ minWidth: 0 }} spacing={2}>
+
+            <MissionVideoPanel
+                title="Warehouse Camera"
+                imgAlt="Warehouse camera stream"
+                disconnectedMessage="Connect the drone to view the warehouse stream."
+                apiBase={apiBase}
+                streamKey={streamKey}
+                videoToken={videoToken}
+                startingVideo={startingVideo}
+                videoError={videoError}
+                videoRetryCount={videoRetryCount}
+                droneConnected={droneConnected}
+                telemetry={telemetry}
+                onVideoError={handleVideoError}
+                onVideoLoad={handleVideoLoad}
+                onRetry={() => {
+                  setManualStreamKey({
+                    flightId: activeFlightId ?? null,
+                    key: Date.now(),
+                  });
+                  setVideoErrorMessage(null);
+                  setVideoErrorStreamKey(null);
+                }}
+            />
+
+
             <Stack spacing={1}>
               <Paper
                 variant="outlined"
                 sx={{
                   p: 2,
                   borderRadius: 1,
-                  borderColor: "hsla(174, 30%, 40%, 0.25)",
-                  background: "hsla(0, 0%, 100%, 0.72)",
-                  '[data-mui-color-scheme="dark"] &': {
-                    background: "hsla(20, 16%, 12%, 0.92)",
-                    borderColor: "hsla(168, 22%, 36%, 0.3)",
-                  },
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
                 }}
               >
                 <Stack
@@ -846,12 +863,8 @@ export default function WarehousePage() {
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  borderColor: "hsla(174, 30%, 40%, 0.25)",
-                  background: "hsla(0, 0%, 100%, 0.72)",
-                  '[data-mui-color-scheme="dark"] &': {
-                    background: "hsla(20, 16%, 12%, 0.92)",
-                    borderColor: "hsla(168, 22%, 36%, 0.3)",
-                  },
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
                 }}
               >
                 <Stack spacing={1.2}>
@@ -999,12 +1012,8 @@ export default function WarehousePage() {
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  borderColor: "hsla(174, 30%, 40%, 0.25)",
-                  background: "hsla(0, 0%, 100%, 0.72)",
-                  '[data-mui-color-scheme="dark"] &': {
-                    background: "hsla(20, 16%, 12%, 0.92)",
-                    borderColor: "hsla(168, 22%, 36%, 0.3)",
-                  },
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
                 }}
               >
                 <Stack spacing={1.2}>
@@ -1062,12 +1071,8 @@ export default function WarehousePage() {
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  borderColor: "hsla(174, 30%, 40%, 0.25)",
-                  background: "hsla(0, 0%, 100%, 0.72)",
-                  '[data-mui-color-scheme="dark"] &': {
-                    background: "hsla(20, 16%, 12%, 0.92)",
-                    borderColor: "hsla(168, 22%, 36%, 0.3)",
-                  },
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
                 }}
               >
                 <Stack
@@ -1215,29 +1220,7 @@ export default function WarehousePage() {
                 )}
               </Paper>
 
-              <MissionVideoPanel
-                title="Warehouse Camera"
-                imgAlt="Warehouse camera stream"
-                disconnectedMessage="Connect the drone to view the warehouse stream."
-                apiBase={apiBase}
-                streamKey={streamKey}
-                videoToken={videoToken}
-                startingVideo={startingVideo}
-                videoError={videoError}
-                videoRetryCount={videoRetryCount}
-                droneConnected={droneConnected}
-                telemetry={telemetry}
-                onVideoError={handleVideoError}
-                onVideoLoad={handleVideoLoad}
-                onRetry={() => {
-                  setManualStreamKey({
-                    flightId: activeFlightId ?? null,
-                    key: Date.now(),
-                  });
-                  setVideoErrorMessage(null);
-                  setVideoErrorStreamKey(null);
-                }}
-              />
+
             </Stack>
           </Stack>
 
@@ -1247,12 +1230,8 @@ export default function WarehousePage() {
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  borderColor: "hsla(174, 30%, 40%, 0.25)",
-                  background: "hsla(0, 0%, 100%, 0.72)",
-                  '[data-mui-color-scheme="dark"] &': {
-                    background: "hsla(20, 16%, 12%, 0.92)",
-                    borderColor: "hsla(168, 22%, 36%, 0.3)",
-                  },
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
                 }}
               >
                 <Typography variant="subtitle1" sx={{ mb: 1.5 }}>

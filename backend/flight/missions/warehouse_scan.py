@@ -397,6 +397,7 @@ class WarehouseScanMission:
 
                 mapping_result = await mapping_service.persist_capture(
                     owner_id=int(self.owner_id),
+                    org_id=None,
                     warehouse_map_id=self.warehouse_map_id,
                     warehouse_name=self.warehouse_name,
                     polygon_local_m=list(self.area_polygon_local_m or []),

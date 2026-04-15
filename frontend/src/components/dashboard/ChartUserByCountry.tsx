@@ -78,10 +78,10 @@ function PieCenterLabel({ primaryText, secondaryText }: PieCenterLabelProps) {
 }
 
 const colors = [
-  'hsla(174, 45%, 40%, 0.8)',
-  'hsla(174, 40%, 35%, 0.75)',
-  'hsla(174, 35%, 30%, 0.7)',
-  'hsla(174, 30%, 24%, 0.65)',
+  'rgba(0, 0, 0, 0.85)',
+  'rgba(0, 0, 0, 0.65)',
+  'rgba(0, 0, 0, 0.45)',
+  'rgba(0, 0, 0, 0.25)',
 ];
 
 type CoverageChartProps = {

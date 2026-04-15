@@ -1,0 +1,5 @@
+CAMERA_IMAGE_TOPIC = "/camera/image_raw"
+DRONE_STATE_TOPIC = "/drone/state"
+GEOTAGGED_CAPTURE_TOPIC = "/capture/geotagged_record"
+MISSION_COMPLETED_TOPIC = "/mission/completed"
+ANALYSIS_OUTPUT_TOPIC = "/analysis/irrigation_anomalies"

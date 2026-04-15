@@ -262,7 +262,7 @@ const PARAMETER_DEFS: ParameterDefinition[] = [
     checkNames: ["Compass Health"],
     deriveActual: (telemetry, check) => {
       const healthy = asBoolean(
-        pickFirst(telemetry, ["compass_healthy", "mag_healthy"]),
+        pickFirst(telemetry, ["compass.healthy", "compass_healthy", "mag_healthy"]),
       );
       if (healthy !== null) return healthy ? "OK" : "NOT OK";
       if (check?.status) {
@@ -308,7 +308,16 @@ const PARAMETER_DEFS: ParameterDefinition[] = [
     unit: "s",
     decimals: 1,
     checkNames: ["Heartbeat Age"],
-    telemetryPaths: ["heartbeat_age_s", "heartbeat.age_s"],
+    deriveActual: (telemetry, check) => {
+      const lastReceived = pickFirst(telemetry, ["heartbeat.last_received"]);
+      if (typeof lastReceived === "string" && lastReceived) {
+        const ageS = (Date.now() - new Date(lastReceived).getTime()) / 1000;
+        return Number.isFinite(ageS) && ageS >= 0 ? ageS : null;
+      }
+      const ageRaw = asNumber(pickFirst(telemetry, ["heartbeat_age_s", "heartbeat.age_s"]));
+      if (ageRaw !== null) return ageRaw;
+      return extractFirstNumber(check?.message);
+    },
   },
   {
     id: "agl_min",
@@ -614,22 +623,17 @@ export function MissionPreflightPanel({
         {
           borderRadius: 2,
           border: "1px solid",
-          borderColor: "hsla(174, 30%, 40%, 0.25)",
-          background: "hsla(0, 0%, 100%, 0.7)",
+          borderColor: "divider",
           "&:before": { display: "none" },
-          '[data-mui-color-scheme="dark"] &': {
-            background: "hsla(20, 16%, 12%, 0.92)",
-            borderColor: "hsla(168, 22%, 36%, 0.3)",
-          },
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreRoundedIcon />}
-        sx={{ px: 2, py: 0.25, minHeight: 0 }}
+        sx={{ px: 1, py: 0.1, minHeight: 0 }}
       >
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+        <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap">
           <Typography variant="subtitle1">{title}</Typography>
           <Chip size="small" label={overallStatus} color={statusToChipColor(overallStatus)} />
           {preflightRun?.preflight_run_id && (
@@ -637,10 +641,10 @@ export function MissionPreflightPanel({
           )}
         </Stack>
       </AccordionSummary>
-      <AccordionDetails sx={{ px: 2, pb: 2, pt: 0.5 }}>
-        <Stack spacing={1.25}>
+      <AccordionDetails sx={{ px:0.2, pb: 0.2, pt: 0.2 }}>
+        <Stack spacing={1}>
           {typeof summary?.passed === "number" && (
-            <Stack direction="row" spacing={0.8} flexWrap="wrap">
+            <Stack direction="row" spacing={0.2} flexWrap="wrap">
               <Chip size="small" color="success" label={`Pass ${summary.passed}`} />
               <Chip size="small" color="warning" label={`Warn ${summary.warned ?? 0}`} />
               <Chip size="small" color="error" label={`Fail ${summary.failed ?? 0}`} />
@@ -648,7 +652,7 @@ export function MissionPreflightPanel({
           )}
 
           {loadingParams && (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 0.75 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 0.2 }}>
               <CircularProgress size={18} />
             </Box>
           )}
@@ -660,10 +664,10 @@ export function MissionPreflightPanel({
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  letterSpacing: 0.8,
+                  letterSpacing: 0.2,
                   fontFamily: "monospace",
                   display: "block",
-                  mb: 0.6,
+                  mb: 0.2,
                 }}
               >
                 {CATEGORY_LABELS[categoryKey]}
@@ -683,7 +687,8 @@ export function MissionPreflightPanel({
                       borderColor: "rgba(35, 70, 58, 0.12)",
                       fontFamily: "monospace",
                       fontSize: "0.72rem",
-                      py: 0.55,
+                      py: 0.1,
+                      px: 0.5,
                     },
                   }}
                 >

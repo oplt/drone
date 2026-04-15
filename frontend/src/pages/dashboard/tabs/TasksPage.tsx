@@ -99,6 +99,7 @@ export default function TasksPage() {
     apiBase: API_BASE_CLEAN,
     getTokenFn: getToken,
     onError: addError,
+    alwaysConnect: true,
   });
   const droneCenter = useDroneCenter(telemetry);
   const { heading, armed } = useMissionCommandMetrics(telemetry);
@@ -431,13 +432,33 @@ export default function TasksPage() {
     >
       <>
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
-              {/* Left side: Map & Camera */}
+              {/* Left side: Camera & Map */}
               <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
+                <MissionVideoPanel
+                  title="Survey Camera"
+                  imgAlt="Survey camera stream"
+                  disconnectedMessage="Connect the drone to view the survey stream."
+                  apiBase={API_BASE_CLEAN}
+                  streamKey={streamKey}
+                  videoToken={videoToken}
+                  startingVideo={startingVideo}
+                  videoError={videoError}
+                  videoRetryCount={videoRetryCount}
+                  droneConnected={droneConnected}
+                  telemetry={telemetry}
+                  onVideoError={handleVideoError}
+                  onVideoLoad={handleVideoLoad}
+                  onRetry={() => {
+                    setStreamKey(Date.now());
+                    setVideoError(null);
+                  }}
+                />
                 <Box
                   sx={{
                     borderRadius: 2,
                     overflow: "hidden",
-                    border: "1px solid hsla(174, 30%, 40%, 0.2)",
+                    border: "1px solid",
+                    borderColor: "divider",
                     backgroundColor: "background.paper",
                   }}
                 >
@@ -537,43 +558,30 @@ export default function TasksPage() {
                   point is placed.
                 </Typography>
 
-                <MissionVideoPanel
-                  title="Survey Camera"
-                  imgAlt="Survey camera stream"
-                  disconnectedMessage="Connect the drone to view the survey stream."
-                  apiBase={API_BASE_CLEAN}
-                  streamKey={streamKey}
-                  videoToken={videoToken}
-                  startingVideo={startingVideo}
-                  videoError={videoError}
-                  videoRetryCount={videoRetryCount}
-                  droneConnected={droneConnected}
-                  telemetry={telemetry}
-                  onVideoError={handleVideoError}
-                  onVideoLoad={handleVideoLoad}
-                  onRetry={() => {
-                    setStreamKey(Date.now());
-                    setVideoError(null);
-                  }}
-                />
               </Stack>
 
               {/* Right side: Controls */}
-              <Box sx={{ width: { xs: "100%", md: 300 } }}>
+              <Box sx={{ width: { xs: "100%", md: 620 } }}>
                 <Stack spacing={2}>
-                  <MissionPreflightPanel
-                    apiBase={API_BASE_CLEAN}
-                    missionType="route"
-                    preflightRun={preflightRun}
-                    telemetry={telemetry}
-                  />
-                  <MissionCommandPanel
-                    telemetry={telemetry}
-                    droneConnected={droneConnected}
-                    missionStatus={missionStatus}
-                    activeFlightId={activeFlightId}
-                    apiBase={API_BASE_CLEAN}
-                  />
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <MissionPreflightPanel
+                        apiBase={API_BASE_CLEAN}
+                        missionType="route"
+                        preflightRun={preflightRun}
+                        telemetry={telemetry}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <MissionCommandPanel
+                        telemetry={telemetry}
+                        droneConnected={droneConnected}
+                        missionStatus={missionStatus}
+                        activeFlightId={activeFlightId}
+                        apiBase={API_BASE_CLEAN}
+                      />
+                    </Box>
+                  </Stack>
                   <TextField variant="filled"
                     label="Field plan name"
                     value={name}

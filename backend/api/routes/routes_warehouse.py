@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.routes import routes_flights
-from backend.auth.deps import require_user
+from backend.auth.deps import OrgUser, require_mission_exec, require_org_user, require_org_write
 from backend.db.models import SettingsRow, WarehouseAsset, WarehouseMap
 from backend.db.repository.warehouse_mapping_repo import WarehouseMappingRepository
 from backend.db.session import get_db
@@ -31,6 +31,7 @@ from backend.flight.missions.warehouse_mission import (
     WarehouseScanMissionParams,
     merge_warehouse_mission_defaults,
 )
+from backend.services.access_control import can_access_org_scope, get_default_project
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
 logger = logging.getLogger(__name__)
@@ -201,12 +202,14 @@ async def _get_owned_warehouse_map(
     db: AsyncSession,
     *,
     warehouse_map_id: int,
-    owner_id: int,
+    user,
 ) -> WarehouseMap:
     warehouse_map = await repo.get_owned_warehouse_map(
         db,
         warehouse_map_id=warehouse_map_id,
-        owner_id=owner_id,
+        owner_id=int(user.id),
+        org_id=user.org_id,
+        allow_org_access=can_access_org_scope(user),
     )
     if warehouse_map is None:
         raise HTTPException(status_code=404, detail="Warehouse map not found")
@@ -290,7 +293,7 @@ def _dock_config_params(
 @router.get("/mission-defaults", response_model=WarehouseMissionDefaults)
 async def get_warehouse_mission_defaults(
     db: AsyncSession = Depends(get_db),
-    _user=Depends(require_user),
+    _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseMissionDefaults:
     return await _load_warehouse_mission_defaults(db)
 
@@ -299,7 +302,7 @@ async def get_warehouse_mission_defaults(
 async def update_warehouse_mission_defaults(
     payload: WarehouseMissionDefaults,
     db: AsyncSession = Depends(get_db),
-    _user=Depends(require_user),
+    _org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseMissionDefaults:
     return await _save_warehouse_mission_defaults(db, payload)
 
@@ -311,9 +314,16 @@ async def update_warehouse_mission_defaults(
 async def list_warehouse_maps(
     limit: int = Query(default=100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> list[WarehouseMapOut]:
-    maps = await repo.list_warehouse_maps(db, owner_id=int(user.id), limit=limit)
+    user = org_user.user
+    maps = await repo.list_warehouse_maps(
+        db,
+        owner_id=int(user.id),
+        org_id=user.org_id,
+        allow_org_access=can_access_org_scope(user),
+        limit=limit,
+    )
     return [
         WarehouseMapOut(
             id=int(m.id),
@@ -330,13 +340,17 @@ async def list_warehouse_maps(
 async def create_warehouse_map(
     payload: WarehouseMapCreateIn,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseMapOut:
+    user = org_user.user
     try:
         polygon_local_m = [tuple(pt) for pt in payload.polygon_local_m]
+        default_project = await get_default_project(db, org_id=int(user.org_id)) if user.org_id else None
         warehouse_map = await repo.create_warehouse_map(
             db,
             owner_id=int(user.id),
+            org_id=user.org_id,
+            project_id=default_project.id if default_project else None,
             warehouse_name=payload.name,
             polygon_local_m=polygon_local_m,
         )
@@ -357,11 +371,9 @@ async def create_warehouse_map(
 async def get_warehouse_map(
     warehouse_map_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseMapOut:
-    warehouse_map = await _get_owned_warehouse_map(
-        db, warehouse_map_id=warehouse_map_id, owner_id=int(user.id)
-    )
+    warehouse_map = await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     return WarehouseMapOut(
         id=int(warehouse_map.id),
         name=warehouse_map.name,
@@ -375,10 +387,15 @@ async def get_warehouse_map(
 async def delete_warehouse_map(
     warehouse_map_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> None:
+    user = org_user.user
     deleted = await repo.delete_warehouse_map(
-        db, warehouse_map_id=warehouse_map_id, owner_id=int(user.id)
+        db,
+        warehouse_map_id=warehouse_map_id,
+        owner_id=int(user.id),
+        org_id=user.org_id,
+        allow_org_access=can_access_org_scope(user),
     )
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse map not found")
@@ -392,9 +409,9 @@ async def delete_warehouse_map(
 async def list_dock_stations(
     warehouse_map_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> list[WarehouseDockOut]:
-    await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, owner_id=int(user.id))
+    await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     docks = await repo.list_dock_stations(db, warehouse_map_id=warehouse_map_id)
     return [_dock_out(d) for d in docks]
 
@@ -404,9 +421,9 @@ async def create_dock_station(
     warehouse_map_id: int,
     payload: WarehouseDockCreateIn,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseDockOut:
-    await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, owner_id=int(user.id))
+    await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     try:
         dock = await repo.create_dock_station(
             db,
@@ -431,9 +448,9 @@ async def delete_dock_station(
     warehouse_map_id: int,
     dock_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> None:
-    await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, owner_id=int(user.id))
+    await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     deactivated = await repo.deactivate_dock_station(
         db, dock_id=dock_id, warehouse_map_id=warehouse_map_id
     )
@@ -449,12 +466,13 @@ async def delete_dock_station(
 async def start_warehouse_scan(
     payload: WarehouseScanStartIn,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseMissionLaunchOut:
+    user = org_user.user
     warehouse_map = await _get_owned_warehouse_map(
         db,
         warehouse_map_id=int(payload.warehouse_map_id),
-        owner_id=int(user.id),
+        user=user,
     )
     mission_defaults = merge_warehouse_mission_defaults(
         await _load_warehouse_mission_defaults(db),
@@ -523,12 +541,13 @@ async def start_warehouse_scan(
 async def start_warehouse_exploration(
     payload: WarehouseExplorationStartIn,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseMissionLaunchOut:
+    user = org_user.user
     warehouse_map = await _get_owned_warehouse_map(
         db,
         warehouse_map_id=int(payload.warehouse_map_id),
-        owner_id=int(user.id),
+        user=user,
     )
 
     docks = await repo.list_dock_stations(db, warehouse_map_id=int(warehouse_map.id))
@@ -599,11 +618,14 @@ async def list_scanned_maps(
     warehouse_map_id: int | None = Query(default=None, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> list[WarehouseScannedMapOut]:
+    user = org_user.user
     rows = await repo.list_ready_scanned_maps(
         db,
         owner_id=int(user.id),
+        org_id=user.org_id,
+        allow_org_access=can_access_org_scope(user),
         warehouse_map_id=warehouse_map_id,
         limit=limit,
     )
@@ -651,12 +673,14 @@ async def list_scanned_maps(
 async def get_scanned_map(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseScannedMapOut:
     """Fetch a single scanned map job by its job_id."""
     rows = await repo.list_ready_scanned_maps(
         db,
-        owner_id=int(user.id),
+        owner_id=int(org_user.user.id),
+        org_id=org_user.user.org_id,
+        allow_org_access=can_access_org_scope(org_user.user),
         limit=200,
     )
     for job, warehouse_map, model in rows:

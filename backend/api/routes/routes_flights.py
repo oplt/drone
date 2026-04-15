@@ -20,6 +20,7 @@ from backend.db.models import FlightStatus
 from backend.db.repository.mission_runtime_repo import mission_runtime_repo
 from backend.db.repository.operator_command_repo import operator_command_repo
 from backend.db.repository.preflight_run_repo import preflight_run_repo
+from backend.db.session import Session
 from backend.drone.drone_base import MissionAbortRequested
 from backend.drone.models import Coordinate
 from backend.flight.missions.grid_mission import GridMission
@@ -53,6 +54,7 @@ from backend.flight.missions.warehouse_mission import (
     WarehouseScanMissionParams,
     build_warehouse_scan_mission,
 )
+from backend.flight.missions.controlled_flight import ControlledFlightMission
 from backend.flight.missions.waypoints_mission import WaypointsMission
 from backend.flight.preflight_check.schemas import PreflightReport
 from backend.flight.state_machine import (
@@ -76,6 +78,7 @@ from backend.runtime import (
     next_runtime_sequence,
     utc_now,
 )
+from backend.services.access_control import get_default_project
 
 logger = logging.getLogger(__name__)
 
@@ -280,7 +283,9 @@ class MissionCreateIn(BaseModel):
 
     @model_validator(mode="after")
     def _check_payload(self) -> MissionCreateIn:
-        if self.mission_type == MissionType.WAYPOINT:
+        if self.mission_type == MissionType.CONTROLLED:
+            pass  # no extra params required
+        elif self.mission_type == MissionType.WAYPOINT:
             if not self.waypoints or len(self.waypoints) < 2:
                 raise ValueError("mission_type='waypoints' requires at least 2 waypoints.")
         elif self.mission_type in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}:
@@ -406,6 +411,28 @@ class PreflightRunOut(BaseModel):
     created_at: float
     expires_at: float
     report: PreflightReport
+
+
+class MissionPreflightOut(BaseModel):
+    """Preflight detail for the audit timeline."""
+
+    preflight_run_id: str
+    overall_status: str
+    base_checks: list[dict]
+    mission_checks: list[dict]
+    critical_failures: list[str]
+    summary: dict
+    started_at: float | None = None
+    completed_at: float | None = None
+
+
+class FlightEventOut(BaseModel):
+    """Single flight event for the audit timeline."""
+
+    id: int
+    type: str
+    data: dict
+    created_at: float
 
 
 @dataclass
@@ -802,6 +829,10 @@ def _resolve_trigger_event_location(
 
 def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> Any:
     """Return the appropriate mission object for the given payload."""
+    if payload.mission_type == MissionType.CONTROLLED:
+        mission = ControlledFlightMission(cruise_alt=float(payload.cruise_alt))
+        return mission, 0
+
     if payload.mission_type == MissionType.WAYPOINT:
         coords = [
             Coordinate(
@@ -1542,6 +1573,12 @@ async def create_mission(
     )
     orch.current_preflight_run_id = preflight_run_id or None
 
+    default_project_id: int | None = None
+    if user.org_id is not None:
+        async with Session() as scope_db:
+            default_project = await get_default_project(scope_db, org_id=int(user.org_id))
+            default_project_id = int(default_project.id) if default_project else None
+
     patrol_task_type = (
         getattr(payload.private_patrol, "task_type", None)
         if payload.private_patrol is not None
@@ -1550,6 +1587,8 @@ async def create_mission(
     db_row = await mission_runtime_repo.create(
         client_flight_id=client_flight_id,
         user_id=int(user.id),
+        org_id=user.org_id,
+        project_id=default_project_id,
         mission_name=payload.name,
         mission_type=payload.mission_type.value,
         mission_task_type=patrol_task_type,
@@ -1834,42 +1873,31 @@ async def get_flight_status():
             runtime_out = _runtime_to_out(runtime)
 
         flight_id = runtime_out.flight_id if runtime_out is not None else None
-        mission_name = getattr(orch, "current_mission_name", "Unknown")
-        telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
-        telemetry_payload = telemetry_envelope.payload if telemetry_envelope is not None else None
-        position = (
-            {
-                "lat": telemetry_payload.position.lat or 0,
-                "lon": telemetry_payload.position.lon or 0,
-                "alt": telemetry_payload.position.alt_m or 0,
-                "relative_alt": telemetry_payload.position.relative_alt_m or 0,
-            }
-            if telemetry_payload is not None
-            else telemetry_manager.last_telemetry.get("position", {})
+        mission_name = (
+            runtime_out.mission_name
+            if runtime_out is not None
+            else getattr(orch, "current_mission_name", "Unknown")
         )
-        has_position = (
-            telemetry_payload.has_position()
-            if telemetry_payload is not None
-            else bool(position.get("lat") or position.get("lon"))
-        )
+        telemetry = telemetry_manager.runtime_snapshot()
+        position_snapshot = telemetry_manager.latest_position_snapshot()
 
         return {
             "flight_id": flight_id,
             "mission_name": mission_name,
             "telemetry": {
-                "running": telemetry_manager._running,
-                "active_connections": len(telemetry_manager.active_connections),
-                "has_position_data": has_position,
-                "last_update": telemetry_manager.get_last_telemetry_timestamp(),
-                "position": position,
+                "running": telemetry["running"],
+                "source_connected": telemetry["source_connected"],
+                "active_connections": telemetry["active_connections"],
+                "has_position_data": position_snapshot["has_position"],
+                "last_update": telemetry["last_update"],
+                "position": position_snapshot["position"],
             },
             "orchestrator": {
                 "ready": orch is not None,
                 "has_drone": getattr(orch, "drone", None) is not None,
-                "drone_connected": (
-                    hasattr(orch, "drone")
-                    and getattr(orch, "drone", None) is not None
-                    and getattr(getattr(orch, "drone", None), "vehicle", None) is not None
+                "drone_connected": bool(
+                    telemetry["source_connected"]
+                    or getattr(orch, "drone", None) is not None
                 ),
             },
             "mission_lifecycle": runtime_out.model_dump() if runtime_out is not None else None,
@@ -1883,11 +1911,14 @@ async def get_flight_status():
         }
     except Exception as exc:
         logger.exception("get_flight_status failed")
+        telemetry = telemetry_manager.runtime_snapshot()
         return {
             "error": str(exc),
             "telemetry": {
-                "running": telemetry_manager._running,
-                "active_connections": len(telemetry_manager.active_connections),
+                "running": telemetry["running"],
+                "source_connected": telemetry["source_connected"],
+                "active_connections": telemetry["active_connections"],
+                "last_update": telemetry["last_update"],
             },
         }
 
@@ -1895,32 +1926,22 @@ async def get_flight_status():
 @router.get("/drone/position")
 async def get_drone_position():
     """Current drone position from telemetry cache."""
-    telemetry_envelope = telemetry_manager.get_last_telemetry_envelope()
-    if telemetry_envelope is not None:
-        position = telemetry_envelope.payload.position
-        lat = position.lat or 0
-        lon = position.lon or 0
-        alt = position.alt_m or 0
-        relative_alt = position.relative_alt_m or 0
-    else:
-        legacy_position = telemetry_manager.last_telemetry.get("position", {})
-        lat = legacy_position.get("lat", 0)
-        lon = legacy_position.get("lon", 0)
-        alt = legacy_position.get("alt", 0)
-        relative_alt = legacy_position.get("relative_alt", 0)
+    telemetry = telemetry_manager.runtime_snapshot()
+    position_snapshot = telemetry_manager.latest_position_snapshot()
+    position = position_snapshot["position"]
     return {
-        "has_position": lat != 0 or lon != 0,
-        "lat": lat,
-        "lng": lon,
-        "alt": alt,
-        "relative_alt": relative_alt,
-        "timestamp": telemetry_manager.get_last_telemetry_timestamp(),
+        "has_position": position_snapshot["has_position"],
+        "lat": position["lat"],
+        "lng": position["lon"],
+        "alt": position["alt"],
+        "relative_alt": position["relative_alt"],
+        "timestamp": telemetry["last_update"],
     }
 
 
 @router.post("/telemetry/start")
 async def start_telemetry():
-    if telemetry_manager._running:
+    if telemetry_manager.runtime_snapshot()["running"]:
         return {"status": "already_running", "message": "Telemetry already running"}
     try:
         orch = await get_orchestrator()
@@ -1932,7 +1953,7 @@ async def start_telemetry():
 
 @router.post("/telemetry/stop")
 async def stop_telemetry():
-    if not telemetry_manager._running:
+    if not telemetry_manager.runtime_snapshot()["running"]:
         return {"status": "already_stopped", "message": "Telemetry already stopped"}
     try:
         orch = await get_orchestrator()
@@ -2286,3 +2307,161 @@ async def preview_private_patrol(
         },
         ai_tasks=[str(task) for task in ai_tasks],
     )
+
+
+# ---------------------------------------------------------------------------
+# Audit timeline endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/missions/{flight_id}/preflight", response_model=MissionPreflightOut)
+async def get_mission_preflight(
+    flight_id: str,
+    user=Depends(require_user),
+):
+    """Return the preflight run result for a mission (audit timeline)."""
+    db_row = await mission_runtime_repo.get_by_client_id_for_user(flight_id, int(user.id))
+    if db_row is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    preflight_run_id = getattr(db_row, "preflight_run_id", None)
+    if not preflight_run_id:
+        raise HTTPException(status_code=404, detail="No preflight run recorded for this mission")
+
+    preflight_row = await preflight_run_repo.get_by_uuid(preflight_run_id)
+    if preflight_row is None:
+        raise HTTPException(status_code=404, detail="Preflight run not found")
+
+    started_ts = (
+        preflight_row.started_at.timestamp()
+        if preflight_row.started_at
+        else None
+    )
+    completed_ts = (
+        preflight_row.completed_at.timestamp()
+        if preflight_row.completed_at
+        else None
+    )
+
+    return MissionPreflightOut(
+        preflight_run_id=preflight_row.run_uuid,
+        overall_status=preflight_row.overall_status,
+        base_checks=preflight_row.base_checks or [],
+        mission_checks=preflight_row.mission_checks or [],
+        critical_failures=preflight_row.critical_failures or [],
+        summary=preflight_row.summary or {},
+        started_at=started_ts,
+        completed_at=completed_ts,
+    )
+
+
+@router.get("/missions/{flight_id}/events", response_model=list[FlightEventOut])
+async def get_mission_flight_events(
+    flight_id: str,
+    limit: int = 200,
+    user=Depends(require_user),
+):
+    """Return flight events for a mission in chronological order (audit timeline)."""
+    from sqlalchemy import select as sa_select
+
+    from backend.db.models import FlightEvent
+
+    db_row = await mission_runtime_repo.get_by_client_id_for_user(flight_id, int(user.id))
+    if db_row is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    db_flight_id = getattr(db_row, "flight_id", None)
+    if db_flight_id is None:
+        return []
+
+    cap = min(limit, 200)
+    async with Session() as s:
+        result = await s.execute(
+            sa_select(FlightEvent)
+            .where(FlightEvent.flight_id == db_flight_id)
+            .order_by(FlightEvent.created_at.asc())
+            .limit(cap)
+        )
+        events = result.scalars().all()
+
+    return [
+        FlightEventOut(
+            id=ev.id,
+            type=ev.type,
+            data=ev.data or {},
+            created_at=ev.created_at.timestamp() if ev.created_at else 0.0,
+        )
+        for ev in events
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Export routes
+# ---------------------------------------------------------------------------
+
+
+@router.post("/missions/{flight_id}/export")
+async def start_mission_export(
+    flight_id: str,
+    user=Depends(require_user),
+):
+    from sqlalchemy import select
+
+    from backend.db.models import ExportJob, MissionRuntime
+    from backend.tasks.export_tasks import generate_mission_export
+
+    runtime_project_id: int | None = None
+    async with Session() as db:
+        runtime_row = (
+            await db.execute(
+                select(MissionRuntime).where(MissionRuntime.client_flight_id == flight_id)
+            )
+        ).scalar_one_or_none()
+        runtime_project_id = runtime_row.project_id if runtime_row is not None else None
+        job = ExportJob(
+            org_id=user.org_id,
+            project_id=runtime_project_id,
+            flight_id=flight_id,
+            requested_by=user.id,
+            status="pending",
+        )
+        db.add(job)
+        await db.flush()
+        job_id = job.id
+        await db.commit()
+
+    generate_mission_export.delay(flight_id, user.id, user.org_id, job_id)
+    return {"job_id": job_id}
+
+
+@router.get("/missions/{flight_id}/export/{job_id}")
+async def get_mission_export_status(
+    flight_id: str,
+    job_id: int,
+    user=Depends(require_user),
+):
+    from sqlalchemy import select
+
+    from backend.db.models import ExportJob
+
+    async with Session() as db:
+        q = await db.execute(
+            select(ExportJob).where(ExportJob.id == job_id, ExportJob.flight_id == flight_id)
+        )
+        job = q.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Export job not found")
+
+    if job.org_id is not None and user.org_id is not None and job.org_id != user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "download_url": job.download_url,
+        "expires_at": job.expires_at.isoformat() if job.expires_at else None,
+        "error": job.error,
+        "created_at": job.created_at.isoformat(),
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+    }

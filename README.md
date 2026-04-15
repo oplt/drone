@@ -104,7 +104,16 @@ npm install
 
 ### 3. Configure environment variables
 
-The repo already contains `backend/.env` and `frontend/.env`. Review and update them for your environment before running the stack.
+Create local env files from the examples before running the stack:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Rotate any previously committed credentials before using the new examples. The operational checklist lives in [docs/operations/SECRET_ROTATION_RUNBOOK.md](/home/polat/Desktop/Projects/drone_app/docs/operations/SECRET_ROTATION_RUNBOOK.md).
+
+Then review and update them for your environment.
 
 Common backend configuration groups include:
 
@@ -149,6 +158,16 @@ celery -A backend.tasks.celery_app:celery_app worker \
 ```
 
 See `backend/tasks/README.md` for worker deployment details, required environment variables, and WebODM/toolchain expectations.
+
+### 7. Run the container baseline
+
+The repository now includes a minimal deployment baseline for local production-like runs:
+
+```bash
+docker compose up --build
+```
+
+This starts Postgres with PostGIS, Redis, the FastAPI API, a Celery worker, and a static frontend build.
 
 ## API and feature areas
 

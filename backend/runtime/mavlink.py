@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -16,6 +17,9 @@ TELEMETRY_MAVLINK_TYPES: list[str] = [
     "RC_CHANNELS",
     "WIND",
     "STATUSTEXT",
+    "EKF_STATUS_REPORT",
+    "RAW_IMU",
+    "SCALED_IMU2",
 ]
 
 
@@ -70,9 +74,11 @@ def process_mavlink_message(
                     hdop = float(hdop_raw) / 100.0
                 except Exception:
                     hdop = None
+            fix_type = msg_dict.get("fix_type")
             merge(
                 "gps",
                 {
+                    "fix_type": int(fix_type) if fix_type is not None else snapshot.get("gps", {}).get("fix_type"),
                     "satellites": int(satellites)
                     if satellites is not None
                     else snapshot.get("gps", {}).get("satellites", 0),
@@ -157,6 +163,7 @@ def process_mavlink_message(
                 merge("system", {"status": status_label})
                 if status_label in {"CRITICAL", "EMERGENCY", "FLIGHT_TERMINATION"}:
                     merge("failsafe", {"state": status_label})
+            merge("heartbeat", {"last_received": datetime.now(UTC).isoformat()})
 
         elif msg_type == "SYS_STATUS":
             drop_rate = msg_dict.get("drop_rate_comm")
@@ -206,6 +213,39 @@ def process_mavlink_message(
                 lowered = text.lower()
                 if "failsafe" in lowered or "emergency" in lowered:
                     merge("failsafe", {"state": text[:64]})
+
+        elif msg_type == "EKF_STATUS_REPORT":
+            flags = msg_dict.get("flags", 0)
+            velocity_ok = bool(flags & 0x01)
+            pos_horiz_ok = bool(flags & 0x02)
+            pos_vert_ok = bool(flags & 0x04)
+            compass_ok = bool(flags & 0x08)
+            merge("ekf", {
+                "flags": int(flags),
+                "velocity_ok": velocity_ok,
+                "pos_horiz_ok": pos_horiz_ok,
+                "pos_vert_ok": pos_vert_ok,
+                "compass_ok": compass_ok,
+                "ok": velocity_ok and pos_horiz_ok and pos_vert_ok,
+                "velocity_variance": float(msg_dict.get("velocity_variance", 0)),
+                "pos_horiz_variance": float(msg_dict.get("pos_horiz_variance", 0)),
+                "pos_vert_variance": float(msg_dict.get("pos_vert_variance", 0)),
+                "compass_variance": float(msg_dict.get("compass_variance", 0)),
+            })
+
+        elif msg_type in ("RAW_IMU", "SCALED_IMU2"):
+            xmag = msg_dict.get("xmag", 0)
+            ymag = msg_dict.get("ymag", 0)
+            zmag = msg_dict.get("zmag", 0)
+            mag_field = math.sqrt(float(xmag)**2 + float(ymag)**2 + float(zmag)**2)
+            healthy = 100 < mag_field < 800
+            merge("compass", {
+                "x": float(xmag),
+                "y": float(ymag),
+                "z": float(zmag),
+                "mag_field": round(mag_field, 1),
+                "healthy": healthy,
+            })
 
     except Exception:
         return processed

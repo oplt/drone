@@ -15,6 +15,7 @@ from backend.db.repository.warehouse_mapping_repo import (
     WarehouseRepositoryError,
 )
 from backend.db.session import Session
+from backend.services.access_control import get_default_project
 from backend.services.photogrammetry.storage import StorageService
 from backend.services.photogrammetry.tiling import convert_mesh_to_3dtiles
 
@@ -37,6 +38,7 @@ class WarehouseScanMappingService:
         self,
         *,
         owner_id: int,
+        org_id: int | None,
         warehouse_map_id: int | None,
         warehouse_name: str | None,
         polygon_local_m: list[tuple[float, float]],
@@ -53,9 +55,14 @@ class WarehouseScanMappingService:
 
         async with Session() as db:
             try:
+                default_project = (
+                    await get_default_project(db, org_id=int(org_id)) if org_id is not None else None
+                )
                 warehouse_map = await self.repo.get_or_create_warehouse_map(
                     db,
                     owner_id=owner_id,
+                    org_id=org_id,
+                    project_id=default_project.id if default_project else None,
                     warehouse_map_id=warehouse_map_id,
                     warehouse_name=warehouse_name,
                     polygon_local_m=polygon_local_m,

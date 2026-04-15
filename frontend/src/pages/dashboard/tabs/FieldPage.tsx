@@ -22,7 +22,7 @@ import {
 import Header from "../../../components/dashboard/Header";
 import InfoLabel from "../../../components/dashboard/InfoLabel";
 import type { TerraDraw } from "terra-draw";
-import {  Polyline,  Polygon,  OverlayView,} from "@react-google-maps/api";
+import { GroundOverlay, Polyline, Polygon, OverlayView } from "@react-google-maps/api";
 import { getToken } from "../../../auth";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import SvgIcon from "@mui/material/SvgIcon";
@@ -62,7 +62,10 @@ import { useMissionWebsocketRuntime } from "../../../hooks/useMissionWebsocketRu
 import { type LatLng } from "../../../lib/extractLatLng";
 import type { DrawResult as CesiumDrawResult } from "../../../utils/CesiumMap";
 import {
+  getIrrigationMissionSummary,
   startMissionWithPreflight,
+  triggerIrrigationMissionProcessing,
+  type IrrigationMissionSummary,
   type PreflightRunResponse,
 } from "../../../utils/api";
 
@@ -106,6 +109,11 @@ type FieldSummary = {
 type FieldFeature = FieldSummary & {
   ring: LonLat[];
   path: LatLng[];
+};
+type IrrigationZoneStyle = {
+  fillColor: string;
+  strokeColor: string;
+  label: string;
 };
 interface MissionStatus {
   flight_id?: string;
@@ -391,6 +399,11 @@ export default function FieldPage() {
   const [exclusionZones, setExclusionZones] = useState<LonLat[][]>([]);
   const [fieldTilesetUrl, setFieldTilesetUrl] = useState<string | null>(null);
   const [mapZoom, setMapZoom] = useState(12);
+  const [lastMissionId, setLastMissionId] = useState<string | null>(null);
+  const [irrigationSummary, setIrrigationSummary] = useState<IrrigationMissionSummary | null>(null);
+  const [irrigationLoading, setIrrigationLoading] = useState(false);
+  const [irrigationRefreshing, setIrrigationRefreshing] = useState(false);
+  const [irrigationError, setIrrigationError] = useState<string | null>(null);
   const [streamKey, setStreamKey] = useState(Date.now());
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
@@ -426,6 +439,7 @@ export default function FieldPage() {
     getTokenFn: getToken,
     onError: addError,
   });
+  const trackedMissionId = activeFlightId ?? lastMissionId;
   const droneCenter = useDroneCenter(telemetry);
   const { heading, armed } = useMissionCommandMetrics(telemetry);
 
@@ -450,6 +464,55 @@ export default function FieldPage() {
   useEffect(() => {
     if (autoStreamKey) setStreamKey(autoStreamKey);
   }, [autoStreamKey]);
+
+  useEffect(() => {
+    if (!trackedMissionId) {
+      setIrrigationSummary(null);
+      setIrrigationError(null);
+      return;
+    }
+
+    const token = getToken();
+    if (!token) return;
+    let cancelled = false;
+
+    const loadSummary = async (background: boolean) => {
+      if (!background) setIrrigationLoading(true);
+      setIrrigationRefreshing(background);
+      try {
+        const summary = await getIrrigationMissionSummary(
+          trackedMissionId,
+          token,
+          API_BASE_CLEAN
+        );
+        if (!cancelled) {
+          setIrrigationSummary(summary);
+          setIrrigationError(null);
+        }
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setIrrigationError(
+            error instanceof Error ? error.message : "Failed to load irrigation outputs"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIrrigationLoading(false);
+          setIrrigationRefreshing(false);
+        }
+      }
+    };
+
+    void loadSummary(false);
+    const timer = window.setInterval(() => {
+      void loadSummary(true);
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [API_BASE_CLEAN, trackedMissionId]);
 
 const onMapLoad = useCallback((map: google.maps.Map) => {
   mapRef.current = map;
@@ -505,6 +568,49 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         : fields.find((f) => f.id === selectedFieldId) ?? null,
     [fields, selectedFieldId]
   );
+  const irrigationLayer = irrigationSummary?.layer ?? null;
+  const irrigationZoneStyles = useMemo<Record<string, IrrigationZoneStyle>>(
+    () => ({
+      under_irrigated: {
+        fillColor: "#d97706",
+        strokeColor: "#92400e",
+        label: "Dry zone",
+      },
+      overwatered: {
+        fillColor: "#0284c7",
+        strokeColor: "#075985",
+        label: "Overwatered",
+      },
+      uneven_distribution: {
+        fillColor: "#7c3aed",
+        strokeColor: "#5b21b6",
+        label: "Uneven band",
+      },
+    }),
+    []
+  );
+  const irrigationZonePaths = useMemo(
+    () =>
+      (irrigationSummary?.anomaly_zones ?? [])
+        .map((zone) => {
+          const coords = zone?.polygon_geojson?.coordinates?.[0];
+          if (!Array.isArray(coords) || coords.length < 4) return null;
+          return {
+            zone,
+            path: coords.map((pair) => ({
+              lng: Number(pair[0]),
+              lat: Number(pair[1]),
+            })),
+          };
+        })
+        .filter(Boolean) as Array<{
+        zone: IrrigationMissionSummary["anomaly_zones"][number];
+        path: LatLng[];
+      }>,
+    [irrigationSummary]
+  );
+  const irrigationCapturePreview = irrigationSummary?.captures?.slice(0, 3) ?? [];
+  const overlayBounds = irrigationLayer?.tile_manifest?.bounds ?? null;
 
   const lonLatRingToPath = useCallback((ring: LonLat[]): LatLng[] => {
     return ring.map(([lon, lat]) => ({ lat, lng: lon }));
@@ -1220,6 +1326,9 @@ useEffect(() => {
       alert(`Grid Survey: "${data.mission_name}" started! Tracking flight...`);
 
       setPendingFlightId(data.flight_id ?? null);
+      setLastMissionId(data.flight_id ?? null);
+      setIrrigationSummary(null);
+      setIrrigationError(null);
 
       setAlt(altToUse);
       setAltInput(String(altToUse));
@@ -1280,14 +1389,9 @@ useEffect(() => {
           width: "100%",
           p: 3,
           borderRadius: 3,
-          background:
-            "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
-          border: "1px solid hsla(174, 30%, 40%, 0.2)",
-          '[data-mui-color-scheme="dark"] &': {
-            background:
-              "linear-gradient(135deg, hsla(168, 24%, 14%, 0.94), hsla(28, 22%, 13%, 0.96))",
-            borderColor: "hsla(168, 22%, 36%, 0.3)",
-          },
+          backgroundColor: "background.paper",
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         <Stack
@@ -1346,11 +1450,31 @@ useEffect(() => {
               sx={{ mb: 3 }}
             >
               <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
+                <MissionVideoPanel
+                  title="Survey Camera"
+                  imgAlt="Survey camera stream"
+                  disconnectedMessage="Connect the drone to view the survey stream."
+                  apiBase={API_BASE_CLEAN}
+                  streamKey={streamKey}
+                  videoToken={videoToken}
+                  startingVideo={startingVideo}
+                  videoError={videoError}
+                  videoRetryCount={videoRetryCount}
+                  droneConnected={droneConnected}
+                  telemetry={telemetry}
+                  onVideoError={handleVideoError}
+                  onVideoLoad={handleVideoLoad}
+                  onRetry={() => {
+                    setStreamKey(Date.now());
+                    setVideoError(null);
+                  }}
+                />
                 <Box
                   sx={{
                     borderRadius: 2,
                     overflow: "hidden",
-                    border: "1px solid hsla(174, 30%, 40%, 0.2)",
+                    border: "1px solid",
+                    borderColor: "divider",
                     backgroundColor: "background.paper",
                   }}
                 >
@@ -1516,6 +1640,96 @@ useEffect(() => {
                           </>
                         )}
 
+                        {overlayBounds?.north != null &&
+                          overlayBounds?.south != null &&
+                          overlayBounds?.east != null &&
+                          overlayBounds?.west != null &&
+                          irrigationLayer?.tile_manifest?.image_uri && (
+                            <GroundOverlay
+                              url={toAbsoluteAssetUrl(irrigationLayer.tile_manifest.image_uri)}
+                              bounds={{
+                                north: overlayBounds.north,
+                                south: overlayBounds.south,
+                                east: overlayBounds.east,
+                                west: overlayBounds.west,
+                              }}
+                              opacity={0.55}
+                            />
+                          )}
+
+                        {irrigationZonePaths.map(({ zone, path }) => {
+                          const style =
+                            irrigationZoneStyles[zone.type] ??
+                            ({
+                              fillColor: "#ef4444",
+                              strokeColor: "#991b1b",
+                              label: zone.type,
+                            } satisfies IrrigationZoneStyle);
+                          return (
+                            <Polygon
+                              key={`irrigation-zone-${zone.id}`}
+                              paths={path}
+                              options={{
+                                clickable: true,
+                                fillColor: style.fillColor,
+                                fillOpacity: 0.28,
+                                strokeColor: style.strokeColor,
+                                strokeOpacity: 0.95,
+                                strokeWeight: 2,
+                                zIndex: 24,
+                              }}
+                            />
+                          );
+                        })}
+
+                        {(irrigationSummary?.inspection_points ?? []).map((point) => (
+                          <OverlayView
+                            key={`inspection-${point.id}`}
+                            position={{ lat: point.lat, lng: point.lon }}
+                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                          >
+                            <div
+                              style={{
+                                transform: "translate(-50%, -50%)",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: "999px",
+                                  background: "#111827",
+                                  color: "#ffffff",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  boxShadow: "0 4px 10px rgba(15,23,42,0.28)",
+                                }}
+                              >
+                                {Math.max(1, Math.round(point.priority * 9))}
+                              </div>
+                              <div
+                                style={{
+                                  background: "rgba(255,255,255,0.96)",
+                                  borderRadius: 4,
+                                  padding: "2px 6px",
+                                  fontSize: 10,
+                                  whiteSpace: "nowrap",
+                                  boxShadow: "0 2px 8px rgba(15,23,42,0.2)",
+                                }}
+                              >
+                                {point.label}
+                              </div>
+                            </div>
+                          </OverlayView>
+                        ))}
+
                         {terraDrawMode === "static" && waypoints.length >= 2 && (
                           <Polyline
                             path={polylinePath}
@@ -1543,7 +1757,6 @@ useEffect(() => {
                           border: "1px solid",
                           borderColor: "divider",
                           bgcolor: "background.paper",
-                          backdropFilter: "blur(2px)",
                         }}
                       >
                         <Stack direction="column" spacing={0.5}>
@@ -2085,42 +2298,29 @@ useEffect(() => {
                   Click on the map to add waypoints.
                 </Typography>
 
-                <MissionVideoPanel
-                  title="Survey Camera"
-                  imgAlt="Survey camera stream"
-                  disconnectedMessage="Connect the drone to view the survey stream."
-                  apiBase={API_BASE_CLEAN}
-                  streamKey={streamKey}
-                  videoToken={videoToken}
-                  startingVideo={startingVideo}
-                  videoError={videoError}
-                  videoRetryCount={videoRetryCount}
-                  droneConnected={droneConnected}
-                  telemetry={telemetry}
-                  onVideoError={handleVideoError}
-                  onVideoLoad={handleVideoLoad}
-                  onRetry={() => {
-                    setStreamKey(Date.now());
-                    setVideoError(null);
-                  }}
-                />
               </Stack>
 
-              <Box sx={{ width: { xs: "100%", md: 300 } }}>
+              <Box sx={{ width: { xs: "100%", md: 620 } }}>
                 <Stack spacing={2}>
-                  <MissionPreflightPanel
-                    apiBase={API_BASE_CLEAN}
-                    missionType="grid"
-                    preflightRun={preflightRun}
-                    telemetry={telemetry}
-                  />
-                  <MissionCommandPanel
-                    telemetry={telemetry}
-                    droneConnected={droneConnected}
-                    missionStatus={missionStatus}
-                    activeFlightId={activeFlightId}
-                    apiBase={API_BASE_CLEAN}
-                  />
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <MissionPreflightPanel
+                        apiBase={API_BASE_CLEAN}
+                        missionType="grid"
+                        preflightRun={preflightRun}
+                        telemetry={telemetry}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <MissionCommandPanel
+                        telemetry={telemetry}
+                        droneConnected={droneConnected}
+                        missionStatus={missionStatus}
+                        activeFlightId={activeFlightId}
+                        apiBase={API_BASE_CLEAN}
+                      />
+                    </Box>
+                  </Stack>
                   <TextField variant="filled"
                     label="Mission name"
                     value={name}
@@ -2245,6 +2445,153 @@ useEffect(() => {
                     )}
                   </Typography>
                 </Stack>
+              </Box>
+            )}
+
+            {trackedMissionId && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  spacing={2}
+                  sx={{ mb: 1 }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+                    Irrigation Analysis
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={irrigationRefreshing}
+                    onClick={async () => {
+                      const token = getToken();
+                      if (!token || !trackedMissionId) return;
+                      try {
+                        setIrrigationRefreshing(true);
+                        await triggerIrrigationMissionProcessing(
+                          trackedMissionId,
+                          token,
+                          API_BASE_CLEAN
+                        );
+                        const refreshed = await getIrrigationMissionSummary(
+                          trackedMissionId,
+                          token,
+                          API_BASE_CLEAN
+                        );
+                        setIrrigationSummary(refreshed);
+                        setIrrigationError(null);
+                      } catch (error: unknown) {
+                        setIrrigationError(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to run irrigation analysis"
+                        );
+                      } finally {
+                        setIrrigationRefreshing(false);
+                      }
+                    }}
+                  >
+                    Reprocess
+                  </Button>
+                </Stack>
+
+                {irrigationLoading ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CircularProgress size={18} />
+                    <Typography variant="caption">Loading mission outputs...</Typography>
+                  </Stack>
+                ) : irrigationError ? (
+                  <Alert severity="warning">{irrigationError}</Alert>
+                ) : irrigationSummary ? (
+                  <Stack spacing={1.2}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        label={`Status: ${irrigationSummary.status}`}
+                        color={
+                          irrigationSummary.status === "completed"
+                            ? "success"
+                            : irrigationSummary.status === "failed"
+                              ? "error"
+                              : "default"
+                        }
+                      />
+                      <Chip
+                        size="small"
+                        label={`Captures: ${irrigationSummary.capture_count}`}
+                        variant="outlined"
+                      />
+                      <Chip
+                        size="small"
+                        label={`Dry: ${
+                          irrigationSummary.summary?.counts_by_type?.under_irrigated ?? 0
+                        }`}
+                        variant="outlined"
+                      />
+                      <Chip
+                        size="small"
+                        label={`Overwatered: ${
+                          irrigationSummary.summary?.counts_by_type?.overwatered ?? 0
+                        }`}
+                        variant="outlined"
+                      />
+                      <Chip
+                        size="small"
+                        label={`Bands: ${
+                          irrigationSummary.summary?.counts_by_type?.uneven_distribution ?? 0
+                        }`}
+                        variant="outlined"
+                      />
+                      <Chip
+                        size="small"
+                        label={`Avg confidence: ${(
+                          Number(irrigationSummary.summary?.average_confidence ?? 0) * 100
+                        ).toFixed(0)}%`}
+                        variant="outlined"
+                      />
+                    </Stack>
+
+                    {irrigationSummary.layer?.error && (
+                      <Alert severity="error">{irrigationSummary.layer.error}</Alert>
+                    )}
+
+                    {!irrigationSummary.capture_count ? (
+                      <Alert severity="info">
+                        No geotagged captures have been ingested for this mission yet.
+                      </Alert>
+                    ) : (
+                      <Typography variant="caption" component="div">
+                        Latest mission: {trackedMissionId}. The stitched preview overlay, anomaly
+                        polygons, and ranked inspection points appear on the map when processing
+                        completes.
+                      </Typography>
+                    )}
+
+                    {irrigationCapturePreview.length > 0 && (
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        {irrigationCapturePreview.map((capture) => (
+                          <Chip
+                            key={capture.id}
+                            size="small"
+                            label={`#${capture.id} @ ${capture.lat.toFixed(4)}, ${capture.lon.toFixed(
+                              4
+                            )}`}
+                            variant="outlined"
+                          />
+                        ))}
+                      </Stack>
+                    )}
+
+                    {(irrigationSummary.inspection_points ?? []).slice(0, 3).map((point, index) => (
+                      <Typography key={point.id} variant="caption" component="div">
+                        {index + 1}. {point.label} at {point.lat.toFixed(5)}, {point.lon.toFixed(5)}
+                      </Typography>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Alert severity="info">Run a grid mission to generate irrigation outputs.</Alert>
+                )}
               </Box>
             )}
           </>

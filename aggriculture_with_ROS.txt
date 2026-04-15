@@ -1,0 +1,181 @@
+Implemented the irrigation inefficiency MVP on top of the existing grid-mission flow.
+
+  Architecture
+  The existing flow stays intact: field selection -> grid mission generation -> autonomous flight. The new stages attach after or during mission execution.
+
+  Backend:
+
+  - Mission-linked capture ingestion and persistence via backend/api/routes/routes_irrigation.py:1
+  - New durable models in backend/db/models.py:1188 with migration backend/alembic/versions/e5f6a7b8c9d0_add_irrigation_mvp_models.py:1
+  - Lightweight GPS/FOV compositor in backend/services/irrigation/compositor.py:1
+  - RGB heuristic anomaly analytics in backend/services/irrigation/analytics.py:1
+  - Mission processing/orchestration in backend/services/irrigation/service.py:1
+  - Automatic post-mission trigger loop in backend/services/irrigation/monitor.py:1
+  - Static irrigation asset mount and lifecycle wiring in backend/api/api_main.py:1
+
+  ROS 2 is now explicit:
+
+  - Topic constants in backend/ros2_irrigation/topics.py:1
+  - camera_bridge_node in backend/ros2_irrigation/camera_bridge_node.py:1
+  - telemetry_state_node in backend/ros2_irrigation/telemetry_state_node.py:1
+  - capture_sync_node in backend/ros2_irrigation/capture_sync_node.py:1
+  - processing_trigger_node in backend/ros2_irrigation/processing_trigger_node.py:1
+  - ROS 2 bridge helpers in backend/ros2_irrigation/common.py:1
+
+  Frontend:
+
+  - New irrigation API types/fetchers in frontend/src/utils/api.ts:118
+  - Map overlay, anomaly polygons, inspection points, and summary panel on frontend/src/pages/dashboard/tabs/FieldPage.tsx:399
+
+  Docs and local tooling:
+
+  - Architecture and runbook in docs/architecture/irrigation-inefficiency-mvp.md:1
+  - Manual processor CLI in backend/scripts/run_irrigation_pipeline.py:1
+
+  How it works
+  Stage 4:
+
+  - ROS 2 capture_sync_node subscribes to /camera/image_raw and /drone/state
+  - It nearest-timestamp matches image frames to state samples, enforces IRRIGATION_CAPTURE_INTERVAL_S, writes a mission-scoped spool file, then uploads the frame and geotag metadata to POST /irrigation/captures
+
+  Stage 5:
+
+  - The backend compositor places images using lat/lon + altitude + assumed FOV and emits a stitched preview overlay plus capture footprints
+
+  Stage 6:
+
+  - The analytics engine computes RGB vegetation/stress proxies and local deviation scores
+  - It emits under_irrigated, overwatered, and uneven_distribution zones with severity, confidence, polygons, and ranked inspection points
+
+  Stage 7:
+
+  - FieldPage polls /irrigation/missions/{mission_id}/summary
+  - The dashboard now shows processing state, capture count, stitched overlay, anomaly polygons, and inspection markers
+
+  New API/data surface
+  Models:
+
+  - CaptureRecord
+  - ProcessedFieldLayer
+  - AnomalyZone
+  - InspectionPoint
+
+  Endpoints:
+
+  - POST /irrigation/captures
+  - GET /irrigation/missions/{mission_id}/captures
+  - GET /irrigation/missions/{mission_id}/summary
+  - POST /irrigation/missions/{mission_id}/process
+
+  ROS 2 topics:
+
+  - /camera/image_raw
+  - /drone/state
+  - /capture/geotagged_record
+  - /mission/completed
+  - /analysis/irrigation_anomalies
+
+  Run
+
+  1. Apply the DB migration:
+
+  alembic -c backend/alembic.ini upgrade head
+
+  2. Start the existing backend/frontend as usual.
+  3. Optional manual processing for one mission:
+
+  python3 -m backend.scripts.run_irrigation_pipeline <mission_id> --force
+
+  4. ROS 2 bridge lane:
+
+  python3 -m backend.ros2_irrigation.telemetry_state_node
+  python3 -m backend.ros2_irrigation.capture_sync_node
+  python3 -m backend.ros2_irrigation.processing_trigger_node
+
+  5. Only add the camera bridge if the sim camera feed needs republishing:
+
+  python3 -m backend.ros2_irrigation.camera_bridge_node
+
+  Relevant env vars:
+
+  - IRRIGATION_STORAGE_DIR
+  - IRRIGATION_CAPTURE_INTERVAL_S
+  - IRRIGATION_CAMERA_FOV_H_DEG
+  - IRRIGATION_CAMERA_FOV_V_DEG
+  - IRRIGATION_MONITOR_POLL_S
+  - IRRIGATION_API_BASE_URL
+  - IRRIGATION_API_TOKEN
+  - IRRIGATION_ACTIVE_MISSION_ID
+  - IRRIGATION_ROS2_CACHE_DIR
+  - IRRIGATION_CAPTURE_SYNC_TOLERANCE_S
+  - IRRIGATION_MISSION_POLL_S
+
+  Validation
+  Passed:
+
+  - python3 -m py_compile backend/api/routes/routes_irrigation.py backend/services/irrigation/*.py backend/ros2_irrigation/*.py backend/scripts/run_irrigation_pipeline.py
+  - python3 -m compileall backend/services/irrigation backend/ros2_irrigation backend/api/routes/routes_irrigation.py backend/scripts/run_irrigation_pipeline.py
+  - pytest -q backend/tests/test_irrigation_pipeline.py
+
+  Tests added:
+
+  - backend/tests/test_irrigation_pipeline.py:1
+
+  Not clean yet:
+
+  - npx eslint src/pages/dashboard/tabs/FieldPage.tsx src/utils/api.ts still reports existing FieldPage.tsx lint debt already present in that file
+  - I did not run a full Gazebo + ArduPilot + ROS 2 end-to-end simulation in this session
+  - gitnexus_detect_changes(scope="all") reports critical, but the worktree is already heavily dirty well beyond this feature slice
+
+  MVP limitations
+
+  - The stitched layer is an approximate geotag/FOV composite, not a survey-grade orthomosaic
+  - Analytics are RGB heuristics, not agronomic ground truth
+  - Uneven-band detection is spatial/elongation based, not crop-row semantic analysis
+  - ROS 2 state/output messages use JSON on std_msgs/String to avoid introducing custom message packages in the MVP
+  - The bridge assumes a ROS 2 image topic exists or is republished; it does not auto-discover Gazebo camera topics
+
+  If you want, the next high-value step is to wire the actual Gazebo camera topic name from your sim into the ROS 2 bridge and add one end-to-end smoke test script for SITL + Gazebo + capture upload.
+
+
+
+
+
+
+ Wired the ROS 2 bridge to the live Gazebo camera topic and added an end-to-end smoke script.
+
+  The bridge now discovers the actual Gazebo image topic from gz topic -l instead of relying on a guessed default. That logic is in backend/ros2_irrigation/common.py:1, and backend/ros2_irrigation/
+  camera_bridge_node.py:1 now uses the discovered topic automatically unless you override it with IRRIGATION_GAZEBO_CAMERA_TOPIC or IRRIGATION_ROS_CAMERA_INPUT_TOPIC.
+
+  I also added backend/scripts/smoke_test_irrigation_ros2.sh:1. It:
+
+  - discovers the active Gazebo camera image topic
+  - starts ros_gz_bridge parameter_bridge for that exact topic
+  - launches telemetry_state_node, camera_bridge_node, and capture_sync_node
+  - waits for uploads
+  - calls /irrigation/missions/{mission_id}/summary
+  - fails if capture_count < 1
+
+  Docs are updated in docs/architecture/irrigation-inefficiency-mvp.md:1.
+
+  Run it like this:
+
+  chmod +x backend/scripts/smoke_test_irrigation_ros2.sh
+  backend/scripts/smoke_test_irrigation_ros2.sh <mission_id> 20
+
+  Useful overrides:
+
+  - IRRIGATION_API_BASE_URL
+  - IRRIGATION_API_TOKEN
+  - IRRIGATION_GAZEBO_CAMERA_TOPIC
+  - IRRIGATION_ROS_CAMERA_INPUT_TOPIC
+  - IRRIGATION_ROS2_CACHE_DIR
+
+  Validation:
+
+  - python3 -m py_compile backend/ros2_irrigation/common.py backend/ros2_irrigation/camera_bridge_node.py
+  - bash -n backend/scripts/smoke_test_irrigation_ros2.sh
+
+  Two caveats remain. The smoke test assumes ros_gz_bridge is installed and available on ros2 run, and I did not execute a full live Gazebo/SITL/ROS 2 run in this session. gitnexus_detect_changes(scope="all") still
+  reports critical, but that is due to the already-dirty repo-wide worktree rather than this slice alone.
+

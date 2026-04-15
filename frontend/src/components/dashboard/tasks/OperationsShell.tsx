@@ -32,14 +32,9 @@ export function OperationsShell({
           width: "100%",
           p: 3,
           borderRadius: 3,
-          background:
-            "linear-gradient(135deg, hsla(174, 50%, 95%, 0.8), hsla(36, 40%, 96%, 0.9))",
-          border: "1px solid hsla(174, 30%, 40%, 0.2)",
-          '[data-mui-color-scheme="dark"] &': {
-            background:
-              "linear-gradient(135deg, hsla(168, 24%, 14%, 0.94), hsla(28, 22%, 13%, 0.96))",
-            borderColor: "hsla(168, 22%, 36%, 0.3)",
-          },
+          border: "1px solid",
+          borderColor: "divider",
+          backgroundColor: "background.paper",
         }}
       >
         <Stack
@@ -50,8 +45,8 @@ export function OperationsShell({
           spacing={2}
         >
           <Box>
-            <Typography variant="h3">{title}</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            <Typography variant="h4" sx={{ color: "text.primary" }}>{title}</Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
               {subtitle}
             </Typography>
           </Box>
@@ -59,15 +54,15 @@ export function OperationsShell({
           <Stack direction="row" spacing={1} alignItems="center">
             <Chip
               size="small"
-              label={droneConnected ? "Drone online" : "Drone offline"}
+              label={droneConnected ? "ONLINE" : "OFFLINE"}
               color={droneConnected ? "success" : "default"}
-              variant={droneConnected ? "filled" : "outlined"}
+              variant="outlined"
             />
             <Chip
               size="small"
-              label={wsConnected ? "Secure link" : "Link down"}
+              label={wsConnected ? "LINK OK" : "LINK DOWN"}
               color={wsConnected ? "success" : "default"}
-              variant={wsConnected ? "filled" : "outlined"}
+              variant="outlined"
             />
           </Stack>
         </Stack>
@@ -76,16 +71,15 @@ export function OperationsShell({
 
         {!apiKey ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            Missing Google Maps API Key. Please set VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY in your .env file.
+            Missing Google Maps API Key. Set VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY in .env.
           </Alert>
         ) : loadError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            Failed to load Google Maps. {loadError.message} Ensure the Maps JavaScript API is enabled, billing is active,
-            and the key allows your domain.
+            Failed to load Google Maps. {loadError.message}
           </Alert>
         ) : !mapId ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Google Maps Map ID is not set. Advanced markers require a Map ID. Set VITE_GOOGLE_MAPS_MAP_ID to remove this warning.
+            Map ID not set. Set VITE_GOOGLE_MAPS_MAP_ID for advanced markers.
           </Alert>
         ) : (
           children

@@ -17,6 +17,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import TerrainIcon from '@mui/icons-material/Terrain';
+import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import PermIdentityRoundedIcon from '@mui/icons-material/PermIdentityRounded';
 import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
@@ -24,6 +25,8 @@ import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
 import LocalFloristRoundedIcon from '@mui/icons-material/LocalFloristRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import WarehouseRoundedIcon from '@mui/icons-material/WarehouseRounded';
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
+import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import { Link, useLocation } from 'react-router-dom';
 
 interface MenuChildItem {
@@ -41,6 +44,7 @@ interface MenuItem {
 
 interface MenuContentProps {
   collapsed?: boolean;
+  userRole?: string;
 }
 
 const mainListItems: MenuItem[] = [
@@ -52,6 +56,7 @@ const mainListItems: MenuItem[] = [
     children: [
       { text: 'Flight', icon: <FlightTakeoffIcon />, path: '/dashboard/tasks' },
       { text: 'Terrain', icon: <TerrainIcon />, path: '/dashboard/terrain' },
+      { text: 'Controlled Flight', icon: <SportsEsportsRoundedIcon/>, path: '/dashboard/controlled' },
       { text: 'PhotoGrammetry', icon: <PhotoCameraRoundedIcon />, path: '/dashboard/photogrammetry' },
       { text: 'Animal Farm', icon: <EmojiNatureRoundedIcon />, path: '/dashboard/animalfarm' },
       { text: 'Field', icon: <LocalFloristRoundedIcon />, path: '/dashboard/field' },
@@ -61,6 +66,7 @@ const mainListItems: MenuItem[] = [
   },
   { text: 'Insights', icon: <InsightsRoundedIcon />, path: '/dashboard/insights' },
   { text: 'Fleet', icon: <PrecisionManufacturingRoundedIcon />, path: '/dashboard/fleet' },
+  { text: 'Templates', icon: <ContentCopyRoundedIcon />, path: '/dashboard/templates' },
 ];
 
 const secondaryListItems: MenuItem[] = [
@@ -71,7 +77,31 @@ const secondaryListItems: MenuItem[] = [
 
 const tasksChildren = mainListItems.find((item) => item.text === 'Tasks')?.children ?? [];
 
-export default function MenuContent({ collapsed = false }: MenuContentProps) {
+const navItemSx = {
+  '& .MuiListItemText-primary': {
+    fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
+    fontSize: '0.8125rem',
+    fontWeight: 400,
+    letterSpacing: '0.01em',
+  },
+};
+
+const activeNavItemSx = {
+  '&.Mui-selected': {
+    backgroundColor: 'transparent',
+    borderLeft: '2px solid #D71921',
+    borderRadius: 0,
+    '& .MuiListItemText-primary': {
+      color: 'text.primary',
+      fontWeight: 500,
+    },
+    '& .MuiSvgIcon-root': {
+      color: 'text.primary',
+    },
+  },
+};
+
+export default function MenuContent({ collapsed = false, userRole }: MenuContentProps) {
   const location = useLocation();
   const isTaskRoute = (pathname: string) =>
     tasksChildren.some(
@@ -102,12 +132,12 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
     );
 
   const listButtonSx = collapsed
-    ? { minHeight: 46, justifyContent: 'center', px: 1.5, borderRadius: 3 }
-    : { minHeight: 46, borderRadius: 3 };
+    ? { minHeight: 40, justifyContent: 'center', px: 1.5, borderRadius: 0, ...navItemSx }
+    : { minHeight: 40, borderRadius: 0, ...navItemSx, ...activeNavItemSx };
 
   const listIconSx = collapsed
     ? { minWidth: 0, mr: 0, justifyContent: 'center' }
-    : { minWidth: 36 };
+    : { minWidth: 32 };
 
   return (
     <Stack sx={{ flexGrow: 1, p: 1, justifyContent: 'space-between' }}>
@@ -128,7 +158,11 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
               )
             ) : item.children ? (
               <>
-                <ListItemButton onClick={handleTasksClick} selected={isTaskRoute(location.pathname)}>
+                <ListItemButton
+                  onClick={handleTasksClick}
+                  selected={isTaskRoute(location.pathname)}
+                  sx={listButtonSx}
+                >
                   <ListItemIcon sx={listIconSx}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.text} />
                   {openTasks ? <ExpandLess /> : <ExpandMore />}
@@ -144,9 +178,9 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
                           location.pathname === child.path ||
                           location.pathname.startsWith(`${child.path}/`)
                         }
-                        sx={{ pl: 4, borderRadius: 3 }}
+                        sx={{ pl: 4, borderRadius: 0, ...navItemSx, ...activeNavItemSx }}
                       >
-                        <ListItemIcon sx={{ minWidth: 36 }}>{child.icon}</ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 32 }}>{child.icon}</ListItemIcon>
                         <ListItemText primary={child.text} />
                       </ListItemButton>
                     ))}
@@ -175,6 +209,18 @@ export default function MenuContent({ collapsed = false }: MenuContentProps) {
       </List>
 
       <List dense>
+        {userRole === "admin" && withTooltip(
+          "Admin",
+          <ListItemButton
+            component={Link}
+            to="/dashboard/admin"
+            selected={location.pathname.startsWith("/dashboard/admin")}
+            sx={listButtonSx}
+          >
+            <ListItemIcon sx={listIconSx}><AdminPanelSettingsRoundedIcon /></ListItemIcon>
+            {!collapsed && <ListItemText primary="Admin" />}
+          </ListItemButton>,
+        )}
         {secondaryListItems.map((item) => (
           <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
             {withTooltip(

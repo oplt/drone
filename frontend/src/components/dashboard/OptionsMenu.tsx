@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { styled } from '@mui/material/styles';
 import Divider, { dividerClasses } from '@mui/material/Divider';
 import Menu from '@mui/material/Menu';
 import MuiMenuItem from '@mui/material/MenuItem';
+import { styled } from '@mui/material/styles';
 import { paperClasses } from '@mui/material/Paper';
 import { listClasses } from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
@@ -11,7 +11,7 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import MenuButton from './MenuButton';
 import { useNavigate } from 'react-router-dom';
-import { clearToken } from '../../auth';
+import { logout } from '../../auth';
 
 const MenuItem = styled(MuiMenuItem)({
   margin: '2px 0',
@@ -29,8 +29,8 @@ export default function OptionsMenu() {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    clearToken();
+  const handleLogout = async () => {
+    await logout();
     navigate('/signin');
   };
 
@@ -63,10 +63,9 @@ export default function OptionsMenu() {
           },
         }}
       >
-        <MenuItem onClick={handleClose}>Farm profile</MenuItem>
-        <MenuItem onClick={handleClose}>My account</MenuItem>
+        <MenuItem onClick={handleClose}>Profile</MenuItem>
+        <MenuItem onClick={handleClose}>Account</MenuItem>
         <Divider />
-        <MenuItem onClick={handleClose}>Add farm member</MenuItem>
         <MenuItem onClick={handleClose}>Settings</MenuItem>
         <Divider />
         <MenuItem

@@ -453,12 +453,15 @@ class Orchestrator:
                 envelope.model_dump_jsonable(),
                 qos=1,
             )
-        await telemetry_manager.broadcast(
-            {
-                "type": envelope.kind,
-                "data": envelope.model_dump_jsonable(),
-            }
-        )
+        if isinstance(envelope, MissionLifecycleEnvelopeV1):
+            await telemetry_manager.ingest_mission_lifecycle_envelope(envelope)
+        else:
+            await telemetry_manager.broadcast(
+                {
+                    "type": envelope.kind,
+                    "data": envelope.model_dump_jsonable(),
+                }
+            )
 
     async def record_flight_event(
         self,
@@ -1325,11 +1328,14 @@ class Orchestrator:
             # STEP 1: Connect to drone
             # ------------------------------------------------------------------
             try:
-                logger.info("🔌 Connecting to drone...")
-                await asyncio.to_thread(self.drone.connect)
-                logger.info("✅ Drone connected successfully")
+                if getattr(self.drone, "vehicle", None):
+                    logger.info("🔌 Drone already connected, skipping connect")
+                else:
+                    logger.info("🔌 Connecting to drone...")
+                    await asyncio.to_thread(self.drone.connect)
+                    logger.info("✅ Drone connected successfully")
                 self._init_video()
-            except Exception as e:  # FIX (Bug 2): bare except -> except Exception as e
+            except Exception as e:
                 logger.exception(f"❌ Drone Connection failed: {e}")
                 raise
 

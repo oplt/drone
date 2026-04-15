@@ -7,10 +7,8 @@ import Stack from '@mui/material/Stack';
 import MuiToolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
-import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import SideMenuMobile from './SideMenuMobile';
 import MenuButton from './MenuButton';
-import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
 
 type DashboardUser = {
   first_name?: string | null;
@@ -31,8 +29,6 @@ const Toolbar = styled(MuiToolbar)({
 
 export default function AppNavbar({ user }: { user: DashboardUser }) {
   const [open, setOpen] = React.useState(false);
-  const displayName =
-    [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Operator';
 
   const toggleDrawer = (nextOpen: boolean) => () => {
     setOpen(nextOpen);
@@ -55,30 +51,28 @@ export default function AppNavbar({ user }: { user: DashboardUser }) {
           sx={{
             alignItems: 'center',
             width: '100%',
-            gap: 1.25,
-            px: 1.25,
+            gap: 1.5,
+            px: 2,
             py: 1,
-            borderRadius: 999,
             border: '1px solid',
             borderColor: 'divider',
-            bgcolor: 'background.paper',
-            backdropFilter: 'blur(18px)',
-            boxShadow: 1,
+            bgcolor: 'background.default',
           }}
         >
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mr: 'auto', minWidth: 0 }}>
-            <CustomIcon />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ color: 'text.primary' }}>
-                Farm Ops Console
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-                {displayName}
-              </Typography>
-            </Box>
-          </Stack>
-          <Chip size="small" label="Live" color="success" />
-          <ColorModeIconDropdown />
+          <Typography
+            sx={{
+              fontFamily: '"Space Mono", monospace',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'text.primary',
+              mr: 'auto',
+            }}
+          >
+            DRONE OPS
+          </Typography>
+          <Chip size="small" label="LIVE" color="success" />
           <MenuButton aria-label="Open menu" onClick={toggleDrawer(true)}>
             <MenuRoundedIcon />
           </MenuButton>
@@ -86,28 +80,5 @@ export default function AppNavbar({ user }: { user: DashboardUser }) {
         </Stack>
       </Toolbar>
     </AppBar>
-  );
-}
-
-export function CustomIcon() {
-  return (
-    <Box
-      sx={{
-        width: '1.85rem',
-        height: '1.85rem',
-        borderRadius: '12px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        alignSelf: 'center',
-        backgroundImage:
-          'linear-gradient(135deg, hsla(174, 60%, 45%, 0.95) 0%, hsla(174, 70%, 22%, 0.95) 100%)',
-        color: 'hsla(36, 100%, 92%, 0.9)',
-        border: '1px solid hsla(174, 45%, 40%, 0.6)',
-        boxShadow: 'inset 0 2px 6px rgba(255, 255, 255, 0.2)',
-      }}
-    >
-      <DashboardRoundedIcon color="inherit" sx={{ fontSize: '1rem' }} />
-    </Box>
   );
 }

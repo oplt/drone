@@ -1,20 +1,20 @@
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
-import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';
-import { clearToken } from '../../auth';
+import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
+import { logout } from '../../auth';
 import { useNavigate } from 'react-router-dom';
 
 type DashboardUser = {
   first_name?: string | null;
   last_name?: string | null;
   email: string;
+  role?: string | null;
 } | null;
 
 interface SideMenuMobileProps {
@@ -27,11 +27,20 @@ function getDisplayName(user: DashboardUser) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Operator';
 }
 
+function getInitials(user: DashboardUser) {
+  return getDisplayName(user)
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+}
+
 export default function SideMenuMobile({ open, toggleDrawer, user }: SideMenuMobileProps) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    clearToken();
+  const handleLogout = async () => {
+    await logout();
     navigate('/signin', { replace: true });
   };
 
@@ -44,54 +53,79 @@ export default function SideMenuMobile({ open, toggleDrawer, user }: SideMenuMob
         zIndex: (theme) => theme.zIndex.drawer + 1,
         [`& .${drawerClasses.paper}`]: {
           backgroundImage: 'none',
-          backgroundColor: 'background.paper',
+          backgroundColor: 'background.default',
+          borderLeft: '1px solid',
+          borderColor: 'divider',
         },
       }}
     >
       <Stack
         sx={{
-          width: { xs: '82dvw', sm: 360 },
-          maxWidth: 360,
+          width: { xs: '82dvw', sm: 320 },
+          maxWidth: 320,
           height: '100%',
         }}
       >
-        <Stack direction="row" sx={{ p: 2, pb: 1, gap: 1.25 }}>
-          <Stack
-            direction="row"
-            sx={{ gap: 1.25, alignItems: 'center', flexGrow: 1, p: 1 }}
+        <Stack direction="row" sx={{ p: 2, pb: 1, gap: 1.5, alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              border: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Avatar sx={{ width: 34, height: 34 }}>
-              {getDisplayName(user)
-                .split(/[\s@._-]+/)
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((part) => part.charAt(0).toUpperCase())
-                .join('')}
-            </Avatar>
-            <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-              <Typography component="p" variant="subtitle2" noWrap>
-                {getDisplayName(user)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {user?.email || 'Farm session'}
-              </Typography>
-            </Stack>
+            <Typography
+              sx={{
+                fontFamily: '"Space Mono", monospace',
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                color: 'text.primary',
+              }}
+            >
+              {getInitials(user)}
+            </Typography>
+          </Box>
+          <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
+            <Typography component="p" variant="subtitle2" noWrap>
+              {getDisplayName(user)}
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: '"Space Mono", monospace',
+                fontSize: '0.625rem',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'text.secondary',
+              }}
+              noWrap
+            >
+              {user?.role || 'OPERATOR'}
+            </Typography>
           </Stack>
-          <MenuButton showBadge>
-            <NotificationsRoundedIcon />
-          </MenuButton>
+          <ColorModeIconDropdown />
         </Stack>
-        <Divider />
+        <Divider sx={{ borderColor: 'divider' }} />
         <Stack sx={{ flexGrow: 1 }}>
-          <MenuContent />
-          <Divider />
+          <MenuContent userRole={user?.role ?? undefined} />
         </Stack>
+        <Divider sx={{ borderColor: 'divider' }} />
         <Stack sx={{ p: 2 }}>
           <Button
             variant="outlined"
             fullWidth
             startIcon={<LogoutRoundedIcon />}
             onClick={handleLogout}
+            sx={{
+              fontFamily: '"Space Mono", monospace',
+              fontSize: '0.6875rem',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}
           >
             Log out
           </Button>

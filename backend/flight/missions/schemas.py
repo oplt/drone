@@ -16,6 +16,7 @@ class MissionType(str, Enum):
     ADAPTIVE_ALTITUDE = "adaptive_altitude"
     WAYPOINT = "waypoint"
     ROUTE = "route"
+    CONTROLLED = "controlled"
 
 
 class Waypoint(BaseModel):
@@ -166,6 +167,19 @@ class PerimeterPatrolMission(BaseMission):
         if len(v) < 3:
             raise ValueError("Polygon must have at least 3 points")
         return v
+
+
+class ControlledFlightMissionSchema(BaseMission):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        use_enum_values=True,
+        extra="ignore",
+    )
+    type: Literal["controlled"]
+    waypoints: list[Waypoint] = Field(default_factory=list)
+    speed: float | None = Field(default=0.0, ge=0.0, le=50.0)
+    altitude_agl: float | None = Field(default=30.0, ge=0.0, le=500.0)
+    control_mode: str = "manual_pilot"
 
 
 class AdaptiveAltitudeMission(BaseMission):
@@ -364,7 +378,8 @@ Mission = Annotated[
     | OrbitMission
     | TerrainFollowMission
     | PerimeterPatrolMission
-    | AdaptiveAltitudeMission,
+    | AdaptiveAltitudeMission
+    | ControlledFlightMissionSchema,
     Field(discriminator="type"),
 ]
 
@@ -389,6 +404,7 @@ def create_mission_from_dict(data: dict) -> Mission:
         "polygon": PerimeterPatrolMission,
         "patrol": PerimeterPatrolMission,
         "adaptive_altitude": AdaptiveAltitudeMission,
+        "controlled": ControlledFlightMissionSchema,
     }
 
     mission_class = type_map.get(mission_type)

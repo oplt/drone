@@ -1,7 +1,6 @@
 import { alpha } from '@mui/material/styles';
 import type { Components } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
-import { gray } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const feedbackCustomizations: Components<Theme> = {
@@ -9,19 +8,26 @@ export const feedbackCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme, ownerState }) => {
         const severity = ownerState.severity ?? 'info';
-        const palette = theme.palette[severity];
+        const colorMap: Record<string, string> = {
+          error: '#D71921',
+          warning: '#D4A843',
+          success: '#4A9E5C',
+          info: '#999999',
+        };
+        const accentColor = colorMap[severity] || '#999999';
 
         return {
-          borderRadius: 14,
-          backgroundColor: alpha(palette.main, 0.08),
+          borderRadius: 8,
+          backgroundColor: alpha(accentColor, 0.08),
           color: (theme.vars || theme).palette.text.primary,
-          border: `1px solid ${alpha(palette.main, 0.18)}`,
+          border: `1px solid ${alpha(accentColor, 0.2)}`,
+          fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
           '& .MuiAlert-icon': {
-            color: palette.main,
+            color: accentColor,
           },
           ...theme.applyStyles('dark', {
-            backgroundColor: alpha(palette.main, 0.18),
-            border: `1px solid ${alpha(palette.main, 0.34)}`,
+            backgroundColor: alpha(accentColor, 0.12),
+            border: `1px solid ${alpha(accentColor, 0.25)}`,
           }),
         };
       },
@@ -31,9 +37,12 @@ export const feedbackCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         '& .MuiDialog-paper': {
-          borderRadius: '20px',
+          borderRadius: 16,
           border: '1px solid',
-          borderColor: (theme.vars || theme).palette.divider,
+          borderColor: '#333333',
+          backgroundImage: 'none',
+          backgroundColor: (theme.vars || theme).palette.background.paper,
+          boxShadow: 'none',
         },
       }),
     },
@@ -41,22 +50,25 @@ export const feedbackCustomizations: Components<Theme> = {
   MuiLinearProgress: {
     styleOverrides: {
       root: ({ theme }) => ({
-        height: 8,
-        borderRadius: 8,
-        backgroundColor: gray[200],
+        height: 4,
+        borderRadius: 0,
+        backgroundColor: '#222222',
         ...theme.applyStyles('dark', {
-          backgroundColor: gray[800],
+          backgroundColor: '#222222',
         }),
+        '& .MuiLinearProgress-bar': {
+          borderRadius: 0,
+        },
       }),
     },
   },
   MuiSkeleton: {
     styleOverrides: {
       root: ({ theme }) => ({
-        borderRadius: 12,
-        backgroundColor: alpha(theme.palette.text.primary, 0.07),
+        borderRadius: 4,
+        backgroundColor: alpha('#999999', 0.08),
         ...theme.applyStyles('dark', {
-          backgroundColor: alpha(theme.palette.common.white, 0.08),
+          backgroundColor: alpha('#999999', 0.08),
         }),
       }),
     },

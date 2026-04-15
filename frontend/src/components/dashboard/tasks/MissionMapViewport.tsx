@@ -38,10 +38,7 @@ export function MissionMapViewport({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "hsla(36, 30%, 96%, 0.7)",
-          '[data-mui-color-scheme="dark"] &': {
-            bgcolor: "hsla(168, 18%, 14%, 0.88)",
-          },
+          bgcolor: "background.paper",
         }}
       >
         <CircularProgress />
@@ -59,10 +56,7 @@ export function MissionMapViewport({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "hsla(36, 30%, 96%, 0.7)",
-          '[data-mui-color-scheme="dark"] &': {
-            bgcolor: "hsla(168, 18%, 14%, 0.88)",
-          },
+          bgcolor: "background.paper",
         }}
       >
         <CircularProgress />

@@ -1,7 +1,6 @@
 import { alpha } from '@mui/material/styles';
 import type { Components } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
-import { gray } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const surfacesCustomizations: Components<Theme> = {
@@ -15,7 +14,8 @@ export const surfacesCustomizations: Components<Theme> = {
         padding: 4,
         overflow: 'clip',
         backgroundColor: (theme.vars || theme).palette.background.default,
-        border: `1px solid ${gray[300]}`,
+        border: '1px solid',
+        borderColor: (theme.vars || theme).palette.divider,
         boxShadow: 'none',
         ':before': {
           backgroundColor: 'transparent',
@@ -31,9 +31,6 @@ export const surfacesCustomizations: Components<Theme> = {
           borderBottomLeftRadius: (theme.vars || theme).shape.borderRadius,
           borderBottomRightRadius: (theme.vars || theme).shape.borderRadius,
         },
-        ...theme.applyStyles('dark', {
-          border: `1px solid ${alpha(gray[300], 0.12)}`,
-        }),
       }),
     },
   },
@@ -42,11 +39,8 @@ export const surfacesCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         border: 'none',
         borderRadius: (theme.vars || theme).shape.borderRadius,
-        '&:hover': { backgroundColor: gray[200] },
+        '&:hover': { backgroundColor: alpha('#999999', 0.06) },
         '&:focus-visible': { backgroundColor: 'transparent' },
-        ...theme.applyStyles('dark', {
-          '&:hover': { backgroundColor: alpha(gray[300], 0.06) },
-        }),
       }),
     },
   },
@@ -73,22 +67,21 @@ export const surfacesCustomizations: Components<Theme> = {
         return {
           padding: 20,
           gap: 20,
-          transition: 'border-color 160ms ease',
-          backgroundColor: gray[50],
-          borderRadius: (theme.vars || theme).shape.borderRadius,
-          border: `1px solid ${gray[300]}`,
+          transition: 'border-color 150ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+          backgroundColor: (theme.vars || theme).palette.background.paper,
+          borderRadius: 16,
+          border: '1px solid',
+          borderColor: (theme.vars || theme).palette.divider,
           boxShadow: 'none',
           '@media (hover: hover)': {
             '&:hover': {
-              borderColor: gray[400],
+              borderColor: '#333333',
             },
           },
           ...theme.applyStyles('dark', {
-            backgroundColor: '#211916',
-            border: `1px solid ${alpha(gray[300], 0.12)}`,
             '@media (hover: hover)': {
               '&:hover': {
-                borderColor: alpha(gray[300], 0.2),
+                borderColor: '#333333',
               },
             },
           }),
@@ -96,12 +89,11 @@ export const surfacesCustomizations: Components<Theme> = {
             {
               props: { variant: 'outlined' },
               style: {
-                border: `1px solid ${gray[300]}`,
+                border: '1px solid',
+                borderColor: (theme.vars || theme).palette.divider,
                 boxShadow: 'none',
-                background: gray[50],
                 ...theme.applyStyles('dark', {
-                  background: alpha('#211916', 0.9),
-                  border: `1px solid ${alpha(gray[300], 0.12)}`,
+                  borderColor: '#222222',
                 }),
               },
             },

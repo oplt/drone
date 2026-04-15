@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { alpha } from "@mui/material/styles";
 import type { SxProps, Theme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -45,34 +44,32 @@ export default function PageLayout({
   return (
     <Box sx={{ width: "100%", maxWidth, px: { xs: 0, sm: 1 } }}>
       <Stack spacing={3}>
-        <Paper
-          variant="outlined"
-          sx={(theme) => ({
-            p: { xs: 3, md: 4 },
-            borderRadius: 5,
-            background:
-              "linear-gradient(145deg, hsla(35, 85%, 95%, 0.88), hsla(166, 58%, 95%, 0.84))",
-            borderColor: alpha(theme.palette.primary.main, 0.16),
-            ...theme.applyStyles("dark", {
-              background:
-                "linear-gradient(145deg, hsla(28, 24%, 13%, 0.92), hsla(168, 28%, 14%, 0.84))",
-            }),
-          })}
-        >
+        <Box sx={{ px: { xs: 0, md: 1 }, pt: { xs: 1, md: 2 } }}>
           <Stack spacing={3}>
             <Stack
               direction={{ xs: "column", lg: "row" }}
               spacing={3}
               justifyContent="space-between"
             >
-              <Stack spacing={1.25} sx={{ maxWidth: 760 }}>
+              <Stack spacing={1.5} sx={{ maxWidth: 760 }}>
                 {eyebrow ? (
-                  <Typography variant="overline" sx={{ letterSpacing: 2, color: "text.secondary" }}>
+                  <Typography
+                    sx={{
+                      fontFamily: '"Space Mono", monospace',
+                      fontSize: '0.6875rem',
+                      fontWeight: 400,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'text.secondary',
+                    }}
+                  >
                     {eyebrow}
                   </Typography>
                 ) : null}
-                <Typography variant="h3">{title}</Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography variant="h3" sx={{ color: 'text.primary' }}>
+                  {title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
                   {description}
                 </Typography>
               </Stack>
@@ -90,22 +87,39 @@ export default function PageLayout({
                         <Grid key={`${metric.label}-${metric.value}`} size={{ xs: 12, sm: 4 }}>
                           <Paper
                             variant="outlined"
-                            sx={(theme) => ({
-                              p: 2.25,
+                            sx={{
+                              p: 2.5,
                               height: "100%",
-                              borderRadius: 4,
-                              backgroundColor: "rgba(255,255,255,0.66)",
-                              backdropFilter: "blur(12px)",
-                              ...theme.applyStyles("dark", {
-                                backgroundColor: "rgba(17,22,26,0.72)",
-                              }),
-                            })}
+                              borderRadius: 3,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              backgroundColor: 'background.paper',
+                            }}
                           >
-                            <Stack spacing={0.75}>
-                              <Typography variant="caption" color="text.secondary">
+                            <Stack spacing={0.5}>
+                              <Typography
+                                sx={{
+                                  fontFamily: '"Space Mono", monospace',
+                                  fontSize: '0.6875rem',
+                                  fontWeight: 400,
+                                  letterSpacing: '0.08em',
+                                  textTransform: 'uppercase',
+                                  color: 'text.secondary',
+                                }}
+                              >
                                 {metric.label}
                               </Typography>
-                              <Typography variant="h5">{metric.value}</Typography>
+                              <Typography
+                                sx={{
+                                  fontFamily: '"Space Mono", monospace',
+                                  fontSize: '1.5rem',
+                                  fontWeight: 400,
+                                  lineHeight: 1.1,
+                                  color: 'text.primary',
+                                }}
+                              >
+                                {metric.value}
+                              </Typography>
                               {metric.caption ? (
                                 <Typography variant="body2" color="text.secondary">
                                   {metric.caption}
@@ -122,7 +136,7 @@ export default function PageLayout({
               </Grid>
             )}
           </Stack>
-        </Paper>
+        </Box>
 
         {children}
       </Stack>
@@ -143,7 +157,10 @@ export function PageSection({
       sx={[
         {
           p: { xs: 2.5, md: 3 },
-          borderRadius: 4,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
@@ -157,7 +174,11 @@ export function PageSection({
           sx={{ mb: 2.5 }}
         >
           <Stack spacing={0.5}>
-            {title ? <Typography variant="h6">{title}</Typography> : null}
+            {title ? (
+              <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                {title}
+              </Typography>
+            ) : null}
             {description ? (
               <Typography variant="body2" color="text.secondary">
                 {description}

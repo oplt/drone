@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import (
@@ -35,13 +35,17 @@ class WarehouseMappingRepository:
         *,
         warehouse_map_id: int,
         owner_id: int,
+        org_id: int | None = None,
+        allow_org_access: bool = False,
     ) -> WarehouseMap | None:
+        scope = (
+            or_(WarehouseMap.owner_id == owner_id, WarehouseMap.org_id == org_id)
+            if allow_org_access and org_id is not None
+            else WarehouseMap.owner_id == owner_id
+        )
         return (
             await db.execute(
-                select(WarehouseMap).where(
-                    WarehouseMap.id == warehouse_map_id,
-                    WarehouseMap.owner_id == owner_id,
-                )
+                select(WarehouseMap).where(WarehouseMap.id == warehouse_map_id, scope)
             )
         ).scalar_one_or_none()
 
@@ -50,13 +54,20 @@ class WarehouseMappingRepository:
         db: AsyncSession,
         *,
         owner_id: int,
+        org_id: int | None = None,
+        allow_org_access: bool = False,
         limit: int = 100,
     ) -> list[WarehouseMap]:
+        scope = (
+            or_(WarehouseMap.owner_id == owner_id, WarehouseMap.org_id == org_id)
+            if allow_org_access and org_id is not None
+            else WarehouseMap.owner_id == owner_id
+        )
         return (
             (
                 await db.execute(
                     select(WarehouseMap)
-                    .where(WarehouseMap.owner_id == owner_id)
+                    .where(scope)
                     .order_by(WarehouseMap.id.desc())
                     .limit(limit)
                 )
@@ -71,10 +82,16 @@ class WarehouseMappingRepository:
         *,
         warehouse_map_id: int,
         owner_id: int,
+        org_id: int | None = None,
+        allow_org_access: bool = False,
     ) -> bool:
         """Returns True if a row was deleted, False if not found / not owned."""
         warehouse_map = await self.get_owned_warehouse_map(
-            db, warehouse_map_id=warehouse_map_id, owner_id=owner_id
+            db,
+            warehouse_map_id=warehouse_map_id,
+            owner_id=owner_id,
+            org_id=org_id,
+            allow_org_access=allow_org_access,
         )
         if warehouse_map is None:
             return False
@@ -157,6 +174,8 @@ class WarehouseMappingRepository:
         db: AsyncSession,
         *,
         owner_id: int,
+        org_id: int | None,
+        project_id: int | None,
         warehouse_name: str,
         polygon_local_m: list[tuple[float, float]],
         meta_data: dict[str, Any] | None = None,
@@ -177,6 +196,8 @@ class WarehouseMappingRepository:
 
         warehouse_map = WarehouseMap(
             owner_id=owner_id,
+            org_id=org_id,
+            project_id=project_id,
             name=warehouse_name.strip(),
             boundary=None,  # indoor — no GPS boundary
             centroid=None,
@@ -192,6 +213,8 @@ class WarehouseMappingRepository:
         db: AsyncSession,
         *,
         owner_id: int,
+        org_id: int | None,
+        project_id: int | None,
         warehouse_map_id: int | None,
         warehouse_name: str | None,
         polygon_local_m: list[tuple[float, float]],
@@ -202,6 +225,8 @@ class WarehouseMappingRepository:
                 db,
                 warehouse_map_id=int(warehouse_map_id),
                 owner_id=owner_id,
+                org_id=org_id,
+                allow_org_access=org_id is not None,
             )
             if warehouse_map is None:
                 raise WarehouseRepositoryError("Selected warehouse map was not found.")
@@ -210,6 +235,8 @@ class WarehouseMappingRepository:
         return await self.create_warehouse_map(
             db,
             owner_id=owner_id,
+            org_id=org_id,
+            project_id=project_id,
             warehouse_name=resolved_name,
             polygon_local_m=polygon_local_m,
             meta_data=meta_data,
@@ -324,15 +351,22 @@ class WarehouseMappingRepository:
         db: AsyncSession,
         *,
         owner_id: int,
+        org_id: int | None = None,
+        allow_org_access: bool = False,
         warehouse_map_id: int | None = None,
         limit: int = 50,
     ) -> list[tuple[WarehouseMappingJob, WarehouseMap, WarehouseModel]]:
+        scope = (
+            or_(WarehouseMap.owner_id == owner_id, WarehouseMap.org_id == org_id)
+            if allow_org_access and org_id is not None
+            else WarehouseMap.owner_id == owner_id
+        )
         stmt = (
             select(WarehouseMappingJob, WarehouseMap, WarehouseModel)
             .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)
             .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)
             .where(
-                WarehouseMap.owner_id == owner_id,
+                scope,
                 WarehouseMappingJob.processor == "warehouse_scan",
                 WarehouseMappingJob.status == "ready",
                 WarehouseModel.status == "ready",

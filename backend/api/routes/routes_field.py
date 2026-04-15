@@ -27,10 +27,11 @@ from shapely.validation import explain_validity
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.deps import require_user
+from backend.auth.deps import OrgUser, require_org_user, require_org_write
 from backend.db.models import Field as FieldModel
 from backend.db.session import get_db
 from backend.schemas.field import FieldCreateGeoJSON, FieldOut, FieldUpdate
+from backend.services.access_control import get_default_project, ownership_clause
 
 router = APIRouter(prefix="/fields", tags=["fields"])
 
@@ -77,7 +78,7 @@ def _field_out(field: FieldModel) -> FieldOut:
 async def create_field(
     payload: FieldCreateGeoJSON,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ):
     """Create a new field boundary for the authenticated user.
 
@@ -89,8 +90,12 @@ async def create_field(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    user = org_user.user
+    default_project = await get_default_project(db, org_id=int(user.org_id)) if user.org_id else None
     field = FieldModel(
         owner_id=user.id,  # ← from auth, not payload
+        org_id=user.org_id,
+        project_id=default_project.id if default_project else None,
         name=payload.name,
         boundary=from_shape(poly, srid=4326),
         area_ha=None,  # computed below if PostGIS available
@@ -122,16 +127,17 @@ async def list_fields(
     q: str | None = Query(None, description="Name search (ILIKE)"),
     limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ):
     """List fields owned by the authenticated user.
 
     NOTE: The frontend should prefer GET /fields/features which returns
     geometry in a single round-trip instead of N+1 calls.
     """
+    user = org_user.user
     stmt = (
         select(FieldModel)
-        .where(FieldModel.owner_id == user.id)
+        .where(ownership_clause(user=user, owner_col=FieldModel.owner_id, org_col=FieldModel.org_id))
         .order_by(FieldModel.id.desc())
         .limit(limit)
     )
@@ -147,16 +153,17 @@ async def list_fields_features(
     q: str | None = Query(None, description="Name search (ILIKE)"),
     limit: int = Query(500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ):
     """Return all fields as a GeoJSON FeatureCollection **in one call**.
 
     The frontend should call this endpoint instead of GET /fields + N×
     GET /fields/{id}/geojson to avoid N+1 network round-trips.
     """
+    user = org_user.user
     stmt = (
         select(FieldModel)
-        .where(FieldModel.owner_id == user.id)
+        .where(ownership_clause(user=user, owner_col=FieldModel.owner_id, org_col=FieldModel.org_id))
         .order_by(FieldModel.id.desc())
         .limit(limit)
     )
@@ -190,9 +197,9 @@ async def list_fields_features(
 async def get_field(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ):
-    field = await _get_owned_field(field_id, user.id, db)
+    field = await _get_owned_field(field_id, org_user.user, db)
     return _field_out(field)
 
 
@@ -200,9 +207,9 @@ async def get_field(
 async def get_field_geojson(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ):
-    field = await _get_owned_field(field_id, user.id, db)
+    field = await _get_owned_field(field_id, org_user.user, db)
     poly = to_shape(field.boundary)
     return {
         "type": "Feature",
@@ -221,9 +228,9 @@ async def update_field(
     field_id: int,
     payload: FieldUpdate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ):
-    field = await _get_owned_field(field_id, user.id, db)
+    field = await _get_owned_field(field_id, org_user.user, db)
 
     if payload.name is not None:
         field.name = payload.name
@@ -258,10 +265,10 @@ async def update_field(
 async def delete_field(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ):
     """Delete a field owned by the authenticated user."""
-    field = await _get_owned_field(field_id, user.id, db)
+    field = await _get_owned_field(field_id, org_user.user, db)
     await db.delete(field)
     await db.commit()
 
@@ -271,12 +278,11 @@ async def delete_field(
 # ---------------------------------------------------------------------------
 
 
-async def _get_owned_field(field_id: int, owner_id: int, db: AsyncSession) -> FieldModel:
+async def _get_owned_field(field_id: int, user, db: AsyncSession) -> FieldModel:
     field = (
         await db.execute(
-            select(FieldModel).where(
-                FieldModel.id == field_id,
-                FieldModel.owner_id == owner_id,
+            select(FieldModel).where(FieldModel.id == field_id).where(
+                ownership_clause(user=user, owner_col=FieldModel.owner_id, org_col=FieldModel.org_id)
             )
         )
     ).scalar_one_or_none()

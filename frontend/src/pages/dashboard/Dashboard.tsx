@@ -1,6 +1,5 @@
 import React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { alpha } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
@@ -21,6 +20,7 @@ type User = {
   email: string;
   first_name?: string | null;
   last_name?: string | null;
+  role?: string | null;
 };
 
 const xThemeComponents = {
@@ -29,15 +29,12 @@ const xThemeComponents = {
   ...datePickersCustomizations,
 };
 
-
-
 export default function Dashboard(props: { disableCustomTheme?: boolean }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [authChecked, setAuthChecked] = React.useState(false);
   const navigate = useNavigate();
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
   const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
-
 
   React.useEffect(() => {
     const token = getToken();
@@ -49,10 +46,24 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
     let cancelled = false;
     const controller = new AbortController();
 
-    fetch(`${API_BASE_CLEAN}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
+    const fetchMe = (signal: AbortSignal) =>
+      fetch(`${API_BASE_CLEAN}/auth/me`, {
+        credentials: "include",
+        signal,
+      });
+
+    fetchMe(controller.signal)
+      .then(async (r) => {
+        if (r.status === 401) {
+          const refreshRes = await fetch(`${API_BASE_CLEAN}/auth/refresh`, {
+            method: "POST",
+            credentials: "include",
+          });
+          if (!refreshRes.ok) throw new Error("unauthorized");
+          return fetchMe(controller.signal);
+        }
+        return r;
+      })
       .then(async (r) => {
         if (!r.ok) {
           if (r.status === 401 || r.status === 403) {
@@ -100,23 +111,12 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
         <AppNavbar user={user} />
         <Box
           component="main"
-          sx={(theme) => ({
+          sx={{
             flexGrow: 1,
-            backgroundColor: theme.vars
-              ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
-              : alpha(theme.palette.background.default, 1),
+            backgroundColor: "background.default",
             overflow: "auto",
             position: "relative",
-            "&::before": {
-              content: '""',
-              position: "fixed",
-              inset: 0,
-              zIndex: 0,
-              pointerEvents: "none",
-              background:
-                "radial-gradient(circle at top right, hsla(174, 55%, 88%, 0.22), transparent 30%), radial-gradient(circle at top left, hsla(36, 90%, 88%, 0.2), transparent 28%)",
-            },
-          })}
+          }}
         >
           <AlertCenterProvider>
             <Stack
@@ -130,7 +130,6 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
                 zIndex: 1,
               }}
             >
-              {/* This is where pages will render */}
               <Outlet />
             </Stack>
           </AlertCenterProvider>

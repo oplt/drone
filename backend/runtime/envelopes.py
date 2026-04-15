@@ -144,6 +144,7 @@ class TelemetryBatteryV1(BaseModel):
 class TelemetryGpsV1(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    fix_type: int | None = None
     satellites_visible: int | None = None
     hdop: float | None = None
 
@@ -185,6 +186,37 @@ class TelemetryFailsafeV1(BaseModel):
     state: str | None = None
 
 
+class TelemetryHeartbeatV1(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    last_received: str | None = None
+
+
+class TelemetryEkfV1(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    flags: int | None = None
+    ok: bool | None = None
+    velocity_ok: bool | None = None
+    pos_horiz_ok: bool | None = None
+    pos_vert_ok: bool | None = None
+    compass_ok: bool | None = None
+    velocity_variance: float | None = None
+    pos_horiz_variance: float | None = None
+    pos_vert_variance: float | None = None
+    compass_variance: float | None = None
+
+
+class TelemetryCompassV1(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    x: float | None = None
+    y: float | None = None
+    z: float | None = None
+    mag_field: float | None = None
+    healthy: bool | None = None
+
+
 class TelemetryCameraV1(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -204,6 +236,9 @@ class TelemetryPayloadV1(BaseModel):
     system: TelemetrySystemV1 = Field(default_factory=TelemetrySystemV1)
     failsafe: TelemetryFailsafeV1 = Field(default_factory=TelemetryFailsafeV1)
     camera: TelemetryCameraV1 = Field(default_factory=TelemetryCameraV1)
+    heartbeat: TelemetryHeartbeatV1 = Field(default_factory=TelemetryHeartbeatV1)
+    ekf: TelemetryEkfV1 = Field(default_factory=TelemetryEkfV1)
+    compass: TelemetryCompassV1 = Field(default_factory=TelemetryCompassV1)
     flight_mode: str = "DISCONNECTED"
     armed: bool = False
     coalesced_message_count: int | None = None
@@ -226,6 +261,9 @@ class TelemetryPayloadV1(BaseModel):
         system = snap.get("system") or {}
         failsafe = snap.get("failsafe") or {}
         camera = snap.get("camera") or {}
+        heartbeat_data = snap.get("heartbeat") or {}
+        ekf_data = snap.get("ekf") or {}
+        compass_data = snap.get("compass") or {}
 
         return cls(
             position=TelemetryPositionV1(
@@ -259,6 +297,7 @@ class TelemetryPayloadV1(BaseModel):
                 ),
             ),
             gps=TelemetryGpsV1(
+                fix_type=_int_or_none(gps.get("fix_type")),
                 satellites_visible=_int_or_none(
                     gps.get("satellites_visible", gps.get("satellites"))
                 ),
@@ -289,6 +328,11 @@ class TelemetryPayloadV1(BaseModel):
             camera=TelemetryCameraV1(
                 gimbal_pitch_deg=_float_or_none(camera.get("gimbal_pitch_deg"))
             ),
+            heartbeat=TelemetryHeartbeatV1(
+                last_received=heartbeat_data.get("last_received"),
+            ),
+            ekf=TelemetryEkfV1(**{k: ekf_data[k] for k in ekf_data if k in TelemetryEkfV1.model_fields}),
+            compass=TelemetryCompassV1(**{k: compass_data[k] for k in compass_data if k in TelemetryCompassV1.model_fields}),
             flight_mode=str(snap.get("flight_mode", snap.get("mode", "DISCONNECTED"))),
             armed=bool(snap.get("armed", False)),
             coalesced_message_count=coalesced_message_count,
@@ -328,6 +372,7 @@ class TelemetryPayloadV1(BaseModel):
                 "temperature": self.battery.temperature_c or 0,
             },
             "gps": {
+                "fix_type": self.gps.fix_type,
                 "satellites": self.gps.satellites_visible or 0,
                 "hdop": self.gps.hdop,
             },
@@ -351,6 +396,28 @@ class TelemetryPayloadV1(BaseModel):
             },
             "camera": {
                 "gimbal_pitch_deg": self.camera.gimbal_pitch_deg,
+            },
+            "heartbeat": {
+                "last_received": self.heartbeat.last_received,
+            },
+            "ekf": {
+                "flags": self.ekf.flags,
+                "ok": self.ekf.ok,
+                "velocity_ok": self.ekf.velocity_ok,
+                "pos_horiz_ok": self.ekf.pos_horiz_ok,
+                "pos_vert_ok": self.ekf.pos_vert_ok,
+                "compass_ok": self.ekf.compass_ok,
+                "velocity_variance": self.ekf.velocity_variance,
+                "pos_horiz_variance": self.ekf.pos_horiz_variance,
+                "pos_vert_variance": self.ekf.pos_vert_variance,
+                "compass_variance": self.ekf.compass_variance,
+            },
+            "compass": {
+                "x": self.compass.x,
+                "y": self.compass.y,
+                "z": self.compass.z,
+                "mag_field": self.compass.mag_field,
+                "healthy": self.compass.healthy,
             },
             "mode": self.flight_mode,
             "armed": self.armed,

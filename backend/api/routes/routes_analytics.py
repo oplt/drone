@@ -200,11 +200,12 @@ async def overview(
         for e in events
     ]
 
+    telemetry = telemetry_manager.runtime_snapshot()
     system = {
-        "telemetry_running": telemetry_manager._running,
-        "active_connections": len(telemetry_manager.active_connections),
-        "last_update": telemetry_manager.get_last_telemetry_timestamp(),
-        "mavlink_connected": telemetry_manager.source_connected(),
+        "telemetry_running": telemetry["running"],
+        "active_connections": telemetry["active_connections"],
+        "last_update": telemetry["last_update"],
+        "mavlink_connected": telemetry["source_connected"],
     }
 
     return {

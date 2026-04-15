@@ -4,8 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from backend.config import bootstrap
 
-from .models import Base
-
 engine = create_async_engine(
     bootstrap.database_url,
     pool_pre_ping=True,
@@ -14,8 +12,9 @@ Session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession
 
 
 async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """No-op: schema is managed exclusively by Alembic migrations.
+    Run `alembic -c backend/alembic.ini upgrade head` before starting the app.
+    """
 
 
 async def close_db() -> None:

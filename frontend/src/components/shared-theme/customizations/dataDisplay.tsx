@@ -6,7 +6,6 @@ import { typographyClasses } from '@mui/material/Typography';
 import { buttonBaseClasses } from '@mui/material/ButtonBase';
 import { chipClasses } from '@mui/material/Chip';
 import { iconButtonClasses } from '@mui/material/IconButton';
-import { gray, red, green } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const dataDisplayCustomizations: Components<Theme> = {
@@ -29,7 +28,7 @@ export const dataDisplayCustomizations: Components<Theme> = {
           color: (theme.vars || theme).palette.text.secondary,
         },
         [`& .${typographyClasses.root}`]: {
-          fontWeight: 500,
+          fontWeight: 400,
         },
         [`& .${buttonBaseClasses.root}`]: {
           display: 'flex',
@@ -39,15 +38,15 @@ export const dataDisplayCustomizations: Components<Theme> = {
           opacity: 0.7,
           '&.Mui-selected': {
             opacity: 1,
-            backgroundColor: alpha(theme.palette.action.selected, 0.3),
+            backgroundColor: alpha('#999999', 0.12),
             [`& .${svgIconClasses.root}`]: {
               color: (theme.vars || theme).palette.text.primary,
             },
             '&:focus-visible': {
-              backgroundColor: alpha(theme.palette.action.selected, 0.3),
+              backgroundColor: alpha('#999999', 0.12),
             },
             '&:hover': {
-              backgroundColor: alpha(theme.palette.action.selected, 0.5),
+              backgroundColor: alpha('#999999', 0.16),
             },
           },
           '&:focus-visible': {
@@ -61,12 +60,14 @@ export const dataDisplayCustomizations: Components<Theme> = {
     styleOverrides: {
       primary: ({ theme }) => ({
         fontSize: theme.typography.body2.fontSize,
-        fontWeight: 500,
+        fontWeight: 400,
         lineHeight: theme.typography.body2.lineHeight,
+        fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
       }),
       secondary: ({ theme }) => ({
         fontSize: theme.typography.caption.fontSize,
         lineHeight: theme.typography.caption.lineHeight,
+        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
       }),
     },
   },
@@ -75,8 +76,11 @@ export const dataDisplayCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         backgroundColor: 'transparent',
         padding: '4px 8px',
-        fontSize: theme.typography.caption.fontSize,
-        fontWeight: 500,
+        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
+        fontSize: '0.6875rem',
+        fontWeight: 400,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase' as const,
         lineHeight: theme.typography.caption.lineHeight,
       }),
     },
@@ -95,103 +99,74 @@ export const dataDisplayCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         border: '1px solid',
-        borderRadius: '999px',
+        borderRadius: 4,
+        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.04em',
         [`& .${chipClasses.label}`]: {
-          fontWeight: 600,
+          fontWeight: 400,
+          fontSize: '0.6875rem',
         },
         variants: [
           {
-            props: {
-              color: 'default',
-            },
+            props: { color: 'default' },
             style: {
-              borderColor: gray[200],
-              backgroundColor: gray[100],
+              borderColor: '#333333',
+              backgroundColor: 'transparent',
               [`& .${chipClasses.label}`]: {
-                color: gray[500],
-              },
-              [`& .${chipClasses.icon}`]: {
-                color: gray[500],
+                color: (theme.vars || theme).palette.text.secondary,
               },
               ...theme.applyStyles('dark', {
-                borderColor: gray[700],
-                backgroundColor: gray[800],
-                [`& .${chipClasses.label}`]: {
-                  color: gray[300],
-                },
-                [`& .${chipClasses.icon}`]: {
-                  color: gray[300],
-                },
+                borderColor: '#333333',
               }),
             },
           },
           {
-            props: {
-              color: 'success',
-            },
+            props: { color: 'success' },
             style: {
-              borderColor: green[200],
-              backgroundColor: green[50],
+              borderColor: alpha('#4A9E5C', 0.3),
+              backgroundColor: alpha('#4A9E5C', 0.08),
               [`& .${chipClasses.label}`]: {
-                color: green[500],
+                color: '#4A9E5C',
               },
-              [`& .${chipClasses.icon}`]: {
-                color: green[500],
-              },
-              ...theme.applyStyles('dark', {
-                borderColor: green[800],
-                backgroundColor: green[900],
-                [`& .${chipClasses.label}`]: {
-                  color: green[300],
-                },
-                [`& .${chipClasses.icon}`]: {
-                  color: green[300],
-                },
-              }),
             },
           },
           {
-            props: {
-              color: 'error',
-            },
+            props: { color: 'error' },
             style: {
-              borderColor: red[100],
-              backgroundColor: red[50],
+              borderColor: alpha('#D71921', 0.3),
+              backgroundColor: alpha('#D71921', 0.08),
               [`& .${chipClasses.label}`]: {
-                color: red[500],
+                color: '#D71921',
               },
-              [`& .${chipClasses.icon}`]: {
-                color: red[500],
+            },
+          },
+          {
+            props: { color: 'warning' },
+            style: {
+              borderColor: alpha('#D4A843', 0.3),
+              backgroundColor: alpha('#D4A843', 0.08),
+              [`& .${chipClasses.label}`]: {
+                color: '#D4A843',
               },
-              ...theme.applyStyles('dark', {
-                borderColor: red[800],
-                backgroundColor: red[900],
-                [`& .${chipClasses.label}`]: {
-                  color: red[200],
-                },
-                [`& .${chipClasses.icon}`]: {
-                  color: red[300],
-                },
-              }),
+            },
+          },
+          {
+            props: { color: 'primary' },
+            style: {
+              borderColor: alpha('#D71921', 0.3),
+              backgroundColor: alpha('#D71921', 0.08),
+              [`& .${chipClasses.label}`]: {
+                color: '#D71921',
+              },
             },
           },
           {
             props: { size: 'small' },
             style: {
-              maxHeight: 20,
+              maxHeight: 22,
               [`& .${chipClasses.label}`]: {
-                fontSize: theme.typography.caption.fontSize,
-              },
-              [`& .${svgIconClasses.root}`]: {
-                fontSize: theme.typography.caption.fontSize,
-              },
-            },
-          },
-          {
-            props: { size: 'medium' },
-            style: {
-              [`& .${chipClasses.label}`]: {
-                fontSize: theme.typography.caption.fontSize,
+                fontSize: '0.625rem',
               },
             },
           },
@@ -221,9 +196,7 @@ export const dataDisplayCustomizations: Components<Theme> = {
       root: {
         variants: [
           {
-            props: {
-              fontSize: 'small',
-            },
+            props: { fontSize: 'small' },
             style: {
               fontSize: '1rem',
             },

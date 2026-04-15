@@ -20,6 +20,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -73,6 +74,12 @@ class Flight(Base):
         String(32), default=FlightStatus.ACTIVE.value, nullable=False
     )
     note: Mapped[str | None] = mapped_column(String(255))
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
 
     start_lat: Mapped[float] = mapped_column(Float, nullable=False)
     start_lon: Mapped[float] = mapped_column(Float, nullable=False)
@@ -224,6 +231,48 @@ class TelemetrySummary(Base):
     )
 
 
+class UserRole(str, Enum):
+    admin = "admin"
+    org_admin = "org_admin"
+    ops_manager = "ops_manager"
+    pilot = "pilot"
+    viewer = "viewer"
+    operator = "operator"  # keep for backward compat
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", use_alter=True, name="fk_org_owner"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (UniqueConstraint("org_id", "slug", name="uq_project_org_slug"),)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -231,9 +280,61 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(255))
+    role: Mapped[UserRole] = mapped_column(
+        SQLEnum(UserRole, name="user_role"),
+        default=UserRole.operator,
+        server_default="operator",
+        nullable=False,
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+    sessions: Mapped[list[UserSession]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    org: Mapped[Organization | None] = relationship(foreign_keys=[org_id])
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    refresh_token_hash: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    user_agent: Mapped[str | None] = mapped_column(String(512))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+
+    user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class AuthAuditLog(Base):
+    __tablename__ = "auth_audit_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True
+    )
+    event: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+    user_agent: Mapped[str | None] = mapped_column(String(512))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (Index("idx_auth_audit_user_time", "user_id", "created_at"),)
 
 
 class Geofence(Base):
@@ -312,6 +413,12 @@ class Field(Base):
     owner_id: Mapped[int | None] = mapped_column(
         Integer, index=True
     )  # link to users.id if you want
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
 
     # exact field border polygon (WGS84)
@@ -384,6 +491,12 @@ class MappingJob(Base):
     processor: Mapped[str] = mapped_column(String(32), nullable=False, default="webodm")
     processor_task_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
 
@@ -452,15 +565,12 @@ class Obstacle(Base):
     )
 
 
-# backend/db/models.py  (APPEND)
-
-from geoalchemy2 import Geometry
-from sqlalchemy import Text
-
-
 class Herd(Base):
     __tablename__ = "herds"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     # Optional: link herd to a pasture geofence you already manage
     pasture_geofence_id: Mapped[int | None] = mapped_column(
@@ -578,6 +688,9 @@ class OperationalAlert(Base):
     __tablename__ = "operational_alerts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     rule_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     dedupe_key: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     source: Mapped[str] = mapped_column(String(32), default="drone", nullable=False)
@@ -815,6 +928,12 @@ class WarehouseMap(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     owner_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     # nullable=True: indoor warehouse maps use polygon_local_m stored in meta_data
     boundary: Mapped[Geometry | None] = mapped_column(
@@ -984,6 +1103,12 @@ class MissionRuntime(Base):
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
 
     # Link to the Flight record (created once the vehicle is armed / flight starts).
     flight_id: Mapped[int | None] = mapped_column(
@@ -1060,6 +1185,171 @@ class MissionRuntime(Base):
     __table_args__ = (
         Index("idx_mission_runtime_state_created", "state", "created_at"),
         Index("idx_mission_runtime_user", "user_id", "created_at"),
+    )
+
+
+class CaptureRecord(Base):
+    __tablename__ = "capture_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    image_uri: Mapped[str] = mapped_column(String(2048), nullable=False)
+    timestamp_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lon: Mapped[float] = mapped_column(Float, nullable=False)
+    alt_m: Mapped[float | None] = mapped_column(Float)
+    yaw_deg: Mapped[float | None] = mapped_column(Float)
+    pitch_deg: Mapped[float | None] = mapped_column(Float)
+    roll_deg: Mapped[float | None] = mapped_column(Float)
+    waypoint_seq: Mapped[int | None] = mapped_column(Integer)
+    frame_width: Mapped[int | None] = mapped_column(Integer)
+    frame_height: Mapped[int | None] = mapped_column(Integer)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_capture_records_mission_time", "mission_id", "timestamp_utc"),
+    )
+
+
+class ProcessedFieldLayer(Base):
+    __tablename__ = "processed_field_layers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending", index=True)
+    capture_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stitched_image_uri: Mapped[str | None] = mapped_column(String(2048))
+    footprints_geojson: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    tile_manifest: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    bounds_geojson: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    resolution_m_per_px: Mapped[float | None] = mapped_column(Float)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AnomalyZone(Base):
+    __tablename__ = "anomaly_zones"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    layer_id: Mapped[int] = mapped_column(
+        ForeignKey("processed_field_layers.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    severity: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    area_m2: Mapped[float | None] = mapped_column(Float)
+    centroid_lat: Mapped[float] = mapped_column(Float, nullable=False)
+    centroid_lon: Mapped[float] = mapped_column(Float, nullable=False)
+    polygon_geojson: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    evidence_image_ids: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_anomaly_zones_mission_type", "mission_id", "type"),
+    )
+
+
+class InspectionPoint(Base):
+    __tablename__ = "inspection_points"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    zone_id: Mapped[int | None] = mapped_column(
+        ForeignKey("anomaly_zones.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lon: Mapped[float] = mapped_column(Float, nullable=False)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    priority: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_inspection_points_mission_priority", "mission_id", "priority"),
     )
 
 
@@ -1201,4 +1491,296 @@ class OperatorCommand(Base):
     __table_args__ = (
         Index("idx_operator_command_runtime", "mission_runtime_id", "requested_at"),
         Index("idx_operator_command_flight", "client_flight_id", "requested_at"),
+    )
+
+
+class ExportJob(Base):
+    __tablename__ = "export_jobs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    flight_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    requested_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    download_url: Mapped[str | None] = mapped_column(String(2048))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(String(512))
+
+
+# ---------------------------------------------------------------------------
+# P3 — Platform & Growth models
+# ---------------------------------------------------------------------------
+
+
+class MissionTemplate(Base):
+    """Saved mission configuration for one-click rerun and scheduled dispatch."""
+
+    __tablename__ = "mission_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    mission_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    preflight_profile: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    schedule_cron: Mapped[str | None] = mapped_column(String(64))  # cron expression; None = manual only
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    runs: Mapped[list[ScheduledRun]] = relationship(
+        back_populates="template", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("org_id", "slug", name="uq_mission_template_org_slug"),
+        Index("idx_mission_template_org_active", "org_id", "is_active"),
+    )
+
+
+class ScheduledRun(Base):
+    """Record of each execution of a MissionTemplate (scheduled or manual)."""
+
+    __tablename__ = "scheduled_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("mission_templates.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    triggered_by: Mapped[str] = mapped_column(String(16), nullable=False)  # "schedule" | "manual"
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending", index=True)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    template: Mapped[MissionTemplate] = relationship(back_populates="runs")
+
+    __table_args__ = (Index("idx_scheduled_run_template_time", "template_id", "created_at"),)
+
+
+class ApiKey(Base):
+    """Permission-scoped API key for external integrations and public API access."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    key_prefix: Mapped[str] = mapped_column(String(8), unique=True, nullable=False, index=True)
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256 of raw secret
+    scopes: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (Index("idx_api_key_org_revoked", "org_id", "revoked"),)
+
+
+class WebhookEndpoint(Base):
+    """Outbound webhook subscription for org-scoped event delivery."""
+
+    __tablename__ = "webhook_endpoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    events: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
+    secret: Mapped[str] = mapped_column(String(64), nullable=False)  # HMAC signing key
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    deliveries: Mapped[list[WebhookDelivery]] = relationship(
+        back_populates="endpoint", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (Index("idx_webhook_endpoint_org_active", "org_id", "is_active"),)
+
+
+class WebhookDelivery(Base):
+    """Individual webhook delivery attempt with retry tracking."""
+
+    __tablename__ = "webhook_deliveries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    endpoint_id: Mapped[int] = mapped_column(
+        ForeignKey("webhook_endpoints.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    response_code: Mapped[int | None] = mapped_column(Integer)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    endpoint: Mapped[WebhookEndpoint] = relationship(back_populates="deliveries")
+
+    __table_args__ = (
+        Index("idx_webhook_delivery_endpoint_time", "endpoint_id", "created_at"),
+        Index("idx_webhook_delivery_status_retry", "status", "next_retry_at"),
+    )
+
+
+class FieldDeliverable(Base):
+    """Generated agronomy deliverable (GeoJSON, HTML summary, KML) with public share link."""
+
+    __tablename__ = "field_deliverables"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    field_id: Mapped[int] = mapped_column(
+        ForeignKey("fields.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # QA_CHECKLIST | HTML_SUMMARY | GEOJSON | KML
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending", index=True)
+    url: Mapped[str | None] = mapped_column(String(2048))  # S3 key or local path
+    share_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (Index("idx_field_deliverable_field_type", "field_id", "type"),)
+
+
+class ComplianceRecord(Base):
+    """FAA / LAANC compliance metadata for a mission runtime."""
+
+    __tablename__ = "compliance_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    mission_runtime_id: Mapped[int] = mapped_column(
+        ForeignKey("mission_runtimes.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    remote_id_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="unknown"
+    )  # broadcast | off | unknown
+    laanc_auth_number: Mapped[str | None] = mapped_column(String(64))
+    laanc_auth_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    preflight_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class OperatorCertification(Base):
+    """Regulatory certification held by a drone operator (FAA Part 107, etc.)."""
+
+    __tablename__ = "operator_certifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    cert_type: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )  # FAA_PART_107 | ICAO_RPAS | OTHER
+    cert_number: Mapped[str] = mapped_column(String(128), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    issuing_authority: Mapped[str | None] = mapped_column(String(255))
+    document_url: Mapped[str | None] = mapped_column(String(2048))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (Index("idx_operator_cert_user_type", "user_id", "cert_type"),)
+
+
+class DeviceReadiness(Base):
+    """Per-device airworthiness and inspection tracking."""
+
+    __tablename__ = "device_readiness"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    device_id: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    device_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    last_inspection_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_inspection_due: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="airworthy"
+    )  # airworthy | grounded | limited
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("device_id", "org_id", name="uq_device_readiness_device_org"),
+        Index("idx_device_readiness_org_status", "org_id", "status"),
     )

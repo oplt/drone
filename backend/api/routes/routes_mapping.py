@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.deps import require_user
+from backend.auth.deps import OrgUser, require_org_user, require_org_write
 from backend.db.models import (
     Asset,
     FieldModel,
@@ -35,6 +35,8 @@ from backend.db.models import (
     Field as FieldEntity,
 )
 from backend.db.session import get_db
+from backend.config import settings
+from backend.services.access_control import get_default_project, ownership_clause, user_can_access_resource
 from backend.services.photogrammetry.asset_gateway import AssetGatewayService
 from backend.services.photogrammetry.field_derivation import (
     collect_image_gps_locations,
@@ -164,9 +166,9 @@ async def _get_owned_field_or_404(
     db: AsyncSession,
     *,
     field_id: int,
-    owner_id: int,
+    user,
 ) -> FieldEntity:
-    field = await field_registry.get_owned_field(db, field_id=field_id, owner_id=owner_id)
+    field = await field_registry.get_owned_field(db, field_id=field_id, user=user)
     if not field:
         raise HTTPException(status_code=404, detail="Field not found")
     return field
@@ -176,12 +178,13 @@ async def _get_owned_job_or_404(
     db: AsyncSession,
     *,
     job_id: int,
-    owner_id: int,
+    user,
 ) -> MappingJob:
     row = await db.execute(
         select(MappingJob, FieldEntity)
         .join(FieldEntity, MappingJob.field_id == FieldEntity.id)
-        .where(MappingJob.id == job_id, FieldEntity.owner_id == owner_id)
+        .where(MappingJob.id == job_id)
+        .where(ownership_clause(user=user, owner_col=FieldEntity.owner_id, org_col=FieldEntity.org_id))
     )
     pair = row.first()
     if not pair:
@@ -194,10 +197,10 @@ async def _get_owned_asset_or_404(
     db: AsyncSession,
     *,
     asset_id: int,
-    owner_id: int,
+    user,
 ) -> tuple[Asset, int]:
     row = await db.execute(
-        select(Asset, FieldEntity.owner_id)
+        select(Asset, FieldEntity.owner_id, FieldEntity.org_id)
         .join(FieldModel, Asset.model_id == FieldModel.id)
         .join(FieldEntity, FieldModel.field_id == FieldEntity.id)
         .where(Asset.id == asset_id)
@@ -205,8 +208,8 @@ async def _get_owned_asset_or_404(
     pair = row.first()
     if not pair:
         raise HTTPException(status_code=404, detail="Asset not found")
-    asset, field_owner_id = pair
-    if int(field_owner_id) != int(owner_id):
+    asset, field_owner_id, field_org_id = pair
+    if not user_can_access_resource(user, owner_id=field_owner_id, org_id=field_org_id):
         raise HTTPException(status_code=404, detail="Asset not found")
     return asset, int(field_owner_id)
 
@@ -366,17 +369,20 @@ def _move_staged_uploads_into_job(
 async def _create_field_from_ring(
     db: AsyncSession,
     *,
-    owner_id: int,
+    user,
     name: str,
     ring: list[list[float]],
 ) -> FieldEntity:
     polygon_wkt = ring_to_polygon_wkt(ring)
+    default_project = await get_default_project(db, org_id=int(user.org_id)) if user.org_id else None
     row = await db.execute(
         text(
             """
-            INSERT INTO fields (owner_id, name, boundary, area_ha, centroid)
+            INSERT INTO fields (owner_id, org_id, project_id, name, boundary, area_ha, centroid)
             VALUES (
                 :owner_id,
+                :org_id,
+                :project_id,
                 :name,
                 ST_GeomFromText(:polygon_wkt, 4326),
                 ST_Area(ST_Transform(ST_GeomFromText(:polygon_wkt, 4326), 3857)) / 10000.0,
@@ -386,7 +392,9 @@ async def _create_field_from_ring(
             """
         ),
         {
-            "owner_id": owner_id,
+            "owner_id": user.id,
+            "org_id": user.org_id,
+            "project_id": default_project.id if default_project else None,
             "name": name,
             "polygon_wkt": polygon_wkt,
         },
@@ -449,9 +457,10 @@ async def _enqueue_job_or_503(db: AsyncSession, *, job: MappingJob) -> None:
 async def create_mapping_job(
     payload: MappingJobCreateIn,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> MappingJobCreateOut:
-    field = await _get_owned_field_or_404(db, field_id=payload.field_id, owner_id=user.id)
+    user = org_user.user
+    field = await _get_owned_field_or_404(db, field_id=payload.field_id, user=user)
     version = await field_registry.next_model_version(db, field_id=field.id)
 
     model = FieldModel(
@@ -484,6 +493,8 @@ async def create_mapping_job(
         status="pending",
         progress=0,
         processor=payload.processor,
+        org_id=field.org_id,
+        project_id=field.project_id,
         params=params,
     )
     db.add(job)
@@ -511,8 +522,9 @@ async def create_mapping_job_from_uploaded_images(
     artifacts: str = Form(default=""),
     webodm_options: str = Form(default=""),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> MappingJobStatusOut:
+    user = org_user.user
     if processor.strip().lower() != "webodm":
         raise HTTPException(
             status_code=400, detail="Only processor='webodm' is currently supported."
@@ -547,7 +559,7 @@ async def create_mapping_job_from_uploaded_images(
 
         field = await _create_field_from_ring(
             db,
-            owner_id=user.id,
+            user=user,
             name=resolved_field_name,
             ring=derived_ring,
         )
@@ -567,6 +579,8 @@ async def create_mapping_job_from_uploaded_images(
             status="uploading",
             progress=0,
             processor=processor.strip().lower(),
+            org_id=field.org_id,
+            project_id=field.project_id,
             params={},
         )
         db.add(job)
@@ -610,14 +624,21 @@ async def create_mapping_job_from_uploaded_images(
 async def list_mapping_jobs(
     limit: int = Query(default=100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> list[MappingJobStatusOut]:
+    user = org_user.user
     jobs = (
         (
             await db.execute(
                 select(MappingJob)
                 .join(FieldEntity, MappingJob.field_id == FieldEntity.id)
-                .where(FieldEntity.owner_id == user.id)
+                .where(
+                    ownership_clause(
+                        user=user,
+                        owner_col=FieldEntity.owner_id,
+                        org_col=FieldEntity.org_id,
+                    )
+                )
                 .order_by(MappingJob.id.desc())
                 .limit(limit)
             )
@@ -653,9 +674,9 @@ async def list_mapping_jobs(
 async def get_mapping_job(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> MappingJobStatusOut:
-    job = await _get_owned_job_or_404(db, job_id=job_id, owner_id=user.id)
+    job = await _get_owned_job_or_404(db, job_id=job_id, user=org_user.user)
     assets = await _assets_for_model(db, model_id=job.model_id)
     return _to_job_status(job, assets)
 
@@ -664,9 +685,9 @@ async def get_mapping_job(
 async def get_latest_ready_mapping_for_field(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> MappingJobStatusOut:
-    field = await _get_owned_field_or_404(db, field_id=field_id, owner_id=user.id)
+    field = await _get_owned_field_or_404(db, field_id=field_id, user=org_user.user)
 
     model = (
         await db.execute(
@@ -698,9 +719,9 @@ async def get_latest_ready_mapping_for_field(
 async def list_field_model_versions(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> list[FieldModelVersionOut]:
-    field = await _get_owned_field_or_404(db, field_id=field_id, owner_id=user.id)
+    field = await _get_owned_field_or_404(db, field_id=field_id, user=org_user.user)
     versions = await field_registry.list_versions(db, field_id=field.id)
     return [
         FieldModelVersionOut(
@@ -717,9 +738,10 @@ async def list_field_model_versions(
 async def get_field_registry(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> FieldRegistryOut:
-    field = await _get_owned_field_or_404(db, field_id=field_id, owner_id=user.id)
+    user = org_user.user
+    field = await _get_owned_field_or_404(db, field_id=field_id, user=user)
     versions = await field_registry.list_versions(db, field_id=field.id)
     return FieldRegistryOut(
         field_id=field.id,
@@ -742,9 +764,9 @@ async def get_field_registry(
 async def start_mapping_job(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> MappingJobStatusOut:
-    job = await _get_owned_job_or_404(db, job_id=job_id, owner_id=user.id)
+    job = await _get_owned_job_or_404(db, job_id=job_id, user=org_user.user)
     if job.status in {"processing", "ready"}:
         raise HTTPException(
             status_code=409,
@@ -763,9 +785,9 @@ async def upload_mapping_job_images(
     job_id: int,
     files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> MappingJobUploadOut:
-    job = await _get_owned_job_or_404(db, job_id=job_id, owner_id=user.id)
+    job = await _get_owned_job_or_404(db, job_id=job_id, user=org_user.user)
     if job.status not in {"pending", "uploading", "failed"}:
         raise HTTPException(
             status_code=409,
@@ -799,9 +821,9 @@ async def upload_mapping_job_images(
 async def delete_mapping_job(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_write),
 ) -> MappingJobDeleteOut:
-    job = await _get_owned_job_or_404(db, job_id=job_id, owner_id=user.id)
+    job = await _get_owned_job_or_404(db, job_id=job_id, user=org_user.user)
     if job.status == "processing":
         raise HTTPException(
             status_code=409,
@@ -837,13 +859,13 @@ async def get_mapping_asset_signed_url(
     ttl_seconds: int = Query(default=900, ge=60, le=86400),
     path: str = Query(default=""),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> MappingSignedUrlOut:
     clean_path = path.strip().lstrip("/")
     if ".." in Path(clean_path).parts:
         raise HTTPException(status_code=400, detail="Invalid asset sub-path")
 
-    asset, owner_id = await _get_owned_asset_or_404(db, asset_id=asset_id, owner_id=user.id)
+    asset, owner_id = await _get_owned_asset_or_404(db, asset_id=asset_id, user=org_user.user)
     gateway = _asset_gateway()
     relative_url, exp = gateway.build_signed_url(
         asset_id=asset.id,
@@ -851,12 +873,24 @@ async def get_mapping_asset_signed_url(
         ttl_seconds=ttl_seconds,
         path=clean_path,
     )
-    absolute_url = f"{str(request.base_url).rstrip('/')}{relative_url}"
+    absolute_url = (
+        await gateway.build_download_url(
+            asset_id=asset.id,
+            user_id=owner_id,
+            org_id=org_user.org_id,
+            asset_url=asset.url,
+            asset_type=asset.type,
+            ttl_seconds=ttl_seconds,
+            path=clean_path,
+        )
+        if settings.storage_backend == "s3"
+        else f"{str(request.base_url).rstrip('/')}{relative_url}"
+    )
     return MappingSignedUrlOut(
         asset_id=asset.id,
         asset_type=asset.type,
         expires_at=datetime.fromtimestamp(exp, tz=UTC),
-        relative_url=relative_url,
+        relative_url=relative_url if settings.storage_backend != "s3" else "",
         url=absolute_url,
         path=clean_path or None,
     )
@@ -875,7 +909,7 @@ async def download_mapping_asset(
         raise HTTPException(status_code=400, detail="Invalid asset sub-path")
 
     row = await db.execute(
-        select(Asset, FieldEntity.owner_id)
+        select(Asset, FieldEntity.owner_id, FieldEntity.org_id)
         .join(FieldModel, Asset.model_id == FieldModel.id)
         .join(FieldEntity, FieldModel.field_id == FieldEntity.id)
         .where(Asset.id == asset_id)
@@ -884,7 +918,7 @@ async def download_mapping_asset(
     if not pair:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    asset, owner_id = pair
+    asset, owner_id, org_id = pair
     owner_id = int(owner_id)
     gateway = _asset_gateway()
     if not gateway.verify(
@@ -909,6 +943,18 @@ async def download_mapping_asset(
         remote = asset.url.rstrip("/")
         if clean_path:
             remote = f"{remote}/{clean_path}"
+        return RedirectResponse(remote, status_code=307, headers=headers)
+
+    if settings.storage_backend == "s3":
+        remote = await gateway.build_download_url(
+            asset_id=asset.id,
+            user_id=owner_id,
+            org_id=int(org_id) if org_id is not None else None,
+            asset_url=asset.url,
+            asset_type=asset.type,
+            ttl_seconds=max(60, exp - int(datetime.now(UTC).timestamp())),
+            path=clean_path,
+        )
         return RedirectResponse(remote, status_code=307, headers=headers)
 
     raise HTTPException(status_code=404, detail="Asset content not available")

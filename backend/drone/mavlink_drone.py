@@ -374,7 +374,8 @@ class MavlinkDrone(DroneClient):
             self.vehicle.simple_goto(target)
 
     def set_mode(self, mode: str) -> None:
-        # self.send_heartbeat()
+        if not self.vehicle:
+            raise RuntimeError("Vehicle not connected")
         self.vehicle.mode = VehicleMode(mode)
 
     def _set_mode_best_effort(self, *modes: str) -> bool:
@@ -804,6 +805,46 @@ class MavlinkDrone(DroneClient):
             0.0,
             float(yaw_rad),
             0.0,
+        )
+        self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
+
+    def send_velocity(
+        self,
+        vx: float,
+        vy: float,
+        vz: float,
+        yaw_rate_dps: float = 0.0,
+    ) -> None:
+        """Send NED velocity setpoint via SET_POSITION_TARGET_LOCAL_NED."""
+        if not self.vehicle:
+            raise RuntimeError("Vehicle not connected")
+
+        master = getattr(self.vehicle, "_master", None)
+        target_system = int(getattr(master, "target_system", 1) or 1)
+        target_component = int(getattr(master, "target_component", 1) or 1)
+
+        type_mask = (
+            mavutil.mavlink.POSITION_TARGET_TYPEMASK_X_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_Y_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_Z_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AX_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AY_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AZ_IGNORE
+            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
+        )
+
+        msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
+            0,
+            target_system,
+            target_component,
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+            int(type_mask),
+            0.0, 0.0, 0.0,
+            float(vx), float(vy), float(vz),
+            0.0, 0.0, 0.0,
+            0.0,
+            math.radians(float(yaw_rate_dps)),
         )
         self.vehicle.send_mavlink(msg)
         self.vehicle.flush()

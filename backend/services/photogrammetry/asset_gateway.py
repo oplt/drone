@@ -7,8 +7,6 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-from backend.config import settings
-
 
 class AssetGatewayService:
     """
@@ -24,7 +22,11 @@ class AssetGatewayService:
     def __init__(self) -> None:
         secret = os.getenv("PHOTOGRAMMETRY_ASSET_SIGNING_SECRET", "").strip()
         if not secret:
-            secret = settings.jwt_secret
+            raise RuntimeError(
+                "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET is not set. "
+                "It must be a dedicated secret, independent of JWT_SECRET. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
         self._secret = secret.encode("utf-8")
         self.storage_dir = Path(
             os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")
@@ -69,6 +71,32 @@ class AssetGatewayService:
         if path:
             qp += f"&path={quote(path)}"
         return f"/mapping/assets/{asset_id}/download?{qp}", exp
+
+    async def build_download_url(
+        self,
+        *,
+        asset_id: int,
+        user_id: int,
+        org_id: int | None,
+        asset_url: str,
+        asset_type: str,
+        ttl_seconds: int = 3600,
+        path: str = "",
+    ) -> str:
+        from backend.config import settings
+
+        if settings.storage_backend == "s3":
+            from backend.services.storage.s3_client import ObjectStorageClient
+
+            object_key = asset_url
+            if path:
+                object_key = f"{asset_url.rstrip('/')}/{path.lstrip('/')}"
+            client = ObjectStorageClient()
+            return await client.generate_presigned_url(object_key, expires_in=ttl_seconds)
+        url, _ = self.build_signed_url(
+            asset_id=asset_id, user_id=user_id, ttl_seconds=ttl_seconds, path=path
+        )
+        return url
 
     def resolve_local_target(
         self, *, asset_url: str, asset_type: str, path: str = ""

@@ -58,6 +58,16 @@ class DroneClient(ABC):
     def stop_video_recording(self) -> bool:
         return False
 
+    def send_velocity(
+        self,
+        vx: float,
+        vy: float,
+        vz: float,
+        yaw_rate_dps: float = 0.0,
+    ) -> None:
+        """Send a body-frame velocity setpoint (m/s) with optional yaw rate (deg/s)."""
+        raise NotImplementedError
+
     # Optional mission-control hooks for command endpoints.
     def pause_mission(self) -> bool:
         return False

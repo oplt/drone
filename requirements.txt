@@ -1,4 +1,5 @@
 aiofiles==25.1.0
+croniter>=3.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.3
 aiosignal==1.4.0
@@ -93,6 +94,13 @@ rignore==0.7.6
 rsa==4.9.1
 ruff==0.15.0
 sentry-sdk==2.52.0
+python-json-logger>=3.2
+prometheus-fastapi-instrumentator>=7.0
+prometheus-client>=0.21
+opentelemetry-sdk>=1.29
+opentelemetry-instrumentation-fastapi>=0.50b0
+opentelemetry-instrumentation-sqlalchemy>=0.50b0
+opentelemetry-exporter-otlp-proto-grpc>=1.29
 shellingham==1.5.4
 six==1.17.0
 sortedcontainers==2.4.0
@@ -114,3 +122,4 @@ yarl==1.22.0
 pip~=26.0.1
 setuptools~=79.0.1
 geoalchemy2
+aiobotocore>=2.13

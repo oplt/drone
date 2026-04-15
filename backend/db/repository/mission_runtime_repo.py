@@ -12,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import delete, select, update
 
-from backend.db.models import MissionRuntime
+from backend.db.models import Flight, MissionRuntime
 from backend.db.session import Session
 from backend.flight.state_machine import (
     ACTIVE_STATES,
@@ -37,6 +37,8 @@ class MissionRuntimeRepository:
         *,
         client_flight_id: str,
         user_id: int | None,
+        org_id: int | None,
+        project_id: int | None,
         mission_name: str,
         mission_type: str,
         mission_task_type: str | None = None,
@@ -49,6 +51,8 @@ class MissionRuntimeRepository:
         row = MissionRuntime(
             client_flight_id=client_flight_id,
             user_id=user_id,
+            org_id=org_id,
+            project_id=project_id,
             mission_name=mission_name,
             mission_type=mission_type,
             mission_task_type=mission_task_type,
@@ -165,11 +169,24 @@ class MissionRuntimeRepository:
 
     async def set_flight_id(self, client_flight_id: str, *, flight_id: int) -> None:
         async with self._sf() as s:
+            runtime_result = await s.execute(
+                select(MissionRuntime).where(MissionRuntime.client_flight_id == client_flight_id)
+            )
+            runtime = runtime_result.scalar_one_or_none()
             await s.execute(
                 update(MissionRuntime)
                 .where(MissionRuntime.client_flight_id == client_flight_id)
                 .values(flight_id=flight_id, updated_at=datetime.now(UTC))
             )
+            if runtime is not None:
+                await s.execute(
+                    update(Flight)
+                    .where(Flight.id == flight_id)
+                    .values(
+                        org_id=runtime.org_id,
+                        project_id=runtime.project_id,
+                    )
+                )
             await s.commit()
 
     # ------------------------------------------------------------------

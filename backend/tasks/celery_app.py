@@ -42,3 +42,11 @@ celery_app.conf.update(
 )
 
 celery_app.autodiscover_tasks(["backend.tasks"])
+
+celery_app.conf.beat_schedule = {
+    "check-due-templates": {
+        "task": "backend.tasks.scheduling_tasks.check_due_templates",
+        "schedule": 60.0,  # every 60 seconds
+    },
+}
+celery_app.conf.timezone = "UTC"
