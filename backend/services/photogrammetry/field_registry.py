@@ -7,8 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import Field as FieldEntity
-from backend.db.models import FieldModel
-from backend.db.models import User
+from backend.db.models import FieldModel, User
 from backend.services.access_control import ownership_clause
 
 

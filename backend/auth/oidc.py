@@ -25,6 +25,7 @@ class GoogleOIDCProvider:
 
     def authorization_url(self, state: str) -> str:
         from urllib.parse import urlencode
+
         from backend.config import settings
 
         params = {
@@ -72,9 +73,10 @@ google_oidc = GoogleOIDCProvider()
 
 
 async def get_or_create_sso_user(db: AsyncSession, info: OIDCUserInfo):
-    from backend.db.models import User, UserRole
-    from backend.auth.auth import hash_password
     import secrets
+
+    from backend.auth.auth import hash_password
+    from backend.db.models import User, UserRole
 
     q = await db.execute(select(User).where(User.email == info.email.lower()))
     user = q.scalar_one_or_none()

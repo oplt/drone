@@ -1,0 +1,8 @@
+redis: sh -c 'redis-cli -h 127.0.0.1 -p 6379 ping >/dev/null 2>&1 && echo "Redis already running" && tail -f /dev/null || redis-server'
+backend: uvicorn backend.api.api_main:app --reload --reload-dir backend --host 0.0.0.0 --port 8000
+default_worker: celery -A backend.tasks.celery_app:celery_app worker --loglevel=INFO --queues=default --hostname=default@%h
+photogrammetry_worker: celery -A backend.tasks.celery_app:celery_app worker --loglevel=INFO --queues=photogrammetry --hostname=photogrammetry@%h
+frontend: cd frontend && npm run dev
+browser: sh -c 'until curl -s http://localhost:5173 >/dev/null 2>&1; do sleep 1; done; xdg-open http://localhost:5173 >/dev/null 2>&1 || true; tail -f /dev/null'
+# llama_cpp: sh -c 'curl -s http://localhost:8081/v1/models >/dev/null 2>&1 && echo "llama.cpp already running, skipping..." && tail -f /dev/null || /home/polat/Desktop/Projects/llama.cpp/build/bin/llama-server -m /home/polat/Desktop/Projects/llama.cpp/models/qwen2.5-14b-instruct-q5_k_m.gguf --host 127.0.0.1 --port 8081 -c 4096 -ngl 99 -fa -b 512 -ub 256 -t 8 --cache-type-k q8_0 --cache-type-v q8_0'
+# ollama: sh -c 'curl -s http://localhost:11434/api/tags >/dev/null 2>&1 && echo "Ollama already running, skipping..." && tail -f /dev/null || ollama serve'

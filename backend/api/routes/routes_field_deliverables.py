@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -107,7 +107,7 @@ async def create_deliverable(
 
         expires_at: datetime | None = None
         if payload.expires_in_days is not None and payload.expires_in_days > 0:
-            expires_at = datetime.now(timezone.utc) + timedelta(days=payload.expires_in_days)
+            expires_at = datetime.now(UTC) + timedelta(days=payload.expires_in_days)
 
         deliverable = FieldDeliverable(
             field_id=field.id,

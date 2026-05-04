@@ -7,7 +7,7 @@ import logging
 import os
 import tempfile
 import zipfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from backend.tasks.celery_app import celery_app
 
@@ -99,7 +99,7 @@ async def _async_generate(flight_id: str, user_id: int, org_id: int | None, job_
                     "flight_id": flight_id,
                     "org_id": org_id,
                     "exported_by_user_id": user_id,
-                    "exported_at": datetime.now(timezone.utc).isoformat(),
+                    "exported_at": datetime.now(UTC).isoformat(),
                     "mission_name": runtime.mission_name if runtime else None,
                     "mission_type": runtime.mission_type if runtime else None,
                     "state": runtime.state if runtime else None,
@@ -182,7 +182,7 @@ async def _async_generate(flight_id: str, user_id: int, org_id: int | None, job_
 
                     await client.upload_file(Path(tmp_path), object_key)
                     download_url = await client.generate_presigned_url(object_key, expires_in=86400)
-                    expires_at = datetime.now(timezone.utc) + timedelta(seconds=86400)
+                    expires_at = datetime.now(UTC) + timedelta(seconds=86400)
                 finally:
                     os.unlink(tmp_path)
             else:
@@ -200,7 +200,7 @@ async def _async_generate(flight_id: str, user_id: int, org_id: int | None, job_
                     status="ready",
                     download_url=download_url,
                     expires_at=expires_at,
-                    completed_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(UTC),
                 )
             )
             await db.commit()
@@ -213,7 +213,7 @@ async def _async_generate(flight_id: str, user_id: int, org_id: int | None, job_
                 .values(
                     status="failed",
                     error=str(exc)[:512],
-                    completed_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(UTC),
                 )
             )
             await db.commit()

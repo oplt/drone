@@ -23,6 +23,7 @@ from backend.db.repository.preflight_run_repo import preflight_run_repo
 from backend.db.session import Session
 from backend.drone.drone_base import MissionAbortRequested
 from backend.drone.models import Coordinate
+from backend.flight.missions.controlled_flight import ControlledFlightMission
 from backend.flight.missions.grid_mission import GridMission
 from backend.flight.missions.photogrammetry_mission import (
     PhotogrammetryMission as FlightPhotogrammetryMission,
@@ -54,7 +55,6 @@ from backend.flight.missions.warehouse_mission import (
     WarehouseScanMissionParams,
     build_warehouse_scan_mission,
 )
-from backend.flight.missions.controlled_flight import ControlledFlightMission
 from backend.flight.missions.waypoints_mission import WaypointsMission
 from backend.flight.preflight_check.schemas import PreflightReport
 from backend.flight.state_machine import (

@@ -25,6 +25,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.deps import OrgUser, require_org_user, require_org_write
+from backend.config import settings
 from backend.db.models import (
     Asset,
     FieldModel,
@@ -35,8 +36,11 @@ from backend.db.models import (
     Field as FieldEntity,
 )
 from backend.db.session import get_db
-from backend.config import settings
-from backend.services.access_control import get_default_project, ownership_clause, user_can_access_resource
+from backend.services.access_control import (
+    get_default_project,
+    ownership_clause,
+    user_can_access_resource,
+)
 from backend.services.photogrammetry.asset_gateway import AssetGatewayService
 from backend.services.photogrammetry.field_derivation import (
     collect_image_gps_locations,

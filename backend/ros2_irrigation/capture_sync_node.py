@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 from collections import deque
-from pathlib import Path
 
 import cv2
 import numpy as np
@@ -17,7 +16,11 @@ from backend.ros2_irrigation.common import (
     require_ros2,
     utc_now_iso,
 )
-from backend.ros2_irrigation.topics import CAMERA_IMAGE_TOPIC, DRONE_STATE_TOPIC, GEOTAGGED_CAPTURE_TOPIC
+from backend.ros2_irrigation.topics import (
+    CAMERA_IMAGE_TOPIC,
+    DRONE_STATE_TOPIC,
+    GEOTAGGED_CAPTURE_TOPIC,
+)
 
 
 def _stamp_to_sec(stamp) -> float:
