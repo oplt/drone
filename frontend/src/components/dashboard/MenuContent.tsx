@@ -19,7 +19,6 @@ import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
-import PermIdentityRoundedIcon from '@mui/icons-material/PermIdentityRounded';
 import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
 import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
 import LocalFloristRoundedIcon from '@mui/icons-material/LocalFloristRounded';
@@ -70,7 +69,6 @@ const mainListItems: MenuItem[] = [
 ];
 
 const secondaryListItems: MenuItem[] = [
-  { text: 'Profile', icon: <PermIdentityRoundedIcon />, path: '/dashboard/profile' },
   { text: 'Account', icon: <ManageAccountsRoundedIcon />, path: '/dashboard/account' },
   { text: 'Settings', icon: <SettingsRoundedIcon />, path: '/dashboard/settings' },
 ];

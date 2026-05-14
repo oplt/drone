@@ -15,7 +15,7 @@ import SvgIcon from "@mui/material/SvgIcon";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import RoomIcon from "@mui/icons-material/Room";
 import { GoogleMapsContext } from "../../../utils/googleMaps";
-import { OverlayView } from "@react-google-maps/api";
+import { OverlayView, Polyline } from "@react-google-maps/api";
 import { getToken } from "../../../auth";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
@@ -23,6 +23,12 @@ import { MissionPreflightPanel } from "../../../components/dashboard/tasks/Missi
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
+import {
+  RouteDrawControls,
+  type RouteDrawMode,
+  type RouteDrawToolMode,
+} from "../../../components/dashboard/tasks/RouteDrawControls";
+import { TerraDrawController, type TerraDrawEditorMode } from "../../../components/dashboard/tasks/TerraDrawController";
 import { useDroneCenter } from "../../../hooks/useDroneCenter";
 import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
 import { useErrors } from "../../../hooks/useErrors";
@@ -34,6 +40,7 @@ import {
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../../utils/api";
+import type { TerraDraw } from "terra-draw";
 
 interface MissionStatus {
   flight_id?: string;
@@ -177,6 +184,11 @@ export default function ControlledFlightPage() {
   const [loadingLocation, setLoadingLocation] = useState(true);
   const { errors, addError, clearErrors, dismissError } = useErrors();
   const [mapZoom, setMapZoom] = useState(12);
+  const [drawMode, setDrawMode] = useState<RouteDrawMode>("point");
+  const terraDrawRef = useRef<TerraDraw | null>(null);
+  const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("point");
+  const [, setTerraDrawReady] = useState(false);
+  const [drawnPoints, setDrawnPoints] = useState<LatLng[]>([]);
   const [lastMissionId, setLastMissionId] = useState<string | null>(null);
   const [streamKey, setStreamKey] = useState(Date.now());
   const [mapReady, setMapReady] = useState(false);
@@ -322,6 +334,27 @@ export default function ControlledFlightPage() {
       lastSyncedCenterRef.current = newCenter;
       setCenter(newCenter);
     }
+  }, []);
+
+  const onMapClick = useCallback(
+      (e: google.maps.MapMouseEvent) => {
+        if (terraDrawMode !== "static" && terraDrawMode !== "select") return;
+        if (drawMode === "none" || !e.latLng) return;
+        setDrawnPoints((prev) => [...prev, { lat: e.latLng!.lat(), lng: e.latLng!.lng() }]);
+      },
+      [drawMode, terraDrawMode]
+  );
+  const handleRouteToolModeChange = useCallback((toolMode: RouteDrawToolMode) => {
+    const googleModeMap: Record<RouteDrawToolMode, TerraDrawEditorMode> = {
+      none: "select",
+      point: "point",
+      polyline: "linestring",
+      polygon: "polygon",
+      rectangle: "rectangle",
+      circle: "circle",
+      triangle: "polygon",
+    };
+    setTerraDrawMode(googleModeMap[toolMode]);
   }, []);
 
   useEffect(() => {
@@ -820,6 +853,15 @@ export default function ControlledFlightPage() {
                         backgroundColor: "background.paper",
                       }}
                   >
+                    <TerraDrawController
+                        map={mapReady ? mapRef.current : null}
+                        enabled
+                        mode={terraDrawMode}
+                        drawRef={terraDrawRef}
+                        onReadyChange={setTerraDrawReady}
+                        onSnapshotChange={() => {}}
+                        onError={addError}
+                    />
                     <MissionMapViewport
                         loadingLocation={loadingLocation}
                         isLoaded={isLoaded}
@@ -828,15 +870,46 @@ export default function ControlledFlightPage() {
                           mapContainerStyle: containerStyle,
                           center: mapCenter,
                           zoom: mapZoom,
+                          onClick: onMapClick,
                           onLoad: onMapLoad,
                           onUnmount: onMapUnmount,
                           onZoomChanged: onMapZoomChanged,
                           onCenterChanged: onMapCenterChanged,
                           options: mapOptions,
                         }}
+                        googleWrapperSx={{ position: "relative" }}
+                        googleOverlay={
+                          <RouteDrawControls
+                              mode={drawMode}
+                              activeToolMode={
+                                  terraDrawMode === "linestring"
+                                      ? "polyline"
+                                      : terraDrawMode === "select" || terraDrawMode === "static"
+                                          ? "none"
+                                          : terraDrawMode === "freehand"
+                                            ? "polygon"
+                                            : terraDrawMode
+                              }
+                              onModeChange={setDrawMode}
+                              onToolModeChange={handleRouteToolModeChange}
+                              onUndo={() => setDrawnPoints((prev) => prev.slice(0, -1))}
+                              hasWaypoints={drawnPoints.length > 0}
+                          />
+                        }
                         cesiumMapProps={undefined}
                         googleChildren={
                           <>
+                            {drawnPoints.length >= 2 && (
+                                <Polyline
+                                    path={drawnPoints}
+                                    options={{
+                                      strokeColor: "#1976d2",
+                                      strokeOpacity: 0.8,
+                                      strokeWeight: 3,
+                                    }}
+                                />
+                            )}
+
                             {droneCenter && (
                                 <OverlayView
                                     position={droneCenter}

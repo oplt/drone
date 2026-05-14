@@ -1,44 +1,71 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { getToken, verifySession } from "./auth";
+import { verifySession } from "./auth";
 import PageLoader from "./components/shared/PageLoader";
+import type { HomeProps } from "./pages/Home";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-const Home = lazy(() => import("./pages/Home"));
-const SignIn = lazy(() => import("./pages/SignIn"));
-const SignUp = lazy(() => import("./pages/SignUp"));
-const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
-const DashboardHome = lazy(() => import("./pages/dashboard/tabs/HomePage"));
-const TasksPage = lazy(() => import("./pages/dashboard/tabs/TasksPage"));
-const SettingsPage = lazy(() => import("./pages/dashboard/tabs/SettingsPage"));
-const AccountPage = lazy(() => import("./pages/dashboard/tabs/AccountPage"));
-const ProfilePage = lazy(() => import("./pages/dashboard/tabs/ProfilePage"));
-const InsightsPage = lazy(() => import("./pages/dashboard/tabs/InsightsPage"));
-const FleetPage = lazy(() => import("./pages/dashboard/tabs/FleetPage"));
-const TerrainPage = lazy(() => import("./pages/dashboard/tabs/TerrainPage"));
-const ControlledFlightPage = lazy(() => import("./pages/dashboard/tabs/ControlledFlightPage"));
-const PhotoGrammetryPage = lazy(() => import("./pages/dashboard/tabs/PhotoGrammetry"));
-const FieldPage = lazy(() => import("./pages/dashboard/tabs/FieldPage"));
-const WarehousePage = lazy(() => import("./pages/dashboard/tabs/Warehouse"));
-const AnimalFarmPage = lazy(() => import("./pages/dashboard/tabs/AnimalFarmPage"));
-const PrivatePatrolPage = lazy(() => import("./pages/dashboard/tabs/PrivatePatrolPage"));
-const MissionTimeline = lazy(() => import("./pages/dashboard/MissionTimeline"));
-const AdminPage = lazy(() => import("./pages/dashboard/tabs/AdminPage"));
-const TemplatesPage = lazy(() => import("./pages/dashboard/tabs/TemplatesPage"));
+const STALE_CHUNK_RELOAD_KEY = "drone-app:stale-chunk-reload";
+
+function isStaleChunkError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk .* failed|error loading dynamically imported module/i.test(
+    message,
+  );
+}
+
+function lazyWithStaleChunkReload<P extends object>(
+  importer: () => Promise<{ default: React.ComponentType<P> }>,
+) {
+  return lazy(() =>
+    importer().catch((error) => {
+      if (isStaleChunkError(error) && sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) !== "1") {
+        sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, "1");
+        window.location.reload();
+        return new Promise<{ default: React.ComponentType<P> }>(() => {});
+      }
+      throw error;
+    }),
+  );
+}
+
+window.addEventListener("load", () => {
+  sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY);
+});
+
+const Home = lazyWithStaleChunkReload<HomeProps>(() => import("./pages/Home"));
+const Dashboard = lazyWithStaleChunkReload(() => import("./pages/dashboard/Dashboard"));
+const DashboardHome = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/HomePage"));
+const TasksPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/TasksPage"));
+const AdminSettingsPage = lazyWithStaleChunkReload(() => import("./pages/AdminSettingsPage"));
+const AccountPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/AccountPage"));
+const InsightsPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/InsightsPage"));
+const FleetPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/FleetPage"));
+const TerrainPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/TerrainPage"));
+const ControlledFlightPage = lazyWithStaleChunkReload(
+  () => import("./pages/dashboard/tabs/ControlledFlightPage"),
+);
+const PhotoGrammetryPage = lazyWithStaleChunkReload(
+  () => import("./pages/dashboard/tabs/PhotoGrammetry"),
+);
+const FieldPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/FieldPage"));
+const WarehousePage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/Warehouse"));
+const AnimalFarmPage = lazyWithStaleChunkReload(
+  () => import("./pages/dashboard/tabs/AnimalFarmPage"),
+);
+const PrivatePatrolPage = lazyWithStaleChunkReload(
+  () => import("./pages/dashboard/tabs/PrivatePatrolPage"),
+);
+const MissionTimeline = lazyWithStaleChunkReload(() => import("./pages/dashboard/MissionTimeline"));
+const AdminPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/AdminPage"));
+const TemplatesPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/TemplatesPage"));
 
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
-  const token = getToken();
-  const [status, setStatus] = useState<"checking" | "authed" | "guest">(
-    token ? "checking" : "guest",
-  );
+  const [status, setStatus] = useState<"checking" | "authed" | "guest">("checking");
 
   useEffect(() => {
     let cancelled = false;
-    if (!token) {
-      setStatus("guest");
-      return;
-    }
     (async () => {
       const ok = await verifySession();
       if (cancelled) return;
@@ -47,7 +74,7 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
   if (status === "checking") {
     return <PageLoader fullScreen />;
@@ -85,7 +112,7 @@ export default function App() {
           path="/signin"
           element={
             <RedirectIfAuthenticated>
-              {renderLazyRoute(<SignIn />, true)}
+              {renderLazyRoute(<Home initialAuthMode="signIn" />, true)}
             </RedirectIfAuthenticated>
           }
         />
@@ -93,7 +120,7 @@ export default function App() {
           path="/signup"
           element={
             <RedirectIfAuthenticated>
-              {renderLazyRoute(<SignUp />, true)}
+              {renderLazyRoute(<Home initialAuthMode="signUp" />, true)}
             </RedirectIfAuthenticated>
           }
         />
@@ -109,10 +136,9 @@ export default function App() {
           <Route path="tasks" element={renderLazyRoute(<TasksPage />)} />
           <Route path="insights" element={renderLazyRoute(<InsightsPage />)} />
           <Route path="fleet" element={renderLazyRoute(<FleetPage />)} />
-          <Route path="settings" element={renderLazyRoute(<SettingsPage />)} />
+          <Route path="settings" element={renderLazyRoute(<AdminSettingsPage />)} />
           <Route path="terrain" element={renderLazyRoute(<TerrainPage />)} />
           <Route path="controlled" element={renderLazyRoute(<ControlledFlightPage />)} />
-          <Route path="profile" element={renderLazyRoute(<ProfilePage />)} />
           <Route path="account" element={renderLazyRoute(<AccountPage />)} />
           <Route
             path="photogrammetry"
@@ -128,6 +154,20 @@ export default function App() {
           <Route path="admin" element={renderLazyRoute(<AdminPage />)} />
           <Route path="templates" element={renderLazyRoute(<TemplatesPage />)} />
         </Route>
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute>
+              {renderLazyRoute(<Dashboard />, true)}
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={renderLazyRoute(<AdminSettingsPage initialTab="profile" />)} />
+        </Route>
+        <Route
+          path="/profile"
+          element={<Navigate to="/admin/settings" replace />}
+        />
         <Route
           path="/missions/:flightId/timeline"
           element={

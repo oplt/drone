@@ -8,12 +8,26 @@ import { queryClient } from "./queryClient";
 import { GoogleMapsProvider } from "./utils/googleMaps";
 
 const originalFetch = window.fetch.bind(window);
+const getFetchUrl = (input: RequestInfo | URL) => {
+  if (input instanceof Request) return input.url;
+  if (input instanceof URL) return input.href;
+  return String(input);
+};
+const isSameOriginFetch = (input: RequestInfo | URL) => {
+  try {
+    return new URL(getFetchUrl(input), window.location.href).origin === window.location.origin;
+  } catch {
+    return true;
+  }
+};
+
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const isSameOrigin = isSameOriginFetch(input);
   const res = await originalFetch(input, {
     ...init,
-    credentials: init?.credentials ?? "include",
+    credentials: init?.credentials ?? (isSameOrigin ? "include" : "omit"),
   });
-  if (res.status === 401 && !String(input).includes("/auth/")) {
+  if (isSameOrigin && res.status === 401 && !getFetchUrl(input).includes("/auth/")) {
     window.location.replace("/signin");
   }
   return res;

@@ -23,7 +23,6 @@ function toTitle(segment: string) {
     fleet: "Fleet",
     settings: "Settings",
     terrain: "Terrain",
-    profile: "Profile",
     account: "Account",
     photogrammetry: "Photogrammetry",
     animalfarm: "Animal Farm",

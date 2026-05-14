@@ -42,7 +42,7 @@ export default function SitemarkIcon() {
           TERRAFIELD
         </Typography>
         <Typography variant="caption" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
-          AGRONOMY DRONES
+          DRONE CONTROL
         </Typography>
       </Box>
     </Stack>

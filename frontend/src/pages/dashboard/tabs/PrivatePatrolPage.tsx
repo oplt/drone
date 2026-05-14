@@ -31,12 +31,11 @@ import RoomIcon from "@mui/icons-material/Room";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { GoogleMapsContext } from "../../../utils/googleMaps";
-import ChangeHistoryOutlinedIcon from "@mui/icons-material/ChangeHistoryOutlined";
+import PentagonOutlinedIcon from "@mui/icons-material/PentagonOutlined";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import CropSquareOutlinedIcon from "@mui/icons-material/CropSquareOutlined";
 import RadioButtonUncheckedOutlinedIcon from "@mui/icons-material/RadioButtonUncheckedOutlined";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PanToolAltOutlinedIcon from "@mui/icons-material/PanToolAltOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
@@ -44,6 +43,7 @@ import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
+import type { MissionMapEngine } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { SavedFieldsPanel } from "../../../components/dashboard/tasks/SavedFieldsPanel";
@@ -69,7 +69,7 @@ import {
 
 type Waypoint = { lat: number; lon: number; alt: number };
 type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
-type DrawMode = "none" | "point" | "polyline" | "polygon";
+type DrawMode = "none" | "point" | "polyline" | "polygon" | "rectangle" | "circle";
 type TerraFeature = TerraDrawFeature;
 type LonLat = [number, number];
 type PrivatePatrolTaskType =
@@ -498,6 +498,7 @@ export default function PrivatePatrolPage() {
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
   const [useCesium, setUseCesium] = useState(false);
+  const [mapEngine, setMapEngine] = useState<MissionMapEngine>("google");
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
   const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
@@ -543,6 +544,10 @@ export default function PrivatePatrolPage() {
     },
     [alt, gridParams.task_type]
   );
+  const handleMapEngineChange = useCallback((next: MissionMapEngine) => {
+    setMapEngine(next);
+    setUseCesium(next === "cesium");
+  }, []);
 
   const droneReady = Boolean(wsConnected && droneCenter);
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
@@ -838,14 +843,14 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
 
   const selectField = useCallback(
     (f: FieldFeature) => {
-      setUseCesium(false);
+      handleMapEngineChange("google");
       setSelectedFieldId(f.id);
       setFieldName(f.name);
       setFieldBorder(f.ring);
       loadRingIntoEditor(f.ring);
       focusRingOnMap(f.ring);
     },
-    [focusRingOnMap, loadRingIntoEditor]
+    [focusRingOnMap, handleMapEngineChange, loadRingIntoEditor]
   );
 
   const handleSavedFieldSelect = useCallback(
@@ -1063,18 +1068,20 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   }, [eventLocation, gridParams.task_type, isLoaded, mapReady, terraDrawMode, waypoints]);
 
 useEffect(() => {
-  if (useCesium) return;
+  if (mapEngine !== "google") return;
 
   const modeMap: Record<DrawMode, TerraDrawEditorMode> = {
     polygon: "polygon",
     polyline: "linestring",
     point: "point",
+    rectangle: "rectangle",
+    circle: "circle",
     none: "static",
   };
 
   const tdMode = modeMap[drawMode];
   if (tdMode) setTerraDrawMode(tdMode);
-}, [drawMode, useCesium]);
+}, [drawMode, mapEngine]);
 
   useEffect(() => {
     return () => {
@@ -1107,13 +1114,13 @@ useEffect(() => {
   );
   const handleDrawingToolSelection = useCallback(
     (toolMode: TerraDrawToolMode) => {
-      if (useCesium) {
+      if (mapEngine !== "google") {
         const cesiumModeMap: Record<TerraDrawToolMode, DrawMode> = {
           polygon: "polygon",
           linestring: "polyline",
           point: "point",
-          rectangle: "polygon",
-          circle: "polygon",
+          rectangle: "rectangle",
+          circle: "circle",
           freehand: "polygon",
           select: "none",
         };
@@ -1123,7 +1130,7 @@ useEffect(() => {
 
       setTerraDrawMode(toolMode);
     },
-    [useCesium]
+    [mapEngine]
   );
   const handleCesiumDrawComplete = useCallback(
     (result: CesiumDrawResult) => {
@@ -1565,18 +1572,18 @@ useEffect(() => {
           onClearAll={clearErrors}
         />
 
-        {!apiKey ? (
+        {mapEngine === "google" && !apiKey ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             Missing Google Maps API Key. Please set
             VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY in your .env file.
           </Alert>
-        ) : loadError ? (
+        ) : mapEngine === "google" && loadError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             Failed to load Google Maps. {loadError.message} Ensure the Maps
             JavaScript API is enabled, billing is active, and the key allows
             your domain.
           </Alert>
-        ) : !mapId ? (
+        ) : mapEngine === "google" && !mapId ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
             Google Maps Map ID is not set. Advanced markers require a Map ID.
             Set VITE_GOOGLE_MAPS_MAP_ID to remove this warning.
@@ -1585,7 +1592,7 @@ useEffect(() => {
           <>
             <TerraDrawController
               map={mapReady ? mapRef.current : null}
-              enabled={!useCesium}
+              enabled={mapEngine === "google"}
               mode={terraDrawMode}
               drawRef={terraDrawRef}
               onReadyChange={setTerraDrawReady}
@@ -1630,6 +1637,7 @@ useEffect(() => {
                     loadingLocation={loadingLocation}
                     isLoaded={isLoaded}
                     useCesium={useCesium}
+                    mapEngine={mapEngine}
                     googleMapProps={{
                       mapContainerStyle: containerStyle,
                       center: mapCenter,
@@ -1655,6 +1663,34 @@ useEffect(() => {
                       onPickLatLng: handleCesiumPick,
                       drawMode,
                       onDrawComplete: handleCesiumDrawComplete,
+                    }}
+                    leafletMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      waypoints,
+                      fieldBoundary: cesiumFieldBoundary,
+                      plannedRoute: cesiumPlannedRoute,
+                      exclusionZones,
+                      droneCenter,
+                      userCenter,
+                      onPickLatLng: handleCesiumPick,
+                      drawMode,
+                      onDrawComplete: handleCesiumDrawComplete,
+                      height: 400,
+                    }}
+                    mapLibreMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      waypoints,
+                      fieldBoundary: cesiumFieldBoundary,
+                      plannedRoute: cesiumPlannedRoute,
+                      exclusionZones,
+                      droneCenter,
+                      userCenter,
+                      onPickLatLng: handleCesiumPick,
+                      drawMode,
+                      onDrawComplete: handleCesiumDrawComplete,
+                      height: 400,
                     }}
                     googleWrapperSx={{ position: "relative" }}
                     googleChildren={
@@ -1825,7 +1861,7 @@ useEffect(() => {
                             {
                               mode: "polygon",
                               label: "Polygon",
-                              icon: <ChangeHistoryOutlinedIcon fontSize="small" />,
+                              icon: <PentagonOutlinedIcon fontSize="small" />,
                             },
                             {
                               mode: "linestring",
@@ -1848,21 +1884,16 @@ useEffect(() => {
                               icon: <RadioButtonUncheckedOutlinedIcon fontSize="small" />,
                             },
                             {
-                              mode: "freehand",
-                              label: "Freehand",
-                              icon: <EditOutlinedIcon fontSize="small" />,
-                            },
-                            {
                               mode: "select",
                               label: "Select",
                               icon: <PanToolAltOutlinedIcon fontSize="small" />,
                             },
                           ].map((tool) => {
-                            const selected = useCesium
+                            const selected = mapEngine !== "google"
                               ? (drawMode === "point" && tool.mode === "point") ||
                                 (drawMode === "polyline" && tool.mode === "linestring") ||
                                 (drawMode === "polygon" &&
-                                  ["polygon", "rectangle", "circle", "freehand"].includes(
+                                  ["polygon", "rectangle", "circle"].includes(
                                     tool.mode
                                   )) ||
                                 (drawMode === "none" && tool.mode === "select")
@@ -1904,7 +1935,7 @@ useEffect(() => {
                                 size="small"
                                 color="error"
                                 onClick={() => {
-                                  if (useCesium) {
+                                  if (mapEngine !== "google") {
                                     if (drawMode !== "none") {
                                       setDrawMode("none");
                                       return;
@@ -1950,7 +1981,7 @@ useEffect(() => {
                                   syncFieldBorderFromSnapshot(remaining);
                                 }}
                                 disabled={
-                                  useCesium
+                                  mapEngine !== "google"
                                     ? drawMode === "none" &&
                                       (!fieldBorder || fieldBorder.length === 0) &&
                                       waypoints.length === 0 &&
@@ -1986,7 +2017,11 @@ useEffect(() => {
 
                                     <CesiumViewControls
                                       useCesium={useCesium}
-                                      onUseCesiumChange={setUseCesium}
+                                      onUseCesiumChange={(next) =>
+                                        handleMapEngineChange(next ? "cesium" : "google")
+                                      }
+                                      mapEngine={mapEngine}
+                                      onMapEngineChange={handleMapEngineChange}
                                       viewMode={cesiumViewMode}
                                       onViewModeChange={setCesiumViewMode}
                                     />

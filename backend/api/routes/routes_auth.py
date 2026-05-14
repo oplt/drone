@@ -44,6 +44,7 @@ class SignUpIn(BaseModel):
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
+    remember_me: bool = False
 
 
 class UserOut(BaseModel):
@@ -84,7 +85,14 @@ async def _write_audit(
     )
 
 
-def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+def _set_auth_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+    *,
+    remember_me: bool = True,
+) -> None:
+    refresh_max_age = settings.jwt_refresh_exp_days * 24 * 3600 if remember_me else None
     response.set_cookie(
         "access_token",
         access_token,
@@ -96,12 +104,22 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
         domain=settings.cookie_domain or None,
     )
     response.set_cookie(
+        "auth_remembered",
+        "1" if remember_me else "0",
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        max_age=refresh_max_age,
+        path="/auth",
+        domain=settings.cookie_domain or None,
+    )
+    response.set_cookie(
         "refresh_token",
         refresh_token,
         httponly=True,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
-        max_age=settings.jwt_refresh_exp_days * 24 * 3600,
+        max_age=refresh_max_age,
         path="/auth",
         domain=settings.cookie_domain or None,
     )
@@ -111,7 +129,7 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
         httponly=False,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
-        max_age=settings.jwt_refresh_exp_days * 24 * 3600,
+        max_age=refresh_max_age,
         path="/",
         domain=settings.cookie_domain or None,
     )
@@ -121,6 +139,7 @@ def _clear_auth_cookies(response: Response) -> None:
     cookie_domain = settings.cookie_domain or None
     response.delete_cookie("access_token", path="/", domain=cookie_domain)
     response.delete_cookie("refresh_token", path="/auth", domain=cookie_domain)
+    response.delete_cookie("auth_remembered", path="/auth", domain=cookie_domain)
     response.delete_cookie("session_present", path="/", domain=cookie_domain)
 
 
@@ -208,7 +227,7 @@ async def signup(
     await _write_audit(db, user_id=user.id, org_id=user.org_id, event="signup", request=request)
     await db.commit()
 
-    _set_auth_cookies(response, access_token, refresh_token)
+    _set_auth_cookies(response, access_token, refresh_token, remember_me=True)
     return {"user": await _user_out(db, user)}
 
 
@@ -241,7 +260,7 @@ async def login(
     await _write_audit(db, user_id=user.id, org_id=user.org_id, event="login_success", request=request)
     await db.commit()
 
-    _set_auth_cookies(response, access_token, refresh_token)
+    _set_auth_cookies(response, access_token, refresh_token, remember_me=payload.remember_me)
     return {"user": await _user_out(db, user)}
 
 
@@ -250,6 +269,7 @@ async def refresh(
     request: Request,
     response: Response,
     refresh_token: str | None = Cookie(default=None),
+    auth_remembered: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     if not refresh_token:
@@ -269,7 +289,12 @@ async def refresh(
     new_access_token = create_access_token(user_id)
     await db.commit()
 
-    _set_auth_cookies(response, new_access_token, new_refresh_token)
+    _set_auth_cookies(
+        response,
+        new_access_token,
+        new_refresh_token,
+        remember_me=auth_remembered == "1",
+    )
     return {"ok": True}
 
 
@@ -344,5 +369,5 @@ async def oidc_google_callback(
         request=request,
     )
     await db.commit()
-    _set_auth_cookies(response, access_token, refresh_token)
+    _set_auth_cookies(response, access_token, refresh_token, remember_me=True)
     return RedirectResponse("/dashboard")

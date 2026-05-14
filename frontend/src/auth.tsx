@@ -36,32 +36,35 @@ export function clearToken(): void {
 }
 
 export async function verifySession(): Promise<boolean> {
-  if (!getToken()) return false;
+  try {
+    const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (meRes.ok) return true;
 
-  const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
-    method: "GET",
-    credentials: "include",
-  });
-  if (meRes.ok) return true;
+    const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!refreshRes.ok) {
+      clearSessionMarkerCookie();
+      return false;
+    }
 
-  const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!refreshRes.ok) {
+    const meResAfterRefresh = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (!meResAfterRefresh.ok) {
+      clearSessionMarkerCookie();
+      return false;
+    }
+    return true;
+  } catch {
     clearSessionMarkerCookie();
     return false;
   }
-
-  const meResAfterRefresh = await fetch(`${API_BASE_URL}/auth/me`, {
-    method: "GET",
-    credentials: "include",
-  });
-  if (!meResAfterRefresh.ok) {
-    clearSessionMarkerCookie();
-    return false;
-  }
-  return true;
 }
 
 export async function logout(): Promise<void> {
@@ -76,9 +79,13 @@ export async function logout(): Promise<void> {
 }
 
 export async function refreshAccessToken(): Promise<boolean> {
-  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: "POST",
-    credentials: "include",
-  });
-  return res.ok;
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

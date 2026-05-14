@@ -1,13 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Header from "../../../components/dashboard/Header";
+import Header from "../components/dashboard/Header";
 import { IconButton, InputAdornment } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import Avatar from "@mui/material/Avatar";
-import Skeleton from "@mui/material/Skeleton";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "../../../auth";
-import { apiRequest } from "../../../utils/api";
+import ProfilePage from "./ProfilePage";
 
 import {
   Alert,
@@ -169,17 +165,6 @@ type SettingsDoc = {
 };
 
 type SettingsSection = Exclude<keyof SettingsDoc, "updated_at">;
-
-type UserResponse = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  created_at?: string;
-};
-
-type UserUpdate = {
-  full_name?: string;
-};
 
 const MASK = "********";
 
@@ -346,43 +331,12 @@ const SETTINGS_TAB_INDEX: Record<SettingsTabKey, number> = {
 };
 
 export default function SettingsPage({ initialTab = "profile" }: { initialTab?: SettingsTabKey }) {
-  const token = getToken();
-  const queryClient = useQueryClient();
   const [tab, setTab] = useState(SETTINGS_TAB_INDEX[initialTab] ?? 0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [doc, setDoc] = useState<SettingsDoc>(DEFAULTS);
   const [lastLoaded, setLastLoaded] = useState<SettingsDoc>(DEFAULTS);
-  const [fullName, setFullName] = useState("");
-  const [saveProfileSuccess, setSaveProfileSuccess] = useState(false);
-  const [saveProfileError, setSaveProfileError] = useState<string | null>(null);
-
-  const { data: user, isLoading: userLoading, error: userError } = useQuery<UserResponse>({
-    queryKey: ["me"],
-    enabled: Boolean(token),
-    queryFn: () => apiRequest<UserResponse>("/auth/me", {}, token),
-  });
-
-  useEffect(() => {
-    if (user) {
-      setFullName(user.full_name ?? "");
-    }
-  }, [user]);
-
-  const profileMutation = useMutation({
-    mutationFn: (payload: UserUpdate) =>
-      apiRequest("/auth/me", { method: "PATCH", body: JSON.stringify(payload) }, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["me"] });
-      setSaveProfileSuccess(true);
-      setSaveProfileError(null);
-    },
-    onError: (error: unknown) => {
-      setSaveProfileError(error instanceof Error ? error.message : "Failed to save profile.");
-      setSaveProfileSuccess(false);
-    },
-  });
 
   const dirty = useMemo(() => JSON.stringify(doc) !== JSON.stringify(lastLoaded), [doc, lastLoaded]);
 
@@ -437,12 +391,6 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
   }
 
   useEffect(() => { void fetchSettings(); }, []);
-
-  const handleSaveProfile = () => {
-    setSaveProfileSuccess(false);
-    setSaveProfileError(null);
-    profileMutation.mutate({ full_name: fullName.trim() });
-  };
 
   const update = (section: SettingsSection, field: string, value: string | number | boolean | null) => {
     setDoc(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
@@ -527,68 +475,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
 
             {/* PROFILE TAB */}
             {tab === 0 && (
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Stack alignItems="center" spacing={2}>
-                    {userLoading ? (
-                      <Skeleton variant="circular" width={80} height={80} />
-                    ) : (
-                      <Avatar sx={{ width: 80, height: 80, bgcolor: "primary.main", fontSize: 28, fontWeight: 700 }}>
-                        {(user?.full_name ?? user?.email ?? "?")
-                          .split(/\s+/)
-                          .filter(Boolean)
-                          .slice(0, 2)
-                          .map((part) => part[0]?.toUpperCase() ?? "")
-                          .join("")}
-                      </Avatar>
-                    )}
-                    <Typography variant="body2" color="text.secondary">
-                      {user?.created_at ? `Member since ${new Date(user.created_at).toLocaleDateString()}` : "Profile details"}
-                    </Typography>
-                  </Stack>
-                </Grid>
-                <Grid size={{ xs: 12, md: 8 }}>
-                  <Stack spacing={2.5}>
-                    {userError ? (
-                      <Alert severity="error">Failed to load profile. Refresh page.</Alert>
-                    ) : null}
-                    {saveProfileSuccess ? (
-                      <Alert severity="success" onClose={() => setSaveProfileSuccess(false)}>
-                        Profile updated successfully.
-                      </Alert>
-                    ) : null}
-                    {saveProfileError ? (
-                      <Alert severity="error" onClose={() => setSaveProfileError(null)}>
-                        {saveProfileError}
-                      </Alert>
-                    ) : null}
-                    <TextField
-                      variant="filled"
-                      fullWidth
-                      label="Full name"
-                      value={fullName}
-                      onChange={(event) => setFullName(event.target.value)}
-                      disabled={userLoading || !user}
-                    />
-                    <TextField
-                      variant="filled"
-                      fullWidth
-                      label="Email"
-                      value={user?.email ?? ""}
-                      disabled
-                    />
-                    <Box>
-                      <Button
-                        variant="contained"
-                        onClick={handleSaveProfile}
-                        disabled={profileMutation.isPending || !fullName.trim() || !user}
-                      >
-                        {profileMutation.isPending ? "Saving..." : "Save profile"}
-                      </Button>
-                    </Box>
-                  </Stack>
-                </Grid>
-              </Grid>
+              <ProfilePage />
             )}
 
             {/* TELEMETRY TAB */}

@@ -41,12 +41,11 @@ import RoomIcon from "@mui/icons-material/Room";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { GoogleMapsContext } from "../../../utils/googleMaps";
-import ChangeHistoryOutlinedIcon from "@mui/icons-material/ChangeHistoryOutlined";
+import PentagonOutlinedIcon from "@mui/icons-material/PentagonOutlined";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import CropSquareOutlinedIcon from "@mui/icons-material/CropSquareOutlined";
 import RadioButtonUncheckedOutlinedIcon from "@mui/icons-material/RadioButtonUncheckedOutlined";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PanToolAltOutlinedIcon from "@mui/icons-material/PanToolAltOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
@@ -54,6 +53,7 @@ import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
+import type { MissionMapEngine } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { SavedFieldsPanel } from "../../../components/dashboard/tasks/SavedFieldsPanel";
@@ -79,7 +79,15 @@ import {
 
 type Waypoint = { lat: number; lon: number; alt: number };
 type CesiumViewMode = "top" | "tilted" | "follow" | "fpv" | "orbit";
-type DrawMode = "none" | "point" | "polyline" | "polygon";
+type DrawMode =
+  | "none"
+  | "point"
+  | "polyline"
+  | "polygon"
+  | "rectangle"
+  | "circle"
+  | "freehand"
+  | "triangle";
 type TerraFeature = TerraDrawFeature;
 type LonLat = [number, number];
 type GridParams = {
@@ -269,6 +277,7 @@ export default function PhotoGrammetryPage() {
   const terraDrawRef = useRef<TerraDraw | null>(null);
   const [terraDrawReady, setTerraDrawReady] = useState(false);
   const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("static");
+  const [selectedTerraDrawFeatureId, setSelectedTerraDrawFeatureId] = useState<string | number | null>(null);
   const [allMappingJobs, setAllMappingJobs] = useState<MappingJobRecord[]>([]);
 
   const isTerraGuidanceFeature = useCallback((feature: TerraFeature): boolean => {
@@ -510,6 +519,7 @@ export default function PhotoGrammetryPage() {
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
   const [useCesium, setUseCesium] = useState(false);
+  const [mapEngine, setMapEngine] = useState<MissionMapEngine>("google");
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
   const suppressFieldSelectionResetRef = useRef(false);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
@@ -594,6 +604,10 @@ export default function PhotoGrammetryPage() {
     },
     [alt]
   );
+  const handleMapEngineChange = useCallback((next: MissionMapEngine) => {
+    setMapEngine(next);
+    setUseCesium(next === "cesium");
+  }, []);
 
   const droneReady = Boolean(wsConnected && droneCenter);
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
@@ -856,14 +870,14 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
 
   const selectField = useCallback(
     (f: FieldFeature) => {
-      setUseCesium(false);
+      handleMapEngineChange("google");
       setSelectedFieldId(f.id);
       setFieldName(f.name);
       setFieldBorder(f.ring);
       loadRingIntoEditor(f.ring);
       focusRingOnMap(f.ring);
     },
-    [focusRingOnMap, loadRingIntoEditor]
+    [focusRingOnMap, handleMapEngineChange, loadRingIntoEditor]
   );
 
   const handleSavedFieldSelect = useCallback(
@@ -1029,7 +1043,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         if (tilesetUrl) {
           setFieldTilesetUrl(tilesetUrl);
         }
-        setUseCesium(true);
+        handleMapEngineChange("cesium");
         setCesiumViewMode("top");
         setActiveMappingJobId(null);
       } else if (data.status === "failed") {
@@ -1038,7 +1052,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
 
       return data;
     },
-    [API_BASE_CLEAN, resolveTilesetUrlFromAssets]
+    [API_BASE_CLEAN, handleMapEngineChange, resolveTilesetUrlFromAssets]
   );
 
   useEffect(() => {
@@ -1087,7 +1101,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
         if (cancelled) return;
         if (tilesetUrl) {
           setFieldTilesetUrl(tilesetUrl);
-          setUseCesium(true);
+          handleMapEngineChange("cesium");
           setCesiumViewMode("top");
         }
       } catch {
@@ -1099,7 +1113,7 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
     return () => {
       cancelled = true;
     };
-  }, [API_BASE_CLEAN, resolveTilesetUrlFromAssets, selectedFieldId]);
+  }, [API_BASE_CLEAN, handleMapEngineChange, resolveTilesetUrlFromAssets, selectedFieldId]);
 
   const mappingJobRunning = activeMappingJobId != null;
   const mappingWillAutoSaveField =
@@ -1374,18 +1388,22 @@ const onMapLoad = useCallback((map: google.maps.Map) => {
   }, [isLoaded, mapReady, terraDrawMode, waypoints]);
 
 useEffect(() => {
-  if (useCesium) return;
+  if (mapEngine !== "google") return;
 
   const modeMap: Record<DrawMode, TerraDrawEditorMode> = {
     polygon: "polygon",
     polyline: "linestring",
     point: "point",
+    rectangle: "rectangle",
+    circle: "circle",
+    freehand: "freehand",
+    triangle: "polygon",
     none: "static",
   };
 
   const tdMode = modeMap[drawMode];
   if (tdMode) setTerraDrawMode(tdMode);
-}, [drawMode, useCesium]);
+}, [drawMode, mapEngine]);
 
   useEffect(() => {
     return () => {
@@ -1412,14 +1430,14 @@ useEffect(() => {
   );
   const handleDrawingToolSelection = useCallback(
     (toolMode: TerraDrawToolMode) => {
-      if (useCesium) {
+      if (mapEngine !== "google") {
         const cesiumModeMap: Record<TerraDrawToolMode, DrawMode> = {
           polygon: "polygon",
           linestring: "polyline",
           point: "point",
-          rectangle: "polygon",
-          circle: "polygon",
-          freehand: "polygon",
+          rectangle: "rectangle",
+          circle: "circle",
+          freehand: "freehand",
           select: "none",
         };
         setDrawMode(cesiumModeMap[toolMode] ?? "none");
@@ -1428,7 +1446,7 @@ useEffect(() => {
 
       setTerraDrawMode(toolMode);
     },
-    [useCesium]
+    [mapEngine]
   );
   const handleCesiumDrawComplete = useCallback(
     (result: CesiumDrawResult) => {
@@ -1885,18 +1903,18 @@ useEffect(() => {
           onClearAll={clearErrors}
         />
 
-        {!apiKey ? (
+        {mapEngine === "google" && !apiKey ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             Missing Google Maps API Key. Please set
             VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY in your .env file.
           </Alert>
-        ) : loadError ? (
+        ) : mapEngine === "google" && loadError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             Failed to load Google Maps. {loadError.message} Ensure the Maps
             JavaScript API is enabled, billing is active, and the key allows
             your domain.
           </Alert>
-        ) : !mapId ? (
+        ) : mapEngine === "google" && !mapId ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
             Google Maps Map ID is not set. Advanced markers require a Map ID.
             Set VITE_GOOGLE_MAPS_MAP_ID to remove this warning.
@@ -1905,11 +1923,12 @@ useEffect(() => {
           <>
             <TerraDrawController
               map={mapReady ? mapRef.current : null}
-              enabled={!useCesium}
+              enabled={mapEngine === "google"}
               mode={terraDrawMode}
               drawRef={terraDrawRef}
               onReadyChange={setTerraDrawReady}
               onSnapshotChange={syncFieldBorderFromSnapshot}
+              onSelectionChange={setSelectedTerraDrawFeatureId}
               onError={addError}
             />
             <Stack
@@ -1950,6 +1969,7 @@ useEffect(() => {
                     loadingLocation={loadingLocation}
                     isLoaded={isLoaded}
                     useCesium={useCesium}
+                    mapEngine={mapEngine}
                     googleMapProps={{
                       mapContainerStyle: containerStyle,
                       center: mapCenter,
@@ -1975,6 +1995,34 @@ useEffect(() => {
                       onPickLatLng: handleCesiumPick,
                       drawMode,
                       onDrawComplete: handleCesiumDrawComplete,
+                    }}
+                    leafletMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      waypoints,
+                      fieldBoundary: cesiumFieldBoundary,
+                      plannedRoute: cesiumPlannedRoute,
+                      exclusionZones,
+                      droneCenter,
+                      userCenter,
+                      onPickLatLng: handleCesiumPick,
+                      drawMode,
+                      onDrawComplete: handleCesiumDrawComplete,
+                      height: 400,
+                    }}
+                    mapLibreMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      waypoints,
+                      fieldBoundary: cesiumFieldBoundary,
+                      plannedRoute: cesiumPlannedRoute,
+                      exclusionZones,
+                      droneCenter,
+                      userCenter,
+                      onPickLatLng: handleCesiumPick,
+                      drawMode,
+                      onDrawComplete: handleCesiumDrawComplete,
+                      height: 400,
                     }}
                     googleWrapperSx={{ position: "relative" }}
                     googleChildren={
@@ -2142,7 +2190,7 @@ useEffect(() => {
                             {
                               mode: "polygon",
                               label: "Polygon",
-                              icon: <ChangeHistoryOutlinedIcon fontSize="small" />,
+                              icon: <PentagonOutlinedIcon fontSize="small" />,
                             },
                             {
                               mode: "linestring",
@@ -2165,21 +2213,16 @@ useEffect(() => {
                               icon: <RadioButtonUncheckedOutlinedIcon fontSize="small" />,
                             },
                             {
-                              mode: "freehand",
-                              label: "Freehand",
-                              icon: <EditOutlinedIcon fontSize="small" />,
-                            },
-                            {
                               mode: "select",
                               label: "Select",
                               icon: <PanToolAltOutlinedIcon fontSize="small" />,
                             },
                           ].map((tool) => {
-                            const selected = useCesium
+                            const selected = mapEngine !== "google"
                               ? (drawMode === "point" && tool.mode === "point") ||
                                 (drawMode === "polyline" && tool.mode === "linestring") ||
                                 (drawMode === "polygon" &&
-                                  ["polygon", "rectangle", "circle", "freehand"].includes(
+                                  ["polygon", "rectangle", "circle"].includes(
                                     tool.mode
                                   )) ||
                                 (drawMode === "none" && tool.mode === "select")
@@ -2221,16 +2264,13 @@ useEffect(() => {
                                 size="small"
                                 color="error"
                                 onClick={() => {
-                                  if (useCesium) {
+                                  if (mapEngine !== "google") {
                                     if (drawMode !== "none") {
                                       setDrawMode("none");
                                       return;
                                     }
                                     if (fieldBorder && fieldBorder.length > 0) {
-                                      setFieldBorder((prev) => {
-                                        if (!prev || prev.length <= 1) return null;
-                                        return prev.slice(0, -1) as LonLat[];
-                                      });
+                                      setFieldBorder(null);
                                       return;
                                     }
                                     setWaypoints((prev) => prev.slice(0, -1));
@@ -2239,7 +2279,12 @@ useEffect(() => {
 
                                   if (!terraDrawRef.current) return;
                                   const snapshot = terraDrawRef.current.getSnapshot();
-                                  const latestFeature = [...snapshot]
+                                  const selectedFeature = snapshot.find(
+                                    (f) =>
+                                      f.id === selectedTerraDrawFeatureId &&
+                                      isRemovableUserDrawingFeature(f)
+                                  );
+                                  const latestFeature = selectedFeature ?? [...snapshot]
                                     .reverse()
                                     .find((f) => isRemovableUserDrawingFeature(f));
                                   if (!latestFeature) return;
@@ -2247,12 +2292,13 @@ useEffect(() => {
                                   terraDrawRef.current.removeFeatures([
                                     String(latestFeature.id),
                                   ]);
+                                  setSelectedTerraDrawFeatureId(null);
 
                                   const remaining = terraDrawRef.current.getSnapshot();
                                   syncFieldBorderFromSnapshot(remaining);
                                 }}
                                 disabled={
-                                  useCesium
+                                  mapEngine !== "google"
                                     ? drawMode === "none" &&
                                       (!fieldBorder || fieldBorder.length === 0) &&
                                       waypoints.length === 0
@@ -2288,7 +2334,11 @@ useEffect(() => {
 
                       <CesiumViewControls
                         useCesium={useCesium}
-                        onUseCesiumChange={setUseCesium}
+                        onUseCesiumChange={(next) =>
+                          handleMapEngineChange(next ? "cesium" : "google")
+                        }
+                        mapEngine={mapEngine}
+                        onMapEngineChange={handleMapEngineChange}
                         viewMode={cesiumViewMode}
                         onViewModeChange={setCesiumViewMode}
                       />
@@ -2861,7 +2911,7 @@ useEffect(() => {
                                 size="small"
                                 sx={{ ml: 1 }}
                                 onClick={() => {
-                                  setUseCesium(true);
+                                  handleMapEngineChange("cesium");
                                   setCesiumViewMode("top");
                                 }}
                               >

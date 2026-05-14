@@ -191,3 +191,4 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 ../commands.txt
+video/recordings/*

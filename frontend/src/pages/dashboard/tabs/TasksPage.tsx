@@ -14,9 +14,19 @@ import { MissionCommandPanel } from "../../../components/dashboard/tasks/Mission
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
+import type { MissionMapEngine } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { OperationsShell } from "../../../components/dashboard/tasks/OperationsShell";
+import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumViewControls";
+import {
+  RouteDrawControls,
+  type RouteDrawMode,
+  type RouteDrawToolMode,
+} from "../../../components/dashboard/tasks/RouteDrawControls";
+import { TerraDrawController, type TerraDrawEditorMode, type TerraDrawFeature } from "../../../components/dashboard/tasks/TerraDrawController";
+import type { CesiumViewMode } from "../../../utils/CesiumMap";
+import type { TerraDraw } from "terra-draw";
 import { useDroneCenter } from "../../../hooks/useDroneCenter";
 import { useDroneMapFollow } from "../../../hooks/useDroneMapFollow";
 import { useErrors } from "../../../hooks/useErrors";
@@ -72,6 +82,15 @@ export default function TasksPage() {
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
   const [mapZoom, setMapZoom] = useState<number>(12);
+  const [mapEngine, setMapEngine] = useState<MissionMapEngine>("google");
+  const [drawMode, setDrawMode] = useState<RouteDrawMode>("point");
+  const terraDrawRef = useRef<TerraDraw | null>(null);
+  const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("point");
+  const [, setTerraDrawReady] = useState(false);
+  const [terraDrawFeatureCount, setTerraDrawFeatureCount] = useState(0);
+  const [selectedTerraDrawFeatureId, setSelectedTerraDrawFeatureId] = useState<string | number | null>(null);
+  const [drawWaypointHistory, setDrawWaypointHistory] = useState<number[]>([]);
+  const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
   const [preflightRun, setPreflightRun] =
     useState<PreflightRunResponse | null>(null);
 
@@ -262,16 +281,107 @@ export default function TasksPage() {
 
   const onMapClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
+      if (mapEngine === "google" && terraDrawMode !== "static" && terraDrawMode !== "select") return;
+      if (drawMode === "none") return;
       if (!e.latLng) return;
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
       setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
     },
+    [alt, drawMode, mapEngine, terraDrawMode],
+  );
+
+  const handleRouteDrawComplete = useCallback(
+    (result: {
+      type: "point" | "polyline" | "polygon";
+      coordinates: [number, number] | [number, number][];
+    }) => {
+      if (result.type === "point") {
+        const [lon, lat] = result.coordinates as [number, number];
+        setWaypoints((prev) => [...prev, { lat, lon, alt }]);
+        setDrawWaypointHistory((prev) => [...prev, 1]);
+        return;
+      }
+
+      const coordinates = result.coordinates as [number, number][];
+      setWaypoints(coordinates.map(([lon, lat]) => ({ lat, lon, alt })));
+      setDrawWaypointHistory([coordinates.length]);
+      setDrawMode("point");
+    },
+    [alt],
+  );
+  const handleRouteToolModeChange = useCallback(
+    (toolMode: RouteDrawToolMode) => {
+      if (mapEngine === "google") {
+        const googleModeMap: Record<RouteDrawToolMode, TerraDrawEditorMode> = {
+          none: "select",
+          point: "point",
+          polyline: "linestring",
+          polygon: "polygon",
+          rectangle: "rectangle",
+          circle: "circle",
+          triangle: "polygon",
+        };
+        setTerraDrawMode(googleModeMap[toolMode]);
+        return;
+      }
+      const flatModeMap: Record<RouteDrawToolMode, RouteDrawMode> = {
+        none: "none",
+        point: "point",
+        polyline: "polyline",
+        polygon: "polygon",
+        rectangle: "rectangle",
+        circle: "circle",
+        triangle: "triangle",
+      };
+      setDrawMode(flatModeMap[toolMode]);
+    },
+    [mapEngine],
+  );
+
+  const syncRouteFromTerraDraw = useCallback(
+    (snapshot: TerraDrawFeature[]) => {
+      const next: Waypoint[] = [];
+      setTerraDrawFeatureCount(snapshot.filter((feature) => feature.id != null).length);
+      snapshot.forEach((feature) => {
+        const geometry = feature.geometry;
+        if (geometry?.type === "Point" && Array.isArray(geometry.coordinates)) {
+          const [lon, lat] = geometry.coordinates as [number, number];
+          if (Number.isFinite(lat) && Number.isFinite(lon)) next.push({ lat, lon, alt });
+        }
+        if (geometry?.type === "LineString" && Array.isArray(geometry.coordinates)) {
+          (geometry.coordinates as [number, number][]).forEach(([lon, lat]) => {
+            if (Number.isFinite(lat) && Number.isFinite(lon)) next.push({ lat, lon, alt });
+          });
+        }
+      });
+      setWaypoints(next);
+    },
     [alt],
   );
 
-  const undo = () => setWaypoints((prev) => prev.slice(0, -1));
-  const clear = () => setWaypoints([]);
+  const undo = () => {
+    if (mapEngine === "google" && terraDrawRef.current) {
+      const snapshot = terraDrawRef.current.getSnapshot() as TerraDrawFeature[];
+      const selectedFeature = snapshot.find((feature) => feature.id === selectedTerraDrawFeatureId);
+      const targetFeature = selectedFeature ?? [...snapshot].reverse().find((feature) => feature.id != null);
+      if (targetFeature?.id != null) {
+        terraDrawRef.current.removeFeatures([targetFeature.id]);
+        setSelectedTerraDrawFeatureId(null);
+        syncRouteFromTerraDraw(terraDrawRef.current.getSnapshot() as TerraDrawFeature[]);
+        return;
+      }
+    }
+    setWaypoints((prev) => {
+      const removeCount = drawWaypointHistory.at(-1) ?? 1;
+      return prev.slice(0, Math.max(0, prev.length - removeCount));
+    });
+    setDrawWaypointHistory((prev) => prev.slice(0, -1));
+  };
+  const clear = () => {
+    setWaypoints([]);
+    setDrawWaypointHistory([]);
+  };
 
   const handleAltitudeInputChange = (value: string) => {
     if (value === "") {
@@ -462,9 +572,20 @@ export default function TasksPage() {
                     backgroundColor: "background.paper",
                   }}
                 >
+                  <TerraDrawController
+                    map={mapReady && mapEngine === "google" ? mapRef.current : null}
+                    enabled={mapEngine === "google"}
+                    mode={terraDrawMode}
+                    drawRef={terraDrawRef}
+                    onReadyChange={setTerraDrawReady}
+                    onSnapshotChange={syncRouteFromTerraDraw}
+                    onSelectionChange={setSelectedTerraDrawFeatureId}
+                    onError={addError}
+                  />
                   <MissionMapViewport
                     loadingLocation={loadingLocation}
                     isLoaded={isLoaded}
+                    mapEngine={mapEngine}
                     googleMapProps={{
                       mapContainerStyle: containerStyle,
                       center: mapCenter,
@@ -474,6 +595,57 @@ export default function TasksPage() {
                       onZoomChanged: onMapZoomChanged,
                       options: mapOptions,
                     }}
+                    cesiumMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      viewMode: cesiumViewMode,
+                      waypoints,
+                      droneCenter,
+                      headingDeg: heading,
+                      drawMode,
+                      onDrawComplete: handleRouteDrawComplete,
+                    }}
+                    leafletMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      waypoints,
+                      droneCenter,
+                      userCenter,
+                      drawMode,
+                      onDrawComplete: handleRouteDrawComplete,
+                      height: 400,
+                    }}
+                    mapLibreMapProps={{
+                      center: mapCenter,
+                      zoom: mapZoom,
+                      waypoints,
+                      droneCenter,
+                      userCenter,
+                      drawMode,
+                      onDrawComplete: handleRouteDrawComplete,
+                      height: 400,
+                    }}
+                    googleWrapperSx={{ position: "relative" }}
+                    googleOverlay={
+                      <RouteDrawControls
+                        mode={drawMode}
+                        activeToolMode={
+                          mapEngine === "google"
+                            ? terraDrawMode === "linestring"
+                              ? "polyline"
+                              : terraDrawMode === "select" || terraDrawMode === "static"
+                                ? "none"
+                                : terraDrawMode === "freehand"
+                                ? "polygon"
+                                : terraDrawMode
+                            : undefined
+                        }
+                        onModeChange={setDrawMode}
+                        onToolModeChange={handleRouteToolModeChange}
+                        onUndo={undo}
+                        hasWaypoints={waypoints.length > 0 || terraDrawFeatureCount > 0}
+                      />
+                    }
                     googleChildren={
                       <>
                         {droneCenter && (
@@ -550,6 +722,26 @@ export default function TasksPage() {
                         )}
                       </>
                     }
+                  />
+                </Box>
+
+                <Box
+                  sx={{
+                    mt: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 2,
+                  }}
+                >
+                  <CesiumViewControls
+                    useCesium={mapEngine === "cesium"}
+                    onUseCesiumChange={(next) => setMapEngine(next ? "cesium" : "google")}
+                    mapEngine={mapEngine}
+                    onMapEngineChange={setMapEngine}
+                    viewMode={cesiumViewMode}
+                    onViewModeChange={setCesiumViewMode}
                   />
                 </Box>
 

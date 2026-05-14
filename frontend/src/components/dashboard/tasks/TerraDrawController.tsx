@@ -38,6 +38,7 @@ type TerraDrawControllerProps = {
   drawRef: MutableRefObject<TerraDraw | null>;
   onReadyChange: (ready: boolean) => void;
   onSnapshotChange: (snapshot: TerraDrawFeature[]) => void;
+  onSelectionChange?: (selectedFeatureId: string | number | null) => void;
   onError?: (message: string) => void;
 };
 
@@ -67,6 +68,7 @@ export function TerraDrawController({
   drawRef,
   onReadyChange,
   onSnapshotChange,
+  onSelectionChange,
   onError,
 }: TerraDrawControllerProps) {
   useEffect(() => {
@@ -154,6 +156,12 @@ export function TerraDrawController({
           if (!SNAPSHOT_CHANGE_EVENTS.has(event)) return;
           onSnapshotChange(draw.getSnapshot() as TerraDrawFeature[]);
         });
+        draw.on("select", (id: string | number) => {
+          onSelectionChange?.(id);
+        });
+        draw.on("deselect", () => {
+          onSelectionChange?.(null);
+        });
 
         draw.start();
         draw.setMode(mode);
@@ -174,7 +182,7 @@ export function TerraDrawController({
       projectionListener?.remove();
       projectionListener = null;
     };
-  }, [drawRef, enabled, map, mode, onError, onReadyChange, onSnapshotChange]);
+  }, [drawRef, enabled, map, mode, onError, onReadyChange, onSelectionChange, onSnapshotChange]);
 
   useEffect(() => {
     if (!enabled || !drawRef.current) return;

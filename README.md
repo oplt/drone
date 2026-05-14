@@ -1,93 +1,239 @@
 # Drone Operations Platform
 
-Ths app is a full-stack drone operations platform for planning, launching, and monitoring autonomous missions from a single operator console. This repository combines a FastAPI backend that talks to vehicles, telemetry, video, mapping, and alerting services with a React dashboard for field teams.
+Production-oriented drone mission orchestration and geospatial analytics platform for autonomous field operations, telemetry monitoring, photogrammetry workflows, and operational intelligence.
 
-The product direction is agronomy-first, but the codebase also includes warehouse scanning, indoor warehouse exploration, private patrol, and animal monitoring workflows.
+Built with FastAPI, React, PostgreSQL/PostGIS, Redis, Celery, and real-time telemetry infrastructure, the platform provides a browser-based operator console for planning, executing, monitoring, and reviewing autonomous drone missions.
 
-## What the project does
+The system is designed for:
 
-- Plan and run waypoint, grid, photogrammetry, private patrol, warehouse scan, and indoor exploration missions.
-- Stream live telemetry, mission lifecycle updates, and video into a browser-based dashboard.
-- Run configurable preflight checks before mission start.
-- Manage fields, geofences, warehouse maps, docks, settings, and operator-facing alerts.
-- Process photogrammetry jobs through a queued pipeline with WebODM and publish mapping assets.
-- Support ML-assisted patrol workflows and websocket event broadcasting.
+- Agricultural field operations
+- Photogrammetry workflows
+- Infrastructure inspection
+- Indoor warehouse navigation
+- Geospatial data collection
+- Telemetry-driven operational monitoring
 
-## Architecture at a glance
+---
 
-### Frontend
+## Core Capabilities
 
-- React 19 + TypeScript + Vite
-- Material UI dashboard
-- Google Maps + Cesium mission views
-- TanStack Query for data fetching
+- Autonomous mission planning and execution
+- Real-time telemetry streaming and websocket broadcasting
+- Geospatial overlays, routing, and geofence management
+- Photogrammetry job orchestration with WebODM integration
+- Preflight safety validation and operational readiness checks
+- Asset, mission, and fleet lifecycle management
+- Asynchronous mapping and processing pipelines
+- AI-assisted analytics and operational workflows
 
-### Backend
+> Status: active development platform with production-oriented backend architecture and ongoing hardware and ML integration validation.
 
-- FastAPI application with websocket support
-- SQLAlchemy async models and repository layer
-- Drone control/orchestration modules built around MAVLink/DroneKit-style integrations
-- MQTT, video streaming, alerting, and mission preflight services
-- Celery + Redis queue path for heavy photogrammetry processing
+---
 
-## Repository layout
+# Why This Platform Exists
+
+Modern drone operations often require multiple disconnected systems for:
+
+- Mission planning
+- Telemetry monitoring
+- Photogrammetry processing
+- Geospatial visualization
+- Fleet management
+- Operational logging
+- Asset delivery
+- Mapping analytics
+
+This platform centralizes those workflows into a single operational system designed for autonomous and semi-autonomous drone operations.
+
+---
+
+# Screenshots
+
+
+---
+
+# System Architecture
 
 ```text
-frontend/   React operator console and public landing pages
-backend/    FastAPI API, mission logic, telemetry, auth, data models, workers
-docs/       Architecture notes and mission design docs
+React/Vite Operator Dashboard
+            |
+            | HTTP + WebSocket
+            v
+FastAPI Backend API Layer
+            |
+            +-- Mission orchestration
+            +-- Telemetry runtime
+            +-- Mapping services
+            +-- Preflight validation
+            +-- Warehouse workflows
+            +-- Irrigation pipelines
+            +-- Livestock monitoring
+            +-- Alerting and integrations
+            |
+            +-- PostgreSQL/PostGIS
+            +-- Redis + Celery workers
+            +-- MinIO / S3 storage
+            +-- Optional WebODM
+            +-- MQTT / OPC UA
+            +-- MAVLink drone runtime
 ```
 
-Architecture decisions live in `docs/adr/`. Runtime inventories live in
-`docs/architecture/`. Start with
-`docs/adr/ADR-001-canonical-live-ops-runtime-architecture.md` and
-`docs/adr/ADR-002-canonical-runtime-envelope-schemas.md`,
-`docs/architecture/runtime-envelope-schemas-v1.md`,
-`docs/architecture/live-ops-runtime-path-inventory.md` plus
-`docs/architecture/live-ops-hot-path-current-state.md` for the current
-live-operations boundary, canonical schema contract, path map, and hot-path
-drawing.
+Heavy mapping and photogrammetry workloads are executed asynchronously through Celery queues outside the API process.
 
-Notable backend areas:
+---
 
-- `backend/api/`: HTTP and websocket routes
-- `backend/flight/`: mission definitions, indoor navigation, preflight checks
-- `backend/services/photogrammetry/`: mapping ingest, storage, WebODM integration
-- `backend/services/warehouse/`: warehouse capture and post-processing flows
-- `backend/ml/`: patrol/anomaly runtime
-- `backend/tasks/`: Celery app and photogrammetry worker tasks
+# System Design Highlights
 
-## Core workflows
+- Asynchronous FastAPI backend architecture
+- Celery-based distributed task processing
+- PostGIS-backed geospatial storage
+- Real-time websocket telemetry broadcasting
+- Queue-isolated photogrammetry workers
+- Signed asset delivery pipeline
+- Event-driven mission lifecycle management
+- Containerized local development environment
+- Modular service-oriented backend structure
 
-### Mission control
+---
 
-The platform exposes multiple mission types, including field routes, photogrammetry surveys, private patrol, warehouse scan missions, and indoor warehouse exploration from a docked start position.
+# Key Features
 
-### Live operations
+## Mission Operations
 
-The dashboard is built for operator-in-the-loop control with mission status, telemetry websockets, map overlays, preflight results, and live video panels.
+- Waypoint missions
+- Grid survey planning
+- Controlled-flight workflows
+- Mission lifecycle tracking
+- Route previews and validation
+- Fleet readiness management
+- Manual control endpoints
 
-### Mapping
+## Telemetry and Monitoring
 
-Photogrammetry jobs are staged through the API and processed asynchronously by Celery workers. The pipeline is designed to publish orthomosaics, terrain products, mesh outputs, and mapping assets for later retrieval.
+- Live telemetry streaming
+- Websocket event broadcasting
+- Operational health checks
+- Alerting and webhook integrations
+- Mission timeline visualization
+- Runtime status tracking
 
-### Warehouse and indoor autonomy
+## Mapping and Photogrammetry
 
-The warehouse subsystem includes warehouse map management, mission defaults, scanned-map asset handling, and an indoor exploration mission that does not depend on GPS. See `docs/indoor_warehouse_exploration_mission.md` for the detailed mission design.
+- Photogrammetry job orchestration
+- WebODM integration hooks
+- Asset staging and signed downloads
+- Field-model registry workflows
+- Terrain-processing support
+- Geospatial overlays and exports
 
-## Local development
+## Agricultural Workflows
 
-This repository is an application repo, not a packaged library, so the main goal locally is to run the API, dashboard, and optional worker services together.
+- Irrigation capture workflows
+- Field management APIs
+- Geofence management
+- Agricultural imaging support
+- ROS2-oriented imaging pipeline support
 
-### Prerequisites
+## Warehouse and Indoor Navigation
 
-- A recent Python 3 environment
-- Node.js and npm
-- PostgreSQL for the application database
-- Redis if you want to run queued photogrammetry jobs
-- Optional external services depending on the workflow: Google Maps, WebODM, MQTT broker, camera stream source, Raspberry Pi companion, and ML assets
+- Warehouse map management
+- Indoor exploration workflows
+- Dock and scanned-map support
+- GPS-denied operational flows
 
-### 1. Install backend dependencies
+## Infrastructure and Integrations
+
+- MQTT integration
+- OPC UA integration
+- S3-compatible object storage
+- Google OIDC hooks
+- API key management
+- Docker Compose deployment baseline
+
+---
+
+# Example Use Cases
+
+- Agricultural field mapping
+- Irrigation inspection
+- Infrastructure surveying
+- Indoor warehouse navigation
+- Security patrol operations
+- Terrain and route analysis
+- Drone fleet monitoring
+- Mapping and orthomosaic generation
+
+---
+
+# Tech Stack
+
+| Area | Technology |
+|---|---|
+| Backend API | FastAPI, Starlette, Uvicorn |
+| Data Layer | SQLAlchemy 2, PostgreSQL/PostGIS, Alembic |
+| Background Jobs | Celery, Redis |
+| Frontend | React, TypeScript, Vite, Material UI |
+| Mapping & GIS | Google Maps, Cesium, MapLibre, Leaflet |
+| Drone Runtime | DroneKit, pymavlink, MAVLink |
+| Storage | MinIO, S3-compatible object storage |
+| Messaging | MQTT, OPC UA, WebSockets |
+| Computer Vision | OpenCV, NumPy |
+| DevOps | Docker, Docker Compose |
+| Quality Tooling | pytest, Ruff, mypy, ESLint |
+
+---
+
+# Repository Structure
+
+```text
+backend/
+├── api/routes/          # FastAPI route groups
+├── auth/                # Authentication and authorization
+├── db/                  # Database models and repositories
+├── alembic/             # Database migrations
+├── drone/               # MAVLink and drone integrations
+├── flight/              # Mission workflows and preflight checks
+├── messaging/           # MQTT, OPC UA, websocket integrations
+├── services/            # Domain services
+├── tasks/               # Celery tasks and workers
+├── tests/               # Backend tests
+└── config.py            # Runtime settings
+
+frontend/
+├── src/                 # React dashboard application
+├── package.json
+├── Dockerfile
+└── nginx.conf
+```
+
+---
+
+# Quick Start
+
+## Clone the Repository
+
+```bash
+git clone <repo-url>
+cd <repo-name>
+```
+
+## Start the Full Stack
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+- Frontend: `http://localhost:8080`
+- API: `http://localhost:8000`
+- Swagger Docs: `http://localhost:8000/docs`
+
+---
+
+# Local Development
+
+## Backend Setup
 
 ```bash
 python -m venv .venv
@@ -95,93 +241,135 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Install frontend dependencies
+## Frontend Setup
 
 ```bash
 cd frontend
 npm install
+cd ..
 ```
 
-### 3. Configure environment variables
-
-Create local env files from the examples before running the stack:
+## Database Migrations
 
 ```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+alembic -c backend/alembic.ini upgrade head
 ```
 
-Rotate any previously committed credentials before using the new examples. The operational checklist lives in [docs/operations/SECRET_ROTATION_RUNBOOK.md](/home/polat/Desktop/Projects/drone_app/docs/operations/SECRET_ROTATION_RUNBOOK.md).
-
-Then review and update them for your environment.
-
-Common backend configuration groups include:
-
-- database and auth: `DATABASE_URL`, `JWT_SECRET`, `SETTINGS_VAULT_KEY`
-- vehicle connectivity: `DRONE_CONN`, `DRONE_CONN_MAVPROXY`, `HEARTBEAT_TIMEOUT`
-- maps and UI integrations: `GOOGLE_MAPS_API_KEY`, `GOOGLE_MAPS_JAVASCRIPT_API_KEY`
-- optional services: `MQTT_*`, `LLM_*`, `RASPBERRY_*`, `ML_*`
-
-Common frontend configuration keys include:
-
-- `VITE_API_BASE_URL`
-- `VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY`
-- `VITE_GOOGLE_MAPS_MAP_ID`
-- `VITE_CESIUM_ION_TOKEN` (optional, for Cesium-backed views)
-
-### 4. Run the backend API
+## Start Backend
 
 ```bash
-uvicorn backend.api.api_main:app --reload
+uvicorn backend.api.api_main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API starts the FastAPI app, initializes the database connection, loads runtime settings, and exposes a health endpoint at `GET /health`.
-
-### 5. Run the frontend
+## Start Frontend
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-By default, the frontend expects the API at `http://localhost:8000`.
+---
 
-### 6. Run the optional photogrammetry worker
+# Environment Variables
 
-If you want queued mapping jobs to process instead of just being enqueued, start Redis and a Celery worker:
-
-```bash
-celery -A backend.tasks.celery_app:celery_app worker \
-  --loglevel=INFO \
-  --queues=photogrammetry \
-  --hostname=photogrammetry@%h
-```
-
-See `backend/tasks/README.md` for worker deployment details, required environment variables, and WebODM/toolchain expectations.
-
-### 7. Run the container baseline
-
-The repository now includes a minimal deployment baseline for local production-like runs:
+Create local environment files:
 
 ```bash
-docker compose up --build
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-This starts Postgres with PostGIS, Redis, the FastAPI API, a Celery worker, and a static frontend build.
+Important backend variables include:
 
-## API and feature areas
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL/PostGIS connection |
+| `JWT_SECRET` | Authentication token signing |
+| `REDIS_URL` | Redis runtime and Celery backend |
+| `CELERY_BROKER_URL` | Celery broker |
+| `WEBODM_*` | Photogrammetry integration |
+| `MQTT_*` | MQTT configuration |
+| `S3_*` | Object storage configuration |
+| `GOOGLE_MAPS_API_KEY` | Maps integration |
 
-Some of the main route groups in the backend are:
+Frontend variables include:
 
-- `/tasks` for mission creation, preflight, and mission lifecycle operations
-- `/mapping` for photogrammetry jobs and mapping assets
-- `/warehouse` for warehouse maps, mission defaults, scans, and exploration launches
-- `/api/ml` for patrol ML runtime controls
+| Variable | Purpose |
+|---|---|
+| `VITE_API_BASE_URL` | Backend API URL |
+| `VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY` | Google Maps API key |
+| `VITE_CESIUM_ION_TOKEN` | Cesium token |
 
-Additional modules cover auth, analytics, geofences, fields, settings, alerts, video, and telemetry websockets.
+---
 
-## Notes for contributors
+# API Overview
 
-- The backend includes Alembic files in `backend/alembic/`, although the app also initializes tables on startup.
-- Photogrammetry is intentionally offloaded to worker processes rather than the API server.
-- Some UI copy is agronomy-specific, while the backend supports broader drone operations use cases.
+FastAPI automatically exposes OpenAPI documentation:
+
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/openapi.json`
+
+Main route groups include:
+
+| Area | Routes |
+|---|---|
+| Auth | `/auth/*` |
+| Missions | `/tasks/missions/*` |
+| Telemetry | `/telemetry/*` |
+| Mapping | `/mapping/*` |
+| Warehouse | `/warehouse/*` |
+| Irrigation | `/irrigation/*` |
+| Livestock | `/livestock/*` |
+| Alerts & Settings | `/api/alerts`, `/api/settings` |
+
+---
+
+# Current Capabilities
+
+- Mission planning and execution
+- Telemetry monitoring
+- Geofence management
+- Mapping job orchestration
+- WebODM integration
+- Warehouse exploration workflows
+- Real-time operational dashboards
+
+---
+
+# Planned / Experimental
+
+- Autonomous irrigation analytics
+- AI anomaly detection
+- ROS2 orchestration improvements
+- Multi-drone coordination
+- Edge AI inference pipelines
+- Advanced geospatial analytics
+
+---
+
+# Security Notes
+
+- Replace all development secrets before deployment
+- Use HTTPS in production
+- Store certificates and credentials outside the repository
+- Validate flight safety in simulation before real hardware deployment
+- Review CORS and authentication configuration before public exposure
+
+---
+
+# Known Limitations
+
+- Some integrations require environment-specific validation
+- Drone hardware integrations depend on MAVLink-compatible systems
+- ROS2 workflows require target-environment validation
+- WebODM and object-storage integrations require external services
+- Demo assets and screenshots are not yet included
+
+---
+
+# License
+
+License not yet documented.
+
+
+

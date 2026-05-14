@@ -63,7 +63,6 @@ export default function OptionsMenu() {
           },
         }}
       >
-        <MenuItem onClick={handleClose}>Profile</MenuItem>
         <MenuItem onClick={handleClose}>Account</MenuItem>
         <Divider />
         <MenuItem onClick={handleClose}>Settings</MenuItem>

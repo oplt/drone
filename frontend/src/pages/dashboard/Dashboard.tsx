@@ -7,7 +7,7 @@ import AppNavbar from "../../components/dashboard/AppNavbar";
 import SideMenu from "../../components/dashboard/SideMenu";
 import AppTheme from "../../components/shared-theme/AppTheme";
 import PageLoader from "../../components/shared/PageLoader";
-import { getToken, clearToken } from "../../auth";
+import { clearToken, verifySession } from "../../auth";
 import {
   chartsCustomizations,
   dataGridCustomizations,
@@ -37,12 +37,6 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
   const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
 
   React.useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      navigate("/signin", { replace: true });
-      return;
-    }
-
     let cancelled = false;
     const controller = new AbortController();
 
@@ -52,7 +46,11 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
         signal,
       });
 
-    fetchMe(controller.signal)
+    verifySession()
+      .then((ok) => {
+        if (!ok) throw new Error("unauthorized");
+        return fetchMe(controller.signal);
+      })
       .then(async (r) => {
         if (r.status === 401) {
           const refreshRes = await fetch(`${API_BASE_CLEAN}/auth/refresh`, {
