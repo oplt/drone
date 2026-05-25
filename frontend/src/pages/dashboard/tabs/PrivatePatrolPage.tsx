@@ -42,6 +42,7 @@ import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumVi
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
+import { TaskControlFrame } from "../../../components/dashboard/tasks/TaskControlFrame";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
 import type { MissionMapEngine } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
@@ -179,6 +180,7 @@ const INFO_INPUT_LABEL_PROPS = {
 } as const;
 
 export default function PrivatePatrolPage() {
+  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [fields, setFields] = useState<FieldFeature[]>([]);
@@ -2721,18 +2723,23 @@ useEffect(() => {
 
               </Stack>
 
-              <Box sx={{ width: { xs: "100%", md: 620 } }}>
+              <Box
+                sx={{
+                  width: { xs: "100%", md: controlFrameExpanded ? 620 : 360 },
+                  transition: "width 180ms ease",
+                }}
+              >
                 <Stack spacing={2}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <TaskControlFrame
+                    expanded={controlFrameExpanded}
+                    onExpandedChange={setControlFrameExpanded}
+                  >
                       <MissionPreflightPanel
                         apiBase={API_BASE_CLEAN}
                         missionType="perimeter_patrol"
                         preflightRun={preflightRun}
                         telemetry={telemetry}
                       />
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
                       <MissionCommandPanel
                         telemetry={telemetry}
                         droneConnected={droneConnected}
@@ -2740,8 +2747,7 @@ useEffect(() => {
                         activeFlightId={activeFlightId}
                         apiBase={API_BASE_CLEAN}
                       />
-                    </Box>
-                  </Stack>
+                  </TaskControlFrame>
                   <TextField variant="filled"
                     label="Mission name"
                     value={name}

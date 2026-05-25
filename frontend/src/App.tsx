@@ -37,12 +37,10 @@ window.addEventListener("load", () => {
 const Home = lazyWithStaleChunkReload<HomeProps>(() => import("./pages/Home"));
 const Dashboard = lazyWithStaleChunkReload(() => import("./pages/dashboard/Dashboard"));
 const DashboardHome = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/HomePage"));
-const TasksPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/TasksPage"));
 const AdminSettingsPage = lazyWithStaleChunkReload(() => import("./pages/AdminSettingsPage"));
 const AccountPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/AccountPage"));
 const InsightsPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/InsightsPage"));
 const FleetPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/FleetPage"));
-const TerrainPage = lazyWithStaleChunkReload(() => import("./pages/dashboard/tabs/TerrainPage"));
 const ControlledFlightPage = lazyWithStaleChunkReload(
   () => import("./pages/dashboard/tabs/ControlledFlightPage"),
 );
@@ -133,11 +131,9 @@ export default function App() {
           }
         >
           <Route index element={renderLazyRoute(<DashboardHome />)} />
-          <Route path="tasks" element={renderLazyRoute(<TasksPage />)} />
           <Route path="insights" element={renderLazyRoute(<InsightsPage />)} />
           <Route path="fleet" element={renderLazyRoute(<FleetPage />)} />
           <Route path="settings" element={renderLazyRoute(<AdminSettingsPage />)} />
-          <Route path="terrain" element={renderLazyRoute(<TerrainPage />)} />
           <Route path="controlled" element={renderLazyRoute(<ControlledFlightPage />)} />
           <Route path="account" element={renderLazyRoute(<AccountPage />)} />
           <Route

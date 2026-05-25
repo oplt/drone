@@ -20,6 +20,7 @@ import Header from "../../../components/dashboard/Header";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
+import { TaskControlFrame } from "../../../components/dashboard/tasks/TaskControlFrame";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { getToken } from "../../../auth";
@@ -290,6 +291,7 @@ const toWarehouseMissionDefaultsPayload = (
 
 
 export default function WarehousePage() {
+  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>([]);
   const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
   const [selectedMapJobId, setSelectedMapJobId] = useState<number | null>(null);
@@ -748,7 +750,9 @@ export default function WarehousePage() {
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
-              md: "minmax(0, 1.15fr) minmax(340px, 0.85fr)",
+              md: controlFrameExpanded
+                ? "minmax(0, 1.15fr) minmax(340px, 0.85fr)"
+                : "minmax(0, 1fr) 360px",
             },
             gap: 3,
             alignItems: "start",
@@ -1333,22 +1337,26 @@ export default function WarehousePage() {
                 </Stack>
               </Paper>
 
-              <MissionPreflightPanel
-                apiBase={apiBase}
-                missionType="warehouse_scan"
-                preflightRun={null}
-                telemetry={telemetry}
-                title="Warehouse Preflight"
-              />
-
-              <MissionCommandPanel
-                telemetry={telemetry}
-                droneConnected={droneConnected}
-                missionStatus={missionStatus}
-                activeFlightId={activeFlightId}
-                apiBase={apiBase}
-                title="Warehouse Commands"
-              />
+              <TaskControlFrame
+                expanded={controlFrameExpanded}
+                onExpandedChange={setControlFrameExpanded}
+              >
+                <MissionPreflightPanel
+                  apiBase={apiBase}
+                  missionType="warehouse_scan"
+                  preflightRun={null}
+                  telemetry={telemetry}
+                  title="Warehouse Preflight"
+                />
+                <MissionCommandPanel
+                  telemetry={telemetry}
+                  droneConnected={droneConnected}
+                  missionStatus={missionStatus}
+                  activeFlightId={activeFlightId}
+                  apiBase={apiBase}
+                  title="Warehouse Commands"
+                />
+              </TaskControlFrame>
           </Stack>
         </Box>
       </Paper>

@@ -20,6 +20,7 @@ import { getToken } from "../../../auth";
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
+import { TaskControlFrame } from "../../../components/dashboard/tasks/TaskControlFrame";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
 import { MissionStatusChips } from "../../../components/dashboard/tasks/MissionStatusChips";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
@@ -152,6 +153,7 @@ const firstFiniteNumber = (...values: unknown[]): number | null => {
 };
 
 export default function ControlledFlightPage() {
+  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
@@ -976,7 +978,12 @@ export default function ControlledFlightPage() {
                 </Stack>
 
                 {/* Right column: controls */}
-                <Box sx={{ width: { xs: "100%", md: 500 } }}>
+                <Box
+                    sx={{
+                      width: { xs: "100%", md: controlFrameExpanded ? 500 : 360 },
+                      transition: "width 180ms ease",
+                    }}
+                >
                   <Stack spacing={0.5}>
                     {/* Drone command box */}
                     <Paper variant="outlined" sx={{ p: 1, borderRadius: 2 }}>
@@ -1046,17 +1053,16 @@ export default function ControlledFlightPage() {
                       </Stack>
                     </Paper>
 
-                    {/* Preflight + Command panels */}
-                    <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <TaskControlFrame
+                        expanded={controlFrameExpanded}
+                        onExpandedChange={setControlFrameExpanded}
+                    >
                         <MissionPreflightPanel
                             apiBase={API_BASE_CLEAN}
                             missionType="controlled"
                             preflightRun={preflightRun}
                             telemetry={telemetry}
                         />
-                      </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
                         <MissionCommandPanel
                             telemetry={telemetry}
                             droneConnected={droneConnected}
@@ -1064,8 +1070,7 @@ export default function ControlledFlightPage() {
                             activeFlightId={activeFlightId}
                             apiBase={API_BASE_CLEAN}
                         />
-                      </Box>
-                    </Stack>
+                    </TaskControlFrame>
 
                     {/* Controlled preflight detail panel */}
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>

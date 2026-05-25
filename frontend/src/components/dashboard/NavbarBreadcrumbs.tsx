@@ -18,11 +18,9 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 
 function toTitle(segment: string) {
   const overrides: Record<string, string> = {
-    tasks: "Field Plans",
     insights: "Insights",
     fleet: "Fleet",
     settings: "Settings",
-    terrain: "Terrain",
     account: "Account",
     photogrammetry: "Photogrammetry",
     animalfarm: "Animal Farm",
@@ -46,7 +44,7 @@ export default function NavbarBreadcrumbs() {
 
   // Examples:
   // /dashboard           -> ["dashboard"]
-  // /dashboard/tasks     -> ["dashboard", "tasks"]
+  // /dashboard/controlled -> ["dashboard", "controlled"]
   const segments = pathname.split("/").filter(Boolean);
 
   // If you're inside /dashboard/... grab the part after "dashboard"

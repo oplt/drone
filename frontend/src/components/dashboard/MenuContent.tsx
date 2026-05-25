@@ -15,8 +15,6 @@ import PrecisionManufacturingRoundedIcon from '@mui/icons-material/PrecisionManu
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
-import TerrainIcon from '@mui/icons-material/Terrain';
 import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
@@ -51,10 +49,8 @@ const mainListItems: MenuItem[] = [
   {
     text: 'Tasks',
     icon: <AssignmentRoundedIcon />,
-    path: '/dashboard/tasks',
+    path: '/dashboard/controlled',
     children: [
-      { text: 'Flight', icon: <FlightTakeoffIcon />, path: '/dashboard/tasks' },
-      { text: 'Terrain', icon: <TerrainIcon />, path: '/dashboard/terrain' },
       { text: 'Controlled Flight', icon: <SportsEsportsRoundedIcon/>, path: '/dashboard/controlled' },
       { text: 'PhotoGrammetry', icon: <PhotoCameraRoundedIcon />, path: '/dashboard/photogrammetry' },
       { text: 'Animal Farm', icon: <EmojiNatureRoundedIcon />, path: '/dashboard/animalfarm' },

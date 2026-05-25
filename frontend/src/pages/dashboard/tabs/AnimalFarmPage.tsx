@@ -12,6 +12,7 @@ import { CesiumViewControls } from "../../../components/dashboard/tasks/CesiumVi
 import { ErrorAlerts } from "../../../components/dashboard/tasks/ErrorAlerts";
 import { MissionCommandPanel } from "../../../components/dashboard/tasks/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../components/dashboard/tasks/MissionPreflightPanel";
+import { TaskControlFrame } from "../../../components/dashboard/tasks/TaskControlFrame";
 import { MissionMapViewport } from "../../../components/dashboard/tasks/MissionMapViewport";
 import type { MissionMapEngine } from "../../../components/dashboard/tasks/MissionMapViewport";
 import { MissionVideoPanel } from "../../../components/dashboard/tasks/MissionVideoPanel";
@@ -94,6 +95,7 @@ const containerStyle = { width: "100%", height: "400px" };
 const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
 export default function AnimalFarmPage() {
+  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
@@ -1055,18 +1057,23 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
               </Stack>
 
               {/* Right side: Controls */}
-              <Box sx={{ width: { xs: "100%", md: 620 } }}>
+              <Box
+                sx={{
+                  width: { xs: "100%", md: controlFrameExpanded ? 620 : 360 },
+                  transition: "width 180ms ease",
+                }}
+              >
                 <Stack spacing={2}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <TaskControlFrame
+                    expanded={controlFrameExpanded}
+                    onExpandedChange={setControlFrameExpanded}
+                  >
                       <MissionPreflightPanel
                         apiBase={API_BASE_CLEAN}
                         missionType="route"
                         preflightRun={preflightRun}
                         telemetry={telemetry}
                       />
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
                       <MissionCommandPanel
                         telemetry={telemetry}
                         droneConnected={droneConnected}
@@ -1074,8 +1081,7 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
                         activeFlightId={activeFlightId}
                         apiBase={API_BASE_CLEAN}
                       />
-                    </Box>
-                  </Stack>
+                  </TaskControlFrame>
                   <TextField variant="filled"
                     label="Field plan name"
                     value={name}
