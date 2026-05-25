@@ -62,6 +62,7 @@ module = [
     "paramiko.*",
     "picamera2.*",
     "pymavlink.*",
+    "pytest",
     "shapely.*",
 ]
 ignore_missing_imports = true
@@ -71,6 +72,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["backend/tests"]
+markers = [
+    "integration: requires PostgreSQL/PostGIS or external service setup",
+]
 
 [tool.vulture]
 paths = ["backend"]

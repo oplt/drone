@@ -1,0 +1,194 @@
+{
+  "backend/entrypoints/workers/photogrammetry_tasks.py|thin-worker-entrypoints|backend.infrastructure.mapping": {
+    "path": "backend/entrypoints/workers/photogrammetry_tasks.py",
+    "line": 13,
+    "rule": "thin-worker-entrypoints",
+    "import": "backend.infrastructure.mapping"
+  },
+  "backend/modules/admin/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/admin/api.py",
+    "line": 6,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/admin/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/admin/api.py",
+    "line": 7,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/admin/api.py|thin-module-api|backend.entrypoints.workers.photogrammetry_tasks": {
+    "path": "backend/modules/admin/api.py",
+    "line": 138,
+    "rule": "thin-module-api",
+    "import": "backend.entrypoints.workers.photogrammetry_tasks"
+  },
+  "backend/modules/admin/api.py|thin-module-api|backend.entrypoints.workers.celery_app": {
+    "path": "backend/modules/admin/api.py",
+    "line": 188,
+    "rule": "thin-module-api",
+    "import": "backend.entrypoints.workers.celery_app"
+  },
+  "backend/modules/alerts/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/alerts/api.py",
+    "line": 4,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/analytics/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/analytics/api.py",
+    "line": 8,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/analytics/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/analytics/api.py",
+    "line": 9,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/automation/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/automation/api.py",
+    "line": 8,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/automation/api.py|thin-module-api|sqlalchemy.exc": {
+    "path": "backend/modules/automation/api.py",
+    "line": 9,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.exc"
+  },
+  "backend/modules/automation/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/automation/api.py",
+    "line": 10,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/automation/api.py|thin-module-api|backend.entrypoints.workers.scheduling_tasks": {
+    "path": "backend/modules/automation/api.py",
+    "line": 224,
+    "rule": "thin-module-api",
+    "import": "backend.entrypoints.workers.scheduling_tasks"
+  },
+  "backend/modules/compliance/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/compliance/api.py",
+    "line": 16,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/deliverables/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/deliverables/api.py",
+    "line": 21,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/deliverables/api.py|thin-module-api|backend.entrypoints.workers.deliverable_tasks": {
+    "path": "backend/modules/deliverables/api.py",
+    "line": 129,
+    "rule": "thin-module-api",
+    "import": "backend.entrypoints.workers.deliverable_tasks"
+  },
+  "backend/modules/deliverables/share_api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/deliverables/share_api.py",
+    "line": 18,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/fields/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/fields/api.py",
+    "line": 27,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/fleet/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/fleet/api.py",
+    "line": 16,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/geofences/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/geofences/api.py",
+    "line": 6,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/geofences/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/geofences/api.py",
+    "line": 7,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/identity/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/identity/api.py",
+    "line": 9,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/identity/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/identity/api.py",
+    "line": 10,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/integrations/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/integrations/api.py",
+    "line": 20,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/integrations/webhooks/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/integrations/webhooks/api.py",
+    "line": 10,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/integrations/webhooks/api.py|thin-module-api|backend.entrypoints.workers.webhook_tasks": {
+    "path": "backend/modules/integrations/webhooks/api.py",
+    "line": 253,
+    "rule": "thin-module-api",
+    "import": "backend.entrypoints.workers.webhook_tasks"
+  },
+  "backend/modules/irrigation/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/irrigation/api.py",
+    "line": 10,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/livestock/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/livestock/api.py",
+    "line": 4,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/mapping/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/mapping/api.py",
+    "line": 24,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/missions/api/routes.py|thin-module-api|backend.entrypoints.workers.export_tasks": {
+    "path": "backend/modules/missions/api/routes.py",
+    "line": 2382,
+    "rule": "thin-module-api",
+    "import": "backend.entrypoints.workers.export_tasks"
+  },
+  "backend/modules/patrol/api.py|thin-module-api|sqlalchemy": {
+    "path": "backend/modules/patrol/api.py",
+    "line": 7,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy"
+  },
+  "backend/modules/patrol/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/patrol/api.py",
+    "line": 8,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  },
+  "backend/modules/warehouse/api.py|thin-module-api|sqlalchemy.ext.asyncio": {
+    "path": "backend/modules/warehouse/api.py",
+    "line": 9,
+    "rule": "thin-module-api",
+    "import": "sqlalchemy.ext.asyncio"
+  }
+}

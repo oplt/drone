@@ -5,9 +5,9 @@ import asyncio
 
 from sqlalchemy import select
 
-from backend.db.models import MissionRuntime
-from backend.db.session import Session
-from backend.services.irrigation.service import irrigation_service
+from backend.core.database.session import Session
+from backend.modules.irrigation.service.processing import irrigation_service
+from backend.modules.missions.runtime_models import MissionRuntime
 
 
 async def _run(mission_id: str, force: bool) -> None:

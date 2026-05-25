@@ -33,7 +33,7 @@ if ! command -v ros2 >/dev/null 2>&1; then
 fi
 
 GAZEBO_TOPIC="$("$PYTHON_BIN" - <<'PY'
-from backend.ros2_irrigation.common import choose_gazebo_camera_topic
+from backend.entrypoints.ros2.common import choose_gazebo_camera_topic
 topic = choose_gazebo_camera_topic()
 print(topic or "")
 PY
@@ -54,11 +54,11 @@ export IRRIGATION_API_BASE_URL="$API_BASE_URL"
 export IRRIGATION_ROS_CAMERA_INPUT_TOPIC="$GAZEBO_TOPIC"
 export IRRIGATION_ROS2_CACHE_DIR="$ROS_CACHE_DIR"
 
-"$PYTHON_BIN" -m backend.ros2_irrigation.telemetry_state_node >/tmp/irrigation_telemetry_state_node.log 2>&1 &
+"$PYTHON_BIN" -m backend.entrypoints.ros2.telemetry_state_node >/tmp/irrigation_telemetry_state_node.log 2>&1 &
 PIDS+=($!)
-"$PYTHON_BIN" -m backend.ros2_irrigation.camera_bridge_node >/tmp/irrigation_camera_bridge_node.log 2>&1 &
+"$PYTHON_BIN" -m backend.entrypoints.ros2.camera_bridge_node >/tmp/irrigation_camera_bridge_node.log 2>&1 &
 PIDS+=($!)
-"$PYTHON_BIN" -m backend.ros2_irrigation.capture_sync_node >/tmp/irrigation_capture_sync_node.log 2>&1 &
+"$PYTHON_BIN" -m backend.entrypoints.ros2.capture_sync_node >/tmp/irrigation_capture_sync_node.log 2>&1 &
 PIDS+=($!)
 
 echo "Waiting ${WAIT_SECONDS}s for captures to upload..."

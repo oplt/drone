@@ -1,1 +1,0 @@
-"""Irrigation pipeline package."""

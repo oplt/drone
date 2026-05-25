@@ -7,9 +7,9 @@ check-local-tools:
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed."; exit 1; }
 
 kill-celery:
-	-pgrep -f "[c]elery.*backend.tasks.celery_app" | xargs -r kill
+	-pgrep -f "[c]elery.*backend.entrypoints.workers.celery_app" | xargs -r kill
 	-sleep 1
-	-pgrep -f "[c]elery.*backend.tasks.celery_app" | xargs -r kill -9
+	-pgrep -f "[c]elery.*backend.entrypoints.workers.celery_app" | xargs -r kill -9
 
 kill-ports:
 	-fuser -k 8000/tcp
@@ -17,12 +17,12 @@ kill-ports:
 
 kill-dev: kill-celery
 	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill
-	-pgrep -f "[u]vicorn backend.api.api_main:app" | xargs -r kill
+	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill
 	-pgrep -f "[v]ite" | xargs -r kill
 	-pgrep -f "[n]pm run dev" | xargs -r kill
 	-sleep 1
 	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill -9
-	-pgrep -f "[u]vicorn backend.api.api_main:app" | xargs -r kill -9
+	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill -9
 	-pgrep -f "[v]ite" | xargs -r kill -9
 	-pgrep -f "[n]pm run dev" | xargs -r kill -9
 	-$(MAKE) -f Makefile.local kill-ports

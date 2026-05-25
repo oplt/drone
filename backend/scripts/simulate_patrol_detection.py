@@ -5,7 +5,7 @@ import asyncio
 import json
 from dataclasses import asdict, dataclass
 
-from backend.services.patrol.patrol_persistence import PatrolPersistenceService
+from backend.modules.patrol.service.persistence import PatrolPersistenceService
 
 
 @dataclass

@@ -1,0 +1,573 @@
+DRONE BACKEND - RECOMMENDED MODULAR ARCHITECTURE
+================================================
+
+Scope
+-----
+Architecture recommendation after inspecting current backend package. This is a
+target structure and migration guide, not an assertion that files already live
+in these locations.
+
+Current stack observed
+----------------------
+- FastAPI application: backend/api/api_main.py
+- SQLAlchemy async persistence plus Alembic migrations
+- PostgreSQL/PostGIS, Redis, MinIO/S3
+- Celery workers and beat scheduler
+- MAVLink/drone runtime, MQTT, WebSockets, OPC UA, ROS2 bridge
+- WebODM/photogrammetry and patrol ML processing
+- OpenTelemetry and Prometheus integration
+
+Main architecture problems observed
+-----------------------------------
+- Mixed organization: technical-layer folders coexist with partial feature
+  folders, making ownership unclear.
+- API layer owns application and persistence logic. Routes directly import
+  SQLAlchemy/models/session in fields, mapping, irrigation, auth, admin,
+  integrations, analytics, templates, fleet, compliance, webhooks, and others.
+- Central model file owns all domains: backend/db/models.py is 1786 lines.
+- Major files exceed clean-module limits, especially:
+  backend/api/routes/routes_flights.py              2467 lines
+  backend/db/models.py                              1786 lines
+  backend/flight/missions/private_patrol.py         1776 lines
+  backend/drone/orchestrator.py                     1593 lines
+  backend/flight/preflight_check/mission_specific.py 1493 lines
+  backend/api/routes/routes_mapping.py               964 lines
+  backend/api/routes/routes_warehouse.py             713 lines
+  backend/services/alerts/engine.py                  653 lines
+  backend/db/repository/telemetry_repo.py            587 lines
+  backend/services/photogrammetry/service.py         561 lines
+- Hardware adapters, mission use cases, realtime publishing, persistence, and
+  long-running runtime control are coupled through global instances and imports.
+- Worker task modules contain SQL/persistence behavior instead of invoking
+  feature use cases.
+- No Python test modules were found under backend/tests even though pytest is
+  configured for that location.
+
+Architecture decision
+---------------------
+Use a domain-first modular monolith under the existing backend package.
+
+Reason:
+- Product already has strongly distinct capabilities: mission execution,
+  telemetry, mapping, irrigation, warehouse inspection, patrol/ML, livestock,
+  alerts, identity, scheduling, exports, and external delivery.
+- A layer-first layout has already produced giant routes/models and cross-domain
+  imports.
+- A modular monolith avoids service/network overhead while enforcing ownership
+  boundaries; domains can be extracted later only when operational need exists.
+- Retaining backend as package root avoids an unnecessary backend.app import
+  migration while modules are extracted.
+
+Dependency direction
+--------------------
+entrypoints/api or entrypoints/workers
+  -> modules/<domain>/api or modules/<domain>/jobs
+  -> modules/<domain>/application
+  -> modules/<domain>/domain
+  -> modules/<domain>/ports
+
+infrastructure/adapters implement ports and may depend on framework/client SDKs.
+core may be imported by all modules, but may not import feature modules.
+One module uses another through its application facade or published events,
+never by querying another module's ORM models directly.
+
+Target tree
+-----------
+backend/
+|-- __init__.py
+|-- entrypoints/
+|   |-- api/
+|   |   |-- app.py                         # FastAPI factory only
+|   |   |-- lifespan.py                    # startup/shutdown composition
+|   |   |-- middleware.py                  # request id, errors, CORS wiring
+|   |   |-- health.py                      # liveness/readiness endpoints
+|   |   `-- router.py                      # includes module routers
+|   |-- workers/
+|   |   |-- celery_app.py                  # Celery config and routes
+|   |   |-- beat_schedule.py               # periodic task registration
+|   |   `-- tasks.py                       # imports module task entrypoints
+|   |-- cli/
+|   |   `-- run_mission.py                 # optional local/ops command
+|   `-- ros2/
+|       |-- camera_bridge_node.py
+|       |-- capture_sync_node.py
+|       |-- processing_trigger_node.py
+|       `-- telemetry_state_node.py
+|
+|-- core/
+|   |-- config/
+|   |   |-- bootstrap.py                   # DB/vault startup settings
+|   |   |-- runtime.py                     # typed application settings
+|   |   `-- feature_flags.py
+|   |-- database/
+|   |   |-- base.py                        # DeclarativeBase only
+|   |   |-- session.py                     # engine and unit-of-work wiring
+|   |   `-- migrations.py                  # migration operational helpers
+|   |-- security/
+|   |   |-- hashing.py
+|   |   |-- jwt.py
+|   |   |-- secrets.py
+|   |   `-- permissions.py                 # shared permission vocabulary
+|   |-- errors/
+|   |   |-- exceptions.py                  # domain/application errors
+|   |   `-- handlers.py                    # stable API error envelope
+|   |-- observability/
+|   |   |-- logging.py
+|   |   |-- metrics.py
+|   |   |-- tracing.py
+|   |   `-- audit.py
+|   |-- events/
+|   |   |-- envelope.py
+|   |   |-- publisher.py                   # port; no WebSocket/Redis SDK
+|   |   `-- outbox.py                      # transactional event pattern
+|   `-- types/
+|       |-- geo.py
+|       |-- pagination.py
+|       `-- time.py
+|
+|-- modules/
+|   |-- identity/
+|   |   |-- api.py                         # /auth, /api-keys
+|   |   |-- schemas.py
+|   |   |-- service.py                     # login/session/key/OIDC use cases
+|   |   |-- repository.py
+|   |   |-- models.py                      # User, UserSession, ApiKey, audit
+|   |   |-- dependencies.py                # authenticated principal only
+|   |   `-- tests/
+|   |
+|   |-- organizations/
+|   |   |-- api.py                         # org/project administration
+|   |   |-- schemas.py
+|   |   |-- service.py                     # tenancy and membership rules
+|   |   |-- repository.py
+|   |   |-- models.py                      # Organization, Project
+|   |   `-- tests/
+|   |
+|   |-- fields/
+|   |   |-- api.py                         # /fields
+|   |   |-- schemas.py
+|   |   |-- service.py                     # ownership and field lifecycle
+|   |   |-- repository.py                  # PostGIS queries
+|   |   |-- models.py                      # Field
+|   |   |-- geometry.py                    # field-domain geo rules
+|   |   `-- tests/
+|   |
+|   |-- geofences/
+|   |   |-- api.py                         # /geofences
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Geofence
+|   |   `-- tests/
+|   |
+|   |-- missions/
+|   |   |-- api/
+|   |   |   |-- commands.py                # create/start/pause/abort/resume
+|   |   |   |-- queries.py                 # status/events/exports
+|   |   |   `-- previews.py                # plan previews
+|   |   |-- schemas/
+|   |   |   |-- commands.py
+|   |   |   |-- responses.py
+|   |   |   `-- mission_types.py
+|   |   |-- service/
+|   |   |   |-- command_service.py
+|   |   |   |-- query_service.py
+|   |   |   |-- preview_service.py
+|   |   |   `-- recovery_service.py
+|   |   |-- domain/
+|   |   |   |-- state_machine.py
+|   |   |   |-- runtime.py
+|   |   |   |-- events.py
+|   |   |   `-- commands.py
+|   |   |-- planning/
+|   |   |   |-- waypoint.py
+|   |   |   |-- grid.py
+|   |   |   |-- photogrammetry.py
+|   |   |   `-- terrain_follow.py
+|   |   |-- repository/
+|   |   |   |-- mission_runtime.py
+|   |   |   |-- operator_commands.py
+|   |   |   `-- events.py
+|   |   |-- models.py                      # Flight, FlightEvent, MissionRuntime
+|   |   `-- tests/
+|   |
+|   |-- preflight/
+|   |   |-- api.py                         # /preflight
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # PreflightRun
+|   |   |-- checks/
+|   |   |   |-- common.py
+|   |   |   |-- outdoor.py
+|   |   |   |-- indoor_warehouse.py
+|   |   |   |-- grid.py
+|   |   |   |-- patrol.py
+|   |   |   `-- exploration.py
+|   |   `-- tests/
+|   |
+|   |-- telemetry/
+|   |   |-- api.py                         # query/control endpoints
+|   |   |-- websocket_api.py               # /ws/telemetry transport
+|   |   |-- schemas.py
+|   |   |-- ingest_service.py
+|   |   |-- query_service.py
+|   |   |-- control_service.py
+|   |   |-- repository/
+|   |   |   |-- samples.py
+|   |   |   |-- mavlink_events.py
+|   |   |   `-- summaries.py
+|   |   |-- models.py                      # Telemetry/Mavlink/Summary
+|   |   `-- tests/
+|   |
+|   |-- vehicle_runtime/
+|   |   |-- service/
+|   |   |   |-- coordinator.py             # replaces god orchestrator
+|   |   |   |-- execution.py
+|   |   |   |-- live_telemetry.py
+|   |   |   `-- cleanup.py
+|   |   |-- ports/
+|   |   |   |-- vehicle.py
+|   |   |   |-- map_provider.py
+|   |   |   |-- analysis_provider.py
+|   |   |   `-- video_provider.py
+|   |   `-- tests/
+|   |
+|   |-- mapping/
+|   |   |-- api/
+|   |   |   |-- jobs.py                    # /mapping/jobs
+|   |   |   |-- assets.py                  # asset download/signed URL
+|   |   |   `-- field_models.py
+|   |   |-- schemas.py
+|   |   |-- service/
+|   |   |   |-- job_service.py
+|   |   |   |-- ingest_service.py
+|   |   |   |-- asset_service.py
+|   |   |   `-- registry_service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # MappingJob, Asset, FieldModel
+|   |   |-- jobs.py                        # worker use-case entrypoint
+|   |   `-- tests/
+|   |
+|   |-- irrigation/
+|   |   |-- api.py
+|   |   |-- schemas.py
+|   |   |-- service/
+|   |   |   |-- capture_service.py
+|   |   |   |-- processing_service.py
+|   |   |   `-- summary_service.py
+|   |   |-- domain/
+|   |   |   |-- compositor.py
+|   |   |   |-- analytics.py
+|   |   |   `-- geometry.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Capture/Layer/Zone/Point
+|   |   |-- jobs.py
+|   |   `-- tests/
+|   |
+|   |-- warehouse/
+|   |   |-- api/
+|   |   |   |-- maps.py
+|   |   |   |-- docking.py
+|   |   |   `-- missions.py
+|   |   |-- schemas.py
+|   |   |-- service/
+|   |   |   |-- map_service.py
+|   |   |   |-- scan_service.py
+|   |   |   `-- exploration_service.py
+|   |   |-- planning/
+|   |   |   |-- local_planner.py
+|   |   |   `-- exploration.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # WarehouseMap/Dock/Asset/Job
+|   |   `-- tests/
+|   |
+|   |-- patrol/
+|   |   |-- api.py                         # incidents/evidence/runtime ops
+|   |   |-- schemas.py
+|   |   |-- service/
+|   |   |   |-- planning.py
+|   |   |   |-- runtime.py
+|   |   |   |-- incident_service.py
+|   |   |   `-- evidence_service.py
+|   |   |-- vision/
+|   |   |   |-- pipeline.py
+|   |   |   |-- detector.py
+|   |   |   |-- tracker.py
+|   |   |   |-- zones.py
+|   |   |   `-- anomaly.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Detection/Incident association
+|   |   `-- tests/
+|   |
+|   |-- livestock/
+|   |   |-- api.py                         # /livestock
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- risk_service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Herd/Animal/Position/Task
+|   |   `-- tests/
+|   |
+|   |-- alerts/
+|   |   |-- api.py
+|   |   |-- schemas.py
+|   |   |-- evaluation_service.py
+|   |   |-- notification_service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Alert/Delivery
+|   |   |-- jobs.py
+|   |   `-- tests/
+|   |
+|   |-- analytics/
+|   |   |-- api.py                         # dashboard/read-model queries
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py                  # optimized read projections
+|   |   |-- cache.py
+|   |   `-- tests/
+|   |
+|   |-- media/
+|   |   |-- api.py                         # video stream/recording endpoints
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   `-- tests/
+|   |
+|   |-- automation/
+|   |   |-- api.py                         # mission templates/schedules
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Template/ScheduledRun
+|   |   |-- jobs.py
+|   |   `-- tests/
+|   |
+|   |-- deliverables/
+|   |   |-- api.py                         # exports/sharing
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # ExportJob/FieldDeliverable
+|   |   |-- jobs.py
+|   |   `-- tests/
+|   |
+|   |-- compliance/
+|   |   |-- api.py
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # ComplianceRecord
+|   |   `-- tests/
+|   |
+|   |-- fleet/
+|   |   |-- api.py
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # Certification/Readiness
+|   |   `-- tests/
+|   |
+|   |-- integrations/
+|   |   |-- api.py                         # FMIS/export-facing HTTP API
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- webhooks/
+|   |   |   |-- api.py
+|   |   |   |-- service.py
+|   |   |   |-- repository.py
+|   |   |   |-- models.py
+|   |   |   `-- jobs.py
+|   |   `-- tests/
+|   |
+|   |-- settings/
+|   |   |-- api.py
+|   |   |-- schemas.py
+|   |   |-- service.py
+|   |   |-- repository.py
+|   |   |-- models.py                      # SettingsRow/VaultSecret
+|   |   `-- tests/
+|   |
+|   `-- admin/
+|       |-- api.py                         # admin composition only
+|       |-- schemas.py
+|       |-- service.py                     # calls owned module facades
+|       `-- tests/
+|
+|-- infrastructure/
+|   |-- persistence/
+|   |   |-- sqlalchemy/
+|   |   |   |-- conventions.py
+|   |   |   `-- transaction.py
+|   |   `-- alembic/
+|   |       |-- env.py
+|   |       `-- versions/
+|   |-- vehicle/
+|   |   |-- mavlink_client.py
+|   |   `-- dronekit_client.py
+|   |-- messaging/
+|   |   |-- mqtt_client.py
+|   |   |-- opcua_server.py
+|   |   |-- redis_pubsub.py
+|   |   `-- websocket_publisher.py
+|   |-- storage/
+|   |   |-- object_store.py
+|   |   `-- local_assets.py
+|   |-- photogrammetry/
+|   |   |-- webodm_client.py
+|   |   |-- raster_tiling.py
+|   |   `-- mesh_conversion.py
+|   |-- maps/
+|   |   |-- google_maps_client.py
+|   |   `-- terrain_client.py
+|   |-- ai/
+|   |   `-- llm_client.py
+|   |-- camera/
+|   |   |-- stream_client.py
+|   |   `-- recording.py
+|   `-- cache/
+|       `-- redis.py
+|
+|-- tests/
+|   |-- integration/                       # DB/adapters/job tests
+|   |-- contract/                          # API/error/auth/tenant contracts
+|   `-- e2e/                               # mission simulation workflows
+|
+|-- scripts/
+|   |-- check_module_boundaries.py
+|   |-- check_file_sizes.py
+|   `-- simulate_patrol_detection.py
+|
+|-- alembic.ini
+|-- requirements.txt
+`-- Dockerfile
+
+Module rules
+------------
+- Each domain owns its models, repository, application service, API schemas,
+  authorization rules, jobs, and tests.
+- API files call services only. No SQLAlchemy statements, filesystem writes,
+  Celery calls, MAVLink calls, WebODM calls, or event fan-out in API files.
+- Services enforce tenant scope and invariants and invoke domain-owned
+  repositories or explicit ports.
+- Repositories contain persistence only and apply org/project scopes for
+  tenant-owned entities.
+- Models contain ORM mappings and constraints only.
+- Jobs are thin worker adapters: deserialize task input, call service,
+  record status, publish safe events.
+- Infrastructure implements ports. It must not own product workflow.
+- Realtime delivery uses domain events through publisher ports, rather than
+  importing a global WebSocket manager throughout domains.
+- Long-running mission and mapping execution records durable state first;
+  worker/runtime processing must be idempotent and restart-safe.
+
+File limits to enforce
+----------------------
+- API route/controller file: 220 effective lines maximum.
+- Service/use-case file: 300 maximum.
+- Repository/data-access file: 250 maximum.
+- Schema/DTO/model file: 250 maximum.
+- Worker/integration adapter file: 280 maximum.
+- Any Python source file: 400 maximum.
+
+Current-to-target ownership map
+-------------------------------
+backend/api/api_main.py                    -> entrypoints/api/*
+backend/main.py, backend/drone/*           -> modules/vehicle_runtime + infrastructure/vehicle
+backend/auth/*                             -> modules/identity + core/security
+backend/db/models.py                       -> modules/*/models.py
+backend/db/repository/*                    -> matching modules/*/repository.py
+backend/api/routes/routes_flights.py       -> modules/missions + modules/preflight + modules/deliverables
+backend/flight/missions/*                  -> modules/missions/planning + modules/warehouse/planning + modules/patrol
+backend/flight/preflight_check/*           -> modules/preflight
+backend/flight/*.py                        -> modules/missions + modules/vehicle_runtime
+backend/api/routes/routes_field.py         -> modules/fields
+backend/api/routes/routes_mapping.py       -> modules/mapping
+backend/services/photogrammetry/*          -> modules/mapping + infrastructure/photogrammetry
+backend/api/routes/routes_irrigation.py    -> modules/irrigation
+backend/services/irrigation/*              -> modules/irrigation
+backend/api/routes/routes_warehouse.py     -> modules/warehouse
+backend/services/warehouse/*               -> modules/warehouse + infrastructure/camera
+backend/api/routes/routes_analytics.py     -> modules/analytics
+backend/services/analytics_cache.py        -> modules/analytics
+backend/api/routes/routes_video.py         -> modules/media + infrastructure/camera
+backend/api/routes/routes_ml.py            -> modules/patrol/vision
+backend/api/routes/routes_patrol_debug.py  -> modules/patrol
+backend/ml/patrol/*                        -> modules/patrol/vision
+backend/services/patrol/*                  -> modules/patrol
+backend/services/alerts/*                  -> modules/alerts
+backend/services/animal_farm/*             -> modules/livestock
+backend/api/routes/routes_geofence.py      -> modules/geofences
+backend/api/routes/routes_alerts.py        -> modules/alerts
+backend/api/routes/routes_animal_farm.py   -> modules/livestock
+backend/api/routes/routes_auth.py          -> modules/identity
+backend/api/routes/routes_apikeys.py       -> modules/identity
+backend/api/routes/routes_admin.py         -> modules/admin
+backend/api/routes/routes_websocket.py     -> modules/telemetry + infrastructure/messaging
+backend/api/routes/routes_telemetry_control.py -> modules/telemetry + modules/vehicle_runtime
+backend/api/routes/routes_field_deliverables.py -> modules/deliverables
+backend/api/routes/routes_deliverables_share.py -> modules/deliverables
+backend/api/routes/routes_templates.py     -> modules/automation
+backend/api/routes/routes_webhooks.py      -> modules/integrations/webhooks
+backend/api/routes/routes_integrations.py  -> modules/integrations
+backend/api/routes/routes_compliance.py    -> modules/compliance
+backend/api/routes/routes_fleet.py         -> modules/fleet
+backend/api/routes/routes_settings.py      -> modules/settings
+backend/services/access_control.py         -> modules/organizations
+backend/services/storage/*                 -> infrastructure/storage
+backend/messaging/*                        -> infrastructure/messaging + telemetry transport
+backend/map/*                              -> infrastructure/maps
+backend/video/*                            -> infrastructure/camera
+backend/runtime/*                          -> core/events + modules/missions/domain
+backend/analysis/*                         -> infrastructure/ai + modules/vehicle_runtime
+backend/tasks/*                            -> entrypoints/workers + matching module jobs.py
+backend/ros2_irrigation/*                  -> entrypoints/ros2
+backend/observability/*                    -> core/observability
+backend/utils/config_runtime.py            -> modules/settings
+backend/utils/geo.py                       -> core/types/geo.py
+
+Migration order
+---------------
+Phase 0 - Guardrails
+- Add backend/tests skeleton, file-size checker, import-boundary checker, and
+  stable structured error handler.
+- Keep current HTTP paths and database schema unchanged.
+
+Phase 1 - Split persistence ownership
+- Move Base/session setup to core/database.
+- Split db/models.py by module while keeping Alembic metadata aggregation.
+- Move repository functions to domain repositories; require tenant scoping.
+
+Phase 2 - Remove persistence from HTTP routes
+- Start with routes_flights.py, routes_mapping.py, routes_warehouse.py,
+  routes_field.py, and routes_irrigation.py because they have highest size and
+  coupling risk.
+- Preserve response contracts; introduce services behind existing endpoints.
+
+Phase 3 - Isolate runtime and adapters
+- Split Orchestrator into vehicle runtime coordination, execution, telemetry,
+  and recovery services.
+- Put MAVLink, maps, MQTT, WebSocket/Redis fan-out, video, object storage, and
+  WebODM behind ports/adapters.
+
+Phase 4 - Normalize async processing
+- Convert Celery modules to thin task adapters calling module jobs/services.
+- Add idempotency, retries/timeouts, status transitions, and outbox-backed
+  notifications for mapping, deliverables, alerts, and webhooks.
+
+Phase 5 - Tests and enforcement
+- Add contract tests for existing routes, auth and tenant isolation.
+- Add integration tests for PostgreSQL/PostGIS repositories and Celery jobs.
+- Enforce Ruff, mypy, pytest, file-size, and boundary checks in CI.
+
+Non-negotiable invariants
+-------------------------
+- User and organization scope is authorized server-side for every tenant-owned
+  field, mission, asset, alert, export, webhook, fleet, and mapping record.
+- Mission start requires valid state and applicable preflight decision.
+- Mission command transitions are validated and audited.
+- Telemetry/event ingestion remains idempotent by stable frame/event key.
+- Mapping, irrigation, exports, webhooks, and alert delivery survive retries
+  without duplicate externally visible effects.
+- Credentials, JWTs, raw private imagery, and unrestricted prompts are never
+  logged.

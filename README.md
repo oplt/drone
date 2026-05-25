@@ -258,7 +258,7 @@ alembic -c backend/alembic.ini upgrade head
 ## Start Backend
 
 ```bash
-uvicorn backend.api.api_main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.entrypoints.api.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Start Frontend
