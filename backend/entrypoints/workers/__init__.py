@@ -7,6 +7,7 @@ from . import (
     outbox_tasks,
     photogrammetry_tasks,
     scheduling_tasks,
+    video_analysis_tasks,
     webhook_tasks,
 )
 

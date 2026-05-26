@@ -1,0 +1,162 @@
+{
+  "frontend/src/modules/admin/views/AdminPage.tsx": {
+    "effective_lines": 321,
+    "limit": 180
+  },
+  "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx": {
+    "effective_lines": 1060,
+    "limit": 180
+  },
+  "frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts": {
+    "effective_lines": 162,
+    "limit": 160
+  },
+  "frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx": {
+    "effective_lines": 916,
+    "limit": 180
+  },
+  "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx": {
+    "effective_lines": 285,
+    "limit": 220
+  },
+  "frontend/src/modules/dashboard/components/MainGrid.tsx": {
+    "effective_lines": 480,
+    "limit": 220
+  },
+  "frontend/src/modules/dashboard/views/AccountPage.tsx": {
+    "effective_lines": 436,
+    "limit": 180
+  },
+  "frontend/src/modules/dashboard/views/InsightsPage.tsx": {
+    "effective_lines": 276,
+    "limit": 180
+  },
+  "frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx": {
+    "effective_lines": 380,
+    "limit": 220
+  },
+  "frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx": {
+    "effective_lines": 539,
+    "limit": 220
+  },
+  "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx": {
+    "effective_lines": 238,
+    "limit": 220
+  },
+  "frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts": {
+    "effective_lines": 407,
+    "limit": 160
+  },
+  "frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts": {
+    "effective_lines": 228,
+    "limit": 160
+  },
+  "frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts": {
+    "effective_lines": 255,
+    "limit": 160
+  },
+  "frontend/src/modules/fleet/views/FleetPage.tsx": {
+    "effective_lines": 596,
+    "limit": 180
+  },
+  "frontend/src/modules/maps/adapters/CesiumMap.tsx": {
+    "effective_lines": 1008,
+    "limit": 400
+  },
+  "frontend/src/modules/mission-history/views/MissionTimeline.tsx": {
+    "effective_lines": 533,
+    "limit": 180
+  },
+  "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts": {
+    "effective_lines": 234,
+    "limit": 160
+  },
+  "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts": {
+    "effective_lines": 252,
+    "limit": 160
+  },
+  "frontend/src/modules/photogrammetry/components/PhotogrammetryGridParamsSection.tsx": {
+    "effective_lines": 382,
+    "limit": 220
+  },
+  "frontend/src/modules/photogrammetry/components/PhotogrammetryMapColumn.tsx": {
+    "effective_lines": 433,
+    "limit": 220
+  },
+  "frontend/src/modules/photogrammetry/hooks/useMappingJobs.ts": {
+    "effective_lines": 178,
+    "limit": 160
+  },
+  "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMap.ts": {
+    "effective_lines": 397,
+    "limit": 160
+  },
+  "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMapping.ts": {
+    "effective_lines": 164,
+    "limit": 160
+  },
+  "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMission.ts": {
+    "effective_lines": 293,
+    "limit": 160
+  },
+  "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryPage.ts": {
+    "effective_lines": 269,
+    "limit": 160
+  },
+  "frontend/src/modules/private-patrol/components/PrivatePatrolMapColumn.tsx": {
+    "effective_lines": 461,
+    "limit": 220
+  },
+  "frontend/src/modules/private-patrol/components/PrivatePatrolParamsSection.tsx": {
+    "effective_lines": 673,
+    "limit": 220
+  },
+  "frontend/src/modules/private-patrol/components/PrivatePatrolPlanningSection.tsx": {
+    "effective_lines": 246,
+    "limit": 220
+  },
+  "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMap.ts": {
+    "effective_lines": 450,
+    "limit": 160
+  },
+  "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts": {
+    "effective_lines": 384,
+    "limit": 160
+  },
+  "frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts": {
+    "effective_lines": 303,
+    "limit": 160
+  },
+  "frontend/src/modules/session/components/MainContent.tsx": {
+    "effective_lines": 262,
+    "limit": 220
+  },
+  "frontend/src/modules/session/components/auth/HomeAuthCard.tsx": {
+    "effective_lines": 423,
+    "limit": 220
+  },
+  "frontend/src/modules/settings/views/AdminSettingsPage.tsx": {
+    "effective_lines": 829,
+    "limit": 180
+  },
+  "frontend/src/modules/settings/views/SettingsPage.tsx": {
+    "effective_lines": 930,
+    "limit": 180
+  },
+  "frontend/src/modules/templates/views/TemplatesPage.tsx": {
+    "effective_lines": 238,
+    "limit": 180
+  },
+  "frontend/src/modules/warehouse/views/Warehouse.tsx": {
+    "effective_lines": 1253,
+    "limit": 180
+  },
+  "frontend/src/shared/theme/customizations/inputs.tsx": {
+    "effective_lines": 416,
+    "limit": 400
+  },
+  "frontend/src/shared/theme/themePrimitives.ts": {
+    "effective_lines": 412,
+    "limit": 400
+  }
+}

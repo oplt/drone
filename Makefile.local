@@ -4,6 +4,7 @@ check-local-tools:
 	@command -v honcho >/dev/null 2>&1 || { echo "honcho is not installed. Install with: pip install honcho"; exit 1; }
 	@command -v uvicorn >/dev/null 2>&1 || { echo "uvicorn is not installed."; exit 1; }
 	@command -v celery >/dev/null 2>&1 || { echo "celery is not installed."; exit 1; }
+	@celery_python="$$(sed -n '1s/^#!//p' "$$(command -v celery)")"; "$$celery_python" -c 'from ultralytics import YOLO' >/dev/null 2>&1 || { echo "Video analysis dependencies broken in Celery Python ($$celery_python). Run: $$celery_python -m pip install --user 'matplotlib>=3.10.0' 'ultralytics>=8.3.0' opencv-python-headless supervision"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed."; exit 1; }
 
 kill-celery:

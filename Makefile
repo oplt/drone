@@ -1,4 +1,4 @@
-.PHONY: local-dev docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality install-hooks commit-ready
+.PHONY: local-dev docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
 PYTHON ?= python3
 BACKEND_QUALITY_PATHS := backend/modules backend/infrastructure backend/entrypoints backend/core backend/tests backend/scripts
 
@@ -43,6 +43,18 @@ backend-guardrails:
 	$(MAKE) PYTHON=$(PYTHON) backend-tests
 
 backend-quality: backend-lint backend-guardrails
+
+frontend-quality:
+	cd frontend && npm run lint:ci
+	cd frontend && npm run check:arch
+	cd frontend && npm run build
+
+frontend-tests:
+	cd frontend && npm run test
+
+frontend-e2e:
+	cd frontend && npm run test:e2e:install
+	cd frontend && npm run test:e2e
 
 install-hooks:
 	pre-commit install

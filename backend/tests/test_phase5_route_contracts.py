@@ -11,7 +11,11 @@ from httpx import ASGITransport, AsyncClient, Response
 from backend.core.database.session import get_db
 from backend.core.errors.handlers import register_error_handlers
 from backend.modules.fields import api as routes_field
-from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
+from backend.modules.identity.dependencies import (
+    OrgUser,
+    require_mission_exec,
+    require_org_user,
+)
 from backend.modules.identity.models import User, UserRole
 
 
@@ -66,7 +70,7 @@ def test_field_creation_uses_server_authenticated_owner(monkeypatch: Any) -> Non
         return OrgUser(user=user, org_id=user.org_id)
 
     app = _app()
-    app.dependency_overrides[require_org_write] = org_writer
+    app.dependency_overrides[require_mission_exec] = org_writer
     monkeypatch.setattr(routes_field, "field_service", _FieldService())
 
     response = asyncio.run(
@@ -85,6 +89,40 @@ def test_field_creation_uses_server_authenticated_owner(monkeypatch: Any) -> Non
     assert response.status_code == 200
     assert response.json()["owner_id"] == 11
     assert created_by == [11]
+
+
+def test_field_creation_allows_pilot_role(monkeypatch: Any) -> None:
+    created_by: list[UserRole] = []
+
+    class _FieldService:
+        async def create(
+            self, db: object, *, user: Any, name: str, polygon: Any
+        ) -> SimpleNamespace:
+            created_by.append(user.role)
+            return SimpleNamespace(id=20, owner_id=user.id, name=name, area_ha=1.0)
+
+    async def pilot_exec() -> OrgUser:
+        user = _user(role=UserRole.pilot)
+        return OrgUser(user=user, org_id=user.org_id)
+
+    app = _app()
+    app.dependency_overrides[require_mission_exec] = pilot_exec
+    monkeypatch.setattr(routes_field, "field_service", _FieldService())
+
+    response = asyncio.run(
+        _request(
+            app,
+            "POST",
+            "/fields",
+            json={
+                "name": "north",
+                "coordinates": [[4.0, 50.0], [4.001, 50.0], [4.001, 50.001]],
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    assert created_by == [UserRole.pilot]
 
 
 def test_cross_tenant_field_access_returns_not_found(monkeypatch: Any) -> None:

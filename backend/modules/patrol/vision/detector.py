@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 
 from backend.modules.patrol.vision.models import Detection, FramePacket
+from backend.modules.video_analysis.model_storage import ensure_model_file
+from backend.modules.video_analysis.schemas import BUILTIN_MODEL_NAMES, CUSTOM_MODEL_PREFIX
 
 log = logging.getLogger(__name__)
 DEFAULT_ALLOWED_LABELS = frozenset(
@@ -36,9 +38,16 @@ class ObjectDetector:
             return self._model
         if YOLO is None:
             raise RuntimeError(
-                "ultralytics is not installed. Install 'ultralytics' and a compatible torch build to enable ML detection."
+                "ultralytics is not installed. Install 'ultralytics' and a compatible "
+                "torch build to enable ML detection."
             )
-        self._model = YOLO(self.model_path)
+        local_path = (
+            str(ensure_model_file(self.model_path))
+            if self.model_path in BUILTIN_MODEL_NAMES
+            or self.model_path.startswith(CUSTOM_MODEL_PREFIX)
+            else self.model_path
+        )
+        self._model = YOLO(local_path)
         return self._model
 
     def detect(self, packet: FramePacket) -> list[Detection]:

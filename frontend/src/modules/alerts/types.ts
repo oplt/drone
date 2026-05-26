@@ -1,0 +1,20 @@
+export type AlertItem = {
+  id: number;
+  rule_type: string;
+  dedupe_key: string;
+  source: string;
+  severity: string;
+  status: string;
+  title: string;
+  message: string;
+  meta_data: Record<string, unknown>;
+  first_triggered_at: string;
+  last_triggered_at: string;
+  last_notified_at?: string | null;
+  resolved_at?: string | null;
+  acknowledged_at?: string | null;
+  acknowledged_by_user_id?: number | null;
+  occurrences: number;
+  created_at: string;
+  updated_at: string;
+};

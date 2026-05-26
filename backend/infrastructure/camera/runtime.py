@@ -175,6 +175,7 @@ class SharedVideoRuntime:
         self._frame_seq = 0
         self._last_error: str | None = None
         self._source_url: str | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._fallback_video_writer: cv2.VideoWriter | None = None
         self._fallback_recording_filename: str | None = None
         self._fallback_recording_path: str | None = None
@@ -388,7 +389,40 @@ class SharedVideoRuntime:
                     proc.kill()
                     await proc.wait()
 
+    async def wait_for_jpeg_frame(self, after_seq: int, timeout_s: float) -> tuple[int, bytes]:
+        deadline = asyncio.get_running_loop().time() + max(0.05, float(timeout_s))
+        async with self._condition:
+            while self._frame_seq <= after_seq and not self._last_error:
+                remaining = deadline - asyncio.get_running_loop().time()
+                if remaining <= 0:
+                    break
+                try:
+                    await asyncio.wait_for(self._condition.wait(), timeout=remaining)
+                except TimeoutError:
+                    break
+
+            if self._last_error and self._frame_seq <= after_seq:
+                raise RuntimeError(self._last_error)
+
+            frame = self._latest_frame
+            if self._frame_seq <= after_seq or not frame:
+                raise TimeoutError("Timed out waiting for a new survey camera frame")
+
+            return self._frame_seq, frame
+
+    def read_jpeg_frame_sync(self, after_seq: int, timeout: float) -> tuple[int, bytes]:
+        loop = self._loop
+        if loop is None or not loop.is_running():
+            raise RuntimeError("Survey camera stream is not running yet")
+
+        future = asyncio.run_coroutine_threadsafe(
+            self.wait_for_jpeg_frame(after_seq, timeout_s=timeout),
+            loop,
+        )
+        return future.result(timeout=max(0.5, float(timeout)) + 1.0)
+
     async def ensure_running(self) -> dict[str, Any]:
+        self._loop = asyncio.get_running_loop()
         already_running = False
         async with self._lock:
             task = self._worker_task

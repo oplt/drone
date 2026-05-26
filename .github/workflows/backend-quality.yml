@@ -1,0 +1,75 @@
+name: Backend Quality
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".github/workflows/backend-quality.yml"
+  push:
+    paths:
+      - "backend/**"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".github/workflows/backend-quality.yml"
+
+env:
+  DATABASE_URL: postgresql+asyncpg://drone:drone@localhost:5432/drone_test
+  SETTINGS_VAULT_KEY: BHmFE5e3ErYeWjVExeoWQooA3kDUO0Uh0bZOhZGH12c=
+  JWT_SECRET: phase5-ci-only-secret
+  GOOGLE_MAPS_API_KEY: phase5-ci-placeholder
+  DRONE_CONN: udp:127.0.0.1:14550
+  DRONE_CONN_MAVPROXY: udp:127.0.0.1:14551
+  HEARTBEAT_TIMEOUT: "5.0"
+  RASPBERRY_IP: 127.0.0.1
+  RASPBERRY_USER: operator
+  RASPBERRY_HOST: raspberrypi.local
+  RASPBERRY_PASSWORD: phase5-ci-placeholder
+  SSH_KEY_PATH: /tmp/id_rsa
+  ALERTS_ENABLED: "0"
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install backend quality dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio
+      - name: Ruff, mypy, architecture guards, and unit tests
+        run: make PYTHON=python backend-quality
+
+  postgis-and-jobs:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: drone_test
+          POSTGRES_USER: drone
+          POSTGRES_PASSWORD: drone
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U drone -d drone_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://drone:drone@localhost:5432/drone_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install backend test dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio
+      - name: PostgreSQL/PostGIS and Celery integration tests
+        run: python -m pytest backend/tests -m integration

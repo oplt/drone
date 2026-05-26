@@ -26,6 +26,7 @@ _MODEL_MODULES = (
     "backend.modules.settings.models",
     "backend.modules.telemetry.models",
     "backend.modules.warehouse.models",
+    "backend.modules.video_analysis.models",
 )
 _registered = False
 

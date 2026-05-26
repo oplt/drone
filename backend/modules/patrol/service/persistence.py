@@ -8,6 +8,7 @@ from typing import Any
 from backend.core.database.session import Session
 from backend.modules.patrol.repository import PatrolDetectionRepository
 from backend.modules.patrol.service.mission_runtime_store import ActiveMissionRuntimeContext
+from backend.modules.patrol.vision.models import Detection, FramePacket
 
 log = logging.getLogger(__name__)
 
@@ -196,6 +197,48 @@ class PatrolPersistenceService:
             mission_task_type=mission_task_type,
             ai_task=ai_task,
         )
+
+    async def persist_live_detections(
+        self,
+        *,
+        detections: list[Detection],
+        packet: FramePacket,
+        telemetry: dict[str, Any],
+        model_name: str,
+    ) -> None:
+        runtime_ctx = await self._resolve_active_runtime_context()
+        if runtime_ctx is None or runtime_ctx.db_flight_id is None or not detections:
+            return
+
+        mission_task_type = runtime_ctx.mission_type or "live_camera"
+        image_height, image_width = packet.image.shape[:2]
+        async with Session() as db:
+            for detection in detections:
+                x1, y1, x2, y2 = detection.bbox
+                await self._repo.add_patrol_detection(
+                    db,
+                    flight_id=int(runtime_ctx.db_flight_id),
+                    mission_task_type=mission_task_type,
+                    ai_task="object_detection",
+                    object_class=detection.label,
+                    confidence=detection.confidence,
+                    bbox_xyxy={"x1": x1, "y1": y1, "x2": x2, "y2": y2},
+                    centroid_xy={"x": (x1 + x2) // 2, "y": (y1 + y2) // 2},
+                    frame_id=packet.frame_id,
+                    lat=telemetry.get("lat"),
+                    lon=telemetry.get("lon"),
+                    alt=telemetry.get("altitude_m"),
+                    heading=telemetry.get("heading"),
+                    groundspeed=telemetry.get("groundspeed"),
+                    source="live_object_detection",
+                    model_name=model_name,
+                    meta_data={
+                        "image_width": int(image_width),
+                        "image_height": int(image_height),
+                        "runtime_client_flight_id": runtime_ctx.client_flight_id,
+                    },
+                )
+            await db.commit()
 
     def _map_ai_task(self, event_type: str, payload: dict) -> str:
         label = str(payload.get("label") or "").lower()

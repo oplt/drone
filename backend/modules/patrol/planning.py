@@ -10,6 +10,7 @@ from typing import Any, Literal
 from shapely.geometry import MultiPolygon, Polygon
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.core.types.geo import coord_from_home
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.missions.planning.grid import GridPlanner, _validate_plan_limits
@@ -479,6 +480,11 @@ def repeat_patrol_loops(waypoints: Sequence[Coordinate], loops: int) -> list[Coo
 
 
 def _resolve_patrol_ml_stream_source(orch: Orchestrator) -> str | int | None:
+    from backend.modules.patrol.vision.stream_reader import (
+        SHARED_VIDEO_STREAM_SOURCE,
+        resolve_ml_stream_source,
+    )
+
     configured_source = getattr(ml_settings, "stream_source", None)
     if configured_source not in {None, ""}:
         return configured_source
@@ -486,13 +492,12 @@ def _resolve_patrol_ml_stream_source(orch: Orchestrator) -> str | int | None:
     video = getattr(orch, "video", None)
     video_source = getattr(video, "source", None)
     if video_source not in {None, ""}:
+        if video_source == shared_video_runtime.source_url():
+            return SHARED_VIDEO_STREAM_SOURCE
         return video_source
 
-    if settings.drone_video_use_gazebo:
-        return settings.drone_video_source_gazebo
-
-    if settings.drone_video_enabled:
-        return settings.drone_video_source
+    if settings.drone_video_use_gazebo or settings.drone_video_enabled:
+        return resolve_ml_stream_source(None)
 
     return None
 
@@ -545,6 +550,10 @@ async def _start_patrol_ml_runtime(
                 stream_source=stream_source,
             )
 
+        from backend.modules.patrol.vision.stream_reader import SHARED_VIDEO_STREAM_SOURCE
+
+        if stream_source == SHARED_VIDEO_STREAM_SOURCE:
+            await shared_video_runtime.ensure_running()
         await ml_runtime.start(stream_source=stream_source)
         if zones:
             ml_runtime.set_zones(zones)

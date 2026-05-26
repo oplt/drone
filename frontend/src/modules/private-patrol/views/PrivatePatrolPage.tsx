@@ -1,0 +1,119 @@
+import { Divider, Stack, Typography } from "@mui/material";
+import { TerraDrawController } from "../../maps";
+import {
+  GoogleMapEngineAlerts,
+  MissionWorkflowShell,
+} from "../../mission-workflow";
+import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
+import { FieldDeleteDialog } from "../../field-survey/components/FieldDeleteDialog";
+import { PrivatePatrolMapColumn } from "../components/PrivatePatrolMapColumn";
+import { PrivatePatrolParamsSection } from "../components/PrivatePatrolParamsSection";
+import {
+  PrivatePatrolFieldsBlock,
+  PrivatePatrolMissionControls,
+} from "../components/PrivatePatrolPlanningSection";
+import { PrivatePatrolStatusSections } from "../components/PrivatePatrolStatusSections";
+import { PrivatePatrolUiNotice } from "../components/PrivatePatrolUiNotice";
+import { usePrivatePatrolPage } from "../hooks/usePrivatePatrolPage";
+
+export default function PrivatePatrolPage() {
+  const vm = usePrivatePatrolPage();
+  const { map, mission, borderEditor } = vm;
+  const telemetry = vm.telemetry as TelemetrySnapshot | null;
+
+  return (
+    <MissionWorkflowShell
+      title="Private Patrol"
+      subtitle="Persistent surveillance missions for private property security with perimeter patrol, key-point verification, grid area coverage, and event-triggered response workflows."
+      droneConnected={vm.droneConnected}
+      wsConnected={vm.wsConnected}
+      errors={vm.errors}
+      onDismissError={vm.dismissError}
+      onClearErrors={vm.clearErrors}
+    >
+      <GoogleMapEngineAlerts
+        mapEngine={map.mapEngine}
+        apiKey={map.apiKey}
+        loadError={map.loadError}
+        mapId={map.mapId}
+      />
+
+      {vm.googleMapsReady ? (
+        <>
+          <TerraDrawController
+            map={map.mapReady ? map.mapRef.current : null}
+            enabled={map.mapEngine === "google"}
+            mode={vm.terraDrawMode}
+            drawRef={map.terraDrawRef}
+            onReadyChange={map.setTerraDrawReady}
+            onSnapshotChange={borderEditor.syncFieldBorderFromSnapshot}
+            onError={vm.addError}
+          />
+          <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
+            <Stack sx={{ flex: 1 }} spacing={2}>
+              <PrivatePatrolMapColumn vm={vm} onSelectField={vm.selectField} />
+              <PrivatePatrolFieldsBlock
+                fields={vm.fields}
+                selectedFieldId={vm.selectedFieldId}
+                selectedField={vm.selectedField}
+                loadingFields={vm.loadingFields}
+                deletingField={vm.deletingField}
+                onSelectField={vm.handleSavedFieldSelect}
+                onRefreshFields={vm.refreshFields}
+                onFocusSelected={() =>
+                  vm.selectedField &&
+                  borderEditor.focusRingOnMap(vm.selectedField.ring)
+                }
+                onDeleteSelected={vm.requestDeleteSelectedField}
+                fieldName={vm.fieldName}
+                fieldBorder={vm.fieldBorder}
+                metrics={vm.metrics}
+                savingField={vm.savingField}
+                onFieldNameChange={vm.setFieldName}
+                onSaveOrUpdate={
+                  vm.selectedFieldId ? vm.updateFieldBorder : vm.saveFieldBorder
+                }
+                onClearBorder={borderEditor.clearFieldBorder}
+                onNewField={vm.handleNewField}
+              />
+              <PrivatePatrolParamsSection mission={mission} />
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {mission.mapHint}
+              </Typography>
+            </Stack>
+
+            <PrivatePatrolMissionControls
+              controlFrameExpanded={vm.controlFrameExpanded}
+              onControlFrameExpandedChange={vm.setControlFrameExpanded}
+              apiBase={vm.apiBase}
+              preflightRun={mission.preflightRun}
+              telemetry={telemetry}
+              droneConnected={vm.droneConnected}
+              missionStatus={vm.missionStatus}
+              activeFlightId={vm.activeFlightId}
+              mission={mission}
+              onSendMission={() => void mission.sendMission()}
+            />
+          </Stack>
+
+          <Divider sx={{ mb: 2 }} />
+
+          <PrivatePatrolStatusSections
+            mission={mission}
+            missionStatus={vm.missionStatus}
+            activeFlightId={vm.activeFlightId}
+          />
+        </>
+      ) : null}
+
+      <FieldDeleteDialog
+        field={vm.pendingDeleteField}
+        deleting={vm.deletingField}
+        onClose={vm.closeDeleteFieldDialog}
+        onConfirm={() => void vm.confirmDeleteSelectedField()}
+      />
+
+      <PrivatePatrolUiNotice notice={vm.uiNotice} onClose={vm.handleUiNoticeClose} />
+    </MissionWorkflowShell>
+  );
+}

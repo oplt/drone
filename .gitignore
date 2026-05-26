@@ -372,5 +372,15 @@ backend/logs
 .gitnexus
 .agents/
 .claude/skills/
-.github
 .codex
+
+# Frontend test artifacts
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/coverage/
+*.pyo
+*.pyd
+logs/
+storage/
+/yolo*.pt

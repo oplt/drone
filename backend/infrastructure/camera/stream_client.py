@@ -27,6 +27,62 @@ def _get_udp_port(s: str) -> int | None:
     return None
 
 
+def open_video_capture(
+    source: int | str,
+    *,
+    width: int = 640,
+    height: int = 480,
+    fps: int = 30,
+    open_timeout_s: float = 5.0,
+) -> cv2.VideoCapture:
+    """Open a video source with the same backend selection used by DroneVideoStream."""
+    udp_port = _get_udp_port(source) if isinstance(source, str) else None
+
+    if udp_port is not None:
+        if not opencv_has_gstreamer():
+            raise RuntimeError(
+                "OpenCV was built without GStreamer support for UDP/RTP H264 sources"
+            )
+
+        gst_pipeline = (
+            f"udpsrc port={udp_port} "
+            "! application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264 "
+            "! rtph264depay "
+            "! avdec_h264 "
+            "! videoconvert "
+            "! appsink"
+        )
+        logger.info("Using GStreamer pipeline for UDP source: %s", gst_pipeline)
+        cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
+
+    elif isinstance(source, int):
+        cap = cv2.VideoCapture(source, cv2.CAP_V4L2)
+        if not cap.isOpened():
+            cap = cv2.VideoCapture(source)
+    elif _is_rtsp(source) or isinstance(source, str):
+        cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FPS, fps)
+    else:
+        cap = cv2.VideoCapture(source)
+
+    if udp_port is None:
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        cap.set(cv2.CAP_PROP_FPS, fps)
+
+    t0 = time.time()
+    ok, _ = cap.read()
+    while not ok and (time.time() - t0) < open_timeout_s:
+        time.sleep(0.2)
+        ok, _ = cap.read()
+    if not ok:
+        cap.release()
+        raise RuntimeError(f"OpenCV source failed: {source}")
+
+    return cap
+
+
 @lru_cache(maxsize=1)
 def opencv_has_gstreamer() -> bool:
     """Return True when the active OpenCV build has GStreamer enabled."""
@@ -109,50 +165,13 @@ class DroneVideoStream:
             self._start_recording()
 
     def _open_source(self, source, width, height, fps, open_timeout_s):
-        udp_port = _get_udp_port(source)
-
-        if udp_port is not None:
-            if not opencv_has_gstreamer():
-                raise RuntimeError(
-                    "OpenCV was built without GStreamer support for UDP/RTP H264 sources"
-                )
-
-            gst_pipeline = (
-                f"udpsrc port={udp_port} "
-                "! application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264 "
-                "! rtph264depay "
-                "! avdec_h264 "
-                "! videoconvert "
-                "! appsink"
-            )
-            logger.info(f"Using GStreamer pipeline for UDP source: {gst_pipeline}")
-            cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
-
-        elif isinstance(source, int):
-            cap = cv2.VideoCapture(source, cv2.CAP_V4L2)
-            if not cap.isOpened():
-                cap = cv2.VideoCapture(source)
-        elif _is_rtsp(source) or isinstance(source, str):
-            cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            cap.set(cv2.CAP_PROP_FPS, fps)
-        else:
-            cap = cv2.VideoCapture(source)
-
-        if udp_port is None:
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-            cap.set(cv2.CAP_PROP_FPS, fps)
-
-        t0 = time.time()
-        ok, _ = cap.read()
-        while not ok and (time.time() - t0) < open_timeout_s:
-            time.sleep(0.2)
-            ok, _ = cap.read()
-        if not ok:
-            cap.release()
-            raise RuntimeError(f"OpenCV source failed: {source}")
-
+        cap = open_video_capture(
+            source,
+            width=width,
+            height=height,
+            fps=fps,
+            open_timeout_s=open_timeout_s,
+        )
         self.connection_healthy = True
         return cap
 

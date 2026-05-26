@@ -37,6 +37,7 @@ from backend.modules.media.api import router as video_router
 from backend.modules.missions.api.routes import router as missions_router
 from backend.modules.missions.service.recovery_service import recover_interrupted_missions
 from backend.modules.patrol.api import router as patrol_debug_router
+from backend.modules.patrol.live_detection_api import router as live_detection_router
 from backend.modules.patrol.vision_api import router as ml_router
 from backend.modules.settings.api import router as settings_router
 from backend.modules.settings.repository import SettingsRepository
@@ -46,6 +47,7 @@ from backend.modules.telemetry.api import (
 )
 from backend.modules.telemetry.websocket_api import router as websockets_router
 from backend.modules.vehicle_runtime.cleanup import start_cleanup_jobs, stop_cleanup_jobs
+from backend.modules.video_analysis.api import router as video_analysis_router
 from backend.modules.warehouse.api import router as warehouse_router
 
 logger = logging.getLogger(__name__)
@@ -181,6 +183,7 @@ app.include_router(warehouse_router)
 app.include_router(alerts_router)
 app.include_router(ml_router)
 app.include_router(patrol_debug_router)
+app.include_router(live_detection_router)
 app.include_router(templates_router, prefix="/tasks")
 app.include_router(apikeys_router, prefix="/tasks")
 app.include_router(webhooks_router, prefix="/tasks")
@@ -188,6 +191,7 @@ app.include_router(compliance_router, prefix="/tasks")
 app.include_router(fleet_router, prefix="/tasks")
 app.include_router(integrations_router)
 app.include_router(deliverables_share_router)
+app.include_router(video_analysis_router)
 
 mapping_assets_dir = Path(
     os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")

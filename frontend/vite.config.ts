@@ -5,6 +5,22 @@ import cesium from "vite-plugin-cesium";
 
 export default defineConfig({
   plugins: [react(), svgr(), cesium()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("cesium") || id.includes("resium")) return "vendor-cesium";
+          if (id.includes("maplibre") || id.includes("leaflet")) return "vendor-maps";
+          if (id.includes("@mui") || id.includes("@emotion")) return "vendor-mui";
+          if (id.includes("@react-google-maps") || id.includes("@googlemaps")) {
+            return "vendor-google-maps";
+          }
+          return "vendor";
+        },
+      },
+    },
+  },
   server: {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",

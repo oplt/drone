@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import require_user
-from backend.modules.patrol.vision.config import ml_settings
 from backend.modules.patrol.vision.runtime import ml_runtime
+from backend.modules.patrol.vision.stream_reader import resolve_ml_stream_source
 
 router = APIRouter(prefix="/api/ml", tags=["ml"])
 
@@ -44,12 +45,10 @@ async def get_ml_status(user=Depends(require_user)) -> dict[str, Any]:
 
 @router.post("/start")
 async def start_ml(body: MLStartIn, user=Depends(require_user)) -> dict[str, Any]:
-    if not ml_settings.enabled:
-        raise HTTPException(
-            status_code=412,
-            detail="ML pipeline disabled. Set ML_ENABLED=1 before starting the anomaly pipeline.",
-        )
-    return await ml_runtime.start(stream_source=body.stream_source)
+    stream_source = resolve_ml_stream_source(body.stream_source)
+    if body.stream_source is None:
+        await shared_video_runtime.ensure_running()
+    return await ml_runtime.start(stream_source=stream_source)
 
 
 @router.post("/stop")

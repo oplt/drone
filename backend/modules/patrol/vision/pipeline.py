@@ -14,8 +14,9 @@ from backend.modules.patrol.vision.detector import ObjectDetector
 from backend.modules.patrol.vision.events import EventSink
 from backend.modules.patrol.vision.evidence import EvidenceRecorder
 from backend.modules.patrol.vision.geo import GeoProjector
+from backend.modules.patrol.vision.live_detections import LiveDetectionSampler
 from backend.modules.patrol.vision.motion import MotionPrefilter
-from backend.modules.patrol.vision.stream_reader import StreamReader
+from backend.modules.patrol.vision.stream_reader import FrameReader, create_stream_reader
 from backend.modules.patrol.vision.tracker import SimpleTracker
 from backend.modules.patrol.vision.zones import Zone, ZoneEngine
 
@@ -25,13 +26,12 @@ except Exception:
     PatrolPersistenceService = None  # type: ignore
 
 log = logging.getLogger(__name__)
-_SENTINEL = object()
 _MAX_TELEMETRY_AGE_S = 5.0
 
 
 class DroneAnomalyPipeline:
     def __init__(self) -> None:
-        self.reader: StreamReader | None = None
+        self.reader: FrameReader | None = None
         self.motion = MotionPrefilter(min_motion_area=ml_settings.min_motion_area)
         self.detector = ObjectDetector(
             model_path=ml_settings.detector_model_path,
@@ -82,6 +82,7 @@ class DroneAnomalyPipeline:
         self._frames_processed = 0
         self._anomalies_emitted = 0
         self._stream_source: str | int | None = ml_settings.stream_source
+        self.live_detections = LiveDetectionSampler(ml_settings.live_detection_persist_interval_s)
 
     async def _read_next_packet(self):
         if self.reader is None:
@@ -93,8 +94,8 @@ class DroneAnomalyPipeline:
             return
 
         self._stream_source = stream_source or self._stream_source or ml_settings.stream_source
-        self.reader = StreamReader(
-            source=self._stream_source,
+        self.reader = create_stream_reader(
+            self._stream_source,
             frame_stride=ml_settings.frame_stride,
         )
 
@@ -102,6 +103,7 @@ class DroneAnomalyPipeline:
         self._running = True
         self._started_at = datetime.utcnow()
         self._last_error = None
+        self.live_detections.reset()
         self._task = asyncio.create_task(self.run_forever(), name="drone-anomaly-pipeline")
 
     async def stop(self) -> None:
@@ -126,6 +128,7 @@ class DroneAnomalyPipeline:
             "last_error": self._last_error,
             "frames_processed": self._frames_processed,
             "anomalies_emitted": self._anomalies_emitted,
+            "detections": self.live_detections.current(),
         }
 
     def set_zones(self, zones: list[dict[str, Any]]) -> None:
@@ -222,9 +225,6 @@ class DroneAnomalyPipeline:
         )
         return telemetry
 
-    async def _next_packet(self, iterator):
-        return await asyncio.to_thread(next, iterator, _SENTINEL)
-
     async def run_forever(self) -> None:
         if self.reader is None:
             raise RuntimeError("Pipeline reader is not initialized. Call start() first.")
@@ -240,24 +240,31 @@ class DroneAnomalyPipeline:
                 self._frames_processed += 1
                 self._last_frame_at = packet.ts
 
-                should_run = True
                 motion_meta: dict[str, Any] = {}
 
                 if ml_settings.enable_motion_prefilter:
-                    should_run, motion_meta = await asyncio.to_thread(
+                    _, motion_meta = await asyncio.to_thread(
                         self.motion.has_motion,
                         packet,
                     )
-
-                if not should_run:
-                    await asyncio.sleep(0)
-                    continue
 
                 detections = await asyncio.to_thread(self.detector.detect, packet)
                 tracks = self.tracker.update(detections, packet.ts)
 
                 gps_lookup: dict[int, Any] = {}
                 telemetry = self._get_latest_telemetry()
+
+                try:
+                    await self.live_detections.capture(
+                        detections=detections,
+                        packet=packet,
+                        telemetry=telemetry,
+                        model_name=ml_settings.detector_model_path,
+                        persistence=self.persistence,
+                    )
+                except Exception as e:
+                    log.exception("Failed to persist live object detections")
+                    self._last_error = str(e)
 
                 drone_lat = telemetry.get("lat")
                 drone_lon = telemetry.get("lon")

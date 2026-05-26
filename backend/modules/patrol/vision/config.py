@@ -19,7 +19,7 @@ class MLRuntimeSettings(BaseSettings):
     enabled: bool = False
     auto_start: bool = False
     stream_source: str = ""
-    detector_model_path: str = "yolov8n.pt"
+    detector_model_path: str = "yolo26n.pt"
     detector_conf: float = 0.35
     detector_iou: float = 0.45
     frame_stride: int = Field(default=2, ge=1)
@@ -33,6 +33,7 @@ class MLRuntimeSettings(BaseSettings):
     save_debug_frames: bool = True
     max_duplicate_event_s: float = 10.0
     max_events_per_track: int = Field(default=8, ge=1)
+    live_detection_persist_interval_s: float = Field(default=0.5, ge=0.1)
     event_sink_mode: str = "http"  # "http" | "noop"
     event_sink_url: str = "http://127.0.0.1:8000/api/events"
 

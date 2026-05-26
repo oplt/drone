@@ -30,7 +30,11 @@ from backend.core.database.session import get_db
 from backend.modules.fields.models import Field
 from backend.modules.fields.schemas import FieldCreateGeoJSON, FieldOut, FieldUpdate
 from backend.modules.fields.service import field_service
-from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
+from backend.modules.identity.dependencies import (
+    OrgUser,
+    require_mission_exec,
+    require_org_user,
+)
 
 router = APIRouter(prefix="/fields", tags=["fields"])
 
@@ -77,7 +81,7 @@ def _field_out(field: Field) -> FieldOut:
 async def create_field(
     payload: FieldCreateGeoJSON,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ):
     """Create a new field boundary for the authenticated user.
 
@@ -179,7 +183,7 @@ async def update_field(
     field_id: int,
     payload: FieldUpdate,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ):
     field = await _get_owned_field(field_id, org_user.user, db)
 
@@ -197,7 +201,7 @@ async def update_field(
 async def delete_field(
     field_id: int,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ):
     """Delete a field owned by the authenticated user."""
     field = await _get_owned_field(field_id, org_user.user, db)
