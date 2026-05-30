@@ -12,7 +12,10 @@ def _process_from_env(name: str) -> ExecuteProcess | None:
     raw = os.getenv(name, "").strip()
     if not raw:
         return None
-    return ExecuteProcess(cmd=shlex.split(raw), output="screen")
+    cmd = shlex.split(raw)
+    if not cmd:
+        return None
+    return ExecuteProcess(cmd=cmd, output="screen", name=name)
 
 
 def generate_launch_description() -> LaunchDescription:

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
+import { ActionIconButton } from "../../shared/ui/ActionIconButton";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
@@ -60,24 +60,20 @@ function AlertCard({
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           Triggered {formatTimestamp(item.last_triggered_at)}
         </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            variant="outlined"
+        <Stack direction="row" spacing={0.25}>
+          <ActionIconButton
+            variant="check"
+            title="Acknowledge"
             disabled={pending || item.status !== "open"}
             onClick={() => void onAcknowledge()}
-          >
-            Acknowledge
-          </Button>
-          <Button
-            size="small"
-            variant="contained"
+          />
+          <ActionIconButton
+            variant="check"
+            title="Resolve"
             color="success"
             disabled={pending}
             onClick={() => void onResolve()}
-          >
-            Resolve
-          </Button>
+          />
         </Stack>
       </Stack>
     </Paper>
@@ -144,9 +140,7 @@ export default function Header() {
                 {openCount} open alerts
               </Typography>
             </Stack>
-            <Button size="small" onClick={() => void refresh()}>
-              Refresh
-            </Button>
+            <ActionIconButton variant="refresh" title="Refresh" onClick={() => void refresh()} />
           </Stack>
           <Divider sx={{ mb: 2 }} />
           {actionError ? (

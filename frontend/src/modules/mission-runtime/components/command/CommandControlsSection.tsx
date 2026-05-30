@@ -1,14 +1,13 @@
 import TimelineIcon from "@mui/icons-material/Timeline";
 import {
   Alert,
-  Button,
-  CircularProgress,
   IconButton,
   Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { ActionIconButton } from "../../../../shared/ui/ActionIconButton";
 import type { MissionCommand, MissionLifecycleSlice } from "../../types";
 
 export function CommandControlsSection({
@@ -48,6 +47,7 @@ export function CommandControlsSection({
               <IconButton
                 size="small"
                 onClick={() => navigate(`/missions/${flightId}/timeline`)}
+                aria-label="View mission timeline"
               >
                 <TimelineIcon fontSize="small" />
               </IconButton>
@@ -63,35 +63,29 @@ export function CommandControlsSection({
       {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="success">{message}</Alert>}
 
-      <Stack direction="row" spacing={1}>
-        <Button
-          size="small"
-          variant="outlined"
-          fullWidth
-          onClick={() => onIssueCommand("pause")}
+      <Stack direction="row" spacing={0.25}>
+        <ActionIconButton
+          variant="pause"
+          title="Pause"
+          loading={busyCommand === "pause"}
           disabled={!flightId || !capabilities.pause || busyCommand !== null}
-        >
-          {busyCommand === "pause" ? <CircularProgress size={16} /> : "Pause"}
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          fullWidth
-          onClick={() => onIssueCommand("resume")}
+          onClick={() => onIssueCommand("pause")}
+        />
+        <ActionIconButton
+          variant="resume"
+          title="Resume"
+          loading={busyCommand === "resume"}
           disabled={!flightId || !capabilities.resume || busyCommand !== null}
-        >
-          {busyCommand === "resume" ? <CircularProgress size={16} /> : "Resume"}
-        </Button>
-        <Button
-          size="small"
+          onClick={() => onIssueCommand("resume")}
+        />
+        <ActionIconButton
+          variant="abort"
+          title="Abort"
           color="error"
-          variant="contained"
-          fullWidth
-          onClick={() => onIssueCommand("abort")}
+          loading={busyCommand === "abort"}
           disabled={!flightId || !capabilities.abort || busyCommand !== null}
-        >
-          {busyCommand === "abort" ? <CircularProgress size={16} color="inherit" /> : "Abort"}
-        </Button>
+          onClick={() => onIssueCommand("abort")}
+        />
       </Stack>
     </>
   );

@@ -1,4 +1,5 @@
-import { Alert, Box, Button } from "@mui/material";
+import { Alert, Box } from "@mui/material";
+import { ActionIconButton } from "./ActionIconButton";
 
 export function ErrorAlerts({
   errors,
@@ -25,9 +26,7 @@ export function ErrorAlerts({
           {error}
         </Alert>
       ))}
-      <Button size="small" onClick={onClearAll} sx={{ mt: 1 }}>
-        Clear All Errors
-      </Button>
+      <ActionIconButton variant="close" title="Clear All Errors" onClick={onClearAll} sx={{ mt: 1 }} />
     </Box>
   );
 }

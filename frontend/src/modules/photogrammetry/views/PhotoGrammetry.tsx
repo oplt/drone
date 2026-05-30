@@ -100,8 +100,6 @@ export default function PhotoGrammetryPage() {
             </Stack>
 
             <PhotogrammetryMissionControls
-              controlFrameExpanded={vm.controlFrameExpanded}
-              onControlFrameExpandedChange={vm.setControlFrameExpanded}
               apiBase={vm.apiBase}
               fieldBorder={vm.fieldBorder}
               preflightRun={mission.preflightRun}

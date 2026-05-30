@@ -324,6 +324,7 @@ class UnknownWarehouseExplorationMission:
         final_status = FlightStatus.FAILED
         final_note = "Indoor warehouse exploration failed"
         perception_started = False
+        mapping_stack_started = False
         from backend.modules.warehouse.service.capture_finalize import (
             safe_flight_token,
             start_warehouse_ros_mapping,
@@ -352,6 +353,7 @@ class UnknownWarehouseExplorationMission:
             )
 
             if self.warehouse_map_id is not None:
+                mapping_stack_started = True
                 mapping_start = await start_warehouse_ros_mapping(
                     flight_id=flight_token,
                     warehouse_map_id=int(self.warehouse_map_id),
@@ -649,6 +651,12 @@ class UnknownWarehouseExplorationMission:
                             flight_token,
                             exc,
                         )
+            if mapping_stack_started:
+                from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+                    shutdown_warehouse_mapping_stack,
+                )
+
+                await shutdown_warehouse_mapping_stack()
 
         await self._finish_flight_safe(orch, status=final_status, note=final_note)
 

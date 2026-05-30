@@ -92,6 +92,13 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application...")
 
+    from backend.infrastructure.warehouse.mapping_stack_process import (
+        get_warehouse_mapping_stack_manager,
+    )
+
+    get_warehouse_mapping_stack_manager().shutdown()
+    logger.info("Warehouse mapping stack stopped")
+
     orchestrator = await _build_orchestrator()
 
     # Mark any active mission as failed before the process exits so it isn't

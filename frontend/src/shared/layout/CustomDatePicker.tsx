@@ -1,7 +1,7 @@
 import * as React from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { useForkRef } from '@mui/material/utils';
-import Button from '@mui/material/Button';
+import { IconButton, Tooltip } from '@mui/material';
 import CalendarTodayRoundedIcon from '@mui/icons-material/CalendarTodayRounded';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -24,6 +24,7 @@ function ButtonField(props: ButtonFieldProps) {
     pickerContext.value == null
       ? parsedFormat
       : pickerContext.value.format(pickerContext.fieldFormat);
+  const label = String(pickerContext.label ?? valueStr);
   const {
     inputRef,
     slotProps,
@@ -32,22 +33,24 @@ function ButtonField(props: ButtonFieldProps) {
   } = forwardedProps as Record<string, unknown>;
 
   return (
-    <Button
-      {...buttonProps}
-      variant="outlined"
-      ref={handleRef}
-      size="small"
-      startIcon={<CalendarTodayRoundedIcon fontSize="small" />}
-      sx={{ minWidth: 'fit-content' }}
-      onClick={(event) => {
-        if (typeof forwardedOnClick === 'function') {
-          forwardedOnClick(event);
-        }
-        pickerContext.setOpen((prev) => !prev);
-      }}
-    >
-      {pickerContext.label ?? valueStr}
-    </Button>
+    <Tooltip title={label}>
+      <span>
+        <IconButton
+          {...buttonProps}
+          ref={handleRef}
+          size="small"
+          aria-label={label}
+          onClick={(event) => {
+            if (typeof forwardedOnClick === 'function') {
+              forwardedOnClick(event);
+            }
+            pickerContext.setOpen((prev) => !prev);
+          }}
+        >
+          <CalendarTodayRoundedIcon fontSize="small" />
+        </IconButton>
+      </span>
+    </Tooltip>
   );
 }
 

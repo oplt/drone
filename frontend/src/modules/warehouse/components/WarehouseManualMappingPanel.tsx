@@ -1,5 +1,6 @@
-import { Alert, Button, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Chip, Paper, Stack, Typography } from "@mui/material";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import type { PreflightRunResponse } from "../../mission-runtime";
 import { ManualFlightControlPanel } from "../../controlled-flight/components/ManualFlightControlPanel";
 import { useWarehouseManualMapping } from "../hooks/useWarehouseManualMapping";
@@ -23,52 +24,79 @@ type Props = {
   onMessage: (message: string) => void;
   onError: (message: string) => void;
   onScanResultReady?: (jobId: number) => void;
+  embedded?: boolean;
 };
 
-export function WarehouseManualMappingPanel(props: Props) {
+export function WarehouseManualMappingPanel({ embedded = false, ...props }: Props) {
   const manualMapping = useWarehouseManualMapping(props);
   const { preflight, manual } = manualMapping;
 
-  return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
-      <Stack spacing={1.25}>
+  const stackLabel = (() => {
+    if (manualMapping.mappingBusy) return "Mapping stack: updating…";
+    if (manualMapping.mappingActiveFlightId) {
+      return manualMapping.mappingStackStatus?.running
+        ? `Mapping stack: running (pid ${manualMapping.mappingStackStatus.pid ?? "?"})`
+        : "Mapping stack: session active, stack stopped";
+    }
+    if (manualMapping.mappingStackStatus?.running) {
+      return `Mapping stack: running (pid ${manualMapping.mappingStackStatus.pid ?? "?"})`;
+    }
+    if (manualMapping.mappingStackStatus?.last_error) {
+      return `Mapping stack: failed (${manualMapping.mappingStackStatus.last_error})`;
+    }
+    return "Mapping stack: stopped";
+  })();
+
+  const stackColor: "default" | "success" | "warning" | "error" =
+    manualMapping.mappingBusy
+      ? "warning"
+      : manualMapping.mappingStackStatus?.last_error
+        ? "error"
+        : manualMapping.mappingStackStatus?.running ||
+            manualMapping.mappingActiveFlightId
+          ? "success"
+          : "default";
+
+  const content = (
+    <Stack spacing={1.25}>
+      {!embedded && (
         <Typography variant="subtitle1">
           <InfoLabel
             label="Manual Warehouse Mapping"
             info="Start a controlled keyboard flight, start ROS mapping, fly the inbound area manually, then stop mapping after landing."
           />
         </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Button
-            variant="contained"
-            disabled={manualMapping.connecting}
+      )}
+        <Chip size="small" label={stackLabel} color={stackColor} variant="outlined" />
+        <Stack direction="row" spacing={0.25} flexWrap="wrap" useFlexGap>
+          <ActionIconButton
+            variant="connect"
+            title={manualMapping.connecting ? "Connecting…" : "Connect Drone"}
+            color="primary"
+            loading={manualMapping.connecting}
             onClick={manualMapping.connectDrone}
-          >
-            {manualMapping.connecting ? <CircularProgress size={16} /> : "Connect Drone"}
-          </Button>
-          <Button
-            variant="contained"
-            disabled={manualMapping.startingSession}
+          />
+          <ActionIconButton
+            variant="takeoff"
+            title={manualMapping.startingSession ? "Starting…" : "Start Keyboard Flight"}
+            color="primary"
+            loading={manualMapping.startingSession}
             onClick={manualMapping.startKeyboardSession}
-          >
-            {manualMapping.startingSession ? "Starting..." : "Start Keyboard Flight"}
-          </Button>
-          <Button
-            variant="outlined"
+          />
+          <ActionIconButton
+            variant="play"
+            title="Start ROS Mapping"
             color="success"
             disabled={manualMapping.mappingBusy || !props.activeFlightId || props.warehouseMapId == null}
             onClick={manualMapping.startMapping}
-          >
-            Start ROS Mapping
-          </Button>
-          <Button
-            variant="outlined"
+          />
+          <ActionIconButton
+            variant="stop"
+            title="Stop ROS Mapping"
             color="warning"
             disabled={manualMapping.mappingBusy || !manualMapping.mappingActiveFlightId}
             onClick={manualMapping.stopMapping}
-          >
-            Stop ROS Mapping
-          </Button>
+          />
         </Stack>
         {!props.activeFlightId && (
           <Alert severity="info">Start a keyboard flight session before enabling movement.</Alert>
@@ -101,6 +129,13 @@ export function WarehouseManualMappingPanel(props: Props) {
           endManualControl={manual.endManualControl}
         />
       </Stack>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
+      {content}
     </Paper>
   );
 }

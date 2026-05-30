@@ -3,23 +3,29 @@ import { alpha, styled } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 import Drawer from '@mui/material/Drawer';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import HubRoundedIcon from '@mui/icons-material/HubRounded';
+import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
+import ContactMailOutlinedIcon from '@mui/icons-material/ContactMailOutlined';
 import ColorModeIconDropdown from '../../../shared/theme/ColorModeIconDropdown';
 import Sitemark from './SitemarkIcon';
 import { Link as RouterLink } from "react-router-dom";
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 
 const navItems = [
-  { label: 'Platform', href: '#platform' },
-  { label: 'Field Safety', href: '#safety' },
-  { label: 'Integrations', href: '#integration' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Platform', href: '#platform', icon: <HubRoundedIcon fontSize="small" /> },
+  { label: 'Field Safety', href: '#safety', icon: <ShieldRoundedIcon fontSize="small" /> },
+  { label: 'Integrations', href: '#integration', icon: <HubOutlinedIcon fontSize="small" /> },
+  { label: 'Contact', href: '#contact', icon: <ContactMailOutlinedIcon fontSize="small" /> },
 ];
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
@@ -61,27 +67,42 @@ export default function AppAppBar() {
         <StyledToolbar variant="dense" disableGutters>
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', px: 0 }}>
             <Sitemark />
-            <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.25 }}>
               {navItems.map((item) => (
-                <Button key={item.label} variant="text" color="primary" size="small" href={item.href}>
-                  {item.label}
-                </Button>
+                <Tooltip key={item.label} title={item.label}>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    href={item.href}
+                    aria-label={item.label}
+                  >
+                    {item.icon}
+                  </IconButton>
+                </Tooltip>
               ))}
             </Box>
           </Box>
           <Box
             sx={{
               display: { xs: 'none', md: 'flex' },
-              gap: 1,
+              gap: 0.25,
               alignItems: 'center',
             }}
           >
-            <Button color="primary" variant="text" size="small" component={RouterLink} to="/signin">
-              Grower sign in
-            </Button>
-            <Button color="primary" variant="contained" size="small" component={RouterLink} to="/signup">
-              Request onboarding
-            </Button>
+            <ActionIconButton
+              variant="connect"
+              title="Grower sign in"
+              color="primary"
+              component={RouterLink}
+              to="/signin"
+            />
+            <ActionIconButton
+              variant="add"
+              title="Request onboarding"
+              color="primary"
+              component={RouterLink}
+              to="/signup"
+            />
             <ColorModeIconDropdown />
           </Box>
           <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 1 }}>
@@ -116,30 +137,24 @@ export default function AppAppBar() {
                   </MenuItem>
                 ))}
                 <Divider sx={{ my: 3 }} />
-                <MenuItem>
-                  <Button
+                <Stack direction="row" spacing={0.5} justifyContent="center">
+                  <ActionIconButton
+                    variant="add"
+                    title="Request onboarding"
                     color="primary"
-                    variant="contained"
                     component={RouterLink}
                     to="/signup"
-                    fullWidth
                     onClick={toggleDrawer(false)}
-                  >
-                    Request onboarding
-                  </Button>
-                </MenuItem>
-                <MenuItem>
-                  <Button
+                  />
+                  <ActionIconButton
+                    variant="connect"
+                    title="Grower sign in"
                     color="primary"
-                    variant="outlined"
                     component={RouterLink}
                     to="/signin"
-                    fullWidth
                     onClick={toggleDrawer(false)}
-                  >
-                    Grower sign in
-                  </Button>
-                </MenuItem>
+                  />
+                </Stack>
               </Box>
             </Drawer>
           </Box>

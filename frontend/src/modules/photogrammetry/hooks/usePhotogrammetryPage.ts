@@ -23,7 +23,6 @@ import { usePhotogrammetryMapping } from "./usePhotogrammetryMapping";
 import { usePhotogrammetryMission } from "./usePhotogrammetryMission";
 
 export function usePhotogrammetryPage() {
-  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
@@ -254,8 +253,6 @@ export function usePhotogrammetryPage() {
 
   return {
     apiBase: API_BASE_CLEAN,
-    controlFrameExpanded,
-    setControlFrameExpanded,
     errors,
     addError,
     dismissError,

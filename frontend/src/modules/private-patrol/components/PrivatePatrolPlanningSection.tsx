@@ -1,12 +1,14 @@
 import {
   Alert,
   Box,
-  Button,
-  CircularProgress,
   Stack,
   TextField,
 } from "@mui/material";
-import { TaskControlFrame } from "../../../modules/mission-workflow";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import {
+  TaskPreflightCommandsDrawer,
+  useTaskPreflightCommandsDrawer,
+} from "../../../modules/mission-workflow";
 import {
   FieldBorderPanel,
   SavedFieldsPanel,
@@ -109,8 +111,6 @@ export function PrivatePatrolFieldsBlock({
 }
 
 export function PrivatePatrolMissionControls({
-  controlFrameExpanded,
-  onControlFrameExpandedChange,
   apiBase,
   preflightRun,
   telemetry,
@@ -120,8 +120,6 @@ export function PrivatePatrolMissionControls({
   mission,
   onSendMission,
 }: {
-  controlFrameExpanded: boolean;
-  onControlFrameExpandedChange: (expanded: boolean) => void;
   apiBase: string;
   preflightRun: PreflightRunResponse | null;
   telemetry: TelemetrySnapshot | null;
@@ -131,6 +129,8 @@ export function PrivatePatrolMissionControls({
   mission: MissionVm;
   onSendMission: () => void;
 }) {
+  const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
+
   const {
     name,
     setName,
@@ -148,31 +148,13 @@ export function PrivatePatrolMissionControls({
   } = mission;
 
   return (
-    <Box
-      sx={{
-        width: { xs: "100%", md: controlFrameExpanded ? 620 : 360 },
-        transition: "width 180ms ease",
-      }}
-    >
-      <Stack spacing={2}>
-        <TaskControlFrame
-          expanded={controlFrameExpanded}
-          onExpandedChange={onControlFrameExpandedChange}
-        >
-          <MissionPreflightPanel
-            apiBase={apiBase}
-            missionType="perimeter_patrol"
-            preflightRun={preflightRun}
-            telemetry={telemetry}
-          />
-          <MissionCommandPanel
-            telemetry={telemetry}
-            droneConnected={droneConnected}
-            missionStatus={missionStatus}
-            activeFlightId={activeFlightId}
-            apiBase={apiBase}
-          />
-        </TaskControlFrame>
+    <>
+      <Box
+        sx={{
+          width: { xs: "100%", md: 360 },
+        }}
+      >
+        <Stack spacing={2}>
         <TextField
           variant="filled"
           label="Mission name"
@@ -203,45 +185,43 @@ export function PrivatePatrolMissionControls({
           }
         />
 
-        <Button
-          variant="contained"
-          onClick={onSendMission}
-          disabled={
-            sending ||
-            previewLoading ||
-            (gridPreviewTooDense && !isWaypointPatrol) ||
-            !!gridPreviewError ||
-            !name.trim() ||
-            altInput === "" ||
-            Number(altInput) < 1 ||
-            Number(altInput) > 500 ||
-            !hasRequiredTaskGeometry
-          }
-          fullWidth
-          sx={{ mt: 1 }}
-          color="success"
-        >
-          {sending ? (
-            <>
-              <CircularProgress size={20} sx={{ mr: 1 }} />
-              {isWaypointPatrol
-                ? "Starting Waypoint Patrol..."
-                : isGridSurveillance
-                  ? "Starting Grid Surveillance..."
-                  : isEventTriggeredPatrol
-                    ? "Starting Event-Triggered Patrol..."
-                    : "Starting Perimeter Patrol..."}
-            </>
-          ) : isWaypointPatrol ? (
-            "Start Waypoint Patrol"
-          ) : isGridSurveillance ? (
-            "Start Grid Surveillance"
-          ) : isEventTriggeredPatrol ? (
-            "Start Event-Triggered Patrol"
-          ) : (
-            "Start Perimeter Patrol"
-          )}
-        </Button>
+        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+          <ActionIconButton
+            variant="play"
+            title={
+              sending
+                ? isWaypointPatrol
+                  ? "Starting Waypoint Patrol…"
+                  : isGridSurveillance
+                    ? "Starting Grid Surveillance…"
+                    : isEventTriggeredPatrol
+                      ? "Starting Event-Triggered Patrol…"
+                      : "Starting Perimeter Patrol…"
+                : isWaypointPatrol
+                  ? "Start Waypoint Patrol"
+                  : isGridSurveillance
+                    ? "Start Grid Surveillance"
+                    : isEventTriggeredPatrol
+                      ? "Start Event-Triggered Patrol"
+                      : "Start Perimeter Patrol"
+            }
+            color="success"
+            size="medium"
+            loading={sending}
+            disabled={
+              sending ||
+              previewLoading ||
+              (gridPreviewTooDense && !isWaypointPatrol) ||
+              !!gridPreviewError ||
+              !name.trim() ||
+              altInput === "" ||
+              Number(altInput) < 1 ||
+              Number(altInput) > 500 ||
+              !hasRequiredTaskGeometry
+            }
+            onClick={onSendMission}
+          />
+        </Stack>
 
         {activeFlightId && (
           <Alert severity="info" sx={{ mt: 2 }}>
@@ -249,6 +229,26 @@ export function PrivatePatrolMissionControls({
           </Alert>
         )}
       </Stack>
-    </Box>
+      </Box>
+
+      <TaskPreflightCommandsDrawer
+        open={preflightCommandsDrawer.open}
+        onOpenChange={preflightCommandsDrawer.onOpenChange}
+      >
+        <MissionPreflightPanel
+          apiBase={apiBase}
+          missionType="perimeter_patrol"
+          preflightRun={preflightRun}
+          telemetry={telemetry}
+        />
+        <MissionCommandPanel
+          telemetry={telemetry}
+          droneConnected={droneConnected}
+          missionStatus={missionStatus}
+          activeFlightId={activeFlightId}
+          apiBase={apiBase}
+        />
+      </TaskPreflightCommandsDrawer>
+    </>
   );
 }

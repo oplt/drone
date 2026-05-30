@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -16,7 +16,6 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded';
 import PageLayout, { PageSection } from "../../../shared/layout/PageLayout";
@@ -109,10 +108,15 @@ function CreateTemplateDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={saving || !name.trim()}>
-          {saving ? 'Creating…' : 'Create'}
-        </Button>
+        <ActionIconButton variant="close" title="Cancel" onClick={onClose} />
+        <ActionIconButton
+          variant="add"
+          title={saving ? "Creating…" : "Create"}
+          color="primary"
+          loading={saving}
+          disabled={saving || !name.trim()}
+          onClick={handleSubmit}
+        />
       </DialogActions>
     </Dialog>
   );
@@ -212,14 +216,12 @@ export default function TemplatesPage() {
       title="Mission Templates"
       description="Save mission configurations for one-click rerun and scheduled dispatch"
       actions={
-        <Button
-          variant="contained"
-          startIcon={<AddRoundedIcon />}
+        <ActionIconButton
+          variant="add"
+          title="New Template"
+          color="primary"
           onClick={() => setCreateOpen(true)}
-          size="small"
-        >
-          New Template
-        </Button>
+        />
       }
     >
       <PageSection>

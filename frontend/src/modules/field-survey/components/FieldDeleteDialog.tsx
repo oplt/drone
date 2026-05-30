@@ -1,11 +1,12 @@
 import {
-  Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Stack,
 } from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import type { FieldFeature } from "../../fields";
 
 export function FieldDeleteDialog({
@@ -28,17 +29,16 @@ export function FieldDeleteDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={deleting}>
-          Cancel
-        </Button>
-        <Button
-          color="error"
-          variant="contained"
-          onClick={onConfirm}
-          disabled={deleting}
-        >
-          {deleting ? "Deleting..." : "Delete"}
-        </Button>
+        <Stack direction="row" spacing={0.25}>
+          <ActionIconButton variant="close" title="Cancel" disabled={deleting} onClick={onClose} />
+          <ActionIconButton
+            variant="delete"
+            title={deleting ? "Deleting…" : "Delete"}
+            color="error"
+            loading={deleting}
+            onClick={onConfirm}
+          />
+        </Stack>
       </DialogActions>
     </Dialog>
   );

@@ -350,7 +350,7 @@ class WarehouseApplication:
     async def delete_sensor_rig(
         self, db: AsyncSession, *, rig: WarehouseSensorRig
     ) -> None:
-        await self.maps.deactivate_sensor_rig(db, rig=rig)
+        await self.maps.delete_sensor_rig(db, rig=rig)
         await db.commit()
 
 

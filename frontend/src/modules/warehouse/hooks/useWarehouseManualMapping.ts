@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { queryClient } from "../../../app/providers/queryClient";
 import { missionKeys } from "../../../app/config/queryKeys";
 import { connectDroneTelemetry } from "../../mission-runtime/api/telemetryConnectApi";
@@ -15,8 +15,10 @@ import {
   telemetryHeartbeatReceived,
 } from "../../controlled-flight/utils/telemetryHealth";
 import {
+  fetchWarehouseMappingStackStatus,
   startWarehouseManualMapping,
   stopWarehouseManualMapping,
+  type WarehouseMappingStackStatus,
 } from "../api/warehouseMissionsApi";
 
 type MissionStatusLike = {
@@ -59,7 +61,28 @@ export function useWarehouseManualMapping({
   const [startingSession, setStartingSession] = useState(false);
   const [mappingActiveFlightId, setMappingActiveFlightId] = useState<string | null>(null);
   const [mappingBusy, setMappingBusy] = useState(false);
+  const [mappingStackStatus, setMappingStackStatus] =
+    useState<WarehouseMappingStackStatus | null>(null);
   const stopAllManualRef = useRef<() => void>(() => {});
+
+  const refreshMappingStackStatus = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const status = await fetchWarehouseMappingStackStatus(token);
+      setMappingStackStatus(status);
+    } catch {
+      setMappingStackStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshMappingStackStatus();
+    const interval = window.setInterval(() => {
+      void refreshMappingStackStatus();
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [refreshMappingStackStatus]);
 
   const droneCenter = useDroneCenter(telemetry);
   const batteryPercent = useMemo(() => telemetryBatteryPercent(telemetry), [telemetry]);
@@ -183,13 +206,22 @@ export function useWarehouseManualMapping({
         token,
       );
       setMappingActiveFlightId(activeFlightId);
+      await refreshMappingStackStatus();
       onMessage(`Manual ROS mapping ${result.status}.`);
     } catch (error) {
       onError(error instanceof Error ? error.message : "Manual mapping could not start");
     } finally {
       setMappingBusy(false);
     }
-  }, [activeFlightId, dockId, onError, onMessage, sensorRigId, warehouseMapId]);
+  }, [
+    activeFlightId,
+    dockId,
+    onError,
+    onMessage,
+    refreshMappingStackStatus,
+    sensorRigId,
+    warehouseMapId,
+  ]);
 
   const stopMapping = useCallback(async () => {
     const token = getToken();
@@ -205,6 +237,7 @@ export function useWarehouseManualMapping({
         token,
       );
       setMappingActiveFlightId(null);
+      await refreshMappingStackStatus();
       const jobId = result.mapping_job?.job_id;
       if (typeof jobId === "number" && Number.isFinite(jobId)) {
         onScanResultReady?.(jobId);
@@ -224,7 +257,15 @@ export function useWarehouseManualMapping({
     } finally {
       setMappingBusy(false);
     }
-  }, [activeFlightId, mappingActiveFlightId, onError, onMessage, onScanResultReady, warehouseMapId]);
+  }, [
+    activeFlightId,
+    mappingActiveFlightId,
+    onError,
+    onMessage,
+    onScanResultReady,
+    refreshMappingStackStatus,
+    warehouseMapId,
+  ]);
 
   return {
     connecting,
@@ -232,6 +273,7 @@ export function useWarehouseManualMapping({
     startingSession,
     mappingBusy,
     mappingActiveFlightId,
+    mappingStackStatus,
     manualControlReady,
     preflight,
     manual,

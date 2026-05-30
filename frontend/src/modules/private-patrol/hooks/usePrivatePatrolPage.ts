@@ -20,7 +20,6 @@ import { usePrivatePatrolMap } from "./usePrivatePatrolMap";
 import { usePrivatePatrolMission } from "./usePrivatePatrolMission";
 
 export function usePrivatePatrolPage() {
-  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
@@ -279,8 +278,6 @@ export function usePrivatePatrolPage() {
 
   return {
     apiBase: API_BASE_CLEAN,
-    controlFrameExpanded,
-    setControlFrameExpanded,
     errors,
     addError,
     dismissError,

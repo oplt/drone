@@ -94,8 +94,6 @@ export default function FieldPage() {
             </Stack>
 
             <FieldSurveyMissionControls
-              controlFrameExpanded={vm.controlFrameExpanded}
-              onControlFrameExpandedChange={vm.setControlFrameExpanded}
               apiBase={vm.apiBase}
               fieldBorder={vm.fieldBorder}
               preflightRun={mission.preflightRun}

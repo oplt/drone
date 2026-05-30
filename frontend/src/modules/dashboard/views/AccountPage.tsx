@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -16,8 +16,6 @@ import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import LockRoundedIcon from '@mui/icons-material/LockRounded';
-import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -180,9 +178,14 @@ function PasswordSection({ token }: { token: string | null }) {
           }
         />
         <Box>
-          <Button variant="contained" onClick={handleSubmit} disabled={mutation.isPending}>
-            {mutation.isPending ? 'Updating...' : 'Change password'}
-          </Button>
+          <ActionIconButton
+            variant="upgrade"
+            title={mutation.isPending ? "Updating…" : "Change password"}
+            color="primary"
+            loading={mutation.isPending}
+            disabled={mutation.isPending}
+            onClick={handleSubmit}
+          />
         </Box>
       </Stack>
     </PageSection>
@@ -266,14 +269,13 @@ function TwoFASection({
 
         {!user.twofa_enabled && !setupData ? (
           <Box>
-            <Button
-              variant="outlined"
-              onClick={() => setupMutation.mutate()}
+            <ActionIconButton
+              variant="preflight"
+              title={setupMutation.isPending ? "Setting up…" : "Set up 2FA"}
+              loading={setupMutation.isPending}
               disabled={setupMutation.isPending}
-              startIcon={<ShieldRoundedIcon fontSize="small" />}
-            >
-              {setupMutation.isPending ? 'Setting up...' : 'Set up 2FA'}
-            </Button>
+              onClick={() => setupMutation.mutate()}
+            />
           </Box>
         ) : null}
 
@@ -306,31 +308,32 @@ function TwoFASection({
               helperText={verifyError ?? undefined}
               variant="filled"
             />
-            <Stack direction="row" spacing={1.5}>
-              <Button
-                variant="contained"
-                onClick={handleVerify}
+            <Stack direction="row" spacing={0.25}>
+              <ActionIconButton
+                variant="check"
+                title={verifyMutation.isPending ? "Verifying…" : "Verify & enable"}
+                color="primary"
+                loading={verifyMutation.isPending}
                 disabled={verifyMutation.isPending || verifyToken.length !== 6}
-              >
-                {verifyMutation.isPending ? 'Verifying...' : 'Verify & enable'}
-              </Button>
-              <Button variant="text" onClick={() => setSetupData(null)}>
-                Cancel
-              </Button>
+                onClick={handleVerify}
+              />
+              <ActionIconButton
+                variant="close"
+                title="Cancel"
+                onClick={() => setSetupData(null)}
+              />
             </Stack>
           </Stack>
         ) : null}
 
         {user.twofa_enabled ? (
           <Box>
-            <Button
-              variant="outlined"
+            <ActionIconButton
+              variant="delete"
+              title="Disable 2FA"
               color="error"
-              startIcon={<LockRoundedIcon fontSize="small" />}
               onClick={() => setDisableOpen(true)}
-            >
-              Disable 2FA
-            </Button>
+            />
           </Box>
         ) : null}
       </Stack>
@@ -354,23 +357,23 @@ function TwoFASection({
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button
+          <ActionIconButton
+            variant="close"
+            title="Cancel"
             onClick={() => {
               setDisableOpen(false);
               setDisablePassword('');
               setDisableError(null);
             }}
-          >
-            Cancel
-          </Button>
-          <Button
+          />
+          <ActionIconButton
+            variant="delete"
+            title={disableMutation.isPending ? "Disabling…" : "Disable"}
             color="error"
-            variant="contained"
+            loading={disableMutation.isPending}
             disabled={disableMutation.isPending || !disablePassword}
             onClick={() => disableMutation.mutate({ password: disablePassword })}
-          >
-            {disableMutation.isPending ? 'Disabling...' : 'Disable'}
-          </Button>
+          />
         </DialogActions>
       </Dialog>
     </PageSection>

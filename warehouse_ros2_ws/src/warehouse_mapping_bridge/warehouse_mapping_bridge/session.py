@@ -49,6 +49,25 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def mapping_session_active_path(capture_root: Path) -> Path:
+    override = os.getenv("WAREHOUSE_MAPPING_SESSION_ACTIVE_FILE", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return capture_root / ".mapping_session_active"
+
+
+def mark_mapping_session_active(capture_root: Path, flight_id: str) -> None:
+    path = mapping_session_active_path(capture_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(flight_id.strip(), encoding="utf-8")
+
+
+def clear_mapping_session_active(capture_root: Path) -> None:
+    path = mapping_session_active_path(capture_root)
+    if path.exists():
+        path.unlink()
+
+
 @dataclass
 class MappingSession:
     flight_id: str
@@ -435,6 +454,7 @@ class BridgeState:
             )
 
         self.sessions[flight_id] = session
+        mark_mapping_session_active(self.config.capture_root, flight_id)
         self._write_session_files(session, payload)
         return {
             "accepted": True,
@@ -475,6 +495,8 @@ class BridgeState:
         self._write_session_files(session, {})
         self._write_artifact_index(session)
         self.sessions.pop(safe_flight_id, None)
+        if not self.sessions:
+            clear_mapping_session_active(self.config.capture_root)
         logger.info(
             "Warehouse mapping session stopped flight_id=%s session_dir=%s",
             safe_flight_id,

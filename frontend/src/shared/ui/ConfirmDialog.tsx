@@ -1,9 +1,9 @@
-import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import { ActionIconButton } from "./ActionIconButton";
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -40,18 +40,20 @@ export default function ConfirmDialog({
         <DialogContentText id="confirm-dialog-description">{description}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} disabled={loading}>
-          {cancelLabel}
-        </Button>
-        <Button
-          variant="contained"
-          color={confirmColor}
-          onClick={onConfirm}
+        <ActionIconButton
+          variant="close"
+          title={cancelLabel}
           disabled={loading}
-          autoFocus
-        >
-          {confirmLabel}
-        </Button>
+          onClick={onCancel}
+        />
+        <ActionIconButton
+          variant="check"
+          title={confirmLabel}
+          color={confirmColor === "error" ? "error" : confirmColor === "warning" ? "warning" : "primary"}
+          loading={loading}
+          disabled={loading}
+          onClick={onConfirm}
+        />
       </DialogActions>
     </Dialog>
   );

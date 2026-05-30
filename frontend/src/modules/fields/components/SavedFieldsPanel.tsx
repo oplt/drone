@@ -1,17 +1,12 @@
 import {
-  CircularProgress,
-  IconButton,
   MenuItem,
   Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong";
-import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 
 type SavedFieldOption = {
   id: number;
@@ -49,7 +44,7 @@ export function SavedFieldsPanel({
       </Typography>
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        spacing={1}
+        spacing={0.25}
         alignItems={{ xs: "stretch", sm: "flex-start" }}
       >
         <TextField
@@ -78,65 +73,27 @@ export function SavedFieldsPanel({
           ))}
         </TextField>
 
-        <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-          <Tooltip title="Refresh saved fields">
-            <span>
-              <IconButton
-                size="small"
-                onClick={onRefresh}
-                disabled={loadingFields}
-                aria-label="Refresh saved fields"
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                }}
-              >
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Focus selected field">
-            <span>
-              <IconButton
-                size="small"
-                disabled={!selectedField}
-                onClick={onFocusSelected}
-                aria-label="Focus selected field"
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                }}
-              >
-                <CenterFocusStrongIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Delete selected field">
-            <span>
-              <IconButton
-                size="small"
-                color="error"
-                disabled={!selectedField || deletingField}
-                onClick={onDeleteSelected}
-                aria-label="Delete selected field"
-                sx={{
-                  border: "1px solid",
-                  borderColor: "error.main",
-                  borderRadius: 1,
-                }}
-              >
-                {deletingField ? (
-                  <CircularProgress size={14} color="inherit" />
-                ) : (
-                  <DeleteOutlineOutlinedIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
+        <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
+          <ActionIconButton
+            variant="refresh"
+            title="Refresh saved fields"
+            loading={loadingFields}
+            onClick={onRefresh}
+          />
+          <ActionIconButton
+            variant="focus"
+            title="Focus selected field"
+            disabled={!selectedField}
+            onClick={onFocusSelected}
+          />
+          <ActionIconButton
+            variant="delete"
+            title="Delete selected field"
+            color="error"
+            loading={deletingField}
+            disabled={!selectedField}
+            onClick={onDeleteSelected}
+          />
         </Stack>
       </Stack>
     </Paper>

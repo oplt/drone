@@ -38,13 +38,13 @@ class Field(Base):
 
     # exact field border polygon (WGS84)
     boundary: Mapped[Geometry] = mapped_column(
-        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=False),
         nullable=False,
     )
 
     area_ha: Mapped[float | None] = mapped_column(Float)
     centroid: Mapped[Geometry | None] = mapped_column(
-        Geometry(geometry_type="POINT", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POINT", srid=4326, spatial_index=False),
         nullable=True,
     )
 
@@ -69,7 +69,7 @@ class Obstacle(Base):
     field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), index=True)
     kind: Mapped[str] = mapped_column(String(64), nullable=False, default="unknown")
     location: Mapped[Geometry] = mapped_column(
-        Geometry(geometry_type="POINT", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POINT", srid=4326, spatial_index=False),
         nullable=False,
     )
     radius_m: Mapped[float] = mapped_column(Float, nullable=False, default=5.0)

@@ -1,12 +1,14 @@
 import {
   Alert,
   Box,
-  Button,
-  CircularProgress,
   Stack,
   TextField,
 } from "@mui/material";
-import { TaskControlFrame } from "../../../modules/mission-workflow";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import {
+  TaskPreflightCommandsDrawer,
+  useTaskPreflightCommandsDrawer,
+} from "../../../modules/mission-workflow";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import {
   MissionCommandPanel,
@@ -27,8 +29,6 @@ type MissionVm = ReturnType<typeof usePhotogrammetryMission>;
 type MappingVm = ReturnType<typeof usePhotogrammetryMapping>;
 
 export function PhotogrammetryMissionControls({
-  controlFrameExpanded,
-  onControlFrameExpandedChange,
   apiBase,
   fieldBorder,
   preflightRun,
@@ -41,8 +41,6 @@ export function PhotogrammetryMissionControls({
   selectedFieldId,
   onOpen3DPlanning,
 }: {
-  controlFrameExpanded: boolean;
-  onControlFrameExpandedChange: (expanded: boolean) => void;
   apiBase: string;
   fieldBorder: import("../../fields").LonLat[] | null;
   preflightRun: PreflightRunResponse | null;
@@ -55,115 +53,112 @@ export function PhotogrammetryMissionControls({
   selectedFieldId: number | null;
   onOpen3DPlanning: () => void;
 }) {
+  const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
+
   return (
-    <Box
-      sx={{
-        width: { xs: "100%", md: controlFrameExpanded ? 620 : 360 },
-        transition: "width 180ms ease",
-      }}
-    >
-      <Stack spacing={2}>
-        <TaskControlFrame
-          expanded={controlFrameExpanded}
-          onExpandedChange={onControlFrameExpandedChange}
-        >
-          <MissionPreflightPanel
-            apiBase={apiBase}
-            missionType="photogrammetry"
-            preflightRun={preflightRun}
-            telemetry={telemetry}
+    <>
+      <Box
+        sx={{
+          width: { xs: "100%", md: 360 },
+        }}
+      >
+        <Stack spacing={2}>
+          <PhotogrammetryMappingSection
+            mapping={mapping}
+            selectedFieldId={selectedFieldId}
+            onOpen3DPlanning={onOpen3DPlanning}
           />
-          <MissionCommandPanel
-            telemetry={telemetry}
-            droneConnected={droneConnected}
-            missionStatus={missionStatus}
-            activeFlightId={activeFlightId}
-            apiBase={apiBase}
+
+          <TextField
+            variant="filled"
+            label="Mission name"
+            value={mission.name}
+            onChange={(e) => mission.setName(e.target.value)}
+            size="small"
+            fullWidth
+            required
+            error={!mission.name.trim()}
+            helperText={!mission.name.trim() ? "Mission name is required" : " "}
           />
-        </TaskControlFrame>
 
-        <PhotogrammetryMappingSection
-          mapping={mapping}
-          selectedFieldId={selectedFieldId}
-          onOpen3DPlanning={onOpen3DPlanning}
-        />
+          <TextField
+            variant="filled"
+            label="Mapping altitude (m)"
+            type="text"
+            value={mission.altInput}
+            onChange={(e) => mission.handleAltitudeInputChange(e.target.value)}
+            onBlur={mission.normalizeAltitude}
+            size="small"
+            fullWidth
+            inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
+            error={
+              mission.altInput !== "" &&
+              (Number(mission.altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
+                Number(mission.altInput) > PHOTOGRAMMETRY_ALT_MAX_M)
+            }
+            helperText={
+              mission.altInput !== "" &&
+              (Number(mission.altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
+                Number(mission.altInput) > PHOTOGRAMMETRY_ALT_MAX_M)
+                ? `Recommended capture range is ${PHOTOGRAMMETRY_ALT_MIN_M}–${PHOTOGRAMMETRY_ALT_MAX_M}m`
+                : `High-res mapping profile: ${PHOTOGRAMMETRY_ALT_MIN_M}–${PHOTOGRAMMETRY_ALT_MAX_M}m`
+            }
+          />
 
-        <TextField
-          variant="filled"
-          label="Mission name"
-          value={mission.name}
-          onChange={(e) => mission.setName(e.target.value)}
-          size="small"
-          fullWidth
-          required
-          error={!mission.name.trim()}
-          helperText={!mission.name.trim() ? "Mission name is required" : " "}
-        />
+          <PhotogrammetryProfileSection
+            profile={mission.photogrammetryProfile}
+            onProfileChange={mission.setPhotogrammetryProfile}
+          />
 
-        <TextField
-          variant="filled"
-          label="Mapping altitude (m)"
-          type="text"
-          value={mission.altInput}
-          onChange={(e) => mission.handleAltitudeInputChange(e.target.value)}
-          onBlur={mission.normalizeAltitude}
-          size="small"
-          fullWidth
-          inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
-          error={
-            mission.altInput !== "" &&
-            (Number(mission.altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
-              Number(mission.altInput) > PHOTOGRAMMETRY_ALT_MAX_M)
-          }
-          helperText={
-            mission.altInput !== "" &&
-            (Number(mission.altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
-              Number(mission.altInput) > PHOTOGRAMMETRY_ALT_MAX_M)
-              ? `Recommended capture range is ${PHOTOGRAMMETRY_ALT_MIN_M}–${PHOTOGRAMMETRY_ALT_MAX_M}m`
-              : `High-res mapping profile: ${PHOTOGRAMMETRY_ALT_MIN_M}–${PHOTOGRAMMETRY_ALT_MAX_M}m`
-          }
-        />
+          <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+            <ActionIconButton
+              variant="play"
+              title={mission.sending ? "Starting PhotoGrammetry…" : "Start PhotoGrammetry"}
+              color="success"
+              size="medium"
+              loading={mission.sending}
+              disabled={
+                mission.sending ||
+                mission.previewLoading ||
+                mission.gridPreviewTooDense ||
+                !!mission.gridPreviewError ||
+                !mission.name.trim() ||
+                mission.altInput === "" ||
+                Number(mission.altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
+                Number(mission.altInput) > PHOTOGRAMMETRY_ALT_MAX_M ||
+                !fieldBorder ||
+                fieldBorder.length < 3
+              }
+              onClick={() => void mission.sendMission()}
+            />
+          </Stack>
 
-        <PhotogrammetryProfileSection
-          profile={mission.photogrammetryProfile}
-          onProfileChange={mission.setPhotogrammetryProfile}
-        />
-
-        <Button
-          variant="contained"
-          onClick={() => void mission.sendMission()}
-          disabled={
-            mission.sending ||
-            mission.previewLoading ||
-            mission.gridPreviewTooDense ||
-            !!mission.gridPreviewError ||
-            !mission.name.trim() ||
-            mission.altInput === "" ||
-            Number(mission.altInput) < PHOTOGRAMMETRY_ALT_MIN_M ||
-            Number(mission.altInput) > PHOTOGRAMMETRY_ALT_MAX_M ||
-            !fieldBorder ||
-            fieldBorder.length < 3
-          }
-          fullWidth
-          sx={{ mt: 1 }}
-          color="success"
-        >
-          {mission.sending ? (
-            <>
-              <CircularProgress size={20} sx={{ mr: 1 }} />
-              Starting PhotoGrammetry...
-            </>
-          ) : (
-            "Start PhotoGrammetry"
+          {activeFlightId && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Active flight: {missionStatus?.mission_name || "Loading..."}
+            </Alert>
           )}
-        </Button>
+        </Stack>
+      </Box>
 
-        {activeFlightId && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Active flight: {missionStatus?.mission_name || "Loading..."}
-          </Alert>
-        )}
-      </Stack>
-    </Box>
+      <TaskPreflightCommandsDrawer
+        open={preflightCommandsDrawer.open}
+        onOpenChange={preflightCommandsDrawer.onOpenChange}
+      >
+        <MissionPreflightPanel
+          apiBase={apiBase}
+          missionType="photogrammetry"
+          preflightRun={preflightRun}
+          telemetry={telemetry}
+        />
+        <MissionCommandPanel
+          telemetry={telemetry}
+          droneConnected={droneConnected}
+          missionStatus={missionStatus}
+          activeFlightId={activeFlightId}
+          apiBase={apiBase}
+        />
+      </TaskPreflightCommandsDrawer>
+    </>
   );
 }

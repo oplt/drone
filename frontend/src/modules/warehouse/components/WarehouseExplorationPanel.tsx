@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import ExploreRoundedIcon from "@mui/icons-material/ExploreRounded";
-import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   InputAdornment,
   Paper,
@@ -13,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import {
   fetchWarehouseExplorationProfile,
   startWarehouseExploration,
@@ -26,10 +24,11 @@ import type {
 type Props = {
   warehouseMapId: number | null;
   selectedDockId: number | null;
-  warehouseName?: string;
+  warehouseName?: string | null;
   getToken: () => string | null;
   onLaunch: (launch: WarehouseMissionLaunchResponse) => void;
   onError: (message: string, error?: unknown) => void;
+  embedded?: boolean;
 };
 
 const DEFAULT_PROFILE: WarehouseExplorationProfile = {
@@ -83,6 +82,7 @@ export function WarehouseExplorationPanel({
   getToken,
   onLaunch,
   onError,
+  embedded = false,
 }: Props) {
   const [profile, setProfile] = useState<WarehouseExplorationProfile>(DEFAULT_PROFILE);
   const [loading, setLoading] = useState(false);
@@ -157,9 +157,9 @@ export function WarehouseExplorationPanel({
     }
   };
 
-  return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
-      <Stack spacing={1.25}>
+  const content = (
+    <Stack spacing={1.25}>
+      {!embedded && (
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1">
             <InfoLabel
@@ -169,10 +169,18 @@ export function WarehouseExplorationPanel({
           </Typography>
           {loading && <CircularProgress size={16} />}
         </Stack>
+      )}
+      {embedded && loading && (
+        <Stack direction="row" justifyContent="flex-end">
+          <CircularProgress size={16} />
+        </Stack>
+      )}
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(56px, 1fr))",
+            gridTemplateColumns: embedded
+              ? "repeat(2, minmax(0, 1fr))"
+              : "repeat(5, minmax(56px, 1fr))",
             gap: 0.75,
             minWidth: 0,
           }}
@@ -202,27 +210,34 @@ export function WarehouseExplorationPanel({
         {selectedDockId == null && (
           <Alert severity="warning">Exploration needs a dock anchor for return.</Alert>
         )}
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SaveOutlinedIcon />}
-            disabled={saving}
-            onClick={saveProfile}
-          >
-            Save Profile
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<ExploreRoundedIcon />}
-            disabled={starting || warehouseMapId == null || selectedDockId == null}
-            onClick={launchExploration}
-          >
-            {starting ? "Starting..." : "Start Exploration"}
-          </Button>
+        <Stack direction="row" spacing={0.25}>
+          <ActionIconButton
+            variant="upgrade"
+            title="Save Profile"
+            loading={saving}
+            onClick={() => {
+              void saveProfile();
+            }}
+          />
+          <ActionIconButton
+            variant="explore"
+            title={starting ? "Starting…" : "Start Exploration"}
+            color="primary"
+            loading={starting}
+            disabled={warehouseMapId == null || selectedDockId == null}
+            onClick={() => {
+              void launchExploration();
+            }}
+          />
         </Stack>
       </Stack>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
+      {content}
     </Paper>
   );
 }

@@ -240,6 +240,14 @@ async def start_warehouse_ros_mapping(
     metadata: dict[str, Any] | None = None,
     perception: WarehousePerceptionPort | None = None,
 ) -> WarehousePerceptionCommandResult:
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        ensure_warehouse_mapping_stack_running,
+        mapping_stack_not_running_result,
+    )
+
+    stack_status = await ensure_warehouse_mapping_stack_running()
+    if not stack_status.running:
+        return mapping_stack_not_running_result()
     port = perception or build_warehouse_perception_port()
     return await port.start_mapping(
         WarehouseMappingStartRequest(

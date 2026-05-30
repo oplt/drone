@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import {
   Box,
-  Button,
   Chip,
   CircularProgress,
   Collapse,
@@ -15,7 +15,6 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import WarningIcon from "@mui/icons-material/Warning";
@@ -280,22 +279,22 @@ function ExportButton({ flightId }: { flightId: string }) {
 
   if (jobStatus?.status === "ready" && jobStatus.download_url) {
     return (
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<DownloadIcon />}
+      <ActionIconButton
+        variant="download"
+        title="Download ZIP"
         onClick={() => window.open(jobStatus.download_url, "_blank")}
-      >
-        Download ZIP
-      </Button>
+      />
     );
   }
 
   if (jobId && jobStatus?.status === "failed") {
     return (
-      <Button size="small" color="error" onClick={() => setJobId(null)}>
-        Export failed — retry
-      </Button>
+      <ActionIconButton
+        variant="retry"
+        title="Export failed — retry"
+        color="error"
+        onClick={() => setJobId(null)}
+      />
     );
   }
 
@@ -311,15 +310,13 @@ function ExportButton({ flightId }: { flightId: string }) {
   }
 
   return (
-    <Button
-      size="small"
-      variant="outlined"
-      startIcon={starting ? <CircularProgress size={14} /> : <DownloadIcon />}
-      onClick={handleExport}
+    <ActionIconButton
+      variant="download"
+      title="Export"
+      loading={starting}
       disabled={starting}
-    >
-      Export
-    </Button>
+      onClick={handleExport}
+    />
   );
 }
 

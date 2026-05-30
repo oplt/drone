@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import {
   Alert,
-  Button,
   Chip,
   CircularProgress,
-  IconButton,
   InputAdornment,
   MenuItem,
   Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -23,6 +18,7 @@ import {
 } from "../api/warehouseMapsApi";
 import type { WarehouseDockPayload, WarehouseDockStation } from "../types";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 
 type Props = {
   warehouseMapId: number | null;
@@ -30,6 +26,7 @@ type Props = {
   onSelectedDockIdChange: (dockId: number | null) => void;
   getToken: () => string | null;
   onError: (message: string) => void;
+  embedded?: boolean;
 };
 
 const ZERO_POSE = { x_m: 0, y_m: 0, z_m: 0, yaw_deg: 0 };
@@ -50,6 +47,7 @@ export function WarehouseDockPanel({
   onSelectedDockIdChange,
   getToken,
   onError,
+  embedded = false,
 }: Props) {
   const [docks, setDocks] = useState<WarehouseDockStation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -137,23 +135,24 @@ export function WarehouseDockPanel({
     }
   };
 
-  return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
-      <Stack spacing={1.25}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="subtitle1">Dock Station</Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip size="small" label={status.label} color={status.color} />
-            {loading && <CircularProgress size={16} />}
-            <Tooltip title="Refresh docks">
-              <span>
-                <IconButton size="small" disabled={!warehouseMapId || loading} onClick={loadDocks}>
-                  <RefreshRoundedIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
+  const content = (
+    <Stack spacing={1.25}>
+      <Stack direction="row" alignItems="center" justifyContent={embedded ? "flex-end" : "space-between"}>
+        {!embedded && <Typography variant="subtitle1">Dock Station</Typography>}
+        <Stack direction="row" spacing={0.25} alignItems="center">
+          <Chip size="small" label={status.label} color={status.color} />
+          {loading && <CircularProgress size={16} />}
+          <ActionIconButton
+            variant="refresh"
+            title="Refresh"
+            disabled={!warehouseMapId}
+            loading={loading}
+            onClick={() => {
+              void loadDocks();
+            }}
+          />
         </Stack>
+      </Stack>
 
         <TextField
           select
@@ -210,30 +209,38 @@ export function WarehouseDockPanel({
                 onChange={(event) => setMarkerSizeM(event.target.value)}
               />
             </Stack>
-            <Stack direction="row" spacing={1}>
-              <Button variant="contained" size="small" disabled={saving} onClick={saveDock}>
-                {selectedDockId == null ? "Create Dock" : "Update Dock"}
-              </Button>
+            <Stack direction="row" spacing={0.25} alignItems="center">
+              <ActionIconButton
+                variant={selectedDockId == null ? "add" : "upgrade"}
+                title={selectedDockId == null ? "Create Dock" : "Update Dock"}
+                color="primary"
+                loading={saving}
+                onClick={() => {
+                  void saveDock();
+                }}
+              />
               {selectedDockId != null && (
-                <Tooltip title="Delete dock">
-                  <span>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      disabled={saving}
-                      onClick={() => {
-                        void removeDock(selectedDockId);
-                      }}
-                    >
-                      <DeleteOutlineRoundedIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                <ActionIconButton
+                  variant="delete"
+                  title="Delete Dock"
+                  color="error"
+                  loading={saving}
+                  onClick={() => {
+                    void removeDock(selectedDockId);
+                  }}
+                />
               )}
             </Stack>
           </Stack>
         )}
       </Stack>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
+      {content}
     </Paper>
   );
 }

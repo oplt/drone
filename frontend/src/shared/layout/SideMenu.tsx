@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
+import { ActionIconButton } from "../ui/ActionIconButton";
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import MuiDrawer, { drawerClasses } from '@mui/material/Drawer';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import MenuContent from './MenuContent';
@@ -175,23 +174,11 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
         <MenuContent collapsed={collapsed} userRole={user?.role ?? undefined} />
         <Box sx={{ mt: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <ColorModeIconDropdown />
-          <Button
-            variant="text"
-            color="inherit"
-            fullWidth
-            startIcon={collapsed ? undefined : <LogoutRoundedIcon />}
+          <ActionIconButton
+            variant="logout"
+            title="Log out"
             onClick={() => void onLogout()}
-            sx={{
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              fontFamily: '"Space Mono", monospace',
-              fontSize: '0.6875rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: 'text.secondary',
-            }}
-          >
-            {collapsed ? <LogoutRoundedIcon fontSize="small" /> : 'Log out'}
-          </Button>
+          />
         </Box>
       </Box>
     </MuiDrawer>

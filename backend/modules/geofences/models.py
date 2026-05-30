@@ -22,7 +22,7 @@ class Geofence(Base):
 
     # GeoAlchemy2 integration with Mapped
     polygon: Mapped[Geometry] = mapped_column(
-        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=False),
         nullable=False,
     )
 

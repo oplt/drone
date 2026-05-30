@@ -111,7 +111,7 @@ class Asset(Base):
 
     # bbox for quick camera framing
     bbox: Mapped[Geometry | None] = mapped_column(
-        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=False),
         nullable=True,
     )
 

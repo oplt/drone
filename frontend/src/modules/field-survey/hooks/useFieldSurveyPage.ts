@@ -20,7 +20,6 @@ import { useFieldSurveyMap } from "./useFieldSurveyMap";
 import { useFieldSurveyMission } from "./useFieldSurveyMission";
 
 export function useFieldSurveyPage() {
-  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
@@ -231,8 +230,6 @@ export function useFieldSurveyPage() {
   return {
     apiBase: API_BASE_CLEAN,
     toAbsoluteAssetUrl,
-    controlFrameExpanded,
-    setControlFrameExpanded,
     errors,
     addError,
     dismissError,

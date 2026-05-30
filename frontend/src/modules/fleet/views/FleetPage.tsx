@@ -1,7 +1,7 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -20,7 +20,6 @@ import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
 import FlightTakeoffRoundedIcon from '@mui/icons-material/FlightTakeoffRounded';
 import Header from "../../../shared/layout/WorkflowHeader";
@@ -168,14 +167,15 @@ function AddCertDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
+        <ActionIconButton variant="close" title="Cancel" onClick={handleClose} />
+        <ActionIconButton
+          variant="add"
+          title={saving ? "Adding…" : "Add"}
+          color="primary"
+          loading={saving}
           disabled={saving || !certNumber.trim() || !issuedAt}
-        >
-          {saving ? 'Adding…' : 'Add'}
-        </Button>
+          onClick={handleSubmit}
+        />
       </DialogActions>
     </Dialog>
   );
@@ -233,14 +233,12 @@ function CertificationsTab() {
       title="Certifications"
       description="Regulatory and authority certifications tied to this fleet."
       action={
-        <Button
-          variant="contained"
-          startIcon={<AddRoundedIcon />}
+        <ActionIconButton
+          variant="add"
+          title="Add Certification"
+          color="primary"
           onClick={() => setAddOpen(true)}
-          size="small"
-        >
-          Add Certification
-        </Button>
+        />
       }
     >
       {isLoading && <Typography color="text.secondary">Loading certifications…</Typography>}
@@ -363,14 +361,15 @@ function AddDeviceDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
+        <ActionIconButton variant="close" title="Cancel" onClick={handleClose} />
+        <ActionIconButton
+          variant="add"
+          title={saving ? "Adding…" : "Add"}
+          color="primary"
+          loading={saving}
           disabled={saving || !deviceId.trim() || !deviceName.trim()}
-        >
-          {saving ? 'Adding…' : 'Add'}
-        </Button>
+          onClick={handleSubmit}
+        />
       </DialogActions>
     </Dialog>
   );
@@ -443,14 +442,12 @@ function DeviceReadinessTab() {
       title="Device Readiness"
       description="Airworthiness status and inspection schedule for each device in the fleet."
       action={
-        <Button
-          variant="contained"
-          startIcon={<AddRoundedIcon />}
+        <ActionIconButton
+          variant="add"
+          title="Add Device"
+          color="primary"
           onClick={() => setAddOpen(true)}
-          size="small"
-        >
-          Add Device
-        </Button>
+        />
       }
     >
       {isLoading && <Typography color="text.secondary">Loading devices…</Typography>}

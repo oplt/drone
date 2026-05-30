@@ -5,10 +5,10 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import ProfilePage from "./ProfilePage";
 
+import { ActionIconButton, ActionIconLabel } from "../../../shared/ui/ActionIconButton";
 import {
   Alert,
   Box,
-  Button,
   Container,
   Divider,
   FormControlLabel,
@@ -490,10 +490,9 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                     <SecretField fullWidth label="Password" placeholder={MASK} value={doc.telemetry?.mqtt_pass} onChange={e => update("telemetry", "mqtt_pass", e.target.value)} />
                     <FormControlLabel control={<Switch checked={doc.telemetry?.mqtt_use_tls} onChange={e => update("telemetry", "mqtt_use_tls", e.target.checked)} />} label="Use TLS" />
 
-                      <Button variant="outlined" component="label" fullWidth>
-                        Upload CA Certificate
+                      <ActionIconLabel variant="upload" title="Upload CA Certificate">
                         <input type="file" hidden accept=".pem,.crt,.ca" onChange={handleFileUpload("telemetry", "mqtt_ca_certs")} />
-                      </Button>
+                      </ActionIconLabel>
                       {doc.telemetry?.mqtt_ca_certs && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ CA certificate uploaded</Typography>}
                     </Stack>
                 </Grid>
@@ -503,16 +502,14 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                     <TextField variant="filled" fullWidth label="Endpoint" value={doc.telemetry?.opcua_endpoint} onChange={e => update("telemetry", "opcua_endpoint", e.target.value)} />
                     <TextField variant="filled" fullWidth label="Security Policy" value={doc.telemetry?.opcua_security_policy} onChange={e => update("telemetry", "opcua_security_policy", e.target.value)} />
 
-                      <Button variant="outlined" component="label" fullWidth>
-                        Upload OPC UA Certificate
+                      <ActionIconLabel variant="upload" title="Upload OPC UA Certificate">
                         <input type="file" hidden accept=".pem,.crt,.cert" onChange={handleFileUpload("telemetry", "opcua_cert_path")} />
-                      </Button>
+                      </ActionIconLabel>
                       {doc.telemetry?.opcua_cert_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ Certificate uploaded</Typography>}
 
-                      <Button variant="outlined" component="label" fullWidth>
-                        Upload OPC UA Key
+                      <ActionIconLabel variant="upload" title="Upload OPC UA Key">
                         <input type="file" hidden accept=".pem,.key" onChange={handleFileUpload("telemetry", "opcua_key_path")} />
-                      </Button>
+                      </ActionIconLabel>
                       {doc.telemetry?.opcua_key_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ Key uploaded</Typography>}
                   </Stack>
                 </Grid>
@@ -694,10 +691,9 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                     <SecretField fullWidth label="Password" placeholder={MASK} value={doc.raspberry?.raspberry_password} onChange={e => update("raspberry", "raspberry_password", e.target.value)} />
                     <SecretField fullWidth label="Streaming Script Path" value={doc.raspberry?.raspberry_streaming_script_path} onChange={e => update("raspberry", "raspberry_streaming_script_path", e.target.value)} />
 
-                      <Button variant="outlined" component="label" fullWidth>
-                        Upload SSH Key
+                      <ActionIconLabel variant="upload" title="Upload SSH Key">
                         <input type="file" hidden accept=".pem,.key,.pub" onChange={handleFileUpload("raspberry", "ssh_key_path")} />
-                      </Button>
+                      </ActionIconLabel>
                       {doc.raspberry?.ssh_key_path && <Typography variant="caption" display="block" sx={{ mt: 1 }}>✓ SSH key uploaded</Typography>}
 
                   </Stack>
@@ -872,11 +868,21 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
 
 
 
-            <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 2 }}>
-              <Button onClick={fetchSettings} disabled={loading || saving} variant="outlined">Reset</Button>
-              <Button disabled={!dirty || saving || loading} onClick={saveSettings} variant="contained">
-                {saving ? "Saving..." : "Save All Changes"}
-              </Button>
+            <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+              <ActionIconButton
+                variant="undo"
+                title="Reset"
+                disabled={loading || saving}
+                onClick={fetchSettings}
+              />
+              <ActionIconButton
+                variant="upgrade"
+                title={saving ? "Saving…" : "Save All Changes"}
+                color="primary"
+                loading={saving}
+                disabled={!dirty || saving || loading}
+                onClick={saveSettings}
+              />
             </Box>
           </Box>
         </Paper>

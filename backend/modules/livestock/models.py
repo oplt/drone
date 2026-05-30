@@ -92,7 +92,7 @@ class AnimalPosition(Base):
 
     # Geo point for PostGIS queries (distance, within pasture)
     point: Mapped[Geometry] = mapped_column(
-        Geometry(geometry_type="POINT", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POINT", srid=4326, spatial_index=False),
         nullable=False,
     )
 

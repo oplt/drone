@@ -1,12 +1,18 @@
-.PHONY: local-dev local-dev-warehouse docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
+.PHONY: local-dev local-dev-warehouse warehouse warehouse-build warehouse-doctor docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
 PYTHON ?= python3
 BACKEND_QUALITY_PATHS := backend/modules backend/infrastructure backend/entrypoints backend/core backend/tests backend/scripts
 
 local-dev:
 	$(MAKE) -f Makefile.local local-dev
 
-local-dev-warehouse:
+warehouse:
 	$(MAKE) -f Makefile.local local-dev-warehouse
+
+warehouse-build:
+	$(MAKE) -f Makefile.local warehouse-build
+
+warehouse-doctor:
+	$(MAKE) -f Makefile.local warehouse-doctor
 
 docker-dev:
 	@test -f Makefile.docker || { echo "Makefile.docker not found. Use 'make local-dev' or add Makefile.docker."; exit 1; }

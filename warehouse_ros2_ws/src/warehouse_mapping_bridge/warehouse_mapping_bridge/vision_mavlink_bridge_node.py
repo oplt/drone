@@ -3,14 +3,19 @@ from __future__ import annotations
 import os
 
 from .config import load_config, topic_env
+from .session import mapping_session_active_path
 from .vision_mavlink import odometry_to_vision_pose
 
 
 def main() -> None:
     import rclpy
     from nav_msgs.msg import Odometry
-    from pymavlink import mavutil
     from rclpy.node import Node
+
+    try:
+        from pymavlink import mavutil
+    except ModuleNotFoundError:
+        mavutil = None  # type: ignore[assignment,misc]
 
     class WarehouseVisionMavlinkBridge(Node):
         def __init__(self) -> None:
@@ -23,6 +28,12 @@ def main() -> None:
                 "on",
             }
             self.mav = None
+            if self.enabled and mavutil is None:
+                self.get_logger().warning(
+                    "pymavlink is not installed; vision MAVLink bridge is disabled. "
+                    "Install with: python3 -m pip install pymavlink"
+                )
+                self.enabled = False
             if self.enabled:
                 self.mav = mavutil.mavlink_connection(
                     self.config.mavlink_vision_url,
@@ -32,6 +43,7 @@ def main() -> None:
                 self.get_logger().info(
                     f"Sending VISION_POSITION_ESTIMATE to {self.config.mavlink_vision_url}"
                 )
+            self._session_active_path = mapping_session_active_path(self.config.capture_root)
             self.create_subscription(
                 Odometry,
                 topic_env()["visual_slam_odom"],
@@ -39,8 +51,17 @@ def main() -> None:
                 20,
             )
 
+        def _mapping_session_active(self) -> bool:
+            path = self._session_active_path
+            if not path.exists():
+                return False
+            try:
+                return bool(path.read_text(encoding="utf-8").strip())
+            except OSError:
+                return False
+
         def on_odometry(self, message: Odometry) -> None:
-            if self.mav is None:
+            if self.mav is None or not self._mapping_session_active():
                 return
             estimate = odometry_to_vision_pose(message)
             self.mav.mav.vision_position_estimate_send(

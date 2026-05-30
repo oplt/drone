@@ -1,9 +1,9 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { ReactNode } from "react";
+import { ActionIconButton } from "./ActionIconButton";
 
 export type ErrorStateProps = {
   title?: string;
@@ -40,11 +40,9 @@ export default function ErrorState({
           {message}
         </Alert>
         {(onRetry || action) && (
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={0.5}>
             {onRetry ? (
-              <Button variant="contained" onClick={onRetry}>
-                {retryLabel}
-              </Button>
+              <ActionIconButton variant="retry" title={retryLabel} color="primary" onClick={onRetry} />
             ) : null}
             {action}
           </Stack>

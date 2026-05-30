@@ -1,5 +1,4 @@
 import {
-  Button,
   LinearProgress,
   Paper,
   Stack,
@@ -10,6 +9,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import type { MappingJobRecord } from "../types";
 
 type IncompleteJobsTableProps = {
@@ -49,18 +49,18 @@ export function IncompleteJobsTable({ jobs, onDelete, onResume }: IncompleteJobs
                 <LinearProgress variant="determinate" value={job.progress} />
               </TableCell>
               <TableCell>
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="outlined" onClick={() => onResume(job.job_id)}>
-                    Resume
-                  </Button>
-                  <Button
-                    size="small"
+                <Stack direction="row" spacing={0.25}>
+                  <ActionIconButton
+                    variant="resume"
+                    title="Resume"
+                    onClick={() => onResume(job.job_id)}
+                  />
+                  <ActionIconButton
+                    variant="delete"
+                    title="Delete"
                     color="error"
-                    variant="outlined"
                     onClick={() => onDelete(job.job_id)}
-                  >
-                    Delete
-                  </Button>
+                  />
                 </Stack>
               </TableCell>
             </TableRow>

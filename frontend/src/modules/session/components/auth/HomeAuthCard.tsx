@@ -1,21 +1,25 @@
 import * as React from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormLabel from '@mui/material/FormLabel';
+import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import LoginIcon from '@mui/icons-material/Login';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import ForgotPassword from '../ForgotPassword';
 import { ApiError } from "../../../../shared/api/apiError";
 import { login, setToken, signUp } from '../../';
+import { ActionIconButton } from '../../../../shared/ui/ActionIconButton';
 
 export type AuthMode = 'signIn' | 'signUp';
 
@@ -51,23 +55,30 @@ const initialSignUpState: SignUpFormState = {
 
 function ToggleButton({
   active,
-  children,
+  title,
+  icon,
   onClick,
 }: {
   active: boolean;
-  children: React.ReactNode;
+  title: string;
+  icon: React.ReactNode;
   onClick: () => void;
 }) {
   return (
-    <Button
-      type="button"
-      variant={active ? 'contained' : 'text'}
-      aria-pressed={active}
-      onClick={onClick}
-      sx={{ minHeight: 40, borderRadius: 999 }}
-    >
-      {children}
-    </Button>
+    <Tooltip title={title}>
+      <span>
+        <IconButton
+          type="button"
+          aria-pressed={active}
+          aria-label={title}
+          onClick={onClick}
+          color={active ? 'primary' : 'default'}
+          sx={{ minHeight: 40, borderRadius: 999, width: '100%' }}
+        >
+          {icon}
+        </IconButton>
+      </span>
+    </Tooltip>
   );
 }
 
@@ -212,9 +223,17 @@ function SignInForm() {
         </Link>
       </Stack>
 
-      <Button type="submit" fullWidth variant="contained" size="large" disabled={submitting}>
-        {submitting ? 'Signing in...' : 'Sign in'}
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <ActionIconButton
+          type="submit"
+          variant="check"
+          title={submitting ? 'Signing in…' : 'Sign in'}
+          color="primary"
+          size="large"
+          loading={submitting}
+          disabled={submitting}
+        />
+      </Box>
       <ForgotPassword open={forgotOpen} handleClose={() => setForgotOpen(false)} />
     </Stack>
   );
@@ -354,9 +373,17 @@ function SignUpForm() {
         label="Notify me about platform updates"
       />
 
-      <Button type="submit" fullWidth variant="contained" size="large" disabled={submitting}>
-        {submitting ? 'Submitting request...' : 'Submit request'}
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <ActionIconButton
+          type="submit"
+          variant="check"
+          title={submitting ? 'Submitting request…' : 'Submit request'}
+          color="primary"
+          size="large"
+          loading={submitting}
+          disabled={submitting}
+        />
+      </Box>
     </Stack>
   );
 }
@@ -436,12 +463,18 @@ export default function HomeAuthCard({ initialMode = 'signIn' }: HomeAuthCardPro
             backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.06),
           })}
         >
-          <ToggleButton active={isSignIn} onClick={() => setMode('signIn')}>
-            Sign in
-          </ToggleButton>
-          <ToggleButton active={!isSignIn} onClick={() => setMode('signUp')}>
-            Sign up
-          </ToggleButton>
+          <ToggleButton
+            active={isSignIn}
+            title="Sign in"
+            icon={<LoginIcon fontSize="small" />}
+            onClick={() => setMode('signIn')}
+          />
+          <ToggleButton
+            active={!isSignIn}
+            title="Sign up"
+            icon={<PersonAddIcon fontSize="small" />}
+            onClick={() => setMode('signUp')}
+          />
         </Box>
 
         <Box sx={{ perspective: 1400 }}>

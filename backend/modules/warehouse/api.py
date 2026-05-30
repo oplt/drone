@@ -524,7 +524,7 @@ async def list_sensor_rigs(
 async def create_sensor_rig(
     payload: WarehouseSensorRigCreateIn,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseSensorRigOut:
     try:
         rig = await warehouse_application.create_sensor_rig(
@@ -540,7 +540,7 @@ async def update_sensor_rig_calibration(
     sensor_rig_id: int,
     payload: WarehouseSensorRigCalibrationIn,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseSensorRigOut:
     rig = await warehouse_application.get_sensor_rig(
         db, sensor_rig_id=sensor_rig_id, user=org_user.user
@@ -560,7 +560,7 @@ async def update_sensor_rig_calibration(
 async def delete_sensor_rig(
     sensor_rig_id: int,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> None:
     rig = await warehouse_application.get_sensor_rig(
         db, sensor_rig_id=sensor_rig_id, user=org_user.user
@@ -619,7 +619,7 @@ async def get_warehouse_mission_defaults(
 async def update_warehouse_mission_defaults(
     payload: WarehouseMissionDefaults,
     db: AsyncSession = Depends(get_db),
-    _org_user: OrgUser = Depends(require_org_write),
+    _org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseMissionDefaults:
     return await warehouse_application.save_mission_defaults(db, defaults=payload)
 
@@ -637,7 +637,7 @@ async def get_warehouse_exploration_profile(
 async def update_warehouse_exploration_profile(
     payload: WarehouseExplorationProfileIn,
     db: AsyncSession = Depends(get_db),
-    _org_user: OrgUser = Depends(require_org_write),
+    _org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseExplorationProfileIn:
     saved = await warehouse_application.save_exploration_profile(
         db,
@@ -788,7 +788,7 @@ async def get_warehouse_map(
 async def delete_warehouse_map(
     warehouse_map_id: int,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> None:
     user = org_user.user
     deleted = await warehouse_application.delete_map(db, map_id=warehouse_map_id, user=user)
@@ -815,7 +815,7 @@ async def create_dock_station(
     warehouse_map_id: int,
     payload: WarehouseDockCreateIn,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseDockOut:
     await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     try:
@@ -846,7 +846,7 @@ async def update_dock_station(
     dock_id: int,
     payload: WarehouseDockUpdateIn,
     db: AsyncSession = Depends(get_db),
-    org_user: OrgUser = Depends(require_org_write),
+    org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseDockOut:
     await _get_owned_warehouse_map(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     try:
@@ -983,6 +983,59 @@ async def start_warehouse_scan(
     )
 
 
+class WarehouseMappingStackStatusOut(BaseModel):
+    running: bool
+    pid: int | None = None
+    started_at: str | None = None
+    last_exit_code: int | None = None
+    last_error: str | None = None
+
+
+def _mapping_stack_status_out(status: object) -> WarehouseMappingStackStatusOut:
+    from backend.infrastructure.warehouse.mapping_stack_process import MappingStackStatus
+
+    if isinstance(status, MappingStackStatus):
+        payload = status.to_dict()
+    elif isinstance(status, dict):
+        payload = status
+    else:
+        payload = {}
+    return WarehouseMappingStackStatusOut.model_validate(payload)
+
+
+@router.get("/mapping-stack/status", response_model=WarehouseMappingStackStatusOut)
+async def get_warehouse_mapping_stack_status(
+    _org_user: OrgUser = Depends(require_mission_exec),
+) -> WarehouseMappingStackStatusOut:
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        warehouse_mapping_stack_status,
+    )
+
+    return _mapping_stack_status_out(await warehouse_mapping_stack_status())
+
+
+@router.post("/mapping-stack/start", response_model=WarehouseMappingStackStatusOut)
+async def start_warehouse_mapping_stack(
+    _org_user: OrgUser = Depends(require_mission_exec),
+) -> WarehouseMappingStackStatusOut:
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        ensure_warehouse_mapping_stack_running,
+    )
+
+    return _mapping_stack_status_out(await ensure_warehouse_mapping_stack_running())
+
+
+@router.post("/mapping-stack/stop", response_model=WarehouseMappingStackStatusOut)
+async def stop_warehouse_mapping_stack(
+    _org_user: OrgUser = Depends(require_mission_exec),
+) -> WarehouseMappingStackStatusOut:
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        shutdown_warehouse_mapping_stack,
+    )
+
+    return _mapping_stack_status_out(await shutdown_warehouse_mapping_stack())
+
+
 @router.post("/manual-mapping/start")
 async def start_warehouse_manual_mapping(
     payload: WarehouseManualMappingStartIn,
@@ -1030,6 +1083,16 @@ async def start_warehouse_manual_mapping(
             "user_id": user.id,
         },
     )
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        ensure_warehouse_mapping_stack_running,
+        mapping_stack_not_running_result,
+    )
+
+    stack_status = await ensure_warehouse_mapping_stack_running()
+    if not stack_status.running:
+        blocked = mapping_stack_not_running_result()
+        return blocked.model_dump(mode="json")
+
     result = await perception.start_mapping(
         WarehouseMappingStartRequest(
             flight_id=payload.flight_id,
@@ -1146,6 +1209,13 @@ async def stop_warehouse_manual_mapping(
                 "job_id": mapping_job.get("job_id"),
             },
         )
+
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        shutdown_warehouse_mapping_stack,
+    )
+
+    stack_status = await shutdown_warehouse_mapping_stack()
+    response["mapping_stack"] = stack_status.to_dict()
     return response
 
 

@@ -2,7 +2,6 @@ import { Suspense, lazy, useMemo } from 'react';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
@@ -16,6 +15,7 @@ import { useAnalyticsOverview } from "../hooks/useAnalyticsOverview";
 import { useTelemetryWebSocket } from "../../mission-runtime";
 import { useAlertCenter } from "../../alerts";
 import PageLayout, { PageSection } from "../../../shared/layout/PageLayout";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 
 const ChartUserByCountry = lazy(() => import('./ChartUserByCountry'));
 const CustomizedTreeView = lazy(() => import('./CustomizedTreeView'));
@@ -229,9 +229,7 @@ export default function MainGrid() {
             color={system?.mavlink_connected ? 'success' : 'default'}
             label={system?.mavlink_connected ? 'MAVLink connected' : 'MAVLink idle'}
           />
-          <Button variant="contained" size="small" onClick={refresh}>
-            Refresh data
-          </Button>
+        <ActionIconButton variant="refresh" title="Refresh data" onClick={refresh} />
         </Stack>
       }
       metrics={[

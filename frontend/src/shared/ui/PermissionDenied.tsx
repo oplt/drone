@@ -1,8 +1,8 @@
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { ActionIconButton } from "./ActionIconButton";
 
 export type PermissionDeniedProps = {
   title?: string;
@@ -38,9 +38,7 @@ export default function PermissionDenied({
           {message}
         </Typography>
         {onGoBack ? (
-          <Button variant="outlined" onClick={onGoBack}>
-            {backLabel}
-          </Button>
+          <ActionIconButton variant="undo" title={backLabel} onClick={onGoBack} />
         ) : null}
       </Stack>
     </Box>

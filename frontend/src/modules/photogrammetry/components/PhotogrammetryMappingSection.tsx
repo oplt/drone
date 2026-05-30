@@ -1,7 +1,6 @@
 import {
   Alert,
   Box,
-  Button,
   Chip,
   LinearProgress,
   MenuItem,
@@ -12,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton, ActionIconLabel } from "../../../shared/ui/ActionIconButton";
 import { INFO_INPUT_LABEL_PROPS } from "../../mission-workflow";
 import type { MappingJobRecord } from "../types";
 import { IncompleteJobsTable } from "./IncompleteJobsTable";
@@ -58,9 +58,8 @@ export function PhotogrammetryMappingSection({
           </TextField>
 
           {mapping.mappingInputMode === "upload" && (
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Button variant="outlined" component="label" size="small">
-                Select Images
+            <Stack direction="row" spacing={0.25} alignItems="center" flexWrap="wrap">
+              <ActionIconLabel variant="upload" title="Select Images">
                 <input
                   hidden
                   multiple
@@ -71,7 +70,7 @@ export function PhotogrammetryMappingSection({
                     mapping.setMappingInputFiles(files);
                   }}
                 />
-              </Button>
+              </ActionIconLabel>
               <Chip
                 size="small"
                 color={mapping.mappingInputFiles.length > 0 ? "success" : "default"}
@@ -108,26 +107,27 @@ export function PhotogrammetryMappingSection({
             }
           >
             <span>
-              <Button
-                variant="contained"
+              <ActionIconButton
+                variant="add"
+                title={
+                  mapping.busy
+                    ? "Preparing 3D Field Map…"
+                    : mapping.mappingWillAutoSaveField
+                      ? "Save Field & Create 3D Field Map"
+                      : mapping.mappingWillInferFieldFromUpload
+                        ? "Create Map From Images"
+                        : "Create 3D Field Map"
+                }
                 color="primary"
-                onClick={() => void mapping.create3DFieldMap()}
+                loading={mapping.busy}
                 disabled={
                   mapping.busy ||
                   mapping.mappingJobRunning ||
                   !mapping.mappingFieldReady ||
-                  (mapping.mappingInputMode === "upload" &&
-                    mapping.mappingInputFiles.length === 0)
+                  (mapping.mappingInputMode === "upload" && mapping.mappingInputFiles.length === 0)
                 }
-              >
-                {mapping.busy
-                  ? "Preparing 3D Field Map..."
-                  : mapping.mappingWillAutoSaveField
-                    ? "Save Field & Create 3D Field Map"
-                    : mapping.mappingWillInferFieldFromUpload
-                      ? "Create Map From Images"
-                      : "Create 3D Field Map"}
-              </Button>
+                onClick={() => void mapping.create3DFieldMap()}
+              />
             </span>
           </Tooltip>
 
@@ -212,9 +212,13 @@ function MappingJobProgress({
       {jobStatus.status === "ready" && (
         <Alert severity="success" sx={{ mt: 1, py: 0.5 }}>
           3D field map is ready. Mesh + boundary are loaded for route planning.
-          <Button size="small" sx={{ ml: 1 }} onClick={onOpen3DPlanning}>
-            Open 3D Planning
-          </Button>
+          <ActionIconButton
+            variant="open"
+            title="Open 3D Planning"
+            size="medium"
+            onClick={onOpen3DPlanning}
+            sx={{ ml: 0.5, verticalAlign: "middle" }}
+          />
         </Alert>
       )}
     </Box>

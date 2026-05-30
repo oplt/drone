@@ -1,17 +1,12 @@
 import {
   Chip,
-  CircularProgress,
-  IconButton,
   Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
-import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import type { BorderMetrics, LonLat } from "../types";
 
 export function FieldBorderPanel({
@@ -48,7 +43,7 @@ export function FieldBorderPanel({
 
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        spacing={1}
+        spacing={0.25}
         alignItems="center"
         sx={{ flexWrap: "wrap" }}
       >
@@ -61,67 +56,22 @@ export function FieldBorderPanel({
           sx={{ minWidth: 220 }}
         />
 
-        <Tooltip title={selectedFieldId ? "Update field border" : "Save field border"}>
-          <span>
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={() => void onSaveOrUpdate()}
-              disabled={savingField || !fieldBorder || fieldBorder.length < 3}
-              aria-label={selectedFieldId ? "Update field border" : "Save field border"}
-              sx={{
-                border: "1px solid",
-                borderColor: "primary.main",
-                borderRadius: 1,
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
-                "&:hover": {
-                  bgcolor: "primary.dark",
-                },
-              }}
-            >
-              {savingField ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <SaveOutlinedIcon fontSize="small" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
+        <ActionIconButton
+          variant={selectedFieldId ? "upgrade" : "add"}
+          title={selectedFieldId ? "Update field border" : "Save field border"}
+          color="primary"
+          loading={savingField}
+          disabled={savingField || !fieldBorder || fieldBorder.length < 3}
+          onClick={() => void onSaveOrUpdate()}
+        />
 
-        <Tooltip title="Clear border">
-          <span>
-            <IconButton
-              size="small"
-              onClick={onClearBorder}
-              aria-label="Clear border"
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-              }}
-            >
-              <DeleteOutlineOutlinedIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
+        <ActionIconButton
+          variant="delete"
+          title="Clear border"
+          onClick={onClearBorder}
+        />
 
-        <Tooltip title="New field">
-          <span>
-            <IconButton
-              size="small"
-              onClick={onNewField}
-              aria-label="New field"
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-              }}
-            >
-              <AddCircleOutlineIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
+        <ActionIconButton variant="add" title="New field" onClick={onNewField} />
 
         {fieldBorder && (
           <>

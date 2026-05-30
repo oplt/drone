@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
 import {
   Box,
-  Button,
+  Chip,
   Paper,
   Stack,
-  Typography,
   TextField,
   Alert,
-  CircularProgress,
-  Chip,
+  Typography,
 } from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import Header from "../../../shared/layout/WorkflowHeader";
 import SvgIcon from "@mui/material/SvgIcon";
 import DroneSvg from "../../../assets/Drone.svg?react";
@@ -20,7 +19,10 @@ import { getToken } from "../../../modules/session";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import { MissionCommandPanel } from "../../../modules/mission-runtime";
 import { MissionPreflightPanel } from "../../../modules/mission-runtime";
-import { TaskControlFrame } from "../../../modules/mission-workflow";
+import {
+  TaskPreflightCommandsDrawer,
+  useTaskPreflightCommandsDrawer,
+} from "../../../modules/mission-workflow";
 import { MissionVideoPanel } from "../../../modules/mission-runtime";
 import { MissionStatusChips } from "../../../modules/mission-runtime";
 import { MissionMapViewport } from "../../../modules/maps";
@@ -73,7 +75,7 @@ interface MissionStatus {
 }
 
 export function ControlledFlightView() {
-  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
+  const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
@@ -671,8 +673,7 @@ export function ControlledFlightView() {
                 {/* Right column: controls */}
                 <Box
                     sx={{
-                      width: { xs: "100%", md: controlFrameExpanded ? 500 : 360 },
-                      transition: "width 180ms ease",
+                      width: { xs: "100%", md: 360 },
                     }}
                 >
                   <Stack spacing={0.5}>
@@ -682,15 +683,15 @@ export function ControlledFlightView() {
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                           Drone control
                         </Typography>
-                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                          <Button
-                              variant="contained"
-                              color={droneManualConnected ? "success" : "primary"}
-                              disabled={connecting || droneManualConnected}
-                              onClick={connectDrone}
-                          >
-                            {connecting ? <><CircularProgress size={16} sx={{ mr: 1 }} /> Connecting…</> : droneManualConnected ? "Drone connected" : "Connect drone"}
-                          </Button>
+                        <Stack direction="row" spacing={0.25} flexWrap="wrap" useFlexGap>
+                          <ActionIconButton
+                            variant="connect"
+                            title={connecting ? "Connecting…" : droneManualConnected ? "Drone connected" : "Connect drone"}
+                            color={droneManualConnected ? "success" : "primary"}
+                            loading={connecting}
+                            disabled={connecting || droneManualConnected}
+                            onClick={connectDrone}
+                          />
                         </Stack>
                         <Chip
                             size="small"
@@ -711,25 +712,6 @@ export function ControlledFlightView() {
                         />
                       </Stack>
                     </Paper>
-
-                    <TaskControlFrame
-                        expanded={controlFrameExpanded}
-                        onExpandedChange={setControlFrameExpanded}
-                    >
-                        <MissionPreflightPanel
-                            apiBase={API_BASE_CLEAN}
-                            missionType="controlled"
-                            preflightRun={preflightRun}
-                            telemetry={telemetry}
-                        />
-                        <MissionCommandPanel
-                            telemetry={telemetry}
-                            droneConnected={droneConnected}
-                            missionStatus={missionStatus}
-                            activeFlightId={activeFlightId}
-                            apiBase={API_BASE_CLEAN}
-                        />
-                    </TaskControlFrame>
 
                     <ManualFlightControlPanel
                         controlledPreflight={controlledPreflight}
@@ -787,29 +769,23 @@ export function ControlledFlightView() {
                         }
                     />
 
-                    <Button
-                        variant="contained"
-                        onClick={sendMission}
-                        disabled={
-                            sending ||
-                            !name.trim() ||
-                            altInput === "" ||
-                            Number(altInput) < 1 ||
-                            Number(altInput) > 500
-                        }
-                        fullWidth
-                        sx={{ mt: 1 }}
+                    <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+                      <ActionIconButton
+                        variant="play"
+                        title={sending ? "Starting session…" : "Start Controlled Flight Session"}
                         color="success"
-                    >
-                      {sending ? (
-                          <>
-                            <CircularProgress size={20} sx={{ mr: 1 }} />
-                            Starting session...
-                          </>
-                      ) : (
-                          "Start Controlled Flight Session"
-                      )}
-                    </Button>
+                        size="medium"
+                        loading={sending}
+                        disabled={
+                          sending ||
+                          !name.trim() ||
+                          altInput === "" ||
+                          Number(altInput) < 1 ||
+                          Number(altInput) > 500
+                        }
+                        onClick={sendMission}
+                      />
+                    </Stack>
 
                     {activeFlightId && (
                         <Alert severity="info" sx={{ mt: 1 }}>
@@ -868,6 +844,25 @@ export function ControlledFlightView() {
               </Stack>
           )}
         </Paper>
+
+        <TaskPreflightCommandsDrawer
+          open={preflightCommandsDrawer.open}
+          onOpenChange={preflightCommandsDrawer.onOpenChange}
+        >
+          <MissionPreflightPanel
+            apiBase={API_BASE_CLEAN}
+            missionType="controlled"
+            preflightRun={preflightRun}
+            telemetry={telemetry}
+          />
+          <MissionCommandPanel
+            telemetry={telemetry}
+            droneConnected={droneConnected}
+            missionStatus={missionStatus}
+            activeFlightId={activeFlightId}
+            apiBase={API_BASE_CLEAN}
+          />
+        </TaskPreflightCommandsDrawer>
       </>
   );
 }

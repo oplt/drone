@@ -1,12 +1,14 @@
 import {
   Alert,
   Box,
-  Button,
-  CircularProgress,
   Stack,
   TextField,
 } from "@mui/material";
-import { TaskControlFrame } from "../../../modules/mission-workflow";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import {
+  TaskPreflightCommandsDrawer,
+  useTaskPreflightCommandsDrawer,
+} from "../../../modules/mission-workflow";
 import {
   FieldBorderPanel,
   SavedFieldsPanel,
@@ -106,8 +108,6 @@ export function FieldSurveyFieldsBlock({
 }
 
 export function FieldSurveyMissionControls({
-  controlFrameExpanded,
-  onControlFrameExpandedChange,
   apiBase,
   fieldBorder,
   preflightRun,
@@ -126,8 +126,6 @@ export function FieldSurveyMissionControls({
   gridPreviewError,
   onSendMission,
 }: {
-  controlFrameExpanded: boolean;
-  onControlFrameExpandedChange: (expanded: boolean) => void;
   apiBase: string;
   fieldBorder: LonLat[] | null;
   preflightRun: PreflightRunResponse | null;
@@ -146,32 +144,16 @@ export function FieldSurveyMissionControls({
   gridPreviewError: string | null | undefined;
   onSendMission: () => void;
 }) {
+  const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
+
   return (
-    <Box
+    <>
+      <Box
         sx={{
-          width: { xs: "100%", md: controlFrameExpanded ? 620 : 360 },
-          transition: "width 180ms ease",
+          width: { xs: "100%", md: 360 },
         }}
       >
         <Stack spacing={2}>
-          <TaskControlFrame
-            expanded={controlFrameExpanded}
-            onExpandedChange={onControlFrameExpandedChange}
-          >
-            <MissionPreflightPanel
-              apiBase={apiBase}
-              missionType="grid"
-              preflightRun={preflightRun}
-              telemetry={telemetry}
-            />
-            <MissionCommandPanel
-              telemetry={telemetry}
-              droneConnected={droneConnected}
-              missionStatus={missionStatus}
-              activeFlightId={activeFlightId}
-              apiBase={apiBase}
-            />
-          </TaskControlFrame>
           <TextField
             variant="filled"
             label="Mission name"
@@ -204,34 +186,28 @@ export function FieldSurveyMissionControls({
             }
           />
 
-          <Button
-            variant="contained"
-            onClick={onSendMission}
-            disabled={
-              sending ||
-              previewLoading ||
-              gridPreviewTooDense ||
-              !!gridPreviewError ||
-              !name.trim() ||
-              altInput === "" ||
-              Number(altInput) < 1 ||
-              Number(altInput) > 500 ||
-              !fieldBorder ||
-              fieldBorder.length < 3
-            }
-            fullWidth
-            sx={{ mt: 1 }}
-            color="success"
-          >
-            {sending ? (
-              <>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                Starting Grid Survey...
-              </>
-            ) : (
-              "Start Grid Survey"
-            )}
-          </Button>
+          <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+            <ActionIconButton
+              variant="play"
+              title={sending ? "Starting Grid Survey…" : "Start Grid Survey"}
+              color="success"
+              size="medium"
+              loading={sending}
+              disabled={
+                sending ||
+                previewLoading ||
+                gridPreviewTooDense ||
+                !!gridPreviewError ||
+                !name.trim() ||
+                altInput === "" ||
+                Number(altInput) < 1 ||
+                Number(altInput) > 500 ||
+                !fieldBorder ||
+                fieldBorder.length < 3
+              }
+              onClick={onSendMission}
+            />
+          </Stack>
 
           {activeFlightId && (
             <Alert severity="info" sx={{ mt: 2 }}>
@@ -239,6 +215,26 @@ export function FieldSurveyMissionControls({
             </Alert>
           )}
         </Stack>
-    </Box>
+      </Box>
+
+      <TaskPreflightCommandsDrawer
+        open={preflightCommandsDrawer.open}
+        onOpenChange={preflightCommandsDrawer.onOpenChange}
+      >
+        <MissionPreflightPanel
+          apiBase={apiBase}
+          missionType="grid"
+          preflightRun={preflightRun}
+          telemetry={telemetry}
+        />
+        <MissionCommandPanel
+          telemetry={telemetry}
+          droneConnected={droneConnected}
+          missionStatus={missionStatus}
+          activeFlightId={activeFlightId}
+          apiBase={apiBase}
+        />
+      </TaskPreflightCommandsDrawer>
+    </>
   );
 }

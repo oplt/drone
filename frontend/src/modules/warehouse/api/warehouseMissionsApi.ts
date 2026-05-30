@@ -35,6 +35,43 @@ export async function startWarehouseExploration(
   });
 }
 
+export type WarehouseMappingStackStatus = {
+  running: boolean;
+  pid: number | null;
+  started_at: string | null;
+  last_exit_code: number | null;
+  last_error: string | null;
+};
+
+export async function fetchWarehouseMappingStackStatus(
+  token?: string | null,
+): Promise<WarehouseMappingStackStatus> {
+  return httpRequest<WarehouseMappingStackStatus>("/warehouse/mapping-stack/status", {
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function startWarehouseMappingStack(
+  token?: string | null,
+): Promise<WarehouseMappingStackStatus> {
+  return httpRequest<WarehouseMappingStackStatus>("/warehouse/mapping-stack/start", {
+    method: "POST",
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function stopWarehouseMappingStack(
+  token?: string | null,
+): Promise<WarehouseMappingStackStatus> {
+  return httpRequest<WarehouseMappingStackStatus>("/warehouse/mapping-stack/stop", {
+    method: "POST",
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
 export async function startWarehouseManualMapping(
   payload: WarehouseManualMappingStartRequest,
   token?: string | null,

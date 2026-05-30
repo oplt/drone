@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Chip, Paper, Stack, Tooltip, Typography } from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import type { ControlledPreflightResult, ManualFlightCommand } from "../types";
 import { MANUAL_CONTROL_BUTTONS } from "../types";
 
@@ -68,34 +69,28 @@ export function ManualFlightControlPanel({
           />
         </Stack>
 
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-          <Button
-            variant="contained"
+        <Stack direction="row" spacing={0.25} flexWrap="wrap" useFlexGap>
+          <ActionIconButton
+            variant="preflight"
+            title={preflightBusy ? "Checking…" : "Preflight"}
             color="success"
-            size="small"
-            disabled={preflightBusy}
+            loading={preflightBusy}
             onClick={onRunPreflight}
-          >
-            {preflightBusy ? "Checking..." : "Preflight"}
-          </Button>
-          <Button
-            variant={manualControlEnabled ? "outlined" : "contained"}
+          />
+          <ActionIconButton
+            variant="keyboard"
+            title={manualControlEnabled ? "Disable keys" : "Enable keys"}
             color={manualControlEnabled ? "warning" : "primary"}
-            size="small"
             disabled={!manualControlReady && !manualControlEnabled}
             onClick={onToggleKeyboard}
-          >
-            {manualControlEnabled ? "Disable keys" : "Enable keys"}
-          </Button>
-          <Button
-            variant="outlined"
+          />
+          <ActionIconButton
+            variant="stop"
+            title="Stop"
             color="error"
-            size="small"
             disabled={activeManualCommands.length === 0}
             onClick={onStopMovement}
-          >
-            Stop
-          </Button>
+          />
         </Stack>
 
         {controlledPreflight?.checks?.length ? (

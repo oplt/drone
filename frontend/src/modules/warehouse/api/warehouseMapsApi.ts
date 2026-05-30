@@ -26,6 +26,17 @@ export async function createWarehouseMap(
   });
 }
 
+export async function deleteWarehouseMap(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<void> {
+  await httpRequest<void>(`/warehouse/maps/${warehouseMapId}`, {
+    method: "DELETE",
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
 export async function fetchSignedTilesetUrl(
   assetId: number,
   token?: string | null,
@@ -137,4 +148,15 @@ export async function fetchWarehouseSensorRigHealth(
       skipUnauthorizedRedirect: true,
     },
   );
+}
+
+export async function deleteWarehouseSensorRig(
+  sensorRigId: number,
+  token?: string | null,
+): Promise<void> {
+  await httpRequest<void>(`/warehouse/sensor-rigs/${sensorRigId}`, {
+    method: "DELETE",
+    token,
+    skipUnauthorizedRedirect: true,
+  });
 }

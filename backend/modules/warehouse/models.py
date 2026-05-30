@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -37,12 +38,12 @@ class WarehouseMap(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     # nullable=True: indoor warehouse maps use polygon_local_m stored in meta_data
     boundary: Mapped[Geometry | None] = mapped_column(
-        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=False),
         nullable=True,
     )
     area_m2: Mapped[float | None] = mapped_column(Float)
     centroid: Mapped[Geometry | None] = mapped_column(
-        Geometry(geometry_type="POINT", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POINT", srid=4326, spatial_index=False),
         nullable=True,
     )
     meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
@@ -90,7 +91,13 @@ class WarehouseSensorRig(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("org_id", "name", name="uq_warehouse_sensor_rig_org_name"),
+        Index(
+            "uq_warehouse_sensor_rig_org_name_active",
+            "org_id",
+            "name",
+            unique=True,
+            postgresql_where=text("active IS TRUE"),
+        ),
         Index("idx_warehouse_sensor_rig_org_active", "org_id", "active"),
     )
 
@@ -196,7 +203,7 @@ class WarehouseAsset(Base):
     size_bytes: Mapped[int | None] = mapped_column(BigInteger)
     checksum: Mapped[str | None] = mapped_column(String(128))
     bbox: Mapped[Geometry | None] = mapped_column(
-        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=True),
+        Geometry(geometry_type="POLYGON", srid=4326, spatial_index=False),
         nullable=True,
     )
     meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)

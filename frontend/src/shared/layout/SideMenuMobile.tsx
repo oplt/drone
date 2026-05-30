@@ -1,10 +1,9 @@
-import Button from '@mui/material/Button';
+import { ActionIconButton } from "../ui/ActionIconButton";
 import Divider from '@mui/material/Divider';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import MenuContent from './MenuContent';
 import ColorModeIconDropdown from "../theme/ColorModeIconDropdown";
 import type { ShellUser } from "./types";
@@ -100,21 +99,12 @@ export default function SideMenuMobile({ open, toggleDrawer, user, onLogout }: S
           <MenuContent userRole={user?.role ?? undefined} />
         </Stack>
         <Divider sx={{ borderColor: 'divider' }} />
-        <Stack sx={{ p: 2 }}>
-          <Button
-            variant="outlined"
-            fullWidth
-            startIcon={<LogoutRoundedIcon />}
+        <Stack sx={{ p: 2, alignItems: 'center' }}>
+          <ActionIconButton
+            variant="logout"
+            title="Log out"
             onClick={() => void onLogout()}
-            sx={{
-              fontFamily: '"Space Mono", monospace',
-              fontSize: '0.6875rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Log out
-          </Button>
+          />
         </Stack>
       </Stack>
     </Drawer>

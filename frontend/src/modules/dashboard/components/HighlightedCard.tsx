@@ -1,16 +1,10 @@
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 
 export default function HighlightedCard() {
-  const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
@@ -26,15 +20,12 @@ export default function HighlightedCard() {
         <Typography sx={{ color: 'text.secondary', mb: '8px' }}>
           Export NDVI, irrigation insights, and coverage maps in one click.
         </Typography>
-        <Button
-          variant="contained"
-          size="small"
+        <ActionIconButton
+          variant="download"
+          title="Generate report"
           color="primary"
-          endIcon={<ChevronRightRoundedIcon />}
-          fullWidth={isSmallScreen}
-        >
-          Generate report
-        </Button>
+          size="medium"
+        />
       </CardContent>
     </Card>
   );

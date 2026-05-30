@@ -35,6 +35,14 @@ function redirectToSignIn(): void {
   window.location.replace(SIGN_IN_PATH);
 }
 
+/** session_present is a UI marker ("1"), not a JWT — never send it as Bearer auth. */
+export function shouldAttachBearerToken(token: string | null | undefined): boolean {
+  if (!token) return false;
+  const trimmed = token.trim();
+  if (!trimmed || trimmed === "1") return false;
+  return trimmed.includes(".") || trimmed.startsWith("sk-");
+}
+
 export async function httpRequest<T>(
   path: string,
   options: HttpRequestOptions = {},
@@ -47,8 +55,8 @@ export async function httpRequest<T>(
   if (payload != null && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (options.token) {
-    headers.set("Authorization", `Bearer ${options.token}`);
+  if (options.token && shouldAttachBearerToken(options.token)) {
+    headers.set("Authorization", `Bearer ${options.token.trim()}`);
   }
 
   const requestBody: BodyInit | undefined =

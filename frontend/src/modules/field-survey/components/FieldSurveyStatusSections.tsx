@@ -1,12 +1,12 @@
 import {
   Alert,
   Box,
-  Button,
   Chip,
   CircularProgress,
   Stack,
   Typography,
 } from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import type { MissionStatus } from "../../mission-workflow";
 import type { useFieldSurveyIrrigation } from "../hooks/useFieldSurveyIrrigation";
 import type { Waypoint } from "../../mission-workflow";
@@ -97,14 +97,13 @@ export function FieldSurveyStatusSections({
             <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
               Irrigation Analysis
             </Typography>
-            <Button
-              size="small"
-              variant="outlined"
+            <ActionIconButton
+              variant="upgrade"
+              title="Reprocess"
+              loading={irrigation.irrigationRefreshing}
               disabled={irrigation.irrigationRefreshing}
               onClick={() => void irrigation.reprocessIrrigation()}
-            >
-              Reprocess
-            </Button>
+            />
           </Stack>
 
           {irrigation.irrigationLoading ? (

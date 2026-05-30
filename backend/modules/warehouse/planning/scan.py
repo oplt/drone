@@ -497,6 +497,12 @@ class WarehouseScanMission:
             },
         )
 
+        from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+            shutdown_warehouse_mapping_stack,
+        )
+
+        await shutdown_warehouse_mapping_stack()
+
         if mission_error is not None:
             raise mission_error
 
@@ -854,6 +860,14 @@ class WarehouseScanMission:
         *,
         session_dir: Path,
     ) -> WarehousePerceptionCommandResult:
+        from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+            ensure_warehouse_mapping_stack_running,
+            mapping_stack_not_running_result,
+        )
+
+        stack_status = await ensure_warehouse_mapping_stack_running()
+        if not stack_status.running:
+            return mapping_stack_not_running_result()
         port = build_warehouse_perception_port()
         flight_id = self._flight_token(orch)
         request = WarehouseMappingStartRequest(

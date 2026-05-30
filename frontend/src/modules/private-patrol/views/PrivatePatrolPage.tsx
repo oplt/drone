@@ -83,8 +83,6 @@ export default function PrivatePatrolPage() {
             </Stack>
 
             <PrivatePatrolMissionControls
-              controlFrameExpanded={vm.controlFrameExpanded}
-              onControlFrameExpandedChange={vm.setControlFrameExpanded}
               apiBase={vm.apiBase}
               preflightRun={mission.preflightRun}
               telemetry={telemetry}

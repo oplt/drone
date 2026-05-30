@@ -1,5 +1,5 @@
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
@@ -9,7 +9,6 @@ import Typography from '@mui/material/Typography';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import TrackChangesRoundedIcon from '@mui/icons-material/TrackChangesRounded';
 import HubRoundedIcon from '@mui/icons-material/HubRounded';
-import ArrowOutwardRoundedIcon from '@mui/icons-material/ArrowOutwardRounded';
 import { Link as RouterLink } from 'react-router-dom';
 import HomeAuthCard, { type AuthMode } from '../components/auth/HomeAuthCard';
 
@@ -98,19 +97,22 @@ export default function MainContent({ initialAuthMode }: MainContentProps = {}) 
                     connectivity without slowing down field teams.
                   </Typography>
                 </Stack>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                      variant="contained"
-                      size="large"
-                      component={RouterLink}
-                      to="/signup"
-                      endIcon={<ArrowOutwardRoundedIcon fontSize="small" />}
-                  >
-                    Request onboarding
-                  </Button>
-                  <Button variant="outlined" size="large" component={RouterLink} to="/signin">
-                    Enter farm console
-                  </Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5}>
+                  <ActionIconButton
+                    variant="add"
+                    title="Request onboarding"
+                    color="primary"
+                    size="medium"
+                    component={RouterLink}
+                    to="/signup"
+                  />
+                  <ActionIconButton
+                    variant="connect"
+                    title="Enter farm console"
+                    size="medium"
+                    component={RouterLink}
+                    to="/signin"
+                  />
                 </Stack>
                 <Grid container spacing={1.5}>
                   {statHighlights.map((item) => (

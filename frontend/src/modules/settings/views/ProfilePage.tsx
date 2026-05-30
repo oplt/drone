@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -120,13 +120,14 @@ export default function ProfilePage() {
             disabled
           />
           <Box>
-            <Button
-              variant="contained"
-              onClick={handleSaveProfile}
+            <ActionIconButton
+              variant="upgrade"
+              title={profileMutation.isPending ? "Saving…" : "Save profile"}
+              color="primary"
+              loading={profileMutation.isPending}
               disabled={profileMutation.isPending || !fullName.trim() || !user}
-            >
-              {profileMutation.isPending ? "Saving..." : "Save profile"}
-            </Button>
+              onClick={handleSaveProfile}
+            />
           </Box>
         </Stack>
       </Grid>

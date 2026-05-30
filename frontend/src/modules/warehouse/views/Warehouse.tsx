@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   InputAdornment,
   MenuItem,
@@ -14,11 +13,13 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import ExploreRoundedIcon from "@mui/icons-material/ExploreRounded";
 import Header from "../../../shared/layout/WorkflowHeader";
 import InfoLabel from "../../../shared/ui/InfoLabel";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { ApiError } from "../../../shared/api/apiError";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import {
@@ -31,7 +32,10 @@ import {
   type MissionLifecycleState,
   type PreflightRunResponse,
 } from "../../mission-runtime";
-import { TaskControlFrame } from "../../mission-workflow";
+import {
+  TaskPreflightCommandsDrawer,
+  useTaskPreflightCommandsDrawer,
+} from "../../mission-workflow";
 import { getToken } from "../../session";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import {
@@ -54,6 +58,8 @@ import {
 import {
   createWarehouseMap,
   createWarehouseSensorRig,
+  deleteWarehouseMap,
+  deleteWarehouseSensorRig,
   fetchWarehouseSensorRigHealth,
   listWarehouseSensorRigs,
   listWarehouseMaps,
@@ -64,6 +70,7 @@ import {
   WarehouseMappingHealthPanel,
   type WarehouseMappingRuntimeStatus,
 } from "../components/WarehouseMappingHealthPanel";
+import { WarehouseDrawerSection } from "../components/WarehouseDrawerSection";
 import { WarehouseDockPanel } from "../components/WarehouseDockPanel";
 import { WarehouseExplorationPanel } from "../components/WarehouseExplorationPanel";
 import { WarehouseManualMappingPanel } from "../components/WarehouseManualMappingPanel";
@@ -382,7 +389,42 @@ const toWarehouseMissionDefaultsPayload = (
 
 
 export default function WarehousePage() {
-  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
+  const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
+  const warehouseMissionDrawer = useTaskPreflightCommandsDrawer();
+  const warehousePreflightDrawer = useTaskPreflightCommandsDrawer();
+
+  const closeOtherWarehouseDrawers = useCallback(
+    (except: "setup" | "mission" | "preflight") => {
+      if (except !== "setup") warehouseSetupDrawer.closeDrawer();
+      if (except !== "mission") warehouseMissionDrawer.closeDrawer();
+      if (except !== "preflight") warehousePreflightDrawer.closeDrawer();
+    },
+    [warehouseMissionDrawer, warehousePreflightDrawer, warehouseSetupDrawer],
+  );
+
+  const handleWarehouseSetupOpenChange = useCallback(
+    (open: boolean) => {
+      warehouseSetupDrawer.onOpenChange(open);
+      if (open) closeOtherWarehouseDrawers("setup");
+    },
+    [closeOtherWarehouseDrawers, warehouseSetupDrawer],
+  );
+
+  const handleWarehouseMissionOpenChange = useCallback(
+    (open: boolean) => {
+      warehouseMissionDrawer.onOpenChange(open);
+      if (open) closeOtherWarehouseDrawers("mission");
+    },
+    [closeOtherWarehouseDrawers, warehouseMissionDrawer],
+  );
+
+  const handleWarehousePreflightOpenChange = useCallback(
+    (open: boolean) => {
+      warehousePreflightDrawer.onOpenChange(open);
+      if (open) closeOtherWarehouseDrawers("preflight");
+    },
+    [closeOtherWarehouseDrawers, warehousePreflightDrawer],
+  );
   const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>([]);
   const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
   const [deletingScannedMap, setDeletingScannedMap] = useState(false);
@@ -397,6 +439,7 @@ export default function WarehousePage() {
   const [selectedDockId, setSelectedDockId] = useState<number | null>(null);
   const [createMapForm, setCreateMapForm] = useState<CreateMapForm>({ name: "", width_m: "", length_m: "" });
   const [creatingMap, setCreatingMap] = useState(false);
+  const [deletingWarehouseMap, setDeletingWarehouseMap] = useState(false);
   const [showCreateMap, setShowCreateMap] = useState(false);
   const [sensorRigs, setSensorRigs] = useState<WarehouseSensorRig[]>([]);
   const [selectedSensorRigId, setSelectedSensorRigId] = useState<number | null>(null);
@@ -405,6 +448,7 @@ export default function WarehousePage() {
     useState<PreflightRunResponse | null>(null);
   const [loadingSensorRigs, setLoadingSensorRigs] = useState(false);
   const [savingSensorRig, setSavingSensorRig] = useState(false);
+  const [deletingSensorRig, setDeletingSensorRig] = useState(false);
   const [showCreateSensorRig, setShowCreateSensorRig] = useState(false);
   const [sensorRigForm, setSensorRigForm] = useState<SensorRigForm>({
     name: "",
@@ -487,7 +531,7 @@ export default function WarehousePage() {
       const explicitJobId = options?.selectJobId;
       if (explicitJobId != null) {
         setSelectedMapJobId(explicitJobId);
-        if (options.showInViewer) {
+        if (options?.showInViewer) {
           setViewerMapJobId(explicitJobId);
         }
       } else {
@@ -666,6 +710,35 @@ export default function WarehousePage() {
     }
   }, [addError, createMapForm, loadWarehouseMaps]);
 
+  const handleDeleteWarehouseMap = useCallback(async () => {
+    if (selectedWarehouseMapId == null) return;
+    const token = getToken();
+    if (!token) {
+      addError("You must be authenticated to delete warehouse maps.");
+      return;
+    }
+    const map = warehouseMaps.find((item) => item.id === selectedWarehouseMapId);
+    const label = map?.name ?? `Map #${selectedWarehouseMapId}`;
+    if (!window.confirm(`Delete warehouse map "${label}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingWarehouseMap(true);
+    try {
+      await deleteWarehouseMap(selectedWarehouseMapId, token);
+      if (selectedWarehouseMapId != null) {
+        setSelectedDockId(null);
+      }
+      setSelectedWarehouseMapId(null);
+      await loadWarehouseMaps();
+      setScanLaunchMessage(`Deleted warehouse map "${label}".`);
+    } catch (error) {
+      addError(`Could not delete warehouse map: ${toMessage(error)}`);
+    } finally {
+      setDeletingWarehouseMap(false);
+    }
+  }, [addError, loadWarehouseMaps, selectedWarehouseMapId, warehouseMaps]);
+
   const handleCreateSensorRig = useCallback(async () => {
     const token = getToken();
     if (!token) return;
@@ -712,12 +785,59 @@ export default function WarehousePage() {
       setShowCreateSensorRig(false);
       await loadSensorRigs();
       setSelectedSensorRigId(created.id);
+      if (created.calibration_status !== "valid") {
+        await updateWarehouseSensorRigCalibration(
+          created.id,
+          {
+            calibration_status: "valid",
+            calibration_hash: created.calibration_hash ?? `manual-${Date.now()}`,
+            intrinsics_url: created.intrinsics_url,
+            extrinsics_url: created.extrinsics_url,
+            imu_transform_json: created.imu_transform_json,
+            calibration_meta: {
+              ...created.calibration_meta,
+              source: "operator_create",
+              updated_at: new Date().toISOString(),
+            },
+          },
+          token,
+        );
+        await loadSensorRigs();
+      }
+      await loadSensorRigHealth(created.id);
     } catch (error) {
       addError(`Could not create sensor rig: ${toMessage(error)}`);
     } finally {
       setSavingSensorRig(false);
     }
-  }, [addError, loadSensorRigs, sensorRigForm]);
+  }, [addError, loadSensorRigHealth, loadSensorRigs, sensorRigForm]);
+
+  const handleDeleteSensorRig = useCallback(async () => {
+    if (selectedSensorRigId == null) return;
+    const token = getToken();
+    if (!token) {
+      addError("You must be authenticated to delete sensor rigs.");
+      return;
+    }
+    const rig = sensorRigs.find((item) => item.id === selectedSensorRigId);
+    const label = rig?.name ?? `Sensor rig #${selectedSensorRigId}`;
+    if (!window.confirm(`Delete sensor rig "${label}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingSensorRig(true);
+    try {
+      await deleteWarehouseSensorRig(selectedSensorRigId, token);
+      setSelectedSensorRigId(null);
+      setSensorRigHealth(null);
+      await loadSensorRigs();
+      setScanLaunchMessage(`Deleted sensor rig "${label}".`);
+    } catch (error) {
+      addError(`Could not delete sensor rig: ${toMessage(error)}`);
+    } finally {
+      setDeletingSensorRig(false);
+    }
+  }, [addError, loadSensorRigs, selectedSensorRigId, sensorRigs]);
 
   const handleMarkSensorRigCalibrated = useCallback(async () => {
     const token = getToken();
@@ -792,7 +912,7 @@ export default function WarehousePage() {
     const previous = previousMissionStateRef.current;
     if (
       (previous === "running" || previous === "paused") &&
-      (state === "completed" || state === "failed" || state === "cancelled")
+      (state === "completed" || state === "failed" || state === "aborted")
     ) {
       void loadScannedMaps().then((records) => {
         const scoped =
@@ -996,6 +1116,11 @@ export default function WarehousePage() {
       ? "Select a calibrated sensor rig before starting."
       : `Scan warehouse map #${selectedWarehouseMapId}.`;
 
+  const selectedWarehouseMapName = useMemo(() => {
+    if (selectedWarehouseMapId == null) return null;
+    return warehouseMaps.find((map) => map.id === selectedWarehouseMapId)?.name ?? null;
+  }, [selectedWarehouseMapId, warehouseMaps]);
+
   return (
     <>
       <Header />
@@ -1042,20 +1167,7 @@ export default function WarehousePage() {
           </Alert>
         )}
 
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              md: controlFrameExpanded
-                ? "minmax(0, 1.15fr) minmax(340px, 0.85fr)"
-                : "minmax(0, 1fr) 360px",
-            },
-            gap: 3,
-            alignItems: "start",
-          }}
-        >
-          <Stack sx={{ minWidth: 0 }} spacing={2}>
+        <Stack sx={{ minWidth: 0 }} spacing={2}>
 
             <MissionVideoPanel
                 title="Warehouse Camera"
@@ -1099,720 +1211,631 @@ export default function WarehousePage() {
                   map={viewerScannedMap}
                 />
               </Paper>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  borderColor: "divider",
-                  backgroundColor: "background.paper",
-                }}
-              >
-                <Stack spacing={1.2}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1">
-                      <InfoLabel
-                        label="Sensor Rig"
-                        info="Register calibrated stereo/RGB-D camera and IMU hardware for ROS 2 mapping."
-                      />
-                    </Typography>
-                    {loadingSensorRigs && <CircularProgress size={16} />}
-                  </Stack>
-
-                  <Stack direction="row" spacing={0.75} alignItems="flex-start" sx={{ minWidth: 0 }}>
-                    <TextField
-                      select
-                      size="small"
-                      label="Camera + IMU Rig"
-                      value={selectedSensorRigId != null ? String(selectedSensorRigId) : ""}
-                      onChange={(event) => {
-                        const raw = event.target.value;
-                        setSelectedSensorRigId(raw ? Number(raw) : null);
-                      }}
-                      helperText={
-                        sensorRigHealth
-                          ? sensorRigHealth.ready
-                            ? "Ready"
-                            : sensorRigHealth.blockers[0] ?? "Not ready"
-                          : undefined
-                      }
-                      sx={{ flex: 1, minWidth: 0, ...COMPACT_FIELD_SX }}
-                    >
-                      {sensorRigs.length === 0 && (
-                        <MenuItem value="" disabled>
-                          No sensor rigs registered
-                        </MenuItem>
-                      )}
-                      {sensorRigs.map((rig) => (
-                        <MenuItem key={rig.id} value={String(rig.id)}>
-                          {`${rig.name} • ${rig.camera_model} • ${rig.calibration_status}`}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, pt: 0.25 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        disabled={loadingSensorRigs}
-                        onClick={() => {
-                          void loadSensorRigs();
-                          void loadSensorRigHealth(selectedSensorRigId);
-                        }}
-                      >
-                        Refresh
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        disabled={selectedSensorRigId == null || savingSensorRig}
-                        onClick={() => {
-                          void handleMarkSensorRigCalibrated();
-                        }}
-                      >
-                        Calibrated
-                      </Button>
-                      <Button
-                        variant={showCreateSensorRig ? "contained" : "outlined"}
-                        size="small"
-                        onClick={() => setShowCreateSensorRig((value) => !value)}
-                      >
-                        {showCreateSensorRig ? "Cancel" : "+ New"}
-                      </Button>
-                    </Stack>
-                  </Stack>
-
-                  {showCreateSensorRig && (
-                    <Stack
-                      spacing={1}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 1,
-                        border: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(7, minmax(56px, 1fr))",
-                          gap: 0.75,
-                          minWidth: 0,
-                        }}
-                      >
-                        {SENSOR_RIG_CREATE_FIELDS.map((field) => (
-                          <TextField
-                            key={field.key}
-                            size="small"
-                            fullWidth
-                            type={field.type}
-                            label={field.label}
-                            value={sensorRigForm[field.key]}
-                            sx={COMPACT_FIELD_SX}
-                            inputProps={
-                              field.type === "number" ? { min: 0.01, step: 0.01 } : undefined
-                            }
-                            InputProps={
-                              field.adornment
-                                ? {
-                                    endAdornment: (
-                                      <InputAdornment position="end">{field.adornment}</InputAdornment>
-                                    ),
-                                  }
-                                : undefined
-                            }
-                            onChange={(event) =>
-                              setSensorRigForm((form) => ({
-                                ...form,
-                                [field.key]: event.target.value,
-                              }))
-                            }
-                          />
-                        ))}
-                      </Box>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        disabled={savingSensorRig}
-                        onClick={() => {
-                          void handleCreateSensorRig();
-                        }}
-                      >
-                        {savingSensorRig ? "Saving..." : "Create Sensor Rig"}
-                      </Button>
-                    </Stack>
-                  )}
-                </Stack>
-              </Paper>
-
-              <WarehouseDockPanel
-                warehouseMapId={selectedWarehouseMapId}
-                selectedDockId={selectedDockId}
-                onSelectedDockIdChange={setSelectedDockId}
-                getToken={getToken}
-                onError={addError}
-              />
-
-              <WarehouseExplorationPanel
-                warehouseMapId={selectedWarehouseMapId}
-                selectedDockId={selectedDockId}
-                warehouseName={
-                  warehouseMaps.find((map) => map.id === selectedWarehouseMapId)?.name
-                }
-                getToken={getToken}
-                onLaunch={handleExplorationLaunch}
-                onError={handleExplorationError}
-              />
-
-              <WarehouseManualMappingPanel
-                activeFlightId={activeFlightId}
-                missionStatus={missionStatus}
-                telemetry={telemetry}
-                wsConnected={wsConnected}
-                droneConnected={droneConnected}
-                warehouseMapId={selectedWarehouseMapId}
-                sensorRigId={selectedSensorRigId}
-                dockId={selectedDockId}
-                setPendingFlightId={setPendingFlightId}
-                onPreflightRun={setWarehousePreflightRun}
-                onMessage={setScanLaunchMessage}
-                onError={addError}
-                onScanResultReady={handleScanResultReady}
-              />
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  borderColor: "divider",
-                  backgroundColor: "background.paper",
-                }}
-              >
-                <Stack spacing={1.2}>
-                  <Stack
-                    direction="row"
-                    spacing={0.75}
-                    alignItems="flex-start"
-                    useFlexGap
-                    sx={{ flexWrap: "wrap", minWidth: 0 }}
-                  >
-                    <Typography variant="subtitle1" sx={{ flexShrink: 0, pt: 0.5 }}>
-                      <InfoLabel
-                        label="Warehouse Map"
-                        info="Select the warehouse footprint. The drone scans using local metric coordinates — no GPS required. Origin (0, 0) is the takeoff position."
-                      />
-                    </Typography>
-                    {loadingWarehouseMaps && (
-                      <CircularProgress size={16} sx={{ mt: 0.75, flexShrink: 0 }} />
-                    )}
-                    <TextField
-                      select
-                      size="small"
-                      label="Map"
-                      value={selectedWarehouseMapId != null ? String(selectedWarehouseMapId) : ""}
-                      onChange={(event) => {
-                        const raw = event.target.value;
-                        setSelectedWarehouseMapId(raw ? Number(raw) : null);
-                        setSelectedDockId(null);
-                      }}
-                      disabled={loadingWarehouseMaps}
-                      helperText={
-                        warehouseMaps.length === 0
-                          ? "No maps yet"
-                          : selectedWarehouseMapId
-                            ? (() => {
-                                const m = warehouseMaps.find((x) => x.id === selectedWarehouseMapId);
-                                return m
-                                  ? `${m.area_m2 != null ? `${Math.round(m.area_m2)} m²` : "area unknown"}`
-                                  : `#${selectedWarehouseMapId}`;
-                              })()
-                            : undefined
-                      }
-                      sx={{ flex: "1 1 160px", minWidth: 140, maxWidth: 360, ...COMPACT_FIELD_SX }}
-                    >
-                      {warehouseMaps.length === 0 && (
-                        <MenuItem value="" disabled>
-                          No warehouse maps registered
-                        </MenuItem>
-                      )}
-                      {warehouseMaps.map((m) => (
-                        <MenuItem key={m.id} value={String(m.id)}>
-                          {`${m.name}${m.area_m2 != null ? ` • ${Math.round(m.area_m2)} m²` : ""}`}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, pt: 0.25 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        disabled={loadingWarehouseMaps}
-                        onClick={() => {
-                          void loadWarehouseMaps();
-                        }}
-                      >
-                        Refresh
-                      </Button>
-                      <Button
-                        variant={showCreateMap ? "contained" : "outlined"}
-                        size="small"
-                        onClick={() => setShowCreateMap((v) => !v)}
-                      >
-                        {showCreateMap ? "Cancel" : "+ New"}
-                      </Button>
-                    </Stack>
-                    {showCreateMap && (
-                      <>
-                        <TextField
-                          size="small"
-                          label="Name"
-                          value={createMapForm.name}
-                          onChange={(e) =>
-                            setCreateMapForm((f) => ({ ...f, name: e.target.value }))
-                          }
-                          placeholder="e.g. Aisle A–F"
-                          sx={{ flex: "1 1 120px", minWidth: 100, ...COMPACT_FIELD_SX }}
-                        />
-                        <TextField
-                          size="small"
-                          type="number"
-                          label="Width"
-                          inputProps={{ min: 0.1, step: 0.5 }}
-                          InputProps={{
-                            endAdornment: <InputAdornment position="end">m</InputAdornment>,
-                          }}
-                          value={createMapForm.width_m}
-                          onChange={(e) =>
-                            setCreateMapForm((f) => ({ ...f, width_m: e.target.value }))
-                          }
-                          sx={{ flex: "0 1 88px", minWidth: 72, ...COMPACT_FIELD_SX }}
-                        />
-                        <TextField
-                          size="small"
-                          type="number"
-                          label="Length"
-                          inputProps={{ min: 0.1, step: 0.5 }}
-                          InputProps={{
-                            endAdornment: <InputAdornment position="end">m</InputAdornment>,
-                          }}
-                          value={createMapForm.length_m}
-                          onChange={(e) =>
-                            setCreateMapForm((f) => ({ ...f, length_m: e.target.value }))
-                          }
-                          sx={{ flex: "0 1 88px", minWidth: 72, ...COMPACT_FIELD_SX }}
-                        />
-                        <Button
-                          variant="contained"
-                          size="small"
-                          disabled={creatingMap}
-                          onClick={() => {
-                            void handleCreateWarehouseMap();
-                          }}
-                          sx={{ mt: 0.25, flexShrink: 0, whiteSpace: "nowrap" }}
-                        >
-                          {creatingMap ? (
-                            <Stack direction="row" spacing={0.75} alignItems="center">
-                              <CircularProgress size={14} color="inherit" />
-                              <span>Creating…</span>
-                            </Stack>
-                          ) : (
-                            "Create"
-                          )}
-                        </Button>
-                      </>
-                    )}
-                  </Stack>
-                </Stack>
-              </Paper>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  borderColor: "divider",
-                  backgroundColor: "background.paper",
-                }}
-              >
-                <Stack spacing={1.2}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                  >
-                    <Typography variant="subtitle1">
-                      <InfoLabel
-                        label="Previous Scan Results"
-                        info="Finished warehouse scans appear here after automated scans, exploration, or manual mapping stop. Select a result, then open it in the 3D map above."
-                      />
-                    </Typography>
-                    {loadingScannedMaps && <CircularProgress size={16} />}
-                  </Stack>
-                  <TextField
-                    select
-                    fullWidth
-                    disabled={!loadingScannedMaps && scannedMaps.length === 0}
-                    size="small"
-                    label="Scanned Maps"
-                    value={selectedScannedMap ? String(selectedScannedMap.job_id) : ""}
-                    onChange={(event) => {
-                      const raw = event.target.value;
-                      setSelectedMapJobId(raw ? Number(raw) : null);
-                    }}
-                    helperText={
-                      selectedScannedMap
-                        ? selectedScannedMap.status === "failed" && selectedScannedMap.error
-                          ? selectedScannedMap.error
-                          : `${getWarehouseName(selectedScannedMap)} (#${getWarehouseMapId(selectedScannedMap)})`
-                        : undefined
-                    }
-                  >
-                    {scannedMaps.length === 0 && (
-                      <MenuItem value="" disabled>
-                        No scanned maps available
-                      </MenuItem>
-                    )}
-                    {scannedMaps.map((map) => (
-                      <MenuItem key={map.job_id} value={String(map.job_id)}>
-                        {`${getWarehouseName(map)} • ${map.source === "simulation" ? "simulation" : "real flight"} • v${map.model_version} • ${map.status} • ${formatTimestamp(map.created_at)}`}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      disabled={!selectedScannedMap}
-                      onClick={showSelectedScanInViewer}
-                    >
-                      View in 3D Map
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      disabled={loadingScannedMaps}
-                      onClick={() => {
-                        void loadScannedMaps();
-                      }}
-                    >
-                      Refresh Scan Results
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      color="error"
-                      disabled={!selectedScannedMap || deletingScannedMap}
-                      onClick={() => {
-                        void handleDeleteScannedMap();
-                      }}
-                    >
-                      {deletingScannedMap ? "Deleting…" : "Delete Result"}
-                    </Button>
-                  </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip
-                      title={
-                        selectedReferenceJobId
-                          ? `Reference job #${selectedReferenceJobId}`
-                          : "Use this scan as alignment reference for the next mission"
-                      }
-                    >
-                      <span>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          disabled={!selectedScannedMap}
-                          onClick={() => {
-                            setSelectedReferenceJobId(selectedScannedMap?.job_id ?? null);
-                          }}
-                        >
-                          Use as Reference
-                        </Button>
-                      </span>
-                    </Tooltip>
-                    {selectedReferenceJobId != null && (
-                      <Typography variant="caption" color="text.secondary">
-                        Ref #{selectedReferenceJobId}
-                      </Typography>
-                    )}
-                  </Stack>
-                  <WarehouseMapQualityPanel
-                    jobId={selectedScannedMap?.job_id ?? null}
-                    getToken={getToken}
-                    onError={addError}
-                  />
-                </Stack>
-              </Paper>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  borderColor: "divider",
-                  backgroundColor: "background.paper",
-                }}
-              >
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ mb: 1 }}
-                >
-                  <Typography variant="subtitle1">
-                    <InfoLabel
-                      label="Default Flight Parameters"
-                      info="Controls aisle spacing, scan layers, ceiling clearance, and rack-facing view behavior for new warehouse scan missions."
-                    />
-                  </Typography>
-                  {loadingMissionDefaults && <CircularProgress size={16} />}
-                </Stack>
-
-                {missionDefaultsDraft ? (
-                  <>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          md: "repeat(4, minmax(0, 1fr))",
-                        },
-                        gap: 1,
-                      }}
-                    >
-                      {WAREHOUSE_MISSION_DEFAULT_COLUMN_ROWS.map((columnRows, columnIndex) => (
-                        <Box
-                          key={`warehouse-default-column-${columnIndex}`}
-                          sx={{ minWidth: 0, overflowX: "hidden" }}
-                        >
-                          <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
-                            <TableHead>
-                              <TableRow>
-                                <TableCell
-                                  sx={{
-                                    width: "58%",
-                                    pr: 0.75,
-                                    py: 0.5,
-                                    fontSize: "0.7rem",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  Parameter
-                                </TableCell>
-                                <TableCell
-                                  sx={{ width: "42%", pl: 0.5, py: 0.5, fontSize: "0.7rem" }}
-                                >
-                                  Value
-                                </TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {columnRows.map((row) => (
-                                <TableRow key={row.key}>
-                                  <TableCell
-                                    sx={{
-                                      width: "58%",
-                                      py: 0.5,
-                                      pr: 0.75,
-                                      fontSize: "0.7rem",
-                                      whiteSpace: "normal",
-                                      wordBreak: "break-word",
-                                      lineHeight: 1.2,
-                                    }}
-                                  >
-                                    {row.label}
-                                  </TableCell>
-                                  <TableCell sx={{ width: "42%", minWidth: 0, py: 0.5, pl: 0.5 }}>
-                                    {row.kind === "select" ? (
-                                      <TextField
-                                        select
-                                        size="small"
-                                        value={missionDefaultsDraft[row.key]}
-                                        onChange={(event) => {
-                                          handleMissionDefaultsDraftChange(
-                                            row.key,
-                                            event.target.value,
-                                          );
-                                        }}
-                                        sx={MISSION_DEFAULT_VALUE_SX}
-                                      >
-                                        {row.options.map((option) => (
-                                          <MenuItem
-                                            key={option.value}
-                                            value={option.value}
-                                            sx={{ fontSize: "0.68rem", py: 0.25 }}
-                                          >
-                                            {option.label}
-                                          </MenuItem>
-                                        ))}
-                                      </TextField>
-                                    ) : (
-                                      <TextField
-                                        size="small"
-                                        type="number"
-                                        value={missionDefaultsDraft[row.key]}
-                                        placeholder={row.placeholder}
-                                        onChange={(event) => {
-                                          handleMissionDefaultsDraftChange(
-                                            row.key,
-                                            event.target.value,
-                                          );
-                                        }}
-                                        inputProps={{
-                                          min: row.min,
-                                          step: row.step,
-                                        }}
-                                        sx={MISSION_DEFAULT_VALUE_SX}
-                                      />
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </Box>
-                      ))}
-                    </Box>
-
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      disabled={savingMissionDefaults}
-                      onClick={() => {
-                        void handleUpdateMissionDefaults();
-                      }}
-                      sx={{ mt: 1.5 }}
-                    >
-                      {savingMissionDefaults ? (
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <CircularProgress size={18} color="inherit" />
-                          <span>Updating Parameters</span>
-                        </Stack>
-                      ) : (
-                        "Update"
-                      )}
-                    </Button>
-
-                    {missionDefaultsMessage && (
-                      <Alert severity="success" sx={{ mt: 1.5 }}>
-                        {missionDefaultsMessage}
-                      </Alert>
-                    )}
-                  </>
-                ) : (
-                  <Alert severity="info">
-                    Warehouse mission defaults are unavailable right now.
-                  </Alert>
-                )}
-              </Paper>
-
-
             </Stack>
-          </Stack>
 
-          <Stack sx={{ minWidth: 0 }} spacing={2}>
-              <Paper
-                variant="outlined"
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                borderColor: "divider",
+                backgroundColor: "background.paper",
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
+                Mission Status
+              </Typography>
+
+              <Box
                 sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  borderColor: "divider",
-                  backgroundColor: "background.paper",
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, minmax(0, 1fr))",
+                  },
+                  gap: 1.5,
                 }}
               >
-                <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
-                  Mission Status
-                </Typography>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Mission
+                  </Typography>
+                  <Typography variant="body1">{missionName}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    State
+                  </Typography>
+                  <Typography variant="body1" sx={{ textTransform: "capitalize" }}>
+                    {missionState.replace(/_/g, " ")}
+                  </Typography>
+                </Box>
+                {activeFlightId && (
+                  <Box sx={{ gridColumn: { sm: "1 / -1" } }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Active Flight
+                    </Typography>
+                    <Typography variant="body1">{activeFlightId}</Typography>
+                  </Box>
+                )}
+              </Box>
 
+              {missionStatus?.mission_lifecycle?.last_error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {missionStatus.mission_lifecycle.last_error}
+                </Alert>
+              )}
+
+              <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
+                <ActionIconButton
+                  variant="play"
+                  title={
+                    startScanDisabled
+                      ? startScanTooltip
+                      : startingScan
+                        ? "Starting Flight & Scan…"
+                        : "Start Flight & Scan"
+                  }
+                  color="primary"
+                  size="large"
+                  loading={startingScan}
+                  disabled={startScanDisabled}
+                  onClick={() => {
+                    void handleStartWarehouseScan();
+                  }}
+                />
+              </Stack>
+            </Paper>
+        </Stack>
+      </Paper>
+
+      <TaskPreflightCommandsDrawer
+        open={warehouseSetupDrawer.open}
+        onOpenChange={handleWarehouseSetupOpenChange}
+        title="Warehouse Setup"
+        subtitle="Map, sensor rig, dock, and scan defaults"
+        tabLabel="SETUP"
+        tabIcon={<TuneRoundedIcon fontSize="small" />}
+        edgeTabIndex={0}
+        edgeTabCount={3}
+        paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
+      >
+        <Stack spacing={2}>
+          <WarehouseDrawerSection
+            title="Warehouse Map"
+            info="Select the warehouse footprint. The drone scans using local metric coordinates — no GPS required. Origin (0, 0) is the takeoff position."
+            action={loadingWarehouseMaps ? <CircularProgress size={16} /> : null}
+          >
+            <Stack
+              direction="row"
+              spacing={0.75}
+              alignItems="flex-start"
+              useFlexGap
+              sx={{ flexWrap: "wrap", minWidth: 0 }}
+            >
+              <TextField
+                select
+                size="small"
+                label="Map"
+                value={selectedWarehouseMapId != null ? String(selectedWarehouseMapId) : ""}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  setSelectedWarehouseMapId(raw ? Number(raw) : null);
+                  setSelectedDockId(null);
+                }}
+                disabled={loadingWarehouseMaps}
+                helperText={
+                  warehouseMaps.length === 0
+                    ? "No maps yet"
+                    : selectedWarehouseMapId
+                      ? (() => {
+                          const m = warehouseMaps.find((x) => x.id === selectedWarehouseMapId);
+                          return m
+                            ? `${m.area_m2 != null ? `${Math.round(m.area_m2)} m²` : "area unknown"}`
+                            : `#${selectedWarehouseMapId}`;
+                        })()
+                      : undefined
+                }
+                sx={{ ...COMPACT_FIELD_SX, flex: "1 1 160px", minWidth: 140, maxWidth: 360 }}
+              >
+                {warehouseMaps.length === 0 && (
+                  <MenuItem value="" disabled>
+                    No warehouse maps registered
+                  </MenuItem>
+                )}
+                {warehouseMaps.map((m) => (
+                  <MenuItem key={m.id} value={String(m.id)}>
+                    {`${m.name}${m.area_m2 != null ? ` • ${Math.round(m.area_m2)} m²` : ""}`}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0, pt: 0.25 }}>
+                <ActionIconButton
+                  variant="refresh"
+                  title="Refresh"
+                  loading={loadingWarehouseMaps}
+                  onClick={() => {
+                    void loadWarehouseMaps();
+                  }}
+                />
+                <ActionIconButton
+                  variant="add"
+                  title={showCreateMap ? "Cancel" : "New Map"}
+                  color={showCreateMap ? "primary" : "default"}
+                  onClick={() => setShowCreateMap((v) => !v)}
+                />
+                <ActionIconButton
+                  variant="delete"
+                  title={deletingWarehouseMap ? "Deleting…" : "Delete Map"}
+                  color="error"
+                  loading={deletingWarehouseMap}
+                  disabled={selectedWarehouseMapId == null}
+                  onClick={() => {
+                    void handleDeleteWarehouseMap();
+                  }}
+                />
+              </Stack>
+              {showCreateMap && (
+                <>
+                  <TextField
+                    size="small"
+                    label="Name"
+                    value={createMapForm.name}
+                    onChange={(e) => setCreateMapForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Aisle A–F"
+                    sx={{ ...COMPACT_FIELD_SX, flex: "1 1 120px", minWidth: 100 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Width"
+                    inputProps={{ min: 0.1, step: 0.5 }}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">m</InputAdornment>,
+                    }}
+                    value={createMapForm.width_m}
+                    onChange={(e) => setCreateMapForm((f) => ({ ...f, width_m: e.target.value }))}
+                    sx={{ ...COMPACT_FIELD_SX, flex: "0 1 88px", minWidth: 72 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Length"
+                    inputProps={{ min: 0.1, step: 0.5 }}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">m</InputAdornment>,
+                    }}
+                    value={createMapForm.length_m}
+                    onChange={(e) => setCreateMapForm((f) => ({ ...f, length_m: e.target.value }))}
+                    sx={{ ...COMPACT_FIELD_SX, flex: "0 1 88px", minWidth: 72 }}
+                  />
+                  <ActionIconButton
+                    variant="add"
+                    title={creatingMap ? "Creating…" : "Create Map"}
+                    color="primary"
+                    loading={creatingMap}
+                    onClick={() => {
+                      void handleCreateWarehouseMap();
+                    }}
+                    sx={{ mt: 0.25, flexShrink: 0 }}
+                  />
+                </>
+              )}
+            </Stack>
+          </WarehouseDrawerSection>
+
+          <WarehouseDrawerSection
+            title="Sensor Rig"
+            info="Register calibrated stereo/RGB-D camera and IMU hardware for ROS 2 mapping."
+            action={loadingSensorRigs ? <CircularProgress size={16} /> : null}
+          >
+            <Stack direction="row" spacing={0.75} alignItems="flex-start" sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                label="Camera + IMU Rig"
+                value={selectedSensorRigId != null ? String(selectedSensorRigId) : ""}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  setSelectedSensorRigId(raw ? Number(raw) : null);
+                }}
+                helperText={
+                  sensorRigHealth
+                    ? sensorRigHealth.ready
+                      ? "Ready"
+                      : sensorRigHealth.blockers[0] ?? "Not ready"
+                    : undefined
+                }
+                sx={{ ...COMPACT_FIELD_SX, flex: 1 }}
+              >
+                {sensorRigs.length === 0 && (
+                  <MenuItem value="" disabled>
+                    No sensor rigs registered
+                  </MenuItem>
+                )}
+                {sensorRigs.map((rig) => (
+                  <MenuItem key={rig.id} value={String(rig.id)}>
+                    {`${rig.name} • ${rig.camera_model} • ${rig.calibration_status}`}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0, pt: 0.25 }}>
+                <ActionIconButton
+                  variant="refresh"
+                  title="Refresh"
+                  loading={loadingSensorRigs}
+                  onClick={() => {
+                    void loadSensorRigs();
+                    void loadSensorRigHealth(selectedSensorRigId);
+                  }}
+                />
+                <ActionIconButton
+                  variant="check"
+                  title="Calibrated"
+                  loading={savingSensorRig}
+                  disabled={selectedSensorRigId == null}
+                  onClick={() => {
+                    void handleMarkSensorRigCalibrated();
+                  }}
+                />
+                <ActionIconButton
+                  variant="add"
+                  title={showCreateSensorRig ? "Cancel" : "New Sensor Rig"}
+                  color={showCreateSensorRig ? "primary" : "default"}
+                  onClick={() => setShowCreateSensorRig((value) => !value)}
+                />
+                <ActionIconButton
+                  variant="delete"
+                  title={deletingSensorRig ? "Deleting…" : "Delete Sensor Rig"}
+                  color="error"
+                  loading={deletingSensorRig}
+                  disabled={selectedSensorRigId == null}
+                  onClick={() => {
+                    void handleDeleteSensorRig();
+                  }}
+                />
+              </Stack>
+            </Stack>
+            {showCreateSensorRig && (
+              <Stack
+                spacing={1}
+                sx={{ mt: 1, p: 1.5, borderRadius: 1, border: "1px solid", borderColor: "divider" }}
+              >
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      sm: "repeat(2, minmax(0, 1fr))",
-                    },
-                    gap: 1.5,
+                    gridTemplateColumns: "repeat(3, minmax(72px, 1fr))",
+                    gap: 0.75,
+                    minWidth: 0,
                   }}
                 >
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Mission
-                    </Typography>
-                    <Typography variant="body1">{missionName}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      State
-                    </Typography>
-                    <Typography variant="body1" sx={{ textTransform: "capitalize" }}>
-                      {missionState.replace(/_/g, " ")}
-                    </Typography>
-                  </Box>
-                  {activeFlightId && (
-                    <Box sx={{ gridColumn: { sm: "1 / -1" } }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Active Flight
-                      </Typography>
-                      <Typography variant="body1">{activeFlightId}</Typography>
-                    </Box>
-                  )}
+                  {SENSOR_RIG_CREATE_FIELDS.map((field) => (
+                    <TextField
+                      key={field.key}
+                      size="small"
+                      fullWidth
+                      type={field.type}
+                      label={field.label}
+                      value={sensorRigForm[field.key]}
+                      sx={COMPACT_FIELD_SX}
+                      inputProps={field.type === "number" ? { min: 0.01, step: 0.01 } : undefined}
+                      InputProps={
+                        field.adornment
+                          ? {
+                              endAdornment: (
+                                <InputAdornment position="end">{field.adornment}</InputAdornment>
+                              ),
+                            }
+                          : undefined
+                      }
+                      onChange={(event) =>
+                        setSensorRigForm((form) => ({
+                          ...form,
+                          [field.key]: event.target.value,
+                        }))
+                      }
+                    />
+                  ))}
                 </Box>
+                <Stack direction="row" justifyContent="flex-end">
+                  <ActionIconButton
+                    variant="add"
+                    title={savingSensorRig ? "Saving…" : "Create Sensor Rig"}
+                    color="primary"
+                    loading={savingSensorRig}
+                    onClick={() => {
+                      void handleCreateSensorRig();
+                    }}
+                  />
+                </Stack>
+              </Stack>
+            )}
+          </WarehouseDrawerSection>
 
-                {missionStatus?.mission_lifecycle?.last_error && (
-                  <Alert severity="error" sx={{ mt: 2 }}>
-                    {missionStatus.mission_lifecycle.last_error}
+          <WarehouseDrawerSection
+            title="Dock Station"
+            info="Optional local-frame anchor for takeoff, return, and exploration missions."
+          >
+            <WarehouseDockPanel
+              embedded
+              warehouseMapId={selectedWarehouseMapId}
+              selectedDockId={selectedDockId}
+              onSelectedDockIdChange={setSelectedDockId}
+              getToken={getToken}
+              onError={addError}
+            />
+          </WarehouseDrawerSection>
+
+          <WarehouseDrawerSection
+            title="Default Flight Parameters"
+            info="Controls aisle spacing, scan layers, ceiling clearance, and rack-facing view behavior for automated warehouse scan missions."
+            action={loadingMissionDefaults ? <CircularProgress size={16} /> : null}
+          >
+            {missionDefaultsDraft ? (
+              <>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
+                    gap: 1,
+                  }}
+                >
+                  {WAREHOUSE_MISSION_DEFAULT_COLUMN_ROWS.map((columnRows, columnIndex) => (
+                    <Box key={`warehouse-default-column-${columnIndex}`} sx={{ minWidth: 0, overflowX: "hidden" }}>
+                      <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ width: "58%", pr: 0.75, py: 0.5, fontSize: "0.7rem" }}>
+                              Parameter
+                            </TableCell>
+                            <TableCell sx={{ width: "42%", pl: 0.5, py: 0.5, fontSize: "0.7rem" }}>
+                              Value
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {columnRows.map((row) => (
+                            <TableRow key={row.key}>
+                              <TableCell
+                                sx={{
+                                  width: "58%",
+                                  py: 0.5,
+                                  pr: 0.75,
+                                  fontSize: "0.7rem",
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                  lineHeight: 1.2,
+                                }}
+                              >
+                                {row.label}
+                              </TableCell>
+                              <TableCell sx={{ width: "42%", minWidth: 0, py: 0.5, pl: 0.5 }}>
+                                {row.kind === "select" ? (
+                                  <TextField
+                                    select
+                                    size="small"
+                                    value={missionDefaultsDraft[row.key]}
+                                    onChange={(event) => {
+                                      handleMissionDefaultsDraftChange(row.key, event.target.value);
+                                    }}
+                                    sx={MISSION_DEFAULT_VALUE_SX}
+                                  >
+                                    {row.options.map((option) => (
+                                      <MenuItem
+                                        key={option.value}
+                                        value={option.value}
+                                        sx={{ fontSize: "0.68rem", py: 0.25 }}
+                                      >
+                                        {option.label}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                ) : (
+                                  <TextField
+                                    size="small"
+                                    type="number"
+                                    value={missionDefaultsDraft[row.key]}
+                                    placeholder={row.placeholder}
+                                    onChange={(event) => {
+                                      handleMissionDefaultsDraftChange(row.key, event.target.value);
+                                    }}
+                                    inputProps={{ min: row.min, step: row.step }}
+                                    sx={MISSION_DEFAULT_VALUE_SX}
+                                  />
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Box>
+                  ))}
+                </Box>
+                <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.5 }}>
+                  <ActionIconButton
+                    variant="upgrade"
+                    title={savingMissionDefaults ? "Updating Parameters…" : "Update Parameters"}
+                    color="primary"
+                    loading={savingMissionDefaults}
+                    onClick={() => {
+                      void handleUpdateMissionDefaults();
+                    }}
+                  />
+                </Stack>
+                {missionDefaultsMessage && (
+                  <Alert severity="success" sx={{ mt: 1.5 }}>
+                    {missionDefaultsMessage}
                   </Alert>
                 )}
+              </>
+            ) : (
+              <Alert severity="info">Warehouse mission defaults are unavailable right now.</Alert>
+            )}
+          </WarehouseDrawerSection>
+        </Stack>
+      </TaskPreflightCommandsDrawer>
 
-                <Stack sx={{ mt: 2 }} spacing={1.25}>
-                  <Tooltip title={startScanTooltip}>
-                    <span>
-                      <Button
-                        variant="contained"
-                        size="large"
-                        disabled={startScanDisabled}
-                        onClick={() => {
-                          void handleStartWarehouseScan();
-                        }}
-                        fullWidth
-                      >
-                        {startingScan ? (
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <CircularProgress size={18} color="inherit" />
-                            <span>Starting Flight &amp; Scan</span>
-                          </Stack>
-                        ) : (
-                          "Start Flight & Scan"
-                        )}
-                      </Button>
-                    </span>
-                  </Tooltip>
-                </Stack>
-              </Paper>
+      <TaskPreflightCommandsDrawer
+        open={warehouseMissionDrawer.open}
+        onOpenChange={handleWarehouseMissionOpenChange}
+        title="Warehouse Missions"
+        subtitle="Exploration, manual mapping, and scan results"
+        tabLabel="FLY"
+        tabIcon={<ExploreRoundedIcon fontSize="small" />}
+        edgeTabIndex={1}
+        edgeTabCount={3}
+        paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
+      >
+        <Stack spacing={2}>
+          <WarehouseDrawerSection
+            title="Exploration"
+            info="Frontier mode uses the ROS nvblox ESDF map and returns before reserve battery."
+          >
+            <WarehouseExplorationPanel
+              embedded
+              warehouseMapId={selectedWarehouseMapId}
+              selectedDockId={selectedDockId}
+              warehouseName={selectedWarehouseMapName ?? undefined}
+              getToken={getToken}
+              onLaunch={handleExplorationLaunch}
+              onError={handleExplorationError}
+            />
+          </WarehouseDrawerSection>
 
-              <TaskControlFrame
-                expanded={controlFrameExpanded}
-                onExpandedChange={setControlFrameExpanded}
+          <WarehouseDrawerSection
+            title="Manual Warehouse Mapping"
+            info="Start a controlled keyboard flight, start ROS mapping, fly the inbound area manually, then stop mapping after landing."
+          >
+            <WarehouseManualMappingPanel
+              embedded
+              activeFlightId={activeFlightId}
+              missionStatus={missionStatus}
+              telemetry={telemetry}
+              wsConnected={wsConnected}
+              droneConnected={droneConnected}
+              warehouseMapId={selectedWarehouseMapId}
+              sensorRigId={selectedSensorRigId}
+              dockId={selectedDockId}
+              setPendingFlightId={setPendingFlightId}
+              onPreflightRun={setWarehousePreflightRun}
+              onMessage={setScanLaunchMessage}
+              onError={addError}
+              onScanResultReady={handleScanResultReady}
+            />
+          </WarehouseDrawerSection>
+
+          <WarehouseDrawerSection
+            title="Previous Scan Results"
+            info="Finished warehouse scans appear here after automated scans, exploration, or manual mapping stop. Use View in 3D Map to load a result in the main viewer."
+            action={loadingScannedMaps ? <CircularProgress size={16} /> : null}
+            showDivider={false}
+          >
+            <Stack direction="row" spacing={1} alignItems="flex-start">
+              <TextField
+                select
+                disabled={!loadingScannedMaps && scannedMaps.length === 0}
+                size="small"
+                label="Scanned Maps"
+                value={selectedScannedMap ? String(selectedScannedMap.job_id) : ""}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  setSelectedMapJobId(raw ? Number(raw) : null);
+                }}
+                helperText={
+                  selectedScannedMap
+                    ? selectedScannedMap.status === "failed" && selectedScannedMap.error
+                      ? selectedScannedMap.error
+                      : `${getWarehouseName(selectedScannedMap)} (#${getWarehouseMapId(selectedScannedMap)})${
+                          selectedReferenceJobId != null ? ` • Ref #${selectedReferenceJobId}` : ""
+                        }`
+                    : undefined
+                }
+                sx={{ flex: 1, minWidth: 0 }}
               >
-                <MissionPreflightPanel
-                  apiBase={apiBase}
-                  missionType="warehouse_scan"
-                  preflightRun={warehousePreflightRun}
-                  telemetry={telemetry}
-                  title="Warehouse Preflight"
+                {scannedMaps.length === 0 && (
+                  <MenuItem value="" disabled>
+                    No scanned maps available
+                  </MenuItem>
+                )}
+                {scannedMaps.map((map) => (
+                  <MenuItem key={map.job_id} value={String(map.job_id)}>
+                    {`${getWarehouseName(map)} • ${map.source === "simulation" ? "simulation" : "real flight"} • v${map.model_version} • ${map.status} • ${formatTimestamp(map.created_at)}`}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0, pt: 2.25 }}>
+                <ActionIconButton
+                  variant="map"
+                  title="View in 3D Map"
+                  color="primary"
+                  disabled={!selectedScannedMap}
+                  onClick={showSelectedScanInViewer}
                 />
-                <MissionCommandPanel
-                  telemetry={telemetry}
-                  droneConnected={droneConnected}
-                  missionStatus={missionStatus}
-                  activeFlightId={activeFlightId}
-                  apiBase={apiBase}
-                  title="Warehouse Commands"
+                <ActionIconButton
+                  variant="refresh"
+                  title="Refresh Scan Results"
+                  loading={loadingScannedMaps}
+                  onClick={() => {
+                    void loadScannedMaps();
+                  }}
                 />
-              </TaskControlFrame>
-          </Stack>
-        </Box>
-      </Paper>
+                <ActionIconButton
+                  variant="check"
+                  title="Use as Reference"
+                  color={
+                    selectedReferenceJobId != null &&
+                    selectedScannedMap?.job_id === selectedReferenceJobId
+                      ? "primary"
+                      : "default"
+                  }
+                  disabled={!selectedScannedMap}
+                  onClick={() => {
+                    setSelectedReferenceJobId(selectedScannedMap?.job_id ?? null);
+                  }}
+                />
+                <ActionIconButton
+                  variant="delete"
+                  title={deletingScannedMap ? "Deleting…" : "Delete Result"}
+                  color="error"
+                  loading={deletingScannedMap}
+                  disabled={!selectedScannedMap}
+                  onClick={() => {
+                    void handleDeleteScannedMap();
+                  }}
+                />
+              </Stack>
+            </Stack>
+            <WarehouseMapQualityPanel
+              jobId={selectedScannedMap?.job_id ?? null}
+              getToken={getToken}
+              onError={addError}
+            />
+          </WarehouseDrawerSection>
+        </Stack>
+      </TaskPreflightCommandsDrawer>
+
+      <TaskPreflightCommandsDrawer
+        open={warehousePreflightDrawer.open}
+        onOpenChange={handleWarehousePreflightOpenChange}
+        edgeTabIndex={2}
+        edgeTabCount={3}
+      >
+        <MissionPreflightPanel
+          apiBase={apiBase}
+          missionType="warehouse_scan"
+          preflightRun={warehousePreflightRun}
+          telemetry={telemetry}
+          title="Warehouse Preflight"
+        />
+        <MissionCommandPanel
+          telemetry={telemetry}
+          droneConnected={droneConnected}
+          missionStatus={missionStatus}
+          activeFlightId={activeFlightId}
+          apiBase={apiBase}
+          title="Warehouse Commands"
+        />
+      </TaskPreflightCommandsDrawer>
     </>
   );
 }

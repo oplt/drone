@@ -118,8 +118,9 @@ async def resolve_user_from_request(
     token_candidates: list[tuple[str, str]] = []
     bearer = _bearer_token(authorization)
     if bearer and not bearer.startswith("sk-"):
-        # Avoid double-processing an API key token as a JWT
-        token_candidates.append(("authorization", bearer))
+        # Frontend session_present marker is "1" — not a JWT.
+        if bearer != "1":
+            token_candidates.append(("authorization", bearer))
     if access_token:
         token_candidates.append(("cookie", access_token))
     if include_query_token and query_token:

@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
-import { Box, Button, Paper, Stack, Typography, Divider, TextField, Alert, CircularProgress, MenuItem,  Select,
-  FormControl, InputLabel} from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import {
+  Box,
+  Paper,
+  Stack,
+  Typography,
+  Divider,
+  TextField,
+  Alert,
+  CircularProgress,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
 import Header from "../../../shared/layout/WorkflowHeader";
 import { Polyline, OverlayView } from "@react-google-maps/api";
 import { getToken } from "../../session";
@@ -35,7 +48,10 @@ import {
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../mission-runtime";
-import { TaskControlFrame } from "../../mission-workflow";
+import {
+  TaskPreflightCommandsDrawer,
+  useTaskPreflightCommandsDrawer,
+} from "../../mission-workflow";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import { type LatLng } from "../../../shared/utils/extractLatLng";
 import type { TerraDraw } from "terra-draw";
@@ -77,7 +93,7 @@ const containerStyle = { width: "100%", height: "400px" };
 const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
 export default function AnimalFarmPage() {
-  const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
+  const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
@@ -648,21 +664,23 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
             </Select>
           </FormControl>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Button
-              variant="contained"
+          <Stack direction="row" spacing={0.25} flexWrap="wrap" useFlexGap>
+            <ActionIconButton
+              variant="plan"
+              title="Plan Census"
+              color="primary"
+              loading={loadingHerdOps}
+              disabled={!selectedHerdId}
               onClick={() => createTaskAndPlan("census")}
-              disabled={!selectedHerdId || loadingHerdOps}
-            >
-              Plan Census
-            </Button>
-            <Button
-              variant="contained"
+            />
+            <ActionIconButton
+              variant="plan"
+              title="Plan Herd Sweep"
+              color="primary"
+              loading={loadingHerdOps}
+              disabled={!selectedHerdId}
               onClick={() => createTaskAndPlan("herd_sweep")}
-              disabled={!selectedHerdId || loadingHerdOps}
-            >
-              Plan Herd Sweep
-            </Button>
+            />
           </Stack>
 
           <Stack direction="row" spacing={1}>
@@ -673,34 +691,30 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
               onChange={(e) => setCollarIdForSearch(e.target.value)}
               fullWidth
             />
-            <Button
-              variant="outlined"
+            <ActionIconButton
+              variant="search"
+              title="Search"
+              loading={loadingHerdOps}
+              disabled={!selectedHerdId}
               onClick={() => createTaskAndPlan("search_locate")}
-              disabled={!selectedHerdId || loadingHerdOps}
-            >
-              Search
-            </Button>
+            />
           </Stack>
 
           <Divider />
 
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button
-              size="small"
-              variant="text"
+          <Stack direction="row" spacing={0.25} alignItems="center">
+            <ActionIconButton
+              variant="refresh"
+              title="Refresh positions"
+              disabled={!selectedHerdId}
               onClick={() => selectedHerdId && fetchLatestPositions(selectedHerdId)}
+            />
+            <ActionIconButton
+              variant="refresh"
+              title="Refresh risk"
               disabled={!selectedHerdId}
-            >
-              Refresh positions
-            </Button>
-            <Button
-              size="small"
-              variant="text"
               onClick={() => selectedHerdId && fetchRisk(selectedHerdId)}
-              disabled={!selectedHerdId}
-            >
-              Refresh risk
-            </Button>
+            />
             {loadingHerdOps && <CircularProgress size={16} />}
           </Stack>
 
@@ -1007,29 +1021,10 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
               {/* Right side: Controls */}
               <Box
                 sx={{
-                  width: { xs: "100%", md: controlFrameExpanded ? 620 : 360 },
-                  transition: "width 180ms ease",
+                  width: { xs: "100%", md: 360 },
                 }}
               >
                 <Stack spacing={2}>
-                  <TaskControlFrame
-                    expanded={controlFrameExpanded}
-                    onExpandedChange={setControlFrameExpanded}
-                  >
-                      <MissionPreflightPanel
-                        apiBase={API_BASE_CLEAN}
-                        missionType="route"
-                        preflightRun={preflightRun}
-                        telemetry={telemetry}
-                      />
-                      <MissionCommandPanel
-                        telemetry={telemetry}
-                        droneConnected={droneConnected}
-                        missionStatus={missionStatus}
-                        activeFlightId={activeFlightId}
-                        apiBase={API_BASE_CLEAN}
-                      />
-                  </TaskControlFrame>
                   <TextField variant="filled"
                     label="Field plan name"
                     value={name}
@@ -1060,49 +1055,40 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
 
                   <Typography variant="subtitle2">Waypoints: {waypoints.length}</Typography>
 
-                  <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                    <Button
-                      variant="outlined"
+                  <Stack direction="row" spacing={0.25} sx={{ mt: 2 }}>
+                    <ActionIconButton
+                      variant="undo"
+                      title="Undo Last"
+                      disabled={waypoints.length === 0 || sending}
                       onClick={undo}
-                      disabled={waypoints.length === 0 || sending}
-                      fullWidth
-                    >
-                      Undo Last
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={clear}
-                      disabled={waypoints.length === 0 || sending}
-                      fullWidth
+                    />
+                    <ActionIconButton
+                      variant="delete"
+                      title="Clear All"
                       color="error"
-                    >
-                      Clear All
-                    </Button>
+                      disabled={waypoints.length === 0 || sending}
+                      onClick={clear}
+                    />
                   </Stack>
 
-                  <Button
-                    variant="contained"
-                    onClick={sendMission}
-                    disabled={
-                      sending ||
-                      waypoints.length < 2 ||
-                      !name.trim() ||
-                      altInput === "" ||
-                      Number(altInput) < 1 ||
-                      Number(altInput) > 500
-                    }
-                    fullWidth
-                    sx={{ mt: 2 }}
-                  >
-                    {sending ? (
-                      <>
-                        <CircularProgress size={20} sx={{ mr: 1 }} />
-                        Sending...
-                      </>
-                    ) : (
-                      "Start Flight Plan"
-                    )}
-                  </Button>
+                  <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
+                    <ActionIconButton
+                      variant="play"
+                      title={sending ? "Sending…" : "Start Flight Plan"}
+                      color="primary"
+                      size="medium"
+                      loading={sending}
+                      disabled={
+                        sending ||
+                        waypoints.length < 2 ||
+                        !name.trim() ||
+                        altInput === "" ||
+                        Number(altInput) < 1 ||
+                        Number(altInput) > 500
+                      }
+                      onClick={sendMission}
+                    />
+                  </Stack>
 
                   {activeFlightId && (
                     <Alert severity="info" sx={{ mt: 2 }}>
@@ -1176,6 +1162,25 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
           </>
         )}
       </Paper>
+
+      <TaskPreflightCommandsDrawer
+        open={preflightCommandsDrawer.open}
+        onOpenChange={preflightCommandsDrawer.onOpenChange}
+      >
+        <MissionPreflightPanel
+          apiBase={API_BASE_CLEAN}
+          missionType="route"
+          preflightRun={preflightRun}
+          telemetry={telemetry}
+        />
+        <MissionCommandPanel
+          telemetry={telemetry}
+          droneConnected={droneConnected}
+          missionStatus={missionStatus}
+          activeFlightId={activeFlightId}
+          apiBase={API_BASE_CLEAN}
+        />
+      </TaskPreflightCommandsDrawer>
     </>
   );
 }

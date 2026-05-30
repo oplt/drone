@@ -1,6 +1,5 @@
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import { Alert, Button, Card, CardContent, MenuItem, Slider, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Card, CardContent, MenuItem, Slider, Stack, TextField, Typography } from "@mui/material";
+import { ActionIconButton, ActionIconLabel } from "../../../shared/ui/ActionIconButton";
 import { MODEL_OPTIONS } from "../modelOptions";
 import type { AnalyzeVideoPayload, VideoAsset } from "../types";
 
@@ -36,17 +35,27 @@ export function AnalysisControls(props: Props) {
           <Stack spacing={2}>
             <Typography variant="overline" color="text.secondary">01 / Source</Typography>
             <Typography variant="h6">Flight recording</Typography>
-            <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />}>
-              Select video
+            <ActionIconLabel variant="upload" title="Select video">
               <input hidden type="file" accept="video/*" onChange={(event) => chooseFile(event.target.files?.[0])} />
-            </Button>
+            </ActionIconLabel>
             <Typography variant="body2" color="text.secondary">
               {props.file ? `${props.file.name} | ${(props.file.size / 1024 / 1024).toFixed(1)} MB` : "MP4, MOV, AVI, MKV or WEBM, up to 1 GB"}
             </Typography>
             {props.video ? <Alert severity="success">Upload ready for analysis.</Alert> : null}
-            <Button variant="contained" disabled={!props.file || props.uploading} onClick={props.onUpload}>
-              {props.uploading ? "Uploading..." : props.video ? "Replace upload" : "Upload video"}
-            </Button>
+            <ActionIconButton
+              variant="upload"
+              title={
+                props.uploading
+                  ? "Uploading…"
+                  : props.video
+                    ? "Replace upload"
+                    : "Upload video"
+              }
+              color="primary"
+              loading={props.uploading}
+              disabled={!props.file}
+              onClick={props.onUpload}
+            />
           </Stack>
         </CardContent>
       </Card>
@@ -71,9 +80,14 @@ export function AnalysisControls(props: Props) {
             <Slider aria-label="Sampling interval seconds" min={0.2} max={5} step={0.1} value={props.payload.frame_stride_seconds} onChange={(_, value) => props.onPayload({ ...props.payload, frame_stride_seconds: value as number })} />
             <Typography variant="body2">Minimum confidence: {(props.payload.confidence_threshold * 100).toFixed(0)}%</Typography>
             <Slider aria-label="Minimum confidence" min={0.05} max={0.95} step={0.05} value={props.payload.confidence_threshold} onChange={(_, value) => props.onPayload({ ...props.payload, confidence_threshold: value as number })} />
-            <Button variant="contained" color="secondary" disabled={!props.video || props.starting} startIcon={<PlayArrowIcon />} onClick={props.onAnalyze}>
-              {props.starting ? "Queuing..." : "Run analysis"}
-            </Button>
+            <ActionIconButton
+              variant="play"
+              title={props.starting ? "Queuing…" : "Run analysis"}
+              color="secondary"
+              loading={props.starting}
+              disabled={!props.video}
+              onClick={props.onAnalyze}
+            />
           </Stack>
         </CardContent>
       </Card>

@@ -15,7 +15,7 @@ setup(
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
     ],
-    install_requires=["setuptools"],
+    install_requires=["setuptools", "pymavlink>=2.4.49"],
     zip_safe=True,
     maintainer="Drone App",
     maintainer_email="operator@example.com",

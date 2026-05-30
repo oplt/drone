@@ -1,4 +1,5 @@
-import { Box, Button, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import { Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { useDetectionFps } from "../hooks/useDetectionFps";
 import { useLiveObjectDetection } from "../hooks/useLiveObjectDetection";
 import { LiveDetectionOverlay } from "./LiveDetectionOverlay";
@@ -65,15 +66,13 @@ export function MissionVideoPanel({
       >
         <Typography variant="subtitle1">{title}</Typography>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Button
-            size="small"
-            variant={objectDetection.enabled ? "contained" : "outlined"}
+          <ActionIconButton
+            variant={objectDetection.enabled ? "visibility" : "visibility-off"}
+            title={objectDetection.enabled ? "Detection On" : "Enable Detection"}
             color={objectDetection.enabled ? "success" : "primary"}
             disabled={!droneConnected || objectDetection.toggling}
             onClick={objectDetection.toggle}
-          >
-            {objectDetection.enabled ? "Detection On" : "Enable Detection"}
-          </Button>
+          />
           {startingVideo && <CircularProgress size={16} />}
           <Typography variant="caption" color="text.secondary">
             {startingVideo
@@ -128,14 +127,12 @@ export function MissionVideoPanel({
             <Typography variant="caption" sx={{ color: "grey.500" }}>
               Retry attempt {videoRetryCount}
             </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              sx={{ mt: 2, color: "white", borderColor: "grey.600" }}
+            <ActionIconButton
+              variant="retry"
+              title="Retry Now"
               onClick={onRetry}
-            >
-              Retry Now
-            </Button>
+              sx={{ mt: 2, color: "white", borderColor: "grey.600" }}
+            />
           </Box>
         ) : shouldRenderStream ? (
           <>

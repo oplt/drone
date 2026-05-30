@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
-  Button,
   Chip,
   CircularProgress,
   FormControl,
@@ -20,7 +19,7 @@ import {
   Stack,
   Alert,
 } from "@mui/material";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import {
   fetchAdminExportJobs,
   fetchAdminMappingJobs,
@@ -183,13 +182,12 @@ function MappingJobsTab() {
             </TableCell>
             <TableCell>
               {(j.status === "failed" || j.status === "pending") && (
-                <Button
-                  size="small"
+                <ActionIconButton
+                  variant="retry"
+                  title="Requeue"
+                  loading={requeue.isPending}
                   onClick={() => requeue.mutate(j.id)}
-                  disabled={requeue.isPending}
-                >
-                  Requeue
-                </Button>
+                />
               )}
             </TableCell>
           </TableRow>
@@ -238,9 +236,11 @@ function ExportJobsTab() {
             </TableCell>
             <TableCell>
               {j.download_url && (
-                <Button size="small" onClick={() => window.open(j.download_url, "_blank")}>
-                  Download
-                </Button>
+                <ActionIconButton
+                  variant="download"
+                  title="Download"
+                  onClick={() => window.open(j.download_url, "_blank")}
+                />
               )}
             </TableCell>
           </TableRow>
@@ -261,9 +261,7 @@ function WorkerHealthTab() {
     <Stack spacing={2}>
       <Stack direction="row" alignItems="center" spacing={1}>
         <Typography variant="subtitle2">Worker Health</Typography>
-        <Button size="small" startIcon={<RefreshIcon />} onClick={() => refetch()}>
-          Refresh
-        </Button>
+        <ActionIconButton variant="refresh" title="Refresh" onClick={() => refetch()} />
       </Stack>
       {isLoading && <CircularProgress />}
       {error && <Alert severity="error">Failed to reach workers</Alert>}

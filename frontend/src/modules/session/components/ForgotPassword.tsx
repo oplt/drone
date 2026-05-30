@@ -1,11 +1,11 @@
 import * as React from 'react';
-import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import OutlinedInput from '@mui/material/OutlinedInput';
+import { ActionIconButton } from '../../../shared/ui/ActionIconButton';
 
 interface ForgotPasswordProps {
   open: boolean;
@@ -49,10 +49,8 @@ export default function ForgotPassword({ open, handleClose }: ForgotPasswordProp
         />
       </DialogContent>
       <DialogActions sx={{ pb: 3, px: 3 }}>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button variant="contained" type="submit">
-          Continue
-        </Button>
+        <ActionIconButton variant="close" title="Cancel" onClick={handleClose} />
+        <ActionIconButton variant="check" title="Continue" color="primary" type="submit" />
       </DialogActions>
     </Dialog>
   );

@@ -1,14 +1,96 @@
 from __future__ import annotations
 
+import hashlib
 from typing import Any, cast
 
-from sqlalchemy import or_, select
+from sqlalchemy import Index, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.warehouse.models import WarehouseSensorRig
 
 
 class WarehouseSensorRigMixin:
+    @staticmethod
+    def _resolve_calibration_urls(
+        intrinsics_url: str | None,
+        extrinsics_url: str | None,
+    ) -> tuple[str | None, str | None, bool]:
+        resolved_intrinsics = (intrinsics_url or "").strip() or None
+        resolved_extrinsics = (extrinsics_url or "").strip() or None
+        calibration_complete = bool(resolved_intrinsics and resolved_extrinsics)
+        return resolved_intrinsics, resolved_extrinsics, calibration_complete
+
+    @staticmethod
+    def _apply_sensor_rig_fields(
+        rig: WarehouseSensorRig,
+        *,
+        owner_id: int,
+        org_id: int | None,
+        name: str,
+        camera_model: str,
+        stereo_baseline_m: float | None,
+        intrinsics_url: str | None,
+        extrinsics_url: str | None,
+        imu_transform_json: dict[str, Any],
+        firmware_version: str | None,
+        isaac_ros_version: str | None,
+        active: bool = True,
+    ) -> WarehouseSensorRig:
+        resolved_intrinsics, resolved_extrinsics, calibration_complete = (
+            WarehouseSensorRigMixin._resolve_calibration_urls(
+                intrinsics_url, extrinsics_url
+            )
+        )
+        rig.owner_id = owner_id
+        rig.org_id = org_id
+        rig.name = name.strip()
+        rig.camera_model = camera_model.strip()
+        rig.stereo_baseline_m = stereo_baseline_m
+        rig.intrinsics_url = resolved_intrinsics
+        rig.extrinsics_url = resolved_extrinsics
+        rig.imu_transform_json = dict(imu_transform_json)
+        rig.firmware_version = (firmware_version or "").strip() or None
+        rig.isaac_ros_version = (isaac_ros_version or "").strip() or None
+        rig.calibration_status = "valid" if calibration_complete else "missing"
+        rig.calibration_hash = (
+            hashlib.sha256(
+                f"{resolved_intrinsics}|{resolved_extrinsics}".encode()
+            ).hexdigest()[:32]
+            if calibration_complete
+            else None
+        )
+        rig.calibration_meta = (
+            {"source": "create", "auto_validated": True} if calibration_complete else {}
+        )
+        rig.active = active
+        return rig
+
+    async def _find_inactive_sensor_rig_by_name(
+        self,
+        db: AsyncSession,
+        *,
+        org_id: int | None,
+        owner_id: int,
+        name: str,
+    ) -> WarehouseSensorRig | None:
+        stripped_name = name.strip()
+        if org_id is not None:
+            scope = WarehouseSensorRig.org_id == org_id
+        else:
+            scope = WarehouseSensorRig.owner_id == owner_id
+        return (
+            await db.execute(
+                select(WarehouseSensorRig)
+                .where(
+                    scope,
+                    WarehouseSensorRig.name == stripped_name,
+                    WarehouseSensorRig.active.is_(False),
+                )
+                .order_by(WarehouseSensorRig.id.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
     def _sensor_scope(
         self,
         *,
@@ -89,19 +171,44 @@ class WarehouseSensorRigMixin:
         firmware_version: str | None,
         isaac_ros_version: str | None,
     ) -> WarehouseSensorRig:
-        rig = WarehouseSensorRig(
+        stripped_name = name.strip()
+        existing = await self._find_inactive_sensor_rig_by_name(
+            db,
+            org_id=org_id,
+            owner_id=owner_id,
+            name=stripped_name,
+        )
+        if existing is not None:
+            self._apply_sensor_rig_fields(
+                existing,
+                owner_id=owner_id,
+                org_id=org_id,
+                name=stripped_name,
+                camera_model=camera_model,
+                stereo_baseline_m=stereo_baseline_m,
+                intrinsics_url=intrinsics_url,
+                extrinsics_url=extrinsics_url,
+                imu_transform_json=imu_transform_json,
+                firmware_version=firmware_version,
+                isaac_ros_version=isaac_ros_version,
+                active=True,
+            )
+            await db.flush()
+            return existing
+
+        rig = WarehouseSensorRig()
+        self._apply_sensor_rig_fields(
+            rig,
             owner_id=owner_id,
             org_id=org_id,
-            name=name.strip(),
-            camera_model=camera_model.strip(),
+            name=stripped_name,
+            camera_model=camera_model,
             stereo_baseline_m=stereo_baseline_m,
-            intrinsics_url=(intrinsics_url or "").strip() or None,
-            extrinsics_url=(extrinsics_url or "").strip() or None,
-            imu_transform_json=dict(imu_transform_json),
-            firmware_version=(firmware_version or "").strip() or None,
-            isaac_ros_version=(isaac_ros_version or "").strip() or None,
-            calibration_status="missing",
-            calibration_meta={},
+            intrinsics_url=intrinsics_url,
+            extrinsics_url=extrinsics_url,
+            imu_transform_json=imu_transform_json,
+            firmware_version=firmware_version,
+            isaac_ros_version=isaac_ros_version,
             active=True,
         )
         db.add(rig)
@@ -132,11 +239,11 @@ class WarehouseSensorRigMixin:
         await db.flush()
         return rig
 
-    async def deactivate_sensor_rig(
+    async def delete_sensor_rig(
         self,
         db: AsyncSession,
         *,
         rig: WarehouseSensorRig,
     ) -> None:
-        rig.active = False
+        await db.delete(rig)
         await db.flush()

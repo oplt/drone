@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "./apiError";
-import { httpRequest, resolveApiUrl } from "./httpClient";
+import { httpRequest, resolveApiUrl, shouldAttachBearerToken } from "./httpClient";
 import { server } from "../../test/msw/server";
 
 describe("httpClient", () => {
@@ -33,6 +33,12 @@ describe("httpClient", () => {
     await expect(
       httpRequest("/analytics/overview", { skipUnauthorizedRedirect: true }),
     ).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("does not treat session_present marker as Bearer auth", () => {
+    expect(shouldAttachBearerToken("1")).toBe(false);
+    expect(shouldAttachBearerToken("eyJhbGci.test.sig")).toBe(true);
+    expect(shouldAttachBearerToken("sk-deadbeef_secret")).toBe(true);
   });
 
   it("surfaces structured backend error messages", async () => {
