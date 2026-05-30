@@ -1,0 +1,17 @@
+{
+  "name": "single_aisle_validation",
+  "units": "meters",
+  "aisles": [
+    {
+      "id": "aisle_a",
+      "length_m": 30.0,
+      "width_m": 3.2,
+      "rack_height_m": 5.0
+    }
+  ],
+  "lighting": {
+    "type": "warehouse_led",
+    "lux": 450
+  },
+  "dynamic_obstacles": []
+}

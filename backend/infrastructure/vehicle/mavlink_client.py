@@ -1,4 +1,5 @@
 import collections.abc
+import json
 import math
 
 for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
@@ -9,10 +10,12 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from dronekit import LocationGlobalRelative, VehicleMode, connect
 from pymavlink import mavutil
 
+from backend.core.config.runtime import settings
 from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate, Telemetry
 from backend.modules.vehicle_runtime.vehicle_port import DroneClient, MissionAbortRequested
 
@@ -76,6 +79,8 @@ class MavlinkDrone(DroneClient):
         self._mission_abort_requested = threading.Event()
         self._mission_control_changed = threading.Event()
         self._mission_control_lock = threading.Lock()
+        self._warehouse_odometry_overlay: dict[str, object] = {}
+        self._warehouse_odometry_overlay_loaded_at = 0.0
         # Segment-follower config; replace or mutate before calling follow_waypoints
         # to tune acceptance radii, lookahead, or attach a progress callback.
         self.follower_config: WaypointFollowerConfig = WaypointFollowerConfig()
@@ -123,6 +128,44 @@ class MavlinkDrone(DroneClient):
         """this function and heart beat flow should be added on raspberry pi on drone"""
         # Start the dead man's switch monitoring
         # self.start_dead_mans_switch()
+
+    def _load_warehouse_odometry_overlay(self) -> dict[str, object]:
+        path_raw = (settings.WAREHOUSE_ODOMETRY_STATE_PATH or "").strip()
+        if not path_raw:
+            return {}
+        now = time.time()
+        if now - self._warehouse_odometry_overlay_loaded_at < 0.5:
+            return self._warehouse_odometry_overlay
+        self._warehouse_odometry_overlay_loaded_at = now
+        path = Path(path_raw)
+        if not path.exists():
+            self._warehouse_odometry_overlay = {}
+            return {}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            logger.warning("Failed reading warehouse odometry state from %s", path, exc_info=True)
+            self._warehouse_odometry_overlay = {}
+            return {}
+        self._warehouse_odometry_overlay = payload if isinstance(payload, dict) else {}
+        return self._warehouse_odometry_overlay
+
+    @staticmethod
+    def _overlay_float(overlay: dict[str, object], key: str) -> float | None:
+        value = overlay.get(key)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _overlay_bool(overlay: dict[str, object], key: str) -> bool | None:
+        value = overlay.get(key)
+        if isinstance(value, bool):
+            return value
+        return None
 
     def get_home_amsl(self) -> float:
         # AMSL in meters (DroneKit global_frame.alt)
@@ -436,9 +479,22 @@ class MavlinkDrone(DroneClient):
         local_north = getattr(local, "north", None)
         local_east = getattr(local, "east", None)
         local_down = getattr(local, "down", None)
+        overlay = self._load_warehouse_odometry_overlay()
+        overlay_north = self._overlay_float(overlay, "local_north_m")
+        overlay_east = self._overlay_float(overlay, "local_east_m")
+        overlay_down = self._overlay_float(overlay, "local_down_m")
+        if local_north is None:
+            local_north = overlay_north
+        if local_east is None:
+            local_east = overlay_east
+        if local_down is None:
+            local_down = overlay_down
         local_position_ok = (
             local_north is not None and local_east is not None and local_down is not None
         )
+        overlay_local_ok = self._overlay_bool(overlay, "local_position_ok")
+        if overlay_local_ok is not None:
+            local_position_ok = local_position_ok and overlay_local_ok
         rangefinder = getattr(v, "rangefinder", None)
         obstacle_distance = getattr(rangefinder, "distance", None)
         lat = getattr(rel, "lat", None) if rel is not None else None
@@ -491,8 +547,10 @@ class MavlinkDrone(DroneClient):
             local_down_m=float(local_down) if local_down is not None else None,
             local_position_ok=local_position_ok,
             local_origin_ok=local_position_ok or home_set is True,
-            odometry_healthy=local_position_ok,
-            odometry_drift_m=None,
+            odometry_healthy=self._overlay_bool(overlay, "slam_tracking_ok")
+            if self._overlay_bool(overlay, "slam_tracking_ok") is not None
+            else local_position_ok,
+            odometry_drift_m=self._overlay_float(overlay, "odometry_drift_m"),
             lidar_healthy=(
                 bool(obstacle_distance > 0.0) if obstacle_distance is not None else None
             ),
@@ -500,6 +558,9 @@ class MavlinkDrone(DroneClient):
                 float(obstacle_distance) if obstacle_distance is not None else None
             ),
             ceiling_distance_m=None,
+            slam_ready=self._overlay_bool(overlay, "slam_ready"),
+            slam_tracking_ok=self._overlay_bool(overlay, "slam_tracking_ok"),
+            localization_confidence=self._overlay_float(overlay, "localization_confidence"),
         )
 
     def set_groundspeed(self, speed_mps: float) -> bool:

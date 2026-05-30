@@ -77,6 +77,8 @@ from backend.modules.warehouse.planning.mission import (
     WarehouseScanMissionParams,
     build_warehouse_scan_mission,
 )
+from backend.modules.warehouse.ports import WarehousePerceptionStatus
+from backend.modules.warehouse.service.runtime_status import get_warehouse_mapping_runtime_status
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +93,27 @@ REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION = (
 ALLOW_WARN_PREFLIGHT_START = (
     os.getenv("ALLOW_WARN_PREFLIGHT_START", "1").strip().lower() in _BOOL_TRUE_TOKENS
 )
+
+
+async def _warehouse_perception_preflight_overrides(
+    mission_payload: dict[str, object] | None,
+) -> dict[str, object]:
+    if not mission_payload or str(mission_payload.get("type") or "").lower() != "warehouse_scan":
+        return {}
+    try:
+        from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
+
+        status = await build_warehouse_perception_port().status()
+    except Exception as exc:
+        logger.warning("Warehouse perception preflight status failed: %s", exc)
+        status = WarehousePerceptionStatus(
+            configured=True,
+            reachable=False,
+            ready=False,
+            status="unreachable",
+            detail=str(exc),
+        )
+    return {"WAREHOUSE_PERCEPTION_STATUS": status.model_dump(mode="python")}
 
 
 class GridMissionParams(BaseModel):
@@ -1456,11 +1479,13 @@ async def run_preflight(
         await _ensure_drone_ready_for_preflight(orch)
         preflight_data_fn = getattr(mission, "get_preflight_mission_data", None)
         mission_data_override = preflight_data_fn() if callable(preflight_data_fn) else None
+        config_overrides = await _warehouse_perception_preflight_overrides(mission_data_override)
         report = await orch._run_preflight_checks(
             mission.get_waypoints(),
             payload.cruise_alt,
             raise_on_fail=False,
             mission_data=mission_data_override,
+            config_overrides=config_overrides,
         )
     except HTTPException:
         raise
@@ -1895,6 +1920,9 @@ async def get_flight_status():
                 ),
             },
             "mission_lifecycle": runtime_out.model_dump() if runtime_out is not None else None,
+            "warehouse_mapping": await get_warehouse_mapping_runtime_status(
+                runtime_out.mission_type if runtime_out is not None else None
+            ),
             "command_capabilities": {
                 "pause": runtime_out is not None and runtime_out.state in {"airborne", "running"},
                 "resume": runtime_out is not None and runtime_out.state == "paused",

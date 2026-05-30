@@ -21,6 +21,16 @@ export function useManualFlightControls({
 }) {
   const heldManualCommandsRef = useRef<Map<string, ManualFlightCommand>>(new Map());
   const activeKeyboardKeysRef = useRef<Set<string>>(new Set());
+  const onDisableRef = useRef(onDisable);
+  const beginManualControlRef = useRef<
+    (keyId: string, command: ManualFlightCommand, source: "keyboard" | "button") => void
+  >(() => {});
+  const endManualControlRef = useRef<(keyId: string, source: "keyboard" | "button") => void>(
+    () => {},
+  );
+  const stopAllManualCommandsRef = useRef<
+    (source?: "keyboard" | "button") => void
+  >(() => {});
   const [activeManualCommands, setActiveManualCommands] = useState<ManualFlightCommand[]>([]);
   const [manualControlError, setManualControlError] = useState<string | null>(null);
   const [lastManualCommand, setLastManualCommand] = useState<{
@@ -79,6 +89,7 @@ export function useManualFlightControls({
   const beginManualControl = useCallback(
     (keyId: string, command: ManualFlightCommand, source: "keyboard" | "button") => {
       if (!ready) return;
+      if (heldManualCommandsRef.current.get(keyId) === command) return;
       heldManualCommandsRef.current.set(keyId, command);
       syncActiveManualCommands();
       void sendManualFlightCommand(command, "start", source);
@@ -98,11 +109,18 @@ export function useManualFlightControls({
   );
 
   useEffect(() => {
+    onDisableRef.current = onDisable;
+    beginManualControlRef.current = beginManualControl;
+    endManualControlRef.current = endManualControl;
+    stopAllManualCommandsRef.current = stopAllManualCommands;
+  }, [beginManualControl, endManualControl, onDisable, stopAllManualCommands]);
+
+  useEffect(() => {
     if (ready) return;
     if (!enabled && activeManualCommands.length === 0) return;
-    onDisable();
-    stopAllManualCommands();
-  }, [activeManualCommands.length, enabled, onDisable, ready, stopAllManualCommands]);
+    onDisableRef.current();
+    stopAllManualCommandsRef.current();
+  }, [activeManualCommands.length, enabled, ready]);
 
   useEffect(() => {
     if (!enabled || !ready) return;
@@ -123,7 +141,7 @@ export function useManualFlightControls({
       event.preventDefault();
       if (activeKeyboardKeysRef.current.has(key)) return;
       activeKeyboardKeysRef.current.add(key);
-      beginManualControl(`key:${key}`, command, "keyboard");
+      beginManualControlRef.current(`key:${key}`, command, "keyboard");
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -132,24 +150,25 @@ export function useManualFlightControls({
       if (!command) return;
       event.preventDefault();
       activeKeyboardKeysRef.current.delete(key);
-      endManualControl(`key:${key}`, "keyboard");
+      endManualControlRef.current(`key:${key}`, "keyboard");
     };
 
     const handleWindowBlur = () => {
-      onDisable();
-      stopAllManualCommands();
+      onDisableRef.current();
+      stopAllManualCommandsRef.current();
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    const listenerOptions = { capture: true };
+    document.addEventListener("keydown", handleKeyDown, listenerOptions);
+    document.addEventListener("keyup", handleKeyUp, listenerOptions);
     window.addEventListener("blur", handleWindowBlur);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("keydown", handleKeyDown, listenerOptions);
+      document.removeEventListener("keyup", handleKeyUp, listenerOptions);
       window.removeEventListener("blur", handleWindowBlur);
-      stopAllManualCommands();
+      stopAllManualCommandsRef.current();
     };
-  }, [beginManualControl, enabled, endManualControl, onDisable, ready, stopAllManualCommands]);
+  }, [enabled, ready]);
 
   useEffect(() => {
     if (!enabled || activeManualCommands.length === 0) return;

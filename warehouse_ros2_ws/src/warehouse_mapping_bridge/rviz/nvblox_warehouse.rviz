@@ -1,0 +1,73 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Warehouse Grid
+      Plane: XY
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: Raw LIDAR Points
+      Topic:
+        Value: /lidar/points
+      Reliability Policy: Best Effort
+      Style: Points
+      Size (Pixels): 3
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: nvBlox Pointcloud
+      Topic:
+        Value: /nvblox_node/pointcloud
+      Reliability Policy: Best Effort
+      Style: Points
+      Size (Pixels): 2
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: nvBlox Occupancy
+      Topic:
+        Value: /nvblox_node/occupancy_layer
+      Reliability Policy: Best Effort
+      Style: Boxes
+      Size (Pixels): 3
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: nvBlox ESDF
+      Topic:
+        Value: /nvblox_node/static_esdf_pointcloud
+      Reliability Policy: Best Effort
+      Style: Points
+      Size (Pixels): 2
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: nvBlox Mesh Marker
+      Marker Topic:
+        Value: /nvblox_node/mesh_marker
+  Enabled: true
+  Global Options:
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+Views:
+  Current:
+    Class: rviz_default_plugins/Orbit
+    Distance: 12
+    Focal Point:
+      X: 0
+      Y: 0
+      Z: 1.5
+    Name: Warehouse Orbit
+    Pitch: 0.65
+    Target Frame: map
+    Yaw: 0.78

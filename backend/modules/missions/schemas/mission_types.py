@@ -284,6 +284,9 @@ class WarehouseScanMission(BaseMission):
     speed: float | None = Field(default=0.8, gt=0.0, le=50.0)
     altitude_agl: float | None = Field(default=None, ge=0.0, le=500.0)
     local_origin: WarehouseLocalOrigin | None = None
+    sensor_rig_id: int | None = Field(default=None, ge=1)
+    dock_marker_id: str | None = Field(default=None, max_length=128)
+    dock_precision_required: bool = False
     local_polygon: list[WarehouseLocalPoint] = Field(..., min_length=3)
     corridors: list[WarehouseCorridor] = Field(default_factory=list)
     obstacles_3d: list[WarehouseObstacleBox] = Field(default_factory=list)

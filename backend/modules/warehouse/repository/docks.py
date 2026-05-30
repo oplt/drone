@@ -93,3 +93,27 @@ class WarehouseDockMixin:
             return False
         dock.active = False
         return True
+
+    async def update_dock_station(
+        self,
+        db: AsyncSession,
+        *,
+        dock_id: int,
+        warehouse_map_id: int,
+        values: dict[str, Any],
+    ) -> WarehouseDockStation | None:
+        dock = (
+            await db.execute(
+                select(WarehouseDockStation).where(
+                    WarehouseDockStation.id == dock_id,
+                    WarehouseDockStation.warehouse_map_id == warehouse_map_id,
+                    WarehouseDockStation.active.is_(True),
+                )
+            )
+        ).scalar_one_or_none()
+        if dock is None:
+            return None
+        for key, value in values.items():
+            setattr(dock, key, value)
+        await db.flush()
+        return dock

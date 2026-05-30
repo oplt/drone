@@ -1,8 +1,13 @@
 import { httpRequest } from "../../../shared/api/httpClient";
 import type {
+  WarehouseExplorationProfile,
+  WarehouseExplorationStartRequest,
+  WarehouseManualMappingCommandResponse,
+  WarehouseManualMappingStartRequest,
   WarehouseMissionDefaultsResponse,
   WarehouseMissionLaunchResponse,
   WarehouseScanStartRequest,
+  WarehouseScannedMapQualityResponse,
   WarehouseScannedMapResponse,
 } from "../types/missions";
 
@@ -18,16 +23,94 @@ export async function startWarehouseScan(
   });
 }
 
+export async function startWarehouseExploration(
+  payload: WarehouseExplorationStartRequest,
+  token?: string | null,
+): Promise<WarehouseMissionLaunchResponse> {
+  return httpRequest<WarehouseMissionLaunchResponse>("/warehouse/missions/exploration/start", {
+    method: "POST",
+    body: payload,
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function startWarehouseManualMapping(
+  payload: WarehouseManualMappingStartRequest,
+  token?: string | null,
+): Promise<WarehouseManualMappingCommandResponse> {
+  return httpRequest<WarehouseManualMappingCommandResponse>("/warehouse/manual-mapping/start", {
+    method: "POST",
+    body: payload,
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function stopWarehouseManualMapping(
+  payload: { flight_id: string; warehouse_map_id?: number | null },
+  token?: string | null,
+): Promise<WarehouseManualMappingCommandResponse> {
+  return httpRequest<WarehouseManualMappingCommandResponse>("/warehouse/manual-mapping/stop", {
+    method: "POST",
+    body: payload,
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function deleteWarehouseScannedMap(
+  jobId: number,
+  token?: string | null,
+): Promise<void> {
+  await httpRequest<void>(`/warehouse/scanned-maps/${jobId}`, {
+    method: "DELETE",
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
 export async function listWarehouseScannedMaps(
   token?: string | null,
-  fieldId?: number | null,
+  warehouseMapId?: number | null,
 ): Promise<WarehouseScannedMapResponse[]> {
   const params = new URLSearchParams();
-  if (typeof fieldId === "number" && Number.isFinite(fieldId)) {
-    params.set("field_id", String(fieldId));
+  if (typeof warehouseMapId === "number" && Number.isFinite(warehouseMapId)) {
+    params.set("warehouse_map_id", String(warehouseMapId));
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return httpRequest<WarehouseScannedMapResponse[]>(`/warehouse/scanned-maps${suffix}`, {
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function fetchWarehouseScannedMapQuality(
+  jobId: number,
+  token?: string | null,
+): Promise<WarehouseScannedMapQualityResponse> {
+  return httpRequest<WarehouseScannedMapQualityResponse>(
+    `/warehouse/scanned-maps/${jobId}/quality`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export async function fetchWarehouseExplorationProfile(
+  token?: string | null,
+): Promise<WarehouseExplorationProfile> {
+  return httpRequest<WarehouseExplorationProfile>("/warehouse/exploration-profile", {
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
+export async function updateWarehouseExplorationProfile(
+  payload: WarehouseExplorationProfile,
+  token?: string | null,
+): Promise<WarehouseExplorationProfile> {
+  return httpRequest<WarehouseExplorationProfile>("/warehouse/exploration-profile", {
+    method: "PUT",
+    body: payload,
     token,
     skipUnauthorizedRedirect: true,
   });

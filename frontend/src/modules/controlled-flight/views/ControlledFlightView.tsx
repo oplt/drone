@@ -41,11 +41,16 @@ import {
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../mission-runtime";
+import { fetchFlightStatus } from "../../mission-runtime/api/missionsApi";
 import type { TerraDraw } from "terra-draw";
 import { connectDroneTelemetry } from "../../mission-runtime/api/telemetryConnectApi";
 import { useControlledPreflight } from "../hooks/useControlledPreflight";
 import { useManualFlightControls } from "../hooks/useManualFlightControls";
-import { MANUAL_CONTROL_BUTTONS } from "../types";
+import { ManualFlightControlPanel } from "../components/ManualFlightControlPanel";
+import {
+  readNestedValue,
+  firstFiniteNumber,
+} from "../utils/telemetryHealth";
 
 interface MissionStatus {
   flight_id?: string;
@@ -66,29 +71,6 @@ interface MissionStatus {
     drone_connected: boolean;
   };
 }
-
-const readNestedValue = (value: unknown, path: string[]): unknown => {
-  let current: unknown = value;
-  for (const segment of path) {
-    if (
-        current == null ||
-        typeof current !== "object" ||
-        !(segment in (current as Record<string, unknown>))
-    ) {
-      return undefined;
-    }
-    current = (current as Record<string, unknown>)[segment];
-  }
-  return current;
-};
-
-const firstFiniteNumber = (...values: unknown[]): number | null => {
-  for (const value of values) {
-    const num = Number(value);
-    if (Number.isFinite(num)) return num;
-  }
-  return null;
-};
 
 export function ControlledFlightView() {
   const [controlFrameExpanded, setControlFrameExpanded] = useState(true);
@@ -116,7 +98,7 @@ export function ControlledFlightView() {
   const [, setTerraDrawReady] = useState(false);
   const [drawnPoints, setDrawnPoints] = useState<LatLng[]>([]);
   const [lastMissionId, setLastMissionId] = useState<string | null>(null);
-  const [streamKey, setStreamKey] = useState(Date.now());
+  const [streamKey, setStreamKey] = useState(() => Date.now());
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
 
@@ -199,7 +181,7 @@ export function ControlledFlightView() {
     } finally {
       setConnecting(false);
     }
-  }, [API_BASE_CLEAN, addError]);
+  }, [addError]);
 
   const stopAllManualRef = useRef<() => void>(() => {});
 
@@ -224,6 +206,39 @@ export function ControlledFlightView() {
       stopAllManualRef.current();
     },
   });
+
+  const runManualPreflightCheck = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      addError("Not authenticated");
+      return;
+    }
+    setConnecting(true);
+    try {
+      if (!missionStatus?.telemetry?.running || !droneConnected) {
+        await connectDroneTelemetry(token);
+      }
+      setDroneManualConnected(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      const refreshedStatus = await fetchFlightStatus<MissionStatus>(token);
+      runControlledPreflightCheck({
+        droneConnected:
+          droneConnected || Boolean(refreshedStatus?.orchestrator?.drone_connected),
+        wsConnected: wsConnected || Boolean(refreshedStatus?.telemetry?.running),
+        missionStatus: refreshedStatus,
+      });
+    } catch (error) {
+      addError(error instanceof Error ? error.message : "Preflight check failed");
+    } finally {
+      setConnecting(false);
+    }
+  }, [
+    addError,
+    droneConnected,
+    missionStatus?.telemetry?.running,
+    runControlledPreflightCheck,
+    wsConnected,
+  ]);
 
   const manualControlReady = Boolean(
     controlledPreflight?.passed && droneManualConnected && (droneConnected || wsConnected),
@@ -676,38 +691,6 @@ export function ControlledFlightView() {
                           >
                             {connecting ? <><CircularProgress size={16} sx={{ mr: 1 }} /> Connecting…</> : droneManualConnected ? "Drone connected" : "Connect drone"}
                           </Button>
-                          <Button
-                              variant="contained"
-                              color="success"
-                              disabled={!droneManualConnected}
-                              onClick={runControlledPreflightCheck}
-                          >
-                            Run preflight check
-                          </Button>
-                          <Button
-                              variant={manualControlEnabled ? "outlined" : "contained"}
-                              color={manualControlEnabled ? "warning" : "primary"}
-                              disabled={!manualControlReady && !manualControlEnabled}
-                              onClick={() => {
-                                if (manualControlEnabled) {
-                                  setManualControlEnabled(false);
-                                  stopAllManualCommands();
-                                  return;
-                                }
-                                setManualControlEnabled(true);
-                                setManualControlError(null);
-                              }}
-                          >
-                            {manualControlEnabled ? "Disable keyboard" : "Enable keyboard"}
-                          </Button>
-                          <Button
-                              variant="outlined"
-                              color="error"
-                              disabled={activeManualCommands.length === 0}
-                              onClick={() => stopAllManualCommands("button")}
-                          >
-                            Stop movement
-                          </Button>
                         </Stack>
                         <Chip
                             size="small"
@@ -748,120 +731,30 @@ export function ControlledFlightView() {
                         />
                     </TaskControlFrame>
 
-                    {/* Controlled preflight detail panel */}
-                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                      <Stack spacing={1.5}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                          Preflight checks
-                        </Typography>
-
-                        {controlledPreflight?.checks?.length ? (
-                            <Stack spacing={1}>
-                              {controlledPreflight.checks.map((check) => (
-                                  <Paper
-                                      key={check.id}
-                                      variant="outlined"
-                                      sx={{
-                                        px: 1.25,
-                                        py: 1,
-                                        borderRadius: 1.5,
-                                        borderColor: check.ok ? "success.light" : "error.light",
-                                      }}
-                                  >
-                                    <Stack
-                                        direction={{ xs: "column", sm: "row" }}
-                                        spacing={1}
-                                        justifyContent="space-between"
-                                        alignItems={{ xs: "flex-start", sm: "center" }}
-                                    >
-                                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {check.label}
-                                      </Typography>
-                                      <Chip
-                                          size="small"
-                                          color={check.ok ? "success" : "error"}
-                                          label={check.ok ? "Green" : "Blocked"}
-                                      />
-                                    </Stack>
-                                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                                      {check.detail}
-                                    </Typography>
-                                  </Paper>
-                              ))}
-                            </Stack>
-                        ) : (
-                            <Alert severity="info">
-                              No preflight check has been run yet. Connect the drone and click "Run
-                              preflight check".
-                            </Alert>
-                        )}
-
-                        {manualControlEnabled ? (
-                            <Alert severity="success">
-                              Keyboard active — W/A/S/D or arrows to move, Q/E yaw, R/F altitude, Space hold, T takeoff, L land.
-                            </Alert>
-                        ) : (
-                            <Alert severity={manualControlReady ? "warning" : "info"}>
-                              {manualControlReady
-                                  ? "Preflight is green. Enable keyboard control to start flying."
-                                  : "Keyboard control stays locked until all preflight checks pass."}
-                            </Alert>
-                        )}
-
-                        {manualControlError && <Alert severity="error">{manualControlError}</Alert>}
-
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                          <Chip size="small" label="W / ↑ Forward" variant="outlined" />
-                          <Chip size="small" label="S / ↓ Backward" variant="outlined" />
-                          <Chip size="small" label="A / ← Left" variant="outlined" />
-                          <Chip size="small" label="D / → Right" variant="outlined" />
-                          <Chip size="small" label="Q / E Yaw" variant="outlined" />
-                          <Chip size="small" label="R / F Altitude" variant="outlined" />
-                          <Chip size="small" label="Space Hold" variant="outlined" />
-                          <Chip size="small" label="T Takeoff" variant="outlined" />
-                          <Chip size="small" label="L Land" variant="outlined" />
-                        </Stack>
-
-                        <Box
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                              gap: 1,
-                            }}
-                        >
-                          {MANUAL_CONTROL_BUTTONS.map((button) => {
-                            const isActive = activeManualCommands.includes(button.command);
-                            return (
-                                <Button
-                                    key={button.id}
-                                    variant={isActive ? "contained" : "outlined"}
-                                    color={button.command === "hold" ? "warning" : "primary"}
-                                    disabled={!manualControlReady}
-                                    onMouseDown={() => beginManualControl(button.id, button.command, "button")}
-                                    onMouseUp={() => endManualControl(button.id, "button")}
-                                    onMouseLeave={() => endManualControl(button.id, "button")}
-                                    onTouchStart={() => beginManualControl(button.id, button.command, "button")}
-                                    onTouchEnd={() => endManualControl(button.id, "button")}
-                                    sx={{ minHeight: 56 }}
-                                >
-                                  <Stack spacing={0.25}>
-                                    <Typography variant="button">{button.label}</Typography>
-                                    <Typography variant="caption">{button.hint}</Typography>
-                                  </Stack>
-                                </Button>
-                            );
-                          })}
-                        </Box>
-
-                        {lastManualCommand && (
-                            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                              Last: {lastManualCommand.command} ({lastManualCommand.phase})
-                              via {lastManualCommand.source} at{" "}
-                              {new Date(lastManualCommand.sentAt).toLocaleTimeString()}.
-                            </Typography>
-                        )}
-                      </Stack>
-                    </Paper>
+                    <ManualFlightControlPanel
+                        controlledPreflight={controlledPreflight}
+                        manualControlEnabled={manualControlEnabled}
+                        manualControlReady={manualControlReady}
+                        manualControlError={manualControlError}
+                        activeManualCommands={activeManualCommands}
+                        lastManualCommand={lastManualCommand}
+                        preflightBusy={connecting}
+                        onRunPreflight={() => {
+                          void runManualPreflightCheck();
+                        }}
+                        onToggleKeyboard={() => {
+                          if (manualControlEnabled) {
+                            setManualControlEnabled(false);
+                            stopAllManualCommands();
+                            return;
+                          }
+                          setManualControlEnabled(true);
+                          setManualControlError(null);
+                        }}
+                        onStopMovement={() => stopAllManualCommands("button")}
+                        beginManualControl={beginManualControl}
+                        endManualControl={endManualControl}
+                    />
 
                     {/* Mission session form */}
                     <TextField

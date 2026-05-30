@@ -10,8 +10,8 @@ from typing import Any, Literal
 from shapely.geometry import MultiPolygon, Polygon
 
 from backend.core.config.runtime import settings
-from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.core.types.geo import coord_from_home
+from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.missions.planning.grid import GridPlanner, _validate_plan_limits
 from backend.modules.patrol.vision.config import ml_settings

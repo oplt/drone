@@ -292,6 +292,17 @@ class RuntimeSettings(BaseSettings):
     CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
     PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: str = ""
 
+    # Warehouse ROS 2 / Isaac perception bridge. The FastAPI backend talks to
+    # this companion service; ROS nodes stay outside the API process.
+    WAREHOUSE_ROS_BRIDGE_URL: str = ""
+    WAREHOUSE_ROS_WS_URL: str = ""
+    WAREHOUSE_ROS_CAPTURE_ROOT: str = "backend/storage/warehouse_ros"
+    WAREHOUSE_ROS_PROFILE: str = "isaac_ros_nvblox_stereo"
+    WAREHOUSE_ROS_BRIDGE_TIMEOUT_S: float = 3.0
+    WAREHOUSE_ODOMETRY_STATE_PATH: str = ""
+    WAREHOUSE_CAPTURE_ARTIFACT_WAIT_S: float = 45.0
+    WAREHOUSE_SCAN_POSTPROCESS_CMD: str = ""
+
     # Observability
     log_format: str = "json"  # "json" | "text"
     otel_enabled: bool = False

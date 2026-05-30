@@ -97,6 +97,7 @@ class WarehouseScanMissionParams(BaseModel):
     warehouse_map_id: int | None = Field(default=None, ge=1)
     warehouse_name: str | None = Field(default=None, min_length=1, max_length=128)
     reference_mapping_job_id: int | None = Field(default=None, ge=1)
+    sensor_rig_id: int | None = Field(default=None, ge=1)
 
     corridor_spacing_m: float = Field(
         default=DEFAULT_WAREHOUSE_MISSION_DEFAULTS.corridor_spacing_m, gt=0.1, le=50.0
@@ -228,5 +229,6 @@ def build_warehouse_scan_mission(
             if scan.reference_mapping_job_id is not None
             else None
         ),
+        sensor_rig_id=int(scan.sensor_rig_id) if scan.sensor_rig_id is not None else None,
     )
     return mission, len(poly)

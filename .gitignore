@@ -384,3 +384,7 @@ frontend/coverage/
 logs/
 storage/
 /yolo*.pt
+
+warehouse_ros2_ws/build/
+warehouse_ros2_ws/install/
+warehouse_ros2_ws/log/

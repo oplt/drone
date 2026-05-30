@@ -1,0 +1,23 @@
+{
+  "vehicle": "warehouse_quadrotor",
+  "camera": {
+    "type": "stereo_global_shutter",
+    "baseline_m": 0.12,
+    "resolution": [1280, 720],
+    "fps": 30,
+    "fov_deg": 90
+  },
+  "imu": {
+    "rate_hz": 200,
+    "noise_profile": "consumer_mems"
+  },
+  "topics": {
+    "left_image": "/left/image_raw",
+    "right_image": "/right/image_raw",
+    "left_info": "/left/camera_info",
+    "right_info": "/right/camera_info",
+    "imu": "/imu",
+    "tf": "/tf",
+    "tf_static": "/tf_static"
+  }
+}

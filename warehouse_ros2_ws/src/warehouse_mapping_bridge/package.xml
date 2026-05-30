@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>warehouse_mapping_bridge</name>
+  <version>0.1.0</version>
+  <description>Jetson-side ROS 2 and Isaac ROS bridge for warehouse 3D mapping.</description>
+  <maintainer email="operator@example.com">Drone App</maintainer>
+  <license>Proprietary</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>python3-fastapi</exec_depend>
+  <exec_depend>python3-pymavlink</exec_depend>
+  <exec_depend>python3-uvicorn</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

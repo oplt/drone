@@ -29,11 +29,16 @@ from backend.modules.warehouse.planning.indoor import (
     SimulatedLocalNavigationAdapter,
     SimulatedSLAMProvider,
     SkeletonBuilder,
+    SLAMHealth,
     SLAMProvider,
 )
 from backend.modules.warehouse.planning.mission import (
     WarehouseDockConfigParams,
     WarehouseDockPoseParams,
+)
+from backend.modules.warehouse.service.safety import (
+    WarehouseSafetyDecision,
+    evaluate_warehouse_runtime_safety,
 )
 
 if TYPE_CHECKING:
@@ -318,6 +323,17 @@ class UnknownWarehouseExplorationMission:
         mission_error: Exception | None = None
         final_status = FlightStatus.FAILED
         final_note = "Indoor warehouse exploration failed"
+        perception_started = False
+        from backend.modules.warehouse.service.capture_finalize import (
+            safe_flight_token,
+            start_warehouse_ros_mapping,
+            stop_warehouse_ros_mapping,
+        )
+
+        flight_token = safe_flight_token(
+            getattr(orch, "current_client_flight_id", None)
+            or getattr(orch, "_flight_id", None)
+        )
 
         try:
             await self._add_event_safe(
@@ -334,6 +350,26 @@ class UnknownWarehouseExplorationMission:
             await self._add_event_safe(
                 orch, "indoor_preflight_passed", {"dock_id": self.dock.dock_id}
             )
+
+            if self.warehouse_map_id is not None:
+                mapping_start = await start_warehouse_ros_mapping(
+                    flight_id=flight_token,
+                    warehouse_map_id=int(self.warehouse_map_id),
+                    metadata={
+                        "mission_kind": "indoor_exploration",
+                        "warehouse_name": self.warehouse_name,
+                    },
+                )
+                perception_started = bool(mapping_start.accepted)
+                await self._add_event_safe(
+                    orch,
+                    "indoor_exploration_mapping_started",
+                    {
+                        "accepted": mapping_start.accepted,
+                        "status": mapping_start.status,
+                        "detail": mapping_start.detail,
+                    },
+                )
 
             await dock_controller.initialize_dock_reference(self.dock)
             self._graph.ensure_dock_node(self.dock)
@@ -400,6 +436,11 @@ class UnknownWarehouseExplorationMission:
                 await self._transition(orch, IndoorMissionState.CHECK_RETURN_MARGIN)
                 current_pose = await slam.get_pose()
                 health = await slam.get_localization_health()
+                decision = await self._check_runtime_safety(orch, health=health)
+                if not decision.safe:
+                    if decision.action in {"return_or_land", "return_or_relocalize"}:
+                        break
+                    raise RuntimeError(f"Indoor exploration safety abort: {decision.reason}")
 
                 if float(health.localization_confidence) < float(self.localization_confidence_min):
                     recovered = await self._handle_localization_degradation(
@@ -557,6 +598,58 @@ class UnknownWarehouseExplorationMission:
                 final_note = f"Indoor exploration failed: {exc}"
             final_status = FlightStatus.FAILED
 
+        finally:
+            if perception_started:
+                from backend.modules.warehouse.service.capture_finalize import (
+                    persist_warehouse_ros_capture,
+                )
+                from backend.modules.warehouse.service.mapping import WarehouseScanMappingError
+
+                stop_result = await stop_warehouse_ros_mapping(flight_id=flight_token)
+                await self._add_event_safe(
+                    orch,
+                    "indoor_exploration_mapping_stopped",
+                    {
+                        "accepted": stop_result.accepted,
+                        "status": stop_result.status,
+                        "detail": stop_result.detail,
+                    },
+                )
+                if (
+                    stop_result.accepted
+                    and self.owner_id is not None
+                    and self.warehouse_map_id is not None
+                ):
+                    stop_data = stop_result.data if isinstance(stop_result.data, dict) else None
+                    try:
+                        mapping_result = await persist_warehouse_ros_capture(
+                            flight_id=flight_token,
+                            owner_id=int(self.owner_id),
+                            org_id=None,
+                            source="indoor_exploration",
+                            stop_data=stop_data,
+                            warehouse_map_id=int(self.warehouse_map_id),
+                            warehouse_name=self.warehouse_name,
+                            db_flight_id=getattr(orch, "_flight_id", None),
+                            mission_kind="indoor_exploration",
+                        )
+                        await self._add_event_safe(
+                            orch,
+                            "indoor_exploration_mapping_saved",
+                            mapping_result,
+                        )
+                    except WarehouseScanMappingError as exc:
+                        await self._add_event_safe(
+                            orch,
+                            "indoor_exploration_mapping_failed",
+                            {"error": str(exc)},
+                        )
+                        logger.warning(
+                            "Indoor exploration mapping persistence failed flight_id=%s error=%s",
+                            flight_token,
+                            exc,
+                        )
+
         await self._finish_flight_safe(orch, status=final_status, note=final_note)
 
         event_type = (
@@ -594,10 +687,12 @@ class UnknownWarehouseExplorationMission:
                 if provider is not None:
                     self.slam_provider = provider
                     return provider
-        raise RuntimeError(
-            "Indoor exploration requires a SLAM/localization provider. "
-            "Attach one to the mission, orchestrator, or drone adapter."
+        from backend.modules.warehouse.service.exploration_slam import (
+            WarehousePerceptionSLAMProvider,
         )
+
+        self.slam_provider = WarehousePerceptionSLAMProvider()
+        return self.slam_provider
 
     def _resolve_navigator(
         self,
@@ -683,6 +778,42 @@ class UnknownWarehouseExplorationMission:
                 orch.mqtt.publish("drone/indoor_exploration/status", payload, qos=1)
             except Exception:
                 logger.exception("Failed publishing indoor exploration status to MQTT")
+
+    async def _check_runtime_safety(
+        self,
+        orch: Orchestrator,
+        *,
+        health: SLAMHealth,
+    ) -> WarehouseSafetyDecision:
+        decision = evaluate_warehouse_runtime_safety(
+            {
+                "slam_tracking_ok": health.tracking_ok,
+                "localization_confidence": health.localization_confidence,
+                "odometry_drift_m": health.drift_estimate_m,
+            },
+            min_localization_confidence=float(self.localization_confidence_return_threshold),
+            min_obstacle_distance_m=float(self.obstacle_clearance_m),
+        )
+        if decision.safe:
+            return decision
+        await self._add_event_safe(
+            orch,
+            "warehouse_safety_action",
+            {
+                "reason": decision.reason,
+                "action": decision.action,
+                "details": decision.details or {},
+            },
+        )
+        await self._publish_status(
+            orch,
+            {
+                "state": self._state.value,
+                "safety_reason": decision.reason or "unknown",
+                "safety_action": decision.action,
+            },
+        )
+        return decision
 
     def _flight_elapsed_s(self) -> float:
         if self._mission_started_at <= 0:

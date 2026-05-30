@@ -4,11 +4,12 @@ import type {
 } from "../../mission-runtime";
 
 export type WarehouseScanStartRequest = {
-  field_id?: number;
-  warehouse_map_id?: number;
+  warehouse_map_id: number;
   mission_name?: string;
   cruise_alt?: number;
   reference_mapping_job_id?: number | null;
+  sensor_rig_id?: number | null;
+  dock_id?: number | null;
   corridor_spacing_m?: number;
   aisle_axis_deg?: number | null;
   clearance_m?: number;
@@ -27,9 +28,52 @@ export type WarehouseScanStartRequest = {
   interpolate_steps_transit_leg?: number;
 };
 
+export type WarehouseExplorationProfile = {
+  max_radius_m: number;
+  min_clearance_m: number;
+  max_frontier_candidates: number;
+  return_battery_reserve_pct: number;
+  max_duration_s: number;
+};
+
+export type WarehouseExplorationStartRequest = {
+  warehouse_map_id: number;
+  mission_name?: string;
+  hover_alt_m?: number;
+  dock_id?: number | null;
+  exploration: {
+    max_mission_time_s: number;
+    max_exploration_radius_m: number;
+    minimum_corridor_clearance_m: number;
+    obstacle_clearance_m: number;
+    max_frontier_candidates: number;
+    battery_return_reserve_pct: number;
+  };
+};
+
+export type WarehouseManualMappingStartRequest = {
+  flight_id: string;
+  warehouse_map_id: number;
+  sensor_rig_id?: number | null;
+  dock_id?: number | null;
+};
+
+export type WarehouseManualMappingCommandResponse = {
+  accepted: boolean;
+  status: string;
+  detail?: string | null;
+  data?: Record<string, unknown>;
+  mapping_job?: {
+    job_id?: number;
+    warehouse_map_id?: number;
+    status?: string;
+    error?: string;
+  };
+};
+
 export type WarehouseMissionLaunchResponse = {
-  field_id: number;
-  field_name: string;
+  warehouse_map_id: number;
+  warehouse_name: string;
   preflight: PreflightRunResponse;
   mission: MissionCreateResponse;
 };
@@ -46,13 +90,25 @@ export type WarehouseScannedMapResponse = {
   job_id: number;
   model_id: number;
   model_version: number;
-  field_id: number;
-  field_name: string;
+  warehouse_map_id: number;
+  warehouse_name: string;
   status: string;
+  progress?: number;
+  error?: string | null;
+  source?: "simulation" | "real_flight" | string;
   created_at: string;
   finished_at?: string | null;
-  boundary_lonlat: Array<[number, number] | number[]>;
+  polygon_local_m: Array<[number, number] | number[]>;
   assets: WarehouseScannedMapAssetResponse[];
+};
+
+export type WarehouseScannedMapQualityResponse = {
+  job_id: number;
+  quality_score?: number | null;
+  coverage_percent?: number | null;
+  drift_estimate_m?: number | null;
+  source: string;
+  report: Record<string, unknown>;
 };
 
 export type WarehouseMissionDefaultsResponse = {

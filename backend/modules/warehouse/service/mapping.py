@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import shutil
@@ -18,11 +19,16 @@ from backend.modules.warehouse.repository import (
     WarehouseMappingRepository,
     WarehouseRepositoryError,
 )
+from backend.modules.warehouse.service.queue import (
+    WarehouseMappingQueue,
+    WarehouseMappingQueueError,
+)
 
 logger = logging.getLogger(__name__)
 
 _MESH_EXTENSIONS = (".glb", ".gltf", ".obj", ".ply", ".fbx", ".dae", ".stl")
 _POINTCLOUD_EXTENSIONS = (".pcd", ".las", ".laz", ".e57", ".ply")
+_ROSBAG_EXTENSIONS = (".db3", ".mcap", ".bag")
 
 
 class WarehouseScanMappingError(RuntimeError):
@@ -33,6 +39,7 @@ class WarehouseScanMappingService:
     def __init__(self) -> None:
         self.storage = StorageService()
         self.repo = WarehouseMappingRepository()
+        self.queue = WarehouseMappingQueue()
 
     async def persist_capture(
         self,
@@ -46,12 +53,20 @@ class WarehouseScanMappingService:
         capture_result: dict[str, Any],
         reference_mapping_job_id: int | None = None,
         flight_id: int | None = None,
+        source: str = "warehouse_scan",
     ) -> dict[str, Any]:
         resolved_session_dir = Path(session_dir).resolve()
         if not resolved_session_dir.exists():
             raise WarehouseScanMappingError(
                 f"Warehouse capture directory does not exist: {resolved_session_dir}"
             )
+        capture_result = dict(capture_result)
+        capture_result.setdefault("absolute_dir", str(resolved_session_dir))
+        meta = capture_result.get("meta")
+        capture_result["meta"] = {
+            **(meta if isinstance(meta, dict) else {}),
+            "polygon_local_m": [[float(x), float(y)] for x, y in polygon_local_m],
+        }
 
         async with Session() as db:
             try:
@@ -69,7 +84,7 @@ class WarehouseScanMappingService:
                     warehouse_name=warehouse_name,
                     polygon_local_m=polygon_local_m,
                     meta_data={
-                        "source": "warehouse_scan",
+                        "source": source,
                         "reference_mapping_job_id": reference_mapping_job_id,
                     },
                 )
@@ -79,26 +94,71 @@ class WarehouseScanMappingService:
                     capture_result=capture_result,
                     reference_mapping_job_id=reference_mapping_job_id,
                     flight_id=flight_id,
+                    input_source=source,
                 )
+                warehouse_map_id_out = int(warehouse_map.id)
+                model_id = int(model.id)
+                job_id = int(job.id)
+                await db.commit()
+                try:
+                    task_id = self.queue.enqueue(job_id=job_id)
+                except WarehouseMappingQueueError:
+                    logger.exception("Warehouse mapping enqueue failed; job remains processing")
+                    task_id = ""
+                if task_id:
+                    await self.repo.set_job_task_id(db, job=job, task_id=task_id)
+                status_out = str(job.status)
+                processor_task_id_out = job.processor_task_id
                 await db.commit()
             except WarehouseRepositoryError as exc:
                 await db.rollback()
                 raise WarehouseScanMappingError(str(exc)) from exc
+        return {
+            "warehouse_map_id": warehouse_map_id_out,
+            "job_id": job_id,
+            "model_id": model_id,
+            "status": status_out,
+            "processor_task_id": processor_task_id_out,
+            "assets": {},
+        }
+
+    async def process_job(self, *, job_id: int) -> dict[str, Any]:
+        async with Session() as db:
+            row = await self.repo.get_job_with_model(db, job_id=job_id)
+            if row is None:
+                raise WarehouseScanMappingError(f"Warehouse mapping job not found: {job_id}")
+            job, model = row
+            model_id = int(model.id)
+            job_model_type = type(job)
+            model_type = type(model)
+            await self.repo.update_job_progress(db, job=job, progress=20)
+            await db.commit()
+            params = dict(job.params or {})
+
+        capture_result = params.get("capture_result")
+        if not isinstance(capture_result, dict):
+            raise WarehouseScanMappingError("Warehouse mapping job has no capture_result.")
+        session_dir = Path(str(capture_result.get("absolute_dir") or "")).resolve()
+        meta = capture_result.get("meta")
+        polygon_raw = meta.get("polygon_local_m") if isinstance(meta, dict) else None
+        polygon_local_m = self._polygon_from_raw(polygon_raw)
+        reference_mapping_job_id = params.get("reference_mapping_job_id")
+        flight_id = params.get("flight_id")
 
         try:
-            with tempfile.TemporaryDirectory(prefix=f"warehouse-map-{job.id}-") as tmp_dir:
+            with tempfile.TemporaryDirectory(prefix=f"warehouse-map-{job_id}-") as tmp_dir:
                 work_dir = Path(tmp_dir)
                 converted, artifact_meta = await asyncio.to_thread(
                     self._prepare_artifacts,
-                    resolved_session_dir,
+                    session_dir,
                     work_dir,
                     polygon_local_m,
                 )
                 uploaded = await self._upload_outputs(converted)
 
             async with Session() as db:
-                db_job = await db.get(type(job), int(job.id))
-                db_model = await db.get(type(model), int(model.id))
+                db_job = await db.get(job_model_type, job_id)
+                db_model = await db.get(model_type, model_id)
                 if db_job is None or db_model is None:
                     raise WarehouseScanMappingError(
                         "Warehouse mapping job disappeared before asset registration."
@@ -116,19 +176,29 @@ class WarehouseScanMappingService:
                 await self.repo.mark_job_ready(db, job=db_job, model=db_model)
                 await db.commit()
             return {
-                "warehouse_map_id": int(warehouse_map.id),
-                "job_id": int(job.id),
-                "model_id": int(model.id),
+                "job_id": int(job_id),
+                "model_id": model_id,
                 "assets": uploaded,
             }
         except Exception as exc:
             async with Session() as db:
-                db_job = await db.get(type(job), int(job.id))
-                db_model = await db.get(type(model), int(model.id))
+                db_job = await db.get(job_model_type, job_id)
+                db_model = await db.get(model_type, model_id)
                 if db_job is not None and db_model is not None:
                     await self.repo.mark_job_failed(db, job=db_job, model=db_model, error=str(exc))
                     await db.commit()
             raise
+
+    @staticmethod
+    def _polygon_from_raw(raw: object) -> list[tuple[float, float]]:
+        if not isinstance(raw, list) or len(raw) < 3:
+            raise WarehouseScanMappingError("Warehouse mapping job has invalid polygon_local_m.")
+        points: list[tuple[float, float]] = []
+        for item in raw:
+            if not isinstance(item, (list, tuple)) or len(item) < 2:
+                raise WarehouseScanMappingError("Warehouse mapping job has invalid polygon point.")
+            points.append((float(item[0]), float(item[1])))
+        return points
 
     async def _upload_outputs(self, converted: dict[str, str]) -> dict[str, str]:
         async def _upload_one(key: str, path: str) -> tuple[str, str]:
@@ -204,6 +274,37 @@ class WarehouseScanMappingService:
             shutil.copy2(src, dst)
         return dst
 
+    @staticmethod
+    def _read_manifest(session_dir: Path) -> dict[str, Any]:
+        for name in ("warehouse_mapping_manifest.json", "capture_manifest.json"):
+            path = session_dir / name
+            if not path.exists() or not path.is_file():
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                return {}
+            return payload if isinstance(payload, dict) else {}
+        return {}
+
+    @staticmethod
+    def _manifest_asset_path(
+        session_dir: Path,
+        manifest: dict[str, Any],
+        *keys: str,
+    ) -> Path | None:
+        assets = manifest.get("assets")
+        if not isinstance(assets, dict):
+            return None
+        for key in keys:
+            raw = assets.get(key)
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            path = (session_dir / raw).resolve()
+            if path.exists():
+                return path
+        return None
+
     def _run_postprocess_cmd(self, *, input_dir: Path, output_dir: Path) -> bool:
         template = os.getenv("WAREHOUSE_SCAN_POSTPROCESS_CMD", "").strip()
         if not template:
@@ -221,8 +322,13 @@ class WarehouseScanMappingService:
     ) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
         converted: dict[str, str] = {}
         artifact_meta: dict[str, dict[str, Any]] = {}
+        manifest = self._read_manifest(session_dir)
 
-        tileset_dir = self._find_existing_tileset_dir(session_dir)
+        tileset_dir = self._manifest_asset_path(session_dir, manifest, "tileset", "tileset_dir")
+        if tileset_dir is not None and tileset_dir.is_file():
+            tileset_dir = tileset_dir.parent
+        if tileset_dir is None:
+            tileset_dir = self._find_existing_tileset_dir(session_dir)
         if tileset_dir is None:
             postprocess_output = work_dir / "postprocess_output"
             postprocess_output.mkdir(parents=True, exist_ok=True)
@@ -238,9 +344,17 @@ class WarehouseScanMappingService:
                 "bbox": self._bbox_from_polygon_local_m(polygon_local_m),
             }
         else:
-            mesh_src = self._find_first_file(session_dir, _MESH_EXTENSIONS)
+            mesh_src = self._manifest_asset_path(session_dir, manifest, "mesh_glb", "mesh")
+            if mesh_src is None:
+                mesh_src = self._find_first_file(session_dir, _MESH_EXTENSIONS)
             if mesh_src is not None:
                 mesh_local = self._copy_to_work_dir(mesh_src, work_dir)
+                if mesh_local.suffix.lower() in {".glb", ".gltf"}:
+                    converted["mesh_glb"] = str(mesh_local)
+                    artifact_meta["mesh_glb"] = {
+                        "source_mesh": mesh_src.name,
+                        "size_bytes": mesh_src.stat().st_size,
+                    }
                 tiles_dir = work_dir / "tileset"
                 convert_mesh_to_3dtiles(str(mesh_local), str(tiles_dir))
                 converted["textured_mesh_3dtiles"] = str(tiles_dir)
@@ -249,17 +363,50 @@ class WarehouseScanMappingService:
                     "bbox": self._bbox_from_polygon_local_m(polygon_local_m),
                 }
 
-        pointcloud_src = self._find_first_file(session_dir, _POINTCLOUD_EXTENSIONS)
+        pointcloud_src = self._manifest_asset_path(session_dir, manifest, "point_cloud")
+        if pointcloud_src is None:
+            pointcloud_src = self._find_first_file(session_dir, _POINTCLOUD_EXTENSIONS)
         if pointcloud_src is not None:
             pointcloud_local = self._copy_to_work_dir(pointcloud_src, work_dir)
             converted["point_cloud"] = str(pointcloud_local)
             artifact_meta["point_cloud"] = {
                 "source_point_cloud": pointcloud_src.name,
+                "size_bytes": pointcloud_src.stat().st_size,
                 "bbox": self._bbox_from_polygon_local_m(polygon_local_m),
             }
 
+        rosbag_src = self._manifest_asset_path(session_dir, manifest, "rosbag")
+        if rosbag_src is None:
+            rosbag_src = self._find_first_file(session_dir, _ROSBAG_EXTENSIONS)
+        if rosbag_src is not None:
+            rosbag_local = self._copy_to_work_dir(rosbag_src, work_dir)
+            converted["rosbag"] = str(rosbag_local)
+            artifact_meta["rosbag"] = {
+                "source_rosbag": rosbag_src.name,
+                "size_bytes": rosbag_src.stat().st_size,
+            }
+
+        quality_src = self._manifest_asset_path(session_dir, manifest, "quality_report")
+        if quality_src is None:
+            quality_src = session_dir / "mapping_quality_report.json"
+        if quality_src.exists() and quality_src.is_file():
+            quality_local = self._copy_to_work_dir(quality_src, work_dir)
+            converted["quality_report"] = str(quality_local)
+            quality = manifest.get("quality")
+            artifact_meta["quality_report"] = {
+                "size_bytes": quality_src.stat().st_size,
+                **(quality if isinstance(quality, dict) else {}),
+            }
+
         if not converted:
+            from backend.modules.warehouse.service.capture_finalize import (
+                missing_artifacts_message,
+                session_has_mapping_artifacts,
+            )
+
+            if not session_has_mapping_artifacts(session_dir):
+                raise WarehouseScanMappingError(missing_artifacts_message(session_dir))
             raise WarehouseScanMappingError(
-                "Warehouse capture did not produce a tileset or point cloud artifact."
+                "Warehouse capture did not produce a tileset, point cloud, or ROS artifact."
             )
         return converted, artifact_meta

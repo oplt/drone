@@ -1069,6 +1069,288 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             message=f"Origin locked at ({float(lat):.6f}, {float(lon):.6f})",
         )
 
+    def _perception_status(self) -> dict[str, Any]:
+        status = self.ctx.config_overrides.get("WAREHOUSE_PERCEPTION_STATUS")
+        return status if isinstance(status, dict) else {}
+
+    def _perception_components(self) -> dict[str, Any]:
+        components = self._perception_status().get("components")
+        return components if isinstance(components, dict) else {}
+
+    def _component_bool(self, *keys: str) -> bool | None:
+        components = self._perception_components()
+        for key in keys:
+            value = components.get(key)
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, dict):
+                nested = value.get("ready", value.get("healthy", value.get("ok")))
+                if isinstance(nested, bool):
+                    return nested
+        return None
+
+    def _topic_configured(self, *keys: str) -> bool:
+        topics = self._perception_components().get("topics")
+        if not isinstance(topics, dict):
+            return False
+        for key in keys:
+            topic = topics.get(key)
+            if not isinstance(topic, str) or not topic.strip():
+                return False
+        return True
+
+    def _component_check(
+        self,
+        *,
+        name: str,
+        keys: tuple[str, ...],
+        pass_message: str,
+        fail_message: str,
+    ) -> CheckResult:
+        value = self._component_bool(*keys)
+        if value is True:
+            return CheckResult(name=name, status=CheckStatus.PASS, message=pass_message)
+        if value is False:
+            return CheckResult(name=name, status=CheckStatus.FAIL, message=fail_message)
+        return CheckResult(
+            name=name,
+            status=CheckStatus.FAIL,
+            message=f"{name} status is missing from the ROS bridge health payload",
+        )
+
+    def check_ros_bridge(self) -> CheckResult:
+        status = self._perception_status()
+        if not status:
+            return CheckResult(
+                name="Warehouse ROS Bridge",
+                status=CheckStatus.FAIL,
+                message="Warehouse ROS bridge health was not collected",
+            )
+        if not bool(status.get("configured")):
+            return CheckResult(
+                name="Warehouse ROS Bridge",
+                status=CheckStatus.FAIL,
+                message="Warehouse ROS bridge URL is not configured",
+            )
+        if not bool(status.get("reachable")):
+            detail = status.get("detail")
+            suffix = f": {detail}" if isinstance(detail, str) and detail else ""
+            return CheckResult(
+                name="Warehouse ROS Bridge",
+                status=CheckStatus.FAIL,
+                message=f"Jetson ROS bridge is unreachable{suffix}",
+            )
+        if not bool(status.get("ready")):
+            return CheckResult(
+                name="Warehouse ROS Bridge",
+                status=CheckStatus.FAIL,
+                message=f"Jetson ROS bridge status is {status.get('status') or 'not ready'}",
+            )
+        return CheckResult(
+            name="Warehouse ROS Bridge",
+            status=CheckStatus.PASS,
+            message=f"Jetson bridge ready ({status.get('profile') or 'unknown profile'})",
+        )
+
+    def check_ros_graph(self) -> CheckResult:
+        value = self._component_bool("ros_graph", "ros2_graph", "ros2_cli")
+        if value is True:
+            return CheckResult(
+                name="Warehouse ROS Graph",
+                status=CheckStatus.PASS,
+                message="ROS 2 graph is available",
+            )
+        if value is False:
+            return CheckResult(
+                name="Warehouse ROS Graph",
+                status=CheckStatus.FAIL,
+                message="ROS 2 graph or ros2 CLI is unavailable on the Jetson",
+            )
+        return CheckResult(
+            name="Warehouse ROS Graph",
+            status=CheckStatus.FAIL,
+            message="ROS 2 graph health is missing from the bridge payload",
+        )
+
+    def check_camera_topics(self) -> CheckResult:
+        if self._component_bool("camera_topics", "stereo_camera") is True:
+            return CheckResult(
+                name="Warehouse Camera Topics",
+                status=CheckStatus.PASS,
+                message="Stereo camera topics are publishing",
+            )
+        if self._component_bool("camera_topics", "stereo_camera") is False:
+            return CheckResult(
+                name="Warehouse Camera Topics",
+                status=CheckStatus.FAIL,
+                message="Stereo camera topics are not publishing",
+            )
+        if self._topic_configured("left_image", "right_image"):
+            return CheckResult(
+                name="Warehouse Camera Topics",
+                status=CheckStatus.PASS,
+                message="Stereo camera topics are configured",
+            )
+        return CheckResult(
+            name="Warehouse Camera Topics",
+            status=CheckStatus.FAIL,
+            message="Left/right camera topics are not configured or not publishing",
+        )
+
+    def check_stereo_sync(self) -> CheckResult:
+        return self._component_check(
+            name="Warehouse Stereo Sync",
+            keys=("stereo_sync", "stereo_timestamps_synced"),
+            pass_message="Stereo timestamps are synchronized",
+            fail_message="Stereo timestamps are not synchronized",
+        )
+
+    def check_imu_topic(self) -> CheckResult:
+        if self._component_bool("imu_topic", "imu") is True:
+            return CheckResult(
+                name="Warehouse IMU Topic",
+                status=CheckStatus.PASS,
+                message="IMU topic is publishing",
+            )
+        if self._component_bool("imu_topic", "imu") is False:
+            return CheckResult(
+                name="Warehouse IMU Topic",
+                status=CheckStatus.FAIL,
+                message="IMU topic is not publishing",
+            )
+        if self._topic_configured("imu"):
+            return CheckResult(
+                name="Warehouse IMU Topic",
+                status=CheckStatus.PASS,
+                message="IMU topic is configured",
+            )
+        return CheckResult(
+            name="Warehouse IMU Topic",
+            status=CheckStatus.FAIL,
+            message="IMU topic is not configured or not publishing",
+        )
+
+    def check_tf_tree(self) -> CheckResult:
+        return self._component_check(
+            name="Warehouse TF Tree",
+            keys=("tf_tree", "tf", "tf_static"),
+            pass_message="Required TF tree is valid",
+            fail_message="Required TF frames are missing or disconnected",
+        )
+
+    def check_visual_slam(self) -> CheckResult:
+        return self._component_check(
+            name="Warehouse Visual SLAM",
+            keys=("visual_slam", "vslam", "visual_slam_tracking"),
+            pass_message="Isaac Visual SLAM tracking is ready",
+            fail_message="Isaac Visual SLAM tracking is not ready",
+        )
+
+    def check_nvblox(self) -> CheckResult:
+        return self._component_check(
+            name="Warehouse Nvblox",
+            keys=("nvblox", "nvblox_mapping"),
+            pass_message="Isaac Nvblox mapping is ready",
+            fail_message="Isaac Nvblox mapping is not ready",
+        )
+
+    def check_mapping_disk(self) -> CheckResult:
+        components = self._perception_components()
+        min_gb = float(self._thr("WAREHOUSE_MAPPING_DISK_FREE_GB_MIN", 10.0))
+        raw_gb = components.get("disk_free_gb")
+        if raw_gb is None and components.get("disk_free_bytes") is not None:
+            raw_gb = float(components["disk_free_bytes"]) / 1_000_000_000.0
+        if raw_gb is None:
+            disk = components.get("disk")
+            if isinstance(disk, dict):
+                raw_gb = disk.get("free_gb")
+        if raw_gb is None:
+            return CheckResult(
+                name="Warehouse Mapping Disk",
+                status=CheckStatus.FAIL,
+                message="Free capture disk space is missing from ROS bridge health",
+            )
+        free_gb = float(raw_gb)
+        if free_gb < min_gb:
+            return CheckResult(
+                name="Warehouse Mapping Disk",
+                status=CheckStatus.FAIL,
+                message=f"Capture disk free {free_gb:.1f}GB < required {min_gb:.1f}GB",
+            )
+        return CheckResult(
+            name="Warehouse Mapping Disk",
+            status=CheckStatus.PASS,
+            message=f"Capture disk free {free_gb:.1f}GB",
+        )
+
+    def check_sensor_rig(self) -> CheckResult:
+        sensor_rig_id = getattr(self.mission, "sensor_rig_id", None)
+        if sensor_rig_id is None:
+            return CheckResult(
+                name="Warehouse Sensor Rig",
+                status=CheckStatus.FAIL,
+                message="No calibrated sensor rig was selected for this scan",
+            )
+        return CheckResult(
+            name="Warehouse Sensor Rig",
+            status=CheckStatus.PASS,
+            message=f"Sensor rig {sensor_rig_id} selected",
+        )
+
+    def check_battery_margin(self) -> CheckResult:
+        reserve_pct = float(self._thr("WAREHOUSE_SCAN_BATTERY_RESERVE_PCT", 30.0))
+        battery_pct = getattr(self.v, "battery_percent", None)
+        if battery_pct is None:
+            battery_pct = getattr(self.v, "battery_remaining", None)
+        if battery_pct is None:
+            return CheckResult(
+                name="Warehouse Battery Margin",
+                status=CheckStatus.FAIL,
+                message="Battery percentage is unavailable for warehouse return margin",
+            )
+        pct = float(battery_pct)
+        if pct <= 1.0:
+            pct *= 100.0
+        if pct < reserve_pct:
+            return CheckResult(
+                name="Warehouse Battery Margin",
+                status=CheckStatus.FAIL,
+                message=f"Battery {pct:.0f}% < warehouse reserve {reserve_pct:.0f}%",
+            )
+        return CheckResult(
+            name="Warehouse Battery Margin",
+            status=CheckStatus.PASS,
+            message=f"Battery {pct:.0f}% >= reserve {reserve_pct:.0f}%",
+        )
+
+    def check_dock_marker(self) -> CheckResult:
+        marker_id = getattr(self.mission, "dock_marker_id", None)
+        precision_required = bool(getattr(self.mission, "dock_precision_required", False))
+        if not marker_id and not precision_required:
+            return CheckResult(
+                name="Warehouse Dock Marker",
+                status=CheckStatus.SKIP,
+                message="No precision dock marker required for this scan",
+            )
+        visible = self._component_bool("dock_marker", "apriltag", "dock_reference")
+        if visible is True:
+            return CheckResult(
+                name="Warehouse Dock Marker",
+                status=CheckStatus.PASS,
+                message=f"Dock marker {marker_id or ''} visible".strip(),
+            )
+        if visible is False:
+            return CheckResult(
+                name="Warehouse Dock Marker",
+                status=CheckStatus.FAIL,
+                message="Required dock marker is not visible",
+            )
+        return CheckResult(
+            name="Warehouse Dock Marker",
+            status=CheckStatus.FAIL,
+            message="Required dock marker visibility is missing from ROS bridge health",
+        )
+
     def check_local_position_lock(self) -> CheckResult:
         local_ok = getattr(self.v, "local_position_ok", None)
         if local_ok is True:
@@ -1293,6 +1575,18 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
         results.append(self.check_speed_limits())
         results.append(self.check_local_origin())
         results.append(self.check_local_position_lock())
+        results.append(self.check_ros_bridge())
+        results.append(self.check_ros_graph())
+        results.append(self.check_camera_topics())
+        results.append(self.check_stereo_sync())
+        results.append(self.check_imu_topic())
+        results.append(self.check_tf_tree())
+        results.append(self.check_visual_slam())
+        results.append(self.check_nvblox())
+        results.append(self.check_mapping_disk())
+        results.append(self.check_sensor_rig())
+        results.append(self.check_battery_margin())
+        results.append(self.check_dock_marker())
         results.append(self.check_odometry_health())
         results.append(self.check_lidar_health())
         results.append(self.check_scan_layers())

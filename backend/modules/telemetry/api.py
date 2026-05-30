@@ -303,6 +303,13 @@ async def send_manual_control(
 
     cmd = payload.command
     phase = payload.phase
+    logger.info(
+        "Manual control command received command=%s phase=%s source=%s flight_id=%s",
+        cmd,
+        phase,
+        payload.source,
+        payload.flight_id,
+    )
 
     if cmd == "takeoff":
         if phase == "stop":
@@ -336,6 +343,15 @@ async def send_manual_control(
     try:
         await asyncio.to_thread(drone.set_mode, "GUIDED")
         await asyncio.to_thread(drone.send_velocity, vx, vy, vz, yaw_rate)
+        logger.info(
+            "Manual control velocity sent command=%s phase=%s vx=%.2f vy=%.2f vz=%.2f yaw_rate=%.2f",
+            cmd,
+            phase,
+            vx,
+            vy,
+            vz,
+            yaw_rate,
+        )
         return {"status": "ok", "command": cmd, "phase": phase}
     except NotImplementedError:
         raise HTTPException(

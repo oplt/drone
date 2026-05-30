@@ -21,8 +21,14 @@ from backend.modules.warehouse.planning.local_planner import (
     WarehouseViewMode,
     plan_warehouse_scan,
 )
+from backend.modules.warehouse.ports import (
+    WarehouseMappingStartRequest,
+    WarehousePerceptionCommandResult,
+    WarehousePerceptionPort,
+)
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
+from backend.modules.warehouse.service.safety import evaluate_warehouse_runtime_safety
 
 if TYPE_CHECKING:
     from backend.modules.vehicle_runtime.orchestrator import Orchestrator
@@ -35,6 +41,12 @@ _UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 def _safe_token(raw: object) -> str:
     token = _UNSAFE_TOKEN_CHARS.sub("_", str(raw or "")).strip("._-")
     return token or "unknown"
+
+
+def build_warehouse_perception_port() -> WarehousePerceptionPort:
+    from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
+
+    return build_warehouse_perception_port()
 
 
 @dataclass(frozen=True)
@@ -92,6 +104,7 @@ class WarehouseScanMission:
     warehouse_map_id: int | None = None
     warehouse_name: str | None = None
     reference_mapping_job_id: int | None = None
+    sensor_rig_id: int | None = None
     await_capture_sync: bool = True
     capture_sync_wait_timeout_s: float = 60.0
     capture_sync_poll_interval_s: float = 1.0
@@ -104,6 +117,7 @@ class WarehouseScanMission:
     # Safety limits
     max_segments: int = 2500
     max_route_m: float = 15_000.0
+    localization_confidence_min: float = 0.5
 
     _last_speed_mps: float | None = field(
         default=None,
@@ -136,6 +150,11 @@ class WarehouseScanMission:
             "speed": float(self.work_speed_mps or 0.8),
             "altitude_agl": float(self.base_height_m),
             "local_origin": {"alt_m": 0.0},
+            "sensor_rig_id": self.sensor_rig_id,
+            "dock_marker_id": self.dock_config.marker_id if self.dock_config else None,
+            "dock_precision_required": (
+                bool(self.dock_config.precision_required) if self.dock_config else False
+            ),
             "control_mode": "local_setpoint",
             "local_control_mode": "local_setpoint",
             "base_height_m": float(self.base_height_m),
@@ -263,12 +282,18 @@ class WarehouseScanMission:
         mission_error: Exception | None = None
         mapping_error: Exception | None = None
         capture_started = False
+        perception_started = False
         video_recording_active = False
         airborne = False
         mapping_saved = False
         execution_frame: WarehouseExecutionFrame | None = None
 
         try:
+            perception_start = await self._start_perception_mapping(
+                orch,
+                session_dir=session.session_dir,
+            )
+            perception_started = bool(perception_start.accepted)
             await asyncio.sleep(0.5)
             await asyncio.to_thread(orch.drone.arm_and_takeoff, float(self.base_height_m))
             airborne = True
@@ -305,9 +330,6 @@ class WarehouseScanMission:
             logger.exception("Warehouse scan path failed")
 
         finally:
-            if capture_started:
-                await self._stop_capture_if_supported(orch)
-
             if airborne:
                 try:
                     await asyncio.to_thread(orch.drone.land)
@@ -324,16 +346,27 @@ class WarehouseScanMission:
                     )
                     logger.exception("Warehouse scan landing failed")
 
+            if perception_started:
+                await self._stop_perception_mapping(orch)
+
+            if capture_started:
+                await self._stop_capture_if_supported(orch)
+
             # Stop video as soon as we're on the ground — mapping can take minutes
             if video_recording_active:
                 await self._stop_video_recording(orch)
 
         if mission_error is None:
             try:
-                capture_paths = await self._download_capture_if_supported(
+                perception_paths = await self._download_perception_artifacts(
+                    orch,
+                    destination_dir=session.session_dir,
+                )
+                fallback_paths = await self._download_capture_if_supported(
                     orch,
                     destination_dir=str(session.session_dir),
                 )
+                capture_paths = [*perception_paths, *fallback_paths]
                 imported_direct = await asyncio.to_thread(
                     capture_session_service.import_external_files,
                     session,
@@ -368,7 +401,15 @@ class WarehouseScanMission:
                         "view_mode": self.view_mode,
                         "layer_count": self.layer_count,
                         "warehouse_map_id": self.warehouse_map_id,
+                        "sensor_rig_id": self.sensor_rig_id,
                         "reference_mapping_job_id": self.reference_mapping_job_id,
+                        "perception_artifacts_count": len(perception_paths),
+                        "direct_downloaded_paths_count": len(fallback_paths),
+                        "rosbag_paths": [
+                            str(Path(path).name)
+                            for path in perception_paths
+                            if Path(path).suffix.lower() in {".db3", ".mcap", ".bag"}
+                        ],
                     },
                 )
                 await self._add_event_safe(
@@ -452,6 +493,7 @@ class WarehouseScanMission:
                 "scan_pattern": self.scan_pattern,
                 "view_mode": self.view_mode,
                 "layers": int(self.layer_count),
+                "odometry_drift_m": self._latest_odometry_drift(orch),
             },
         )
 
@@ -526,6 +568,7 @@ class WarehouseScanMission:
         total_legs: int,
         execution_frame: WarehouseExecutionFrame,
     ) -> None:
+        await self._check_runtime_safety(orch)
         work_leg = bool(segment.work_leg)
         leg_type = segment.leg_type
         yaw_deg = segment.yaw_deg
@@ -743,6 +786,144 @@ class WarehouseScanMission:
     # ------------------------------------------------------------------
     # Capture hooks
     # ------------------------------------------------------------------
+
+    def _flight_token(self, orch: Orchestrator) -> str:
+        return _safe_token(
+            getattr(orch, "_flight_id", None)
+            or getattr(orch, "current_client_flight_id", None)
+            or "unknown"
+        )
+
+    def _latest_odometry_drift(self, orch: Orchestrator) -> float | None:
+        snapshot = getattr(orch, "_last_telemetry_snapshot", None)
+        if not isinstance(snapshot, dict):
+            return None
+        raw = snapshot.get("odometry_drift_m")
+        try:
+            return round(float(raw), 3) if raw is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    async def _check_runtime_safety(self, orch: Orchestrator) -> None:
+        try:
+            status = await build_warehouse_perception_port().status()
+        except Exception:
+            return
+        components = status.components if isinstance(status.components, dict) else {}
+        decision = evaluate_warehouse_runtime_safety(
+            components,
+            min_localization_confidence=float(self.localization_confidence_min),
+            min_obstacle_distance_m=float(self.clearance_m),
+            min_ceiling_distance_m=float(self.ceiling_margin_m),
+        )
+        if decision.safe:
+            return
+        await self._add_event_safe(
+            orch,
+            "warehouse_safety_abort",
+            {
+                "reason": decision.reason,
+                "action": decision.action,
+                "details": decision.details or {},
+            },
+        )
+        raise RuntimeError(f"Warehouse safety abort: {decision.reason}")
+
+    def _perception_metadata(self, orch: Orchestrator, *, session_dir: Path) -> dict[str, object]:
+        del orch
+        return {
+            "mission_kind": self.mission_kind,
+            "warehouse_map_id": self.warehouse_map_id,
+            "warehouse_name": self.warehouse_name,
+            "sensor_rig_id": self.sensor_rig_id,
+            "reference_mapping_job_id": self.reference_mapping_job_id,
+            "scan_pattern": self.scan_pattern,
+            "view_mode": self.view_mode,
+            "layer_count": int(self.layer_count),
+            "work_speed_mps": self.work_speed_mps,
+            "transit_speed_mps": self.transit_speed_mps,
+            "session_dir": str(session_dir),
+            "polygon_local_m": [
+                [float(x), float(y)] for x, y in (self.area_polygon_local_m or [])
+            ],
+        }
+
+    async def _start_perception_mapping(
+        self,
+        orch: Orchestrator,
+        *,
+        session_dir: Path,
+    ) -> WarehousePerceptionCommandResult:
+        port = build_warehouse_perception_port()
+        flight_id = self._flight_token(orch)
+        request = WarehouseMappingStartRequest(
+            flight_id=flight_id,
+            warehouse_map_id=self.warehouse_map_id,
+            sensor_rig_id=self.sensor_rig_id,
+            metadata=self._perception_metadata(orch, session_dir=session_dir),
+        )
+        result = await port.start_mapping(request)
+        await self._add_event_safe(
+            orch,
+            "warehouse_scan_perception_mapping_started",
+            {
+                "accepted": result.accepted,
+                "status": result.status,
+                "detail": result.detail,
+                "data": result.data,
+            },
+        )
+        if not result.accepted:
+            raise RuntimeError(f"Warehouse perception mapping was not accepted: {result.status}")
+        return result
+
+    async def _stop_perception_mapping(
+        self,
+        orch: Orchestrator,
+    ) -> WarehousePerceptionCommandResult:
+        port = build_warehouse_perception_port()
+        try:
+            result = await port.stop_mapping(flight_id=self._flight_token(orch))
+        except Exception as exc:
+            logger.exception("Warehouse perception stop failed")
+            result = WarehousePerceptionCommandResult(
+                accepted=False,
+                status="failed",
+                detail=str(exc),
+            )
+        await self._add_event_safe(
+            orch,
+            "warehouse_scan_perception_mapping_stopped",
+            {
+                "accepted": result.accepted,
+                "status": result.status,
+                "detail": result.detail,
+                "data": result.data,
+            },
+        )
+        return result
+
+    async def _download_perception_artifacts(
+        self,
+        orch: Orchestrator,
+        *,
+        destination_dir: Path,
+    ) -> list[str]:
+        port = build_warehouse_perception_port()
+        try:
+            paths = await port.download_artifacts(
+                flight_id=self._flight_token(orch),
+                destination_dir=destination_dir,
+            )
+        except Exception:
+            logger.exception("Warehouse perception artifact download failed")
+            paths = []
+        await self._add_event_safe(
+            orch,
+            "warehouse_scan_perception_artifacts_downloaded",
+            {"downloaded_paths_count": len(paths), "destination_dir": str(destination_dir)},
+        )
+        return [str(path) for path in paths]
 
     async def _start_capture_if_supported(self, orch: Orchestrator) -> bool:
         for name in (

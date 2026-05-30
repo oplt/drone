@@ -30,7 +30,8 @@ def _default_capture_extensions() -> set[str]:
         "WAREHOUSE_SCAN_CAPTURE_EXTENSIONS",
         (
             ".json,.bin,.glb,.gltf,.obj,.ply,.pcd,.las,.laz,.e57,"
-            ".jpg,.jpeg,.png,.tif,.tiff,.b3dm,.pnts"
+            ".jpg,.jpeg,.png,.tif,.tiff,.b3dm,.pnts,"
+            ".db3,.mcap,.bag,.yaml,.yml,.sqlite,.sqlite3"
         ),
     )
     values = {item.strip().lower() for item in raw.split(",") if item.strip()}

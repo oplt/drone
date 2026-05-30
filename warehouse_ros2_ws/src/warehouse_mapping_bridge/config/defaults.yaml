@@ -1,0 +1,18 @@
+warehouse_mapping_bridge:
+  ros__parameters:
+    profile: isaac_ros_nvblox_stereo
+    left_image_topic: /left/image_rect
+    right_image_topic: /right/image_rect
+    imu_topic: /imu
+    visual_slam_odom_topic: /visual_slam/tracking/odometry
+    local_odometry_topic: /warehouse/local_odometry
+    mavlink_vision_url: udpout:127.0.0.1:14550
+    depth_topic: /depth
+    raw_lidar_topic: /lidar/points
+    pointcloud_topic: /nvblox_node/pointcloud
+    mesh_topic: /nvblox_node/mesh
+    mesh_marker_topic: /nvblox_node/mesh_marker
+    occupancy_topic: /nvblox_node/occupancy_layer
+    esdf_topic: /nvblox_node/static_esdf_pointcloud
+    back_projected_depth_topic: /nvblox_node/back_projected_depth
+    health_topic: /warehouse/mapping/health

@@ -1,11 +1,44 @@
-.PHONY: local-dev kill-dev kill-celery kill-ports check-local-tools
+ROS_DISTRO ?= jazzy
+PYTHON ?= $(if $(wildcard $(CURDIR)/.venv/bin/python),$(CURDIR)/.venv/bin/python,python3)
+ROS_WS ?= $(CURDIR)/warehouse_ros2_ws
+ROS_WS_SETUP ?= $(ROS_WS)/install/setup.bash
+WAREHOUSE_BRIDGE_PYTHON ?= $(PYTHON)
+BACKEND_ENV ?= $(CURDIR)/backend/.env
+WITH_VIDEO ?= 0
+DEV_PROCS := redis backend default_worker photogrammetry_worker frontend browser
+WAREHOUSE_DEV_PROCS := $(DEV_PROCS) warehouse_mapping_worker gazebo_sensor_bridge warehouse_mapping_stack warehouse_bridge rosbridge_ws
+ifeq ($(WITH_VIDEO),1)
+DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker frontend browser
+WAREHOUSE_DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker warehouse_mapping_worker gazebo_sensor_bridge warehouse_mapping_stack frontend browser warehouse_bridge rosbridge_ws
+endif
+export ROS_DISTRO
+export ROS_WS_SETUP
+export WAREHOUSE_BRIDGE_PYTHON
+
+.PHONY: local-dev local-dev-warehouse warehouse-build warehouse-doctor kill-dev kill-warehouse-dev kill-celery kill-ports kill-warehouse-ports check-local-tools check-warehouse-tools
 
 check-local-tools:
 	@command -v honcho >/dev/null 2>&1 || { echo "honcho is not installed. Install with: pip install honcho"; exit 1; }
 	@command -v uvicorn >/dev/null 2>&1 || { echo "uvicorn is not installed."; exit 1; }
+	@command -v alembic >/dev/null 2>&1 || { echo "alembic is not installed."; exit 1; }
 	@command -v celery >/dev/null 2>&1 || { echo "celery is not installed."; exit 1; }
-	@celery_python="$$(sed -n '1s/^#!//p' "$$(command -v celery)")"; "$$celery_python" -c 'from ultralytics import YOLO' >/dev/null 2>&1 || { echo "Video analysis dependencies broken in Celery Python ($$celery_python). Run: $$celery_python -m pip install --user 'matplotlib>=3.10.0' 'ultralytics>=8.3.0' opencv-python-headless supervision"; exit 1; }
+	@$(PYTHON) -c 'import uvicorn, fastapi' >/dev/null 2>&1 || { echo "Backend Python deps missing for $(PYTHON). Activate .venv or install requirements."; exit 1; }
+ifeq ($(WITH_VIDEO),1)
+	@$(PYTHON) -c 'from ultralytics import YOLO' >/dev/null 2>&1 || { echo "Video analysis dependencies missing for $(PYTHON). Run: $(PYTHON) -m pip install --user 'matplotlib>=3.10.0' 'ultralytics>=8.3.0' opencv-python-headless supervision"; exit 1; }
+endif
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed."; exit 1; }
+	@command -v redis-cli >/dev/null 2>&1 || command -v redis-server >/dev/null 2>&1 || { echo "redis-cli or redis-server is required."; exit 1; }
+
+warehouse-build:
+	@test -d "$(ROS_WS)" || { echo "ROS workspace not found: $(ROS_WS)"; exit 1; }
+	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && cd "$(ROS_WS)" && colcon build --packages-select warehouse_mapping_bridge'
+
+check-warehouse-tools: check-local-tools
+	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && command -v ros2 >/dev/null 2>&1' || { echo "ROS 2 is not available. Install/source ROS 2, e.g. /opt/ros/$${ROS_DISTRO}/setup.bash"; exit 1; }
+	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && ros2 pkg prefix rosbridge_server >/dev/null 2>&1' || { echo "rosbridge_server is not installed. Install: sudo apt install ros-$${ROS_DISTRO}-rosbridge-server"; exit 1; }
+	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && ros2 pkg prefix ros_gz_bridge >/dev/null 2>&1' || { echo "ros_gz_bridge is not installed. Install: sudo apt install ros-$${ROS_DISTRO}-ros-gz-bridge"; exit 1; }
+	@test -f "$${ROS_WS_SETUP}" || { echo "ROS workspace setup file not found: $${ROS_WS_SETUP}"; echo "Build it first with: make -f Makefile.local warehouse-build"; exit 1; }
+	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash; source "$${ROS_WS_SETUP}"; ros2 pkg prefix warehouse_mapping_bridge >/dev/null 2>&1' || { echo "warehouse_mapping_bridge was not found after sourcing: $${ROS_WS_SETUP}"; echo "Try: make -f Makefile.local warehouse-build"; exit 1; }
 
 kill-celery:
 	-pgrep -f "[c]elery.*backend.entrypoints.workers.celery_app" | xargs -r kill
@@ -15,6 +48,10 @@ kill-celery:
 kill-ports:
 	-fuser -k 8000/tcp
 	-fuser -k 5173/tcp
+
+kill-warehouse-ports: kill-ports
+	-fuser -k 9090/tcp
+	-fuser -k 8088/tcp
 
 kill-dev: kill-celery
 	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill
@@ -28,5 +65,27 @@ kill-dev: kill-celery
 	-pgrep -f "[n]pm run dev" | xargs -r kill -9
 	-$(MAKE) -f Makefile.local kill-ports
 
+kill-warehouse-dev:
+	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill
+	-pgrep -f "[w]arehouse_bridge_service" | xargs -r kill
+	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill
+	-pgrep -f "[r]os2 run ros_gz_bridge parameter_bridge" | xargs -r kill
+	-pgrep -f "[r]osbridge_websocket" | xargs -r kill
+	-pgrep -f "[r]os2 launch rosbridge_server rosbridge_websocket_launch.xml" | xargs -r kill
+	-sleep 1
+	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill -9
+	-pgrep -f "[w]arehouse_bridge_service" | xargs -r kill -9
+	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill -9
+	-pgrep -f "[r]os2 run ros_gz_bridge parameter_bridge" | xargs -r kill -9
+	-pgrep -f "[r]osbridge_websocket" | xargs -r kill -9
+	-pgrep -f "[r]os2 launch rosbridge_server rosbridge_websocket_launch.xml" | xargs -r kill -9
+	-$(MAKE) -f Makefile.local kill-warehouse-ports
+
 local-dev: check-local-tools kill-dev
-	honcho -f Procfile.dev start
+	honcho -f Procfile.dev start $(DEV_PROCS)
+
+local-dev-warehouse: check-warehouse-tools kill-dev kill-warehouse-dev
+	honcho -e "$(BACKEND_ENV)" -f Procfile.dev start $(WAREHOUSE_DEV_PROCS)
+
+warehouse-doctor: check-warehouse-tools
+	honcho -e "$(BACKEND_ENV)" -f Procfile.dev run bash -lc 'set -o pipefail; source /opt/ros/$${ROS_DISTRO:-jazzy}/setup.bash && source "$${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}" && echo "Env:" && echo "ROS_DOMAIN_ID=$${ROS_DOMAIN_ID:-unset}" && echo "GZ_PARTITION=$${GZ_PARTITION:-unset}" && echo && echo "Bridge:" && (curl -fsS "$${WAREHOUSE_ROS_BRIDGE_URL:-http://127.0.0.1:8088}/health" || true) && echo && echo "ROS topics:" && ros2 topic list --no-daemon -t | sort'
