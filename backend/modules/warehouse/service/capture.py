@@ -108,8 +108,10 @@ class WarehouseCaptureSessionService:
         safe_flight_id = self._sanitize_flight_id(flight_id)
         relative_dir = f"flight_{safe_flight_id}"
         session_dir = (self.sync_root / relative_dir).resolve()
-        if not str(session_dir).startswith(str(self.sync_root)):
-            raise RuntimeError("Resolved warehouse capture directory is outside sync root.")
+        try:
+            session_dir.relative_to(self.sync_root)
+        except ValueError:
+            raise RuntimeError("Resolved warehouse capture directory is outside sync root.") from None
         session_dir.mkdir(parents=True, exist_ok=True)
 
         session = WarehouseCaptureSession(

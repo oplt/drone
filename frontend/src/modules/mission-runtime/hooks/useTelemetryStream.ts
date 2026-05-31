@@ -101,7 +101,7 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
   );
 
   const disconnectWebSocket = useCallback(() => {
-    console.log("🛑 Disconnecting WebSocket...");
+    console.debug("Disconnecting WebSocket");
     cleanupWebSocket();
   }, [cleanupWebSocket]);
 
@@ -131,7 +131,7 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
 
     const wsUrl = wsBase + `/ws/telemetry`;
 
-    console.log(`🔗 Connecting to WebSocket (attempt ${connectionAttemptRef.current})`);
+    console.debug(`Connecting to WebSocket (attempt ${connectionAttemptRef.current})`);
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -139,7 +139,7 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
 
       ws.onopen = () => {
         if (!mountedRef.current || ws !== wsRef.current) return;
-        console.log(`✅ WebSocket connected (attempt ${currentAttempt})`);
+        console.debug(`WebSocket connected (attempt ${currentAttempt})`);
         setIsConnected(true);
         setError(null);
         setReconnectAttempt(0);
@@ -207,7 +207,9 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
       ws.onclose = (ev) => {
         if (!mountedRef.current || ws !== wsRef.current) return;
 
-        console.log(`🔌 WebSocket closed (code: ${ev.code}, reason: ${ev.reason})`);
+        const benignClose = ev.code === 1000 || ev.code === 1001 || ev.code === 1005 || ev.code === 1006;
+        const logClose = benignClose ? console.debug : console.info;
+        logClose(`WebSocket closed (code: ${ev.code}, reason: ${ev.reason || "none"})`);
         setIsConnected(false);
 
         // Clear ping interval

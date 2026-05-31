@@ -264,11 +264,16 @@ class RuntimeExecutionServiceMixin:
                 raise
             except Exception as e:
                 logger.exception(f"❌ Mission failed: {e}")
+                event_data: dict[str, object] = {"error": str(e)}
+                from backend.modules.warehouse.exceptions import WarehouseMissionFailure
+
+                if isinstance(e, WarehouseMissionFailure):
+                    event_data = e.to_event_payload()
                 await self._finalize_started_flight(
                     status=FlightStatus.FAILED,
                     note=f"Mission failed: {e}",
                     event_type="mission_failed",
-                    event_data={"error": str(e)},
+                    event_data=event_data,
                 )
                 raise
         finally:

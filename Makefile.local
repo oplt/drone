@@ -18,16 +18,15 @@ export APP_HOST
 export APP_PORT
 
 # Backend/FastAPI code may use the app venv. ROS 2 Jazzy nodes must not.
-WAREHOUSE_BRIDGE_PYTHON ?= $(ROS_PYTHON)
 ROS_PYTHON ?= /usr/bin/python3
+WAREHOUSE_BRIDGE_PYTHON ?= $(APP_PYTHON)
 BACKEND_ENV ?= $(CURDIR)/backend/.env
 WITH_VIDEO ?= 0
 DEV_PROCS := redis backend default_worker photogrammetry_worker frontend browser
-# Always-on warehouse dev services. warehouse_mapping_stack is intentionally omitted:
-# nvblox + mapping launch starts from the backend when a flight begins
-# (ensure_warehouse_mapping_ready_for_preflight → mapping_stack_process.py).
-# Manual debug: make -f Makefile.local warehouse-session
-WAREHOUSE_DEV_PROCS := $(DEV_PROCS) warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export warehouse_bridge rosbridge_ws
+# Always-on warehouse dev services. nvblox starts at flight time via backend mapping stack.
+# Full launch graph: make -f Makefile.local warehouse-session
+WAREHOUSE_DEV_BASE := warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export warehouse_bridge rosbridge_ws
+WAREHOUSE_DEV_PROCS := $(DEV_PROCS) $(WAREHOUSE_DEV_BASE)
 ifeq ($(WITH_VIDEO),1)
 DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker frontend browser
 WAREHOUSE_DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export frontend browser warehouse_bridge rosbridge_ws

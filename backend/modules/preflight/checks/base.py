@@ -86,12 +86,16 @@ class BasePreflightChecks:
     # -------------------------
 
     def _value(self, *names: str) -> Any:
-        """Return first non-None telemetry attribute among aliases."""
+        """Return first non-None telemetry value from object or dict snapshots."""
         for name in names:
-            if hasattr(self.v, name):
-                val = getattr(self.v, name)
-                if val is not None:
-                    return val
+            if isinstance(self.v, dict):
+                val = self.v.get(name)
+            else:
+                val = getattr(self.v, name, None)
+
+            if val is not None:
+                return val
+
         return None
 
     def _ok(self, name: str, message: str | None = None) -> CheckResult:
@@ -262,75 +266,106 @@ class BasePreflightChecks:
         return [self._skip("Arming Checks", "Arming checks telemetry not available")]
 
     async def check_gps_quality(
-        self,
-        timeout_s: float = 30.0,
-        poll_interval_s: float = 1.0,
-        required_stable_reads: int = 3,
+            self,
+            timeout_s: float = 0.0,
+            poll_interval_s: float = 0.5,
+            required_stable_reads: int = 1,
     ) -> list[CheckResult]:
-        start = time.monotonic()
-        stable = 0
-        last_results: list[CheckResult] = []
+        """
+        GPS quality check optimized for telemetry snapshots.
+
+        Default is one-shot. Pass timeout_s > 0 and required_stable_reads > 1 only when
+        this checker reads from a live-updating vehicle_state object.
+        """
+        gps_required = bool(self.ctx.get_threshold("GPS_REQUIRED", True))
+        required_stable_reads = int(
+            self.ctx.get_threshold("GPS_STABLE_READS", required_stable_reads)
+        )
 
         def eval_once() -> list[CheckResult]:
-            r: list[CheckResult] = []
+            results: list[CheckResult] = []
 
-            fix = self._value("gps_fix_type")
+            fix = self._value("gps_fix_type", "fix_type")
+
             if fix is None:
-                r.append(self._skip("GPS Fix Type", "gps_fix_type not available"))
-            elif fix >= self.GPS_FIX_TYPE_MIN:
-                r.append(self._ok("GPS Fix Type", f"{fix}"))
-            else:
-                r.append(self._fail("GPS Fix Type", f"Fix type {fix} < {self.GPS_FIX_TYPE_MIN}"))
-
-            hdop_raw = self._value("hdop")
-            hdop = (float(hdop_raw) / 100.0) if hdop_raw is not None else None
-            if hdop is None:
-                r.append(self._skip("GPS HDOP", "hdop not available"))
-            elif float(hdop) <= float(self.HDOP_MAX):
-                r.append(self._ok("GPS HDOP", f"{float(hdop):.2f}"))
-            else:
-                r.append(
-                    self._fail(
-                        "GPS HDOP",
-                        f"HDOP {float(hdop):.2f} > {float(self.HDOP_MAX):.2f}",
+                status = CheckStatus.FAIL if gps_required else CheckStatus.SKIP
+                results.append(
+                    CheckResult(
+                        name="GPS Fix Type",
+                        status=status,
+                        message="gps_fix_type not available",
                     )
                 )
-
-            sats = self._value("satellites_visible")
-            if sats is None:
-                r.append(self._skip("GPS Satellites", "satellites_visible not available"))
-            elif int(sats) >= int(self.SAT_MIN):
-                r.append(self._ok("GPS Satellites", f"{int(sats)}"))
+            elif int(fix) >= int(self.GPS_FIX_TYPE_MIN):
+                results.append(self._ok("GPS Fix Type", str(fix)))
             else:
-                r.append(self._fail("GPS Satellites", f"Sats {int(sats)} < {int(self.SAT_MIN)}"))
+                results.append(
+                    self._fail("GPS Fix Type", f"Fix type {fix} < {self.GPS_FIX_TYPE_MIN}")
+                )
+
+            hdop_raw = self._value("hdop", "gps_hdop")
+            hdop = None if hdop_raw is None else float(hdop_raw)
+
+            if hdop is not None and hdop > 20.0:
+                hdop /= 100.0
+
+            if hdop is None:
+                results.append(
+                    self._warn("GPS HDOP", "hdop not available")
+                    if gps_required
+                    else self._skip("GPS HDOP", "hdop not available")
+                )
+            elif hdop <= float(self.HDOP_MAX):
+                results.append(self._ok("GPS HDOP", f"{hdop:.2f}"))
+            else:
+                results.append(
+                    self._fail("GPS HDOP", f"HDOP {hdop:.2f} > {float(self.HDOP_MAX):.2f}")
+                )
+
+            sats = self._value("satellites_visible", "gps_satellites", "satellites")
+
+            if sats is None:
+                results.append(
+                    self._warn("GPS Satellites", "satellite count not available")
+                    if gps_required
+                    else self._skip("GPS Satellites", "satellite count not available")
+                )
+            elif int(sats) >= int(self.SAT_MIN):
+                results.append(self._ok("GPS Satellites", str(int(sats))))
+            else:
+                results.append(
+                    self._fail("GPS Satellites", f"Sats {int(sats)} < {int(self.SAT_MIN)}")
+                )
 
             pos_unc = self._value("pos_uncertainty_m")
+
             if pos_unc is not None:
-                pos_unc_max = self._value("pos_uncertainty_max")
-                threshold = float(pos_unc_max) if pos_unc_max is not None else 5.0
+                threshold = float(self._value("pos_uncertainty_max") or 5.0)
+
                 if float(pos_unc) <= threshold:
-                    r.append(self._ok("Position Uncertainty", f"{float(pos_unc):.2f}m"))
+                    results.append(self._ok("Position Uncertainty", f"{float(pos_unc):.2f}m"))
                 else:
-                    r.append(
+                    results.append(
                         self._fail(
                             "Position Uncertainty",
                             f"{float(pos_unc):.2f}m > {threshold:.2f}m",
                         )
                     )
 
-            return r
+            return results
 
-        def no_fail(r: list[CheckResult]) -> bool:
-            return not any(x.status == CheckStatus.FAIL for x in r)
+        if timeout_s <= 0 or required_stable_reads <= 1:
+            return eval_once()
+
+        start = time.monotonic()
+        stable = 0
+        last_results: list[CheckResult] = []
 
         while True:
             last_results = eval_once()
-            stable = stable + 1 if no_fail(last_results) else 0
+            stable = stable + 1 if not any(r.status == CheckStatus.FAIL for r in last_results) else 0
 
-            if stable >= required_stable_reads:
-                return last_results
-
-            if time.monotonic() - start >= timeout_s:
+            if stable >= required_stable_reads or time.monotonic() - start >= timeout_s:
                 return last_results
 
             await asyncio.sleep(poll_interval_s)
@@ -944,23 +979,17 @@ class BasePreflightChecks:
         return sorted(specs, key=lambda s: int(s.priority))
 
     async def run(
-        self,
-        estimated_time_s: float | None = None,
-        mission_waypoints: list[Any] | None = None,
-        expected_mission_count: int | None = None,
-        mission_crc: int | None = None,
-        mission_ah_req: float | None = None,
-        allowed_modes: list[str] | None = None,
-        gps_timeout_s: float = 30.0,
-        fail_fast: bool = True,
-        concurrent_within_priority: bool = True,
+            self,
+            estimated_time_s: float | None = None,
+            mission_waypoints: list[Any] | None = None,
+            expected_mission_count: int | None = None,
+            mission_crc: int | None = None,
+            mission_ah_req: float | None = None,
+            allowed_modes: list[str] | None = None,
+            gps_timeout_s: float = 0.0,
+            fail_fast: bool = True,
+            concurrent_within_priority: bool = True,
     ) -> list[CheckResult]:
-        """
-        Executes checks in priority order.
-
-        - fail_fast=True: if any CRITICAL/SAFETY gate FAILs, remaining lower-priority checks are SKIPped.
-        - concurrent_within_priority=True: runs checks of same priority concurrently.
-        """
         specs = self._specs(
             estimated_time_s=estimated_time_s,
             mission_ah_req=mission_ah_req,
@@ -973,93 +1002,89 @@ class BasePreflightChecks:
 
         results: list[CheckResult] = []
         gates_failed = False
-        last_priority: Priority | None = None
         batch: list[CheckSpec] = []
+        last_priority: Priority | None = None
 
-        async def run_spec(spec: CheckSpec) -> list[CheckResult]:
+        async def run_spec(spec: CheckSpec) -> tuple[CheckSpec, list[CheckResult]]:
             try:
                 out = await spec.coro()
-                return out if isinstance(out, list) else [out]
+                spec_results = out if isinstance(out, list) else [out]
             except Exception as e:
-                # preflight should be resilient; convert exceptions to FAIL for gates, WARN otherwise
-                if spec.is_gate:
-                    return [self._fail(spec.name, f"Exception: {type(e).__name__}: {e}")]
-                return [self._warn(spec.name, f"Exception: {type(e).__name__}: {e}")]
+                spec_results = [
+                    self._fail(spec.name, f"Exception: {type(e).__name__}: {e}")
+                    if spec.is_gate
+                    else self._warn(spec.name, f"Exception: {type(e).__name__}: {e}")
+                ]
+
+            return spec, spec_results
 
         async def flush_batch() -> None:
-            nonlocal gates_failed, results, batch, last_priority
+            nonlocal batch, gates_failed
 
             if not batch:
                 return
 
-            # If we already failed gates and we're fail-fast, skip remaining batches
             if fail_fast and gates_failed:
-                for s in batch:
-                    results.append(self._skip(s.name, "Skipped due to previous gate failure"))
+                results.extend(
+                    self._skip(s.name, "Skipped due to previous gate failure") for s in batch
+                )
                 batch = []
                 return
 
+            pairs: list[tuple[CheckSpec, list[CheckResult]]]
+
             if concurrent_within_priority and len(batch) > 1:
-                groups = await asyncio.gather(
-                    *(run_spec(s) for s in batch), return_exceptions=False
-                )
-                flat: list[CheckResult] = []
-                for g in groups:
-                    flat.extend(g)
+                pairs = await asyncio.gather(*(run_spec(s) for s in batch))
             else:
-                flat = []
+                pairs = []
                 for s in batch:
-                    flat.extend(await run_spec(s))
+                    pairs.append(await run_spec(s))
 
-            results.extend(flat)
+            for spec, spec_results in pairs:
+                results.extend(spec_results)
 
-            # Update gate-failure state
-            if fail_fast:
-                for s in batch:
-                    if s.is_gate:
-                        # Determine if this spec produced any FAIL
-                        spec_results = [
-                            r for r in flat if r.name == s.name or r.name.startswith(s.name)
-                        ]
-                        if any(r.status == CheckStatus.FAIL for r in spec_results):
-                            gates_failed = True
-                            break
+                if fail_fast and spec.is_gate and any(
+                        r.status == CheckStatus.FAIL for r in spec_results
+                ):
+                    gates_failed = True
 
             batch = []
 
-        # Group by priority and flush per priority
         for spec in specs:
             if last_priority is None:
                 last_priority = spec.priority
-                batch.append(spec)
-                continue
 
             if spec.priority != last_priority:
                 await flush_batch()
                 last_priority = spec.priority
-                batch.append(spec)
-            else:
-                batch.append(spec)
+
+            batch.append(spec)
 
         await flush_batch()
 
-        # Deduplicate by name (defensive)
         results = self._dedupe_by_name(results)
 
-        # Final ordering: priority buckets first, then status severity within each bucket
         status_rank = {
-            CheckStatus.FAIL: 0,
-            CheckStatus.WARN: 1,
-            CheckStatus.PASS: 2,
-            CheckStatus.SKIP: 3,
+            "FAIL": 0,
+            "WARN": 1,
+            "PASS": 2,
+            "SKIP": 3,
         }
 
-        # Create a map from spec-name to priority (for ordering)
-        prio_map = {s.name: s.priority for s in specs}
+        prio_map = {s.name: int(s.priority) for s in specs}
 
-        def result_priority(r: CheckResult) -> int:
-            # If name matches spec, use it; else default to INFO
-            return int(prio_map.get(r.name, Priority.INFO))
+        def result_priority(result: CheckResult) -> int:
+            return prio_map.get(result.name, int(Priority.INFO))
 
-        results.sort(key=lambda r: (result_priority(r), status_rank.get(r.status, 99), r.name))
+        def status_value(result: CheckResult) -> str:
+            return str(getattr(result.status, "value", result.status))
+
+        results.sort(
+            key=lambda r: (
+                result_priority(r),
+                status_rank.get(status_value(r), 99),
+                r.name,
+            )
+        )
+
         return results

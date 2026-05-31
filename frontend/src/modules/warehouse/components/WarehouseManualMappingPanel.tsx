@@ -13,12 +13,12 @@ type MissionStatusLike = {
 type Props = {
   activeFlightId: string | null;
   missionStatus: MissionStatusLike | null;
-  telemetry: unknown;
   wsConnected: boolean;
   droneConnected: boolean;
   warehouseMapId: number | null;
   sensorRigId: number | null;
   dockId: number | null;
+  warehousePreflightPassed: boolean;
   setPendingFlightId: (flightId: string | null) => void;
   onPreflightRun: (preflight: PreflightRunResponse | null) => void;
   onMessage: (message: string) => void;
@@ -29,7 +29,7 @@ type Props = {
 
 export function WarehouseManualMappingPanel({ embedded = false, ...props }: Props) {
   const manualMapping = useWarehouseManualMapping(props);
-  const { preflight, manual } = manualMapping;
+  const { manual } = manualMapping;
 
   const stackLabel = (() => {
     if (manualMapping.mappingBusy) return "Mapping stack: updating…";
@@ -81,6 +81,7 @@ export function WarehouseManualMappingPanel({ embedded = false, ...props }: Prop
             title={manualMapping.startingSession ? "Starting…" : "Start Keyboard Flight"}
             color="primary"
             loading={manualMapping.startingSession}
+            disabled={!props.warehousePreflightPassed}
             onClick={manualMapping.startKeyboardSession}
           />
           <ActionIconButton
@@ -98,30 +99,31 @@ export function WarehouseManualMappingPanel({ embedded = false, ...props }: Prop
             onClick={manualMapping.stopMapping}
           />
         </Stack>
-        {!props.activeFlightId && (
+        {!props.warehousePreflightPassed && (
+          <Alert severity="warning">
+            Run Warehouse Preflight above before connecting or starting keyboard flight.
+          </Alert>
+        )}
+        {!props.activeFlightId && props.warehousePreflightPassed && (
           <Alert severity="info">Start a keyboard flight session before enabling movement.</Alert>
         )}
         {manualMapping.mappingActiveFlightId && (
           <Alert severity="success">ROS mapping is recording for this keyboard flight.</Alert>
         )}
         <ManualFlightControlPanel
-          controlledPreflight={preflight.controlledPreflight}
-          manualControlEnabled={preflight.manualControlEnabled}
+          preflightPassed={props.warehousePreflightPassed}
+          manualControlEnabled={manualMapping.manualControlEnabled}
           manualControlReady={manualMapping.manualControlReady}
           manualControlError={manual.manualControlError}
-          preflightBusy={manualMapping.preflightPreparing}
           activeManualCommands={manual.activeManualCommands}
           lastManualCommand={manual.lastManualCommand}
-          onRunPreflight={() => {
-            void manualMapping.runPreflightCheck();
-          }}
           onToggleKeyboard={() => {
-            if (preflight.manualControlEnabled) {
-              preflight.setManualControlEnabled(false);
+            if (manualMapping.manualControlEnabled) {
+              manualMapping.setManualControlEnabled(false);
               manual.stopAllManualCommands();
               return;
             }
-            preflight.setManualControlEnabled(true);
+            manualMapping.setManualControlEnabled(true);
             manual.setManualControlError(null);
           }}
           onStopMovement={() => manual.stopAllManualCommands("button")}

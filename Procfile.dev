@@ -12,6 +12,6 @@ gazebo_sensor_bridge: bash -lc 'exec "$(pwd)/scripts/start_gazebo_sensor_bridge.
 warehouse_sim_tf: scripts/procfile.sh ros2 run warehouse_mapping_bridge warehouse_sim_tf_broadcaster
 warehouse_odometry_export: scripts/procfile.sh ros2 run warehouse_mapping_bridge warehouse_odometry_export
 warehouse_bridge: bash -lc './scripts/warehouse_bridge.sh'
-# Not started by "make warehouse". Backend spawns this launch graph at flight start; use warehouse-session for manual runs.
+# nvblox starts when a warehouse flight begins (backend mapping_stack_lifecycle). Optional full graph:
 warehouse_mapping_stack: scripts/procfile.sh ros2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py
 rosbridge_ws: scripts/procfile.sh ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=${ROSBRIDGE_PORT:-9090}

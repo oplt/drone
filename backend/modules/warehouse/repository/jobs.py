@@ -56,6 +56,14 @@ class WarehouseJobMixin:
         flight_id: int | None,
         input_source: str = "warehouse_scan",
     ) -> tuple[WarehouseModel, WarehouseMappingJob]:
+        # Serialize version allocation per warehouse map.  Without this lock two
+        # concurrent persistence jobs can both see the same max(version) and trip
+        # uq_warehouse_model_version during flush.
+        await db.execute(
+            select(WarehouseMap.id)
+            .where(WarehouseMap.id == warehouse_map_id)
+            .with_for_update()
+        )
         version = await self.next_model_version(db, warehouse_map_id=warehouse_map_id)
         model = WarehouseModel(
             warehouse_map_id=warehouse_map_id,

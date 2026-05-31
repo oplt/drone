@@ -26,6 +26,7 @@ class WarehouseMappingStartRequest(BaseModel):
     sensor_rig_id: int | None = None
     capture_root: str | None = None
     metadata: dict[str, object] = Field(default_factory=dict)
+    calibration: dict[str, object] = Field(default_factory=dict)
 
 
 class WarehouseReplayStartRequest(BaseModel):
@@ -50,7 +51,7 @@ class WarehouseExplorationSnapshot(BaseModel):
 
 
 class WarehousePerceptionPort(Protocol):
-    async def status(self, *, deep: bool = False) -> WarehousePerceptionStatus: ...
+    async def status(self, *, deep: bool = False, force: bool = False) -> WarehousePerceptionStatus: ...
 
     async def exploration_snapshot(self) -> WarehouseExplorationSnapshot: ...
 

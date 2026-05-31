@@ -9,7 +9,11 @@ from typing import Any, cast
 
 from backend.core.config.runtime import setup_logging
 from backend.entrypoints.workers.celery_app import celery_app
-from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
+from backend.modules.warehouse.service.mapping import (
+    WarehouseScanMappingError,
+    WarehouseScanMappingPreconditionError,
+    WarehouseScanMappingService,
+)
 
 logger = logging.getLogger(__name__)
 setup_logging()
@@ -49,5 +53,15 @@ def _run_on_worker_loop(coro: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, 
 def process_warehouse_mapping_job(self: Any, job_id: int) -> dict[str, Any]:
     try:
         return _run_on_worker_loop(WarehouseScanMappingService().process_job(job_id=job_id))
+    except WarehouseScanMappingPreconditionError as exc:
+        logger.error(
+            "Warehouse mapping job %s failed precondition (no retry): %s",
+            job_id,
+            exc,
+        )
+        return {"job_id": job_id, "status": "failed_precondition", "error": str(exc)}
+    except WarehouseScanMappingError as exc:
+        logger.error("Warehouse mapping job %s failed: %s", job_id, exc)
+        return {"job_id": job_id, "status": "failed", "error": str(exc)}
     except Exception as exc:
         raise self.retry(exc=exc, countdown=30) from exc

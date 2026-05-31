@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,7 +29,13 @@ from backend.modules.warehouse.ports import (
 )
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
-from backend.modules.warehouse.service.safety import evaluate_warehouse_runtime_safety
+from backend.modules.warehouse.exceptions import WarehouseMissionFailure
+from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
+from backend.modules.warehouse.service.takeoff_readiness import ensure_warehouse_takeoff_readiness
+from backend.modules.warehouse.service.video import (
+    warehouse_video_recording_enabled,
+    warehouse_video_skip_reason,
+)
 
 if TYPE_CHECKING:
     from backend.modules.vehicle_runtime.orchestrator import Orchestrator
@@ -127,6 +134,12 @@ class WarehouseScanMission:
     )
     _plan_cache: WarehousePlanResult | None = field(
         default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _runtime_safety: WarehouseRuntimeSafetyTracker = field(
+        default_factory=WarehouseRuntimeSafetyTracker,
         init=False,
         repr=False,
         compare=False,
@@ -289,14 +302,36 @@ class WarehouseScanMission:
         execution_frame: WarehouseExecutionFrame | None = None
 
         try:
-            perception_start = await self._start_perception_mapping(
+            perception_start, takeoff_ready = await self._start_perception_mapping(
                 orch,
                 session_dir=session.session_dir,
             )
             perception_started = bool(perception_start.accepted)
-            await asyncio.sleep(0.5)
+            if not takeoff_ready.ready:
+                raise WarehouseMissionFailure(
+                    reason="takeoff_sensors_not_ready",
+                    action="abort",
+                    stage="takeoff",
+                    message=takeoff_ready.detail or "Warehouse sensors not ready for takeoff",
+                    details=takeoff_ready.to_dict(),
+                )
+            await self._add_event_safe(
+                orch,
+                "warehouse_scan_takeoff_readiness",
+                takeoff_ready.to_dict(),
+            )
+            if not perception_start.data.get("nvblox_ready") and perception_start.data.get(
+                "nvblox_warning"
+            ):
+                await self._add_event_safe(
+                    orch,
+                    "warehouse_scan_nvblox_warming",
+                    {"detail": perception_start.data.get("nvblox_warning")},
+                )
+
             await asyncio.to_thread(orch.drone.arm_and_takeoff, float(self.base_height_m))
             airborne = True
+            self._runtime_safety.reset_for_takeoff()
             await self._add_event_safe(
                 orch,
                 "warehouse_scan_takeoff",
@@ -332,8 +367,8 @@ class WarehouseScanMission:
         finally:
             if airborne:
                 try:
-                    await asyncio.to_thread(orch.drone.land)
                     await self._add_event_safe(orch, "landing_command_sent", {})
+                    await asyncio.to_thread(orch.drone.land)
                     await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
                     await self._add_event_safe(orch, "landed_dock", {})
                 except Exception as exc:
@@ -346,15 +381,40 @@ class WarehouseScanMission:
                     )
                     logger.exception("Warehouse scan landing failed")
 
+            # Stop video immediately after landing; mapping/capture stop can take longer.
+            video_stop_task = (
+                asyncio.create_task(self._stop_video_recording(orch))
+                if video_recording_active
+                else None
+            )
+
             if perception_started:
-                await self._stop_perception_mapping(orch)
+                stop_result = await self._stop_perception_mapping(orch)
+                from backend.modules.warehouse.service.capture_finalize import (
+                    resolve_capture_session_dir,
+                    wait_for_mapping_artifacts,
+                )
+
+                ros_session_dir = resolve_capture_session_dir(
+                    self._flight_token(orch),
+                    stop_data=stop_result.data if isinstance(stop_result.data, dict) else None,
+                )
+                export_ready = await wait_for_mapping_artifacts(ros_session_dir)
+                await self._add_event_safe(
+                    orch,
+                    "warehouse_scan_artifact_export",
+                    {
+                        "ready": export_ready,
+                        "session_dir": str(ros_session_dir),
+                        "has_mapping_artifacts": export_ready,
+                    },
+                )
 
             if capture_started:
                 await self._stop_capture_if_supported(orch)
 
-            # Stop video as soon as we're on the ground — mapping can take minutes
-            if video_recording_active:
-                await self._stop_video_recording(orch)
+            if video_stop_task is not None:
+                await video_stop_task
 
         if mission_error is None:
             try:
@@ -466,14 +526,26 @@ class WarehouseScanMission:
             )
 
         final_status = FlightStatus.COMPLETED if mission_error is None else FlightStatus.FAILED
+        ros_mapping_status = "completed" if mapping_saved else (
+            "failed" if mapping_error is not None else "skipped"
+        )
+        artifact_export_status = "exported" if mapping_saved else (
+            "missing_outputs" if mapping_error is not None else "not_attempted"
+        )
+        overall_status = "completed"
+        if mission_error is not None:
+            overall_status = "failed"
+        elif mapping_error is not None:
+            overall_status = "partial_failure"
+
         if mission_error is not None:
             final_note = "Warehouse scan flight failed; 3D map persistence was skipped"
         elif mapping_saved:
             final_note = "Warehouse scan flight completed and 3D map persisted"
         elif mapping_error is not None:
             final_note = (
-                "Warehouse scan flight completed but 3D map persistence failed: "
-                + str(mapping_error)[:180]
+                "Flight completed, but warehouse mapping failed because no ROS mapping "
+                f"artifacts were produced: {str(mapping_error)[:160]}"
             )
         else:
             final_note = "Warehouse scan flight completed"
@@ -490,6 +562,10 @@ class WarehouseScanMission:
                 "mapping_saved": mapping_saved,
                 "mapping_error": str(mapping_error) if mapping_error is not None else None,
                 "flight_status": final_status.value,
+                "video_capture_status": "completed" if video_recording_active else "not_started",
+                "ros_mapping_status": ros_mapping_status,
+                "artifact_export_status": artifact_export_status,
+                "overall_status": overall_status,
                 "scan_pattern": self.scan_pattern,
                 "view_mode": self.view_mode,
                 "layers": int(self.layer_count),
@@ -503,9 +579,29 @@ class WarehouseScanMission:
 
         await shutdown_warehouse_mapping_stack()
 
+        await self._log_mission_diagnostic_summary(
+            orch,
+            mission_error=mission_error,
+            mapping_saved=mapping_saved,
+        )
+
         if mission_error is not None:
             raise mission_error
-
+        if mapping_error is not None:
+            raise WarehouseMissionFailure(
+                reason="mapping_artifacts_missing",
+                action="complete",
+                stage="capture",
+                message=(
+                    "Flight completed, but warehouse mapping failed because no ROS mapping "
+                    "artifacts were produced. Check RGB/depth/odometry/nvblox topics before rerunning."
+                ),
+                details={
+                    "mapping_error": str(mapping_error)[:500],
+                    "overall_status": "partial_failure",
+                    "artifact_export_status": "missing_outputs",
+                },
+            )
     # ------------------------------------------------------------------
     # Plan building
     # ------------------------------------------------------------------
@@ -810,18 +906,98 @@ class WarehouseScanMission:
         except (TypeError, ValueError):
             return None
 
-    async def _check_runtime_safety(self, orch: Orchestrator) -> None:
+    async def _log_mission_diagnostic_summary(
+        self,
+        orch: Orchestrator,
+        *,
+        mission_error: Exception | None,
+        mapping_saved: bool,
+    ) -> None:
+        from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
+        from backend.modules.warehouse.exceptions import WarehouseMissionFailure
+        from backend.modules.warehouse.service.readiness_result import (
+            readiness_from_perception_status_strict,
+        )
+
+        failure_code = None
+        if isinstance(mission_error, WarehouseMissionFailure):
+            failure_code = mission_error.reason
+
         try:
-            status = await build_warehouse_perception_port().status()
-        except Exception:
+            status = await build_warehouse_perception_port().status(deep=True, force=True)
+            readiness = readiness_from_perception_status_strict(status)
+        except Exception as exc:
+            logger.warning("Mission diagnostic health probe failed: %s", exc)
+            readiness = None
+
+        summary: dict[str, object] = {
+            "flight_id": getattr(orch, "_flight_id", None),
+            "mission_type": self.mission_kind,
+            "result": (
+                "failed"
+                if mission_error
+                else ("partial_failure" if not mapping_saved and mapping_error else "completed")
+            ),
+            "failure_code": failure_code,
+            "mapping_saved": mapping_saved,
+            "cleanup_completed": True,
+        }
+        if readiness is not None:
+            summary.update(
+                {
+                    "bridge_alive": readiness.bridge_alive,
+                    "ros_graph_ready": readiness.ros_graph_ready,
+                    "can_localize": readiness.can_localize,
+                    "missing_required_topics": list(readiness.missing_required_topics),
+                    "missing_nvblox_topics": list(readiness.missing_nvblox_topics),
+                    "unhealthy_topics": list(readiness.unhealthy_topics),
+                }
+            )
+
+        logger.info("Warehouse mission diagnostic summary %s", summary)
+        await self._add_event_safe(orch, "warehouse_mission_diagnostic", summary)
+
+    async def _check_runtime_safety(self, orch: Orchestrator) -> None:
+        deep = self._runtime_safety.should_run_deep_health_probe()
+        try:
+            status = await build_warehouse_perception_port().status(
+                deep=deep,
+                force=deep,
+            )
+        except Exception as exc:
+            logger.warning("Warehouse runtime safety health check failed: %s", exc)
             return
+        if deep:
+            self._runtime_safety.mark_deep_probe_ran()
+
         components = status.components if isinstance(status.components, dict) else {}
-        decision = evaluate_warehouse_runtime_safety(
+        components = dict(components)
+        from backend.modules.warehouse.service.runtime_safety import read_odometry_state_file
+
+        odom_read = read_odometry_state_file()
+        if odom_read.unreadable:
+            components["odometry_state_unreadable"] = True
+            components["local_odometry_state"] = {}
+        elif odom_read.payload:
+            components["local_odometry_state"] = odom_read.payload
+        decision = self._runtime_safety.evaluate(
             components,
+            deep_health=deep,
             min_localization_confidence=float(self.localization_confidence_min),
             min_obstacle_distance_m=float(self.clearance_m),
             min_ceiling_distance_m=float(self.ceiling_margin_m),
         )
+        from backend.modules.warehouse.service.flight_watchdog import (
+            apply_watchdog_to_safety_decision,
+            get_warehouse_flight_watchdog,
+        )
+
+        watchdog = get_warehouse_flight_watchdog()
+        if not watchdog.active:
+            watchdog.start()
+        watchdog_action = watchdog.evaluate(components=components, status=status)
+        if watchdog_action.triggered:
+            decision = apply_watchdog_to_safety_decision(watchdog_action)
         if decision.safe:
             return
         await self._add_event_safe(
@@ -831,9 +1007,16 @@ class WarehouseScanMission:
                 "reason": decision.reason,
                 "action": decision.action,
                 "details": decision.details or {},
+                "deep_health": deep,
             },
         )
-        raise RuntimeError(f"Warehouse safety abort: {decision.reason}")
+        raise WarehouseMissionFailure(
+            reason=decision.reason or "warehouse_safety_abort",
+            action=decision.action,
+            stage="flight",
+            message=f"Warehouse safety abort: {decision.reason}",
+            details=decision.details or {},
+        )
 
     def _perception_metadata(self, orch: Orchestrator, *, session_dir: Path) -> dict[str, object]:
         del orch
@@ -859,15 +1042,54 @@ class WarehouseScanMission:
         orch: Orchestrator,
         *,
         session_dir: Path,
-    ) -> WarehousePerceptionCommandResult:
+    ) -> tuple[WarehousePerceptionCommandResult, object]:
         from backend.modules.warehouse.service.mapping_stack_lifecycle import (
-            ensure_warehouse_mapping_stack_running,
             mapping_stack_not_running_result,
+            prepare_warehouse_scan_ros,
         )
+        def _float_env(name: str, default: float) -> float:
+            raw = os.getenv(name)
+            if raw is None or raw.strip() == "":
+                return default
+            try:
+                return float(raw)
+            except ValueError:
+                return default
 
-        stack_status = await ensure_warehouse_mapping_stack_running()
+        stack_status, flight_readiness, takeoff_ready = await prepare_warehouse_scan_ros(
+            require_nvblox=True,
+            sensor_timeout_s=_float_env("WAREHOUSE_TAKEOFF_READINESS_WAIT_S", 10.0),
+            nvblox_timeout_s=_float_env("WAREHOUSE_FLIGHT_MAPPING_WAIT_S", 30.0),
+        )
         if not stack_status.running:
-            return mapping_stack_not_running_result()
+            return mapping_stack_not_running_result(), takeoff_ready
+        if not flight_readiness.bridge_reachable:
+            raise WarehouseMissionFailure(
+                reason="warehouse_bridge_unreachable",
+                action="abort",
+                stage="flight",
+                message=flight_readiness.detail
+                or "Warehouse ROS bridge could not be reached after starting nvblox",
+                details=flight_readiness.to_dict(),
+            )
+        if not takeoff_ready.ready:
+            raise WarehouseMissionFailure(
+                reason="takeoff_sensors_not_ready",
+                action="abort",
+                stage="takeoff",
+                message=takeoff_ready.detail
+                or "Warehouse sensors not ready for takeoff",
+                details=takeoff_ready.to_dict(),
+            )
+        if not flight_readiness.core_ready:
+            raise WarehouseMissionFailure(
+                reason="warehouse_sensors_not_ready",
+                action="abort",
+                stage="flight",
+                message=flight_readiness.detail
+                or "Warehouse bridge not ready after starting nvblox",
+                details=flight_readiness.to_dict(),
+            )
         port = build_warehouse_perception_port()
         flight_id = self._flight_token(orch)
         request = WarehouseMappingStartRequest(
@@ -877,6 +1099,13 @@ class WarehouseScanMission:
             metadata=self._perception_metadata(orch, session_dir=session_dir),
         )
         result = await port.start_mapping(request)
+        extra_data: dict[str, object] = dict(result.data or {})
+        extra_data["stack_pid"] = stack_status.pid
+        extra_data["nvblox_ready"] = flight_readiness.nvblox_ready
+        if not flight_readiness.nvblox_ready:
+            extra_data["nvblox_warning"] = (
+                "Nvblox still warming; map outputs may appear during the scan"
+            )
         await self._add_event_safe(
             orch,
             "warehouse_scan_perception_mapping_started",
@@ -884,12 +1113,18 @@ class WarehouseScanMission:
                 "accepted": result.accepted,
                 "status": result.status,
                 "detail": result.detail,
-                "data": result.data,
+                "data": extra_data,
             },
         )
         if not result.accepted:
             raise RuntimeError(f"Warehouse perception mapping was not accepted: {result.status}")
-        return result
+        merged = WarehousePerceptionCommandResult(
+            accepted=result.accepted,
+            status=result.status,
+            detail=result.detail,
+            data=extra_data,
+        )
+        return merged, takeoff_ready
 
     async def _stop_perception_mapping(
         self,
@@ -1011,6 +1246,18 @@ class WarehouseScanMission:
     async def _start_video_recording(self, orch: Orchestrator) -> dict[str, object]:
         if not self.enable_video_recording:
             return {"enabled": False}
+
+        skip_reason = warehouse_video_skip_reason()
+        if skip_reason or not warehouse_video_recording_enabled():
+            payload = {
+                "enabled": True,
+                "recording": False,
+                "skipped": True,
+                "reason": skip_reason or "warehouse video source not configured for profile",
+            }
+            await self._add_event_safe(orch, "warehouse_scan_video_recording_started", payload)
+            logger.info("Warehouse video recording skipped: %s", payload["reason"])
+            return payload
 
         flight_id = (
             getattr(orch, "_flight_id", None)

@@ -11,11 +11,12 @@ from backend.infrastructure.warehouse.mapping_stack_process import (
     get_warehouse_mapping_stack_manager,
 )
 from backend.modules.warehouse.ports import WarehousePerceptionCommandResult, WarehousePerceptionStatus
+from backend.modules.warehouse.service.takeoff_readiness import readiness_from_perception_status
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PREFLIGHT_WAIT_S = 60.0
-_PREFLIGHT_POLL_S = 1.0
+_DEFAULT_PREFLIGHT_WAIT_S = 20.0
+_PREFLIGHT_POLL_S = 0.5
 
 
 @dataclass(frozen=True)
@@ -32,13 +33,18 @@ class WarehouseMappingReadiness:
     topic_diagnostics: dict[str, object] = field(default_factory=dict)
 
     @property
+    def core_ready(self) -> bool:
+        return bool(self.bridge_reachable and self.sensors_ready)
+
+    @property
+    def mapping_ready(self) -> bool:
+        return bool(self.nvblox_ready)
+
+    @property
     def ready_for_preflight(self) -> bool:
-        return (
-            self.stack_status.running
-            and self.bridge_reachable
-            and self.sensors_ready
-            and self.nvblox_ready
-        )
+        if _preflight_wait_for_nvblox():
+            return self.core_ready and self.nvblox_ready
+        return self.core_ready
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -46,7 +52,9 @@ class WarehouseMappingReadiness:
             "bridge_reachable": self.bridge_reachable,
             "ros_graph_ready": self.ros_graph_ready,
             "sensors_ready": self.sensors_ready,
+            "core_ready": self.core_ready,
             "nvblox_ready": self.nvblox_ready,
+            "mapping_ready": self.mapping_ready,
             "ready_for_preflight": self.ready_for_preflight,
             "missing_required_topics": list(self.missing_required),
             "missing_nvblox_topics": list(self.missing_nvblox),
@@ -56,9 +64,17 @@ class WarehouseMappingReadiness:
         }
 
 
-def _preflight_wait_for_nvblox_only() -> bool:
-    raw = os.getenv("WAREHOUSE_PREFLIGHT_WAIT_NVBLOX_ONLY", "1").strip().lower()
+def _preflight_wait_for_nvblox() -> bool:
+    raw = os.getenv("WAREHOUSE_PREFLIGHT_WAIT_NVBLOX", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+def _preflight_poll_interval_s() -> float:
+    raw = os.getenv("WAREHOUSE_READINESS_POLL_S", "0.5")
+    try:
+        return max(0.25, float(raw))
+    except ValueError:
+        return 0.5
 
 
 def _diagnostic_verify_actions(components: dict[str, object]) -> tuple[str, ...]:
@@ -124,10 +140,24 @@ def _readiness_from_status(status: WarehousePerceptionStatus, *, stack_status: M
     missing_nvblox = tuple(
         str(item) for item in (components.get("missing_nvblox_topics") or []) if item
     )
-    sensors_ready = bool(status.ready)
-    nvblox_ready = bool(components.get("nvblox_healthy", components.get("nvblox")))
-    topic_diagnostics_raw = components.get("topic_diagnostics")
-    topic_diagnostics = topic_diagnostics_raw if isinstance(topic_diagnostics_raw, dict) else {}
+    diagnostics_ready = bool(components.get("diagnostics_ready", True))
+    takeoff = readiness_from_perception_status(status, require_nvblox=False, strict=True)
+    sensors_ready = bool(status.ready) if diagnostics_ready else False
+    if diagnostics_ready:
+        sensors_ready = takeoff.ready
+    nvblox_ready = (
+        bool(components.get("nvblox_healthy", components.get("nvblox")))
+        if diagnostics_ready
+        else False
+    )
+    topic_diagnostics = takeoff.topic_diagnostics
+    detail = status.detail if diagnostics_ready else "waiting for warehouse bridge diagnostics"
+    if diagnostics_ready and not sensors_ready and takeoff.detail:
+        detail = takeoff.detail
+    if takeoff.missing_topics or takeoff.stale_topics:
+        missing_required = tuple(
+            dict.fromkeys((*missing_required, *takeoff.missing_topics, *takeoff.stale_topics))
+        )
     return WarehouseMappingReadiness(
         stack_status=stack_status,
         bridge_reachable=bool(status.reachable),
@@ -136,7 +166,7 @@ def _readiness_from_status(status: WarehousePerceptionStatus, *, stack_status: M
         nvblox_ready=nvblox_ready,
         missing_required=missing_required,
         missing_nvblox=missing_nvblox,
-        detail=status.detail,
+        detail=detail,
         topic_diagnostics=topic_diagnostics,
         suggested_actions=_suggested_actions(
             bridge_reachable=bool(status.reachable),
@@ -145,7 +175,8 @@ def _readiness_from_status(status: WarehousePerceptionStatus, *, stack_status: M
             missing_required=missing_required,
             missing_nvblox=missing_nvblox,
             components=components,
-        ),
+        )
+        or takeoff.suggested_actions,
     )
 
 
@@ -158,20 +189,8 @@ async def ensure_warehouse_mapping_ready_for_preflight(
     *,
     timeout_s: float | None = None,
 ) -> WarehouseMappingReadiness:
-    """Start mapping stack and wait until bridge reports sensor + nvblox readiness."""
-    stack_status = await ensure_warehouse_mapping_stack_running()
-    if not stack_status.running:
-        return WarehouseMappingReadiness(
-            stack_status=stack_status,
-            bridge_reachable=False,
-            sensors_ready=False,
-            nvblox_ready=False,
-            detail=stack_status.last_error or "mapping stack failed to start",
-            suggested_actions=(
-                "Inspect backend/storage/warehouse_ros/logs/warehouse_mapping_stack.log",
-                "Set WAREHOUSE_NVBLOX_LAUNCH_CMD to scripts/start_warehouse_nvblox.sh",
-            ),
-        )
+    """Wait for bridge sensor readiness without starting nvblox (flight starts the stack)."""
+    stack_status = await warehouse_mapping_stack_status()
 
     wait_s = timeout_s if timeout_s is not None else float(
         os.getenv("WAREHOUSE_PREFLIGHT_PERCEPTION_WAIT_S", str(_DEFAULT_PREFLIGHT_WAIT_S))
@@ -188,21 +207,35 @@ async def ensure_warehouse_mapping_ready_for_preflight(
         detail="waiting for mapping readiness",
     )
 
+    poll_s = _preflight_poll_interval_s()
+    deep_interval_s = float(os.getenv("WAREHOUSE_READINESS_DEEP_INTERVAL_S", "6.0"))
+    last_deep_at = 0.0
+    attempt = 0
+
     while time.monotonic() < deadline:
-        status = await port.status(deep=True)
+        now = time.monotonic()
+        attempt += 1
+        use_deep = attempt == 1 or (now - last_deep_at) >= deep_interval_s
+        if use_deep:
+            last_deep_at = now
+
+        status = await port.status(deep=use_deep, force=attempt == 1)
         last = _readiness_from_status(status, stack_status=stack_status)
-        if _preflight_wait_for_nvblox_only():
-            ready_for_preflight = last.nvblox_ready and last.sensors_ready
-        else:
-            ready_for_preflight = last.ready_for_preflight
-        if ready_for_preflight:
+        components = status.components if isinstance(status.components, dict) else {}
+        diagnostics_ready = bool(components.get("diagnostics_ready", True))
+        if not diagnostics_ready or (
+            components.get("probe_in_progress") and not components.get("cache_ready")
+        ):
+            await asyncio.sleep(poll_s)
+            continue
+        if last.ready_for_preflight:
             logger.info(
                 "Warehouse mapping ready for preflight sensors=%s nvblox=%s",
                 last.sensors_ready,
                 last.nvblox_ready,
             )
             return last
-        await asyncio.sleep(_PREFLIGHT_POLL_S)
+        await asyncio.sleep(poll_s)
 
     logger.warning(
         "Warehouse mapping stack not ready before preflight sensors=%s nvblox=%s timeout_s=%.0f missing_required=%s missing_nvblox=%s",
@@ -223,6 +256,147 @@ async def ensure_warehouse_mapping_ready_for_preflight(
         suggested_actions=last.suggested_actions
         or ("Increase WAREHOUSE_PREFLIGHT_PERCEPTION_WAIT_S",),
     )
+
+
+async def prepare_warehouse_scan_ros(
+    *,
+    require_nvblox: bool = False,
+    sensor_timeout_s: float | None = None,
+    nvblox_timeout_s: float | None = None,
+) -> tuple[MappingStackStatus, WarehouseMappingReadiness, "WarehouseTakeoffReadiness"]:
+    """Start nvblox and confirm sensors in parallel with takeoff readiness (faster flight prep)."""
+    from backend.modules.warehouse.service.takeoff_readiness import (
+        WarehouseTakeoffReadiness,
+        ensure_warehouse_takeoff_readiness,
+    )
+
+    stack_status = await ensure_warehouse_mapping_stack_running()
+    if not stack_status.running:
+        readiness = WarehouseMappingReadiness(
+            stack_status=stack_status,
+            bridge_reachable=False,
+            sensors_ready=False,
+            nvblox_ready=False,
+            detail=stack_status.last_error or "mapping stack failed to start",
+        )
+        takeoff_ready = WarehouseTakeoffReadiness(
+            ready=False,
+            detail=readiness.detail,
+        )
+        return stack_status, readiness, takeoff_ready
+
+    settle_s = float(os.getenv("WAREHOUSE_MAPPING_STACK_SETTLE_S", "2.0"))
+    if settle_s > 0:
+        await asyncio.sleep(settle_s)
+
+    mapping_ready_task = asyncio.create_task(
+        _wait_bridge_after_stack_start(
+            stack_status=stack_status,
+            timeout_s=nvblox_timeout_s,
+            require_nvblox=require_nvblox,
+        )
+    )
+    takeoff_ready_task = asyncio.create_task(
+        ensure_warehouse_takeoff_readiness(
+            timeout_s=sensor_timeout_s,
+            require_nvblox=False,
+            reuse_recent=False,
+            strict=True,
+            force_refresh=True,
+        )
+    )
+    mapping_readiness, takeoff_ready = await asyncio.gather(
+        mapping_ready_task,
+        takeoff_ready_task,
+    )
+    return stack_status, mapping_readiness, takeoff_ready
+
+
+async def _wait_bridge_after_stack_start(
+    *,
+    stack_status: MappingStackStatus,
+    timeout_s: float | None,
+    require_nvblox: bool,
+) -> WarehouseMappingReadiness:
+    from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
+
+    wait_s = timeout_s if timeout_s is not None else float(
+        os.getenv("WAREHOUSE_FLIGHT_MAPPING_WAIT_S", "30")
+    )
+    port = build_warehouse_perception_port()
+    deadline = time.monotonic() + max(3.0, wait_s)
+    last = WarehouseMappingReadiness(
+        stack_status=stack_status,
+        bridge_reachable=False,
+        sensors_ready=False,
+        nvblox_ready=False,
+        detail="waiting for bridge after nvblox start",
+    )
+    poll_s = _preflight_poll_interval_s()
+    deep_interval_s = float(os.getenv("WAREHOUSE_READINESS_DEEP_INTERVAL_S", "8.0"))
+    last_deep_at = 0.0
+    attempt = 0
+
+    while time.monotonic() < deadline:
+        attempt += 1
+        now = time.monotonic()
+        use_deep = (now - last_deep_at) >= deep_interval_s and attempt > 3
+        if use_deep:
+            last_deep_at = now
+
+        status = await port.status(deep=use_deep, force=use_deep)
+        last = _readiness_from_status(status, stack_status=stack_status)
+        components = status.components if isinstance(status.components, dict) else {}
+        if not status.reachable:
+            await asyncio.sleep(poll_s)
+            continue
+        if components.get("probe_in_progress") and not components.get("cache_ready"):
+            await asyncio.sleep(poll_s)
+            continue
+        if last.core_ready and (not require_nvblox or last.mapping_ready):
+            logger.info(
+                "Warehouse flight ROS ready sensors=%s nvblox=%s stack_pid=%s",
+                last.sensors_ready,
+                last.nvblox_ready,
+                stack_status.pid,
+            )
+            return last
+        await asyncio.sleep(poll_s)
+
+    logger.warning(
+        "Warehouse flight ROS wait timed out sensors=%s nvblox=%s",
+        last.sensors_ready,
+        last.nvblox_ready,
+    )
+    return last
+
+
+async def ensure_warehouse_mapping_stack_for_flight(
+    *,
+    timeout_s: float | None = None,
+    require_nvblox: bool = False,
+) -> tuple[MappingStackStatus, WarehouseMappingReadiness]:
+    """Start nvblox and wait for bridge/mapping readiness without repeating takeoff readiness."""
+    stack_status = await ensure_warehouse_mapping_stack_running()
+    if not stack_status.running:
+        return stack_status, WarehouseMappingReadiness(
+            stack_status=stack_status,
+            bridge_reachable=False,
+            sensors_ready=False,
+            nvblox_ready=False,
+            detail=stack_status.last_error or "mapping stack failed to start",
+        )
+
+    settle_s = float(os.getenv("WAREHOUSE_MAPPING_STACK_SETTLE_S", "2.0"))
+    if settle_s > 0:
+        await asyncio.sleep(settle_s)
+
+    readiness = await _wait_bridge_after_stack_start(
+        stack_status=stack_status,
+        timeout_s=timeout_s,
+        require_nvblox=require_nvblox,
+    )
+    return stack_status, readiness
 
 
 async def shutdown_warehouse_mapping_stack() -> MappingStackStatus:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
@@ -68,12 +68,23 @@ def _grid(payload: dict[str, object]) -> OccupancyGrid:
 class WarehousePerceptionSLAMProvider(SLAMProvider):
     """SLAMProvider backed by the Jetson ROS bridge nvblox exploration snapshot."""
 
+    snapshot_cache_ttl_s: float = 0.2
+    _cached_snapshot: object | None = field(default=None, init=False, repr=False)
+    _cached_snapshot_at: float = field(default=0.0, init=False, repr=False)
+
+    async def _snapshot(self):
+        now = time.monotonic()
+        if self._cached_snapshot is None or (now - self._cached_snapshot_at) > self.snapshot_cache_ttl_s:
+            self._cached_snapshot = await build_warehouse_perception_port().exploration_snapshot()
+            self._cached_snapshot_at = now
+        return self._cached_snapshot
+
     async def get_pose(self) -> LocalPose:
-        snapshot = await build_warehouse_perception_port().exploration_snapshot()
+        snapshot = await self._snapshot()
         return _pose(snapshot.pose)
 
     async def get_map_snapshot(self) -> MapSnapshot:
-        snapshot = await build_warehouse_perception_port().exploration_snapshot()
+        snapshot = await self._snapshot()
         grid = _grid(snapshot.occupancy_grid)
         free_cells, occupied_cells, _unknown_cells = grid.counts()
         return MapSnapshot(
@@ -86,7 +97,7 @@ class WarehousePerceptionSLAMProvider(SLAMProvider):
         )
 
     async def get_localization_health(self) -> SLAMHealth:
-        snapshot = await build_warehouse_perception_port().exploration_snapshot()
+        snapshot = await self._snapshot()
         health = snapshot.health if isinstance(snapshot.health, dict) else {}
         return SLAMHealth(
             tracking_ok=bool(health.get("tracking_ok", health.get("vslam_tracking", False))),

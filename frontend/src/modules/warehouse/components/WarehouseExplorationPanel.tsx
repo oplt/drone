@@ -3,14 +3,17 @@ import {
   Alert,
   Box,
   CircularProgress,
+  IconButton,
   InputAdornment,
   Paper,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import SaveIcon from "@mui/icons-material/Save";
+import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
 import InfoLabel from "../../../shared/ui/InfoLabel";
-import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import {
   fetchWarehouseExplorationProfile,
   startWarehouseExploration,
@@ -29,6 +32,7 @@ type Props = {
   onLaunch: (launch: WarehouseMissionLaunchResponse) => void;
   onError: (message: string, error?: unknown) => void;
   embedded?: boolean;
+  warehousePreflightPassed?: boolean;
 };
 
 const DEFAULT_PROFILE: WarehouseExplorationProfile = {
@@ -39,13 +43,70 @@ const DEFAULT_PROFILE: WarehouseExplorationProfile = {
   max_duration_s: 900,
 };
 
-const EXPLORATION_FIELD_SX = {
-  minWidth: 0,
-  "& .MuiInputBase-input": { px: 0.75, py: 0.75 },
-  "& .MuiInputAdornment-root": { ml: 0, mr: 0.25 },
-  "& .MuiInputAdornment-root .MuiTypography-root": { fontSize: "0.7rem" },
-  "& .MuiInputLabel-root": { fontSize: "0.75rem" },
+const CLASSIC_FILLED_INPUT_SX = {
+  "& .MuiFilledInput-root": {
+    border: "none !important",
+    boxShadow: "none",
+    backgroundColor: "grey.200",
+    "&:before, &:after": { display: "none" },
+    "&:hover": {
+      border: "none !important",
+      backgroundColor: "grey.300",
+    },
+    "&.Mui-focused": {
+      border: "none !important",
+      backgroundColor: "grey.300",
+    },
+  },
+  '[data-mui-color-scheme="dark"] & .MuiFilledInput-root': {
+    backgroundColor: "grey.800",
+    "&:hover": { backgroundColor: "grey.700" },
+    "&.Mui-focused": { backgroundColor: "grey.700" },
+  },
 } as const;
+
+/** 40% smaller than prior exploration field size (5.2rem → 3.12rem). */
+const EXPLORATION_FIELD_WIDTH = "3.12rem";
+
+const EXPLORATION_FIELD_SX = {
+  flex: "0 0 auto",
+  width: EXPLORATION_FIELD_WIDTH,
+  maxWidth: EXPLORATION_FIELD_WIDTH,
+  ...CLASSIC_FILLED_INPUT_SX,
+  "& .MuiFilledInput-root": {
+    ...CLASSIC_FILLED_INPUT_SX["& .MuiFilledInput-root"],
+    minHeight: "1.65rem",
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  "[data-mui-color-scheme=\"dark\"] & .MuiFilledInput-root": CLASSIC_FILLED_INPUT_SX[
+    '[data-mui-color-scheme="dark"] & .MuiFilledInput-root'
+  ],
+  "& .MuiInputBase-root": { fontSize: "0.65rem" },
+  "& .MuiFilledInput-input": {
+    px: 0.45,
+    py: 0.25,
+    pt: 0.75,
+    pb: 0.25,
+    textAlign: "right",
+    MozAppearance: "textfield",
+    "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+      WebkitAppearance: "none",
+      margin: 0,
+    },
+  },
+  "& .MuiInputAdornment-root": { ml: 0, mr: 0.15 },
+  "& .MuiInputAdornment-root .MuiTypography-root": { fontSize: "0.6rem" },
+  "& .MuiInputLabel-root": {
+    fontSize: "0.6rem",
+    transform: "translate(8px, 6px) scale(1)",
+  },
+  "& .MuiInputLabel-shrink": {
+    transform: "translate(8px, -6px) scale(0.72)",
+  },
+} as const;
+
+const EMBEDDED_EXPLORATION_FIELD_SX = EXPLORATION_FIELD_SX;
 
 const EXPLORATION_FIELDS = [
   {
@@ -83,6 +144,7 @@ export function WarehouseExplorationPanel({
   onLaunch,
   onError,
   embedded = false,
+  warehousePreflightPassed = false,
 }: Props) {
   const [profile, setProfile] = useState<WarehouseExplorationProfile>(DEFAULT_PROFILE);
   const [loading, setLoading] = useState(false);
@@ -175,61 +237,152 @@ export function WarehouseExplorationPanel({
           <CircularProgress size={16} />
         </Stack>
       )}
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: embedded
-              ? "repeat(2, minmax(0, 1fr))"
-              : "repeat(5, minmax(56px, 1fr))",
-            gap: 0.75,
-            minWidth: 0,
-          }}
-        >
-          {EXPLORATION_FIELDS.map((field) => (
-            <TextField
-              key={field.key}
-              size="small"
-              fullWidth
-              type="number"
-              label={field.label}
-              value={profile[field.key]}
-              sx={EXPLORATION_FIELD_SX}
-              InputProps={
-                field.adornment
-                  ? {
-                      endAdornment: (
-                        <InputAdornment position="end">{field.adornment}</InputAdornment>
-                      ),
+        {embedded ? (
+          <Stack direction="row" spacing={0.5} alignItems="flex-start" sx={{ minWidth: 0 }}>
+            {EXPLORATION_FIELDS.map((field) => (
+              <TextField
+                variant="filled"
+                key={field.key}
+                size="small"
+                type="number"
+                label={field.label}
+                value={profile[field.key]}
+                sx={EMBEDDED_EXPLORATION_FIELD_SX}
+                InputProps={
+                  field.adornment
+                    ? {
+                        endAdornment: (
+                          <InputAdornment position="end">{field.adornment}</InputAdornment>
+                        ),
+                      }
+                    : undefined
+                }
+                onChange={(event) => updateNumber(field.key, event.target.value)}
+              />
+            ))}
+            <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, pt: 0.35 }}>
+              <Tooltip title="Save Profile">
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label="Save Profile"
+                    disabled={saving}
+                    onClick={() => {
+                      void saveProfile();
+                    }}
+                  >
+                    {saving ? <CircularProgress size={18} /> : <SaveIcon fontSize="small" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={starting ? "Starting…" : "Start Exploration"}>
+                <span>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    aria-label="Start Exploration"
+                    disabled={
+                      !warehousePreflightPassed ||
+                      warehouseMapId == null ||
+                      selectedDockId == null ||
+                      starting
                     }
-                  : undefined
-              }
-              onChange={(event) => updateNumber(field.key, event.target.value)}
-            />
-          ))}
-        </Box>
+                    onClick={() => {
+                      void launchExploration();
+                    }}
+                  >
+                    {starting ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <FlightTakeoffIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        ) : (
+          <>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: `repeat(5, ${EXPLORATION_FIELD_WIDTH})`,
+                gap: 0.5,
+                minWidth: 0,
+                width: "fit-content",
+                maxWidth: "100%",
+              }}
+            >
+              {EXPLORATION_FIELDS.map((field) => (
+                <TextField
+                  variant="filled"
+                  key={field.key}
+                  size="small"
+                  type="number"
+                  label={field.label}
+                  value={profile[field.key]}
+                  sx={EXPLORATION_FIELD_SX}
+                  InputProps={
+                    field.adornment
+                      ? {
+                          endAdornment: (
+                            <InputAdornment position="end">{field.adornment}</InputAdornment>
+                          ),
+                        }
+                      : undefined
+                  }
+                  onChange={(event) => updateNumber(field.key, event.target.value)}
+                />
+              ))}
+            </Box>
+            <Stack direction="row" spacing={0.25}>
+              <Tooltip title="Save Profile">
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label="Save Profile"
+                    disabled={saving}
+                    onClick={() => {
+                      void saveProfile();
+                    }}
+                  >
+                    {saving ? <CircularProgress size={18} /> : <SaveIcon fontSize="small" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={starting ? "Starting…" : "Start Exploration"}>
+                <span>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    aria-label="Start Exploration"
+                    disabled={
+                      !warehousePreflightPassed ||
+                      warehouseMapId == null ||
+                      selectedDockId == null ||
+                      starting
+                    }
+                    onClick={() => {
+                      void launchExploration();
+                    }}
+                  >
+                    {starting ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <FlightTakeoffIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
+          </>
+        )}
         {selectedDockId == null && (
           <Alert severity="warning">Exploration needs a dock anchor for return.</Alert>
         )}
-        <Stack direction="row" spacing={0.25}>
-          <ActionIconButton
-            variant="upgrade"
-            title="Save Profile"
-            loading={saving}
-            onClick={() => {
-              void saveProfile();
-            }}
-          />
-          <ActionIconButton
-            variant="explore"
-            title={starting ? "Starting…" : "Start Exploration"}
-            color="primary"
-            loading={starting}
-            disabled={warehouseMapId == null || selectedDockId == null}
-            onClick={() => {
-              void launchExploration();
-            }}
-          />
-        </Stack>
+        {!warehousePreflightPassed && (
+          <Alert severity="warning">Run Warehouse Preflight above before starting exploration.</Alert>
+        )}
       </Stack>
   );
 

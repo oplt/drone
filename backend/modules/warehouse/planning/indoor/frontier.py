@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
 from .models import Frontier, LocalPose, MapSnapshot, OccupancyGrid
@@ -22,8 +21,8 @@ class FrontierScoreWeights:
 
 class FrontierExtractor:
     def __init__(self, *, obstacle_clearance_m: float, minimum_corridor_clearance_m: float):
-        self.obstacle_clearance_m = float(obstacle_clearance_m)
-        self.minimum_corridor_clearance_m = float(minimum_corridor_clearance_m)
+        self.obstacle_clearance_m = max(0.0, float(obstacle_clearance_m))
+        self.minimum_corridor_clearance_m = max(0.0, float(minimum_corridor_clearance_m))
 
     def extract(
         self,
@@ -35,11 +34,26 @@ class FrontierExtractor:
     ) -> list[Frontier]:
         grid = snapshot.occupancy_grid
         frontiers: list[Frontier] = []
-        for index, group in enumerate(grid.frontier_groups()):
+        resolution_sq_m = float(grid.resolution_m) ** 2
+        groups = grid.frontier_groups()
+        for index, group in enumerate(groups):
+            if not group:
+                continue
             centroid = self._centroid_pose(grid, group, z_m=current_pose.z_m)
-            approach = self._approach_pose(grid, centroid, z_m=current_pose.z_m)
+            approach = self._approach_pose(
+                grid,
+                centroid,
+                z_m=current_pose.z_m,
+                clearance_m=self.obstacle_clearance_m,
+            )
             if approach is None:
                 continue
+            clearance_m = grid.clearance_at(approach)
+            if clearance_m < self.minimum_corridor_clearance_m:
+                continue
+
+            # A* is the expensive step, so run it only after cheap geometric
+            # filters prove that this frontier is actually usable.
             path = grid.astar_path(
                 current_pose,
                 approach,
@@ -47,12 +61,10 @@ class FrontierExtractor:
             )
             if not path:
                 continue
+
             path_length_m = OccupancyGrid.path_length_m(path)
-            clearance_m = grid.clearance_at(approach)
-            if clearance_m < self.minimum_corridor_clearance_m:
-                continue
             return_graph_distance_m = graph.distance_from_confirmed_graph(approach)
-            information_gain = float(len(group)) * (float(grid.resolution_m) ** 2)
+            information_gain = float(len(group)) * resolution_sq_m
             drift_penalty = max(0.0, path_length_m / 30.0)
             corridor_preference = max(
                 0.0,
@@ -72,7 +84,7 @@ class FrontierExtractor:
                     return_graph_distance_m=return_graph_distance_m,
                     battery_cost_pct=0.0,
                     corridor_preference=corridor_preference,
-                    metadata={"cells": list(group)},
+                    metadata={"cells": group},
                 )
             )
         return frontiers
@@ -80,13 +92,15 @@ class FrontierExtractor:
     @staticmethod
     def _centroid_pose(
         grid: OccupancyGrid,
-        cells: Iterable[tuple[int, int]],
+        cells: list[tuple[int, int]],
         *,
         z_m: float,
     ) -> LocalPose:
-        cell_list = list(cells)
-        mean_x = sum(float(cell[0]) for cell in cell_list) / max(1, len(cell_list))
-        mean_y = sum(float(cell[1]) for cell in cell_list) / max(1, len(cell_list))
+        if not cells:
+            return grid.cell_to_pose(0, 0, z_m=z_m)
+        inv_count = 1.0 / float(len(cells))
+        mean_x = sum(cell[0] for cell in cells) * inv_count
+        mean_y = sum(cell[1] for cell in cells) * inv_count
         return grid.cell_to_pose(int(round(mean_x)), int(round(mean_y)), z_m=z_m)
 
     @staticmethod
@@ -95,8 +109,13 @@ class FrontierExtractor:
         centroid: LocalPose,
         *,
         z_m: float,
+        clearance_m: float,
     ) -> LocalPose | None:
-        nearest = grid.nearest_free_cell(centroid, clearance_m=0.0, max_radius_m=2.0)
+        nearest = grid.nearest_free_cell(
+            centroid,
+            clearance_m=max(0.0, float(clearance_m)),
+            max_radius_m=2.0,
+        )
         if nearest is None:
             return None
         return grid.cell_to_pose(nearest[0], nearest[1], z_m=z_m)

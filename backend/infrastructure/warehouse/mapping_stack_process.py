@@ -18,7 +18,7 @@ _DEFAULT_LOG_DIR = Path("backend/storage/warehouse_ros/logs")
 _TERMINATE_TIMEOUT_S = 12.0
 _POLL_INTERVAL_S = 0.25
 
-_LAUNCH_SHELL = (
+_FULL_LAUNCH_SHELL = (
     "if [ -n \"${VIRTUAL_ENV:-}\" ]; then "
     "PATH=\"${PATH//$VIRTUAL_ENV\\/bin:/}\"; "
     "PATH=\"${PATH//:$VIRTUAL_ENV\\/bin/}\"; "
@@ -31,6 +31,74 @@ _LAUNCH_SHELL = (
     "source \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\" && "
     "exec ros2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py"
 )
+
+
+def _nvblox_process_running() -> bool:
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "[n]vblox_ros.*nvblox_node"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def _nvblox_topics_in_graph() -> bool:
+    repo_root = Path(__file__).resolve().parents[3]
+    env = os.environ.copy()
+    env.setdefault("ROS_DOMAIN_ID", "42")
+    env.setdefault("ROS_DISTRO", "jazzy")
+    env.setdefault("ROS_WS_SETUP", str(repo_root / "warehouse_ros2_ws/install/setup.bash"))
+    try:
+        result = subprocess.run(
+            [
+                "bash",
+                "-lc",
+                f"cd {repo_root} && "
+                "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+                "source \"${ROS_WS_SETUP}\" && "
+                "ros2 topic list",
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=8.0,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if result.returncode != 0:
+        return False
+    return "/nvblox_node/" in result.stdout
+
+
+def _launch_shell_command() -> str:
+    """Prefer lightweight nvblox-only launch; use full isaac launch when requested."""
+    mode = os.getenv("WAREHOUSE_MAPPING_STACK_MODE", "nvblox").strip().lower()
+    if mode in {"full", "isaac", "launch"}:
+        return _FULL_LAUNCH_SHELL
+
+    nvblox_cmd = os.getenv("WAREHOUSE_NVBLOX_LAUNCH_CMD", "").strip()
+    if not nvblox_cmd:
+        repo_root = Path(__file__).resolve().parents[3]
+        nvblox_cmd = f"bash {repo_root / 'scripts' / 'start_warehouse_nvblox.sh'}"
+
+    prefix = (
+        "if [ -n \"${VIRTUAL_ENV:-}\" ]; then "
+        "PATH=\"${PATH//$VIRTUAL_ENV\\/bin:/}\"; "
+        "PATH=\"${PATH//:$VIRTUAL_ENV\\/bin/}\"; "
+        "PATH=\"${PATH//$VIRTUAL_ENV\\/bin/}\"; "
+        "unset VIRTUAL_ENV; "
+        "fi; "
+        "unset PYTHONPATH PYTHONHOME; "
+        "export PYTHONNOUSERSITE=0; "
+        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+        "source \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\" && "
+    )
+    return f"{prefix}exec {nvblox_cmd}"
 
 
 def _utc_now_iso() -> str:
@@ -79,14 +147,35 @@ class WarehouseMappingStackProcessManager:
             if self._process is not None and self._process.poll() is None:
                 return self._status_locked()
 
+            reuse = os.getenv("WAREHOUSE_REUSE_DEV_NVBLOX", "0").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+            if reuse and _nvblox_process_running() and _nvblox_topics_in_graph():
+                self._started_at = self._started_at or _utc_now_iso()
+                self._last_error = None
+                logger.info(
+                    "Warehouse mapping stack reusing existing nvblox_node from dev stack"
+                )
+                return MappingStackStatus(
+                    running=True,
+                    pid=None,
+                    started_at=self._started_at,
+                    last_exit_code=None,
+                    last_error=None,
+                )
+
             log_path = self._log_dir / "warehouse_mapping_stack.log"
             try:
                 log_handle = log_path.open("a", encoding="utf-8")
                 log_handle.write(f"\n--- mapping stack start {_utc_now_iso()} ---\n")
                 log_handle.flush()
                 env = self._ros_launch_env()
+                launch_shell = _launch_shell_command()
                 process = subprocess.Popen(
-                    ["bash", "-lc", _LAUNCH_SHELL],
+                    ["bash", "-lc", launch_shell],
                     env=env,
                     stdout=log_handle,
                     stderr=subprocess.STDOUT,
@@ -206,7 +295,13 @@ class WarehouseMappingStackProcessManager:
         env.setdefault("WAREHOUSE_GAZEBO_SIM", "1")
         env.setdefault("WAREHOUSE_TOPIC_PROFILE", "gazebo")
         env.setdefault("WAREHOUSE_ROS_PROFILE", "gazebo")
+        env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
         env.setdefault("PYTHONNOUSERSITE", "0")
+        if "WAREHOUSE_NVBLOX_LAUNCH_CMD" not in env:
+            repo_root = Path(__file__).resolve().parents[3]
+            env["WAREHOUSE_NVBLOX_LAUNCH_CMD"] = (
+                f"bash {repo_root / 'scripts' / 'start_warehouse_nvblox.sh'}"
+            )
         return env
 
 

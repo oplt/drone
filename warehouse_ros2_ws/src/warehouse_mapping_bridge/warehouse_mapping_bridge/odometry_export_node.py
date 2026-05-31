@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -46,8 +47,10 @@ def main() -> None:
             orientation = message.pose.pose.orientation
             linear = message.twist.twist.linear
             angular = message.twist.twist.angular
+            now_mono = time.monotonic()
             payload = {
                 "timestamp_utc": datetime.now(UTC).isoformat(),
+                "updated_at_monotonic": now_mono,
                 "source_stamp_sec": _stamp_to_sec(message.header.stamp),
                 "frame_id": message.header.frame_id,
                 "child_frame_id": message.child_frame_id,

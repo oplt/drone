@@ -16,7 +16,6 @@ from backend.core.events import (
 )
 from backend.core.events.mavlink import (
     TELEMETRY_MAVLINK_TYPES,
-    check_mavlink_connection,
     process_mavlink_message,
     raw_event_from_mavlink_message,
 )
@@ -70,8 +69,11 @@ class RuntimeTelemetryServiceMixin:
     def _telemetry_worker(self, conn_str: str) -> None:
         mav_conn = None
         message_buffer: list[dict[str, Any]] = []
-        last_broadcast_time = time.time()
-        last_heartbeat_time = time.time()
+        last_broadcast_time = time.monotonic()
+        last_message_at = time.monotonic()
+        last_heartbeat_check_at = time.monotonic()
+        reconnect_attempt = 0
+        reconnect_backoff_s = 2.0
 
         try:
             logger.info("Connecting orchestrator telemetry ingest to MAVLink: %s", conn_str)
@@ -82,6 +84,7 @@ class RuntimeTelemetryServiceMixin:
             heartbeat = mav_conn.wait_heartbeat(timeout=10)
             if not heartbeat:
                 raise RuntimeError("MAVLink heartbeat timeout")
+            last_message_at = time.monotonic()
 
             try:
                 self._telemetry_connections.request_all_streams(mav_conn)
@@ -90,19 +93,33 @@ class RuntimeTelemetryServiceMixin:
 
             while self._telemetry_stream_running:
                 try:
-                    now_s = time.time()
-                    if now_s - last_heartbeat_time > 5:
-                        if not mav_conn or not check_mavlink_connection(mav_conn):
-                            logger.warning("Telemetry MAVLink connection lost, reconnecting")
+                    now_s = time.monotonic()
+                    if now_s - last_heartbeat_check_at >= 5.0:
+                        last_heartbeat_check_at = now_s
+                        message_age_ms = int((now_s - last_message_at) * 1000)
+                        if message_age_ms > 8000:
+                            reconnect_attempt += 1
+                            logger.warning(
+                                "Telemetry MAVLink stale — reconnecting "
+                                "last_message_age_ms=%s reconnect_attempt=%s connection_url=%s",
+                                message_age_ms,
+                                reconnect_attempt,
+                                conn_str,
+                            )
                             if mav_conn:
-                                mav_conn.close()
+                                with suppress(Exception):
+                                    mav_conn.close()
+                            time.sleep(min(reconnect_backoff_s, 15.0))
+                            reconnect_backoff_s = min(reconnect_backoff_s * 1.5, 15.0)
                             mav_conn = self._telemetry_connections.connect(conn_str)
                             self._telemetry_mav_conn = mav_conn
                             self.fanout.set_runtime_active(
                                 running=True,
                                 source_connected=True,
                             )
-                        last_heartbeat_time = now_s
+                            last_message_at = time.monotonic()
+                        else:
+                            reconnect_backoff_s = 2.0
 
                     msg = mav_conn.recv_match(
                         blocking=False,
@@ -110,12 +127,13 @@ class RuntimeTelemetryServiceMixin:
                         type=TELEMETRY_MAVLINK_TYPES,
                     )
                     if msg:
+                        last_message_at = time.monotonic()
                         msg_dict = msg.to_dict()
                         emitted_s = time.time()
                         if self.mqtt:
                             raw_payload = dict(msg_dict)
                             raw_payload["timestamp"] = emitted_s
-                            self.mqtt.publish(settings.telemetry_topic, raw_payload, qos=1)
+                            self.mqtt.publish(settings.telemetry_topic, raw_payload, qos=0)
 
                         if self._running and self._flight_id is not None:
                             self._enqueue_raw_event(
@@ -137,7 +155,7 @@ class RuntimeTelemetryServiceMixin:
                             self._last_telemetry_snapshot = snapshot
                             message_buffer.append(telemetry_delta)
 
-                    now_s = time.time()
+                    now_s = time.monotonic()
                     if (
                         now_s - last_broadcast_time >= self._telemetry_broadcast_interval
                         and message_buffer

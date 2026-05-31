@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import asyncio
+import inspect
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -10,231 +14,217 @@ from .check_models import PrecomputedMissionData
 
 @dataclass
 class PreflightContext:
-    """
-    Central context object containing all data needed for preflight checks.
-    This is passed to all checkers, ensuring consistent access to data and cached computations.
-    """
-
-    # Core data
-    vehicle_state: Any  # Vehicle telemetry snapshot
-    mission: Mission  # Validated mission object
+    vehicle_state: Any
+    mission: Mission
     timestamp: float = field(default_factory=time.time)
 
-    # Optional data providers
-    terrain_provider: Any | None = None  # Terrain data provider with get_elevation(lat, lon)
-    wind_data: dict[str, float] | None = None  # Wind speed, gust, direction
-    no_fly_zones: list[Any] | None = None  # List of no-fly zones
-    obstacle_map: Any | None = None  # Obstacle map data
-    geofence_polygon: list[Waypoint] | None = None  # Geofence boundary
+    terrain_provider: Any | None = None
+    wind_data: dict[str, float] | None = None
+    no_fly_zones: list[Any] | None = None
+    obstacle_map: Any | None = None
+    geofence_polygon: list[Waypoint] | None = None
 
-    # Precomputed/cached data
     precomputed: PrecomputedMissionData | None = None
     terrain_cache: TerrainCache | None = None
     distance_cache: DistanceCache | None = None
-
-    # Configuration overrides
     config_overrides: dict[str, Any] = field(default_factory=dict)
 
-    # Metadata
     vehicle_id: str | None = None
     flight_id: str | None = None
 
-    # Internal caches (initialized if not provided)
     _terrain_cache: TerrainCache = field(init=False, repr=False)
     _distance_cache: DistanceCache = field(init=False, repr=False)
     _computed_segment_distances: list[float] = field(default_factory=list, init=False, repr=False)
     _computed_total_distance: float = field(default=0.0, init=False, repr=False)
 
-    def __post_init__(self):
-        """Initialize internal caches if not provided."""
-        # Ensure config_overrides is never None
-        if self.config_overrides is None:
-            self.config_overrides = {}
+    def __post_init__(self) -> None:
+        self.config_overrides = self.config_overrides or {}
+        self._terrain_cache = self.terrain_cache or TerrainCache()
+        self._distance_cache = self.distance_cache or DistanceCache()
 
-        if self.terrain_cache is None:
-            self._terrain_cache = TerrainCache()
-        else:
-            self._terrain_cache = self.terrain_cache
-
-        if self.distance_cache is None:
-            self._distance_cache = DistanceCache()
-        else:
-            self._distance_cache = self.distance_cache
-
-        # Precompute distances if waypoints exist and no precomputed data
-        if self.mission and self.mission.waypoints and self.precomputed is None:
+        if self.precomputed is None and self._waypoints:
             self._precompute_distances()
 
-    def _precompute_distances(self):
-        """Precompute all segment distances."""
-        waypoints = self.mission.waypoints
+    @property
+    def _waypoints(self) -> list[Any]:
+        return list(getattr(self.mission, "waypoints", []) or [])
+
+    def _precompute_distances(self) -> None:
         self._computed_segment_distances = []
         total = 0.0
 
-        for i in range(len(waypoints) - 1):
-            wp1 = waypoints[i]
-            wp2 = waypoints[i + 1]
+        for a, b in zip(self._waypoints, self._waypoints[1:]):
+            if not all(hasattr(p, "lat") and hasattr(p, "lon") for p in (a, b)):
+                continue
 
-            # Check cache first
-            dist = self._distance_cache.get(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+            dist = self._distance_cache.get(a.lat, a.lon, b.lat, b.lon)
+
             if dist is None:
-                dist = optimized_distance(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
-                self._distance_cache.set(wp1.lat, wp1.lon, wp2.lat, wp2.lon, dist)
+                dist = optimized_distance(a.lat, a.lon, b.lat, b.lon)
+                self._distance_cache.set(a.lat, a.lon, b.lat, b.lon, dist)
 
             self._computed_segment_distances.append(dist)
             total += dist
 
         self._computed_total_distance = total
 
-    # ========== Distance methods ==========
-
     def get_distance(self, idx1: int, idx2: int) -> float:
-        """
-        Get distance between two waypoints by index.
-        Uses cached/precomputed values when available.
-        """
-        if self.precomputed:
-            return self.precomputed.get_distance_between(min(idx1, idx2), max(idx1, idx2))
-
-        # Use precomputed segment distances
         if idx1 == idx2:
             return 0.0
 
-        start, end = min(idx1, idx2), max(idx1, idx2)
-        if end - start == 1 and start < len(self._computed_segment_distances):
-            return self._computed_segment_distances[start]
+        start, end = sorted((idx1, idx2))
 
-        # Sum segment distances
-        total = 0.0
-        for i in range(start, end):
-            if i < len(self._computed_segment_distances):
-                total += self._computed_segment_distances[i]
-            else:
-                # Fallback to on-demand calculation
-                wp1 = self.mission.waypoints[i]
-                wp2 = self.mission.waypoints[i + 1]
-                total += self.get_distance_between_points(wp1, wp2)
+        if start < 0 or end >= len(self._waypoints):
+            raise IndexError(f"Waypoint index out of range: {idx1}, {idx2}")
 
-        return total
+        if self.precomputed is not None:
+            return self.precomputed.get_distance_between(start, end)
+
+        return sum(self._computed_segment_distances[start:end])
 
     def get_distance_between_points(self, wp1: Waypoint, wp2: Waypoint) -> float:
-        """Get distance between two waypoint objects with caching."""
-        # Check cache
-        dist = self._distance_cache.get(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
-        if dist is not None:
-            return dist
+        cached = self._distance_cache.get(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
 
-        # Compute and cache
-        dist = optimized_distance(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
-        self._distance_cache.set(wp1.lat, wp1.lon, wp2.lat, wp2.lon, dist)
-        return dist
+        if cached is not None:
+            return cached
+
+        distance = optimized_distance(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+        self._distance_cache.set(wp1.lat, wp1.lon, wp2.lat, wp2.lon, distance)
+        return distance
 
     def total_distance(self) -> float:
-        """Get total mission distance."""
-        if self.precomputed:
+        if self.precomputed is not None:
             return self.precomputed.total_distance
+
         return self._computed_total_distance
 
+    @staticmethod
+    async def _call_maybe_async(fn: Any, *args: Any) -> Any:
+        if inspect.iscoroutinefunction(fn):
+            return await fn(*args)
+
+        result = await asyncio.to_thread(fn, *args)
+
+        if inspect.isawaitable(result):
+            return await result
+
+        return result
+
     async def get_terrain_elevation(self, lat: float, lon: float) -> float | None:
-        """Async terrain fetch with cache."""
-        # Try precomputed first
-        if self.precomputed:
-            for i, wp in enumerate(self.mission.waypoints):
-                if abs(wp.lat - lat) < 1e-6 and abs(wp.lon - lon) < 1e-6:
-                    return self.precomputed.get_terrain_at(i)
+        cached = self._terrain_cache.get(lat, lon)
 
-        # Try cache
-        elev = self._terrain_cache.get(lat, lon)
-        if elev is not None:
-            return elev
+        if cached is not None:
+            return cached
 
-        # Async fetch from provider
-        if self.terrain_provider and hasattr(self.terrain_provider, "get_elevation"):
-            elev = await self.terrain_provider.get_elevation(lat, lon)
-            if elev is not None:
-                self._terrain_cache.set(lat, lon, elev)
-            return elev
-
-        return None
-
-    def get_waypoint_terrain(self, idx: int) -> float | None:
-        """Get terrain elevation for a specific waypoint."""
-        if idx >= len(self.mission.waypoints):
+        if self.terrain_provider is None:
             return None
 
-        wp = self.mission.waypoints[idx]
+        fetcher = getattr(self.terrain_provider, "get_elevation", None)
 
-        if self.precomputed:
+        if fetcher is None:
+            return None
+
+        elevation = await self._call_maybe_async(fetcher, lat, lon)
+
+        if elevation is not None:
+            elevation = float(elevation)
+            self._terrain_cache.set(lat, lon, elevation)
+
+        return elevation
+
+    def get_waypoint_terrain(self, idx: int) -> float | None:
+        waypoints = self._waypoints
+
+        if idx < 0 or idx >= len(waypoints):
+            return None
+
+        if self.precomputed is not None:
             return self.precomputed.get_terrain_at(idx)
 
-        return self.get_terrain_elevation(wp.lat, wp.lon)
+        wp = waypoints[idx]
 
-    # ========== Wind methods ==========
+        if not hasattr(wp, "lat") or not hasattr(wp, "lon"):
+            return None
+
+        return self._terrain_cache.get(wp.lat, wp.lon)
+
+    async def get_waypoint_terrain_async(self, idx: int) -> float | None:
+        waypoints = self._waypoints
+
+        if idx < 0 or idx >= len(waypoints):
+            return None
+
+        terrain = self.get_waypoint_terrain(idx)
+
+        if terrain is not None:
+            return terrain
+
+        wp = waypoints[idx]
+
+        if not hasattr(wp, "lat") or not hasattr(wp, "lon"):
+            return None
+
+        return await self.get_terrain_elevation(wp.lat, wp.lon)
 
     def get_wind_speed(self) -> float | None:
-        """Get current wind speed."""
-        if self.wind_data:
-            return self.wind_data.get("speed")
-        return None
+        return None if not self.wind_data else self.wind_data.get("speed")
 
     def get_wind_gust(self) -> float | None:
-        """Get wind gust speed."""
-        if self.wind_data:
-            return self.wind_data.get("gust")
-        return None
+        return None if not self.wind_data else self.wind_data.get("gust")
 
     def get_wind_direction(self) -> float | None:
-        """Get wind direction in degrees."""
-        if self.wind_data:
-            return self.wind_data.get("direction")
-        return None
-
-    # ========== No-fly zone methods ==========
+        return None if not self.wind_data else self.wind_data.get("direction")
 
     def check_no_fly_zones(self, lat: float, lon: float, buffer: float = 0) -> bool:
-        """
-        Check if a point is inside any no-fly zone.
-        Returns True if point is safe (outside all zones).
-        """
         if not self.no_fly_zones:
             return True
 
-        # This would need actual geometry checking
-        # Placeholder implementation
         for zone in self.no_fly_zones:
-            if hasattr(zone, "contains") and zone.contains(lat, lon, buffer):
-                return False
+            contains = getattr(zone, "contains", None)
+
+            if contains is None:
+                continue
+
+            try:
+                if contains(lat, lon, buffer):
+                    return False
+            except TypeError:
+                try:
+                    if contains((lon, lat)):
+                        return False
+                except Exception:
+                    continue
 
         return True
 
-    # ========== Configuration ==========
-
     def get_config(self, key: str, default: Any = None) -> Any:
-        """Get configuration value with override support."""
         if key in self.config_overrides:
             return self.config_overrides[key]
 
-        # Check vehicle state for config
-        if hasattr(self.vehicle_state, "config") and key in self.vehicle_state.config:
-            return self.vehicle_state.config[key]
+        config = None
+
+        if isinstance(self.vehicle_state, dict):
+            config = self.vehicle_state.get("config")
+        else:
+            config = getattr(self.vehicle_state, "config", None)
+
+        if isinstance(config, dict) and key in config:
+            return config[key]
 
         return default
 
-    # ========== Utility methods ==========
-
-    def get_threshold(self, name: str, default: float) -> float:
-        """Get threshold value from config overrides."""
+    def get_threshold(self, name: str, default: Any) -> Any:
         return self.get_config(name, default)
 
     @property
     def cache_stats(self) -> dict[str, Any]:
-        """Get cache statistics."""
         return {
             "terrain_cache": self._terrain_cache.stats,
             "distance_cache": self._distance_cache.stats,
         }
 
-    def clear_caches(self):
-        """Clear all internal caches."""
+    def clear_caches(self) -> None:
         self._terrain_cache.clear()
-        self._distance_cache = DistanceCache()
+        self._distance_cache.clear()
+        self._computed_segment_distances.clear()
+        self._computed_total_distance = 0.0

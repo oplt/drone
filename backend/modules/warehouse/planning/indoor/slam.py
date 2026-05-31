@@ -54,6 +54,7 @@ class SimulatedSLAMProvider:
     current_pose: LocalPose = field(init=False)
 
     def __post_init__(self) -> None:
+        self.reveal_radius_m = max(0.0, float(self.reveal_radius_m))
         self.current_pose = self.initial_pose
         self.observed_grid = OccupancyGrid(
             resolution_m=float(self.world_grid.resolution_m),
@@ -87,6 +88,7 @@ class SimulatedSLAMProvider:
         return self.health
 
     async def relocalize(self, timeout_s: float) -> bool:
+        del timeout_s
         if not self.health.lidar_streaming:
             return False
         self.health = replace(
@@ -129,10 +131,11 @@ class SimulatedSLAMProvider:
         return None
 
     def reveal_around(self, pose: LocalPose, *, radius_m: float) -> None:
+        radius = max(0.0, float(radius_m))
         self.observed_grid.copy_visible_from(
             self.world_grid,
             center_pose=pose,
-            radius_m=float(radius_m),
+            radius_m=radius,
         )
         self.health = replace(
             self.health,

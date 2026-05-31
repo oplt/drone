@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -75,13 +76,35 @@ logger.info(
 
 
 @app.get("/health")
-async def health(deep: bool = False) -> dict[str, Any]:
-    return await asyncio.to_thread(state.health, deep=deep)
+async def health(deep: bool = False, force: bool = False) -> dict[str, Any]:
+    path = "/health?deep=1" if deep else "/health"
+    if force:
+        path = f"{path}&force=1" if "?" in path else f"{path}?force=1"
+    started = time.perf_counter()
+
+    if deep:
+        payload = await asyncio.to_thread(state.health, deep=True, force=force)
+    else:
+        payload = state.health(deep=False, force=force)
+
+    duration_ms = round((time.perf_counter() - started) * 1000, 2)
+    payload["duration_ms"] = duration_ms
+
+    logger.info(
+        "Warehouse bridge health path=%s deep=%s from_cache=%s duration_ms=%s probe_in_progress=%s",
+        path,
+        deep,
+        bool(payload.get("from_cache", False)),
+        duration_ms,
+        bool(payload.get("probe_in_progress", False)),
+    )
+
+    return payload
 
 
 @app.get("/exploration/snapshot")
 async def exploration_snapshot() -> dict[str, Any]:
-    return state.exploration_snapshot()
+    return await asyncio.to_thread(state.exploration_snapshot)
 
 
 @app.post("/mapping/start")
@@ -97,7 +120,7 @@ async def start_mapping(payload: MappingStartIn) -> dict[str, Any]:
             "sensor_rig_id": payload.sensor_rig_id,
         },
     )
-    return state.start_mapping(payload.model_dump(mode="python"))
+    return await asyncio.to_thread(state.start_mapping, payload.model_dump(mode="python"))
 
 
 @app.post("/mapping/stop")
@@ -107,7 +130,7 @@ async def stop_mapping(payload: MappingStopIn) -> dict[str, Any]:
         payload.flight_id,
         extra={"flight_id": payload.flight_id},
     )
-    return state.stop_mapping(payload.flight_id)
+    return await asyncio.to_thread(state.stop_mapping, payload.flight_id)
 
 
 @app.post("/mapping/artifacts/download")
@@ -116,7 +139,9 @@ async def download_artifacts(payload: ArtifactDownloadIn) -> dict[str, Any]:
         "Warehouse bridge API artifact download",
         extra={"flight_id": payload.flight_id, "destination_dir": payload.destination_dir},
     )
-    return state.download_artifacts(payload.flight_id, Path(payload.destination_dir))
+    return await asyncio.to_thread(
+        state.download_artifacts, payload.flight_id, Path(payload.destination_dir)
+    )
 
 
 @app.post("/replay/start")
@@ -125,18 +150,24 @@ async def start_replay(payload: ReplayStartIn) -> dict[str, Any]:
         "Warehouse bridge API replay start",
         extra={"replay_id": payload.replay_id, "rosbag_path": payload.rosbag_path},
     )
-    return state.start_replay(payload.model_dump(mode="python"))
+    return await asyncio.to_thread(state.start_replay, payload.model_dump(mode="python"))
 
 
 @app.post("/replay/stop")
 async def stop_replay(payload: ReplayStopIn) -> dict[str, Any]:
     logger.info("Warehouse bridge API replay stop", extra={"replay_id": payload.replay_id})
-    return state.stop_replay(payload.replay_id)
+    return await asyncio.to_thread(state.stop_replay, payload.replay_id)
 
 
 def main() -> None:
     logger.info("Starting Warehouse ROS bridge service")
-    uvicorn.run(app, host=config.host, port=config.port)
+    uvicorn.run(
+        app,
+        host=config.host,
+        port=config.port,
+        log_level="info",
+        timeout_keep_alive=5,
+    )
 
 
 if __name__ == "__main__":

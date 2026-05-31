@@ -69,6 +69,7 @@ from backend.modules.patrol.planning import (
 from backend.modules.preflight.checks.schemas import PreflightReport
 from backend.modules.vehicle_runtime.types import Coordinate
 from backend.modules.vehicle_runtime.vehicle_port import MissionAbortRequested
+from backend.modules.warehouse.exceptions import WarehouseMissionFailure
 from backend.modules.warehouse.planning.exploration import (
     WarehouseExplorationMissionParams,
     build_unknown_warehouse_exploration_mission,
@@ -98,12 +99,18 @@ ALLOW_WARN_PREFLIGHT_START = (
 async def _warehouse_perception_preflight_overrides(
     mission_payload: dict[str, object] | None,
 ) -> dict[str, object]:
-    if not mission_payload or str(mission_payload.get("type") or "").lower() != "warehouse_scan":
+    from backend.modules.warehouse.service.warehouse_preflight import (
+        uses_warehouse_ros_preflight,
+        fetch_warehouse_perception_status,
+        warehouse_perception_config_overrides,
+    )
+
+    if not mission_payload or not uses_warehouse_ros_preflight(
+        str(mission_payload.get("type") or "")
+    ):
         return {}
     try:
-        from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
-
-        status = await build_warehouse_perception_port().status(deep=True)
+        status = await fetch_warehouse_perception_status(deep=True)
     except Exception as exc:
         logger.warning("Warehouse perception preflight status failed: %s", exc)
         status = WarehousePerceptionStatus(
@@ -113,7 +120,50 @@ async def _warehouse_perception_preflight_overrides(
             status="unreachable",
             detail=str(exc),
         )
-    return {"WAREHOUSE_PERCEPTION_STATUS": status.model_dump(mode="python")}
+    return warehouse_perception_config_overrides(status)
+
+
+async def _run_preflight_report(
+    orch: Any,
+    payload: MissionCreateIn,
+    *,
+    mission: Any,
+    mission_data_override: dict[str, object] | None,
+) -> PreflightReport:
+    from backend.core.config.runtime import settings
+    from backend.modules.warehouse.service.warehouse_preflight import (
+        run_warehouse_ros_preflight_report,
+        uses_warehouse_ros_preflight,
+    )
+
+    if uses_warehouse_ros_preflight(payload.mission_type):
+        mission_data = mission_data_override or {
+            "type": payload.mission_type.value,
+            "waypoints": [
+                {
+                    "lat": w.lat,
+                    "lon": w.lon,
+                    "alt": getattr(w, "alt", None) or payload.cruise_alt,
+                }
+                for w in mission.get_waypoints()
+            ],
+            "speed": settings.cruise_speed_mps,
+            "altitude_agl": payload.cruise_alt,
+        }
+        return await run_warehouse_ros_preflight_report(
+            mission_data,
+            cruise_alt=payload.cruise_alt,
+        )
+
+    await _ensure_drone_ready_for_preflight(orch, payload)
+    config_overrides = await _warehouse_perception_preflight_overrides(mission_data_override)
+    return await orch._run_preflight_checks(
+        mission.get_waypoints(),
+        payload.cruise_alt,
+        raise_on_fail=False,
+        mission_data=mission_data_override,
+        config_overrides=config_overrides,
+    )
 
 
 class GridMissionParams(BaseModel):
@@ -1095,6 +1145,27 @@ async def execute_mission(
     except MissionAbortRequested as exc:
         await _set_runtime_state(runtime_id, state="aborted", error=str(exc))
         logger.warning("🛑 Mission '%s' aborted: %s", mission_name, exc)
+    except WarehouseMissionFailure as exc:
+        db_row = await mission_application.get_by_client_id(runtime_id)
+        if db_row is not None:
+            runtime = _MissionRuntimeRecord.from_db(db_row)
+            await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
+            if exc.stage == "capture" and exc.action == "complete":
+                await _set_runtime_state(
+                    runtime_id,
+                    state="completed",
+                    error=str(exc.message or exc),
+                )
+                logger.warning(
+                    "⚠️ Mission '%s' flight completed with mapping failure: %s",
+                    mission_name,
+                    exc.message or exc,
+                )
+            elif runtime.state != "aborted":
+                await _set_runtime_state(runtime_id, state="failed", error=str(exc))
+                logger.warning("🛑 Mission '%s' failed: %s", mission_name, exc)
+        else:
+            logger.warning("🛑 Mission '%s' warehouse failure: %s", mission_name, exc)
     except asyncio.CancelledError:
         db_row = await mission_application.get_by_client_id(runtime_id)
         aborted = db_row is not None and db_row.state == "aborted"
@@ -1485,19 +1556,35 @@ async def run_preflight(
         )
 
     try:
-        await _ensure_drone_ready_for_preflight(orch, payload)
         preflight_data_fn = getattr(mission, "get_preflight_mission_data", None)
         mission_data_override = preflight_data_fn() if callable(preflight_data_fn) else None
-        config_overrides = await _warehouse_perception_preflight_overrides(mission_data_override)
-        report = await orch._run_preflight_checks(
-            mission.get_waypoints(),
-            payload.cruise_alt,
-            raise_on_fail=False,
-            mission_data=mission_data_override,
-            config_overrides=config_overrides,
+        report = await _run_preflight_report(
+            orch,
+            payload,
+            mission=mission,
+            mission_data_override=mission_data_override,
         )
     except HTTPException:
         raise
+    except RuntimeError as exc:
+        from backend.modules.warehouse.service.warehouse_preflight import (
+            uses_warehouse_ros_preflight,
+        )
+
+        if uses_warehouse_ros_preflight(payload.mission_type):
+            logger.exception("Warehouse ROS preflight run failed")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "message": "Warehouse ROS preflight failed",
+                    "error": str(exc),
+                },
+            ) from exc
+        logger.exception("Manual preflight run failed")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Preflight execution failed: {exc}",
+        ) from exc
     except Exception as exc:
         logger.exception("Manual preflight run failed")
         raise HTTPException(

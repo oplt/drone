@@ -1,171 +1,149 @@
+from __future__ import annotations
+
+import math
 import time
+from typing import Any, Awaitable, Callable
 
 from backend.core.types.geo import haversine_km
 
 
 class TerrainCache:
-    """
-    Cache for terrain elevation data to avoid repeated API calls.
-    Rounds coordinates to ~1m precision (1e-5 degrees ≈ 1.1m at equator).
-    """
+    """Small in-memory TTL cache for terrain elevation lookups."""
 
     def __init__(self, precision: float = 1e-5, ttl_seconds: float | None = 300):
-        """
-        Initialize terrain cache.
-
-        Args:
-            precision: Coordinate rounding precision in degrees
-            ttl_seconds: Time-to-live for cache entries (None = no expiry)
-        """
-        self.precision = precision
+        self.precision = max(float(precision), 1e-9)
         self.ttl = ttl_seconds
-        self._cache: dict[str, tuple[float, float]] = {}  # key -> (elevation, timestamp)
+        self.decimal_places = max(0, -int(math.floor(math.log10(self.precision))))
+
+        self._cache: dict[str, tuple[float, float]] = {}
         self._hits = 0
         self._misses = 0
 
     def _make_key(self, lat: float, lon: float) -> str:
-        """Create cache key from rounded coordinates."""
-        # Determine decimal places from precision (e.g. 1e-5 -> 5 places)
-        import math
-
-        decimal_places = max(0, -int(math.floor(math.log10(self.precision))))
-        rounded_lat = round(lat, decimal_places)
-        rounded_lon = round(lon, decimal_places)
-        fmt = f"{{:.{decimal_places}f}}"
-        return f"{fmt.format(rounded_lat)},{fmt.format(rounded_lon)}"
+        return (
+            f"{round(float(lat), self.decimal_places):.{self.decimal_places}f},"
+            f"{round(float(lon), self.decimal_places):.{self.decimal_places}f}"
+        )
 
     def get(self, lat: float, lon: float) -> float | None:
-        """Get cached elevation if available and not expired."""
         key = self._make_key(lat, lon)
-        if key in self._cache:
-            elevation, timestamp = self._cache[key]
-            if self.ttl is None or (time.time() - timestamp) < self.ttl:
-                self._hits += 1
-                return elevation
-            else:
-                # Expired
-                del self._cache[key]
+        item = self._cache.get(key)
+
+        if item is None:
+            self._misses += 1
+            return None
+
+        elevation, ts = item
+        if self.ttl is None or (time.time() - ts) < float(self.ttl):
+            self._hits += 1
+            return elevation
+
+        self._cache.pop(key, None)
         self._misses += 1
         return None
 
-    def set(self, lat: float, lon: float, elevation: float):
-        """Cache elevation for coordinates."""
-        key = self._make_key(lat, lon)
-        self._cache[key] = (elevation, time.time())
+    def set(self, lat: float, lon: float, elevation: float | None) -> None:
+        if elevation is not None:
+            self._cache[self._make_key(lat, lon)] = (float(elevation), time.time())
 
-    def clear(self):
-        """Clear the cache."""
+    def clear(self) -> None:
         self._cache.clear()
         self._hits = 0
         self._misses = 0
 
     @property
-    def stats(self) -> dict[str, any]:
-        """Get cache statistics."""
+    def stats(self) -> dict[str, Any]:
+        total = self._hits + self._misses
         return {
             "size": len(self._cache),
             "hits": self._hits,
             "misses": self._misses,
-            "hit_rate": self._hits / (self._hits + self._misses)
-            if (self._hits + self._misses) > 0
-            else 0,
+            "hit_rate": self._hits / total if total else 0.0,
         }
 
     async def get_or_fetch(
-        self,
-        lat: float,
-        lon: float,
-        fetcher,  # async callable: async def(lat, lon) -> float | None
+            self,
+            lat: float,
+            lon: float,
+            fetcher: Callable[[float, float], Awaitable[float | None]],
     ) -> float | None:
-        """Get from cache or fetch asynchronously."""
         cached = self.get(lat, lon)
         if cached is not None:
             return cached
+
         elevation = await fetcher(lat, lon)
-        if elevation is not None:
-            self.set(lat, lon, elevation)
+        self.set(lat, lon, elevation)
         return elevation
 
 
 class DistanceCache:
-    """
-    Cache for haversine distances between coordinate pairs.
-    """
+    """Cache for pairwise distances in meters."""
 
-    def __init__(self):
-        self._cache: dict[str, float] = {}
+    def __init__(self) -> None:
+        self._cache: dict[tuple[float, float, float, float], float] = {}
         self._hits = 0
         self._misses = 0
 
-    def _make_key(self, lat1: float, lon1: float, lat2: float, lon2: float) -> str:
-        """Create cache key (order-independent for pairs)."""
-        # Sort coordinates to make key order-independent
-        coords = sorted([(round(lat1, 6), round(lon1, 6)), (round(lat2, 6), round(lon2, 6))])
-        return f"{coords[0][0]},{coords[0][1]}|{coords[1][0]},{coords[1][1]}"
+    @staticmethod
+    def _make_key(
+            lat1: float,
+            lon1: float,
+            lat2: float,
+            lon2: float,
+    ) -> tuple[float, float, float, float]:
+        a = (round(float(lat1), 6), round(float(lon1), 6))
+        b = (round(float(lat2), 6), round(float(lon2), 6))
+        p1, p2 = sorted((a, b))
+        return p1[0], p1[1], p2[0], p2[1]
 
     def get(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float | None:
-        """Get cached distance if available."""
         key = self._make_key(lat1, lon1, lat2, lon2)
-        if key in self._cache:
-            self._hits += 1
-            return self._cache[key]
-        self._misses += 1
-        return None
+        value = self._cache.get(key)
 
-    def set(self, lat1: float, lon1: float, lat2: float, lon2: float, distance: float):
-        """Cache distance for coordinate pair."""
-        key = self._make_key(lat1, lon1, lat2, lon2)
-        self._cache[key] = distance
+        if value is None:
+            self._misses += 1
+            return None
+
+        self._hits += 1
+        return value
+
+    def set(self, lat1: float, lon1: float, lat2: float, lon2: float, distance: float) -> None:
+        self._cache[self._make_key(lat1, lon1, lat2, lon2)] = float(distance)
+
+    def clear(self) -> None:
+        self._cache.clear()
+        self._hits = 0
+        self._misses = 0
 
     @property
-    def stats(self) -> dict[str, any]:
-        """Get cache statistics."""
+    def stats(self) -> dict[str, Any]:
+        total = self._hits + self._misses
         return {
             "size": len(self._cache),
             "hits": self._hits,
             "misses": self._misses,
-            "hit_rate": self._hits / (self._hits + self._misses)
-            if (self._hits + self._misses) > 0
-            else 0,
+            "hit_rate": self._hits / total if total else 0.0,
         }
 
 
-# Fast local projection for small distances (< 10km)
 def fast_local_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """
-    Fast distance approximation using equirectangular projection.
-    Accurate enough for distances < 10km, ~50x faster than haversine.
-    """
-    from math import cos, radians, sqrt
+    lat1_rad = math.radians(float(lat1))
+    lat2_rad = math.radians(float(lat2))
+    d_lat = lat2_rad - lat1_rad
+    d_lon = math.radians(float(lon2) - float(lon1))
 
-    # Convert to radians
-    lat1_rad = radians(lat1)
-    lon1_rad = radians(lon1)
-    lat2_rad = radians(lat2)
-    lon2_rad = radians(lon2)
-
-    # Equirectangular approximation
-    x = (lon2_rad - lon1_rad) * cos((lat1_rad + lat2_rad) / 2)
-    y = lat2_rad - lat1_rad
-
-    # Earth radius in meters
-    R = 6371000
-    return R * sqrt(x * x + y * y)
+    x = d_lon * math.cos((lat1_rad + lat2_rad) * 0.5)
+    return 6371000.0 * math.hypot(x, d_lat)
 
 
 def optimized_distance(
-    lat1: float, lon1: float, lat2: float, lon2: float, threshold: float = 0.1
+        lat1: float,
+        lon1: float,
+        lat2: float,
+        lon2: float,
+        threshold_deg: float = 0.1,
 ) -> float:
-    """
-    Optimized distance calculation using fast approximation for small distances.
+    if abs(float(lat1) - float(lat2)) > threshold_deg or abs(float(lon1) - float(lon2)) > threshold_deg:
+        return haversine_km(float(lat1), float(lon1), float(lat2), float(lon2)) * 1000.0
 
-    Args:
-        threshold: Distance threshold in degrees (~11km at equator)
-    """
-    # Quick check if points are far apart using rough approximation
-    if abs(lat1 - lat2) > threshold or abs(lon1 - lon2) > threshold:
-        dist_km = haversine_km(lat1, lon1, lat2, lon2)
-        dist_meter = dist_km * 1000
-        return dist_meter
-    else:
-        return fast_local_distance(lat1, lon1, lat2, lon2)
+    return fast_local_distance(float(lat1), float(lon1), float(lat2), float(lon2))

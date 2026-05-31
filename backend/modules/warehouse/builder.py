@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import time
 from collections.abc import AsyncIterator
+from contextlib import suppress
 from urllib.parse import urlparse
 
 import cv2
@@ -257,9 +258,14 @@ _recorder_task: asyncio.Task | None = None
 
 
 def _recording_source_url() -> str:
-    if settings.drone_video_use_gazebo:
-        return settings.drone_video_source_gazebo
-    return f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
+    from backend.modules.warehouse.service.video import (
+        effective_drone_video_source,
+        effective_drone_video_use_gazebo,
+    )
+
+    if effective_drone_video_use_gazebo():
+        return effective_drone_video_source() or settings.drone_video_source_gazebo
+    return effective_drone_video_source() or f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
 
 async def _recorder_pump(video: DroneVideoStream):
@@ -288,7 +294,16 @@ async def _recorder_pump(video: DroneVideoStream):
 
 @router.post("/recording/start")
 async def start_recording(user=Depends(require_user)):
+    from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+
     global _recorder, _recorder_task
+
+    if warehouse_video_blocked():
+        return {
+            "status": "skipped",
+            "recording": False,
+            "message": warehouse_video_skip_reason(),
+        }
 
     async with _recorder_lock:
         if _recorder and _recorder.get_connection_status().get("recording"):
@@ -297,7 +312,9 @@ async def start_recording(user=Depends(require_user)):
                 "recording_file": _recorder.get_connection_status().get("recording_file"),
             }
 
-        if settings.drone_video_use_gazebo:
+        from backend.modules.warehouse.service.video import effective_drone_video_use_gazebo
+
+        if effective_drone_video_use_gazebo():
             await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
 
         source = _recording_source_url()
@@ -326,14 +343,18 @@ async def stop_recording(user=Depends(require_user)):
         if not _recorder:
             return {"status": "not_recording", "recording_file": None}
 
-        filename = _recorder.stop_recording()
-
-        if _recorder_task:
-            _recorder_task.cancel()
-            _recorder_task = None
-
-        _recorder.close()
+        recorder = _recorder
+        task = _recorder_task
         _recorder = None
+        _recorder_task = None
+
+        filename = recorder.stop_recording()
+        recorder.close()
+
+        if task:
+            task.cancel()
+            with suppress(asyncio.CancelledError, TimeoutError):
+                await asyncio.wait_for(task, timeout=2.0)
 
         return {"status": "stopped", "recording_file": filename}
 
@@ -355,7 +376,21 @@ async def recording_status(user=Depends(require_user)):
 
 @router.post("/start")
 async def start_pi_camera_server(user=Depends(require_user)):
-    if settings.drone_video_use_gazebo:
+    from backend.modules.warehouse.service.video import (
+        effective_drone_video_use_gazebo,
+        warehouse_video_blocked,
+        warehouse_video_skip_reason,
+    )
+
+    if warehouse_video_blocked():
+        return {
+            "status": "skipped",
+            "source": None,
+            "proxy": "/video/mjpeg",
+            "message": warehouse_video_skip_reason(),
+        }
+
+    if effective_drone_video_use_gazebo():
         await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
         return {
             "status": "started",

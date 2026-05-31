@@ -18,6 +18,7 @@ from backend.modules.warehouse.ports import (
 )
 from backend.modules.warehouse.service.mapping import (
     WarehouseScanMappingError,
+    WarehouseScanMappingPreconditionError,
     WarehouseScanMappingService,
 )
 
@@ -52,12 +53,21 @@ _MAPPING_ARTIFACT_EXTENSIONS = {
     ".bag",
     ".tsdf",
     ".esdf",
+    ".bin",
 }
 
 
 def safe_flight_token(raw: Any) -> str:
     token = _UNSAFE_TOKEN_CHARS.sub("_", str(raw or "")).strip("._-")
     return token or "unknown"
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def session_has_mapping_artifacts(session_dir: Path) -> bool:
@@ -98,10 +108,9 @@ def missing_artifacts_message(session_dir: Path) -> str:
         "Warehouse capture did not produce a tileset, point cloud, or ROS artifact. "
         f"Session {summary['session_dir']} contains {summary['file_count']} file(s) "
         f"({metadata}). "
-        "Start the ROS nvblox mapping stack before mapping (set WAREHOUSE_ROS_AUTOLAUNCH=1 "
-        "on the bridge or launch isaac_warehouse_mapping manually), verify camera/lidar topics "
-        "in ROS Mapping Health, fly while mapping is active, then stop mapping and wait a few "
-        "seconds for export."
+        "Start the ROS nvblox mapping stack before mapping (flight prep starts nvblox automatically), "
+        "verify camera/lidar topics in ROS Mapping Health, fly while mapping is active, "
+        "then stop mapping and wait a few seconds for nvblox export."
     )
 
 
@@ -145,6 +154,12 @@ def resolve_capture_session_dir(
     )
     for candidate in candidates:
         resolved = candidate.resolve()
+        if not _is_relative_to(resolved, root):
+            logger.warning(
+                "Ignoring warehouse capture directory outside capture root: %s",
+                resolved,
+            )
+            continue
         if resolved.exists():
             return resolved
     return (root / f"flight_{token}").resolve()
@@ -241,11 +256,11 @@ async def start_warehouse_ros_mapping(
     perception: WarehousePerceptionPort | None = None,
 ) -> WarehousePerceptionCommandResult:
     from backend.modules.warehouse.service.mapping_stack_lifecycle import (
-        ensure_warehouse_mapping_stack_running,
+        ensure_warehouse_mapping_stack_for_flight,
         mapping_stack_not_running_result,
     )
 
-    stack_status = await ensure_warehouse_mapping_stack_running()
+    stack_status, _readiness = await ensure_warehouse_mapping_stack_for_flight()
     if not stack_status.running:
         return mapping_stack_not_running_result()
     port = perception or build_warehouse_perception_port()
@@ -302,6 +317,10 @@ async def persist_warehouse_ros_capture(
         )
         downloaded = []
 
+    await wait_for_mapping_artifacts(session_dir)
+    if not session_has_mapping_artifacts(session_dir):
+        raise WarehouseScanMappingPreconditionError(missing_artifacts_message(session_dir))
+
     capture_result = build_capture_result(
         session_dir,
         mission_kind=mission_kind or source,
@@ -310,10 +329,6 @@ async def persist_warehouse_ros_capture(
             "perception_artifacts_count": len(downloaded),
         },
     )
-
-    await wait_for_mapping_artifacts(session_dir)
-    if not session_has_mapping_artifacts(session_dir):
-        raise WarehouseScanMappingError(missing_artifacts_message(session_dir))
 
     resolved_map_id, resolved_name, resolved_polygon = _resolve_capture_context(
         session_dir,
@@ -325,6 +340,10 @@ async def persist_warehouse_ros_capture(
     if resolved_map_id is None:
         raise WarehouseScanMappingError(
             "Warehouse capture persistence requires warehouse_map_id in session metadata."
+        )
+    if len(resolved_polygon) < 3:
+        raise WarehouseScanMappingError(
+            "Warehouse capture persistence requires a valid polygon_local_m with at least 3 points."
         )
 
     return await WarehouseScanMappingService().persist_capture(

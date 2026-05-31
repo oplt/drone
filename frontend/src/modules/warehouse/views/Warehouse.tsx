@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   InputAdornment,
   MenuItem,
@@ -24,7 +25,6 @@ import { ApiError } from "../../../shared/api/apiError";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import {
   MissionCommandPanel,
-  MissionPreflightPanel,
   MissionStatusChips,
   MissionVideoPanel,
   useAutoStartVideo,
@@ -45,6 +45,11 @@ import {
   updateWarehouseMissionDefaults,
   deleteWarehouseScannedMap,
 } from "../api/warehouseMissionsApi";
+import {
+  sendWarehouseFlightCommand,
+} from "../api/warehouseFlightApi";
+import { WarehousePreflightChecksPanel } from "../components/WarehousePreflightChecksPanel";
+import { useRunWarehousePreflight } from "../hooks/useRunWarehousePreflight";
 import type {
   WarehouseMissionDefaultsResponse,
   WarehouseMissionLaunchResponse,
@@ -152,7 +157,24 @@ const SCANNED_MAP_REFRESH_MS = 30000;
 
 const COMPACT_FIELD_SX = {
   minWidth: 0,
-  "& .MuiInputBase-input": { px: 0.75, py: 0.75 },
+  "& .MuiFilledInput-root": {
+    paddingTop: 0,
+    paddingBottom: 0,
+    backgroundColor: "action.hover",
+    "&:hover": { backgroundColor: "action.selected" },
+    "&.Mui-focused": { backgroundColor: "action.selected" },
+  },
+  "& .MuiFilledInput-input": {
+    px: 0.75,
+    py: 0.85,
+    pt: 1.1,
+    MozAppearance: "textfield",
+    "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+      WebkitAppearance: "none",
+      margin: 0,
+    },
+  },
+  "& .MuiSelect-select": { py: 0.85, pt: 1.1 },
   "& .MuiInputAdornment-root": { ml: 0, mr: 0.25 },
   "& .MuiInputAdornment-root .MuiTypography-root": { fontSize: "0.7rem" },
   "& .MuiInputLabel-root": { fontSize: "0.75rem" },
@@ -178,7 +200,16 @@ const toMessage = (error: unknown): string =>
 
 const getWarehouseStartPreflight = (error: unknown): PreflightRunResponse | null => {
   const body = (error as { body?: unknown } | null)?.body as WarehouseStartErrorBody | undefined;
-  return body?.detail?.preflight ?? null;
+  return body?.detail?.preflight ?? body?.error?.details?.preflight ?? null;
+};
+
+const getWarehouseStartReadiness = (error: unknown): WarehouseFlightReadiness | null => {
+  const body = (error as { body?: unknown } | null)?.body as WarehouseStartErrorBody | undefined;
+  const readiness = body?.detail?.readiness ?? body?.error?.details?.readiness;
+  if (!readiness || typeof readiness !== "object") {
+    return null;
+  }
+  return readiness as WarehouseFlightReadiness;
 };
 
 const getWarehouseStartMessage = (error: unknown): string => {
@@ -196,6 +227,15 @@ const getWarehouseStartMessage = (error: unknown): string => {
     const actions = detail.suggested_actions ?? [];
     if (actions.length > 0) {
       parts.push(actions[0]);
+    }
+    const readinessPayload =
+      getWarehouseStartReadiness(error) ??
+      (detail?.readiness && typeof detail.readiness === "object"
+        ? (detail.readiness as WarehouseFlightReadiness)
+        : null);
+    const blocking = readinessPayload?.blocking_reasons;
+    if (blocking && blocking.length > 0) {
+      parts.push(`Blocked: ${blocking.join("; ")}`);
     }
     return parts.join(" — ");
   }
@@ -326,16 +366,21 @@ const MISSION_DEFAULT_VALUE_SX = {
   width: "100%",
   maxWidth: 96,
   ml: "auto",
-  "& .MuiInputBase-root": { fontSize: "0.68rem" },
-  "& .MuiInputBase-input": {
+  "& .MuiFilledInput-root": {
+    ...COMPACT_FIELD_SX["& .MuiFilledInput-root"],
+    fontSize: "0.68rem",
+  },
+  "& .MuiFilledInput-input": {
     px: 0.5,
     py: 0.45,
+    pt: 0.95,
     fontSize: "0.68rem",
     lineHeight: 1.2,
   },
   "& .MuiSelect-select": {
     fontSize: "0.68rem",
     py: 0.45,
+    pt: 0.95,
     minHeight: "1.25rem",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -428,15 +473,15 @@ const toWarehouseMissionDefaultsPayload = (
 export default function WarehousePage() {
   const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
   const warehouseMissionDrawer = useTaskPreflightCommandsDrawer();
-  const warehousePreflightDrawer = useTaskPreflightCommandsDrawer();
+  const warehouseFlightDrawer = useTaskPreflightCommandsDrawer();
 
   const closeOtherWarehouseDrawers = useCallback(
-    (except: "setup" | "mission" | "preflight") => {
+    (except: "setup" | "mission" | "flight") => {
       if (except !== "setup") warehouseSetupDrawer.closeDrawer();
       if (except !== "mission") warehouseMissionDrawer.closeDrawer();
-      if (except !== "preflight") warehousePreflightDrawer.closeDrawer();
+      if (except !== "flight") warehouseFlightDrawer.closeDrawer();
     },
-    [warehouseMissionDrawer, warehousePreflightDrawer, warehouseSetupDrawer],
+    [warehouseFlightDrawer, warehouseMissionDrawer, warehouseSetupDrawer],
   );
 
   const handleWarehouseSetupOpenChange = useCallback(
@@ -455,12 +500,12 @@ export default function WarehousePage() {
     [closeOtherWarehouseDrawers, warehouseMissionDrawer],
   );
 
-  const handleWarehousePreflightOpenChange = useCallback(
+  const handleWarehouseFlightOpenChange = useCallback(
     (open: boolean) => {
-      warehousePreflightDrawer.onOpenChange(open);
-      if (open) closeOtherWarehouseDrawers("preflight");
+      warehouseFlightDrawer.onOpenChange(open);
+      if (open) closeOtherWarehouseDrawers("flight");
     },
-    [closeOtherWarehouseDrawers, warehousePreflightDrawer],
+    [closeOtherWarehouseDrawers, warehouseFlightDrawer],
   );
   const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>([]);
   const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
@@ -521,6 +566,17 @@ export default function WarehousePage() {
   const apiBaseRaw = import.meta.env.VITE_API_BASE_URL ?? "";
   const apiBase = (apiBaseRaw || "http://localhost:8000").replace(/\/$/, "");
   const videoToken = getToken();
+  const authToken = getToken();
+  const missionLoadedForReadiness =
+    selectedWarehouseMapId != null && selectedSensorRigId != null;
+  const {
+    running: preflightRunning,
+    result: warehousePreflight,
+    error: preflightError,
+    runChecks: runWarehousePreflightChecks,
+    passed: warehousePreflightPassed,
+  } = useRunWarehousePreflight(authToken);
+  const [flightCommandBusy, setFlightCommandBusy] = useState(false);
 
   const {
     missionStatus,
@@ -1069,6 +1125,28 @@ export default function WarehousePage() {
     setPendingFlightId,
   ]);
 
+  const handleFlightCommand = useCallback(
+    async (command: "pause" | "abort" | "land") => {
+      const token = getToken();
+      if (!token) {
+        addError("You must be authenticated to send flight commands.");
+        return;
+      }
+      setFlightCommandBusy(true);
+      try {
+        const result = await sendWarehouseFlightCommand(command, token);
+        if (!result.accepted) {
+          addError(result.message || `Flight ${command} command failed.`);
+        }
+      } catch (error) {
+        addError(toMessage(error));
+      } finally {
+        setFlightCommandBusy(false);
+      }
+    },
+    [addError],
+  );
+
   const handleExplorationLaunch = useCallback(
     (launch: WarehouseMissionLaunchResponse) => {
       setPendingFlightId(launch.mission.flight_id);
@@ -1146,14 +1224,17 @@ export default function WarehousePage() {
     startingScan ||
     !selectedWarehouseMapId ||
     selectedSensorRigId == null ||
-    sensorRigHealth?.ready !== true;
-  const startScanTooltip = !selectedWarehouseMapId
-    ? "Select a warehouse map to enable launch."
-    : selectedSensorRigId == null || sensorRigHealth?.ready !== true
-      ? "Select a registered sensor rig before starting."
-      : !sensorRigHealth?.perception?.ready
-        ? "Launch scan — mapping stack and perception start with the flight."
-        : `Scan warehouse map #${selectedWarehouseMapId}.`;
+    sensorRigHealth?.ready !== true ||
+    !warehousePreflightPassed;
+  const startScanTooltip = !warehousePreflightPassed
+    ? "Run preflight checks and wait for them to pass before starting flight."
+    : !selectedWarehouseMapId
+      ? "Select a warehouse map to enable launch."
+      : selectedSensorRigId == null || sensorRigHealth?.ready !== true
+        ? "Select a registered sensor rig before starting."
+        : !sensorRigHealth?.perception?.ready
+          ? "Launch scan — mapping stack and nvblox start with the flight."
+          : `Scan warehouse map #${selectedWarehouseMapId}.`;
 
   const selectedWarehouseMapName = useMemo(() => {
     if (selectedWarehouseMapId == null) return null;
@@ -1251,20 +1332,26 @@ export default function WarehousePage() {
                 />
               </Paper>
             </Stack>
+        </Stack>
+      </Paper>
 
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                borderColor: "divider",
-                backgroundColor: "background.paper",
-              }}
+      {warehousePreflightPassed && (
+        <TaskPreflightCommandsDrawer
+          open={warehouseFlightDrawer.open}
+          onOpenChange={handleWarehouseFlightOpenChange}
+          title="Warehouse Flight"
+          subtitle="Mission status, launch, and in-flight controls"
+          tabLabel="FLIGHT"
+          tabIcon={<ExploreRoundedIcon fontSize="small" />}
+          edgeTabIndex={2}
+          edgeTabCount={3}
+          paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
+        >
+          <Stack spacing={2}>
+            <WarehouseDrawerSection
+              title="Mission Status"
+              info="Live mission state from the warehouse scan runtime."
             >
-              <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
-                Mission Status
-              </Typography>
-
               <Box
                 sx={{
                   display: "grid",
@@ -1304,8 +1391,13 @@ export default function WarehousePage() {
                   {missionStatus.mission_lifecycle.last_error}
                 </Alert>
               )}
+            </WarehouseDrawerSection>
 
-              <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
+            <WarehouseDrawerSection
+              title="Launch Scan"
+              info="Preflight passed. Starting flight also boots nvblox and creates the warehouse scan mission."
+            >
+              <Stack direction="row" justifyContent="flex-end">
                 <ActionIconButton
                   variant="play"
                   title={
@@ -1324,9 +1416,57 @@ export default function WarehousePage() {
                   }}
                 />
               </Stack>
-            </Paper>
-        </Stack>
-      </Paper>
+            </WarehouseDrawerSection>
+
+            {(missionState === "running" || missionState === "airborne") && (
+              <WarehouseDrawerSection title="In-flight controls">
+                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    disabled={flightCommandBusy}
+                    onClick={() => {
+                      void handleFlightCommand("pause");
+                    }}
+                  >
+                    Pause
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    size="small"
+                    disabled={flightCommandBusy}
+                    onClick={() => {
+                      void handleFlightCommand("abort");
+                    }}
+                  >
+                    Abort
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    disabled={flightCommandBusy}
+                    onClick={() => {
+                      void handleFlightCommand("land");
+                    }}
+                  >
+                    Land
+                  </Button>
+                </Stack>
+                <MissionCommandPanel
+                  telemetry={telemetry}
+                  droneConnected={droneConnected}
+                  missionStatus={missionStatus}
+                  activeFlightId={activeFlightId}
+                  apiBase={apiBase}
+                  title="Warehouse Commands"
+                />
+              </WarehouseDrawerSection>
+            )}
+          </Stack>
+        </TaskPreflightCommandsDrawer>
+      )}
 
       <TaskPreflightCommandsDrawer
         open={warehouseSetupDrawer.open}
@@ -1336,7 +1476,7 @@ export default function WarehousePage() {
         tabLabel="SETUP"
         tabIcon={<TuneRoundedIcon fontSize="small" />}
         edgeTabIndex={0}
-        edgeTabCount={3}
+        edgeTabCount={warehousePreflightPassed ? 3 : 2}
         paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
       >
         <Stack spacing={2}>
@@ -1353,6 +1493,7 @@ export default function WarehousePage() {
               sx={{ flexWrap: "wrap", minWidth: 0 }}
             >
               <TextField
+                variant="filled"
                 select
                 size="small"
                 label="Map"
@@ -1417,7 +1558,8 @@ export default function WarehousePage() {
               {showCreateMap && (
                 <>
                   <TextField
-                    size="small"
+                    variant="filled"
+                size="small"
                     label="Name"
                     value={createMapForm.name}
                     onChange={(e) => setCreateMapForm((f) => ({ ...f, name: e.target.value }))}
@@ -1425,7 +1567,8 @@ export default function WarehousePage() {
                     sx={{ ...COMPACT_FIELD_SX, flex: "1 1 120px", minWidth: 100 }}
                   />
                   <TextField
-                    size="small"
+                    variant="filled"
+                size="small"
                     type="number"
                     label="Width"
                     inputProps={{ min: 0.1, step: 0.5 }}
@@ -1437,7 +1580,8 @@ export default function WarehousePage() {
                     sx={{ ...COMPACT_FIELD_SX, flex: "0 1 88px", minWidth: 72 }}
                   />
                   <TextField
-                    size="small"
+                    variant="filled"
+                size="small"
                     type="number"
                     label="Length"
                     inputProps={{ min: 0.1, step: 0.5 }}
@@ -1470,6 +1614,7 @@ export default function WarehousePage() {
           >
             <Stack direction="row" spacing={0.75} alignItems="flex-start" sx={{ minWidth: 0 }}>
               <TextField
+                variant="filled"
                 select
                 size="small"
                 label="Camera + IMU Rig"
@@ -1553,7 +1698,8 @@ export default function WarehousePage() {
                 >
                   {SENSOR_RIG_CREATE_FIELDS.map((field) => (
                     <TextField
-                      key={field.key}
+                      variant="filled"
+                key={field.key}
                       size="small"
                       fullWidth
                       type={field.type}
@@ -1654,7 +1800,8 @@ export default function WarehousePage() {
                               <TableCell sx={{ width: "42%", minWidth: 0, py: 0.5, pl: 0.5 }}>
                                 {row.kind === "select" ? (
                                   <TextField
-                                    select
+                                    variant="filled"
+                select
                                     size="small"
                                     value={missionDefaultsDraft[row.key]}
                                     onChange={(event) => {
@@ -1674,7 +1821,8 @@ export default function WarehousePage() {
                                   </TextField>
                                 ) : (
                                   <TextField
-                                    size="small"
+                                    variant="filled"
+                size="small"
                                     type="number"
                                     value={missionDefaultsDraft[row.key]}
                                     placeholder={row.placeholder}
@@ -1725,10 +1873,23 @@ export default function WarehousePage() {
         tabLabel="FLY"
         tabIcon={<ExploreRoundedIcon fontSize="small" />}
         edgeTabIndex={1}
-        edgeTabCount={3}
+        edgeTabCount={warehousePreflightPassed ? 3 : 2}
         paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
       >
         <Stack spacing={2}>
+          <WarehousePreflightChecksPanel
+            preflight={warehousePreflight}
+            running={preflightRunning}
+            error={preflightError}
+            flightAvailable={warehousePreflightPassed}
+            onOpenFlight={() => handleWarehouseFlightOpenChange(true)}
+            onRunChecks={() => {
+              void runWarehousePreflightChecks({
+                missionLoaded: missionLoadedForReadiness,
+              });
+            }}
+          />
+
           <WarehouseDrawerSection
             title="Exploration"
             info="Frontier mode uses the ROS nvblox ESDF map and returns before reserve battery."
@@ -1738,6 +1899,7 @@ export default function WarehousePage() {
               warehouseMapId={selectedWarehouseMapId}
               selectedDockId={selectedDockId}
               warehouseName={selectedWarehouseMapName ?? undefined}
+              warehousePreflightPassed={warehousePreflightPassed}
               getToken={getToken}
               onLaunch={handleExplorationLaunch}
               onError={handleExplorationError}
@@ -1752,12 +1914,12 @@ export default function WarehousePage() {
               embedded
               activeFlightId={activeFlightId}
               missionStatus={missionStatus}
-              telemetry={telemetry}
               wsConnected={wsConnected}
               droneConnected={droneConnected}
               warehouseMapId={selectedWarehouseMapId}
               sensorRigId={selectedSensorRigId}
               dockId={selectedDockId}
+              warehousePreflightPassed={warehousePreflightPassed}
               setPendingFlightId={setPendingFlightId}
               onPreflightRun={setWarehousePreflightRun}
               onMessage={setScanLaunchMessage}
@@ -1774,6 +1936,7 @@ export default function WarehousePage() {
           >
             <Stack direction="row" spacing={1} alignItems="flex-start">
               <TextField
+                variant="filled"
                 select
                 disabled={!loadingScannedMaps && scannedMaps.length === 0}
                 size="small"
@@ -1854,29 +2017,6 @@ export default function WarehousePage() {
             />
           </WarehouseDrawerSection>
         </Stack>
-      </TaskPreflightCommandsDrawer>
-
-      <TaskPreflightCommandsDrawer
-        open={warehousePreflightDrawer.open}
-        onOpenChange={handleWarehousePreflightOpenChange}
-        edgeTabIndex={2}
-        edgeTabCount={3}
-      >
-        <MissionPreflightPanel
-          apiBase={apiBase}
-          missionType="warehouse_scan"
-          preflightRun={warehousePreflightRun}
-          telemetry={telemetry}
-          title="Warehouse Preflight"
-        />
-        <MissionCommandPanel
-          telemetry={telemetry}
-          droneConnected={droneConnected}
-          missionStatus={missionStatus}
-          activeFlightId={activeFlightId}
-          apiBase={apiBase}
-          title="Warehouse Commands"
-        />
       </TaskPreflightCommandsDrawer>
     </>
   );

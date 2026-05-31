@@ -295,6 +295,14 @@ export const inputsCustomizations: Components<Theme> = {
           opacity: 0.5,
           color: '#999999',
         },
+        '&[type=number]': {
+          MozAppearance: 'textfield',
+        },
+        '&[type=number]::-webkit-outer-spin-button, &[type=number]::-webkit-inner-spin-button':
+          {
+            WebkitAppearance: 'none',
+            margin: 0,
+          },
       },
     },
   },

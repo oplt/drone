@@ -20,6 +20,17 @@ class RuntimeCompletionServiceMixin:
         if self._flight_id is None:
             return
 
+        finalize_key = getattr(self, "_flight_finalize_key", None)
+        token = (self._flight_id, event_type or "finalize")
+        if finalize_key == token:
+            logger.debug(
+                "Skipping duplicate flight finalization flight_id=%s event_type=%s",
+                self._flight_id,
+                event_type,
+            )
+            return
+        self._flight_finalize_key = token
+
         safe_note = (note or "").strip()
         if len(safe_note) > 250:
             safe_note = safe_note[:247] + "..."

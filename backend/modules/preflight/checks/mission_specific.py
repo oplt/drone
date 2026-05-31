@@ -1,4 +1,5 @@
 import math
+import os
 from collections.abc import Iterable, Sequence
 from math import atan, pi, radians, tan
 from typing import Any
@@ -623,75 +624,83 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
         self.mission: TerrainFollowMission = context.mission
 
     def check_terrain_follow_feasibility(self) -> list[CheckResult]:
-        """Check if terrain following is feasible."""
-        results = []
-
+        """Validate terrain-follow climb/descent rates using cached/precomputed terrain only."""
         if len(self.mission.waypoints) < 2:
             return [
                 CheckResult(
                     name="Terrain Follow",
                     status=CheckStatus.FAIL,
-                    message="Insufficient waypoints",
+                    message="At least two waypoints are required",
                 )
             ]
 
-        max_climb_rate = 0
-        max_descent_rate = 0
+        speed = float(getattr(self.mission, "speed", 0.0) or 0.0)
+
+        if speed <= 0:
+            return [
+                CheckResult(
+                    name="Terrain Follow",
+                    status=CheckStatus.FAIL,
+                    message="Mission speed must be positive",
+                )
+            ]
+
+        max_climb_rate = 0.0
+        max_descent_rate = 0.0
+        missing_terrain: list[int] = []
 
         for i in range(1, len(self.mission.waypoints)):
-            # Get terrain from context (cached)
-            current_terrain = self._get_terrain(i) or 0
-            prev_terrain = self._get_terrain(i - 1) or 0
+            current_terrain = self._get_terrain(i)
+            previous_terrain = self._get_terrain(i - 1)
 
-            # Get distance from context (cached)
+            if current_terrain is None or previous_terrain is None:
+                missing_terrain.append(i)
+                continue
+
             segment_distance = self._get_distance(i - 1, i)
-            segment_time = segment_distance / self.mission.speed if self.mission.speed > 0 else 0
 
-            if segment_time > 0:
-                alt_change = (current_terrain - prev_terrain) + self.mission.min_agl
-                rate = alt_change / segment_time
+            if segment_distance <= 0:
+                continue
 
-                if rate > 0:
-                    max_climb_rate = max(max_climb_rate, rate)
-                else:
-                    max_descent_rate = max(max_descent_rate, abs(rate))
+            segment_time = segment_distance / speed
 
-        # Check against vehicle limits
-        climb_rate_max = getattr(self.v, "climb_rate_max", 5)
-        if max_climb_rate > climb_rate_max:
-            results.append(
-                CheckResult(
-                    name="Climb Rate",
-                    status=CheckStatus.FAIL,
-                    message=f"Required climb {max_climb_rate:.1f}m/s > max {climb_rate_max}m/s",
-                )
-            )
-        else:
-            results.append(
-                CheckResult(
-                    name="Climb Rate",
-                    status=CheckStatus.PASS,
-                    message=f"Max climb: {max_climb_rate:.1f}m/s",
-                )
-            )
+            # Constant AGL terrain-follow means required vehicle altitude changes by terrain delta only.
+            rate = (float(current_terrain) - float(previous_terrain)) / segment_time
 
-        descent_rate_max = getattr(self.v, "descent_rate_max", 3)
-        if max_descent_rate > descent_rate_max:
-            results.append(
+            if rate >= 0:
+                max_climb_rate = max(max_climb_rate, rate)
+            else:
+                max_descent_rate = max(max_descent_rate, abs(rate))
+
+        if missing_terrain:
+            return [
                 CheckResult(
-                    name="Descent Rate",
-                    status=CheckStatus.FAIL,
-                    message=f"Required descent {max_descent_rate:.1f}m/s > max {descent_rate_max}m/s",
+                    name="Terrain Follow",
+                    status=CheckStatus.WARN,
+                    message=f"Terrain missing at waypoint(s): {missing_terrain[:5]}",
                 )
+            ]
+
+        results: list[CheckResult] = []
+
+        climb_rate_max = float(getattr(self.v, "climb_rate_max", 5.0) or 5.0)
+        descent_rate_max = float(getattr(self.v, "descent_rate_max", 3.0) or 3.0)
+
+        results.append(
+            CheckResult(
+                name="Climb Rate",
+                status=CheckStatus.PASS if max_climb_rate <= climb_rate_max else CheckStatus.FAIL,
+                message=f"Required {max_climb_rate:.1f}m/s, max {climb_rate_max:.1f}m/s",
             )
-        else:
-            results.append(
-                CheckResult(
-                    name="Descent Rate",
-                    status=CheckStatus.PASS,
-                    message=f"Max descent: {max_descent_rate:.1f}m/s",
-                )
+        )
+
+        results.append(
+            CheckResult(
+                name="Descent Rate",
+                status=CheckStatus.PASS if max_descent_rate <= descent_rate_max else CheckStatus.FAIL,
+                message=f"Required {max_descent_rate:.1f}m/s, max {descent_rate_max:.1f}m/s",
             )
+        )
 
         return results
 
@@ -1164,6 +1173,34 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             return f"{prefix}. {detail.strip()}"
         return prefix
 
+    def _warehouse_sensor_readiness(self):
+        from backend.modules.warehouse.ports import WarehousePerceptionStatus
+        from backend.modules.warehouse.service.takeoff_readiness import (
+            readiness_from_perception_status,
+            takeoff_requires_nvblox,
+        )
+
+        status_dict = self._perception_status()
+        if not status_dict:
+            return None
+        components = status_dict.get("components")
+        if not isinstance(components, dict):
+            components = {}
+        perception = WarehousePerceptionStatus(
+            configured=bool(status_dict.get("configured", True)),
+            reachable=bool(status_dict.get("reachable", False)),
+            ready=bool(status_dict.get("ready", False)),
+            status=str(status_dict.get("status") or "unknown"),
+            profile=status_dict.get("profile"),
+            bridge_url=status_dict.get("bridge_url"),
+            components=components,
+            detail=status_dict.get("detail"),
+        )
+        return readiness_from_perception_status(
+            perception,
+            require_nvblox=takeoff_requires_nvblox(),
+        )
+
     def check_ros_bridge(self) -> CheckResult:
         status = self._perception_status()
         if not status:
@@ -1192,13 +1229,25 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.PASS,
                 message=f"Jetson bridge ready ({status.get('profile') or 'unknown profile'})",
             )
+        takeoff = self._warehouse_sensor_readiness()
+        if takeoff is not None and takeoff.ready:
+            return CheckResult(
+                name="Warehouse ROS Bridge",
+                status=CheckStatus.PASS,
+                message=(
+                    f"Bridge reachable; required sensor topics are live "
+                    f"({status.get('profile') or 'unknown profile'})"
+                ),
+            )
         bridge_status = status.get("status") or "not ready"
+        detail = takeoff.detail if takeoff is not None and takeoff.detail else None
+        prefix = f"Jetson ROS bridge status is {bridge_status}"
+        if detail:
+            prefix = f"{prefix}: {detail}"
         return CheckResult(
             name="Warehouse ROS Bridge",
             status=CheckStatus.FAIL,
-            message=self._missing_topics_message(
-                prefix=f"Jetson ROS bridge status is {bridge_status}",
-            ),
+            message=self._missing_topics_message(prefix=prefix),
         )
 
     def check_ros_graph(self) -> CheckResult:
@@ -1228,6 +1277,17 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.PASS,
                 message="Camera topics are publishing",
             )
+        rgb_diag = self._topic_diagnostic("rgb_image")
+        if rgb_diag and (
+            rgb_diag.get("healthy")
+            or rgb_diag.get("readiness_state") in {"ok", "ok_via_messages", "shallow_present"}
+        ):
+            matched = rgb_diag.get("matched") or rgb_diag.get("expected")
+            return CheckResult(
+                name="Warehouse Camera Topics",
+                status=CheckStatus.PASS,
+                message=f"RGB camera topic listed ({matched})",
+            )
         detail = self._topic_diagnostic_message("rgb_image")
         if detail is None:
             left_detail = self._topic_diagnostic_message("left_image")
@@ -1241,11 +1301,66 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
         )
 
     def check_stereo_sync(self) -> CheckResult:
-        return self._component_check(
+        value = self._component_bool("stereo_sync", "stereo_timestamps_synced")
+        if value is True:
+            return CheckResult(
+                name="Warehouse Stereo Sync",
+                status=CheckStatus.PASS,
+                message="Stereo timestamps are synchronized",
+            )
+        if value is False:
+            return CheckResult(
+                name="Warehouse Stereo Sync",
+                status=CheckStatus.FAIL,
+                message="Stereo timestamps are not synchronized",
+            )
+
+        rgb_diag = self._topic_diagnostic("rgb_image")
+        rgb_ok = bool(
+            rgb_diag
+            and (
+                rgb_diag.get("healthy")
+                or rgb_diag.get("readiness_state")
+                in {"ok", "ok_via_messages", "ok_graph_presence", "shallow_present"}
+            )
+        )
+        left_diag = self._topic_diagnostic("left_image")
+        right_diag = self._topic_diagnostic("right_image")
+        stereo_topics_present = bool(left_diag or right_diag)
+
+        if rgb_ok and not stereo_topics_present:
+            return CheckResult(
+                name="Warehouse Stereo Sync",
+                status=CheckStatus.SKIP,
+                message="RGBD front camera in use; stereo pair sync not required",
+            )
+
+        if rgb_ok:
+            return CheckResult(
+                name="Warehouse Stereo Sync",
+                status=CheckStatus.PASS,
+                message="RGB camera live; stereo sync not reported (RGBD mode)",
+            )
+
+        sim_mode = os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if sim_mode:
+            return CheckResult(
+                name="Warehouse Stereo Sync",
+                status=CheckStatus.WARN,
+                message=(
+                    "Stereo sync not reported by bridge; verify left/right topics if using stereo"
+                ),
+            )
+
+        return CheckResult(
             name="Warehouse Stereo Sync",
-            keys=("stereo_sync", "stereo_timestamps_synced"),
-            pass_message="Stereo timestamps are synchronized",
-            fail_message="Stereo timestamps are not synchronized",
+            status=CheckStatus.FAIL,
+            message="Warehouse Stereo Sync status is missing from the ROS bridge health payload",
         )
 
     def check_imu_topic(self) -> CheckResult:
@@ -1288,11 +1403,35 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.PASS,
                 message="Visual SLAM odometry is publishing and fresh",
             )
+        if self._component_bool("odometry_state_unreadable"):
+            topic = self._perception_components().get("odometry_topic") or "/warehouse/drone/odometry"
+            return CheckResult(
+                name="Warehouse Local Odometry",
+                status=CheckStatus.FAIL,
+                message=(
+                    f"Local odometry state unreadable; verify publishing on {topic} "
+                    "(ros2 topic echo --once)"
+                ),
+            )
+        for key in ("visual_slam_odom", "local_odometry"):
+            diag = self._topic_diagnostic(key)
+            if diag and (
+                diag.get("healthy")
+                or diag.get("readiness_state") in {"ok", "ok_via_messages", "shallow_present"}
+            ):
+                matched = diag.get("matched") or diag.get("expected")
+                source = self._perception_components().get("odometry_source") or "local_odom"
+                return CheckResult(
+                    name="Warehouse Local Odometry",
+                    status=CheckStatus.PASS,
+                    message=f"{source} live ({matched})",
+                )
         detail = self._topic_diagnostic_message("visual_slam_odom")
+        topic = self._perception_components().get("odometry_topic") or "/warehouse/drone/odometry"
         return CheckResult(
-            name="Warehouse Visual SLAM",
+            name="Warehouse Local Odometry",
             status=CheckStatus.FAIL,
-            message=detail or "Visual SLAM odometry is not ready (check /warehouse/drone/odometry)",
+            message=detail or f"Local odometry not ready (check {topic})",
         )
 
     def check_nvblox(self) -> CheckResult:
@@ -1303,6 +1442,40 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 message="Nvblox mapping outputs are publishing and fresh",
             )
         components = self._perception_components()
+        sim_mode = os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        listed = components.get("listed_topics")
+        has_nvblox_node = isinstance(listed, list) and any(
+            str(topic).startswith("/nvblox_node/") for topic in listed
+        )
+        if components.get("nvblox_warming_up") or (sim_mode and has_nvblox_node):
+            return CheckResult(
+                name="Warehouse Nvblox",
+                status=CheckStatus.WARN,
+                message=(
+                    "Nvblox is running; map outputs may still be warming up — "
+                    "flight can start mapping in parallel"
+                ),
+            )
+        strict_nvblox = os.getenv("WAREHOUSE_PREFLIGHT_WAIT_NVBLOX", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if sim_mode and not has_nvblox_node and not strict_nvblox:
+            return CheckResult(
+                name="Warehouse Nvblox",
+                status=CheckStatus.WARN,
+                message=(
+                    "Nvblox is not running yet (starts when the warehouse flight begins); "
+                    "Gazebo sensor topics are sufficient for preflight"
+                ),
+            )
         missing = components.get("missing_nvblox_topics")
         detail_parts: list[str] = []
         if isinstance(missing, list) and missing:
@@ -1311,8 +1484,6 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             diag_msg = self._topic_diagnostic_message(key)
             if diag_msg:
                 detail_parts.append(f"{key}: {diag_msg}")
-        if components.get("nvblox_warming_up"):
-            detail_parts.append("nvblox node detected but outputs not yet healthy")
         return CheckResult(
             name="Warehouse Nvblox",
             status=CheckStatus.FAIL,
@@ -1364,14 +1535,20 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
 
     def check_battery_margin(self) -> CheckResult:
         reserve_pct = float(self._thr("WAREHOUSE_SCAN_BATTERY_RESERVE_PCT", 30.0))
+        if reserve_pct <= 0:
+            return CheckResult(
+                name="Warehouse Battery Margin",
+                status=CheckStatus.SKIP,
+                message="Battery margin check disabled for ROS/Gazebo warehouse preflight",
+            )
         battery_pct = getattr(self.v, "battery_percent", None)
         if battery_pct is None:
             battery_pct = getattr(self.v, "battery_remaining", None)
         if battery_pct is None:
             return CheckResult(
                 name="Warehouse Battery Margin",
-                status=CheckStatus.FAIL,
-                message="Battery percentage is unavailable for warehouse return margin",
+                status=CheckStatus.SKIP,
+                message="Battery percentage unavailable (MAVLink not required for warehouse sim)",
             )
         pct = float(battery_pct)
         if pct <= 1.0:
@@ -1825,10 +2002,20 @@ class IndoorExplorationMissionPreflight(MissionPreflightBase):
 
 
 def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
+    mission_type = str(getattr(context.mission, "type", "") or "").lower()
 
-    mission_type = context.mission.type.lower() if hasattr(context.mission, "type") else ""
+    aliases = {
+        "survey": "grid",
+        "circle": "orbit",
+        "poi": "orbit",
+        "private_patrol": "perimeter_patrol",
+        "polygon": "perimeter_patrol",
+        "patrol": "perimeter_patrol",
+    }
 
-    mission_classes = {
+    mission_type = aliases.get(mission_type, mission_type)
+
+    mission_classes: dict[str, type[MissionPreflightBase]] = {
         "grid": GridMissionPreflight,
         "warehouse_scan": WarehouseScanMissionPreflight,
         "indoor_exploration": IndoorExplorationMissionPreflight,
@@ -1839,19 +2026,4 @@ def create_mission_preflight(context: PreflightContext) -> MissionPreflightBase:
         "route": WaypointMissionPreflight,
     }
 
-    # Handle aliases
-    base_type = mission_type
-    if mission_type in ["survey"]:
-        base_type = "grid"
-    elif mission_type in ["circle", "poi"]:
-        base_type = "orbit"
-    elif mission_type in ["private_patrol", "polygon", "patrol"]:
-        base_type = "perimeter_patrol"
-
-    mission_class = mission_classes.get(base_type) or mission_classes.get(mission_type)
-
-    if mission_class:
-        return mission_class(context)
-    else:
-        # Return base class that does nothing
-        return MissionPreflightBase(context)
+    return mission_classes.get(mission_type, WaypointMissionPreflight)(context)

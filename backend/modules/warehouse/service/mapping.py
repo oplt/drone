@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -35,6 +36,10 @@ class WarehouseScanMappingError(RuntimeError):
     pass
 
 
+class WarehouseScanMappingPreconditionError(WarehouseScanMappingError):
+    """Mapping cannot proceed — missing inputs/artifacts; do not retry blindly."""
+
+
 class WarehouseScanMappingService:
     def __init__(self) -> None:
         self.storage = StorageService()
@@ -59,6 +64,10 @@ class WarehouseScanMappingService:
         if not resolved_session_dir.exists():
             raise WarehouseScanMappingError(
                 f"Warehouse capture directory does not exist: {resolved_session_dir}"
+            )
+        if len(polygon_local_m) < 3:
+            raise WarehouseScanMappingError(
+                "Warehouse mapping requires polygon_local_m with at least 3 points."
             )
         capture_result = dict(capture_result)
         capture_result.setdefault("absolute_dir", str(resolved_session_dir))
@@ -301,6 +310,11 @@ class WarehouseScanMappingService:
             if not isinstance(raw, str) or not raw.strip():
                 continue
             path = (session_dir / raw).resolve()
+            try:
+                path.relative_to(session_dir.resolve())
+            except ValueError:
+                logger.warning("Ignoring manifest asset outside session dir: %s", path)
+                continue
             if path.exists():
                 return path
         return None
@@ -309,9 +323,12 @@ class WarehouseScanMappingService:
         template = os.getenv("WAREHOUSE_SCAN_POSTPROCESS_CMD", "").strip()
         if not template:
             return False
-        cmd = template.format(input_dir=str(input_dir), output_dir=str(output_dir))
-        logger.info("Running warehouse post-process command: %s", cmd)
-        subprocess.run(cmd, shell=True, check=True)
+        rendered = template.format(input_dir=str(input_dir), output_dir=str(output_dir))
+        argv = shlex.split(rendered)
+        if not argv:
+            return False
+        logger.info("Running warehouse post-process command: %s", argv[0])
+        subprocess.run(argv, check=True)
         return True
 
     def _prepare_artifacts(
@@ -405,8 +422,8 @@ class WarehouseScanMappingService:
             )
 
             if not session_has_mapping_artifacts(session_dir):
-                raise WarehouseScanMappingError(missing_artifacts_message(session_dir))
-            raise WarehouseScanMappingError(
+                raise WarehouseScanMappingPreconditionError(missing_artifacts_message(session_dir))
+            raise WarehouseScanMappingPreconditionError(
                 "Warehouse capture did not produce a tileset, point cloud, or ROS artifact."
             )
         return converted, artifact_meta

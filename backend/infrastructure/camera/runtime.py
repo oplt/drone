@@ -27,7 +27,11 @@ _last_gazebo_enable_attempt = 0.0
 
 
 def gazebo_subprocess_fallback_required() -> bool:
-    return bool(settings.drone_video_use_gazebo and not opencv_has_gstreamer())
+    try:
+        from backend.modules.warehouse.service.video import effective_drone_video_use_gazebo
+    except Exception:
+        return bool(settings.drone_video_use_gazebo and not opencv_has_gstreamer())
+    return bool(effective_drone_video_use_gazebo() and not opencv_has_gstreamer())
 
 
 def _get_gazebo_udp_port() -> int:
@@ -181,13 +185,37 @@ class SharedVideoRuntime:
         self._fallback_recording_path: str | None = None
 
     def source_url(self) -> str:
-        if settings.drone_video_use_gazebo:
-            return settings.drone_video_source_gazebo
-        return f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
+        from backend.modules.warehouse.service.video import (
+            effective_drone_video_source,
+            effective_drone_video_use_gazebo,
+            warehouse_video_blocked,
+        )
+
+        if warehouse_video_blocked():
+            raise RuntimeError(
+                "Warehouse Gazebo sim does not use Raspberry Pi / TCP video streams"
+            )
+        if effective_drone_video_use_gazebo():
+            return effective_drone_video_source() or settings.drone_video_source_gazebo
+        return effective_drone_video_source() or f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
     async def ensure_source_available(self) -> dict[str, Any]:
+        from backend.modules.warehouse.service.video import (
+            effective_drone_video_use_gazebo,
+            warehouse_video_blocked,
+            warehouse_video_skip_reason,
+        )
+
+        if warehouse_video_blocked():
+            return {
+                "status": "skipped",
+                "source": None,
+                "proxy": "/video/mjpeg",
+                "message": warehouse_video_skip_reason(),
+            }
+
         source = self.source_url()
-        if settings.drone_video_use_gazebo:
+        if effective_drone_video_use_gazebo():
             await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
             return {
                 "status": "ready",
@@ -527,6 +555,17 @@ class SharedVideoRuntime:
         }
 
     async def start_recording(self, *, recording_path: str | None = None) -> dict[str, Any]:
+        from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+
+        if warehouse_video_blocked():
+            return {
+                "recording": False,
+                "recording_file": None,
+                "recording_path": None,
+                "skipped": True,
+                "message": warehouse_video_skip_reason(),
+            }
+
         await self.ensure_running()
         recording_root = _recording_root_from_path(recording_path)
 

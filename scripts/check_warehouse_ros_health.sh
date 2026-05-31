@@ -18,9 +18,34 @@ echo
 
 echo "=== Gazebo topics (warehouse/imu/odom) ==="
 if command -v gz >/dev/null 2>&1; then
-  gz topic -l 2>/dev/null | grep -E 'warehouse|imu|odometry' | sort || true
+  gz topic -l 2>/dev/null | grep -E 'warehouse|imu|odometry|rgbd|scan' | sort || true
 else
   echo "gz CLI not found"
+fi
+echo
+
+GAZEBO_CHECK_TOPICS=(
+  "${WAREHOUSE_GAZEBO_RGB_TOPIC:-/warehouse/front/rgbd/image}"
+  "${WAREHOUSE_GAZEBO_DEPTH_TOPIC:-/warehouse/front/rgbd/depth_image}"
+  "${WAREHOUSE_GAZEBO_ODOM_TOPIC:-/warehouse/drone/odometry}"
+)
+
+if command -v gz >/dev/null 2>&1; then
+  echo "=== Gazebo publish check (3s window each) ==="
+  GAZEBO_FAIL=0
+  for topic in "${GAZEBO_CHECK_TOPICS[@]}"; do
+    printf '%s: ' "${topic}"
+    if timeout 3 gz topic -t "${topic}" -f 2>/dev/null | grep -q .; then
+      echo "publishing"
+    else
+      echo "NOT publishing"
+      GAZEBO_FAIL=1
+    fi
+  done
+  echo
+  if (( GAZEBO_FAIL != 0 )); then
+    echo "Gazebo sensors idle. Start running sim: gz sim -r <world>.sdf (or press Play)." >&2
+  fi
 fi
 echo
 
@@ -52,4 +77,8 @@ done
 if [ -n "${WAREHOUSE_ROS_BRIDGE_URL:-}" ]; then
   echo "=== Bridge /health (deep) ==="
   curl -fsS --max-time 20 "${WAREHOUSE_ROS_BRIDGE_URL}/health?deep=1" | python3 -m json.tool 2>/dev/null | head -80 || true
+fi
+
+if command -v gz >/dev/null 2>&1 && [ "${GAZEBO_FAIL:-0}" != "0" ]; then
+  exit 1
 fi

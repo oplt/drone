@@ -31,7 +31,7 @@ POINTS_TOPIC="${WAREHOUSE_GAZEBO_POINTS_TOPIC:-/warehouse/front/rgbd/points}"
 CAMERA_INFO_TOPIC="${WAREHOUSE_GAZEBO_CAMERA_INFO_TOPIC:-/warehouse/front/rgbd/camera_info}"
 ODOM_TOPIC="${WAREHOUSE_GAZEBO_ODOM_TOPIC:-/warehouse/drone/odometry}"
 WAIT_S="${WAREHOUSE_GAZEBO_SENSOR_WAIT_S:-300}"
-REQUIRE_PUBLISHING="${WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING:-0}"
+REQUIRE_PUBLISHING="${WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING:-1}"
 
 _gazebo_listed() {
   gz topic -l 2>/dev/null | grep -Fxq "$1"
@@ -39,6 +39,12 @@ _gazebo_listed() {
 
 _gazebo_publishing() {
   timeout "${2:-3}" gz topic -t "$1" -f 2>/dev/null | grep -q .
+}
+
+_gazebo_sensors_publishing() {
+  _gazebo_publishing "${RGB_TOPIC}" 3 \
+    && _gazebo_publishing "${DEPTH_TOPIC}" 3 \
+    && _gazebo_publishing "${ODOM_TOPIC}" 3
 }
 
 _discover_imu_topic() {
@@ -56,11 +62,11 @@ saw_topic=0
 while (( SECONDS < deadline )); do
   if _gazebo_listed "${RGB_TOPIC}"; then
     saw_topic=1
-    if _gazebo_publishing "${RGB_TOPIC}" 3; then
-      echo "[gazebo_sensor_bridge] Gazebo sensors publishing"
+    if _gazebo_sensors_publishing; then
+      echo "[gazebo_sensor_bridge] Gazebo RGB, depth, and odometry publishing"
       break
     fi
-    echo "[gazebo_sensor_bridge] topic listed but not publishing yet (press Play or use gz sim -r ...)"
+    echo "[gazebo_sensor_bridge] topic listed but not publishing yet (press Play or use: gz sim -r <world>.sdf)"
     if [ "${REQUIRE_PUBLISHING}" != "1" ]; then
       echo "[gazebo_sensor_bridge] starting bridge anyway; ROS publishers appear once sim publishes"
       break
@@ -78,12 +84,15 @@ if ! _gazebo_listed "${RGB_TOPIC}"; then
   exit 1
 fi
 
-if [ "${REQUIRE_PUBLISHING}" = "1" ] && ! _gazebo_publishing "${RGB_TOPIC}" 3; then
-  echo "[gazebo_sensor_bridge] ERROR: Gazebo sensors idle after ${WAIT_S}s — press Play in sim" >&2
+if [ "${REQUIRE_PUBLISHING}" = "1" ] && ! _gazebo_sensors_publishing; then
+  echo "[gazebo_sensor_bridge] ERROR: Gazebo sensors idle after ${WAIT_S}s — start with gz sim -r or press Play" >&2
+  echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${RGB_TOPIC}" >&2
+  echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${DEPTH_TOPIC}" >&2
+  echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${ODOM_TOPIC}" >&2
   exit 1
 fi
 
-if ! _gazebo_publishing "${RGB_TOPIC}" 3; then
+if ! _gazebo_sensors_publishing; then
   echo "[gazebo_sensor_bridge] WARN: Gazebo not publishing yet; bridge will relay once sim runs"
 fi
 
@@ -100,6 +109,9 @@ _bridge_specs=(
 if [ -n "${IMU_TOPIC}" ] && _gazebo_listed "${IMU_TOPIC}"; then
   _bridge_specs+=("${IMU_TOPIC}@sensor_msgs/msg/Imu[gz.msgs.IMU")
   echo "[gazebo_sensor_bridge] IMU bridge ${IMU_TOPIC}"
+  if [ "${IMU_TOPIC}" != "/imu" ]; then
+    export WAREHOUSE_IMU_RELAY_SOURCE="${IMU_TOPIC}"
+  fi
 elif [ -n "${IMU_TOPIC}" ]; then
   echo "[gazebo_sensor_bridge] WARN: IMU topic not listed yet (${IMU_TOPIC}); skipping IMU bridge"
 else
@@ -122,6 +134,13 @@ if _gazebo_listed "/scan/points"; then
 fi
 
 echo "[gazebo_sensor_bridge] starting bridge ROS_DOMAIN_ID=${ROS_DOMAIN_ID} bridges=${#_bridge_specs[@]}"
+
+if [ -n "${WAREHOUSE_IMU_RELAY_SOURCE:-}" ]; then
+  echo "[gazebo_sensor_bridge] starting IMU relay ${WAREHOUSE_IMU_RELAY_SOURCE} -> /imu"
+  ros2 run topic_tools relay "${WAREHOUSE_IMU_RELAY_SOURCE}" /imu sensor_msgs/msg/Imu &
+  IMU_RELAY_PID=$!
+  disown || true
+fi
 
 exec ros2 run ros_gz_bridge parameter_bridge \
   "${_bridge_specs[@]}" \

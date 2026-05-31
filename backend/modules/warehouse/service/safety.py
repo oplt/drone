@@ -27,7 +27,11 @@ def evaluate_warehouse_runtime_safety(
 ) -> WarehouseSafetyDecision:
     if components.get("ros_bridge_heartbeat") is False:
         return WarehouseSafetyDecision(False, "land", "ros_bridge_heartbeat_lost")
-    if components.get("slam_tracking_ok", components.get("visual_slam")) is False:
+    slam_tracking = components.get("slam_tracking_ok")
+    visual_slam = components.get("visual_slam")
+    if slam_tracking is False:
+        return WarehouseSafetyDecision(False, "return_or_land", "vslam_tracking_lost")
+    if slam_tracking is None and visual_slam is False:
         return WarehouseSafetyDecision(False, "return_or_land", "vslam_tracking_lost")
 
     obstacle_distance = _num(components.get("obstacle_distance_m"))

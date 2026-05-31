@@ -20,6 +20,14 @@ import type { WarehouseDockPayload, WarehouseDockStation } from "../types";
 import InfoLabel from "../../../shared/ui/InfoLabel";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 
+const DOCK_FIELD_SX = {
+  "& .MuiFilledInput-root": {
+    backgroundColor: "action.hover",
+    "&:hover": { backgroundColor: "action.selected" },
+    "&.Mui-focused": { backgroundColor: "action.selected" },
+  },
+} as const;
+
 type Props = {
   warehouseMapId: number | null;
   selectedDockId: number | null;
@@ -155,9 +163,11 @@ export function WarehouseDockPanel({
       </Stack>
 
         <TextField
+          variant="filled"
           select
           fullWidth
           size="small"
+          sx={DOCK_FIELD_SX}
           label={
             <InfoLabel
               label="Start dock"
@@ -182,26 +192,34 @@ export function WarehouseDockPanel({
         ) : (
           <Stack spacing={1}>
             <TextField
+              variant="filled"
               size="small"
+              sx={DOCK_FIELD_SX}
               label={selectedDockId == null ? "New dock name" : "Edit dock name"}
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
               <TextField
+                variant="filled"
                 size="small"
+                sx={DOCK_FIELD_SX}
                 label="Marker ID"
                 value={markerId}
                 onChange={(event) => setMarkerId(event.target.value)}
               />
               <TextField
+                variant="filled"
                 size="small"
+                sx={DOCK_FIELD_SX}
                 label="Family"
                 value={markerFamily}
                 onChange={(event) => setMarkerFamily(event.target.value)}
               />
               <TextField
+                variant="filled"
                 size="small"
+                sx={DOCK_FIELD_SX}
                 label="Size"
                 type="number"
                 value={markerSizeM}

@@ -22,7 +22,20 @@ class RuntimeVideoServiceMixin:
         if not settings.drone_video_enabled:
             logger.info("Drone video streaming disabled in configuration")
             return
-        if settings.drone_video_use_gazebo:
+        try:
+            from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+
+            if warehouse_video_blocked():
+                logger.info(
+                    "Skipping drone video init for warehouse Gazebo sim: %s",
+                    warehouse_video_skip_reason(),
+                )
+                return
+        except Exception:
+            pass
+        from backend.modules.warehouse.service.video import effective_drone_video_use_gazebo
+
+        if effective_drone_video_use_gazebo():
             logger.info("Gazebo video mode enabled; stream will be handled by API on demand")
             return
         if self.video is not None:

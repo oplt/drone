@@ -13,8 +13,33 @@ router = APIRouter(prefix="/video", tags=["video"])
 
 @router.post("/start")
 async def start_video_stream(user=Depends(require_user)):
+    from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+
+    if warehouse_video_blocked():
+        return {
+            "status": "skipped",
+            "source": None,
+            "proxy": "/video/mjpeg",
+            "message": warehouse_video_skip_reason(),
+        }
+
     availability = await shared_video_runtime.ensure_source_available()
-    status = await shared_video_runtime.ensure_running()
+    if availability.get("status") == "skipped":
+        return {
+            "status": "skipped",
+            "source": availability.get("source"),
+            "proxy": "/video/mjpeg",
+            "message": availability.get("message"),
+        }
+    try:
+        status = await shared_video_runtime.ensure_running()
+    except RuntimeError as exc:
+        return {
+            "status": "unavailable",
+            "source": availability.get("source"),
+            "proxy": "/video/mjpeg",
+            "message": str(exc),
+        }
     return {
         "status": availability.get("status", "started"),
         "source": status.get("source"),

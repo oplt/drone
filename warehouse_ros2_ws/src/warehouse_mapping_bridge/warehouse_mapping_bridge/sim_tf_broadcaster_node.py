@@ -103,9 +103,10 @@ def main() -> None:
                 )
 
         def on_odometry(self, message: Odometry) -> None:
-            child_frame = _normalize_frame_id(message.child_frame_id or self.base_link_frame)
+            # Always publish the configured base_link frame so nvblox/TF agree with Gazebo sim.
+            child_frame = _normalize_frame_id(self.base_link_frame)
             transform = TransformStamped()
-            transform.header.stamp = message.header.stamp
+            transform.header.stamp = self.get_clock().now().to_msg()
             transform.header.frame_id = _normalize_frame_id(message.header.frame_id or self.odom_frame)
             transform.child_frame_id = child_frame
 

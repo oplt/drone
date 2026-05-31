@@ -7,7 +7,7 @@ import type { MissionLifecycleEvent, MissionStatusPayload } from "../types";
 
 export function useMissionStatusPolling<TStatus extends MissionStatusPayload>({
   enabled = true,
-  pollMs = 3000,
+  pollMs = 1500,
   lifecycleMessage,
   onError,
 }: {

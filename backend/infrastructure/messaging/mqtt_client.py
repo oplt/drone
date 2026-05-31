@@ -89,5 +89,27 @@ class MqttClient:
         logger.info(f"[MQTT] Disconnected rc={rc}")
 
     def _on_log(self, client, userdata, level, buf):
+        message = str(buf)
+        upper = message.upper()
+        routine_markers = (
+            "CONNECT",
+            "CONNACK",
+            "DISCONNECT",
+            "PUBLISH",
+            "PUBACK",
+            "PINGREQ",
+            "PINGRESP",
+            "SUBSCRIBE",
+            "SUBACK",
+            "UNSUBSCRIBE",
+            "UNSUBACK",
+        )
+        if any(marker in upper for marker in routine_markers):
+            logger.debug("[MQTT] %s", message)
+            return
         if level >= mqtt.MQTT_LOG_ERR:
-            logger.info(f"[MQTT] {buf}")
+            logger.warning("[MQTT] %s", message)
+        elif level >= mqtt.MQTT_LOG_WARNING:
+            logger.info("[MQTT] %s", message)
+        else:
+            logger.debug("[MQTT] %s", message)

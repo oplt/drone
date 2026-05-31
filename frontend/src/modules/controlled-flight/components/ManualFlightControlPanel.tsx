@@ -11,14 +11,11 @@ type LastManualCommand = {
 } | null;
 
 type Props = {
-  controlledPreflight: ControlledPreflightResult | null;
   manualControlEnabled: boolean;
   manualControlReady: boolean;
   manualControlError: string | null;
-  preflightBusy?: boolean;
   activeManualCommands: ManualFlightCommand[];
   lastManualCommand: LastManualCommand;
-  onRunPreflight: () => void;
   onToggleKeyboard: () => void;
   onStopMovement: () => void;
   beginManualControl: (
@@ -27,10 +24,15 @@ type Props = {
     source: "keyboard" | "button",
   ) => void;
   endManualControl: (keyId: string, source: "keyboard" | "button") => void;
+  controlledPreflight?: ControlledPreflightResult | null;
+  preflightPassed?: boolean;
+  preflightBusy?: boolean;
+  onRunPreflight?: () => void;
 };
 
 export function ManualFlightControlPanel({
-  controlledPreflight,
+  controlledPreflight = null,
+  preflightPassed,
   manualControlEnabled,
   manualControlReady,
   manualControlError,
@@ -43,6 +45,30 @@ export function ManualFlightControlPanel({
   beginManualControl,
   endManualControl,
 }: Props) {
+  const usesWarehousePreflight = onRunPreflight == null;
+  const passed = usesWarehousePreflight
+    ? Boolean(preflightPassed)
+    : Boolean(controlledPreflight?.passed);
+  const statusLabel = usesWarehousePreflight
+    ? passed
+      ? "Ready"
+      : "Blocked"
+    : controlledPreflight == null
+      ? "Not checked"
+      : controlledPreflight.passed
+        ? "Ready"
+        : "Blocked";
+  const statusColor: "default" | "success" | "error" =
+    usesWarehousePreflight
+      ? passed
+        ? "success"
+        : "error"
+      : controlledPreflight == null
+        ? "default"
+        : controlledPreflight.passed
+          ? "success"
+          : "error";
+
   return (
     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
       <Stack spacing={1.5}>
@@ -50,33 +76,19 @@ export function ManualFlightControlPanel({
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
             Keyboard Flight
           </Typography>
-          <Chip
-            size="small"
-            color={
-              controlledPreflight == null
-                ? "default"
-                : controlledPreflight.passed
-                  ? "success"
-                  : "error"
-            }
-            label={
-              controlledPreflight == null
-                ? "Not checked"
-                : controlledPreflight.passed
-                  ? "Ready"
-                  : "Blocked"
-            }
-          />
+          <Chip size="small" color={statusColor} label={statusLabel} />
         </Stack>
 
         <Stack direction="row" spacing={0.25} flexWrap="wrap" useFlexGap>
-          <ActionIconButton
-            variant="preflight"
-            title={preflightBusy ? "Checking…" : "Preflight"}
-            color="success"
-            loading={preflightBusy}
-            onClick={onRunPreflight}
-          />
+          {onRunPreflight && (
+            <ActionIconButton
+              variant="preflight"
+              title={preflightBusy ? "Checking…" : "Preflight"}
+              color="success"
+              loading={preflightBusy}
+              onClick={onRunPreflight}
+            />
+          )}
           <ActionIconButton
             variant="keyboard"
             title={manualControlEnabled ? "Disable keys" : "Enable keys"}
@@ -93,7 +105,7 @@ export function ManualFlightControlPanel({
           />
         </Stack>
 
-        {controlledPreflight?.checks?.length ? (
+        {!usesWarehousePreflight && controlledPreflight?.checks?.length ? (
           <Stack spacing={1}>
             {controlledPreflight.checks.map((check) => (
               <Paper
@@ -118,9 +130,17 @@ export function ManualFlightControlPanel({
               </Paper>
             ))}
           </Stack>
-        ) : (
+        ) : null}
+
+        {!usesWarehousePreflight && !controlledPreflight?.checks?.length ? (
           <Alert severity="info">Run preflight before enabling keyboard flight.</Alert>
-        )}
+        ) : null}
+
+        {usesWarehousePreflight && !passed ? (
+          <Alert severity="info">
+            Complete Warehouse Preflight above before enabling keyboard flight.
+          </Alert>
+        ) : null}
 
         {manualControlEnabled ? (
           <Alert severity="success">

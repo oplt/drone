@@ -270,7 +270,7 @@ class RuntimeSettings(BaseSettings):
     drone_video_timeout: float = 10.0
     drone_video_fallback: str = ""
     drone_video_save_stream: bool = True
-    drone_video_save_path: str = "./backend/video/recordings/"
+    drone_video_save_path: str = "./backend/storage/video_records/"
 
     # Wireless streaming network configuration
     drone_video_wifi_ssid: str = "Drone_Network"
@@ -298,7 +298,7 @@ class RuntimeSettings(BaseSettings):
     WAREHOUSE_ROS_WS_URL: str = ""
     WAREHOUSE_ROS_CAPTURE_ROOT: str = "backend/storage/warehouse_ros"
     WAREHOUSE_ROS_PROFILE: str = "isaac_ros_nvblox_stereo"
-    WAREHOUSE_ROS_BRIDGE_TIMEOUT_S: float = 10.0
+    WAREHOUSE_ROS_BRIDGE_TIMEOUT_S: float = 3.0
     WAREHOUSE_ROS_BRIDGE_DEEP_TIMEOUT_S: float = 90.0
     WAREHOUSE_ODOMETRY_STATE_PATH: str = ""
     WAREHOUSE_CAPTURE_ARTIFACT_WAIT_S: float = 45.0

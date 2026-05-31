@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 TERMINAL_FLIGHT_STATUSES = FlightStatus.terminal_values()
+_MAVLINK_INSERT_SUMMARY: dict[int, tuple[int, float]] = {}
+_MAVLINK_INSERT_SUMMARY_INTERVAL_S = 5.0
 
 
 def _normalized_status_value(status: str | FlightStatus) -> str:
@@ -142,7 +145,25 @@ class TelemetryIngestMixin:
                             logger.error(f"Single insert failed for flight {flight_id}: {single_e}")
                             await s.rollback()
             await s.commit()
-        logger.info(
-            f"Successfully inserted {inserted_total} MavlinkEvent records for flight {flight_id}"
-        )
+        _log_mavlink_insert_summary(flight_id, inserted_total)
         return inserted_total
+
+
+def _log_mavlink_insert_summary(flight_id: int, inserted_total: int) -> None:
+    now = time.monotonic()
+    prior = _MAVLINK_INSERT_SUMMARY.get(flight_id)
+    if prior is None:
+        _MAVLINK_INSERT_SUMMARY[flight_id] = (inserted_total, now)
+        return
+    batch_total, last_logged_at = prior
+    batch_total += inserted_total
+    if now - last_logged_at < _MAVLINK_INSERT_SUMMARY_INTERVAL_S:
+        _MAVLINK_INSERT_SUMMARY[flight_id] = (batch_total, last_logged_at)
+        return
+    logger.info(
+        "MavlinkEvent batch persisted flight_id=%s inserted_events_count=%s flush_interval_ms=%s",
+        flight_id,
+        batch_total,
+        int(_MAVLINK_INSERT_SUMMARY_INTERVAL_S * 1000),
+    )
+    _MAVLINK_INSERT_SUMMARY[flight_id] = (0, now)

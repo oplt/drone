@@ -49,33 +49,53 @@ _WAREHOUSE_SETTINGS_SECTION = "warehouse"
 _WAREHOUSE_MISSION_DEFAULTS_KEY = "mission_defaults"
 
 
-async def _require_warehouse_mapping_readiness() -> None:
-    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
-        ensure_warehouse_mapping_ready_for_preflight,
+async def _require_warehouse_scan_preflight() -> None:
+    from backend.modules.warehouse.service.scan_preflight import ensure_warehouse_scan_preflight
+
+    readiness = await ensure_warehouse_scan_preflight()
+    if not readiness.can_fly_warehouse_scan:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": readiness.user_message
+                or "Warehouse sensors are not ready for scan.",
+                **readiness.to_api_detail(),
+            },
+        )
+
+
+async def _require_warehouse_flight_readiness_gate(
+    *,
+    mission_loaded: bool = True,
+    mission_valid: bool = True,
+    speed_mps: float | None = None,
+    altitude_m: float | None = None,
+) -> None:
+    from backend.modules.warehouse.exceptions import WarehouseFlightNotReadyError
+    from backend.modules.warehouse.service.flight_service import (
+        WarehouseFlightMissionContext,
+        assert_ready_for_warehouse_flight_start,
     )
 
-    readiness = await ensure_warehouse_mapping_ready_for_preflight()
-    if not readiness.stack_status.running:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "message": "Warehouse mapping stack could not be started.",
-                "readiness": readiness.to_dict(),
-            },
+    try:
+        await assert_ready_for_warehouse_flight_start(
+            mission=WarehouseFlightMissionContext(
+                loaded=mission_loaded,
+                valid=mission_valid,
+                speed_mps=speed_mps,
+                altitude_m=altitude_m,
+            ),
         )
-    if not readiness.sensors_ready or not readiness.nvblox_ready:
+    except WarehouseFlightNotReadyError as exc:
         raise HTTPException(
-            status_code=503,
+            status_code=412,
             detail={
-                "message": "Warehouse mapping stack is not ready for preflight.",
-                "readiness": readiness.to_dict(),
-                "missing_required_topics": list(readiness.missing_required),
-                "missing_nvblox_topics": list(readiness.missing_nvblox),
-                "ros_graph_ready": readiness.ros_graph_ready,
-                "suggested_actions": list(readiness.suggested_actions),
-                "topic_diagnostics": readiness.topic_diagnostics,
+                "message": "Warehouse flight readiness gate blocked mission start.",
+                "reason": "WAREHOUSE_FLIGHT_NOT_READY",
+                "blocking_reasons": exc.blocking_reasons,
+                "readiness": exc.readiness,
             },
-        )
+        ) from exc
 
 
 async def _run_warehouse_preflight(mission_payload: routes_flights.MissionCreateIn, user: object):
@@ -343,7 +363,43 @@ class WarehouseSensorRigHealthOut(BaseModel):
 
 
 class WarehousePerceptionHealthOut(WarehousePerceptionStatus):
-    pass
+    flight_ready: bool = False
+    app_health_only: bool = True
+    preflight_path: str = "/warehouse/preflight"
+
+
+class WarehouseBridgeHealthOut(BaseModel):
+    bridge_alive: bool
+    reachable: bool
+    status: str
+    ros_bridge_heartbeat: bool = True
+    probe_in_progress: bool = False
+    note: str = (
+        "Bridge process health only. Does not imply RGB/depth/odometry are flight-ready. "
+        "Use GET /warehouse/preflight for go/no-go."
+    )
+
+
+class WarehouseGoPreflightOut(BaseModel):
+    ready_to_fly: bool
+    bridge_ok: bool
+    gazebo_ok: bool | None = None
+    sensors_ok: bool
+    odom_ok: bool
+    localization_ok: bool
+    tf_ok: bool
+    nvblox_ok: bool | None = None
+    stability_ok: bool
+    vehicle_link_ok: bool = False
+    telemetry_stream_ok: bool = False
+    battery_ok: bool = False
+    perception_stable_for_ms: int
+    perception_required_stable_ms: int
+    ros_topic_count: int | None = None
+    blocking_reasons: list[str] = Field(default_factory=list)
+    suggested_actions: list[str] = Field(default_factory=list)
+    categories: dict[str, str] = Field(default_factory=dict)
+    note: str = ""
 
 
 # ------------------------------------------------------------------ helpers
@@ -529,11 +585,48 @@ def _dock_config_params(
 # ------------------------------------------------------------------ mission defaults
 
 
+@router.get("/bridge/health", response_model=WarehouseBridgeHealthOut)
+async def get_warehouse_bridge_health(
+    _org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseBridgeHealthOut:
+    status = await get_warehouse_perception_port().status(deep=False)
+    components = status.components if isinstance(status.components, dict) else {}
+    return WarehouseBridgeHealthOut(
+        bridge_alive=bool(status.reachable),
+        reachable=bool(status.reachable),
+        status=str(status.status or "unknown"),
+        ros_bridge_heartbeat=bool(components.get("ros_bridge_heartbeat", True)),
+        probe_in_progress=bool(components.get("probe_in_progress")),
+    )
+
+
+@router.get("/preflight", response_model=WarehouseGoPreflightOut)
+async def get_warehouse_preflight(
+    mission_loaded: bool = False,
+    deep: bool = True,
+    _org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseGoPreflightOut:
+    from backend.modules.warehouse.service.warehouse_go_preflight import (
+        evaluate_warehouse_go_preflight,
+    )
+
+    result = await evaluate_warehouse_go_preflight(
+        deep=deep,
+        mission_loaded=mission_loaded,
+    )
+    return WarehouseGoPreflightOut.model_validate(result.to_dict())
+
+
 @router.get("/perception/health", response_model=WarehousePerceptionHealthOut)
 async def get_warehouse_perception_health(
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehousePerceptionHealthOut:
+    from backend.modules.warehouse.service.warehouse_go_preflight import (
+        evaluate_warehouse_go_preflight,
+    )
+
     status = await get_warehouse_perception_port().status()
+    preflight = await evaluate_warehouse_go_preflight(deep=False)
     if not status.ready:
         components = status.components if isinstance(status.components, dict) else {}
         logger.warning(
@@ -553,7 +646,11 @@ async def get_warehouse_perception_health(
                 "probe_error": components.get("ros_topic_probe_error"),
             },
         )
-    return WarehousePerceptionHealthOut.model_validate(status.model_dump(mode="python"))
+    payload = status.model_dump(mode="python")
+    payload["flight_ready"] = preflight.ready_to_fly
+    payload["app_health_only"] = True
+    payload["preflight_path"] = "/warehouse/preflight"
+    return WarehousePerceptionHealthOut.model_validate(payload)
 
 
 # ------------------------------------------------------------------ sensor rigs
@@ -1018,7 +1115,11 @@ async def start_warehouse_scan(
         ),
     )
 
-    await _require_warehouse_mapping_readiness()
+    await _require_warehouse_scan_preflight()
+    await _require_warehouse_flight_readiness_gate(
+        speed_mps=float(mission_defaults.work_speed_mps),
+        altitude_m=float(mission_defaults.cruise_alt),
+    )
     preflight = await _run_warehouse_preflight(mission_payload, user=user)
     if not preflight.can_start_mission:
         raise HTTPException(
@@ -1333,7 +1434,10 @@ async def start_warehouse_exploration(
         warehouse_exploration=exploration_payload,
     )
 
-    await _require_warehouse_mapping_readiness()
+    await _require_warehouse_scan_preflight()
+    await _require_warehouse_flight_readiness_gate(
+        altitude_m=float(payload.hover_alt_m),
+    )
     preflight = await _run_warehouse_preflight(mission_payload, user=user)
     if not preflight.can_start_mission:
         raise HTTPException(
@@ -1520,3 +1624,8 @@ async def delete_scanned_map(
     )
     if not deleted:
         raise HTTPException(status_code=404, detail="Scanned map not found")
+
+
+from backend.modules.warehouse.flight_api import router as warehouse_flight_router
+
+router.include_router(warehouse_flight_router)

@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 try:
@@ -33,6 +34,7 @@ class TopicRegistry:
     required_for_perception: tuple[str, ...]
     required_for_nvblox_any: tuple[str, ...]
     frames: dict[str, str]
+    frame_aliases: dict[str, list[str]]
 
 
 _ENV_OVERRIDES: dict[str, str] = {
@@ -52,6 +54,74 @@ _ENV_OVERRIDES: dict[str, str] = {
     "back_projected_depth": "WAREHOUSE_BACK_PROJECTED_DEPTH_TOPIC",
     "health": "WAREHOUSE_MAPPING_HEALTH_TOPIC",
 }
+
+_DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
+    "gazebo": {
+        "rgb_image": "/warehouse/front/rgbd/image",
+        "left_image": "/warehouse/stereo/left/image",
+        "right_image": "/warehouse/stereo/right/image",
+        "depth": "/warehouse/front/rgbd/depth_image",
+        "imu": "/imu",
+        "visual_slam_odom": "/warehouse/drone/odometry",
+        "local_odometry": "/warehouse/drone/odometry",
+        "raw_lidar": "/warehouse/front/rgbd/points",
+        "pointcloud": "/nvblox_node/static_map_pointcloud",
+        "mesh": "/nvblox_node/mesh",
+        "occupancy": "/nvblox_node/occupancy",
+        "esdf": "/nvblox_node/esdf",
+        "health": "/warehouse/mapping/health",
+    },
+    "isaac_ros_nvblox_stereo": {
+        "rgb_image": "/warehouse/front/rgbd/image",
+        "left_image": "/warehouse/stereo/left/image",
+        "right_image": "/warehouse/stereo/right/image",
+        "depth": "/warehouse/front/rgbd/depth_image",
+        "imu": "/imu",
+        "visual_slam_odom": "/visual_slam/tracking/odometry",
+        "local_odometry": "/warehouse/local_odometry",
+        "raw_lidar": "/scan",
+        "pointcloud": "/nvblox_node/static_map_pointcloud",
+        "mesh": "/nvblox_node/mesh",
+        "occupancy": "/nvblox_node/occupancy",
+        "esdf": "/nvblox_node/esdf",
+        "health": "/warehouse/mapping/health",
+    },
+}
+
+_DEFAULT_REQUIRED_FOR_PERCEPTION: tuple[str, ...] = (
+    "rgb_image",
+    "depth",
+    "imu",
+    "raw_lidar",
+    "visual_slam_odom",
+)
+
+_DEFAULT_REQUIRED_FOR_NVBLOX_ANY: tuple[str, ...] = (
+    "mesh",
+    "pointcloud",
+    "occupancy",
+    "esdf",
+)
+
+
+def int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def float_env(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
 
 
 def bool_env(name: str, default: bool = False) -> bool:
@@ -100,24 +170,31 @@ def _load_yaml_registry() -> dict[str, object]:
 
 
 def discover_gz_imu_topic() -> str | None:
-    """Return the first IMU-like Gazebo topic from the running sim, if any."""
+    """Return the first IMU-like Gazebo topic from the running sim, if explicitly enabled."""
+    if not bool_env("WAREHOUSE_GAZEBO_IMU_AUTO_DISCOVER", False):
+        return None
     if not shutil.which("gz"):
         return None
+
     env = os.environ.copy()
     partition = os.getenv("GZ_PARTITION", "").strip()
     if partition:
         env["GZ_PARTITION"] = partition
+
+    timeout_s = max(0.25, float_env("WAREHOUSE_GZ_TOPIC_LIST_TIMEOUT_S", 1.0))
+
     try:
         result = subprocess.run(
             ["gz", "topic", "-l"],
             check=False,
             capture_output=True,
             text=True,
-            timeout=5.0,
+            timeout=timeout_s,
             env=env,
         )
     except (subprocess.TimeoutExpired, OSError):
         return None
+
     for line in result.stdout.splitlines():
         topic = line.strip()
         if topic.startswith("/") and "imu" in topic.lower():
@@ -125,6 +202,7 @@ def discover_gz_imu_topic() -> str | None:
     return None
 
 
+@lru_cache(maxsize=1)
 def topic_registry() -> TopicRegistry:
     payload = _load_yaml_registry()
     profile = _default_topic_profile()
@@ -137,7 +215,14 @@ def topic_registry() -> TopicRegistry:
     if not isinstance(profile_topics, dict):
         profile_topics = {}
 
-    topics: dict[str, str] = {
+    default_topics = dict(
+        _DEFAULT_TOPICS_BY_PROFILE.get(
+            profile,
+            _DEFAULT_TOPICS_BY_PROFILE["gazebo"],
+        )
+    )
+
+    topics: dict[str, str] = default_topics | {
         str(k): str(v)
         for k, v in profile_topics.items()
         if v is not None and str(v).strip()
@@ -153,6 +238,12 @@ def topic_registry() -> TopicRegistry:
         raw = os.getenv(env_name, "").strip()
         if raw:
             topics[key] = raw
+
+    odom_topic = os.getenv("WAREHOUSE_ODOMETRY_TOPIC", "").strip()
+    if odom_topic:
+        topics["visual_slam_odom"] = odom_topic
+        if not os.getenv("WAREHOUSE_LOCAL_ODOMETRY_TOPIC", "").strip():
+            topics["local_odometry"] = odom_topic
 
     gz_imu = os.getenv("WAREHOUSE_GAZEBO_IMU_TOPIC", "").strip()
     if gz_imu:
@@ -172,9 +263,15 @@ def topic_registry() -> TopicRegistry:
     topics.setdefault("right_image_compressed", f"{right_topic}/compressed")
     topics.setdefault("health", "/warehouse/mapping/health")
 
-    required = payload.get("required_for_perception", [])
-    nvblox_required = payload.get("required_for_nvblox_any", [])
+    required = payload.get("required_for_perception", list(_DEFAULT_REQUIRED_FOR_PERCEPTION))
+    nvblox_required = payload.get("required_for_nvblox_any", list(_DEFAULT_REQUIRED_FOR_NVBLOX_ANY))
     frames_raw = payload.get("frames", {})
+    frame_aliases_raw = payload.get("frame_aliases", {})
+    frame_aliases: dict[str, list[str]] = {}
+    if isinstance(frame_aliases_raw, dict):
+        for key, values in frame_aliases_raw.items():
+            if isinstance(values, list):
+                frame_aliases[str(key)] = [str(item) for item in values]
     frames = {
         "odom": os.getenv("WAREHOUSE_ODOM_FRAME", "odom"),
         "base_link": os.getenv("WAREHOUSE_BASE_LINK_FRAME", "base_link"),
@@ -184,14 +281,54 @@ def topic_registry() -> TopicRegistry:
         for key in ("odom", "base_link", "camera"):
             if frames_raw.get(key):
                 frames[key] = str(frames_raw[key])
+    if profile == "gazebo":
+        gazebo_frames = payload.get("gazebo_frames", {})
+        if isinstance(gazebo_frames, dict):
+            for key in ("odom", "base_link", "camera"):
+                if gazebo_frames.get(key):
+                    frames[key] = str(gazebo_frames[key])
+
+    required_tuple = (
+        tuple(str(x) for x in required)
+        if isinstance(required, list)
+        else _DEFAULT_REQUIRED_FOR_PERCEPTION
+    )
+    if profile == "gazebo":
+        require_local = os.getenv("WAREHOUSE_REQUIRE_LOCAL_ODOMETRY", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if not require_local:
+            required_tuple = tuple(key for key in required_tuple if key != "local_odometry")
+        require_lidar = os.getenv("WAREHOUSE_REQUIRE_RAW_LIDAR", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if not require_lidar:
+            required_tuple = tuple(key for key in required_tuple if key != "raw_lidar")
+        if not os.getenv("WAREHOUSE_LOCAL_ODOMETRY_TOPIC", "").strip():
+            topics["local_odometry"] = topics.get(
+                "visual_slam_odom",
+                topics.get("local_odometry", "/warehouse/drone/odometry"),
+            )
+    nvblox_required_tuple = (
+        tuple(str(x) for x in nvblox_required)
+        if isinstance(nvblox_required, list)
+        else _DEFAULT_REQUIRED_FOR_NVBLOX_ANY
+    )
 
     return TopicRegistry(
         profile=profile,
         topics=topics,
         aliases=aliases,
-        required_for_perception=tuple(str(x) for x in required) if isinstance(required, list) else tuple(),
-        required_for_nvblox_any=tuple(str(x) for x in nvblox_required) if isinstance(nvblox_required, list) else tuple(),
+        required_for_perception=required_tuple,
+        required_for_nvblox_any=nvblox_required_tuple,
         frames=frames,
+        frame_aliases=frame_aliases,
     )
 
 
@@ -202,7 +339,7 @@ def load_config() -> BridgeConfig:
     profile = os.getenv("WAREHOUSE_ROS_PROFILE", "").strip() or _default_topic_profile()
     return BridgeConfig(
         host=os.getenv("WAREHOUSE_ROS_BRIDGE_HOST", "0.0.0.0"),
-        port=int(os.getenv("WAREHOUSE_ROS_BRIDGE_PORT", "8088")),
+        port=int_env("WAREHOUSE_ROS_BRIDGE_PORT", 8088),
         capture_root=capture_root.resolve(),
         profile=profile,
         ros_ws_url=os.getenv("WAREHOUSE_ROS_WS_URL", ""),

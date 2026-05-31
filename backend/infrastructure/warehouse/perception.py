@@ -18,6 +18,8 @@ from backend.modules.warehouse.ports import (
 
 logger = logging.getLogger(__name__)
 
+_cached_port: WarehousePerceptionPort | None = None
+
 
 def _as_dict(value: object) -> dict[str, object]:
     return value if isinstance(value, dict) else {}
@@ -118,10 +120,29 @@ class HttpWarehousePerceptionPort:
         self.profile = profile
         self.timeout_s = timeout_s
         self.deep_timeout_s = deep_timeout_s
+        limits = httpx.Limits(max_connections=20, max_keepalive_connections=10)
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(deep_timeout_s, connect=min(2.0, timeout_s)),
+            limits=limits,
+            follow_redirects=False,
+        )
 
-    async def status(self, *, deep: bool = False) -> WarehousePerceptionStatus:
+    async def aclose(self) -> None:
+        await self._client.aclose()
+
+    async def status(
+        self,
+        *,
+        deep: bool = False,
+        force: bool = False,
+    ) -> WarehousePerceptionStatus:
         timeout_s = self.deep_timeout_s if deep else self.timeout_s
-        path = "/health?deep=1" if deep else "/health"
+        if deep and force:
+            path = "/health?deep=1&force=1"
+        elif deep:
+            path = "/health?deep=1"
+        else:
+            path = "/health"
         try:
             payload = await self._get_json(path, timeout_s=timeout_s)
         except Exception as exc:
@@ -146,6 +167,19 @@ class HttpWarehousePerceptionPort:
             )
 
         components = _as_dict(payload.get("components"))
+        for bridge_field in (
+            "diagnostics_ready",
+            "probe_in_progress",
+            "cache_ready",
+            "probe_mode",
+            "from_cache",
+            "health_sample_timestamp",
+            "capabilities",
+        ):
+            if bridge_field not in components and bridge_field in payload:
+                components[bridge_field] = payload.get(bridge_field)
+        if "capabilities" in payload and "capabilities" not in components:
+            components["capabilities"] = payload.get("capabilities")
         ready = bool(payload.get("ready", payload.get("healthy", False)))
         status = _string(payload.get("status")) or ("ready" if ready else "degraded")
         if not ready:
@@ -182,7 +216,16 @@ class HttpWarehousePerceptionPort:
         )
 
     async def exploration_snapshot(self) -> WarehouseExplorationSnapshot:
-        payload = await self._get_json("/exploration/snapshot")
+        try:
+            payload = await self._get_json("/exploration/snapshot", timeout_s=self.timeout_s)
+        except Exception as exc:
+            logger.warning(
+                "Warehouse ROS bridge exploration snapshot failed bridge_url=%s error=%s",
+                self.bridge_url,
+                _format_http_error(exc, timeout_s=self.timeout_s),
+                extra={"bridge_url": self.bridge_url},
+            )
+            return WarehouseExplorationSnapshot()
         return WarehouseExplorationSnapshot.model_validate(payload)
 
     async def start_mapping(
@@ -261,39 +304,72 @@ class HttpWarehousePerceptionPort:
 
     async def _get_json(self, path: str, *, timeout_s: float | None = None) -> dict[str, Any]:
         effective_timeout = self.timeout_s if timeout_s is None else timeout_s
-        async with httpx.AsyncClient(timeout=effective_timeout) as client:
-            response = await client.get(f"{self.bridge_url}{path}")
-            logger.debug(
-                "Warehouse ROS bridge GET",
-                extra={"url": f"{self.bridge_url}{path}", "status_code": response.status_code},
-            )
-            response.raise_for_status()
-            return cast(dict[str, Any], response.json())
+        timeout = httpx.Timeout(effective_timeout, connect=min(2.0, effective_timeout))
+        response = await self._client.get(f"{self.bridge_url}{path}", timeout=timeout)
+        logger.debug(
+            "Warehouse ROS bridge GET",
+            extra={"url": f"{self.bridge_url}{path}", "status_code": response.status_code},
+        )
+        response.raise_for_status()
+        return cast(dict[str, Any], response.json())
 
-    async def _post_json(self, path: str, payload: dict[str, object]) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-            response = await client.post(f"{self.bridge_url}{path}", json=payload)
+    async def _post_json(
+            self,
+            path: str,
+            payload: dict[str, object],
+            *,
+            timeout_s: float | None = None,
+    ) -> dict[str, Any]:
+        effective_timeout = self.deep_timeout_s if timeout_s is None else timeout_s
+        timeout = httpx.Timeout(effective_timeout, connect=min(2.0, effective_timeout))
+        url = f"{self.bridge_url}{path}"
+        try:
+            response = await self._client.post(url, json=payload, timeout=timeout)
             logger.info(
                 "Warehouse ROS bridge POST url=%s status_code=%s",
-                f"{self.bridge_url}{path}",
+                url,
                 response.status_code,
-                extra={"url": f"{self.bridge_url}{path}", "status_code": response.status_code},
+                extra={"url": url, "status_code": response.status_code},
             )
             response.raise_for_status()
             return cast(dict[str, Any], response.json())
+        except Exception as exc:
+            detail = _format_http_error(exc, timeout_s=effective_timeout)
+            logger.warning(
+                "Warehouse ROS bridge POST failed url=%s error=%s",
+                url,
+                detail,
+                extra={"url": url, "error": detail},
+            )
+            return {
+                "accepted": False,
+                "status": "unreachable",
+                "detail": detail,
+                "data": {},
+                "paths": [],
+            }
 
     @staticmethod
     def _command_result(payload: dict[str, Any]) -> WarehousePerceptionCommandResult:
         data = _as_dict(payload.get("data"))
+        accepted_raw = payload.get("accepted", True)
+        accepted = (
+            accepted_raw
+            if isinstance(accepted_raw, bool)
+            else str(accepted_raw).strip().lower() not in {"0", "false", "no", "off"}
+        )
         return WarehousePerceptionCommandResult(
-            accepted=bool(payload.get("accepted", True)),
-            status=_string(payload.get("status")) or "accepted",
+            accepted=accepted,
+            status=_string(payload.get("status")) or ("accepted" if accepted else "failed"),
             detail=_string(payload.get("detail")),
             data=data,
         )
 
 
 def build_warehouse_perception_port() -> WarehousePerceptionPort:
+    global _cached_port
+    if _cached_port is not None:
+        return _cached_port
     bridge_url = settings.WAREHOUSE_ROS_BRIDGE_URL.strip()
     websocket_url = settings.WAREHOUSE_ROS_WS_URL.strip()
     capture_root = settings.WAREHOUSE_ROS_CAPTURE_ROOT.strip()
@@ -301,13 +377,14 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
     timeout_s = max(0.1, float(settings.WAREHOUSE_ROS_BRIDGE_TIMEOUT_S))
     deep_timeout_s = max(timeout_s, float(settings.WAREHOUSE_ROS_BRIDGE_DEEP_TIMEOUT_S))
     if not bridge_url:
-        return DisabledWarehousePerceptionPort(
+        _cached_port = DisabledWarehousePerceptionPort(
             profile=profile,
             bridge_url=bridge_url,
             websocket_url=websocket_url,
             capture_root=capture_root,
         )
-    return HttpWarehousePerceptionPort(
+        return _cached_port
+    _cached_port = HttpWarehousePerceptionPort(
         bridge_url=bridge_url,
         websocket_url=websocket_url,
         capture_root=capture_root,
@@ -315,3 +392,9 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
         timeout_s=timeout_s,
         deep_timeout_s=deep_timeout_s,
     )
+    return _cached_port
+
+
+def reset_warehouse_perception_port_for_tests() -> None:
+    global _cached_port
+    _cached_port = None

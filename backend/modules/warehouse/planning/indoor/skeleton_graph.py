@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import heapq
 import itertools
 import math
 from dataclasses import dataclass, field
@@ -46,15 +47,20 @@ class ExplorationGraph:
             connected_to_dock=bool(connected_to_dock),
             kind=kind,
         )
+        is_new = resolved_id not in self.nodes
         self.nodes[resolved_id] = node
         self.edges.setdefault(resolved_id, {})
-        self.visit_order.append(resolved_id)
+        if is_new:
+            self.visit_order.append(resolved_id)
         return node
 
     def connect_nodes(self, node_a: str, node_b: str, cost_m: float) -> None:
         if node_a == node_b or node_a not in self.nodes or node_b not in self.nodes:
             return
         weight = float(max(0.0, cost_m))
+        current = self.edges.setdefault(node_a, {}).get(node_b)
+        if current is not None and current <= weight:
+            return
         self.edges.setdefault(node_a, {})[node_b] = weight
         self.edges.setdefault(node_b, {})[node_a] = weight
 
@@ -73,15 +79,20 @@ class ExplorationGraph:
         max_distance_m: float | None = None,
     ) -> ExplorationNode | None:
         best: ExplorationNode | None = None
-        best_distance = float("inf")
+        best_distance_sq = float("inf")
+        max_distance_sq = None if max_distance_m is None else float(max_distance_m) ** 2
+        target_x = float(pose.x_m)
+        target_y = float(pose.y_m)
         for node in self.nodes.values():
             if confirmed_only and not node.confirmed:
                 continue
-            distance = node.pose.planar_distance_to(pose)
-            if max_distance_m is not None and distance > float(max_distance_m):
+            dx = float(node.pose.x_m) - target_x
+            dy = float(node.pose.y_m) - target_y
+            distance_sq = dx * dx + dy * dy
+            if max_distance_sq is not None and distance_sq > max_distance_sq:
                 continue
-            if distance < best_distance:
-                best_distance = distance
+            if distance_sq < best_distance_sq:
+                best_distance_sq = distance_sq
                 best = node
         return best
 
@@ -99,34 +110,43 @@ class ExplorationGraph:
 
         distances: dict[str, float] = {start_node_id: 0.0}
         previous: dict[str, str] = {}
-        remaining = set(self.nodes)
+        heap: list[tuple[float, str]] = [(0.0, start_node_id)]
+        visited: set[str] = set()
 
-        while remaining:
-            current = min(remaining, key=lambda node_id: distances.get(node_id, float("inf")))
-            remaining.remove(current)
+        while heap:
+            current_distance, current = heapq.heappop(heap)
+            if current in visited:
+                continue
+            if current_distance > distances.get(current, float("inf")):
+                continue
+            visited.add(current)
             if current == goal_node_id:
                 break
-            current_distance = distances.get(current, float("inf"))
-            if current_distance == float("inf"):
-                break
             for neighbor, weight in self.edges.get(current, {}).items():
+                if neighbor in visited:
+                    continue
                 candidate = current_distance + float(weight)
                 if candidate < distances.get(neighbor, float("inf")):
                     distances[neighbor] = candidate
                     previous[neighbor] = current
+                    heapq.heappush(heap, (candidate, neighbor))
 
         if goal_node_id not in distances:
             return []
 
         order: list[str] = [goal_node_id]
         while order[-1] != start_node_id:
-            order.append(previous[order[-1]])
+            parent = previous.get(order[-1])
+            if parent is None:
+                return []
+            order.append(parent)
         order.reverse()
         return [self.nodes[node_id] for node_id in order]
 
     def backtrack_candidates(self, *, limit: int) -> list[ExplorationNode]:
         result: list[ExplorationNode] = []
         seen: set[str] = set()
+        target_count = max(1, int(limit))
         for node_id in reversed(self.visit_order):
             if node_id in seen or node_id not in self.nodes:
                 continue
@@ -134,7 +154,7 @@ class ExplorationGraph:
             node = self.nodes[node_id]
             if node.confirmed:
                 result.append(node)
-            if len(result) >= max(1, int(limit)):
+            if len(result) >= target_count:
                 break
         return result
 
@@ -155,7 +175,7 @@ class SkeletonBuilder:
         grid = snapshot.occupancy_grid
         dock_cell = grid.world_to_cell(dock.pose)
         max_steps = max(1, int(math.ceil(float(radius_m) / float(grid.resolution_m))))
-        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        directions = ((1, 0), (-1, 0), (0, 1), (0, -1))
         nodes: list[ExplorationNode] = []
 
         for dx, dy in directions:

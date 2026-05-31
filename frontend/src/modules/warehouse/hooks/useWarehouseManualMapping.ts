@@ -1,19 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { queryClient } from "../../../app/providers/queryClient";
-import { missionKeys } from "../../../app/config/queryKeys";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { connectDroneTelemetry } from "../../mission-runtime/api/telemetryConnectApi";
 import { startMissionWithPreflight, type PreflightRunResponse } from "../../mission-runtime";
-import { fetchFlightStatus } from "../../mission-runtime/api/missionsApi";
 import { getToken } from "../../session";
-import { useDroneCenter } from "../../maps";
-import { useControlledPreflight } from "../../controlled-flight/hooks/useControlledPreflight";
 import { useManualFlightControls } from "../../controlled-flight/hooks/useManualFlightControls";
-import {
-  telemetryBatteryPercent,
-  telemetryBoolean,
-  telemetryGpsFixType,
-  telemetryHeartbeatReceived,
-} from "../../controlled-flight/utils/telemetryHealth";
 import {
   fetchWarehouseMappingStackStatus,
   startWarehouseManualMapping,
@@ -29,12 +18,12 @@ type MissionStatusLike = {
 export type WarehouseManualMappingHookArgs = {
   activeFlightId: string | null;
   missionStatus: MissionStatusLike | null;
-  telemetry: unknown;
   wsConnected: boolean;
   droneConnected: boolean;
   warehouseMapId: number | null;
   sensorRigId: number | null;
   dockId: number | null;
+  warehousePreflightPassed: boolean;
   setPendingFlightId: (flightId: string | null) => void;
   onPreflightRun: (preflight: PreflightRunResponse | null) => void;
   onMessage: (message: string) => void;
@@ -44,13 +33,12 @@ export type WarehouseManualMappingHookArgs = {
 
 export function useWarehouseManualMapping({
   activeFlightId,
-  missionStatus,
-  telemetry,
   wsConnected,
   droneConnected,
   warehouseMapId,
   sensorRigId,
   dockId,
+  warehousePreflightPassed,
   setPendingFlightId,
   onPreflightRun,
   onMessage,
@@ -59,6 +47,7 @@ export function useWarehouseManualMapping({
 }: WarehouseManualMappingHookArgs) {
   const [connecting, setConnecting] = useState(false);
   const [startingSession, setStartingSession] = useState(false);
+  const [manualControlEnabled, setManualControlEnabled] = useState(false);
   const [mappingActiveFlightId, setMappingActiveFlightId] = useState<string | null>(null);
   const [mappingBusy, setMappingBusy] = useState(false);
   const [mappingStackStatus, setMappingStackStatus] =
@@ -80,48 +69,28 @@ export function useWarehouseManualMapping({
     void refreshMappingStackStatus();
     const interval = window.setInterval(() => {
       void refreshMappingStackStatus();
-    }, 5000);
+    }, activeFlightId ? 2000 : 10000);
     return () => window.clearInterval(interval);
-  }, [refreshMappingStackStatus]);
+  }, [refreshMappingStackStatus, activeFlightId]);
 
-  const droneCenter = useDroneCenter(telemetry);
-  const batteryPercent = useMemo(() => telemetryBatteryPercent(telemetry), [telemetry]);
-  const gpsFixType = useMemo(() => telemetryGpsFixType(telemetry), [telemetry]);
-  const heartbeatReceived = useMemo(() => telemetryHeartbeatReceived(telemetry), [telemetry]);
-  const ekfOk = useMemo(() => telemetryBoolean(telemetry, ["ekf", "ok"]), [telemetry]);
-  const compassHealthy = useMemo(
-    () => telemetryBoolean(telemetry, ["compass", "healthy"]),
-    [telemetry],
-  );
-
-  const preflight = useControlledPreflight({
-    droneConnected,
-    wsConnected,
-    missionStatus,
-    droneCenter,
-    heartbeatReceived,
-    gpsFixType,
-    ekfOk,
-    compassHealthy,
-    batteryPercent,
-    telemetry,
-    profile: "warehouse",
-    onFailed: () => {
+  useEffect(() => {
+    if (!warehousePreflightPassed) {
+      setManualControlEnabled(false);
       stopAllManualRef.current();
-    },
-  });
+    }
+  }, [warehousePreflightPassed]);
 
   const manualControlReady = Boolean(
-    preflight.controlledPreflight?.passed && activeFlightId && (droneConnected || wsConnected),
+    warehousePreflightPassed && activeFlightId && (droneConnected || wsConnected),
   );
-  const setManualControlEnabled = preflight.setManualControlEnabled;
+
   const disableManualControl = useCallback(() => {
     setManualControlEnabled(false);
-  }, [setManualControlEnabled]);
+  }, []);
 
   const manual = useManualFlightControls({
     flightId: activeFlightId,
-    enabled: preflight.manualControlEnabled,
+    enabled: manualControlEnabled,
     ready: manualControlReady,
     onDisable: disableManualControl,
   });
@@ -141,38 +110,11 @@ export function useWarehouseManualMapping({
     }
   }, [onError, onMessage]);
 
-  const runPreflightCheck = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      onError("Not authenticated");
+  const startKeyboardSession = useCallback(async () => {
+    if (!warehousePreflightPassed) {
+      onError("Run Warehouse Preflight checks before starting keyboard flight.");
       return;
     }
-
-    setConnecting(true);
-    try {
-      if (!missionStatus?.telemetry?.running || !droneConnected) {
-        await connectDroneTelemetry(token);
-      }
-      const refreshedStatus = await queryClient.fetchQuery({
-        queryKey: missionKeys.flightStatus(),
-        queryFn: () => fetchFlightStatus<MissionStatusLike>(token),
-        staleTime: 0,
-      });
-      preflight.runControlledPreflightCheck({
-        droneConnected:
-          droneConnected || Boolean(refreshedStatus?.orchestrator?.drone_connected),
-        wsConnected,
-        missionStatus: refreshedStatus,
-      });
-      onMessage("Warehouse preflight check completed.");
-    } catch (error) {
-      onError(error instanceof Error ? error.message : "Warehouse preflight failed");
-    } finally {
-      setConnecting(false);
-    }
-  }, [droneConnected, missionStatus?.telemetry?.running, onError, onMessage, preflight, wsConnected]);
-
-  const startKeyboardSession = useCallback(async () => {
     const token = getToken();
     if (!token) return onError("Not authenticated");
     setStartingSession(true);
@@ -189,7 +131,7 @@ export function useWarehouseManualMapping({
     } finally {
       setStartingSession(false);
     }
-  }, [onError, onMessage, onPreflightRun, setPendingFlightId]);
+  }, [onError, onMessage, onPreflightRun, setPendingFlightId, warehousePreflightPassed]);
 
   const startMapping = useCallback(async () => {
     const token = getToken();
@@ -269,16 +211,15 @@ export function useWarehouseManualMapping({
 
   return {
     connecting,
-    preflightPreparing: connecting,
     startingSession,
     mappingBusy,
     mappingActiveFlightId,
     mappingStackStatus,
     manualControlReady,
-    preflight,
+    manualControlEnabled,
+    setManualControlEnabled,
     manual,
     connectDrone,
-    runPreflightCheck,
     startKeyboardSession,
     startMapping,
     stopMapping,

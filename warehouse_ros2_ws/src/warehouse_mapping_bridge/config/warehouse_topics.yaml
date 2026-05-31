@@ -9,14 +9,13 @@ profiles:
     depth: /warehouse/front/rgbd/depth_image
     # imu: set WAREHOUSE_IMU_TOPIC or auto-discovered from `gz topic -l`
     visual_slam_odom: /warehouse/drone/odometry
-    local_odometry: /warehouse/local_odometry
+    local_odometry: /warehouse/drone/odometry
     raw_lidar: /warehouse/front/rgbd/points
     pointcloud: /nvblox_node/static_esdf_pointcloud
     mesh: /nvblox_node/mesh
     mesh_marker: /nvblox_node/tsdf_layer_marker
     occupancy: /nvblox_node/static_occupancy_grid
     esdf: /nvblox_node/static_esdf_pointcloud
-    back_projected_depth: /nvblox_node/back_projected_depth
 
   isaac_ros_nvblox_stereo:
     rgb_image: /warehouse/front/rgbd/image
@@ -40,6 +39,7 @@ aliases:
     - /warehouse/front/rgbd/points
   imu:
     - /imu
+    - /world/iris_warehouse/model/iris_rplidar_rgbd/model/iris_with_standoffs/link/imu_link/sensor/imu_sensor/imu
   visual_slam_odom:
     - /warehouse/drone/odometry
     - /visual_slam/tracking/odometry
@@ -65,7 +65,6 @@ required_for_perception:
   - depth
   - imu
   - visual_slam_odom
-  - local_odometry
   - raw_lidar
 
 required_for_nvblox_any:
@@ -74,9 +73,21 @@ required_for_nvblox_any:
   - mesh_marker
   - occupancy
   - esdf
-  - back_projected_depth
+
+gazebo_frames:
+  odom: odom
+  base_link: iris_with_standoffs/base_link
+  camera: iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera
 
 frames:
   odom: odom
   base_link: base_link
   camera: front_rgbd_camera_link
+
+frame_aliases:
+  base_link:
+    - iris_with_standoffs/base_link
+    - base_link
+  camera:
+    - iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera
+    - front_rgbd_camera_link

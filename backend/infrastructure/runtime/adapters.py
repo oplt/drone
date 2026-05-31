@@ -48,7 +48,18 @@ class MavlinkTelemetryConnectionFactory:
 
 class VideoStreamFactory:
     def create(self) -> DroneVideoStream:
-        source: Any = settings.drone_video_source
+        from backend.modules.warehouse.service.video import (
+            effective_drone_video_source,
+            warehouse_video_blocked,
+        )
+
+        if warehouse_video_blocked():
+            raise RuntimeError(
+                "Warehouse Gazebo sim: external drone video disabled; "
+                "set DRONE_VIDEO_SOURCE_GAZEBO or disable DRONE_VIDEO_ENABLED"
+            )
+
+        source: Any = effective_drone_video_source() or settings.drone_video_source
         with suppress(ValueError, TypeError):
             source = int(source)
         return DroneVideoStream(

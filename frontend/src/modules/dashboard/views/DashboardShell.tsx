@@ -13,6 +13,11 @@ const dashboardThemeComponents = {
   ...chartsCustomizations,
   ...dataGridCustomizations,
   ...datePickersCustomizations,
+  MuiTextField: {
+    defaultProps: {
+      variant: "filled" as const,
+    },
+  },
 };
 
 export default function Dashboard(props: { disableCustomTheme?: boolean }) {
