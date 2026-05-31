@@ -15,7 +15,7 @@ setup(
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
     ],
-    install_requires=["setuptools", "pymavlink>=2.4.49"],
+    install_requires=["setuptools", "pymavlink>=2.4.49", "PyYAML>=6.0"],
     zip_safe=True,
     maintainer="Drone App",
     maintainer_email="operator@example.com",
@@ -29,6 +29,7 @@ setup(
             "warehouse_health_monitor = warehouse_mapping_bridge.health_monitor_node:main",
             "warehouse_odometry_export = warehouse_mapping_bridge.odometry_export_node:main",
             "warehouse_vision_mavlink_bridge = warehouse_mapping_bridge.vision_mavlink_bridge_node:main",
+            "warehouse_sim_tf_broadcaster = warehouse_mapping_bridge.sim_tf_broadcaster_node:main",
         ],
     },
 )

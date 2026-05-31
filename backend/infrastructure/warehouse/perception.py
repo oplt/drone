@@ -27,6 +27,16 @@ def _string(value: object) -> str | None:
     return value if isinstance(value, str) and value.strip() else None
 
 
+def _format_http_error(exc: Exception, *, timeout_s: float) -> str:
+    text = str(exc).strip()
+    if text:
+        return text
+    name = type(exc).__name__
+    if name in {"ReadTimeout", "ConnectTimeout", "PoolTimeout", "WriteTimeout"}:
+        return f"{name}: warehouse ROS bridge did not respond within {timeout_s:.1f}s"
+    return name
+
+
 class DisabledWarehousePerceptionPort:
     def __init__(
         self,
@@ -41,7 +51,8 @@ class DisabledWarehousePerceptionPort:
         self.websocket_url = websocket_url
         self.capture_root = capture_root
 
-    async def status(self) -> WarehousePerceptionStatus:
+    async def status(self, *, deep: bool = False) -> WarehousePerceptionStatus:
+        del deep
         return WarehousePerceptionStatus(
             configured=False,
             reachable=False,
@@ -99,22 +110,28 @@ class HttpWarehousePerceptionPort:
         capture_root: str,
         profile: str,
         timeout_s: float,
+        deep_timeout_s: float,
     ) -> None:
         self.bridge_url = bridge_url.rstrip("/")
         self.websocket_url = websocket_url.strip()
         self.capture_root = capture_root
         self.profile = profile
         self.timeout_s = timeout_s
+        self.deep_timeout_s = deep_timeout_s
 
-    async def status(self) -> WarehousePerceptionStatus:
+    async def status(self, *, deep: bool = False) -> WarehousePerceptionStatus:
+        timeout_s = self.deep_timeout_s if deep else self.timeout_s
+        path = "/health?deep=1" if deep else "/health"
         try:
-            payload = await self._get_json("/health")
+            payload = await self._get_json(path, timeout_s=timeout_s)
         except Exception as exc:
+            detail = _format_http_error(exc, timeout_s=timeout_s)
             logger.warning(
-                "Warehouse ROS bridge health check failed bridge_url=%s error=%s",
+                "Warehouse ROS bridge health check failed bridge_url=%s deep=%s error=%s",
                 self.bridge_url,
-                exc,
-                extra={"bridge_url": self.bridge_url, "error": str(exc)},
+                deep,
+                detail,
+                extra={"bridge_url": self.bridge_url, "deep": deep, "error": detail},
             )
             return WarehousePerceptionStatus(
                 configured=True,
@@ -125,7 +142,7 @@ class HttpWarehousePerceptionPort:
                 bridge_url=self.bridge_url,
                 websocket_url=self.websocket_url or None,
                 capture_root=self.capture_root,
-                detail=str(exc),
+                detail=detail,
             )
 
         components = _as_dict(payload.get("components"))
@@ -242,8 +259,9 @@ class HttpWarehousePerceptionPort:
     async def stop_replay(self, *, replay_id: str) -> WarehousePerceptionCommandResult:
         return self._command_result(await self._post_json("/replay/stop", {"replay_id": replay_id}))
 
-    async def _get_json(self, path: str) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
+    async def _get_json(self, path: str, *, timeout_s: float | None = None) -> dict[str, Any]:
+        effective_timeout = self.timeout_s if timeout_s is None else timeout_s
+        async with httpx.AsyncClient(timeout=effective_timeout) as client:
             response = await client.get(f"{self.bridge_url}{path}")
             logger.debug(
                 "Warehouse ROS bridge GET",
@@ -281,6 +299,7 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
     capture_root = settings.WAREHOUSE_ROS_CAPTURE_ROOT.strip()
     profile = settings.WAREHOUSE_ROS_PROFILE.strip() or "isaac_ros_nvblox_stereo"
     timeout_s = max(0.1, float(settings.WAREHOUSE_ROS_BRIDGE_TIMEOUT_S))
+    deep_timeout_s = max(timeout_s, float(settings.WAREHOUSE_ROS_BRIDGE_DEEP_TIMEOUT_S))
     if not bridge_url:
         return DisabledWarehousePerceptionPort(
             profile=profile,
@@ -294,4 +313,5 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
         capture_root=capture_root,
         profile=profile,
         timeout_s=timeout_s,
+        deep_timeout_s=deep_timeout_s,
     )

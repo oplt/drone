@@ -1118,6 +1118,52 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             message=f"{name} status is missing from the ROS bridge health payload",
         )
 
+    def _topic_diagnostic(self, key: str) -> dict[str, Any] | None:
+        components = self._perception_components()
+        diagnostics = components.get("topic_diagnostics")
+        if isinstance(diagnostics, dict):
+            diag = diagnostics.get(key)
+            if isinstance(diag, dict):
+                return diag
+        matches = components.get("topic_matches")
+        if isinstance(matches, dict):
+            diag = matches.get(key)
+            if isinstance(diag, dict):
+                return diag
+        return None
+
+    def _topic_diagnostic_message(self, key: str) -> str | None:
+        diag = self._topic_diagnostic(key)
+        if not diag:
+            return None
+        expected = diag.get("expected")
+        matched = diag.get("matched")
+        error = diag.get("error")
+        if error:
+            return f"expected={expected} matched={matched or 'none'} ({error})"
+        if not diag.get("healthy"):
+            return f"expected={expected} matched={matched or 'none'}"
+        return None
+
+    def _tf_chain_detail(self) -> str | None:
+        components = self._perception_components()
+        tf_chain = components.get("tf_chain")
+        if isinstance(tf_chain, dict):
+            detail = tf_chain.get("detail")
+            if isinstance(detail, str) and detail.strip() and detail != "ok":
+                return detail.strip()
+        return None
+
+    def _missing_topics_message(self, *, prefix: str) -> str:
+        components = self._perception_components()
+        missing = components.get("missing_required_topics")
+        if isinstance(missing, list) and missing:
+            return f"{prefix}: {', '.join(str(item) for item in missing)}"
+        detail = self._perception_status().get("detail")
+        if isinstance(detail, str) and detail.strip():
+            return f"{prefix}. {detail.strip()}"
+        return prefix
+
     def check_ros_bridge(self) -> CheckResult:
         status = self._perception_status()
         if not status:
@@ -1140,16 +1186,19 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.FAIL,
                 message=f"Jetson ROS bridge is unreachable{suffix}",
             )
-        if not bool(status.get("ready")):
+        if bool(status.get("ready")):
             return CheckResult(
                 name="Warehouse ROS Bridge",
-                status=CheckStatus.FAIL,
-                message=f"Jetson ROS bridge status is {status.get('status') or 'not ready'}",
+                status=CheckStatus.PASS,
+                message=f"Jetson bridge ready ({status.get('profile') or 'unknown profile'})",
             )
+        bridge_status = status.get("status") or "not ready"
         return CheckResult(
             name="Warehouse ROS Bridge",
-            status=CheckStatus.PASS,
-            message=f"Jetson bridge ready ({status.get('profile') or 'unknown profile'})",
+            status=CheckStatus.FAIL,
+            message=self._missing_topics_message(
+                prefix=f"Jetson ROS bridge status is {bridge_status}",
+            ),
         )
 
     def check_ros_graph(self) -> CheckResult:
@@ -1177,24 +1226,18 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             return CheckResult(
                 name="Warehouse Camera Topics",
                 status=CheckStatus.PASS,
-                message="Stereo camera topics are publishing",
+                message="Camera topics are publishing",
             )
-        if self._component_bool("camera_topics", "stereo_camera") is False:
-            return CheckResult(
-                name="Warehouse Camera Topics",
-                status=CheckStatus.FAIL,
-                message="Stereo camera topics are not publishing",
-            )
-        if self._topic_configured("left_image", "right_image"):
-            return CheckResult(
-                name="Warehouse Camera Topics",
-                status=CheckStatus.PASS,
-                message="Stereo camera topics are configured",
-            )
+        detail = self._topic_diagnostic_message("rgb_image")
+        if detail is None:
+            left_detail = self._topic_diagnostic_message("left_image")
+            right_detail = self._topic_diagnostic_message("right_image")
+            if left_detail or right_detail:
+                detail = "; ".join(filter(None, [left_detail, right_detail]))
         return CheckResult(
             name="Warehouse Camera Topics",
             status=CheckStatus.FAIL,
-            message="Left/right camera topics are not configured or not publishing",
+            message=detail or "RGB or stereo camera topics are not publishing",
         )
 
     def check_stereo_sync(self) -> CheckResult:
@@ -1206,52 +1249,74 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
         )
 
     def check_imu_topic(self) -> CheckResult:
-        if self._component_bool("imu_topic", "imu") is True:
+        if self._component_bool("imu_healthy", "imu_topic", "imu") is True:
             return CheckResult(
                 name="Warehouse IMU Topic",
                 status=CheckStatus.PASS,
                 message="IMU topic is publishing",
             )
-        if self._component_bool("imu_topic", "imu") is False:
-            return CheckResult(
-                name="Warehouse IMU Topic",
-                status=CheckStatus.FAIL,
-                message="IMU topic is not publishing",
-            )
-        if self._topic_configured("imu"):
-            return CheckResult(
-                name="Warehouse IMU Topic",
-                status=CheckStatus.PASS,
-                message="IMU topic is configured",
-            )
+        detail = self._topic_diagnostic_message("imu")
         return CheckResult(
             name="Warehouse IMU Topic",
             status=CheckStatus.FAIL,
-            message="IMU topic is not configured or not publishing",
+            message=detail or "IMU topic is not publishing",
         )
 
     def check_tf_tree(self) -> CheckResult:
-        return self._component_check(
+        if self._component_bool("tf_tree", "tf", "tf_static") is True:
+            return CheckResult(
+                name="Warehouse TF Tree",
+                status=CheckStatus.PASS,
+                message="Required TF chain odom→base_link→camera is valid",
+            )
+        detail = self._tf_chain_detail()
+        return CheckResult(
             name="Warehouse TF Tree",
-            keys=("tf_tree", "tf", "tf_static"),
-            pass_message="Required TF tree is valid",
-            fail_message="Required TF frames are missing or disconnected",
+            status=CheckStatus.FAIL,
+            message=detail or "Required TF frames are missing or disconnected (odom/base_link/camera)",
         )
 
     def check_visual_slam(self) -> CheckResult:
-        return self._component_check(
+        if self._component_bool(
+            "visual_slam_healthy",
+            "visual_slam",
+            "vslam",
+            "visual_slam_tracking",
+        ):
+            return CheckResult(
+                name="Warehouse Visual SLAM",
+                status=CheckStatus.PASS,
+                message="Visual SLAM odometry is publishing and fresh",
+            )
+        detail = self._topic_diagnostic_message("visual_slam_odom")
+        return CheckResult(
             name="Warehouse Visual SLAM",
-            keys=("visual_slam", "vslam", "visual_slam_tracking"),
-            pass_message="Isaac Visual SLAM tracking is ready",
-            fail_message="Isaac Visual SLAM tracking is not ready",
+            status=CheckStatus.FAIL,
+            message=detail or "Visual SLAM odometry is not ready (check /warehouse/drone/odometry)",
         )
 
     def check_nvblox(self) -> CheckResult:
-        return self._component_check(
+        if self._component_bool("nvblox_healthy", "nvblox", "nvblox_mapping"):
+            return CheckResult(
+                name="Warehouse Nvblox",
+                status=CheckStatus.PASS,
+                message="Nvblox mapping outputs are publishing and fresh",
+            )
+        components = self._perception_components()
+        missing = components.get("missing_nvblox_topics")
+        detail_parts: list[str] = []
+        if isinstance(missing, list) and missing:
+            detail_parts.append(f"missing outputs: {', '.join(str(item) for item in missing)}")
+        for key in ("pointcloud", "mesh", "mesh_marker", "occupancy", "esdf", "back_projected_depth"):
+            diag_msg = self._topic_diagnostic_message(key)
+            if diag_msg:
+                detail_parts.append(f"{key}: {diag_msg}")
+        if components.get("nvblox_warming_up"):
+            detail_parts.append("nvblox node detected but outputs not yet healthy")
+        return CheckResult(
             name="Warehouse Nvblox",
-            keys=("nvblox", "nvblox_mapping"),
-            pass_message="Isaac Nvblox mapping is ready",
-            fail_message="Isaac Nvblox mapping is not ready",
+            status=CheckStatus.FAIL,
+            message="; ".join(detail_parts) or "Nvblox mapping outputs are not ready",
         )
 
     def check_mapping_disk(self) -> CheckResult:
@@ -1410,6 +1475,22 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
         )
 
     def check_lidar_health(self) -> CheckResult:
+        components = self._perception_components()
+        raw_lidar_healthy = components.get("raw_lidar_healthy")
+        if raw_lidar_healthy is True:
+            return CheckResult(
+                name="Warehouse LiDAR",
+                status=CheckStatus.PASS,
+                message="LiDAR point cloud topic is publishing",
+            )
+        if raw_lidar_healthy is False:
+            detail = self._topic_diagnostic_message("raw_lidar")
+            return CheckResult(
+                name="Warehouse LiDAR",
+                status=CheckStatus.FAIL,
+                message=detail or "LiDAR point cloud topic is not publishing",
+            )
+
         lidar_healthy = getattr(self.v, "lidar_healthy", None)
         obstacle_distance_m = getattr(self.v, "obstacle_distance_m", None)
         clearance_m = float(getattr(self.mission, "clearance_m", 0.6))
@@ -1439,10 +1520,11 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.PASS,
                 message=message,
             )
+        detail = self._topic_diagnostic_message("raw_lidar")
         return CheckResult(
             name="Warehouse LiDAR",
-            status=CheckStatus.WARN,
-            message="LiDAR/range health is unknown from current telemetry",
+            status=CheckStatus.FAIL,
+            message=detail or "LiDAR/range health is unknown; raw_lidar topic not publishing",
         )
 
     def check_scan_layers(self) -> CheckResult:

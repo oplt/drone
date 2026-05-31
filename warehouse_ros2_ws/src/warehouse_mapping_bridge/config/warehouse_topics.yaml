@@ -1,0 +1,82 @@
+# Warehouse ROS topic registry. Env vars (WAREHOUSE_*_TOPIC) override these values.
+# Select profile via WAREHOUSE_TOPIC_PROFILE (defaults to gazebo when WAREHOUSE_GAZEBO_SIM=1).
+
+profiles:
+  gazebo:
+    rgb_image: /warehouse/front/rgbd/image
+    left_image: /warehouse/stereo/left/image
+    right_image: /warehouse/stereo/right/image
+    depth: /warehouse/front/rgbd/depth_image
+    # imu: set WAREHOUSE_IMU_TOPIC or auto-discovered from `gz topic -l`
+    visual_slam_odom: /warehouse/drone/odometry
+    local_odometry: /warehouse/local_odometry
+    raw_lidar: /warehouse/front/rgbd/points
+    pointcloud: /nvblox_node/static_esdf_pointcloud
+    mesh: /nvblox_node/mesh
+    mesh_marker: /nvblox_node/tsdf_layer_marker
+    occupancy: /nvblox_node/static_occupancy_grid
+    esdf: /nvblox_node/static_esdf_pointcloud
+    back_projected_depth: /nvblox_node/back_projected_depth
+
+  isaac_ros_nvblox_stereo:
+    rgb_image: /warehouse/front/rgbd/image
+    left_image: /left/image_rect
+    right_image: /right/image_rect
+    depth: /depth
+    imu: /imu
+    visual_slam_odom: /visual_slam/tracking/odometry
+    local_odometry: /warehouse/local_odometry
+    raw_lidar: /lidar/points
+    pointcloud: /nvblox_node/pointcloud
+    mesh: /nvblox_node/mesh
+    mesh_marker: /nvblox_node/mesh_marker
+    occupancy: /nvblox_node/occupancy_layer
+    esdf: /nvblox_node/static_esdf_pointcloud
+    back_projected_depth: /nvblox_node/back_projected_depth
+
+aliases:
+  raw_lidar:
+    - /scan/points
+    - /warehouse/front/rgbd/points
+  imu:
+    - /imu
+  visual_slam_odom:
+    - /warehouse/drone/odometry
+    - /visual_slam/tracking/odometry
+  local_odometry:
+    - /warehouse/local_odometry
+    - /warehouse/drone/odometry
+  occupancy:
+    - /nvblox_node/static_occupancy_grid
+    - /nvblox_node/combined_occupancy_grid
+  esdf:
+    - /nvblox_node/static_esdf_pointcloud
+    - /nvblox_node/pessimistic_static_esdf_pointcloud
+  mesh_marker:
+    - /nvblox_node/tsdf_layer_marker
+    - /nvblox_node/color_layer_marker
+  pointcloud:
+    - /nvblox_node/pointcloud
+    - /nvblox_node/static_esdf_pointcloud
+    - /nvblox_node/static_map_slice
+
+required_for_perception:
+  - rgb_image
+  - depth
+  - imu
+  - visual_slam_odom
+  - local_odometry
+  - raw_lidar
+
+required_for_nvblox_any:
+  - pointcloud
+  - mesh
+  - mesh_marker
+  - occupancy
+  - esdf
+  - back_projected_depth
+
+frames:
+  odom: odom
+  base_link: base_link
+  camera: front_rgbd_camera_link

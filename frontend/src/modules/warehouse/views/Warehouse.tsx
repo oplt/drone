@@ -97,6 +97,21 @@ type WarehouseStartErrorBody = {
   detail?: {
     message?: string;
     preflight?: PreflightRunResponse;
+    readiness?: Record<string, unknown>;
+    missing_required_topics?: string[];
+    missing_nvblox_topics?: string[];
+    suggested_actions?: string[];
+  };
+  error?: {
+    message?: string;
+    details?: {
+      message?: string;
+      preflight?: PreflightRunResponse;
+      readiness?: Record<string, unknown>;
+      missing_required_topics?: string[];
+      missing_nvblox_topics?: string[];
+      suggested_actions?: string[];
+    };
   };
 };
 
@@ -168,7 +183,29 @@ const getWarehouseStartPreflight = (error: unknown): PreflightRunResponse | null
 
 const getWarehouseStartMessage = (error: unknown): string => {
   const body = (error as { body?: unknown } | null)?.body as WarehouseStartErrorBody | undefined;
-  return body?.detail?.message ?? toMessage(error);
+  const detail = body?.detail ?? body?.error?.details;
+  if (detail?.message) {
+    const parts = [detail.message];
+    const missing = [
+      ...(detail.missing_required_topics ?? []),
+      ...(detail.missing_nvblox_topics ?? []),
+    ];
+    if (missing.length > 0) {
+      parts.push(`Missing: ${missing.join(", ")}`);
+    }
+    const actions = detail.suggested_actions ?? [];
+    if (actions.length > 0) {
+      parts.push(actions[0]);
+    }
+    return parts.join(" — ");
+  }
+  if (body?.error?.message) {
+    return body.error.message;
+  }
+  if (error instanceof ApiError && error.detail) {
+    return error.detail;
+  }
+  return toMessage(error);
 };
 
 const formatTimestamp = (value?: string | null): string => {
@@ -1113,8 +1150,10 @@ export default function WarehousePage() {
   const startScanTooltip = !selectedWarehouseMapId
     ? "Select a warehouse map to enable launch."
     : selectedSensorRigId == null || sensorRigHealth?.ready !== true
-      ? "Select a calibrated sensor rig before starting."
-      : `Scan warehouse map #${selectedWarehouseMapId}.`;
+      ? "Select a registered sensor rig before starting."
+      : !sensorRigHealth?.perception?.ready
+        ? "Launch scan — mapping stack and perception start with the flight."
+        : `Scan warehouse map #${selectedWarehouseMapId}.`;
 
   const selectedWarehouseMapName = useMemo(() => {
     if (selectedWarehouseMapId == null) return null;
@@ -1442,7 +1481,10 @@ export default function WarehousePage() {
                 helperText={
                   sensorRigHealth
                     ? sensorRigHealth.ready
-                      ? "Ready"
+                      ? sensorRigHealth.perception?.ready
+                        ? "Ready"
+                        : sensorRigHealth.warnings?.[0] ??
+                          "Registered — perception stack starts with flight"
                       : sensorRigHealth.blockers[0] ?? "Not ready"
                     : undefined
                 }

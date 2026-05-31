@@ -1,6 +1,8 @@
 ROS_DISTRO ?= jazzy
 PYTHON ?= $(if $(wildcard $(CURDIR)/.venv/bin/python),$(CURDIR)/.venv/bin/python,python3)
 APP_PYTHON ?= $(PYTHON)
+APP_HOST ?= 127.0.0.1
+APP_PORT ?= 8000
 HONCHO ?= $(if $(wildcard $(CURDIR)/.venv/bin/honcho),$(CURDIR)/.venv/bin/honcho,honcho)
 ROS_WS ?= $(CURDIR)/warehouse_ros2_ws
 ROS_WS_SETUP ?= $(ROS_WS)/install/setup.bash
@@ -12,24 +14,28 @@ export APP_PYTHON
 export HONCHO
 export PYTHONNOUSERSITE
 export PYTHONDONTWRITEBYTECODE
+export APP_HOST
+export APP_PORT
 
 # Backend/FastAPI code may use the app venv. ROS 2 Jazzy nodes must not.
-WAREHOUSE_BRIDGE_PYTHON ?= $(PYTHON)
+WAREHOUSE_BRIDGE_PYTHON ?= $(ROS_PYTHON)
 ROS_PYTHON ?= /usr/bin/python3
 BACKEND_ENV ?= $(CURDIR)/backend/.env
 WITH_VIDEO ?= 0
 DEV_PROCS := redis backend default_worker photogrammetry_worker frontend browser
-WAREHOUSE_DEV_PROCS := $(DEV_PROCS) warehouse_mapping_worker gazebo_sensor_bridge warehouse_bridge rosbridge_ws
+# Always-on warehouse dev services. warehouse_mapping_stack is intentionally omitted:
+# nvblox + mapping launch starts from the backend when a flight begins
+# (ensure_warehouse_mapping_ready_for_preflight → mapping_stack_process.py).
+# Manual debug: make -f Makefile.local warehouse-session
+WAREHOUSE_DEV_PROCS := $(DEV_PROCS) warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export warehouse_bridge rosbridge_ws
 ifeq ($(WITH_VIDEO),1)
 DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker frontend browser
-WAREHOUSE_DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker warehouse_mapping_worker gazebo_sensor_bridge frontend browser warehouse_bridge rosbridge_ws
+WAREHOUSE_DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export frontend browser warehouse_bridge rosbridge_ws
 endif
 
 ROS_DOMAIN_ID ?= 42
-GZ_PARTITION ?= drone_app_warehouse
 
 export ROS_DOMAIN_ID
-export GZ_PARTITION
 
 
 export ROS_DISTRO
@@ -42,15 +48,13 @@ export ROS_PYTHON
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
 	@$(HONCHO) --help >/dev/null 2>&1 || { echo "honcho executable is not usable: $(HONCHO). Reinstall with: $(PYTHON) -m pip install --force-reinstall honcho"; exit 1; }
-	@command -v uvicorn >/dev/null 2>&1 || { echo "uvicorn is not installed."; exit 1; }
-	@command -v alembic >/dev/null 2>&1 || { echo "alembic is not installed."; exit 1; }
-	@command -v celery >/dev/null 2>&1 || { echo "celery is not installed."; exit 1; }
+	@$(APP_PYTHON) -c 'import uvicorn, fastapi, alembic, celery' >/dev/null 2>&1 || { echo "Backend Python deps missing for $(APP_PYTHON). Install backend requirements."; exit 1; }
 	@$(PYTHON) -c 'import uvicorn, fastapi' >/dev/null 2>&1 || { echo "Backend Python deps missing for $(PYTHON). Activate .venv or install requirements."; exit 1; }
 ifeq ($(WITH_VIDEO),1)
 	@$(PYTHON) -c 'from ultralytics import YOLO' >/dev/null 2>&1 || { echo "Video analysis dependencies missing for $(PYTHON). Run: $(PYTHON) -m pip install --user 'matplotlib>=3.10.0' 'ultralytics>=8.3.0' opencv-python-headless supervision"; exit 1; }
 endif
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed."; exit 1; }
-	@command -v redis-cli >/dev/null 2>&1 || command -v redis-server >/dev/null 2>&1 || { echo "redis-cli or redis-server is required."; exit 1; }
+	@command -v redis-server >/dev/null 2>&1 || { echo "redis-server is required."; exit 1; }
 
 warehouse-build:
 	@test -d "$(ROS_WS)" || { echo "ROS workspace not found: $(ROS_WS)"; exit 1; }
@@ -105,23 +109,27 @@ kill-dev: kill-celery
 
 kill-warehouse-dev:
 	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill
+	-pgrep -f "[w]arehouse_mapping_bridge.bridge_service" | xargs -r kill
 	-pgrep -f "[w]arehouse_bridge_service" | xargs -r kill
+	-pgrep -f "[r]os_gz_bridge/parameter_bridge" | xargs -r kill
 	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill
-	-pgrep -f "[r]os2 run ros_gz_bridge parameter_bridge" | xargs -r kill
 	-pgrep -f "[r]osbridge_websocket" | xargs -r kill
 	-pgrep -f "[r]os2 launch rosbridge_server rosbridge_websocket_launch.xml" | xargs -r kill
 	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill
+	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill
 	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill
 	-pgrep -f "[n]vblox" | xargs -r kill
 	-sleep 1
 	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill -9
+	-pgrep -f "[w]arehouse_mapping_bridge.bridge_service" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_bridge_service" | xargs -r kill -9
+	-pgrep -f "[r]os_gz_bridge/parameter_bridge" | xargs -r kill -9
 	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill -9
-	-pgrep -f "[r]os2 run ros_gz_bridge parameter_bridge" | xargs -r kill -9
 	-pgrep -f "[r]osbridge_websocket" | xargs -r kill -9
 	-pgrep -f "[r]os2 launch rosbridge_server rosbridge_websocket_launch.xml" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill -9
+	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill -9
 	-pgrep -f "[n]vblox" | xargs -r kill -9
@@ -139,15 +147,17 @@ warehouse-session: check-warehouse-tools
 warehouse-stop-session:
 	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill
 	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill
+	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill
 	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill
 	-pgrep -f "[n]vblox" | xargs -r kill
 	-sleep 1
 	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill -9
+	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill -9
 	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill -9
 	-pgrep -f "[n]vblox" | xargs -r kill -9
 
 warehouse-doctor: check-warehouse-tools
-	$(HONCHO) -e "$(BACKEND_ENV)" -f Procfile.dev run bash -lc 'set -o pipefail; export PYTHONNOUSERSITE=0; source /opt/ros/$${ROS_DISTRO:-jazzy}/setup.bash && source "$${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}" && echo "Env:" && echo "ROS_DOMAIN_ID=$${ROS_DOMAIN_ID:-unset}" && echo "GZ_PARTITION=$${GZ_PARTITION:-unset}" && echo "python=$$(python3 -V 2>&1)" && echo "which python3=$$(command -v python3)" && echo && echo "Bridge:" && (curl -fsS "$${WAREHOUSE_ROS_BRIDGE_URL:-http://127.0.0.1:8088}/health" || true) && echo && echo "ROS topics:" && ros2 topic list --no-daemon -t | sort'
+	$(HONCHO) -e "$(BACKEND_ENV)" -f Procfile.dev run bash -lc 'set -o pipefail; export PYTHONNOUSERSITE=0; source /opt/ros/$${ROS_DISTRO:-jazzy}/setup.bash && source "$${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}" && echo "Env:" && echo "ROS_DOMAIN_ID=$${ROS_DOMAIN_ID:-unset}" && echo "ros_gz_bridge_count=$$(pgrep -fc "[r]os_gz_bridge/parameter_bridge" || echo 0)" && echo && echo "Gazebo topics:" && (gz topic -l 2>/dev/null | grep -E "warehouse|imu|odometry" | sort || true) && echo && echo "Gazebo hz (3s):" && for t in /warehouse/front/rgbd/image /warehouse/drone/odometry; do printf "  %s: " "$$t"; timeout 3 gz topic -t "$$t" -f 2>/dev/null | tail -1 || echo "no messages"; done && echo && echo "Bridge:" && (curl -fsS --max-time 15 "$${WAREHOUSE_ROS_BRIDGE_URL:-http://127.0.0.1:8088}/health" | python3 -m json.tool 2>/dev/null | head -40 || true) && echo && echo "ROS topics:" && ros2 topic list --no-daemon 2>/dev/null | grep -E "warehouse|nvblox|imu" | sort && echo && echo "ROS hz (3s):" && for t in /warehouse/front/rgbd/image /warehouse/front/rgbd/depth_image /warehouse/drone/odometry /warehouse/local_odometry; do printf "  %s: " "$$t"; timeout 3 ros2 topic hz "$$t" 2>&1 | tail -1 || true; echo; done'

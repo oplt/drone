@@ -201,7 +201,11 @@ class WarehouseMappingStackProcessManager:
             parts = [part for part in path.split(":") if part and part != venv_bin]
             env["PATH"] = ":".join(parts)
         env.setdefault("ROS_DISTRO", "jazzy")
+        env.setdefault("ROS_DOMAIN_ID", "42")
         env.setdefault("ROS_WS_SETUP", "warehouse_ros2_ws/install/setup.bash")
+        env.setdefault("WAREHOUSE_GAZEBO_SIM", "1")
+        env.setdefault("WAREHOUSE_TOPIC_PROFILE", "gazebo")
+        env.setdefault("WAREHOUSE_ROS_PROFILE", "gazebo")
         env.setdefault("PYTHONNOUSERSITE", "0")
         return env
 

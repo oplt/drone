@@ -44,12 +44,6 @@ def generate_launch_description() -> LaunchDescription:
             ),
             Node(
                 package="warehouse_mapping_bridge",
-                executable="warehouse_odometry_export",
-                name="warehouse_odometry_export",
-                output="screen",
-            ),
-            Node(
-                package="warehouse_mapping_bridge",
                 executable="warehouse_vision_mavlink_bridge",
                 name="warehouse_vision_mavlink_bridge",
                 output="screen",

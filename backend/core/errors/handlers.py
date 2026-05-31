@@ -79,13 +79,18 @@ def _response(
 
 
 def _safe_http_message(status_code: int, detail: Any) -> tuple[str, Any]:
-    if status_code >= 500:
+    if status_code >= 500 and status_code not in {503}:
         return "Internal server error", {}
     if isinstance(detail, str):
         return detail, {}
     if isinstance(detail, dict):
         message = str(detail.get("message", "Request failed"))
-        return message, detail.get("details", {})
+        details = {
+            key: value
+            for key, value in detail.items()
+            if key != "message"
+        }
+        return message, details
     return "Request failed", {}
 
 

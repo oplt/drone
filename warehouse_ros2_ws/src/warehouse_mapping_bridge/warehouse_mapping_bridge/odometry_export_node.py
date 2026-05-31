@@ -20,7 +20,6 @@ def main() -> None:
     import rclpy
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
-    from std_msgs.msg import String
 
     class WarehouseOdometryExport(Node):
         def __init__(self) -> None:
@@ -30,7 +29,11 @@ def main() -> None:
             self.state_path = Path(
                 os.getenv("WAREHOUSE_ODOMETRY_STATE_PATH", str(self.config.odometry_state_path))
             ).expanduser()
-            self.publisher = self.create_publisher(String, self.topics["local_odometry"], 20)
+            self.publisher = self.create_publisher(
+                Odometry,
+                self.topics["local_odometry"],
+                20,
+            )
             self.create_subscription(
                 Odometry,
                 self.topics["visual_slam_odom"],
@@ -76,9 +79,7 @@ def main() -> None:
             }
             self.state_path.parent.mkdir(parents=True, exist_ok=True)
             self.state_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
-            msg = String()
-            msg.data = json.dumps(payload, sort_keys=True)
-            self.publisher.publish(msg)
+            self.publisher.publish(message)
 
     rclpy.init()
     node = WarehouseOdometryExport()

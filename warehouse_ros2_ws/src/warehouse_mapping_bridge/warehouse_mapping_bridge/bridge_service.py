@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -74,8 +75,8 @@ logger.info(
 
 
 @app.get("/health")
-async def health() -> dict[str, Any]:
-    return state.health()
+async def health(deep: bool = False) -> dict[str, Any]:
+    return await asyncio.to_thread(state.health, deep=deep)
 
 
 @app.get("/exploration/snapshot")

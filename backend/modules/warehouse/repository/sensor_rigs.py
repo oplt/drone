@@ -194,6 +194,7 @@ class WarehouseSensorRigMixin:
                 active=True,
             )
             await db.flush()
+            await db.refresh(existing)
             return existing
 
         rig = WarehouseSensorRig()
@@ -213,6 +214,7 @@ class WarehouseSensorRigMixin:
         )
         db.add(rig)
         await db.flush()
+        await db.refresh(rig)
         return rig
 
     async def update_sensor_rig_calibration(
@@ -237,6 +239,7 @@ class WarehouseSensorRigMixin:
             rig.imu_transform_json = dict(imu_transform_json)
         rig.calibration_meta = dict(calibration_meta)
         await db.flush()
+        await db.refresh(rig)
         return rig
 
     async def delete_sensor_rig(

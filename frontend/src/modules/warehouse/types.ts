@@ -101,4 +101,5 @@ export type WarehouseSensorRigHealth = {
   };
   ready: boolean;
   blockers: string[];
+  warnings?: string[];
 };

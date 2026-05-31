@@ -103,7 +103,7 @@ async def _warehouse_perception_preflight_overrides(
     try:
         from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
 
-        status = await build_warehouse_perception_port().status()
+        status = await build_warehouse_perception_port().status(deep=True)
     except Exception as exc:
         logger.warning("Warehouse perception preflight status failed: %s", exc)
         status = WarehousePerceptionStatus(
@@ -793,7 +793,16 @@ def _preflight_record_out(rec: _PreflightRunRecord) -> PreflightRunOut:
     )
 
 
-async def _ensure_drone_ready_for_preflight(orch: Any) -> None:
+async def _ensure_drone_ready_for_preflight(orch: Any, payload: MissionCreateIn | None = None) -> None:
+    if payload is not None and payload.mission_type in {
+        MissionType.WAREHOUSE_SCAN,
+        MissionType.INDOOR_EXPLORATION,
+    }:
+        logger.info(
+            "Skipping MAVLink connect for %s preflight; using warehouse ROS perception checks",
+            payload.mission_type.value,
+        )
+        return
     try:
         await asyncio.to_thread(orch.drone.get_telemetry)
         return
@@ -1476,7 +1485,7 @@ async def run_preflight(
         )
 
     try:
-        await _ensure_drone_ready_for_preflight(orch)
+        await _ensure_drone_ready_for_preflight(orch, payload)
         preflight_data_fn = getattr(mission, "get_preflight_mission_data", None)
         mission_data_override = preflight_data_fn() if callable(preflight_data_fn) else None
         config_overrides = await _warehouse_perception_preflight_overrides(mission_data_override)

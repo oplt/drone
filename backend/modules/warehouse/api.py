@@ -48,6 +48,56 @@ logger = logging.getLogger(__name__)
 _WAREHOUSE_SETTINGS_SECTION = "warehouse"
 _WAREHOUSE_MISSION_DEFAULTS_KEY = "mission_defaults"
 
+
+async def _require_warehouse_mapping_readiness() -> None:
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        ensure_warehouse_mapping_ready_for_preflight,
+    )
+
+    readiness = await ensure_warehouse_mapping_ready_for_preflight()
+    if not readiness.stack_status.running:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Warehouse mapping stack could not be started.",
+                "readiness": readiness.to_dict(),
+            },
+        )
+    if not readiness.sensors_ready or not readiness.nvblox_ready:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Warehouse mapping stack is not ready for preflight.",
+                "readiness": readiness.to_dict(),
+                "missing_required_topics": list(readiness.missing_required),
+                "missing_nvblox_topics": list(readiness.missing_nvblox),
+                "ros_graph_ready": readiness.ros_graph_ready,
+                "suggested_actions": list(readiness.suggested_actions),
+                "topic_diagnostics": readiness.topic_diagnostics,
+            },
+        )
+
+
+async def _run_warehouse_preflight(mission_payload: routes_flights.MissionCreateIn, user: object):
+    try:
+        return await routes_flights.run_preflight(mission_payload, user=user)
+    except HTTPException as exc:
+        if exc.status_code == 500:
+            detail_text = str(exc.detail)
+            if "wait_ready" in detail_text.lower() or "heartbeat" in detail_text.lower():
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "message": "Autopilot MAVLink is unavailable for this warehouse mission.",
+                        "hint": (
+                            "Warehouse missions use ROS/Gazebo odometry when "
+                            "WAREHOUSE_GAZEBO_SIM=1; MAVLink SITL is optional."
+                        ),
+                        "error": detail_text,
+                    },
+                ) from exc
+        raise
+
 # ------------------------------------------------------------------ schemas
 
 
@@ -289,6 +339,7 @@ class WarehouseSensorRigHealthOut(BaseModel):
     perception: WarehousePerceptionStatus
     ready: bool
     blockers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class WarehousePerceptionHealthOut(WarehousePerceptionStatus):
@@ -584,6 +635,7 @@ async def get_sensor_rig_health(
 
     perception = await get_warehouse_perception_port().status()
     blockers: list[str] = []
+    warnings: list[str] = []
     if rig.calibration_status != "valid":
         blockers.append(f"Calibration status is {rig.calibration_status}.")
     if not rig.intrinsics_url:
@@ -595,13 +647,18 @@ async def get_sensor_rig_health(
     elif not perception.reachable:
         blockers.append("Warehouse ROS bridge is unreachable.")
     elif not perception.ready:
-        blockers.append("Warehouse ROS perception stack is not ready.")
+        # Mapping stack + live sensor topics are started at flight time; do not
+        # block rig registration while only the HTTP bridge is up.
+        warnings.append(
+            "Warehouse ROS perception stack is idle. It starts when a warehouse flight begins."
+        )
 
     return WarehouseSensorRigHealthOut(
         sensor_rig=_sensor_rig_out(rig),
         perception=perception,
         ready=not blockers,
         blockers=blockers,
+        warnings=warnings,
     )
 
 
@@ -961,7 +1018,8 @@ async def start_warehouse_scan(
         ),
     )
 
-    preflight = await routes_flights.run_preflight(mission_payload, user=user)
+    await _require_warehouse_mapping_readiness()
+    preflight = await _run_warehouse_preflight(mission_payload, user=user)
     if not preflight.can_start_mission:
         raise HTTPException(
             status_code=412,
@@ -1275,7 +1333,8 @@ async def start_warehouse_exploration(
         warehouse_exploration=exploration_payload,
     )
 
-    preflight = await routes_flights.run_preflight(mission_payload, user=user)
+    await _require_warehouse_mapping_readiness()
+    preflight = await _run_warehouse_preflight(mission_payload, user=user)
     if not preflight.can_start_mission:
         raise HTTPException(
             status_code=412,

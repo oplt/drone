@@ -7,6 +7,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -14,7 +15,12 @@ from time import monotonic
 from pathlib import Path
 from typing import Any
 
-from .config import BridgeConfig, topic_env
+from .config import BridgeConfig, topic_aliases, topic_env, topic_registry
+from .topic_diagnostics import (
+    probe_gazebo_sensors,
+    probe_topics,
+    summarize_diagnostics,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +104,15 @@ class MappingSession:
 
 
 class BridgeState:
-    TOPIC_CACHE_GRACE_S = 10.0
+    TOPIC_CACHE_GRACE_S = 30.0
+    TOPIC_PROBE_ATTEMPTS = 3
+
+    HEALTH_CACHE_TTL_S = 5.0
+    FAST_HEALTH_CACHE_S = 1.0
+    TF_PROBE_INTERVAL_S = 15.0
+    TOPIC_FAST_CACHE_S = 5.0
+    DEEP_HEALTH_STALE_S = 20.0
+    DEEP_REFRESH_INTERVAL_S = 8.0
 
     def __init__(self, config: BridgeConfig) -> None:
         self.config = config
@@ -109,65 +123,182 @@ class BridgeState:
         self._last_nonempty_topics_at = 0.0
         self._last_probe_error: str | None = None
         self._last_health_signature: tuple[object, ...] | None = None
+        self._health_cache: tuple[float, dict[str, Any]] | None = None
+        self._deep_health_cache: tuple[float, dict[str, Any]] | None = None
+        self._health_lock = threading.Lock()
+        self._last_tf_probe_at = 0.0
+        self._last_tf_probe_result: object | None = None
+        if self._background_probe_enabled():
+            threading.Thread(
+                target=self._deep_health_refresh_loop,
+                daemon=True,
+                name="warehouse-health-probe",
+            ).start()
 
-    def health(self) -> dict[str, Any]:
+    @staticmethod
+    def _background_probe_enabled() -> bool:
+        raw = os.getenv("WAREHOUSE_HEALTH_BACKGROUND_PROBE", "1").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _deep_probe_enabled() -> bool:
+        raw = os.getenv("WAREHOUSE_HEALTH_DEEP_PROBE", "0").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    def _deep_health_refresh_loop(self) -> None:
+        interval_s = float(
+            os.getenv("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", str(self.DEEP_REFRESH_INTERVAL_S))
+        )
+        while True:
+            try:
+                payload = self._build_health(deep=True)
+                with self._health_lock:
+                    self._deep_health_cache = (monotonic(), payload)
+            except Exception:
+                logger.exception("Warehouse deep health refresh failed")
+            time.sleep(max(1.0, interval_s))
+
+    def health(self, *, deep: bool = False) -> dict[str, Any]:
+        if deep:
+            payload = self._build_health(deep=True)
+            with self._health_lock:
+                self._deep_health_cache = (monotonic(), payload)
+            payload = dict(payload)
+            payload["probe_mode"] = "deep"
+            return payload
+
+        stale_s = float(os.getenv("WAREHOUSE_HEALTH_DEEP_STALE_S", str(self.DEEP_HEALTH_STALE_S)))
+        with self._health_lock:
+            if self._deep_health_cache is not None:
+                cached_at, cached_payload = self._deep_health_cache
+                age_s = monotonic() - cached_at
+                if age_s <= stale_s:
+                    payload = dict(cached_payload)
+                    payload["probe_mode"] = "deep_cached"
+                    payload["probe_age_s"] = round(age_s, 2)
+                    return payload
+
+        now = monotonic()
+        if self._health_cache is not None:
+            cached_at, cached_payload = self._health_cache
+            if now - cached_at <= self.FAST_HEALTH_CACHE_S:
+                return cached_payload
+
+        payload = self._build_health(deep=False)
+        payload = dict(payload)
+        payload["probe_mode"] = "shallow"
+        self._health_cache = (now, payload)
+        return payload
+
+    def _build_health(self, *, deep: bool) -> dict[str, Any]:
+        registry = topic_registry()
         topics = topic_env()
-        listed_topics = self._stable_ros2_topics()
+        listed_topics = self._stable_ros2_topics(fast=not deep)
         disk = shutil.disk_usage(self.config.capture_root)
         odometry_state = self._read_odometry_state()
-        topic_health = {
-            key: self._topic_present(topic, listed_topics) for key, topic in topics.items()
-        }
-        rgb_camera_ready = topic_health["rgb_image"] or topic_health["rgb_image_compressed"]
-        left_camera_ready = topic_health["left_image"] or topic_health["left_image_compressed"]
-        right_camera_ready = topic_health["right_image"] or topic_health["right_image_compressed"]
-        camera_ready = rgb_camera_ready or (left_camera_ready and right_camera_ready)
-        vslam_ready = topic_health["visual_slam_odom"] or topic_health["local_odometry"]
-        nvblox_ready = (
-            topic_health["pointcloud"]
-            or topic_health["mesh"]
-            or topic_health["occupancy"]
-            or topic_health["esdf"]
+
+        probe_keys = sorted(
+            set(registry.required_for_perception)
+            | set(registry.required_for_nvblox_any)
+            | {"left_image", "right_image", "mesh"}
         )
-        ros_graph_ready = listed_topics is not None
+        deep_probe = deep or self._deep_probe_enabled()
+        if deep_probe:
+            diagnostics = probe_topics(listed_topics, keys=probe_keys)
+        else:
+            diagnostics = {
+                key: self._shallow_topic_diagnostic(key, topics.get(key, ""), listed_topics)
+                for key in probe_keys
+                if topics.get(key)
+            }
+
+        summary = summarize_diagnostics(diagnostics)
+        topic_health = {key: diag.healthy for key, diag in diagnostics.items()}
+        topic_presence = {key: diag.listed or diag.publisher_count > 0 for key, diag in diagnostics.items()}
+
+        rgb_ok = topic_health.get("rgb_image", False)
+        left_ok = topic_health.get("left_image", False)
+        right_ok = topic_health.get("right_image", False)
+        camera_ready = rgb_ok or (left_ok and right_ok)
+
+        vslam_diag = diagnostics.get("visual_slam_odom")
+        local_odom_diag = diagnostics.get("local_odometry")
+        imu_diag = diagnostics.get("imu")
+        vslam_ready = bool(vslam_diag and vslam_diag.healthy)
+        local_odom_ready = bool(local_odom_diag and local_odom_diag.healthy)
+
+        nvblox_ready = any(
+            topic_health.get(key, False)
+            for key in registry.required_for_nvblox_any
+        )
+        ros_graph_ready = listed_topics is not None and len(listed_topics) > 0
+
         missing_required = [
             key
-            for key in (
-                "rgb_image",
-                "left_image",
-                "right_image",
-                "depth",
-                "raw_lidar",
-                "imu",
-                "visual_slam_odom",
-                "local_odometry",
-            )
-            if not topic_health.get(key)
+            for key in summary["missing_required_topics"]
+            if key not in {"rgb_image", "left_image", "right_image"}
         ]
-        missing_nvblox = [
-            key
-            for key in (
-                "pointcloud",
-                "mesh",
-                "mesh_marker",
-                "occupancy",
-                "esdf",
-                "back_projected_depth",
-            )
-            if not topic_health.get(key)
-        ]
+        if not camera_ready:
+            missing_required.append("rgb_image")
+        missing_nvblox = list(summary["missing_nvblox_topics"])
+
+        gazebo_status = None
+        if registry.profile == "gazebo" and deep:
+            gazebo_status = probe_gazebo_sensors()
+
+        if deep:
+            tf_diag = self._cached_tf_chain_probe()
+        else:
+            tf_diag = self._tf_from_deep_cache()
+        tf_tree = tf_diag.chain_ok if tf_diag is not None else False
+        override_tf = self._optional_bool_env("WAREHOUSE_TF_TREE_OK")
+        if override_tf is not None:
+            tf_tree = override_tf
+
+        stereo_sync = self._optional_bool_env("WAREHOUSE_STEREO_SYNC_OK")
+        if stereo_sync is None and left_ok and right_ok:
+            stereo_sync = True
+
+        perception_ready = bool(
+            ros_graph_ready
+            and camera_ready
+            and topic_health.get("depth", False)
+            and topic_health.get("imu", False)
+            and topic_health.get("raw_lidar", False)
+            and vslam_ready
+            and local_odom_ready
+            and tf_tree
+        )
+
+        health_detail = self._format_health_detail(
+            missing_required=missing_required,
+            missing_nvblox=missing_nvblox,
+            nvblox_ready=nvblox_ready,
+            summary=summary,
+            tf_detail=(
+                tf_diag.detail
+                if tf_diag
+                else ("tf diagnostics pending" if not deep else "tf probe unavailable")
+            ),
+            gazebo=gazebo_status if registry.profile == "gazebo" else None,
+        )
+
         self._log_health_change(
             ros_graph_ready=ros_graph_ready,
-            ready=bool(ros_graph_ready and camera_ready and topic_health["imu"] and vslam_ready),
+            ready=perception_ready,
             topic_count=len(listed_topics) if listed_topics is not None else None,
             missing_required=missing_required,
             missing_nvblox=missing_nvblox,
             probe_error=self._last_probe_error,
+            topic_matches=summary.get("topic_matches", {}),
         )
+        diagnostics_payload = {key: diag.to_dict() for key, diag in diagnostics.items()}
         return {
-            "status": "ready" if ros_graph_ready else "degraded",
-            "ready": bool(ros_graph_ready and camera_ready and topic_health["imu"] and vslam_ready),
+            "status": "ready" if perception_ready else "degraded",
+            "ready": perception_ready,
+            "detail": health_detail,
             "profile": self.config.profile,
+            "topic_profile": registry.profile,
             "capture_root": str(self.config.capture_root),
             "websocket_url": self.config.ros_ws_url,
             "components": {
@@ -181,24 +312,41 @@ class BridgeState:
                 "ros_topic_probe_error": self._last_probe_error,
                 "missing_required_topics": missing_required,
                 "missing_nvblox_topics": missing_nvblox,
-                "topic_presence": topic_health,
+                "topic_presence": topic_presence,
+                "topic_diagnostics": diagnostics_payload,
+                "topic_matches": summary.get("topic_matches", {}),
                 "camera_topics": camera_ready,
-                "imu_topic": topic_health["imu"],
+                "imu_topic": bool(imu_diag and imu_diag.healthy),
+                "imu_healthy": bool(imu_diag and imu_diag.healthy),
+                "raw_lidar_healthy": bool(
+                    diagnostics.get("raw_lidar") and diagnostics["raw_lidar"].healthy
+                ),
                 "visual_slam": vslam_ready,
+                "vslam": vslam_ready,
+                "visual_slam_tracking": vslam_ready,
+                "visual_slam_healthy": vslam_ready,
+                "local_odometry_healthy": local_odom_ready,
                 "local_position_ok": bool(odometry_state.get("local_position_ok", False)),
-                "slam_ready": bool(odometry_state.get("slam_ready", vslam_ready)),
-                "slam_tracking_ok": bool(odometry_state.get("slam_tracking_ok", vslam_ready)),
+                "slam_ready": vslam_ready and bool(odometry_state.get("slam_ready", True)),
+                "slam_tracking_ok": vslam_ready and bool(odometry_state.get("slam_tracking_ok", True)),
                 "localization_confidence": odometry_state.get("localization_confidence"),
                 "odometry_drift_m": odometry_state.get("odometry_drift_m"),
                 "local_odometry_state": odometry_state,
                 "nvblox": nvblox_ready,
+                "nvblox_healthy": nvblox_ready,
+                "nvblox_warming_up": bool(
+                    not nvblox_ready
+                    and listed_topics is not None
+                    and self._nvblox_node_present(listed_topics)
+                ),
+                "tf_chain": tf_diag.to_dict() if tf_diag else None,
                 "ros_bridge_heartbeat": True,
                 "obstacle_distance_m": self._optional_float_env("WAREHOUSE_OBSTACLE_DISTANCE_M"),
                 "ceiling_distance_m": self._optional_float_env("WAREHOUSE_CEILING_DISTANCE_M"),
                 "frontier_count": self._optional_float_env("WAREHOUSE_FRONTIER_COUNT"),
                 "exploration_state": self._optional_str_env("WAREHOUSE_EXPLORATION_STATE"),
-                "stereo_sync": self._optional_bool_env("WAREHOUSE_STEREO_SYNC_OK"),
-                "tf_tree": self._optional_bool_env("WAREHOUSE_TF_TREE_OK"),
+                "stereo_sync": stereo_sync,
+                "tf_tree": tf_tree,
                 "dock_marker": self._optional_bool_env("WAREHOUSE_DOCK_MARKER_VISIBLE"),
                 "dock_marker_family": self._optional_str_env("WAREHOUSE_DOCK_MARKER_FAMILY"),
                 "dock_marker_id": self._optional_str_env("WAREHOUSE_DOCK_MARKER_ID"),
@@ -208,8 +356,125 @@ class BridgeState:
                 ),
                 "disk_free_bytes": disk.free,
                 "disk_free_gb": round(disk.free / 1_000_000_000.0, 2),
+                "gazebo": gazebo_status,
             },
         }
+
+    @staticmethod
+    def _format_health_detail(
+        *,
+        missing_required: list[str],
+        missing_nvblox: list[str],
+        nvblox_ready: bool,
+        summary: dict[str, object],
+        tf_detail: str,
+        gazebo: dict[str, Any] | None = None,
+    ) -> str | None:
+        parts: list[str] = []
+        if missing_required:
+            parts.append(f"Missing required topics: {', '.join(missing_required)}")
+        if missing_nvblox and not nvblox_ready:
+            parts.append(f"Missing nvblox topics: {', '.join(missing_nvblox)}")
+        if tf_detail and tf_detail != "ok":
+            parts.append(f"TF chain: {tf_detail}")
+        if isinstance(gazebo, dict) and not gazebo.get("sim_publishing"):
+            parts.append(
+                "Gazebo sensors not publishing (press Play in sim or start with gz sim -r ...)"
+            )
+        matches = summary.get("topic_matches")
+        if isinstance(matches, dict):
+            for key, payload in matches.items():
+                if not isinstance(payload, dict):
+                    continue
+                if payload.get("healthy"):
+                    continue
+                expected = payload.get("expected")
+                matched = payload.get("matched")
+                error = payload.get("error")
+                publishers = payload.get("publisher_count")
+                publishing = payload.get("publishing")
+                message_type = payload.get("message_type")
+                verify_cmd = payload.get("verify_cmd")
+                detail_bits = [
+                    f"expected={expected}",
+                    f"matched={matched or 'none'}",
+                ]
+                if publishers is not None:
+                    detail_bits.append(f"publishers={publishers}")
+                if publishing is not None:
+                    detail_bits.append(f"messages={publishing}")
+                if message_type:
+                    detail_bits.append(f"type={message_type}")
+                detail_bits.append(f"reason={error or 'unhealthy'}")
+                if verify_cmd:
+                    detail_bits.append(f"verify=`{verify_cmd}`")
+                parts.append(f"{key}: " + " ".join(detail_bits))
+        return "; ".join(parts) if parts else None
+
+    @classmethod
+    def _shallow_topic_diagnostic(cls, key: str, primary: str, listed_topics: set[str] | None):
+        from .topic_diagnostics import TopicDiagnostic
+
+        matched = cls._topic_key_present(key, primary, listed_topics)
+        alias = None
+        if matched:
+            alias = primary if primary in (listed_topics or set()) else None
+            if alias is None:
+                for candidate in topic_registry().aliases.get(key, []):
+                    if listed_topics and candidate in listed_topics:
+                        alias = candidate
+                        break
+        return TopicDiagnostic(
+            key=key,
+            expected=primary,
+            matched=alias if matched else None,
+            listed=bool(matched),
+            publisher_count=0,
+            publishing=False,
+            hz=None,
+            last_message_age_s=None,
+            message_type=None,
+            healthy=False,
+            error="shallow probe only — topic listed, publishers/messages not verified",
+            readiness_state="shallow_pending" if matched else "topic_missing",
+        )
+
+    def _tf_from_deep_cache(self):
+        from .topic_diagnostics import TfChainDiagnostic
+
+        with self._health_lock:
+            if self._deep_health_cache is None:
+                return None
+            _, payload = self._deep_health_cache
+        tf_chain = payload.get("components", {}).get("tf_chain") if isinstance(payload, dict) else None
+        if not isinstance(tf_chain, dict):
+            return None
+        return TfChainDiagnostic(
+            odom_frame=str(tf_chain.get("odom_frame", "odom")),
+            base_link_frame=str(tf_chain.get("base_link_frame", "base_link")),
+            camera_frame=str(tf_chain.get("camera_frame", "front_rgbd_camera_link")),
+            odom_to_base_link=bool(tf_chain.get("odom_to_base_link")),
+            base_link_to_camera=bool(tf_chain.get("base_link_to_camera")),
+            chain_ok=bool(tf_chain.get("chain_ok")),
+            detail=str(tf_chain.get("detail") or "unknown"),
+        )
+
+    def _cached_tf_chain_probe(self):
+        from .topic_diagnostics import TfChainDiagnostic, probe_tf_chain
+
+        if not self._tf_probe_enabled():
+            return None
+        now = monotonic()
+        if (
+            self._last_tf_probe_result is not None
+            and now - self._last_tf_probe_at <= self.TF_PROBE_INTERVAL_S
+            and isinstance(self._last_tf_probe_result, TfChainDiagnostic)
+        ):
+            return self._last_tf_probe_result
+        result = probe_tf_chain()
+        self._last_tf_probe_at = now
+        self._last_tf_probe_result = result
+        return result
 
     def exploration_snapshot(self) -> dict[str, Any]:
         odometry_state = self._read_odometry_state()
@@ -305,55 +570,203 @@ class BridgeState:
 
     @staticmethod
     def _topic_present(topic: str, listed_topics: set[str] | None) -> bool:
-        if listed_topics is None:
+        if listed_topics is None or not topic:
             return False
         return topic in listed_topics
+
+    @classmethod
+    def _topic_key_present(
+        cls,
+        key: str,
+        topic: str,
+        listed_topics: set[str] | None,
+    ) -> bool:
+        if cls._topic_present(topic, listed_topics):
+            return True
+        for alias in topic_aliases().get(key, []):
+            if cls._topic_present(alias, listed_topics):
+                return True
+        return False
+
+    @staticmethod
+    def _warehouse_topic_cache_usable(topics: set[str]) -> bool:
+        if not topics:
+            return False
+        if any(name.startswith("/nvblox_node/") for name in topics):
+            return True
+        markers = (
+            "/warehouse/",
+            "/world/",
+            "/scan",
+            "/visual_slam/",
+        )
+        return any(any(name.startswith(prefix) for prefix in markers) for name in topics)
+
+    @staticmethod
+    def _sim_tf_broadcaster_active() -> bool:
+        if not shutil.which("ros2"):
+            return False
+        ros_distro = os.getenv("ROS_DISTRO", "jazzy")
+        ros_domain_id = os.getenv("ROS_DOMAIN_ID", "0")
+        cmd = (
+            f"source /opt/ros/{ros_distro}/setup.bash && "
+            f"export ROS_DOMAIN_ID={ros_domain_id} && "
+            "ros2 topic info /tf -v"
+        )
+        try:
+            result = subprocess.run(
+                ["bash", "-lc", cmd],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=3.0,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+        return "warehouse_sim_tf_broadcaster" in f"{result.stdout}\n{result.stderr}"
+
+    @staticmethod
+    def _listed_nvblox_outputs(listed_topics: set[str] | None) -> bool:
+        if not listed_topics:
+            return False
+        prefix = os.getenv("WAREHOUSE_NVBLOX_TOPIC_PREFIX", "/nvblox_node/")
+        signals = ("mesh", "esdf", "occupancy", "pointcloud", "tsdf", "map_slice")
+        return any(
+            name.startswith(prefix) and any(signal in name for signal in signals)
+            for name in listed_topics
+        )
+
+    @staticmethod
+    def _nvblox_node_present(listed_topics: set[str] | None) -> bool:
+        if not listed_topics:
+            return False
+        prefix = os.getenv("WAREHOUSE_NVBLOX_TOPIC_PREFIX", "/nvblox_node/")
+        return any(name.startswith(prefix) for name in listed_topics)
+
+    @staticmethod
+    def _ros2_topic_list_cmd() -> str:
+        ros_distro = os.getenv("ROS_DISTRO", "jazzy")
+        ros_domain_id = os.getenv("ROS_DOMAIN_ID", "0")
+        ros_ws_setup = os.getenv("ROS_WS_SETUP", "").strip()
+        source_ws = f'source "{ros_ws_setup}" && ' if ros_ws_setup else ""
+        return (
+            f"source /opt/ros/{ros_distro}/setup.bash && "
+            f"{source_ws}"
+            f"export ROS_DOMAIN_ID={ros_domain_id} && "
+            "ros2 topic list --no-daemon"
+        )
+
+    def _cached_tf_tree_probe(self, *, parent_frame: str, child_frame: str) -> bool | None:
+        if not self._tf_probe_enabled():
+            return None
+        now = monotonic()
+        if now - self._last_tf_probe_at <= self.TF_PROBE_INTERVAL_S:
+            return self._last_tf_probe_result
+        result = self._probe_tf_tree(parent_frame=parent_frame, child_frame=child_frame)
+        self._last_tf_probe_at = now
+        self._last_tf_probe_result = result
+        return result
+
+    @staticmethod
+    def _tf_probe_enabled() -> bool:
+        raw = os.getenv("WAREHOUSE_TF_PROBE_ON_HEALTH", "1").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @classmethod
+    def _probe_tf_tree(cls, *, parent_frame: str, child_frame: str) -> bool | None:
+        if not shutil.which("ros2"):
+            return None
+        ros_distro = os.getenv("ROS_DISTRO", "jazzy")
+        ros_domain_id = os.getenv("ROS_DOMAIN_ID", "0")
+        cmd = (
+            f"source /opt/ros/{ros_distro}/setup.bash && "
+            f"export ROS_DOMAIN_ID={ros_domain_id} && "
+            f"timeout 1.0 ros2 run tf2_ros tf2_echo {shlex.quote(parent_frame)} "
+            f"{shlex.quote(child_frame)}"
+        )
+        try:
+            result = subprocess.run(
+                ["bash", "-lc", cmd],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=4.0,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        output = f"{result.stdout}\n{result.stderr}"
+        if "At time" in output or "Translation:" in output:
+            return True
+        if "Invalid frame ID" in output or "Could not transform" in output:
+            return False
+        return None
 
     @staticmethod
     def _ros2_topics() -> set[str] | None:
         if not shutil.which("ros2"):
             logger.warning("ROS 2 CLI not found while probing warehouse topics")
             return None
-        try:
-            result = subprocess.run(
-                ["ros2", "topic", "list", "--no-daemon"],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=5.0,
-            )
-        except subprocess.TimeoutExpired:
-            logger.warning("ROS 2 topic probe timed out after %.1fs", 5.0)
-            return None
-        except Exception as exc:
-            logger.warning("ROS 2 topic probe failed: %s", exc)
-            return None
-        if result.returncode != 0:
-            stderr = result.stderr.strip()[-500:]
-            logger.warning(
-                "ROS 2 topic probe returned non-zero returncode=%s stderr=%s",
-                result.returncode,
-                stderr,
-                extra={
-                    "returncode": result.returncode,
-                    "stderr": stderr,
-                },
-            )
-            return None
-        return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+        best: set[str] | None = None
+        last_error: str | None = None
+        for attempt in range(BridgeState.TOPIC_PROBE_ATTEMPTS):
+            try:
+                result = subprocess.run(
+                    ["bash", "-lc", BridgeState._ros2_topic_list_cmd()],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=10.0,
+                )
+            except subprocess.TimeoutExpired:
+                last_error = "ros2 topic list timed out"
+                if attempt + 1 < BridgeState.TOPIC_PROBE_ATTEMPTS:
+                    time.sleep(0.75)
+                continue
+            except Exception as exc:
+                last_error = f"ros2 topic list failed: {exc}"
+                if attempt + 1 < BridgeState.TOPIC_PROBE_ATTEMPTS:
+                    time.sleep(0.75)
+                continue
+            if result.returncode != 0:
+                stderr = result.stderr.strip()[-500:]
+                last_error = f"ros2 topic list returned {result.returncode}: {stderr}"
+                if attempt + 1 < BridgeState.TOPIC_PROBE_ATTEMPTS:
+                    time.sleep(0.75)
+                continue
+            topics = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+            if best is None or len(topics) > len(best):
+                best = topics
+            if len(topics) >= 8:
+                return topics
+            if attempt + 1 < BridgeState.TOPIC_PROBE_ATTEMPTS:
+                time.sleep(0.75)
+        if best is not None:
+            return best
+        if last_error:
+            logger.warning("ROS 2 topic probe failed after retries: %s", last_error)
+        return None
 
-    def _stable_ros2_topics(self) -> set[str] | None:
-        listed_topics = self._ros2_topics()
+    def _stable_ros2_topics(self, *, fast: bool = False) -> set[str] | None:
         now = monotonic()
+        if (
+            self._last_nonempty_topics is not None
+            and self._warehouse_topic_cache_usable(self._last_nonempty_topics)
+            and (
+                fast
+                or now - self._last_nonempty_topics_at <= self.TOPIC_FAST_CACHE_S
+            )
+        ):
+            return self._last_nonempty_topics
+        listed_topics = self._ros2_topics()
         if listed_topics:
             self._last_nonempty_topics = listed_topics
             self._last_nonempty_topics_at = now
             self._last_probe_error = None
             return listed_topics
         if (
-            listed_topics == set()
-            and self._last_nonempty_topics is not None
+            self._last_nonempty_topics is not None
             and now - self._last_nonempty_topics_at <= self.TOPIC_CACHE_GRACE_S
+            and self._warehouse_topic_cache_usable(self._last_nonempty_topics)
         ):
             logger.info(
                 "Using cached warehouse ROS topics after empty probe count=%s age_s=%.2f",
@@ -380,6 +793,7 @@ class BridgeState:
         missing_required: list[str],
         missing_nvblox: list[str],
         probe_error: str | None,
+        topic_matches: dict[str, object] | None = None,
     ) -> None:
         signature = (
             ros_graph_ready,
@@ -388,15 +802,22 @@ class BridgeState:
             tuple(missing_required),
             tuple(missing_nvblox),
             probe_error,
+            tuple(sorted((topic_matches or {}).items())),
         )
         if signature == self._last_health_signature:
             return
         self._last_health_signature = signature
         log = logger.info if ready else logger.warning
+        match_summary = {
+            key: payload
+            for key, payload in (topic_matches or {}).items()
+            if isinstance(payload, dict) and not payload.get("healthy")
+        }
         log(
             (
                 "Warehouse ROS bridge health changed ready=%s ros_graph_ready=%s "
-                "topic_count=%s missing_required=%s missing_nvblox=%s probe_error=%s"
+                "topic_count=%s missing_required=%s missing_nvblox=%s probe_error=%s "
+                "unhealthy_topics=%s"
             ),
             ready,
             ros_graph_ready,
@@ -404,6 +825,7 @@ class BridgeState:
             ",".join(missing_required) or "none",
             ",".join(missing_nvblox) or "none",
             probe_error or "none",
+            json.dumps(match_summary, sort_keys=True) if match_summary else "none",
             extra={
                 "ros_graph_ready": ros_graph_ready,
                 "ready": ready,
@@ -411,6 +833,7 @@ class BridgeState:
                 "missing_required_topics": missing_required,
                 "missing_nvblox_topics": missing_nvblox,
                 "probe_error": probe_error,
+                "topic_matches": topic_matches,
             },
         )
 
