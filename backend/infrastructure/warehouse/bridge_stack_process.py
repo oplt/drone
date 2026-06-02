@@ -20,6 +20,11 @@ import json
 import shlex
 import textwrap
 
+from backend.modules.warehouse.service.bridge_flow import (
+    flow_env_overrides,
+    resolve_warehouse_bridge_flow,
+)
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_LOG_DIR = Path("backend/storage/warehouse_ros/logs")
@@ -200,6 +205,26 @@ class WarehouseBridgeStackProcessManager:
 
     @classmethod
     def _build_launch_shell(cls) -> str:
+        flow = resolve_warehouse_bridge_flow()
+        if flow.name != "gazebo":
+            return textwrap.dedent(f"""
+            set -Eeuo pipefail
+            source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash
+            if [ -f "${{ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}}" ]; then
+              source "${{ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}}"
+            else
+              echo "[warehouse_bridge_stack] WARNING: ROS workspace setup not found: ${{ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}}"
+              export PYTHONPATH="$(pwd)/warehouse_ros2_ws/src/warehouse_mapping_bridge:${{PYTHONPATH:-}}"
+            fi
+            export WAREHOUSE_BRIDGE_FLOW={flow.name}
+            export WAREHOUSE_TOPIC_PROFILE={flow.topic_profile}
+            export WAREHOUSE_ROS_PROFILE={flow.ros_profile}
+            export WAREHOUSE_GAZEBO_SIM=0
+            exec ros2 launch warehouse_mapping_bridge {flow.launch_file} \\
+              use_sim_time:={'true' if flow.use_sim_time else 'false'} \\
+              rosbridge_port:=${{ROSBRIDGE_PORT:-9090}}
+            """).strip()
+
         bridge_up = cls._external_bridge_alive()
         rosbridge_up = cls._local_port_in_use(cls._rosbridge_port())
 
@@ -265,13 +290,29 @@ class WarehouseBridgeStackProcessManager:
       set +u
       source "/opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash"
     
-      if [ ! -f "${{ROS_WS_SETUP}}" ]; then
-        echo "[warehouse_bridge_stack] ERROR: ROS workspace setup not found: ${{ROS_WS_SETUP}}"
-        exit 97
+      if [ -f "${{ROS_WS_SETUP}}" ]; then
+        source "${{ROS_WS_SETUP}}"
+      else
+        echo "[warehouse_bridge_stack] WARNING: ROS workspace setup not found: ${{ROS_WS_SETUP}}"
+        export PYTHONPATH="$(pwd)/warehouse_ros2_ws/src/warehouse_mapping_bridge:${{PYTHONPATH:-}}"
       fi
-    
-      source "${{ROS_WS_SETUP}}"
       set -u
+    }}
+
+    run_warehouse_node() {{
+      local executable="$1"
+      local module="$2"
+      if ros2 pkg prefix warehouse_mapping_bridge >/dev/null 2>&1; then
+        bash scripts/procfile.sh ros2 run warehouse_mapping_bridge "$executable"
+      else
+        echo "[warehouse_bridge_stack] package not installed; running source module $module"
+        WAREHOUSE_BRIDGE_PYTHON="${{WAREHOUSE_BRIDGE_PYTHON:-$(pwd)/.venv/bin/python}}"
+        if [ ! -x "$WAREHOUSE_BRIDGE_PYTHON" ]; then
+          WAREHOUSE_BRIDGE_PYTHON="$(command -v python3)"
+        fi
+        PYTHONPATH="$(pwd)/warehouse_ros2_ws/src/warehouse_mapping_bridge:${{PYTHONPATH:-}}" \\
+          "$WAREHOUSE_BRIDGE_PYTHON" -m "$module"
+      fi
     }}
     
     safe_kill_pattern() {{
@@ -353,12 +394,15 @@ class WarehouseBridgeStackProcessManager:
     
     start_if_missing 'start_gazebo_sensor_bridge.sh' \\
       bash -lc 'exec bash "$(pwd)/scripts/start_gazebo_sensor_bridge.sh"'
+
+    start_if_missing 'warehouse_topic_adapter' \\
+      run_warehouse_node warehouse_topic_adapter warehouse_mapping_bridge.topic_adapter_node
     
     start_if_missing 'warehouse_sim_tf_broadcaster' \\
-      bash scripts/procfile.sh ros2 run warehouse_mapping_bridge warehouse_sim_tf_broadcaster
+      run_warehouse_node warehouse_sim_tf_broadcaster warehouse_mapping_bridge.sim_tf_broadcaster_node
     
     start_if_missing 'warehouse_odometry_export' \\
-      bash scripts/procfile.sh ros2 run warehouse_mapping_bridge warehouse_odometry_export
+      run_warehouse_node warehouse_odometry_export warehouse_mapping_bridge.odometry_export_node
     
     if [ "${{WAREHOUSE_SKIP_BRIDGE_LAUNCH}}" != "1" ]; then
       echo "[warehouse_bridge_stack] starting warehouse_bridge.sh"
@@ -392,27 +436,30 @@ class WarehouseBridgeStackProcessManager:
         for key in ("VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME"):
             env.pop(key, None)
 
-        venv_bin = str(repo_root / ".venv/bin")
+        venv_bins = {
+            str(repo_root / ".venv/bin"),
+            str(repo_root / "backend/.venv/bin"),
+        }
         path = env.get("PATH", "")
-        env["PATH"] = ":".join(part for part in path.split(":") if part and part != venv_bin)
+        env["PATH"] = ":".join(part for part in path.split(":") if part and part not in venv_bins)
 
         env.setdefault("ROS_DISTRO", "jazzy")
         env.setdefault("ROS_DOMAIN_ID", "42")
         env.setdefault("ROS_WS_SETUP", str(repo_root / "warehouse_ros2_ws/install/setup.bash"))
 
-        # Make Gazebo bridge startup deterministic.
-        env.setdefault("WAREHOUSE_GAZEBO_SIM", "1")
-        env.setdefault("WAREHOUSE_TOPIC_PROFILE", "gazebo")
-        env.setdefault("WAREHOUSE_ROS_PROFILE", "gazebo")
-        env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
+        env.update(flow_env_overrides())
+        if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
+            env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
 
         # Important for real Gazebo readiness, not only HTTP-process readiness.
-        env.setdefault("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", "0")
-        env.setdefault("WAREHOUSE_GAZEBO_SENSOR_WAIT_S", "60")
-        env.setdefault("WAREHOUSE_BRIDGE_WAIT_FOR_TOPICS", "0")
-        env.setdefault("WAREHOUSE_GAZEBO_PROBE_ON_HEALTH", "1")
+        if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
+            env.setdefault("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", "0")
+            env.setdefault("WAREHOUSE_GAZEBO_SENSOR_WAIT_S", "60")
+            env.setdefault("WAREHOUSE_BRIDGE_WAIT_FOR_TOPICS", "0")
+            env.setdefault("WAREHOUSE_GAZEBO_PROBE_ON_HEALTH", "1")
         env.setdefault("WAREHOUSE_TF_PROBE_ON_HEALTH", "1")
         env.setdefault("WAREHOUSE_BRIDGE_PYTHON", str(repo_root / ".venv/bin/python"))
+        env.setdefault("PYTHONNOUSERSITE", "0")
 
         bridge_up = cls._external_bridge_alive()
         rosbridge_up = cls._local_port_in_use(cls._rosbridge_port())

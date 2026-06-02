@@ -32,6 +32,42 @@ def quaternion_to_euler_rad(x: float, y: float, z: float, w: float) -> tuple[flo
     return roll, pitch, yaw
 
 
+def _quaternion_to_matrix(x: float, y: float, z: float, w: float) -> list[list[float]]:
+    norm = math.sqrt(x * x + y * y + z * z + w * w)
+    if norm == 0.0:
+        x, y, z, w = 0.0, 0.0, 0.0, 1.0
+    else:
+        x, y, z, w = x / norm, y / norm, z / norm, w / norm
+    return [
+        [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)],
+        [2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)],
+        [2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)],
+    ]
+
+
+def _matmul(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
+    return [
+        [
+            sum(a[row][col2] * b[col2][col] for col2 in range(3))
+            for col in range(3)
+        ]
+        for row in range(3)
+    ]
+
+
+def _matrix_to_euler_zyx(matrix: list[list[float]]) -> tuple[float, float, float]:
+    # Matrix maps body FRD vectors into world NED. Extract aerospace roll/pitch/yaw.
+    pitch = math.asin(max(-1.0, min(1.0, -matrix[2][0])))
+    if abs(math.cos(pitch)) > 1e-9:
+        roll = math.atan2(matrix[2][1], matrix[2][2])
+        yaw = math.atan2(matrix[1][0], matrix[0][0])
+    else:
+        roll = 0.0
+        yaw = math.atan2(-matrix[0][1], matrix[1][1])
+    yaw = (yaw + math.pi) % (2.0 * math.pi) - math.pi
+    return roll, pitch, yaw
+
+
 def enu_quaternion_to_ned_euler_rad(
     x: float,
     y: float,
@@ -39,12 +75,19 @@ def enu_quaternion_to_ned_euler_rad(
     w: float,
 ) -> tuple[float, float, float]:
     """Convert ROS ENU FLU body orientation to MAVLink local NED FRD Euler angles."""
-    roll_enu, pitch_enu, yaw_enu = quaternion_to_euler_rad(x, y, z, w)
-    roll_ned = roll_enu
-    pitch_ned = -pitch_enu
-    yaw_ned = math.pi / 2.0 - yaw_enu
-    yaw_ned = (yaw_ned + math.pi) % (2.0 * math.pi) - math.pi
-    return roll_ned, pitch_ned, yaw_ned
+    enu_from_flu = _quaternion_to_matrix(x, y, z, w)
+    ned_from_enu = [
+        [0.0, 1.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 0.0, -1.0],
+    ]
+    flu_from_frd = [
+        [1.0, 0.0, 0.0],
+        [0.0, -1.0, 0.0],
+        [0.0, 0.0, -1.0],
+    ]
+    ned_from_frd = _matmul(_matmul(ned_from_enu, enu_from_flu), flu_from_frd)
+    return _matrix_to_euler_zyx(ned_from_frd)
 
 
 def covariance21(position_var_m2: float, angle_var_rad2: float) -> list[float]:

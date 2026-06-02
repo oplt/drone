@@ -1,0 +1,40 @@
+# Required Isaac/NVIDIA ROS stack commands for a complete warehouse mapping flow.
+# Launch arguments override env vars; env vars remain supported for deployments.
+required_commands:
+  - key: camera
+    env: WAREHOUSE_CAMERA_LAUNCH_CMD
+    description: Starts RGB/stereo camera publishers.
+    expected_topics:
+      - /left/image_rect
+      - /right/image_rect
+  - key: imu
+    env: WAREHOUSE_IMU_LAUNCH_CMD
+    description: Starts IMU publisher.
+    expected_topics:
+      - /imu
+  - key: image_pipeline
+    env: WAREHOUSE_IMAGE_PIPELINE_LAUNCH_CMD
+    description: Rectifies/synchronizes image streams.
+    expected_topics:
+      - /left/image_rect
+      - /right/image_rect
+  - key: visual_slam
+    env: WAREHOUSE_VISUAL_SLAM_LAUNCH_CMD
+    description: Starts visual SLAM odometry.
+    expected_topics:
+      - /visual_slam/tracking/odometry
+  - key: depth
+    env: WAREHOUSE_DEPTH_LAUNCH_CMD
+    description: Starts depth estimation or depth camera bridge.
+    expected_topics:
+      - /depth
+  - key: nvblox
+    env: WAREHOUSE_NVBLOX_LAUNCH_CMD
+    description: Starts NVBlox mapping.
+    expected_topics:
+      - /nvblox_node/static_esdf_pointcloud
+      - /nvblox_node/mesh
+optional_commands:
+  - key: rviz
+    env: WAREHOUSE_RVIZ_LAUNCH_CMD
+    description: Starts operator visualization.

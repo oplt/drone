@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   FormControlLabel,
   InputAdornment,
@@ -28,7 +27,6 @@ import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { ApiError } from "../../../shared/api/apiError";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import {
-  MissionCommandPanel,
   MissionStatusChips,
   MissionVideoPanel,
   useAutoStartVideo,
@@ -47,7 +45,6 @@ import {
   listWarehouseScannedMaps,
   startWarehouseScan,
   updateWarehouseMissionDefaults,
-  deleteWarehouseScannedMap,
 } from "../api/warehouseMissionsApi";
 import {
   sendWarehouseFlightCommand,
@@ -62,7 +59,6 @@ import type {
 } from "../types/missions";
 import {
   getWarehouseMapId,
-  getWarehouseName,
   selectScannedMap,
 } from "../scannedMapSelectors";
 import {
@@ -88,16 +84,18 @@ import { WarehouseDrawerSection } from "../components/WarehouseDrawerSection";
 import { WarehouseDockPanel } from "../components/WarehouseDockPanel";
 import { WarehouseExplorationPanel } from "../components/WarehouseExplorationPanel";
 import { WarehouseManualMappingPanel } from "../components/WarehouseManualMappingPanel";
-import { WarehouseMapQualityPanel } from "../components/WarehouseMapQualityPanel";
 import { WarehouseScanViewer } from "../components/WarehouseScanViewer";
 import { WarehouseLiveVoxelMapViewer } from "../components/WarehouseLiveVoxelMapViewer";
+import { WarehouseFlightReadinessPanel } from "../components/WarehouseFlightReadinessPanel";
 import { WarehouseFlightReadinessRibbon } from "../components/WarehouseFlightReadinessRibbon";
+import { WarehouseScanResultsSelector } from "../components/WarehouseScanResultsSelector";
+import { WarehouseMissionStatusSummary } from "../components/WarehouseMissionStatusSummary";
 import {
   WarehouseDeleteConfirmationDialog,
   type WarehouseDeleteTarget,
 } from "../components/WarehouseDeleteConfirmationDialog";
 import { useWarehouseLiveVoxelMap } from "../hooks/useWarehouseLiveVoxelMap";
-import { compareWarehouseScannedMaps } from "../api/warehouseMissionsApi";
+import { useWarehouseFlightReadiness } from "../hooks/useWarehouseFlightReadiness";
 
 type CreateMapForm = {
   name: string;
@@ -303,13 +301,6 @@ const getWarehouseStartMessage = (error: unknown): string => {
     return error.detail;
   }
   return toMessage(error);
-};
-
-const formatTimestamp = (value?: string | null): string => {
-  if (!value) return "--";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
 };
 
 type WarehouseMissionDefaultsKey = keyof WarehouseMissionDefaultsResponse;
@@ -618,15 +609,13 @@ const toWarehouseMissionDefaultsPayload = (
 export default function WarehousePage() {
   const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
   const warehouseMissionDrawer = useTaskPreflightCommandsDrawer();
-  const warehouseFlightDrawer = useTaskPreflightCommandsDrawer();
 
   const closeOtherWarehouseDrawers = useCallback(
-    (except: "setup" | "mission" | "flight") => {
+    (except: "setup" | "mission") => {
       if (except !== "setup") warehouseSetupDrawer.closeDrawer();
       if (except !== "mission") warehouseMissionDrawer.closeDrawer();
-      if (except !== "flight") warehouseFlightDrawer.closeDrawer();
     },
-    [warehouseFlightDrawer, warehouseMissionDrawer, warehouseSetupDrawer],
+    [warehouseMissionDrawer, warehouseSetupDrawer],
   );
 
   const handleWarehouseSetupOpenChange = useCallback(
@@ -645,23 +634,12 @@ export default function WarehousePage() {
     [closeOtherWarehouseDrawers, warehouseMissionDrawer],
   );
 
-  const handleWarehouseFlightOpenChange = useCallback(
-    (open: boolean) => {
-      warehouseFlightDrawer.onOpenChange(open);
-      if (open) closeOtherWarehouseDrawers("flight");
-    },
-    [closeOtherWarehouseDrawers, warehouseFlightDrawer],
-  );
   const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>(
     [],
   );
   const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
-  const [deletingScannedMap, setDeletingScannedMap] = useState(false);
   const [selectedMapJobId, setSelectedMapJobId] = useState<number | null>(null);
   const [viewerMapJobId, setViewerMapJobId] = useState<number | null>(null);
-  const [selectedReferenceJobId, setSelectedReferenceJobId] = useState<
-    number | null
-  >(null);
 
   // Warehouse maps (footprints) — separate from scanned results
   const [warehouseMaps, setWarehouseMaps] = useState<WarehouseMapOut[]>([]);
@@ -707,12 +685,9 @@ export default function WarehousePage() {
   const [setupTab, setSetupTab] = useState<"map" | "rig" | "dock" | "defaults">(
     "map",
   );
+  const [flyMode, setFlyMode] = useState<"automated" | "manual">("automated");
   const [showAdvancedDefaults, setShowAdvancedDefaults] = useState(false);
-  const [showAllScannedMaps, setShowAllScannedMaps] = useState(false);
-  const [scanResultFilter, setScanResultFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<WarehouseDeleteTarget>(null);
-  const [compareMessage, setCompareMessage] = useState<string | null>(null);
-  const [comparingScans, setComparingScans] = useState(false);
 
   const [startingScan, setStartingScan] = useState(false);
   const [scanLaunchMessage, setScanLaunchMessage] = useState<string | null>(
@@ -754,6 +729,14 @@ export default function WarehousePage() {
     runChecks: runWarehousePreflightChecks,
     passed: warehousePreflightPassed,
   } = useRunWarehousePreflight(authToken);
+  const {
+    data: warehouseFlightReadiness,
+    isLoading: flightReadinessLoading,
+    refetch: refetchWarehouseFlightReadiness,
+  } = useWarehouseFlightReadiness(authToken, {
+    missionLoaded: missionLoadedForReadiness,
+    enabled: Boolean(authToken),
+  });
   const [flightCommandBusy, setFlightCommandBusy] = useState(false);
 
   const {
@@ -783,8 +766,7 @@ export default function WarehousePage() {
     enabled: Boolean(
       activeFlightId &&
       !warehouseSetupDrawer.open &&
-      !warehouseMissionDrawer.open &&
-      !warehouseFlightDrawer.open,
+      !warehouseMissionDrawer.open,
     ),
     token: authToken,
   });
@@ -806,10 +788,7 @@ export default function WarehousePage() {
 
       setLoadingScannedMaps(true);
       try {
-        const records = await listWarehouseScannedMaps(
-          token,
-          showAllScannedMaps ? null : selectedWarehouseMapId,
-        );
+        const records = await listWarehouseScannedMaps(token, selectedWarehouseMapId);
         setScannedMaps(records);
 
         const explicitJobId = options?.selectJobId;
@@ -839,17 +818,8 @@ export default function WarehousePage() {
         setLoadingScannedMaps(false);
       }
     },
-    [addError, selectedWarehouseMapId, showAllScannedMaps],
+    [addError, selectedWarehouseMapId],
   );
-
-  const showSelectedScanInViewer = useCallback(() => {
-    if (!selectedScannedMap) return;
-    setViewerMapJobId(selectedScannedMap.job_id);
-    viewerSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [selectedScannedMap]);
 
   const handleScanResultReady = useCallback(
     (jobId: number) => {
@@ -867,40 +837,6 @@ export default function WarehousePage() {
     },
     [loadScannedMaps],
   );
-
-  const handleDeleteScannedMap = useCallback(async () => {
-    if (!selectedScannedMap) return;
-    const token = getToken();
-    if (!token) {
-      addError("You must be authenticated to delete scan results.");
-      return;
-    }
-    const jobId = selectedScannedMap.job_id;
-    setDeletingScannedMap(true);
-    try {
-      await deleteWarehouseScannedMap(jobId, token);
-      if (viewerMapJobId === jobId) {
-        setViewerMapJobId(null);
-      }
-      if (selectedReferenceJobId === jobId) {
-        setSelectedReferenceJobId(null);
-      }
-      setSelectedMapJobId(null);
-      await loadScannedMaps();
-      setScanLaunchMessage(`Deleted scan result #${jobId}.`);
-    } catch (error) {
-      addError(`Could not delete scan result: ${toMessage(error)}`);
-    } finally {
-      setDeletingScannedMap(false);
-      setDeleteTarget(null);
-    }
-  }, [
-    addError,
-    loadScannedMaps,
-    selectedReferenceJobId,
-    selectedScannedMap,
-    viewerMapJobId,
-  ]);
 
   const loadMissionDefaults = useCallback(async () => {
     const token = getToken();
@@ -1226,7 +1162,6 @@ export default function WarehousePage() {
         selectedSensorRigId?: number | null;
         selectedDockId?: number | null;
         setupTab?: "map" | "rig" | "dock" | "defaults";
-        showAllScannedMaps?: boolean;
       };
       if (typeof saved.selectedWarehouseMapId === "number") {
         setSelectedWarehouseMapId(saved.selectedWarehouseMapId);
@@ -1239,9 +1174,6 @@ export default function WarehousePage() {
       }
       if (saved.setupTab) {
         setSetupTab(saved.setupTab);
-      }
-      if (typeof saved.showAllScannedMaps === "boolean") {
-        setShowAllScannedMaps(saved.showAllScannedMaps);
       }
     } catch {
       window.localStorage.removeItem(localStorageKey);
@@ -1257,7 +1189,6 @@ export default function WarehousePage() {
           selectedSensorRigId,
           selectedDockId,
           setupTab,
-          showAllScannedMaps,
         }),
       );
     } catch {
@@ -1269,7 +1200,6 @@ export default function WarehousePage() {
     selectedSensorRigId,
     selectedWarehouseMapId,
     setupTab,
-    showAllScannedMaps,
   ]);
 
   useEffect(() => {
@@ -1379,7 +1309,7 @@ export default function WarehousePage() {
           dock_id: selectedDockId,
           // Link to the most recent scanned result for this map as reference, if available
           reference_mapping_job_id:
-            selectedReferenceJobId ??
+            selectedScannedMap?.job_id ??
             scannedMaps.find(
               (m) => getWarehouseMapId(m) === selectedWarehouseMapId,
             )?.job_id,
@@ -1388,6 +1318,7 @@ export default function WarehousePage() {
       );
 
       setPendingFlightId(launch.mission.flight_id);
+      void refetchWarehouseFlightReadiness();
       const launchWarehouseName = launch.warehouse_name.trim() || "Warehouse";
       setScanLaunchMessage(
         `Started ${launch.mission.mission_name} in ${launchWarehouseName}. Preflight ${launch.preflight.overall_status}.`,
@@ -1405,9 +1336,10 @@ export default function WarehousePage() {
   }, [
     addError,
     loadScannedMaps,
+    refetchWarehouseFlightReadiness,
     scannedMaps,
     selectedDockId,
-    selectedReferenceJobId,
+    selectedScannedMap?.job_id,
     selectedSensorRigId,
     selectedWarehouseMapId,
     sensorRigHealth?.ready,
@@ -1425,6 +1357,7 @@ export default function WarehousePage() {
       setFlightCommandBusy(true);
       try {
         const result = await sendWarehouseFlightCommand(command, token);
+        void refetchWarehouseFlightReadiness();
         if (!result.accepted) {
           addError(result.message || `Flight ${command} command failed.`);
         }
@@ -1434,7 +1367,7 @@ export default function WarehousePage() {
         setFlightCommandBusy(false);
       }
     },
-    [addError],
+    [addError, refetchWarehouseFlightReadiness],
   );
 
   const handleExplorationLaunch = useCallback(
@@ -1538,76 +1471,18 @@ export default function WarehousePage() {
   }, [selectedWarehouseMapId, warehouseMaps]);
 
   const visibleScannedMaps = useMemo(() => {
-    const normalizedFilter = scanResultFilter.trim().toLowerCase();
     return scannedMaps.filter((map) => {
-      if (!showAllScannedMaps && selectedWarehouseMapId != null) {
+      if (selectedWarehouseMapId != null) {
         if (getWarehouseMapId(map) !== selectedWarehouseMapId) return false;
       }
-      if (!normalizedFilter) return true;
-      return [
-        getWarehouseName(map),
-        map.status,
-        map.source,
-        String(map.job_id),
-        String(map.model_version),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedFilter);
+      return true;
     });
-  }, [
-    scanResultFilter,
-    scannedMaps,
-    selectedWarehouseMapId,
-    showAllScannedMaps,
-  ]);
+  }, [scannedMaps, selectedWarehouseMapId]);
 
-  const selectedReferenceMap = useMemo(
-    () => selectScannedMap(scannedMaps, selectedReferenceJobId),
-    [scannedMaps, selectedReferenceJobId],
-  );
   const missionDefaultColumns = useMemo(
     () => toMissionDefaultColumns(showAdvancedDefaults),
     [showAdvancedDefaults],
   );
-
-  const handleCompareSelectedScan = useCallback(async () => {
-    if (!selectedReferenceJobId || !selectedScannedMap) return;
-    const token = getToken();
-    if (!token) {
-      addError("You must be authenticated to compare scan results.");
-      return;
-    }
-    setComparingScans(true);
-    setCompareMessage(null);
-    try {
-      const comparison = await compareWarehouseScannedMaps(
-        selectedReferenceJobId,
-        selectedScannedMap.job_id,
-        token,
-      );
-      const parts = [
-        comparison.coverage_delta != null
-          ? `coverage ${comparison.coverage_delta >= 0 ? "+" : ""}${comparison.coverage_delta.toFixed(1)}%`
-          : null,
-        comparison.drift_delta_m != null
-          ? `drift ${comparison.drift_delta_m >= 0 ? "+" : ""}${comparison.drift_delta_m.toFixed(2)}m`
-          : null,
-        comparison.quality_delta != null
-          ? `quality ${comparison.quality_delta >= 0 ? "+" : ""}${comparison.quality_delta.toFixed(2)}`
-          : null,
-      ].filter(Boolean);
-      setCompareMessage(
-        `Baseline #${comparison.baseline_job_id} vs current #${comparison.candidate_job_id}: ${
-          parts.join(", ") || "no comparable quality fields"
-        }.`,
-      );
-    } catch (error) {
-      addError(`Could not compare scan results: ${toMessage(error)}`);
-    } finally {
-      setComparingScans(false);
-    }
-  }, [addError, selectedReferenceJobId, selectedScannedMap]);
   const handleManualMappingPreflightRun = useCallback(
     (preflight: PreflightRunResponse | null) => {
       if (preflight)
@@ -1724,8 +1599,7 @@ export default function WarehousePage() {
                   state={liveVoxelMap}
                   hidden={
                     warehouseSetupDrawer.open ||
-                    warehouseMissionDrawer.open ||
-                    warehouseFlightDrawer.open
+                    warehouseMissionDrawer.open
                   }
                 />
               ) : (
@@ -1736,153 +1610,36 @@ export default function WarehousePage() {
                 />
               )}
             </Paper>
-          </Stack>
-        </Stack>
-      </Paper>
-
-      {warehousePreflightPassed && (
-        <TaskPreflightCommandsDrawer
-          open={warehouseFlightDrawer.open}
-          onOpenChange={handleWarehouseFlightOpenChange}
-          title="Warehouse Flight"
-          subtitle="Mission status, launch, and in-flight controls"
-          tabLabel="FLIGHT"
-          tabIcon={<ExploreRoundedIcon fontSize="small" />}
-          edgeTabIndex={2}
-          edgeTabCount={3}
-          paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
-        >
-          <Stack spacing={2}>
-            <WarehouseDrawerSection
-              title="Mission Status"
-              info="Live mission state from the warehouse scan runtime."
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                borderColor: "divider",
+                backgroundColor: "background.paper",
+              }}
             >
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, minmax(0, 1fr))",
-                  },
-                  gap: 1.5,
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Mission
-                  </Typography>
-                  <Typography variant="body1">{missionName}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    State
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    sx={{ textTransform: "capitalize" }}
-                  >
-                    {missionState.replace(/_/g, " ")}
-                  </Typography>
-                </Box>
-                {activeFlightId && (
-                  <Box sx={{ gridColumn: { sm: "1 / -1" } }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Active Flight
-                    </Typography>
-                    <Typography variant="body1">{activeFlightId}</Typography>
-                  </Box>
-                )}
-              </Box>
-
-              {missionStatus?.mission_lifecycle?.last_error && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {missionStatus.mission_lifecycle.last_error}
-                </Alert>
-              )}
-            </WarehouseDrawerSection>
-
-            <WarehouseDrawerSection
-              title="Launch Scan"
-              info="Preflight passed. Starting flight also boots nvblox and creates the warehouse scan mission."
-            >
-              <Stack direction="row" justifyContent="flex-end">
-                <ActionIconButton
-                  variant="play"
-                  title={
-                    startScanDisabled
-                      ? startScanTooltip
-                      : startingScan
-                        ? "Starting Flight & Scan…"
-                        : "Start Flight & Scan"
-                  }
-                  color="primary"
-                  size="large"
-                  loading={startingScan}
-                  disabled={startScanDisabled}
-                  onClick={() => {
-                    void handleStartWarehouseScan();
+              <Stack spacing={1}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Previous Scan Results
+                </Typography>
+                <WarehouseScanResultsSelector
+                  maps={visibleScannedMaps}
+                  selectedMap={selectedScannedMap}
+                  loading={loadingScannedMaps}
+                  onSelect={(jobId) => {
+                    setSelectedMapJobId(jobId);
+                    setViewerMapJobId(jobId);
+                  }}
+                  onRefresh={() => {
+                    void loadScannedMaps();
                   }}
                 />
               </Stack>
-            </WarehouseDrawerSection>
-
-            {missionState === "running" && (
-              <WarehouseDrawerSection
-                title="In-flight controls"
-                info="Pause, abort, land, or send mission commands while the warehouse mission is running."
-              >
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  flexWrap="wrap"
-                  sx={{ mb: 2 }}
-                >
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={flightCommandBusy}
-                    onClick={() => {
-                      void handleFlightCommand("pause");
-                    }}
-                  >
-                    Pause
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="warning"
-                    size="small"
-                    disabled={flightCommandBusy}
-                    onClick={() => {
-                      void handleFlightCommand("abort");
-                    }}
-                  >
-                    Abort
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    disabled={flightCommandBusy}
-                    onClick={() => {
-                      void handleFlightCommand("land");
-                    }}
-                  >
-                    Land
-                  </Button>
-                </Stack>
-                <MissionCommandPanel
-                  telemetry={telemetry}
-                  droneConnected={droneConnected}
-                  missionStatus={missionStatus}
-                  activeFlightId={activeFlightId}
-                  apiBase={apiBase}
-                  title="Warehouse Commands"
-                />
-              </WarehouseDrawerSection>
-            )}
+            </Paper>
           </Stack>
-        </TaskPreflightCommandsDrawer>
-      )}
+        </Stack>
+      </Paper>
 
       <TaskPreflightCommandsDrawer
         open={warehouseSetupDrawer.open}
@@ -1892,7 +1649,7 @@ export default function WarehousePage() {
         tabLabel="SETUP"
         tabIcon={<TuneRoundedIcon fontSize="small" />}
         edgeTabIndex={0}
-        edgeTabCount={warehousePreflightPassed ? 3 : 2}
+        edgeTabCount={2}
         paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
       >
         <Stack spacing={2}>
@@ -2475,12 +2232,12 @@ export default function WarehousePage() {
       <TaskPreflightCommandsDrawer
         open={warehouseMissionDrawer.open}
         onOpenChange={handleWarehouseMissionOpenChange}
-        title="Warehouse Missions"
-        subtitle="Exploration, manual mapping, and scan results"
+        title="Warehouse Fly"
+        subtitle="Preflight, automated scan, and manual mapping"
         tabLabel="FLY"
         tabIcon={<ExploreRoundedIcon fontSize="small" />}
         edgeTabIndex={1}
-        edgeTabCount={warehousePreflightPassed ? 3 : 2}
+        edgeTabCount={2}
         paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
       >
         <Stack spacing={2}>
@@ -2489,7 +2246,6 @@ export default function WarehousePage() {
             running={preflightRunning}
             error={preflightError}
             flightAvailable={warehousePreflightPassed}
-            onOpenFlight={() => handleWarehouseFlightOpenChange(true)}
             onRunChecks={() => {
               void runWarehousePreflightChecks({
                 missionLoaded: missionLoadedForReadiness,
@@ -2498,209 +2254,109 @@ export default function WarehousePage() {
           />
 
           <WarehouseDrawerSection
-            title="Exploration"
-            info="Frontier mode uses the ROS nvblox ESDF map and returns before reserve battery."
+            title="Mission Status"
+            info="Live mission state from the warehouse scan runtime."
           >
-            <WarehouseExplorationPanel
-              embedded
-              warehouseMapId={selectedWarehouseMapId}
-              selectedDockId={selectedDockId}
-              warehouseName={selectedWarehouseMapName ?? undefined}
-              warehousePreflightPassed={warehousePreflightPassed}
-              getToken={getToken}
-              onLaunch={handleExplorationLaunch}
-              onError={handleExplorationError}
-            />
-          </WarehouseDrawerSection>
-
-          <WarehouseDrawerSection
-            title="Manual Warehouse Mapping"
-            info="Start a controlled keyboard flight, start ROS mapping, fly the inbound area manually, then stop mapping after landing."
-          >
-            <WarehouseManualMappingPanel
-              embedded
+            <WarehouseMissionStatusSummary
+              missionName={missionName}
+              missionState={missionState}
               activeFlightId={activeFlightId}
-              missionStatus={missionStatus}
-              wsConnected={wsConnected}
-              droneConnected={droneConnected}
-              warehouseMapId={selectedWarehouseMapId}
-              sensorRigId={selectedSensorRigId}
-              dockId={selectedDockId}
-              warehousePreflightPassed={warehousePreflightPassed}
-              setPendingFlightId={setPendingFlightId}
-              onPreflightRun={handleManualMappingPreflightRun}
-              onMessage={setScanLaunchMessage}
-              onError={addError}
-              onScanResultReady={handleScanResultReady}
+              lastError={missionStatus?.mission_lifecycle?.last_error}
             />
           </WarehouseDrawerSection>
 
-          <WarehouseDrawerSection
-            title="Previous Scan Results"
-            info="Finished warehouse scans appear here after automated scans, exploration, or manual mapping stop. Use View in 3D Map to load a result in the main viewer."
-            action={loadingScannedMaps ? <CircularProgress size={16} /> : null}
-            showDivider={false}
+          <Tabs
+            value={flyMode}
+            onChange={(_, value: "automated" | "manual") => setFlyMode(value)}
+            variant="fullWidth"
           >
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ mb: 1 }}
+            <Tab value="automated" label="Automated" disabled={!warehousePreflightPassed} />
+            <Tab value="manual" label="Manual" disabled={!warehousePreflightPassed} />
+          </Tabs>
+
+          {!warehousePreflightPassed && (
+            <Alert severity="warning">
+              Run Warehouse Preflight and wait for checks to pass before choosing Manual or Automated flight.
+            </Alert>
+          )}
+
+          {warehousePreflightPassed && flyMode === "automated" && (
+            <>
+              <WarehouseDrawerSection
+                title="Flight & Scan"
+                info="Start the warehouse flight and scan using the selected setup map, dock, rig, and mission defaults."
+              >
+                <WarehouseFlightReadinessPanel
+                  readiness={warehouseFlightReadiness}
+                  preflight={warehousePreflight}
+                  loading={flightReadinessLoading}
+                  starting={startingScan}
+                  startDisabled={startScanDisabled}
+                  startDisabledReason={startScanTooltip}
+                  onStart={() => {
+                    void handleStartWarehouseScan();
+                  }}
+                  onPause={() => {
+                    void handleFlightCommand("pause");
+                  }}
+                  onAbort={() => {
+                    void handleFlightCommand("abort");
+                  }}
+                  onLand={() => {
+                    void handleFlightCommand("land");
+                  }}
+                  commandBusy={flightCommandBusy}
+                  showControls={missionState === "running"}
+                />
+              </WarehouseDrawerSection>
+
+              <WarehouseDrawerSection
+                title="Exploration"
+                info="Frontier mode uses the ROS nvblox ESDF map and returns before reserve battery."
+              >
+                <WarehouseExplorationPanel
+                  embedded
+                  warehouseMapId={selectedWarehouseMapId}
+                  selectedDockId={selectedDockId}
+                  warehouseName={selectedWarehouseMapName ?? undefined}
+                  warehousePreflightPassed={warehousePreflightPassed}
+                  getToken={getToken}
+                  onLaunch={handleExplorationLaunch}
+                  onError={handleExplorationError}
+                />
+              </WarehouseDrawerSection>
+            </>
+          )}
+
+          {warehousePreflightPassed && flyMode === "manual" && (
+            <WarehouseDrawerSection
+              title="Manual Warehouse Mapping"
+              info="Start a controlled keyboard flight, start ROS mapping, fly the inbound area manually, then stop mapping after landing."
+              showDivider={false}
             >
-              <TextField
-                variant="filled"
-                size="small"
-                label="Search results"
-                value={scanResultFilter}
-                onChange={(event) => setScanResultFilter(event.target.value)}
-                sx={{ flex: 1, minWidth: 0 }}
+              <WarehouseManualMappingPanel
+                embedded
+                activeFlightId={activeFlightId}
+                missionStatus={missionStatus}
+                wsConnected={wsConnected}
+                droneConnected={droneConnected}
+                warehouseMapId={selectedWarehouseMapId}
+                sensorRigId={selectedSensorRigId}
+                dockId={selectedDockId}
+                warehousePreflightPassed={warehousePreflightPassed}
+                setPendingFlightId={setPendingFlightId}
+                onPreflightRun={handleManualMappingPreflightRun}
+                onMessage={setScanLaunchMessage}
+                onError={addError}
+                onScanResultReady={handleScanResultReady}
               />
-              <FormControlLabel
-                control={
-                  <Switch
-                    size="small"
-                    checked={showAllScannedMaps}
-                    onChange={(event) =>
-                      setShowAllScannedMaps(event.target.checked)
-                    }
-                  />
-                }
-                label="All maps"
-              />
-            </Stack>
-            <Stack direction="row" spacing={1} alignItems="flex-start">
-              <TextField
-                variant="filled"
-                select
-                disabled={
-                  !loadingScannedMaps && visibleScannedMaps.length === 0
-                }
-                size="small"
-                label="Scanned Maps"
-                value={
-                  selectedScannedMap ? String(selectedScannedMap.job_id) : ""
-                }
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  setSelectedMapJobId(raw ? Number(raw) : null);
-                }}
-                helperText={
-                  selectedScannedMap
-                    ? selectedScannedMap.status === "failed" &&
-                      selectedScannedMap.error
-                      ? selectedScannedMap.error
-                      : `${getWarehouseName(selectedScannedMap)} (#${getWarehouseMapId(selectedScannedMap)})${
-                          selectedReferenceMap
-                            ? ` • baseline #${selectedReferenceMap.job_id}`
-                            : ""
-                        }`
-                    : undefined
-                }
-                sx={{ flex: 1, minWidth: 0 }}
-              >
-                {visibleScannedMaps.length === 0 && (
-                  <MenuItem value="" disabled>
-                    No scanned maps available
-                  </MenuItem>
-                )}
-                {visibleScannedMaps.map((map) => (
-                  <MenuItem key={map.job_id} value={String(map.job_id)}>
-                    {`${getWarehouseName(map)} • ${map.source === "simulation" ? "simulation" : "real flight"} • v${map.model_version} • ${map.status} • ${formatTimestamp(map.created_at)}`}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Stack
-                direction="row"
-                spacing={0.25}
-                alignItems="center"
-                sx={{ flexShrink: 0, pt: 2.25 }}
-              >
-                <ActionIconButton
-                  variant="map"
-                  title="View in 3D Map"
-                  color="primary"
-                  disabled={!selectedScannedMap}
-                  onClick={showSelectedScanInViewer}
-                />
-                <ActionIconButton
-                  variant="refresh"
-                  title="Refresh Scan Results"
-                  loading={loadingScannedMaps}
-                  onClick={() => {
-                    void loadScannedMaps();
-                  }}
-                />
-                <ActionIconButton
-                  variant="check"
-                  title={
-                    selectedReferenceJobId != null &&
-                    selectedScannedMap?.job_id !== selectedReferenceJobId
-                      ? "Compare with Reference"
-                      : "Use as Reference"
-                  }
-                  color={
-                    selectedReferenceJobId != null &&
-                    selectedScannedMap?.job_id === selectedReferenceJobId
-                      ? "primary"
-                      : "default"
-                  }
-                  disabled={!selectedScannedMap}
-                  onClick={() => {
-                    if (
-                      selectedReferenceJobId != null &&
-                      selectedScannedMap?.job_id !== selectedReferenceJobId
-                    ) {
-                      void handleCompareSelectedScan();
-                    } else {
-                      setSelectedReferenceJobId(
-                        selectedScannedMap?.job_id ?? null,
-                      );
-                      setCompareMessage(
-                        selectedScannedMap
-                          ? `Baseline scan set to #${selectedScannedMap.job_id}.`
-                          : null,
-                      );
-                    }
-                  }}
-                  loading={comparingScans}
-                />
-                <ActionIconButton
-                  variant="delete"
-                  title={deletingScannedMap ? "Deleting…" : "Delete Result"}
-                  color="error"
-                  loading={deletingScannedMap}
-                  disabled={!selectedScannedMap}
-                  onClick={() => {
-                    setDeleteTarget({
-                      kind: "scan result",
-                      label: selectedScannedMap
-                        ? `${getWarehouseName(selectedScannedMap)} • job #${selectedScannedMap.job_id}`
-                        : "Scan result",
-                      assetCount: selectedScannedMap?.assets.length ?? 0,
-                      onConfirm: () => {
-                        void handleDeleteScannedMap();
-                      },
-                    });
-                  }}
-                />
-              </Stack>
-            </Stack>
-            <WarehouseMapQualityPanel
-              jobId={selectedScannedMap?.job_id ?? null}
-              getToken={getToken}
-              onError={addError}
-            />
-            {compareMessage && (
-              <Alert severity="info" sx={{ mt: 1 }}>
-                {compareMessage}
-              </Alert>
-            )}
-          </WarehouseDrawerSection>
+            </WarehouseDrawerSection>
+          )}
         </Stack>
       </TaskPreflightCommandsDrawer>
       <WarehouseDeleteConfirmationDialog
         target={deleteTarget}
-        busy={deletingScannedMap || deletingWarehouseMap || deletingSensorRig}
+        busy={deletingWarehouseMap || deletingSensorRig}
         onClose={() => setDeleteTarget(null)}
       />
     </>

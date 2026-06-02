@@ -57,14 +57,29 @@ def main() -> None:
             self.declare_parameter("odom_frame", self.odom_frame)
             self.declare_parameter("base_link_frame", self.base_link_frame)
             self.declare_parameter("rgbd_frame", self.rgbd_frame)
+            self.declare_parameter(
+                "publish_initial_identity_tf",
+                os.getenv("WAREHOUSE_PUBLISH_INITIAL_IDENTITY_TF", "0").lower()
+                in {"1", "true", "yes", "on"},
+            )
+            self.declare_parameter(
+                "strict_odometry_frames",
+                os.getenv("WAREHOUSE_STRICT_ODOMETRY_FRAMES", "0").lower()
+                in {"1", "true", "yes", "on"},
+            )
             self.odom_frame = _normalize_frame_id(str(self.get_parameter("odom_frame").value))
             self.base_link_frame = _normalize_frame_id(str(self.get_parameter("base_link_frame").value))
             self.rgbd_frame = _normalize_frame_id(str(self.get_parameter("rgbd_frame").value))
+            self.publish_initial_identity_tf = bool(
+                self.get_parameter("publish_initial_identity_tf").value
+            )
+            self.strict_odometry_frames = bool(self.get_parameter("strict_odometry_frames").value)
             self.camera_offsets = _camera_offsets()
             self.tf_broadcaster = TransformBroadcaster(self)
             self.static_broadcaster = StaticTransformBroadcaster(self)
             self.published_static_frames: set[str] = set()
             self._last_odom_transform: TransformStamped | None = None
+            self._warned_frame_mismatches: set[tuple[str, str]] = set()
 
             odom_topic = os.getenv(
                 "WAREHOUSE_ODOM_TOPIC",
@@ -130,6 +145,16 @@ def main() -> None:
                 )
 
         def on_odometry(self, message: Odometry) -> None:
+            source_frame = _normalize_frame_id(message.header.frame_id)
+            source_child = _normalize_frame_id(message.child_frame_id)
+            if source_frame and source_frame != self.odom_frame:
+                self._warn_frame_mismatch("odom", source_frame, self.odom_frame)
+                if self.strict_odometry_frames:
+                    return
+            if source_child and source_child != self.base_link_frame:
+                self._warn_frame_mismatch("base_link", source_child, self.base_link_frame)
+                if self.strict_odometry_frames:
+                    return
             # Always publish the configured base_link frame so nvblox/TF agree with Gazebo sim.
             child_frame = _normalize_frame_id(self.base_link_frame)
             transform = TransformStamped()
@@ -159,12 +184,23 @@ def main() -> None:
                 transform.transform = self._last_odom_transform.transform
                 self.tf_broadcaster.sendTransform(transform)
                 return
+            if not self.publish_initial_identity_tf:
+                return
             transform = TransformStamped()
             transform.header.stamp = self.get_clock().now().to_msg()
             transform.header.frame_id = self.odom_frame
             transform.child_frame_id = self.base_link_frame
             transform.transform.rotation.w = 1.0
             self.tf_broadcaster.sendTransform(transform)
+
+        def _warn_frame_mismatch(self, role: str, source: str, configured: str) -> None:
+            key = (role, source)
+            if key in self._warned_frame_mismatches:
+                return
+            self._warned_frame_mismatches.add(key)
+            self.get_logger().warning(
+                f"Odometry {role} frame mismatch source={source} configured={configured}"
+            )
 
         def on_camera_info(self, message: CameraInfo, topic: str) -> None:
             child_frame = _normalize_frame_id(message.header.frame_id)

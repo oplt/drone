@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -38,11 +39,13 @@ def _copy_outputs(
         ".mcap",
     }
     artifacts_dir = session_dir / "artifacts"
+    seen: set[str] = set()
     for src in output_dir.rglob("*"):
         if not src.is_file() or src.suffix.lower() not in allowed:
             continue
         stat = src.stat()
         state_key = str(src.resolve())
+        seen.add(state_key)
         state_value = (stat.st_size, int(stat.st_mtime_ns))
         if copied_state.get(state_key) == state_value:
             continue
@@ -51,6 +54,9 @@ def _copy_outputs(
         shutil.copy2(src, dst)
         copied_state[state_key] = state_value
         copied.append({"path": str(dst.relative_to(session_dir)), "size_bytes": dst.stat().st_size})
+    for state_key in list(copied_state):
+        if state_key not in seen:
+            copied_state.pop(state_key, None)
     return copied
 
 
@@ -86,11 +92,17 @@ def main() -> None:
             )
             self.copied_state: dict[str, tuple[int, int]] = {}
             period_s = float(os.getenv("WAREHOUSE_ARTIFACT_EXPORT_PERIOD_S", "10.0"))
+            self.index_write_period_s = max(
+                1.0,
+                float(os.getenv("WAREHOUSE_ARTIFACT_INDEX_WRITE_PERIOD_S", "30.0")),
+            )
+            self._last_index_write_s = 0.0
             self.create_timer(max(1.0, period_s), self.export_once)
             self.exported = False
 
         def export_once(self) -> None:
             artifacts = _copy_outputs(self.output_dir, self.session_dir, self.copied_state)
+            now_mono = time.monotonic()
             manifest = {
                 "flight_id": self.flight_id,
                 "profile": self.profile,
@@ -104,7 +116,14 @@ def main() -> None:
                     "mapping_health_summary.json",
                 ],
             }
-            _write_json(self.session_dir / "artifact_index.json", manifest)
+            should_write_index = (
+                bool(artifacts)
+                or not self.exported
+                or now_mono - self._last_index_write_s >= self.index_write_period_s
+            )
+            if should_write_index:
+                _write_json(self.session_dir / "artifact_index.json", manifest)
+                self._last_index_write_s = now_mono
             msg = String()
             msg.data = json.dumps(manifest, sort_keys=True)
             self.publisher.publish(msg)

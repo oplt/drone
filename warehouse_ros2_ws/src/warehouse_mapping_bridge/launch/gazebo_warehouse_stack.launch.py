@@ -1,12 +1,49 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import yaml
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, OpaqueFunction, SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import Command, PathJoinSubstitution, TextSubstitution
 from launch.substitutions import LaunchConfiguration
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+
+def _package_file(*parts: str) -> Path:
+    return Path(__file__).resolve().parents[1].joinpath(*parts)
+
+
+def _bridge_argument(mapping: dict[str, str]) -> str:
+    direction = str(mapping.get("direction", "GZ_TO_ROS")).upper()
+    ros_topic = mapping["ros_topic_name"]
+    gz_topic = mapping.get("gz_topic_name", ros_topic)
+    ros_type = mapping["ros_type_name"]
+    gz_type = mapping["gz_type_name"]
+    if ros_topic != gz_topic:
+        raise RuntimeError(
+            "ros_gz_bridge parameter_bridge cannot express different ROS/Gazebo "
+            f"topic names without remapping: {ros_topic} != {gz_topic}"
+        )
+    separator = {
+        "GZ_TO_ROS": "[",
+        "ROS_TO_GZ": "]",
+        "BIDIRECTIONAL": "@",
+    }.get(direction)
+    if separator is None:
+        raise RuntimeError(f"Unsupported Gazebo bridge direction: {direction}")
+    return f"{ros_topic}@{ros_type}{separator}{gz_type}"
+
+
+def _gazebo_bridge_arguments() -> list[str]:
+    path = _package_file("config", "gazebo_bridge.yaml")
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    if not isinstance(payload, list):
+        raise RuntimeError(f"{path} must contain a list of bridge mappings")
+    return [_bridge_argument(mapping) for mapping in payload]
 
 
 def _validate_gazebo_args(context, *_args, **_kwargs) -> list[ExecuteProcess]:
@@ -19,7 +56,7 @@ def _validate_gazebo_args(context, *_args, **_kwargs) -> list[ExecuteProcess]:
 
 def _helper_node(executable: str, name: str) -> Node:
     default_params = PathJoinSubstitution(
-        [FindPackageShare("warehouse_mapping_bridge"), "config", "defaults.yaml"]
+        [FindPackageShare("warehouse_mapping_bridge"), "config", "defaults_gazebo.yaml"]
     )
     return Node(
         package="warehouse_mapping_bridge",
@@ -36,6 +73,9 @@ def generate_launch_description() -> LaunchDescription:
     default_world = PathJoinSubstitution(
         [FindPackageShare("warehouse_mapping_bridge"), "worlds", "warehouse_empty.sdf"]
     )
+    drone_urdf = PathJoinSubstitution(
+        [FindPackageShare("warehouse_mapping_bridge"), "urdf", "warehouse_drone.urdf"]
+    )
 
     return LaunchDescription(
         [
@@ -47,6 +87,10 @@ def generate_launch_description() -> LaunchDescription:
             OpaqueFunction(function=_validate_gazebo_args),
             SetEnvironmentVariable("WAREHOUSE_GAZEBO_SIM", "1"),
             SetEnvironmentVariable("WAREHOUSE_TOPIC_PROFILE", "gazebo"),
+            SetEnvironmentVariable(
+                "GZ_SIM_RESOURCE_PATH",
+                PathJoinSubstitution([FindPackageShare("warehouse_mapping_bridge"), "models"]),
+            ),
             ExecuteProcess(
                 cmd=["gz", "sim", "-r", world],
                 output="screen",
@@ -54,33 +98,42 @@ def generate_launch_description() -> LaunchDescription:
                 condition=IfCondition(LaunchConfiguration("start_gazebo")),
             ),
             Node(
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                name="warehouse_robot_state_publisher",
+                output="screen",
+                parameters=[
+                    {
+                        "use_sim_time": LaunchConfiguration("use_sim_time"),
+                        "robot_description": ParameterValue(
+                            Command([TextSubstitution(text="cat "), drone_urdf]),
+                            value_type=str,
+                        ),
+                    }
+                ],
+            ),
+            Node(
                 package="ros_gz_bridge",
                 executable="parameter_bridge",
                 name="warehouse_gz_parameter_bridge",
                 output="screen",
-                arguments=[
-                    "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
-                    "/warehouse/front/rgbd/image@sensor_msgs/msg/Image[gz.msgs.Image",
-                    "/warehouse/front/rgbd/depth_image@sensor_msgs/msg/Image[gz.msgs.Image",
-                    "/warehouse/front/rgbd/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
-                    "/warehouse/front/rgbd/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
-                    "/warehouse/drone/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
-                    "/world/iris_warehouse/model/iris_rplidar_rgbd/model/iris_with_standoffs/link/imu_link/sensor/imu_sensor/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
-                ],
+                arguments=_gazebo_bridge_arguments(),
                 condition=IfCondition(LaunchConfiguration("start_bridges")),
             ),
+            _helper_node("warehouse_topic_adapter", "warehouse_topic_adapter"),
             _helper_node("warehouse_bridge_service", "warehouse_bridge_service"),
             _helper_node("warehouse_sim_tf_broadcaster", "warehouse_sim_tf_broadcaster"),
             _helper_node("warehouse_odometry_export", "warehouse_odometry_export"),
             _helper_node("warehouse_health_monitor", "warehouse_health_monitor"),
             _helper_node("warehouse_artifact_exporter", "warehouse_artifact_exporter"),
+            _helper_node("warehouse_diagnostics_aggregator", "warehouse_diagnostics_aggregator"),
             ExecuteProcess(
                 cmd=[
                     "ros2",
                     "launch",
                     "rosbridge_server",
                     "rosbridge_websocket_launch.xml",
-                    ["port:=", rosbridge_port],
+                    [TextSubstitution(text="port:="), rosbridge_port],
                 ],
                 output="screen",
                 name="rosbridge_websocket",

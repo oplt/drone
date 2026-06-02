@@ -19,13 +19,16 @@ def start_process(
         return subprocess.Popen(cmd, env=env, start_new_session=True)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = log_path.open("ab")
-    return subprocess.Popen(
-        cmd,
-        env=env,
-        start_new_session=True,
-        stdout=log_file,
-        stderr=subprocess.STDOUT,
-    )
+    try:
+        return subprocess.Popen(
+            cmd,
+            env=env,
+            start_new_session=True,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+        )
+    finally:
+        log_file.close()
 
 
 def exited_during_grace(process: subprocess.Popen[bytes], *, grace_s: float) -> bool:

@@ -33,9 +33,15 @@ from backend.modules.warehouse.service.warehouse_vehicle_checks import (
     sim_ros_odometry_fallback_ok,
     vehicle_runtime_from_parts,
 )
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
 
 def _gazebo_sim_enabled(components: dict[str, Any] | None = None) -> bool:
+    flow = resolve_warehouse_bridge_flow()
+    if flow.name == "gazebo":
+        return True
+    if flow.name == "real_device":
+        return False
     if os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
         "true",
@@ -61,10 +67,10 @@ def _topic_label(key: str, components: dict[str, Any]) -> str:
             if isinstance(matched, str) and matched.strip():
                 return matched.strip()
     defaults = {
-        "rgb_image": "/warehouse/front/rgbd/image",
-        "depth": "/warehouse/front/rgbd/depth_image",
-        "imu": "/imu",
-        "visual_slam_odom": os.getenv("WAREHOUSE_ODOMETRY_TOPIC", "/warehouse/drone/odometry"),
+        "rgb_image": "/warehouse/contract/rgb/image",
+        "depth": "/warehouse/contract/depth/image",
+        "imu": "/warehouse/contract/imu",
+        "visual_slam_odom": "/warehouse/contract/odometry",
     }
     return defaults.get(key, key)
 
@@ -436,8 +442,8 @@ async def evaluate_warehouse_go_preflight(
         suggested.append("Wait for bridge health refresh to complete")
     if gazebo_ok is False and gazebo_reason:
         blocking.append(gazebo_reason)
-        suggested.append("Press Play in Gazebo or launch gz sim with -r")
-        suggested.append("Verify: timeout 5 ros2 topic hz /warehouse/front/rgbd/image")
+        suggested.append("Start the selected warehouse bridge flow and wait for adapter topics")
+        suggested.append("Verify: timeout 5 ros2 topic hz /warehouse/contract/rgb/image")
     if not sensors_ok:
         if sensors.status == SubsystemStatus.FAIL or sensors.status in {
             SubsystemStatus.WAITING,

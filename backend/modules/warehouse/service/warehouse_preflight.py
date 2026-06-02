@@ -109,12 +109,9 @@ def build_warehouse_vehicle_state_from_perception(
 
     alt_m = -down if down is not None else 0.0
 
-    sim_mode = os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
+
+    sim_mode = resolve_warehouse_bridge_flow().name == "gazebo"
 
     return Telemetry(
         lat=0.0,

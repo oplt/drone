@@ -91,6 +91,7 @@ class BridgeState:
                 daemon=True,
                 name="warehouse-health-probe",
             ).start()
+        self._recover_export_status()
         self._recover_active_session()
 
     @staticmethod
@@ -136,6 +137,26 @@ class BridgeState:
             started_at=started_at,
             status="recovered",
         )
+
+    def _recover_export_status(self) -> None:
+        for status_path in self.config.capture_root.glob("flight_*/export_status.json"):
+            flight_id = safe_token(status_path.parent.name.removeprefix("flight_"))
+            try:
+                payload = json.loads(status_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            status = str(payload.get("status") or "unknown")
+            if status == "running":
+                payload = {
+                    **payload,
+                    "status": "interrupted",
+                    "finished_at": utc_now_iso(),
+                    "error": "bridge restarted during export finalization",
+                }
+                write_json(status_path, payload)
+            self.export_status[flight_id] = payload
 
     @classmethod
     def _topic_list_probe_config(cls, *, background: bool) -> tuple[float, int]:
@@ -549,6 +570,7 @@ class BridgeState:
             "detail": "Health diagnostics warming; /health is alive but ROS diagnostics cache is not ready yet",
             "profile": self.config.profile,
             "topic_profile": self._topic_profile,
+            "bridge_flow": os.getenv("WAREHOUSE_BRIDGE_FLOW", self._topic_profile),
             "capture_root": str(self.config.capture_root),
             "websocket_url": self.config.ros_ws_url,
             "probe_mode": "cache_empty",
@@ -768,6 +790,7 @@ class BridgeState:
             nvblox_ready=nvblox_ready,
         )
         components_payload = {
+                "bridge_flow": os.getenv("WAREHOUSE_BRIDGE_FLOW", registry.profile),
                 "ros2_cli": bool(shutil.which("ros2")),
                 "ros_graph": ros_graph_ready,
                 "autolaunch": self.config.autolaunch,
@@ -849,6 +872,7 @@ class BridgeState:
             "detail": health_detail,
             "profile": self.config.profile,
             "topic_profile": registry.profile,
+            "bridge_flow": os.getenv("WAREHOUSE_BRIDGE_FLOW", registry.profile),
             "capture_root": str(self.config.capture_root),
             "websocket_url": self.config.ros_ws_url,
             "components": components_payload,
@@ -1165,7 +1189,7 @@ class BridgeState:
 
         explicit_tracking = odometry_state.get("slam_tracking_ok")
         if fresh:
-            if explicit_tracking is False:
+            if explicit_tracking is False and not vslam_topic_ready:
                 return fresh, age_s, False
             return fresh, age_s, True
 
@@ -1305,8 +1329,20 @@ class BridgeState:
         ros_distro = os.getenv("ROS_DISTRO", "jazzy")
         ros_domain_id = os.getenv("ROS_DOMAIN_ID", "0")
         ros_ws_setup = os.getenv("ROS_WS_SETUP", "").strip()
-        source_ws = f'source "{ros_ws_setup}" && ' if ros_ws_setup else ""
+        source_ws = (
+            f'if [ -f "{ros_ws_setup}" ]; then source "{ros_ws_setup}"; fi && '
+            if ros_ws_setup
+            else ""
+        )
         return (
+            'REPO_ROOT="$(pwd)" && '
+            'PATH="${PATH//$REPO_ROOT\\/.venv\\/bin:/}" && '
+            'PATH="${PATH//:$REPO_ROOT\\/.venv\\/bin/}" && '
+            'PATH="${PATH//$REPO_ROOT\\/.venv\\/bin/}" && '
+            'PATH="${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin:/}" && '
+            'PATH="${PATH//:$REPO_ROOT\\/backend\\/.venv\\/bin/}" && '
+            'PATH="${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin/}" && '
+            "unset VIRTUAL_ENV PYTHONHOME && "
             f"source /opt/ros/{ros_distro}/setup.bash && "
             f"{source_ws}"
             f"export ROS_DOMAIN_ID={ros_domain_id} && "
@@ -1336,6 +1372,14 @@ class BridgeState:
         ros_distro = os.getenv("ROS_DISTRO", "jazzy")
         ros_domain_id = os.getenv("ROS_DOMAIN_ID", "0")
         cmd = (
+            'REPO_ROOT="$(pwd)" && '
+            'PATH="${PATH//$REPO_ROOT\\/.venv\\/bin:/}" && '
+            'PATH="${PATH//:$REPO_ROOT\\/.venv\\/bin/}" && '
+            'PATH="${PATH//$REPO_ROOT\\/.venv\\/bin/}" && '
+            'PATH="${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin:/}" && '
+            'PATH="${PATH//:$REPO_ROOT\\/backend\\/.venv\\/bin/}" && '
+            'PATH="${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin/}" && '
+            "unset VIRTUAL_ENV PYTHONHOME && "
             f"source /opt/ros/{ros_distro}/setup.bash && "
             f"export ROS_DOMAIN_ID={ros_domain_id} && "
             f"timeout 1.0 ros2 run tf2_ros tf2_echo {shlex.quote(parent_frame)} "
@@ -1360,16 +1404,18 @@ class BridgeState:
 
     @staticmethod
     def _ros2_topics(*, timeout_s: float = 2.5, attempts: int = 1) -> set[str] | None:
-        if os.getenv("WAREHOUSE_GRAPH_PROBE_BACKEND", "rclpy").strip().lower() in {
+        graph_backend = os.getenv("WAREHOUSE_GRAPH_PROBE_BACKEND", "auto").strip().lower()
+        if graph_backend in {
             "rclpy",
             "auto",
         }:
             from .ros_graph import rclpy_topic_names
 
             graph_topics = rclpy_topic_names(timeout_s=min(timeout_s, 1.0))
-            if graph_topics:
+            min_topics = int(os.getenv("WAREHOUSE_GRAPH_PROBE_MIN_TOPICS", "8"))
+            if graph_topics and len(graph_topics) >= min_topics:
                 return graph_topics
-            if os.getenv("WAREHOUSE_GRAPH_PROBE_BACKEND", "rclpy").strip().lower() == "rclpy":
+            if graph_backend == "rclpy":
                 return graph_topics
 
         if not shutil.which("ros2"):
@@ -1527,6 +1573,7 @@ class BridgeState:
         flight_id = safe_token(raw_flight_id)
         warehouse_map_id = payload.get("warehouse_map_id")
         profile = str(payload.get("profile") or self.config.profile)
+        bridge_flow = str(payload.get("bridge_flow") or os.getenv("WAREHOUSE_BRIDGE_FLOW", profile))
         session_dir = self.config.capture_root / f"flight_{flight_id}"
 
         with self._session_lock:
@@ -1553,7 +1600,8 @@ class BridgeState:
                 extra={
                     "flight_id": flight_id,
                     "warehouse_map_id": warehouse_map_id,
-                    "profile": profile,
+                "profile": profile,
+                "bridge_flow": bridge_flow,
                     "session_dir": str(session_dir),
                     "autolaunch": self.config.autolaunch,
                 },
@@ -1564,13 +1612,32 @@ class BridgeState:
                 warehouse_map_id=int(warehouse_map_id) if warehouse_map_id is not None else None,
                 profile=profile,
                 session_dir=session_dir,
+                status="starting" if self.config.autolaunch else "running",
             )
+            self.sessions[flight_id] = session
+            self._write_session_files(session, payload)
 
-            if self.config.autolaunch:
+        if self.config.autolaunch:
+            try:
                 process = self._launch_mapping_graph(session)
+            except Exception as exc:
+                with self._session_lock:
+                    session.status = "failed"
+                    self._write_session_files(session, payload)
+                return {
+                    "accepted": False,
+                    "status": "failed",
+                    "detail": f"Warehouse mapping launch failed: {exc}",
+                    "data": {
+                        "flight_id": flight_id,
+                        "session_dir": str(session_dir),
+                    },
+                }
+            launch_grace_s = float(os.getenv("WAREHOUSE_LAUNCH_STARTUP_GRACE_S", "1.0"))
+            launch_failed = exited_during_grace(process, grace_s=launch_grace_s)
+            with self._session_lock:
                 session.launch_pid = process.pid
-                launch_grace_s = float(os.getenv("WAREHOUSE_LAUNCH_STARTUP_GRACE_S", "1.0"))
-                if exited_during_grace(process, grace_s=launch_grace_s):
+                if launch_failed:
                     session.status = "failed"
                     self._write_session_files(session, payload)
                     return {
@@ -1585,16 +1652,19 @@ class BridgeState:
                         },
                     }
                 self.processes[flight_id] = process
+                session.status = "running"
+                mark_mapping_session_active(self.config.capture_root, flight_id)
+                self._write_session_files(session, payload)
                 logger.info(
                     "Warehouse mapping launch process started flight_id=%s pid=%s",
                     flight_id,
                     process.pid,
                     extra={"flight_id": flight_id, "pid": process.pid},
                 )
-
-            self.sessions[flight_id] = session
-            mark_mapping_session_active(self.config.capture_root, flight_id)
-            self._write_session_files(session, payload)
+        else:
+            with self._session_lock:
+                mark_mapping_session_active(self.config.capture_root, flight_id)
+                self._write_session_files(session, payload)
 
         return {
             "accepted": True,
@@ -1633,8 +1703,17 @@ class BridgeState:
                     "status": "not_found",
                     "data": {"flight_id": safe_flight_id},
                 }
+            persisted_export_status: dict[str, Any] = {}
+            export_status_path = session_dir / "export_status.json"
+            if export_status_path.exists():
+                try:
+                    persisted = json.loads(export_status_path.read_text(encoding="utf-8"))
+                    if isinstance(persisted, dict):
+                        persisted_export_status = persisted
+                except Exception:
+                    persisted_export_status = {}
             data["process_alive"] = bool(process and process.poll() is None)
-            data["export"] = export_status.get(safe_flight_id, {})
+            data["export"] = export_status.get(safe_flight_id, persisted_export_status)
             return {"accepted": True, "status": data.get("status", "unknown"), "data": data}
 
         out: list[dict[str, Any]] = []
@@ -1688,7 +1767,7 @@ class BridgeState:
         export_thread = threading.Thread(
             target=self._finalize_mapping_outputs,
             args=(session,),
-            daemon=True,
+            daemon=False,
             name=f"warehouse-export-{safe_flight_id}",
         )
         self.export_jobs[safe_flight_id] = export_thread
@@ -1699,6 +1778,7 @@ class BridgeState:
             "harvested_artifacts": 0,
             "error": None,
         }
+        self._write_export_status(session)
         export_thread.start()
 
         logger.info(
@@ -1742,6 +1822,7 @@ class BridgeState:
                 "harvested_artifacts": harvested,
                 "error": None,
             }
+            self._write_export_status(session)
             logger.info(
                 "Warehouse mapping artifact finalization complete flight_id=%s harvested=%s",
                 session.flight_id,
@@ -1757,9 +1838,16 @@ class BridgeState:
                 "error": "artifact finalization failed",
             }
             self._write_session_files(session, {})
+            self._write_export_status(session)
             logger.exception("Warehouse mapping artifact finalization failed flight_id=%s", session.flight_id)
         finally:
             self.export_jobs.pop(session.flight_id, None)
+
+    def _write_export_status(self, session: MappingSession) -> None:
+        status = self.export_status.get(session.flight_id)
+        if not status:
+            return
+        write_json(session.session_dir / "export_status.json", dict(status))
 
     def download_artifacts(self, flight_id: str, destination_dir: Path) -> dict[str, Any]:
         session_dir = self.config.capture_root / f"flight_{safe_token(flight_id)}"
@@ -1921,6 +2009,7 @@ class BridgeState:
                 "WAREHOUSE_ACTIVE_FLIGHT_ID": session.flight_id,
                 "WAREHOUSE_ACTIVE_SESSION_DIR": str(session.session_dir),
                 "WAREHOUSE_ROS_PROFILE": session.profile,
+                "WAREHOUSE_BRIDGE_FLOW": os.getenv("WAREHOUSE_BRIDGE_FLOW", session.profile),
             }
         )
         return start_process(self.config.launch_cmd, env=env, log_path=session.session_dir / "launch.log")

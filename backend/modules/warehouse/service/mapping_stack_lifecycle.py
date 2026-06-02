@@ -116,13 +116,13 @@ def _suggested_actions(
         )
     if not sensors_ready:
         actions.append(
-            "Start external Gazebo (e.g. gz sim -v4 -r your_world.sdf) and ensure sensor topics publish"
+            "Start the selected warehouse bridge flow and ensure contract sensor topics publish"
         )
         actions.append(
             "Run scripts/check_warehouse_ros_health.sh to verify bridged sensor topics"
         )
         actions.append(
-            "Verify ros2 topic hz /warehouse/front/rgbd/image and /warehouse/drone/odometry"
+            "Verify ros2 topic hz /warehouse/contract/rgb/image and /warehouse/contract/odometry"
         )
     if missing_required:
         actions.append(f"Restore required sensor topics: {', '.join(missing_required)}")

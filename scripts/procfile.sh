@@ -9,6 +9,15 @@ export ROS_WS_SETUP="${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}"
 # allow ROS Python tools to see apt-installed packages like tornado/argcomplete.
 export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PATH="${PATH//$REPO_ROOT\/.venv\/bin:/}"
+PATH="${PATH//:$REPO_ROOT\/.venv\/bin/}"
+PATH="${PATH//$REPO_ROOT\/.venv\/bin/}"
+PATH="${PATH//$REPO_ROOT\/backend\/.venv\/bin:/}"
+PATH="${PATH//:$REPO_ROOT\/backend\/.venv\/bin/}"
+PATH="${PATH//$REPO_ROOT\/backend\/.venv\/bin/}"
+export PATH
+
 source_ros_env() {
   local nounset_was_enabled=0
 

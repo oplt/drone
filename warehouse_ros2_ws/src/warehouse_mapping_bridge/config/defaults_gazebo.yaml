@@ -1,12 +1,12 @@
 /**:
   ros__parameters:
-    profile: isaac_ros_nvblox_stereo
+    profile: gazebo
+    rgb_image_topic: /warehouse/contract/rgb/image
     left_image_topic: /warehouse/contract/stereo/left/image
     right_image_topic: /warehouse/contract/stereo/right/image
     imu_topic: /warehouse/contract/imu
     visual_slam_odom_topic: /warehouse/contract/odometry
     local_odometry_topic: /warehouse/contract/local_odometry
-    mavlink_vision_url: udpout:127.0.0.1:14550
     depth_topic: /warehouse/contract/depth/image
     raw_lidar_topic: /warehouse/contract/points
     pointcloud_topic: /warehouse/contract/map/points
@@ -14,5 +14,9 @@
     mesh_marker_topic: /warehouse/contract/map/mesh_marker
     occupancy_topic: /warehouse/contract/map/occupancy
     esdf_topic: /warehouse/contract/map/esdf
-    back_projected_depth_topic: /warehouse/contract/depth/back_projected
+    static_map_slice_topic: /nvblox_node/static_map_slice
+    combined_map_slice_topic: /nvblox_node/combined_map_slice
     health_topic: /warehouse/mapping/health
+    odom_frame: odom
+    base_link_frame: base_link
+    rgbd_frame: front_rgbd_camera_link

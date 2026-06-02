@@ -63,7 +63,7 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
         "left_image": "/warehouse/stereo/left/image",
         "right_image": "/warehouse/stereo/right/image",
         "depth": "/warehouse/front/rgbd/depth_image",
-        "imu": "",
+        "imu": "/imu",
         "visual_slam_odom": "/warehouse/drone/odometry",
         "local_odometry": "/warehouse/drone/odometry",
         "raw_lidar": "/warehouse/front/rgbd/points",
@@ -95,6 +95,45 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
         "back_projected_depth": "/nvblox_node/back_projected_depth",
         "health": "/warehouse/mapping/health",
     },
+    "real_device": {
+        "rgb_image": "/camera/color/image_raw",
+        "left_image": "/stereo/left/image_rect",
+        "right_image": "/stereo/right/image_rect",
+        "depth": "/camera/depth/image_rect_raw",
+        "imu": "/imu/data",
+        "visual_slam_odom": "/visual_slam/tracking/odometry",
+        "local_odometry": "/warehouse/local_odometry",
+        "raw_lidar": "/lidar/points",
+        "pointcloud": "/nvblox_node/static_esdf_pointcloud",
+        "mesh": "/nvblox_node/mesh",
+        "mesh_marker": "/nvblox_node/mesh_marker",
+        "occupancy": "/nvblox_node/occupancy_layer",
+        "esdf": "/nvblox_node/static_esdf_pointcloud",
+        "static_map_slice": "/nvblox_node/static_map_slice",
+        "combined_map_slice": "/nvblox_node/combined_map_slice",
+        "back_projected_depth": "/nvblox_node/back_projected_depth",
+        "health": "/warehouse/mapping/health",
+    },
+}
+
+_CONTRACT_TOPICS: dict[str, str] = {
+    "rgb_image": "/warehouse/contract/rgb/image",
+    "left_image": "/warehouse/contract/stereo/left/image",
+    "right_image": "/warehouse/contract/stereo/right/image",
+    "depth": "/warehouse/contract/depth/image",
+    "imu": "/warehouse/contract/imu",
+    "visual_slam_odom": "/warehouse/contract/odometry",
+    "local_odometry": "/warehouse/contract/local_odometry",
+    "raw_lidar": "/warehouse/contract/points",
+    "pointcloud": "/warehouse/contract/map/points",
+    "mesh": "/warehouse/contract/map/mesh",
+    "mesh_marker": "/warehouse/contract/map/mesh_marker",
+    "occupancy": "/warehouse/contract/map/occupancy",
+    "esdf": "/warehouse/contract/map/esdf",
+    "static_map_slice": "/warehouse/contract/map/static_slice",
+    "combined_map_slice": "/warehouse/contract/map/combined_slice",
+    "back_projected_depth": "/warehouse/contract/depth/back_projected",
+    "health": "/warehouse/mapping/health",
 }
 
 _DEFAULT_REQUIRED_FOR_PERCEPTION: tuple[str, ...] = (
@@ -228,7 +267,7 @@ def discover_gz_imu_topic() -> str | None:
 def topic_registry() -> TopicRegistry:
     payload = _load_yaml_registry()
     profile = _default_topic_profile()
-    profiles = payload.get("profiles", {})
+    profiles = payload.get("source_profiles", payload.get("profiles", {}))
     known_profiles = set(_DEFAULT_TOPICS_BY_PROFILE)
     if isinstance(profiles, dict):
         known_profiles.update(str(key) for key in profiles)
@@ -236,24 +275,12 @@ def topic_registry() -> TopicRegistry:
         raise ValueError(
             f"Unknown warehouse topic profile {profile!r}; expected one of {sorted(known_profiles)}"
         )
-    profile_topics = profiles.get(profile, {})
-    if not isinstance(profile_topics, dict):
-        profile_topics = {}
-    if not profile_topics and profile != "gazebo":
-        profile_topics = profiles.get("gazebo", {})
-    if not isinstance(profile_topics, dict):
-        profile_topics = {}
-
-    default_topics = dict(
-        _DEFAULT_TOPICS_BY_PROFILE.get(
-            profile,
-            _DEFAULT_TOPICS_BY_PROFILE["gazebo"],
-        )
-    )
-
-    topics: dict[str, str] = default_topics | {
+    contract_topics = payload.get("contract", {})
+    if not isinstance(contract_topics, dict):
+        contract_topics = {}
+    topics: dict[str, str] = dict(_CONTRACT_TOPICS) | {
         str(k): str(v)
-        for k, v in profile_topics.items()
+        for k, v in contract_topics.items()
         if v is not None and str(v).strip()
     }
     aliases_raw = payload.get("aliases", {})
@@ -263,10 +290,11 @@ def topic_registry() -> TopicRegistry:
             if isinstance(values, list):
                 aliases[str(key)] = [str(item) for item in values]
 
-    for key, env_name in _ENV_OVERRIDES.items():
-        raw = os.getenv(env_name, "").strip()
-        if raw:
-            topics[key] = raw
+    if bool_env("WAREHOUSE_ALLOW_CONTRACT_TOPIC_OVERRIDES", False):
+        for key, env_name in _ENV_OVERRIDES.items():
+            raw = os.getenv(env_name, "").strip()
+            if raw:
+                topics[key] = raw
 
     odom_topic = os.getenv("WAREHOUSE_ODOMETRY_TOPIC", "").strip()
     if odom_topic:
@@ -389,6 +417,26 @@ def load_config() -> BridgeConfig:
 
 def topic_env() -> dict[str, str]:
     return dict(topic_registry().topics)
+
+
+def source_topic_env(profile: str | None = None) -> dict[str, str]:
+    payload = _load_yaml_registry()
+    selected = profile or _default_topic_profile()
+    profiles = payload.get("source_profiles", payload.get("profiles", {}))
+    source = profiles.get(selected, {}) if isinstance(profiles, dict) else {}
+    if not isinstance(source, dict):
+        source = {}
+    defaults = _DEFAULT_TOPICS_BY_PROFILE.get(selected, _DEFAULT_TOPICS_BY_PROFILE["gazebo"])
+    topics = dict(defaults) | {str(k): str(v) for k, v in source.items() if v is not None}
+    if bool_env("WAREHOUSE_SOURCE_TOPIC_ENV_OVERRIDES", False):
+        for key, env_name in _ENV_OVERRIDES.items():
+            raw = os.getenv(env_name, "").strip()
+            if raw:
+                topics[key] = raw
+    odom_topic = os.getenv("WAREHOUSE_ODOMETRY_TOPIC", "").strip()
+    if odom_topic:
+        topics["visual_slam_odom"] = odom_topic
+    return topics
 
 
 def topic_aliases() -> dict[str, list[str]]:

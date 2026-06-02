@@ -20,12 +20,12 @@ def rclpy_topic_names(*, timeout_s: float = 0.5) -> set[str] | None:
             "warehouse_graph_probe",
             namespace=os.getenv("WAREHOUSE_GRAPH_PROBE_NAMESPACE", ""),
         )
-        deadline = time.monotonic() + max(0.05, timeout_s)
+        deadline = time.monotonic() + max(0.25, timeout_s)
         topics: set[str] = set()
         while time.monotonic() < deadline:
             rclpy.spin_once(node, timeout_sec=0.05)
             topics = {name for name, _types in node.get_topic_names_and_types()}
-            if topics:
+            if len(topics) >= int(os.getenv("WAREHOUSE_GRAPH_PROBE_MIN_TOPICS", "4")):
                 break
         return topics
     except Exception:

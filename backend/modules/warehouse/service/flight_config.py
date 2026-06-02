@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
+
 
 def _int_env(name: str, default: int) -> int:
     raw = os.getenv(name)
@@ -72,5 +74,5 @@ class WarehouseFlightConfig:
             require_nvblox_for_autonomy=_bool_env("WAREHOUSE_TAKEOFF_REQUIRE_NVBLOX", True),
             require_mission_for_autonomy=True,
             require_gazebo_publishing=_bool_env("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", True),
-            gazebo_sim=_bool_env("WAREHOUSE_GAZEBO_SIM", False),
+            gazebo_sim=resolve_warehouse_bridge_flow().name == "gazebo",
         )

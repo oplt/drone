@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from backend.core.config.runtime import settings
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.warehouse.ports import (
     WarehouseExplorationSnapshot,
     WarehouseMappingStartRequest,
@@ -76,23 +77,26 @@ class DisabledWarehousePerceptionPort:
             self,
             *,
             profile: str,
+            bridge_flow: str,
             bridge_url: str,
             websocket_url: str,
             capture_root: str,
     ) -> None:
         self.profile = profile
+        self.bridge_flow = bridge_flow
         self.bridge_url = bridge_url
         self.websocket_url = websocket_url
         self.capture_root = capture_root
 
-    async def status(self, *, deep: bool = False) -> WarehousePerceptionStatus:
-        del deep
+    async def status(self, *, deep: bool = False, force: bool = False) -> WarehousePerceptionStatus:
+        del deep, force
         return WarehousePerceptionStatus(
             configured=False,
             reachable=False,
             ready=False,
             status="disabled",
             profile=self.profile,
+            bridge_flow=self.bridge_flow,
             bridge_url=self.bridge_url or None,
             websocket_url=self.websocket_url or None,
             capture_root=self.capture_root,
@@ -143,6 +147,7 @@ class HttpWarehousePerceptionPort:
             websocket_url: str,
             capture_root: str,
             profile: str,
+            bridge_flow: str,
             timeout_s: float,
             deep_timeout_s: float,
     ) -> None:
@@ -150,6 +155,7 @@ class HttpWarehousePerceptionPort:
         self.websocket_url = websocket_url.strip()
         self.capture_root = capture_root
         self.profile = profile
+        self.bridge_flow = bridge_flow
         self.timeout_s = timeout_s
         self.deep_timeout_s = deep_timeout_s
         limits = httpx.Limits(max_connections=20, max_keepalive_connections=10)
@@ -200,6 +206,7 @@ class HttpWarehousePerceptionPort:
 
         components = _as_dict(payload.get("components"))
         for bridge_field in (
+                "bridge_flow",
                 "diagnostics_ready",
                 "probe_in_progress",
                 "cache_ready",
@@ -240,6 +247,7 @@ class HttpWarehousePerceptionPort:
             ready=ready,
             status=status,
             profile=_string(payload.get("profile")) or self.profile,
+            bridge_flow=_string(payload.get("bridge_flow")) or self.bridge_flow,
             bridge_url=self.bridge_url,
             websocket_url=_string(payload.get("websocket_url")) or self.websocket_url or None,
             capture_root=_string(payload.get("capture_root")) or self.capture_root,
@@ -266,6 +274,8 @@ class HttpWarehousePerceptionPort:
         payload = request.model_dump(mode="json")
         if not payload.get("profile"):
             payload["profile"] = self.profile
+        if not payload.get("bridge_flow"):
+            payload["bridge_flow"] = self.bridge_flow
         if not payload.get("capture_root"):
             payload["capture_root"] = self.capture_root
         logger.info(
@@ -278,6 +288,7 @@ class HttpWarehousePerceptionPort:
                 "flight_id": payload.get("flight_id"),
                 "warehouse_map_id": payload.get("warehouse_map_id"),
                 "profile": payload.get("profile"),
+                "bridge_flow": payload.get("bridge_flow"),
             },
         )
         result = self._command_result(await self._post_json("/mapping/start", payload))
@@ -424,11 +435,13 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
     bridge_url = settings.WAREHOUSE_ROS_BRIDGE_URL.strip()
     websocket_url = settings.WAREHOUSE_ROS_WS_URL.strip()
     capture_root = settings.WAREHOUSE_ROS_CAPTURE_ROOT.strip()
-    profile = settings.WAREHOUSE_ROS_PROFILE.strip() or "gazebo"
+    flow = resolve_warehouse_bridge_flow()
+    profile = settings.WAREHOUSE_ROS_PROFILE.strip() or flow.ros_profile
 
     if not bridge_url:
         _cached_port = DisabledWarehousePerceptionPort(
             profile=profile,
+            bridge_flow=flow.name,
             bridge_url="",
             websocket_url=websocket_url,
             capture_root=capture_root,
@@ -443,6 +456,7 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
         websocket_url=websocket_url,
         capture_root=capture_root,
         profile=profile,
+        bridge_flow=flow.name,
         timeout_s=timeout_s,
         deep_timeout_s=deep_timeout_s,
     )

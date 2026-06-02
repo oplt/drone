@@ -17,6 +17,16 @@ def _stamp_to_sec(stamp: object) -> float | None:
     return float(sec) + (float(nanosec) / 1_000_000_000.0)
 
 
+def _covariance_max_diagonal(covariance: object) -> float | None:
+    try:
+        values = [float(covariance[index]) for index in (0, 7, 14)]
+    except (TypeError, ValueError, IndexError):
+        return None
+    if not any(values):
+        return None
+    return max(values)
+
+
 def main() -> None:
     import rclpy
     from nav_msgs.msg import Odometry
@@ -64,6 +74,12 @@ def main() -> None:
             linear = message.twist.twist.linear
             angular = message.twist.twist.angular
             now_mono = time.monotonic()
+            max_position_variance = _covariance_max_diagonal(message.pose.covariance)
+            local_position_ok = (
+                max_position_variance is None
+                or max_position_variance <= float(os.getenv("WAREHOUSE_ODOM_MAX_POSITION_VAR_M2", "4.0"))
+            )
+            tracking_ok = bool(local_position_ok)
             payload = {
                 "timestamp_utc": datetime.now(UTC).isoformat(),
                 "updated_at_monotonic": now_mono,
@@ -90,11 +106,14 @@ def main() -> None:
                     "z_mps": float(linear.z),
                     "yaw_rate_rps": float(angular.z),
                 },
-                "slam_ready": True,
-                "slam_tracking_ok": True,
-                "local_position_ok": True,
-                "localization_confidence": 1.0,
-                "odometry_drift_m": 0.0,
+                "odom_received": True,
+                "slam_ready": tracking_ok,
+                "slam_tracking_ok": tracking_ok,
+                "slam_tracking_status": "tracking" if tracking_ok else "covariance_high",
+                "local_position_ok": local_position_ok,
+                "localization_confidence": None,
+                "max_position_variance_m2": max_position_variance,
+                "odometry_drift_m": None,
             }
             if now_mono - self._last_state_write_s >= self.state_write_period_s:
                 self._last_state_write_s = now_mono

@@ -325,6 +325,7 @@ class RuntimeSettings(BaseSettings):
 
     # Warehouse ROS 2 / Isaac perception bridge. The FastAPI backend talks to
     # this companion service; ROS nodes stay outside the API process.
+    WAREHOUSE_BRIDGE_FLOW: str = "isaac"
     WAREHOUSE_ROS_BRIDGE_URL: str = "http://127.0.0.1:8088"
     WAREHOUSE_ROS_WS_URL: str = ""
     WAREHOUSE_ROS_CAPTURE_ROOT: str = "backend/storage/warehouse_ros"

@@ -4,11 +4,14 @@ import logging
 import os
 
 from backend.core.config.runtime import settings
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
 logger = logging.getLogger(__name__)
 
 
 def warehouse_gazebo_sim_enabled() -> bool:
+    if resolve_warehouse_bridge_flow().name == "gazebo":
+        return True
     return os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
         "true",
@@ -18,6 +21,8 @@ def warehouse_gazebo_sim_enabled() -> bool:
 
 
 def effective_drone_video_use_gazebo() -> bool:
+    if resolve_warehouse_bridge_flow().name != "gazebo":
+        return False
     if settings.drone_video_use_gazebo:
         return True
     if warehouse_gazebo_sim_enabled() and (settings.drone_video_source_gazebo or "").strip():

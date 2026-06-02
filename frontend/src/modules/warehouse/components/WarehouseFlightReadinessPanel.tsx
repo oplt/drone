@@ -61,6 +61,8 @@ type Props = {
   loading?: boolean;
   onStart?: () => void;
   starting?: boolean;
+  startDisabled?: boolean;
+  startDisabledReason?: string;
   onPause?: () => void;
   onAbort?: () => void;
   onLand?: () => void;
@@ -74,6 +76,8 @@ export function WarehouseFlightReadinessPanel({
   loading = false,
   onStart,
   starting = false,
+  startDisabled = false,
+  startDisabledReason,
   onPause,
   onAbort,
   onLand,
@@ -162,7 +166,13 @@ export function WarehouseFlightReadinessPanel({
             </Typography>
           )}
           {onStart && (
-            <Button variant="contained" size="small" disabled={!canStart || starting} onClick={onStart}>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={!canStart || startDisabled || starting}
+              title={startDisabledReason}
+              onClick={onStart}
+            >
               Start Warehouse Flight
             </Button>
           )}
@@ -269,7 +279,8 @@ export function WarehouseFlightReadinessPanel({
               <Button
                 variant="contained"
                 size="small"
-                disabled={!canStart || starting}
+                disabled={!canStart || startDisabled || starting}
+                title={startDisabledReason}
                 onClick={onStart}
               >
                 Start Warehouse Flight

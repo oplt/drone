@@ -15,6 +15,7 @@ setup(
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
         (f"share/{package_name}/worlds", glob("worlds/*.sdf")),
+        (f"share/{package_name}/models/warehouse_drone", glob("models/warehouse_drone/*")),
         (f"share/{package_name}/urdf", glob("urdf/*")),
     ],
     install_requires=[
@@ -22,7 +23,7 @@ setup(
         "fastapi>=0.100",
         "uvicorn>=0.23",
         "pymavlink>=2.4.49",
-        "PyYAML>=6.0",
+            "PyYAML>=6.0",
     ],
     zip_safe=True,
     maintainer="Drone App",
@@ -39,6 +40,9 @@ setup(
             "warehouse_live_map_publisher = warehouse_mapping_bridge.live_map_publisher_node:main",
             "warehouse_vision_mavlink_bridge = warehouse_mapping_bridge.vision_mavlink_bridge_node:main",
             "warehouse_sim_tf_broadcaster = warehouse_mapping_bridge.sim_tf_broadcaster_node:main",
+            "warehouse_isaac_stack_preflight = warehouse_mapping_bridge.isaac_stack_preflight_node:main",
+            "warehouse_diagnostics_aggregator = warehouse_mapping_bridge.diagnostics_aggregator_node:main",
+            "warehouse_topic_adapter = warehouse_mapping_bridge.topic_adapter_node:main",
         ],
     },
 )

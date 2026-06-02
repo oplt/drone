@@ -1,13 +1,33 @@
 # Warehouse ROS topic registry. Env vars (WAREHOUSE_*_TOPIC) override these values.
 # Select profile via WAREHOUSE_TOPIC_PROFILE (defaults to gazebo when WAREHOUSE_GAZEBO_SIM=1).
 
-profiles:
+contract:
+  rgb_image: /warehouse/contract/rgb/image
+  left_image: /warehouse/contract/stereo/left/image
+  right_image: /warehouse/contract/stereo/right/image
+  depth: /warehouse/contract/depth/image
+  imu: /warehouse/contract/imu
+  visual_slam_odom: /warehouse/contract/odometry
+  local_odometry: /warehouse/contract/local_odometry
+  raw_lidar: /warehouse/contract/points
+  pointcloud: /warehouse/contract/map/points
+  mesh: /warehouse/contract/map/mesh
+  mesh_marker: /warehouse/contract/map/mesh_marker
+  occupancy: /warehouse/contract/map/occupancy
+  esdf: /warehouse/contract/map/esdf
+  static_map_slice: /warehouse/contract/map/static_slice
+  combined_map_slice: /warehouse/contract/map/combined_slice
+  back_projected_depth: /warehouse/contract/depth/back_projected
+  health: /warehouse/mapping/health
+
+source_profiles:
   gazebo:
     rgb_image: /warehouse/front/rgbd/image
     left_image: /warehouse/stereo/left/image
     right_image: /warehouse/stereo/right/image
     depth: /warehouse/front/rgbd/depth_image
-    # imu: set WAREHOUSE_IMU_TOPIC or auto-discovered from `gz topic -l`
+    # start_gazebo_sensor_bridge relays discovered Gazebo IMU into /imu.
+    imu: /imu
     visual_slam_odom: /warehouse/drone/odometry
     local_odometry: /warehouse/drone/odometry
     raw_lidar: /warehouse/front/rgbd/points
@@ -37,12 +57,33 @@ profiles:
     combined_map_slice: /nvblox_node/combined_map_slice
     back_projected_depth: /nvblox_node/back_projected_depth
 
+  real_device:
+    rgb_image: /camera/color/image_raw
+    left_image: /stereo/left/image_rect
+    right_image: /stereo/right/image_rect
+    depth: /camera/depth/image_rect_raw
+    imu: /imu/data
+    visual_slam_odom: /visual_slam/tracking/odometry
+    local_odometry: /warehouse/local_odometry
+    raw_lidar: /lidar/points
+    pointcloud: /nvblox_node/static_esdf_pointcloud
+    mesh: /nvblox_node/mesh
+    mesh_marker: /nvblox_node/mesh_marker
+    occupancy: /nvblox_node/occupancy_layer
+    esdf: /nvblox_node/static_esdf_pointcloud
+    static_map_slice: /nvblox_node/static_map_slice
+    combined_map_slice: /nvblox_node/combined_map_slice
+    back_projected_depth: /nvblox_node/back_projected_depth
+
 aliases:
   raw_lidar:
     - /scan/points
     - /warehouse/front/rgbd/points
+    - /lidar/points
   imu:
     - /imu
+    - /imu/data
+    - /warehouse/drone/imu
     - /world/iris_warehouse/model/iris_rplidar_rgbd/model/iris_with_standoffs/link/imu_link/sensor/imu_sensor/imu
   visual_slam_odom:
     - /warehouse/drone/odometry

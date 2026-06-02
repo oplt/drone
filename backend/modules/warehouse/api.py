@@ -63,6 +63,7 @@ from backend.modules.warehouse.service.live_map_storage import (
     LiveMapStorageError,
     warehouse_live_map_chunk_storage,
 )
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.telemetry.websocket_api import _authorize_websocket
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
@@ -172,6 +173,8 @@ class WarehouseManualMappingStartIn(BaseModel):
     warehouse_map_id: int = Field(..., ge=1)
     sensor_rig_id: int | None = Field(default=None, ge=1)
     dock_id: int | None = Field(default=None, ge=1)
+    profile: str | None = Field(default=None, max_length=128)
+    bridge_flow: str | None = Field(default=None, max_length=32)
 
 
 class WarehouseManualMappingStopIn(BaseModel):
@@ -294,6 +297,13 @@ class WarehouseSimulationReplayIn(BaseModel):
     replay_id: str = Field(..., min_length=1, max_length=128)
     rosbag_path: str = Field(..., min_length=1, max_length=4096)
     profile: str | None = Field(default=None, max_length=128)
+
+
+@router.get("/bridge-flow")
+async def get_warehouse_bridge_flow(
+    _org_user: OrgUser = Depends(require_org_user),
+) -> dict[str, object]:
+    return resolve_warehouse_bridge_flow().to_dict()
 
 
 class WarehouseMapOut(BaseModel):
@@ -1336,8 +1346,11 @@ async def start_warehouse_manual_mapping(
             flight_id=payload.flight_id,
             warehouse_map_id=int(warehouse_map.id),
             sensor_rig_id=payload.sensor_rig_id,
+            profile=payload.profile,
+            bridge_flow=payload.bridge_flow,
             metadata={
                 "mission_kind": "warehouse_manual_mapping",
+                "bridge_flow": payload.bridge_flow or resolve_warehouse_bridge_flow().name,
                 "warehouse_name": warehouse_map.name,
                 "dock_id": int(dock.id) if dock is not None else None,
                 "dock_marker_id": dock.marker_id if dock is not None else None,

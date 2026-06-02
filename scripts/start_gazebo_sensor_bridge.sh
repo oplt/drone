@@ -8,12 +8,20 @@ export ROS_DISTRO="${ROS_DISTRO:-jazzy}"
 export WAREHOUSE_GAZEBO_BRIDGE_LOG_LEVEL="${WAREHOUSE_GAZEBO_BRIDGE_LOG_LEVEL:-info}"
 export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -n "${VIRTUAL_ENV:-}" ]; then
   PATH="${PATH//$VIRTUAL_ENV\/bin:/}"
   PATH="${PATH//:$VIRTUAL_ENV\/bin/}"
   PATH="${PATH//$VIRTUAL_ENV\/bin/}"
   unset VIRTUAL_ENV
 fi
+PATH="${PATH//$REPO_ROOT\/.venv\/bin:/}"
+PATH="${PATH//:$REPO_ROOT\/.venv\/bin/}"
+PATH="${PATH//$REPO_ROOT\/.venv\/bin/}"
+PATH="${PATH//$REPO_ROOT\/backend\/.venv\/bin:/}"
+PATH="${PATH//:$REPO_ROOT\/backend\/.venv\/bin/}"
+PATH="${PATH//$REPO_ROOT\/backend\/.venv\/bin/}"
+export PATH
 unset PYTHONPATH PYTHONHOME
 
 source "/opt/ros/${ROS_DISTRO}/setup.bash"

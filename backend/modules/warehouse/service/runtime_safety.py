@@ -12,9 +12,14 @@ from backend.modules.warehouse.service.safety import (
     WarehouseSafetyDecision,
     evaluate_warehouse_runtime_safety,
 )
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
 
 def _gazebo_sim_enabled() -> bool:
+    if resolve_warehouse_bridge_flow().name == "gazebo":
+        return True
+    if resolve_warehouse_bridge_flow().name == "real_device":
+        return False
     return os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
         "true",
@@ -71,10 +76,7 @@ def odometry_topic_path(components: dict[str, Any]) -> str:
             matched = diag.get("matched") or diag.get("expected")
             if isinstance(matched, str) and matched.strip():
                 return matched.strip()
-    env_topic = os.getenv("WAREHOUSE_ODOMETRY_TOPIC", "").strip()
-    if env_topic:
-        return env_topic
-    return "/warehouse/drone/odometry"
+    return "/warehouse/contract/odometry"
 
 
 def odometry_source_label(*, gazebo_sim: bool | None = None) -> str:

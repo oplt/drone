@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import struct
 import threading
 import time
 import urllib.error
@@ -20,6 +21,57 @@ def _float_env(name: str, default: float) -> float:
         return default
 
 
+def _field_offsets(fields: list[Any]) -> dict[str, int]:
+    offsets: dict[str, int] = {}
+    for field in fields:
+        name = str(getattr(field, "name", ""))
+        if name in {"x", "y", "z"}:
+            offsets[name] = int(getattr(field, "offset", 0))
+    return offsets
+
+
+def pointcloud_xyz_sample(message: Any, *, max_points: int) -> list[list[float]]:
+    count = int(getattr(message, "width", 0)) * int(getattr(message, "height", 0))
+    point_step = int(getattr(message, "point_step", 0))
+    data = bytes(getattr(message, "data", b""))
+    offsets = _field_offsets(list(getattr(message, "fields", [])))
+    if count <= 0 or point_step <= 0 or not data or not {"x", "y", "z"}.issubset(offsets):
+        return []
+    limit = min(count, max(1, max_points), len(data) // point_step)
+    stride = max(1, count // limit)
+    points: list[list[float]] = []
+    endian = ">" if bool(getattr(message, "is_bigendian", False)) else "<"
+    unpack = struct.Struct(f"{endian}f").unpack_from
+    for index in range(0, count, stride):
+        if len(points) >= limit:
+            break
+        base = index * point_step
+        if base + point_step > len(data):
+            break
+        try:
+            x = float(unpack(data, base + offsets["x"])[0])
+            y = float(unpack(data, base + offsets["y"])[0])
+            z = float(unpack(data, base + offsets["z"])[0])
+        except (struct.error, ValueError):
+            continue
+        if not all(-1.0e6 < value < 1.0e6 for value in (x, y, z)):
+            continue
+        points.append([x, y, z])
+    return points
+
+
+def bbox_from_points(points: list[list[float]], fallback_pose: dict[str, float | str]) -> list[float]:
+    if points:
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        zs = [point[2] for point in points]
+        return [min(xs), min(ys), min(zs), max(xs), max(ys), max(zs)]
+    x = float(fallback_pose["x_m"])
+    y = float(fallback_pose["y_m"])
+    z = float(fallback_pose["z_m"])
+    return [x - 0.5, y - 0.5, max(0.0, z - 0.25), x + 0.5, y + 0.5, z + 0.25]
+
+
 @dataclass
 class BackendPublisher:
     base_url: str
@@ -27,9 +79,9 @@ class BackendPublisher:
     token: str
     timeout_s: float = 2.0
 
-    def publish(self, payload: dict[str, Any]) -> None:
+    def publish(self, payload: dict[str, Any]) -> tuple[bool, str]:
         if not self.base_url or not self.flight_id or not self.token:
-            return
+            return False, "backend_not_configured"
         url = f"{self.base_url.rstrip('/')}/warehouse/live-map/{self.flight_id}/updates"
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -43,23 +95,35 @@ class BackendPublisher:
         )
         try:
             urllib.request.urlopen(req, timeout=self.timeout_s).read()
-        except (urllib.error.URLError, TimeoutError):
-            return
+            return True, ""
+        except (urllib.error.URLError, TimeoutError) as exc:
+            return False, str(exc)
 
 
 class AsyncBackendPublisher:
     def __init__(self, publisher: BackendPublisher, *, max_queue: int = 2) -> None:
         self.publisher = publisher
         self.queue: queue.Queue[dict[str, Any] | None] = queue.Queue(maxsize=max(1, max_queue))
+        self.lock = threading.Lock()
+        self.submitted = 0
+        self.dropped = 0
+        self.succeeded = 0
+        self.failed = 0
+        self.last_error = ""
+        self.last_success_monotonic: float | None = None
         self.thread = threading.Thread(target=self._run, name="warehouse-live-map-http", daemon=True)
         self.thread.start()
 
     def submit(self, payload: dict[str, Any]) -> None:
+        with self.lock:
+            self.submitted += 1
         try:
             self.queue.put_nowait(payload)
         except queue.Full:
             try:
                 self.queue.get_nowait()
+                with self.lock:
+                    self.dropped += 1
             except queue.Empty:
                 pass
             self.queue.put_nowait(payload)
@@ -75,11 +139,32 @@ class AsyncBackendPublisher:
             payload = self.queue.get()
             if payload is None:
                 return
-            self.publisher.publish(payload)
+            ok, error = self.publisher.publish(payload)
+            with self.lock:
+                if ok:
+                    self.succeeded += 1
+                    self.last_error = ""
+                    self.last_success_monotonic = time.monotonic()
+                else:
+                    self.failed += 1
+                    self.last_error = error
+
+    def snapshot(self) -> dict[str, Any]:
+        with self.lock:
+            return {
+                "submitted": self.submitted,
+                "dropped": self.dropped,
+                "succeeded": self.succeeded,
+                "failed": self.failed,
+                "last_error": self.last_error,
+                "last_success_monotonic": self.last_success_monotonic,
+                "queue_size": self.queue.qsize(),
+            }
 
 
 def main() -> None:
     import rclpy
+    from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
     from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -103,6 +188,10 @@ def main() -> None:
             self.sequence = 0
             self.pose = {"x_m": 0.0, "y_m": 0.0, "z_m": 0.0, "frame_id": "map"}
             self.min_period_s = _float_env("WAREHOUSE_LIVE_MAP_PUBLISH_PERIOD_S", 0.5)
+            self.max_points_per_chunk = max(
+                1,
+                int(_float_env("WAREHOUSE_LIVE_MAP_MAX_POINTS_PER_CHUNK", 2048)),
+            )
             self.last_publish_s = 0.0
             self.last_pointcloud_s = 0.0
             self.pointcloud_topic = os.getenv("WAREHOUSE_ESDF_TOPIC", topics["esdf"])
@@ -114,6 +203,13 @@ def main() -> None:
             sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
             self.create_subscription(PointCloud2, self.pointcloud_topic, self.on_pointcloud, sensor_qos)
             self.create_subscription(Odometry, self.odom_topic, self.on_odom, QoSProfile(depth=20))
+            self.diagnostics_publisher = self.create_publisher(
+                DiagnosticArray,
+                "/warehouse/mapping/live_map_diagnostics",
+                QoSProfile(depth=10),
+            )
+            self._last_reported_failures = 0
+            self.create_timer(2.0, self.publish_diagnostics)
 
         def on_odom(self, msg: Odometry) -> None:
             self.pose = {
@@ -131,9 +227,10 @@ def main() -> None:
             self.last_pointcloud_s = now
             self.sequence += 1
             point_count = int(msg.width) * int(msg.height)
-            span = max(0.5, min(8.0, point_count ** (1 / 3) * 0.03))
-            chunk_id = f"esdf-{self.sequence:08d}"
+            sample = pointcloud_xyz_sample(msg, max_points=self.max_points_per_chunk)
+            chunk_id = f"pointcloud-{self.sequence:08d}"
             payload = {
+                "schema": "warehouse.live_map.v1",
                 "flight_id": self.flight_id,
                 "frame_id": msg.header.frame_id or "map",
                 "pose": self.pose,
@@ -141,17 +238,12 @@ def main() -> None:
                 "changed_chunks": [
                     {
                         "id": chunk_id,
-                        "kind": "esdf",
+                        "kind": "pointcloud_xyz",
                         "sequence": self.sequence,
                         "point_count": point_count,
-                        "bbox_local_m": [
-                            self.pose["x_m"] - span,
-                            self.pose["y_m"] - span,
-                            max(0.0, self.pose["z_m"] - span / 2),
-                            self.pose["x_m"] + span,
-                            self.pose["y_m"] + span,
-                            self.pose["z_m"] + span / 2,
-                        ],
+                        "sampled_point_count": len(sample),
+                        "points_xyz_m": sample,
+                        "bbox_local_m": bbox_from_points(sample, self.pose),
                     }
                 ],
                 "health": {
@@ -164,6 +256,34 @@ def main() -> None:
                 },
             }
             self.publisher.submit(payload)
+
+        def publish_diagnostics(self) -> None:
+            stats = self.publisher.snapshot()
+            failures = int(stats["failed"])
+            if failures > self._last_reported_failures:
+                self._last_reported_failures = failures
+                self.get_logger().warning(
+                    f"Live map backend publish failed count={failures} error={stats['last_error']}"
+                )
+            diag = DiagnosticArray()
+            diag.header.stamp = self.get_clock().now().to_msg()
+            status = DiagnosticStatus()
+            status.name = "warehouse_mapping_bridge/live_map_publisher"
+            status.hardware_id = "warehouse_mapping_bridge"
+            status.level = DiagnosticStatus.WARN if failures else DiagnosticStatus.OK
+            status.message = "backend_errors" if failures else "ok"
+            status.values = [
+                KeyValue(key="submitted", value=str(stats["submitted"])),
+                KeyValue(key="dropped", value=str(stats["dropped"])),
+                KeyValue(key="succeeded", value=str(stats["succeeded"])),
+                KeyValue(key="failed", value=str(stats["failed"])),
+                KeyValue(key="last_error", value=str(stats["last_error"])),
+                KeyValue(key="queue_size", value=str(stats["queue_size"])),
+                KeyValue(key="payload_kind", value="pointcloud_xyz"),
+                KeyValue(key="schema", value="warehouse.live_map.v1"),
+            ]
+            diag.status.append(status)
+            self.diagnostics_publisher.publish(diag)
 
     rclpy.init()
     node = WarehouseLiveMapPublisher()

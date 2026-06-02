@@ -12,6 +12,7 @@ class WarehousePerceptionStatus(BaseModel):
     ready: bool
     status: str
     profile: str | None = None
+    bridge_flow: str | None = None
     bridge_url: str | None = None
     websocket_url: str | None = None
     capture_root: str | None = None
@@ -23,6 +24,7 @@ class WarehouseMappingStartRequest(BaseModel):
     flight_id: str
     warehouse_map_id: int | None = None
     profile: str | None = None
+    bridge_flow: str | None = None
     sensor_rig_id: int | None = None
     capture_root: str | None = None
     metadata: dict[str, object] = Field(default_factory=dict)

@@ -30,6 +30,7 @@ from backend.modules.warehouse.ports import (
 )
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
 from backend.modules.warehouse.service.video import (
     warehouse_video_recording_enabled,
@@ -1091,10 +1092,13 @@ class WarehouseScanMission:
             )
         port = build_warehouse_perception_port()
         flight_id = self._flight_token(orch)
+        bridge_flow = resolve_warehouse_bridge_flow()
         request = WarehouseMappingStartRequest(
             flight_id=flight_id,
             warehouse_map_id=self.warehouse_map_id,
             sensor_rig_id=self.sensor_rig_id,
+            profile=bridge_flow.ros_profile,
+            bridge_flow=bridge_flow.name,
             metadata=self._perception_metadata(orch, session_dir=session_dir),
         )
         result = await port.start_mapping(request)

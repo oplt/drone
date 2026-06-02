@@ -13,6 +13,21 @@ def _quat_from_yaw(yaw_rad: float) -> tuple[float, float, float, float]:
     return 0.0, 0.0, math.sin(yaw_rad / 2.0), math.cos(yaw_rad / 2.0)
 
 
+def _quat_from_rpy(roll: float, pitch: float, yaw: float) -> tuple[float, float, float, float]:
+    cr = math.cos(roll / 2.0)
+    sr = math.sin(roll / 2.0)
+    cp = math.cos(pitch / 2.0)
+    sp = math.sin(pitch / 2.0)
+    cy = math.cos(yaw / 2.0)
+    sy = math.sin(yaw / 2.0)
+    return (
+        sr * cp * cy - cr * sp * sy,
+        cr * sp * cy + sr * cp * sy,
+        cr * cp * sy - sr * sp * cy,
+        cr * cp * cy + sr * sp * sy,
+    )
+
+
 def _odom(x: float, y: float, z: float, quat: tuple[float, float, float, float]) -> object:
     qx, qy, qz, qw = quat
     return SimpleNamespace(
@@ -39,6 +54,14 @@ def test_enu_north_facing_yaw_maps_to_zero_ned_yaw() -> None:
     assert math.isclose(roll, 0.0, abs_tol=1e-9)
     assert math.isclose(pitch, 0.0, abs_tol=1e-9)
     assert math.isclose(yaw, 0.0, abs_tol=1e-9)
+
+
+def test_enu_roll_pitch_attitude_maps_to_ned_frd() -> None:
+    roll, pitch, yaw = enu_quaternion_to_ned_euler_rad(*_quat_from_rpy(0.2, 0.1, 0.3))
+
+    assert math.isclose(roll, 0.2, abs_tol=1e-9)
+    assert math.isclose(pitch, -0.1, abs_tol=1e-9)
+    assert math.isclose(yaw, math.pi / 2.0 - 0.3, abs_tol=1e-9)
 
 
 def test_odometry_position_maps_enu_to_ned() -> None:

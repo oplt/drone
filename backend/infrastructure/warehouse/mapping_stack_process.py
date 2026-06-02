@@ -13,6 +13,11 @@ from pathlib import Path
 from typing import TextIO
 import shlex
 
+from backend.modules.warehouse.service.bridge_flow import (
+    flow_env_overrides,
+    resolve_warehouse_bridge_flow,
+)
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_LOG_DIR = Path("backend/storage/warehouse_ros/logs")
@@ -20,16 +25,24 @@ _TERMINATE_TIMEOUT_S = 12.0
 _POLL_INTERVAL_S = 0.25
 
 _FULL_LAUNCH_SHELL = (
+    "REPO_ROOT=\"$(pwd)\"; "
     "if [ -n \"${VIRTUAL_ENV:-}\" ]; then "
     "PATH=\"${PATH//$VIRTUAL_ENV\\/bin:/}\"; "
     "PATH=\"${PATH//:$VIRTUAL_ENV\\/bin/}\"; "
     "PATH=\"${PATH//$VIRTUAL_ENV\\/bin/}\"; "
     "unset VIRTUAL_ENV; "
     "fi; "
+    "PATH=\"${PATH//$REPO_ROOT\\/.venv\\/bin:/}\"; "
+    "PATH=\"${PATH//:$REPO_ROOT\\/.venv\\/bin/}\"; "
+    "PATH=\"${PATH//$REPO_ROOT\\/.venv\\/bin/}\"; "
+    "PATH=\"${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin:/}\"; "
+    "PATH=\"${PATH//:$REPO_ROOT\\/backend\\/.venv\\/bin/}\"; "
+    "PATH=\"${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin/}\"; "
     "unset PYTHONPATH PYTHONHOME; "
     "export PYTHONNOUSERSITE=0; "
     "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-    "source \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\" && "
+    "if [ -f \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\" ]; then "
+    "source \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\"; fi && "
     "exec ros2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py"
 )
 
@@ -56,8 +69,15 @@ def _nvblox_topics_in_graph() -> bool:
 
     command = (
         f"cd {shlex.quote(str(repo_root))} && "
+        "PATH=\"${PATH//$PWD\\/.venv\\/bin:/}\" && "
+        "PATH=\"${PATH//:$PWD\\/.venv\\/bin/}\" && "
+        "PATH=\"${PATH//$PWD\\/.venv\\/bin/}\" && "
+        "PATH=\"${PATH//$PWD\\/backend\\/.venv\\/bin:/}\" && "
+        "PATH=\"${PATH//:$PWD\\/backend\\/.venv\\/bin/}\" && "
+        "PATH=\"${PATH//$PWD\\/backend\\/.venv\\/bin/}\" && "
+        "unset VIRTUAL_ENV PYTHONHOME && "
         "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-        "source \"${ROS_WS_SETUP}\" && "
+        "if [ -f \"${ROS_WS_SETUP}\" ]; then source \"${ROS_WS_SETUP}\"; fi && "
         "ros2 topic list"
     )
 
@@ -77,6 +97,28 @@ def _nvblox_topics_in_graph() -> bool:
 
 
 def _launch_shell_command() -> str:
+    flow = resolve_warehouse_bridge_flow()
+    if flow.name == "real_device":
+        real_cmd = os.getenv("WAREHOUSE_REAL_MAPPING_STACK_CMD", "").strip()
+        if real_cmd:
+            return real_cmd
+        return (
+            "REPO_ROOT=\"$(pwd)\"; "
+            "PATH=\"${PATH//$REPO_ROOT\\/.venv\\/bin:/}\"; "
+            "PATH=\"${PATH//:$REPO_ROOT\\/.venv\\/bin/}\"; "
+            "PATH=\"${PATH//$REPO_ROOT\\/.venv\\/bin/}\"; "
+            "PATH=\"${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin:/}\"; "
+            "PATH=\"${PATH//:$REPO_ROOT\\/backend\\/.venv\\/bin/}\"; "
+            "PATH=\"${PATH//$REPO_ROOT\\/backend\\/.venv\\/bin/}\"; "
+            "unset VIRTUAL_ENV PYTHONHOME; "
+            "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+            "if [ -f \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\" ]; then "
+            "source \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\"; fi && "
+            "exec ros2 launch warehouse_mapping_bridge real_device_warehouse_mapping.launch.py"
+        )
+    if flow.name == "isaac":
+        return _FULL_LAUNCH_SHELL
+
     mode = os.getenv("WAREHOUSE_MAPPING_STACK_MODE", "nvblox").strip().lower()
     if mode in {"full", "isaac", "launch"}:
         return _FULL_LAUNCH_SHELL
@@ -249,8 +291,9 @@ class WarehouseMappingStackProcessManager:
             last_exit_code=self._last_exit_code,
             last_error=self._last_error,
         )
-        def shutdown(self) -> None:
-            self.stop()
+
+    def shutdown(self) -> None:
+        self.stop()
 
 
     def _refresh_process_state_locked(self) -> None:
@@ -306,16 +349,15 @@ class WarehouseMappingStackProcessManager:
             else -signal.SIGKILL
         )
 
-
-        def _close_log_handle(self) -> None:
-            if self._log_handle is None:
-                return
-            try:
-                self._log_handle.flush()
-                self._log_handle.close()
-            except OSError:
-                pass
-            self._log_handle = None
+    def _close_log_handle(self) -> None:
+        if self._log_handle is None:
+            return
+        try:
+            self._log_handle.flush()
+            self._log_handle.close()
+        except OSError:
+            pass
+        self._log_handle = None
 
     @staticmethod
     def _ros_launch_env() -> dict[str, str]:
@@ -326,16 +368,18 @@ class WarehouseMappingStackProcessManager:
             env.pop(key, None)
 
         path = env.get("PATH", "")
-        venv_bin = str(repo_root / ".venv/bin")
-        env["PATH"] = ":".join(part for part in path.split(":") if part and part != venv_bin)
+        venv_bins = {
+            str(repo_root / ".venv/bin"),
+            str(repo_root / "backend/.venv/bin"),
+        }
+        env["PATH"] = ":".join(part for part in path.split(":") if part and part not in venv_bins)
 
         env.setdefault("ROS_DISTRO", "jazzy")
         env.setdefault("ROS_DOMAIN_ID", "42")
         env.setdefault("ROS_WS_SETUP", str(repo_root / "warehouse_ros2_ws/install/setup.bash"))
-        env.setdefault("WAREHOUSE_GAZEBO_SIM", "1")
-        env.setdefault("WAREHOUSE_TOPIC_PROFILE", "gazebo")
-        env.setdefault("WAREHOUSE_ROS_PROFILE", "gazebo")
-        env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
+        env.update(flow_env_overrides())
+        if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
+            env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
         env.setdefault("PYTHONNOUSERSITE", "0")
         return env
 

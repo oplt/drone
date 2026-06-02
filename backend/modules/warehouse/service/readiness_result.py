@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.modules.warehouse.ports import WarehousePerceptionStatus
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.warehouse.service.runtime_safety import (
     default_odometry_max_age_s,
     evaluate_local_odometry,
@@ -18,11 +19,11 @@ FAILURE_USER_MESSAGES: dict[str, str] = {
     ),
     "odometry_stale": (
         "Warehouse scan cannot continue because local odometry is stale. "
-        "Verify the odometry topic is publishing: ros2 topic hz /warehouse/drone/odometry"
+        "Verify the odometry topic is publishing: ros2 topic hz /warehouse/contract/odometry"
     ),
     "odometry_state_unreadable": (
         "Warehouse local odometry state is unreadable. "
-        "Check the odometry export node and ros2 topic echo /warehouse/drone/odometry --once"
+        "Check the odometry export node and ros2 topic echo /warehouse/contract/odometry --once"
     ),
     "depth_topic_unavailable": (
         "Depth camera topic is missing or not publishing. Check the RGB-D camera bridge."
@@ -81,6 +82,11 @@ def _float_env(name: str, default: float) -> float:
 
 
 def _gazebo_sim_enabled(components: dict[str, object] | None = None) -> bool:
+    flow = resolve_warehouse_bridge_flow()
+    if flow.name == "gazebo":
+        return True
+    if flow.name == "real_device":
+        return False
     if os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
         "true",
@@ -386,7 +392,7 @@ def readiness_from_perception_status_strict(
     if not status.reachable:
         suggested.append("Ensure warehouse_bridge is running on WAREHOUSE_ROS_BRIDGE_URL")
     if missing or unhealthy:
-        suggested.append("Press Play in Gazebo and verify: ros2 topic hz /warehouse/drone/odometry")
+        suggested.append("Verify contract topics: ros2 topic hz /warehouse/contract/odometry")
         suggested.append("Run scripts/check_warehouse_ros_health.sh")
 
     sample_ts_raw = components.get("health_sample_timestamp")

@@ -9,25 +9,19 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-
-_REQUIRED_STACK_COMMANDS = (
-    "WAREHOUSE_CAMERA_LAUNCH_CMD",
-    "WAREHOUSE_IMU_LAUNCH_CMD",
-    "WAREHOUSE_IMAGE_PIPELINE_LAUNCH_CMD",
-    "WAREHOUSE_VISUAL_SLAM_LAUNCH_CMD",
-    "WAREHOUSE_DEPTH_LAUNCH_CMD",
-    "WAREHOUSE_NVBLOX_LAUNCH_CMD",
+from warehouse_mapping_bridge.isaac_stack_contract import (
+    load_stack_commands,
+    missing_required_commands,
 )
 
 
-def _process_from_env(name: str) -> ExecuteProcess | None:
-    raw = os.getenv(name, "").strip()
-    if not raw:
+def _process_from_command(env_name: str, command: str) -> ExecuteProcess | None:
+    if not command.strip():
         return None
-    cmd = shlex.split(raw)
+    cmd = shlex.split(command)
     if not cmd:
         return None
-    return ExecuteProcess(cmd=cmd, output="screen", name=name)
+    return ExecuteProcess(cmd=cmd, output="screen", name=env_name)
 
 
 def _validate_required_commands(_context, *_args, **_kwargs) -> list[ExecuteProcess]:
@@ -38,9 +32,10 @@ def _validate_required_commands(_context, *_args, **_kwargs) -> list[ExecuteProc
         "on",
     }:
         return []
-    missing = [name for name in _REQUIRED_STACK_COMMANDS if not os.getenv(name, "").strip()]
+    commands = load_stack_commands()
+    missing = missing_required_commands(commands)
     if missing:
-        joined = ", ".join(missing)
+        joined = ", ".join(command.env for command in missing)
         raise RuntimeError(
             "Isaac warehouse launch requires full stack commands. "
             f"Missing: {joined}. Set WAREHOUSE_ALLOW_PARTIAL_ISAAC_LAUNCH=1 for helper-only launch."
@@ -62,22 +57,26 @@ def _helper_node(executable: str, name: str) -> Node:
 
 
 def generate_launch_description() -> LaunchDescription:
+    stack_commands = load_stack_commands()
     actions = [
         DeclareLaunchArgument("use_sim_time", default_value="false"),
         SetEnvironmentVariable("WAREHOUSE_TOPIC_PROFILE", "isaac_ros_nvblox_stereo"),
         OpaqueFunction(function=_validate_required_commands),
     ]
 
-    for env_name in (*_REQUIRED_STACK_COMMANDS, "WAREHOUSE_RVIZ_LAUNCH_CMD"):
-        process = _process_from_env(env_name)
+    for stack_command in stack_commands:
+        process = _process_from_command(stack_command.env, stack_command.command)
         if process is not None:
             actions.append(process)
 
     actions.extend(
         [
+            _helper_node("warehouse_isaac_stack_preflight", "warehouse_isaac_stack_preflight"),
+            _helper_node("warehouse_topic_adapter", "warehouse_topic_adapter"),
             _helper_node("warehouse_health_monitor", "warehouse_health_monitor"),
             _helper_node("warehouse_vision_mavlink_bridge", "warehouse_vision_mavlink_bridge"),
             _helper_node("warehouse_artifact_exporter", "warehouse_artifact_exporter"),
+            _helper_node("warehouse_diagnostics_aggregator", "warehouse_diagnostics_aggregator"),
         ]
     )
     return LaunchDescription(actions)

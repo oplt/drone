@@ -10,9 +10,11 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription(
         [
             DeclareLaunchArgument("profile", default_value="isaac_ros_nvblox_stereo"),
+            DeclareLaunchArgument("bridge_flow", default_value="isaac"),
             DeclareLaunchArgument("capture_root", default_value="/backend/storage/warehouse_ros"),
             DeclareLaunchArgument("host", default_value="0.0.0.0"),
             DeclareLaunchArgument("port", default_value="8088"),
+            SetEnvironmentVariable("WAREHOUSE_BRIDGE_FLOW", LaunchConfiguration("bridge_flow")),
             SetEnvironmentVariable("WAREHOUSE_ROS_PROFILE", LaunchConfiguration("profile")),
             SetEnvironmentVariable("WAREHOUSE_TOPIC_PROFILE", LaunchConfiguration("profile")),
             SetEnvironmentVariable("WAREHOUSE_ROS_CAPTURE_ROOT", LaunchConfiguration("capture_root")),

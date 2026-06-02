@@ -87,6 +87,13 @@ def _topic_diag_entry(
 
 
 def _gazebo_sim_enabled() -> bool:
+    from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
+
+    flow = resolve_warehouse_bridge_flow()
+    if flow.name == "gazebo":
+        return True
+    if flow.name == "real_device":
+        return False
     return os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
         "true",
@@ -210,7 +217,7 @@ def readiness_from_perception_status(
     if not odom_fresh:
         detail_parts.append(
             "warehouse odometry is stale or unavailable "
-            f"(check: ros2 topic hz {os.getenv('WAREHOUSE_ODOMETRY_TOPIC', '/warehouse/drone/odometry')})"
+            "(check: ros2 topic hz /warehouse/contract/odometry)"
         )
     if require_nvblox and not nvblox_ready:
         detail_parts.append("nvblox outputs not ready")
@@ -220,10 +227,10 @@ def readiness_from_perception_status(
         suggested.append("Ensure warehouse_bridge is running on WAREHOUSE_ROS_BRIDGE_URL")
     if missing or stale or not odom_fresh:
         suggested.append(
-            "Press Play in Gazebo (gz sim -r world.sdf) and wait for sensor topics to publish"
+            "Start the selected warehouse bridge flow and wait for contract sensor topics to publish"
         )
         suggested.append(
-            "Run: ros2 topic hz /warehouse/drone/odometry /warehouse/front/rgbd/image /imu"
+            "Run: ros2 topic hz /warehouse/contract/odometry /warehouse/contract/rgb/image /warehouse/contract/imu"
         )
     if require_nvblox and not nvblox_ready:
         suggested.append("Wait for nvblox mesh/pointcloud topics after mapping stack starts")

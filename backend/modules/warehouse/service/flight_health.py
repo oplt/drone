@@ -214,7 +214,7 @@ def check_autopilot(
 
 GAZEBO_SENSOR_START_HINT = (
     "Gazebo sensors not publishing. Start with gz sim -r <world>.sdf or press Play, "
-    "then verify: gz topic -e -t /warehouse/front/rgbd/image"
+    "then verify: ros2 topic hz /warehouse/contract/rgb/image"
 )
 
 
