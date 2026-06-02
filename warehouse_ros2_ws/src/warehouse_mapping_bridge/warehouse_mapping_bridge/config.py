@@ -51,6 +51,8 @@ _ENV_OVERRIDES: dict[str, str] = {
     "mesh_marker": "WAREHOUSE_MESH_MARKER_TOPIC",
     "occupancy": "WAREHOUSE_OCCUPANCY_TOPIC",
     "esdf": "WAREHOUSE_ESDF_TOPIC",
+    "static_map_slice": "WAREHOUSE_STATIC_MAP_SLICE_TOPIC",
+    "combined_map_slice": "WAREHOUSE_COMBINED_MAP_SLICE_TOPIC",
     "back_projected_depth": "WAREHOUSE_BACK_PROJECTED_DEPTH_TOPIC",
     "health": "WAREHOUSE_MAPPING_HEALTH_TOPIC",
 }
@@ -65,10 +67,12 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
         "visual_slam_odom": "/warehouse/drone/odometry",
         "local_odometry": "/warehouse/drone/odometry",
         "raw_lidar": "/warehouse/front/rgbd/points",
-        "pointcloud": "/nvblox_node/static_map_pointcloud",
+        "pointcloud": "/nvblox_node/static_esdf_pointcloud",
         "mesh": "/nvblox_node/mesh",
-        "occupancy": "/nvblox_node/occupancy",
-        "esdf": "/nvblox_node/esdf",
+        "occupancy": "/nvblox_node/occupancy_layer",
+        "esdf": "/nvblox_node/static_esdf_pointcloud",
+        "static_map_slice": "/nvblox_node/static_map_slice",
+        "combined_map_slice": "/nvblox_node/combined_map_slice",
         "health": "/warehouse/mapping/health",
     },
     "isaac_ros_nvblox_stereo": {
@@ -80,10 +84,12 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
         "visual_slam_odom": "/visual_slam/tracking/odometry",
         "local_odometry": "/warehouse/local_odometry",
         "raw_lidar": "/scan",
-        "pointcloud": "/nvblox_node/static_map_pointcloud",
+        "pointcloud": "/nvblox_node/static_esdf_pointcloud",
         "mesh": "/nvblox_node/mesh",
-        "occupancy": "/nvblox_node/occupancy",
-        "esdf": "/nvblox_node/esdf",
+        "occupancy": "/nvblox_node/occupancy_layer",
+        "esdf": "/nvblox_node/static_esdf_pointcloud",
+        "static_map_slice": "/nvblox_node/static_map_slice",
+        "combined_map_slice": "/nvblox_node/combined_map_slice",
         "health": "/warehouse/mapping/health",
     },
 }
@@ -101,6 +107,8 @@ _DEFAULT_REQUIRED_FOR_NVBLOX_ANY: tuple[str, ...] = (
     "pointcloud",
     "occupancy",
     "esdf",
+    "static_map_slice",
+    "combined_map_slice",
 )
 
 
@@ -334,7 +342,7 @@ def topic_registry() -> TopicRegistry:
 
 def load_config() -> BridgeConfig:
     capture_root = Path(
-        os.getenv("WAREHOUSE_ROS_CAPTURE_ROOT", "/data/warehouse_ros")
+        os.getenv("WAREHOUSE_ROS_CAPTURE_ROOT", "/backend/storage/warehouse_ros")
     ).expanduser()
     profile = os.getenv("WAREHOUSE_ROS_PROFILE", "").strip() or _default_topic_profile()
     return BridgeConfig(

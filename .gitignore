@@ -390,3 +390,4 @@ warehouse_ros2_ws/install/
 warehouse_ros2_ws/log/
 
 *.egg-info/
+log

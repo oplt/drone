@@ -33,7 +33,7 @@ def perception_core_ok(
         return False
     if bridge.status != SubsystemStatus.OK:
         return False
-    if sensors.status != SubsystemStatus.OK:
+    if sensors.status == SubsystemStatus.FAIL:
         return False
     if slam.status == SubsystemStatus.FAIL:
         return False

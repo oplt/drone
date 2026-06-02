@@ -10,6 +10,11 @@ from backend.modules.preflight.checks.schemas import PreflightReport
 from backend.modules.preflight.checks.service import PreflightOrchestrator
 from backend.modules.vehicle_runtime.types import Telemetry
 from backend.modules.warehouse.ports import WarehousePerceptionStatus
+import math
+
+from backend.modules.warehouse.service.bridge_stack_lifecycle import (
+    ensure_warehouse_bridge_stack_for_preflight,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +24,19 @@ WAREHOUSE_ROS_PREFLIGHT_MISSION_TYPES = frozenset(
         MissionType.INDOOR_EXPLORATION.value,
     }
 )
+
+def _float_or_none(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _bool_flag(value: object) -> bool:
+    return value is True or str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def uses_warehouse_ros_preflight(mission_type: str | MissionType | None) -> bool:
@@ -54,44 +72,42 @@ def perception_status_to_dict(
 
 
 def build_warehouse_vehicle_state_from_perception(
-    status: WarehousePerceptionStatus | dict[str, Any],
+        status: WarehousePerceptionStatus | dict[str, Any],
 ) -> Telemetry:
-    """Synthetic vehicle state for warehouse preflight (no MAVLink connection)."""
     components = _components_from_status(status)
     odom = _odometry_state(components)
 
-    north = odom.get("local_north_m")
-    east = odom.get("local_east_m")
-    down = odom.get("local_down_m")
+    north = _float_or_none(odom.get("local_north_m"))
+    east = _float_or_none(odom.get("local_east_m"))
+    down = _float_or_none(odom.get("local_down_m"))
+
+    numeric_local_pose = north is not None and east is not None and down is not None
+
     local_position_ok = bool(
-        components.get("local_odometry_healthy")
-        or components.get("local_position_ok")
-        or (
-            north is not None
-            and east is not None
-            and down is not None
-        )
+        _bool_flag(components.get("local_odometry_healthy"))
+        or _bool_flag(components.get("local_position_ok"))
+        or numeric_local_pose
     )
 
     vslam_ok = bool(
-        components.get("visual_slam_healthy")
-        or components.get("visual_slam")
-        or components.get("vslam")
+        _bool_flag(components.get("visual_slam_healthy"))
+        or _bool_flag(components.get("visual_slam"))
+        or _bool_flag(components.get("vslam"))
     )
-    raw_lidar_ok = bool(components.get("raw_lidar_healthy"))
-    depth_ok = bool(
+
+    raw_lidar_ok = _bool_flag(components.get("raw_lidar_healthy"))
+
+    depth_ok = (
         components.get("depth")
         if isinstance(components.get("depth"), bool)
-        else None
+        else _bool_flag(components.get("depth_healthy"))
     )
 
-    drift = odom.get("odometry_drift_m")
+    drift = _float_or_none(odom.get("odometry_drift_m"))
     if drift is None:
-        drift = components.get("odometry_drift_m")
+        drift = _float_or_none(components.get("odometry_drift_m"))
 
-    alt_m = 0.0
-    if down is not None:
-        alt_m = -float(down)
+    alt_m = -down if down is not None else 0.0
 
     sim_mode = os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
@@ -99,16 +115,15 @@ def build_warehouse_vehicle_state_from_perception(
         "yes",
         "on",
     }
-    battery_remaining = 100.0 if sim_mode else None
 
     return Telemetry(
         lat=0.0,
         lon=0.0,
         alt=alt_m,
-        heading=float(odom.get("yaw_deg") or 0.0),
+        heading=_float_or_none(odom.get("yaw_deg")) or 0.0,
         groundspeed=0.0,
         mode="GUIDED",
-        battery_remaining=battery_remaining,
+        battery_remaining=100.0 if sim_mode else None,
         gps_fix_type=0,
         hdop=99.0,
         satellites_visible=0,
@@ -118,22 +133,23 @@ def build_warehouse_vehicle_state_from_perception(
         home_lat=0.0,
         home_lon=0.0,
         ekf_ok=vslam_ok or local_position_ok,
-        local_north_m=float(north) if north is not None else None,
-        local_east_m=float(east) if east is not None else None,
-        local_down_m=float(down) if down is not None else None,
+        local_north_m=north,
+        local_east_m=east,
+        local_down_m=down,
         local_position_ok=local_position_ok,
-        local_origin_ok=True,
+        local_origin_ok=local_position_ok,
         odometry_healthy=vslam_ok or local_position_ok,
-        odometry_drift_m=float(drift) if drift is not None else None,
+        odometry_drift_m=drift,
         lidar_healthy=raw_lidar_ok,
-        estimator_ready=vslam_ok,
-        rangefinder_healthy=depth_ok if depth_ok else None,
+        estimator_ready=vslam_ok or local_position_ok,
+        rangefinder_healthy=bool(depth_ok),
         slam_ready=vslam_ok,
-        slam_tracking_ok=bool(odom.get("slam_tracking_ok", vslam_ok)),
-        localization_confidence=odom.get("localization_confidence"),
-        obstacle_distance_m=components.get("obstacle_distance_m"),
-        ceiling_distance_m=components.get("ceiling_distance_m"),
+        slam_tracking_ok=_bool_flag(odom.get("slam_tracking_ok")) or vslam_ok,
+        localization_confidence=_float_or_none(odom.get("localization_confidence")),
+        obstacle_distance_m=_float_or_none(components.get("obstacle_distance_m")),
+        ceiling_distance_m=_float_or_none(components.get("ceiling_distance_m")),
     )
+
 
 
 async def fetch_warehouse_perception_status(
@@ -153,19 +169,23 @@ def warehouse_perception_config_overrides(
 
 
 async def run_warehouse_ros_preflight_report(
-    mission_data: dict[str, Any],
-    *,
-    cruise_alt: float,
-    flight_id: str | None = None,
-    preflight_config: dict[str, Any] | None = None,
-    **kwargs: Any,
+        mission_data: dict[str, Any],
+        *,
+        cruise_alt: float,
+        flight_id: str | None = None,
+        preflight_config: dict[str, Any] | None = None,
+        **kwargs: Any,
 ) -> PreflightReport:
     """Run preflight using ROS bridge health — never calls MAVLink get_telemetry."""
+
+    await ensure_warehouse_bridge_stack_for_preflight()
+
     status = await fetch_warehouse_perception_status(deep=True, force=True)
     vehicle_state = build_warehouse_vehicle_state_from_perception(status)
 
     config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
     config_overrides.update(warehouse_perception_config_overrides(status))
+    config_overrides.setdefault("CRUISE_ALT_M", cruise_alt)
 
     runtime_preflight = {
         "ENFORCE_PREFLIGHT_RANGE": settings.enforce_preflight_range,

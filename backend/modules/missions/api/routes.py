@@ -100,8 +100,8 @@ async def _warehouse_perception_preflight_overrides(
     mission_payload: dict[str, object] | None,
 ) -> dict[str, object]:
     from backend.modules.warehouse.service.warehouse_preflight import (
-        uses_warehouse_ros_preflight,
         fetch_warehouse_perception_status,
+        uses_warehouse_ros_preflight,
         warehouse_perception_config_overrides,
     )
 

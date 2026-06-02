@@ -69,7 +69,7 @@ export function useWarehouseManualMapping({
     void refreshMappingStackStatus();
     const interval = window.setInterval(() => {
       void refreshMappingStackStatus();
-    }, activeFlightId ? 2000 : 10000);
+    }, activeFlightId ? 5000 : 15000);
     return () => window.clearInterval(interval);
   }, [refreshMappingStackStatus, activeFlightId]);
 

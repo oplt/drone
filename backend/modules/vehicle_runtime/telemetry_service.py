@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from contextlib import suppress
+from dataclasses import asdict, is_dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -28,43 +29,106 @@ class RuntimeTelemetryServiceMixin:
         self,
         mavlink_connection_str: str | None = None,
     ) -> bool:
-        if self._telemetry_stream_running:
-            return False
+        lock = getattr(self, "_telemetry_start_lock", None)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._telemetry_start_lock = lock
+        async with lock:
+            thread = getattr(self, "_telemetry_thread", None)
+            if self._telemetry_stream_running and thread is not None and thread.is_alive():
+                return False
 
-        if self._event_loop is None:
-            self.bind_event_loop(asyncio.get_running_loop())
+            if self._event_loop is None:
+                self.bind_event_loop(asyncio.get_running_loop())
 
-        conn_str = mavlink_connection_str or self._telemetry_conn_str
-        if not conn_str:
-            raise RuntimeError("No MAVLink connection string provided for telemetry")
+            conn_str = mavlink_connection_str or self._telemetry_conn_str
+            if not conn_str:
+                raise RuntimeError("No MAVLink connection string provided for telemetry")
 
-        self._telemetry_conn_str = conn_str
-        self._telemetry_stream_running = True
-        self._metrics["ingest_started_at"] = utc_now().isoformat()
-        self.fanout.set_runtime_active(running=True, source_connected=False)
-        self._telemetry_thread = threading.Thread(
-            target=self._telemetry_worker,
-            args=(conn_str,),
-            daemon=True,
-            name="OrchestratorTelemetryWorker",
+            self._telemetry_conn_str = conn_str
+            self._telemetry_stream_running = True
+            self._metrics["ingest_started_at"] = utc_now().isoformat()
+            self.fanout.set_runtime_active(running=True, source_connected=False)
+            worker = (
+                self._vehicle_telemetry_worker
+                if self._should_use_existing_vehicle_connection()
+                else self._telemetry_worker
+            )
+            self._telemetry_thread = threading.Thread(
+                target=worker,
+                args=(conn_str,),
+                daemon=True,
+                name=f"OrchestratorTelemetryWorker:{conn_str}",
+            )
+            self._telemetry_thread.start()
+            logger.info("Orchestrator live telemetry ingest started endpoint=%s", conn_str)
+            return True
+
+    def _should_use_existing_vehicle_connection(self) -> bool:
+        drone = getattr(self, "drone", None)
+        return bool(drone is not None and getattr(drone, "vehicle", None) is not None)
+
+    def _vehicle_telemetry_worker(self, conn_str: str) -> None:
+        drone = getattr(self, "drone", None)
+        logger.info(
+            "Using existing DroneKit vehicle for telemetry fanout endpoint=%s",
+            conn_str,
         )
-        self._telemetry_thread.start()
-        logger.info("Orchestrator live telemetry ingest started")
-        return True
+        self.fanout.set_runtime_active(running=True, source_connected=True)
+        try:
+            while self._telemetry_stream_running:
+                try:
+                    telemetry = drone.get_telemetry()
+                    emitted_s = time.time()
+                    if is_dataclass(telemetry):
+                        snapshot = asdict(telemetry)
+                    else:
+                        snapshot = dict(telemetry)
+                    snapshot["timestamp"] = emitted_s
+                    self._last_telemetry_snapshot = snapshot
+
+                    envelope = TelemetryEnvelopeV1(
+                        mission_runtime_id=self._current_mission_runtime_id(),
+                        db_flight_id=self._runtime_db_flight_id(),
+                        sequence=self._sequence("orchestrator.telemetry"),
+                        emitted_at=datetime.fromtimestamp(emitted_s, tz=UTC),
+                        source="orchestrator.telemetry",
+                        mission=self._mission_context(),
+                        payload=TelemetryPayloadV1.from_legacy_snapshot(
+                            snapshot,
+                            coalesced_message_count=1,
+                        ),
+                    )
+                    self._schedule_coro(self._fanout_runtime_envelope(envelope))
+                    self.fanout.set_runtime_active(running=True, source_connected=True)
+                except Exception as exc:
+                    if self._telemetry_stream_running:
+                        logger.warning("DroneKit telemetry poll failed: %s", exc)
+                    self.fanout.set_runtime_active(running=True, source_connected=False)
+                time.sleep(max(0.1, self._telemetry_broadcast_interval))
+        finally:
+            self._telemetry_stream_running = False
+            self.fanout.set_runtime_active(running=False, source_connected=False)
+            logger.info("Orchestrator telemetry worker stopped")
 
     async def stop_live_telemetry(self) -> bool:
-        if not self._telemetry_stream_running:
-            return False
+        lock = getattr(self, "_telemetry_start_lock", None)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._telemetry_start_lock = lock
+        async with lock:
+            if not self._telemetry_stream_running:
+                return False
 
-        self._telemetry_stream_running = False
-        thread = self._telemetry_thread
-        if thread and thread.is_alive():
-            await asyncio.to_thread(thread.join, 3.0)
-        self._telemetry_thread = None
-        self._telemetry_mav_conn = None
-        self.fanout.set_runtime_active(running=False, source_connected=False)
-        logger.info("Orchestrator live telemetry ingest stopped")
-        return True
+            self._telemetry_stream_running = False
+            thread = self._telemetry_thread
+            if thread and thread.is_alive():
+                thread.join(3.0)
+            self._telemetry_thread = None
+            self._telemetry_mav_conn = None
+            self.fanout.set_runtime_active(running=False, source_connected=False)
+            logger.info("Orchestrator live telemetry ingest stopped")
+            return True
 
     def _telemetry_worker(self, conn_str: str) -> None:
         mav_conn = None

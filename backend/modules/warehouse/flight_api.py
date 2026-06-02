@@ -104,14 +104,19 @@ def _subsystem_out(key: str, payload: dict[str, Any]) -> WarehouseFlightSubsyste
 
 
 def _readiness_out(payload: dict[str, Any]) -> WarehouseFlightReadinessOut:
-    subsystems_raw = payload.get("subsystems") if isinstance(payload.get("subsystems"), dict) else {}
+    subsystems_raw = (
+        payload.get("subsystems") if isinstance(payload.get("subsystems"), dict) else {}
+    )
     subsystems = {
         str(key): _subsystem_out(str(key), value if isinstance(value, dict) else {})
         for key, value in subsystems_raw.items()
     }
     updated_at_raw = payload.get("updated_at")
     if isinstance(updated_at_raw, str):
-        updated_at = datetime.fromisoformat(updated_at_raw.replace("Z", "+00:00"))
+        try:
+            updated_at = datetime.fromisoformat(updated_at_raw.replace("Z", "+00:00"))
+        except ValueError:
+            updated_at = datetime.utcnow()
     else:
         updated_at = datetime.utcnow()
     return WarehouseFlightReadinessOut(
@@ -136,6 +141,8 @@ async def get_warehouse_flight_readiness(
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseFlightReadinessOut:
     snapshot = await evaluate_warehouse_flight_readiness(
+        deep=mission_loaded,
+        force=mission_loaded,
         mission=WarehouseFlightMissionContext(loaded=mission_loaded, valid=mission_loaded),
     )
     return _readiness_out(snapshot.to_dict())
@@ -208,8 +215,7 @@ async def warehouse_flight_command(
         message = "Mission resumed." if success else "Resume command failed."
     elif command == "abort":
         success = await asyncio.to_thread(orch.drone.abort_mission)
-        message = "Mission aborted."
-        success = True
+        message = "Mission aborted." if success else "Abort command failed."
     elif command == "land":
         success = await asyncio.to_thread(orch.drone.set_mode, "LAND")
         message = "Land command sent." if success else "Land command failed."

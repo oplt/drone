@@ -11,28 +11,42 @@ import type {
   WarehouseScannedMapResponse,
 } from "../types/missions";
 
+export type WarehouseScannedMapCompareResponse = {
+  baseline_job_id: number;
+  candidate_job_id: number;
+  quality_delta?: number | null;
+  coverage_delta?: number | null;
+  drift_delta_m?: number | null;
+};
+
 export async function startWarehouseScan(
   payload: WarehouseScanStartRequest,
   token?: string | null,
 ): Promise<WarehouseMissionLaunchResponse> {
-  return httpRequest<WarehouseMissionLaunchResponse>("/warehouse/missions/start", {
-    method: "POST",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMissionLaunchResponse>(
+    "/warehouse/missions/start",
+    {
+      method: "POST",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function startWarehouseExploration(
   payload: WarehouseExplorationStartRequest,
   token?: string | null,
 ): Promise<WarehouseMissionLaunchResponse> {
-  return httpRequest<WarehouseMissionLaunchResponse>("/warehouse/missions/exploration/start", {
-    method: "POST",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMissionLaunchResponse>(
+    "/warehouse/missions/exploration/start",
+    {
+      method: "POST",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export type WarehouseMappingStackStatus = {
@@ -46,54 +60,69 @@ export type WarehouseMappingStackStatus = {
 export async function fetchWarehouseMappingStackStatus(
   token?: string | null,
 ): Promise<WarehouseMappingStackStatus> {
-  return httpRequest<WarehouseMappingStackStatus>("/warehouse/mapping-stack/status", {
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMappingStackStatus>(
+    "/warehouse/mapping-stack/status",
+    {
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function startWarehouseMappingStack(
   token?: string | null,
 ): Promise<WarehouseMappingStackStatus> {
-  return httpRequest<WarehouseMappingStackStatus>("/warehouse/mapping-stack/start", {
-    method: "POST",
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMappingStackStatus>(
+    "/warehouse/mapping-stack/start",
+    {
+      method: "POST",
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function stopWarehouseMappingStack(
   token?: string | null,
 ): Promise<WarehouseMappingStackStatus> {
-  return httpRequest<WarehouseMappingStackStatus>("/warehouse/mapping-stack/stop", {
-    method: "POST",
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMappingStackStatus>(
+    "/warehouse/mapping-stack/stop",
+    {
+      method: "POST",
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function startWarehouseManualMapping(
   payload: WarehouseManualMappingStartRequest,
   token?: string | null,
 ): Promise<WarehouseManualMappingCommandResponse> {
-  return httpRequest<WarehouseManualMappingCommandResponse>("/warehouse/manual-mapping/start", {
-    method: "POST",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseManualMappingCommandResponse>(
+    "/warehouse/manual-mapping/start",
+    {
+      method: "POST",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function stopWarehouseManualMapping(
   payload: { flight_id: string; warehouse_map_id?: number | null },
   token?: string | null,
 ): Promise<WarehouseManualMappingCommandResponse> {
-  return httpRequest<WarehouseManualMappingCommandResponse>("/warehouse/manual-mapping/stop", {
-    method: "POST",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseManualMappingCommandResponse>(
+    "/warehouse/manual-mapping/stop",
+    {
+      method: "POST",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function deleteWarehouseScannedMap(
@@ -116,10 +145,13 @@ export async function listWarehouseScannedMaps(
     params.set("warehouse_map_id", String(warehouseMapId));
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return httpRequest<WarehouseScannedMapResponse[]>(`/warehouse/scanned-maps${suffix}`, {
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseScannedMapResponse[]>(
+    `/warehouse/scanned-maps${suffix}`,
+    {
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function fetchWarehouseScannedMapQuality(
@@ -132,44 +164,75 @@ export async function fetchWarehouseScannedMapQuality(
   );
 }
 
+export async function compareWarehouseScannedMaps(
+  baselineJobId: number,
+  candidateJobId: number,
+  token?: string | null,
+): Promise<WarehouseScannedMapCompareResponse> {
+  return httpRequest<WarehouseScannedMapCompareResponse>(
+    "/warehouse/scanned-maps/compare",
+    {
+      method: "POST",
+      body: {
+        baseline_job_id: baselineJobId,
+        candidate_job_id: candidateJobId,
+      },
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
+}
+
 export async function fetchWarehouseExplorationProfile(
   token?: string | null,
 ): Promise<WarehouseExplorationProfile> {
-  return httpRequest<WarehouseExplorationProfile>("/warehouse/exploration-profile", {
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseExplorationProfile>(
+    "/warehouse/exploration-profile",
+    {
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function updateWarehouseExplorationProfile(
   payload: WarehouseExplorationProfile,
   token?: string | null,
 ): Promise<WarehouseExplorationProfile> {
-  return httpRequest<WarehouseExplorationProfile>("/warehouse/exploration-profile", {
-    method: "PUT",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseExplorationProfile>(
+    "/warehouse/exploration-profile",
+    {
+      method: "PUT",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function fetchWarehouseMissionDefaults(
   token?: string | null,
 ): Promise<WarehouseMissionDefaultsResponse> {
-  return httpRequest<WarehouseMissionDefaultsResponse>("/warehouse/mission-defaults", {
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMissionDefaultsResponse>(
+    "/warehouse/mission-defaults",
+    {
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function updateWarehouseMissionDefaults(
   payload: WarehouseMissionDefaultsResponse,
   token?: string | null,
 ): Promise<WarehouseMissionDefaultsResponse> {
-  return httpRequest<WarehouseMissionDefaultsResponse>("/warehouse/mission-defaults", {
-    method: "PUT",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseMissionDefaultsResponse>(
+    "/warehouse/mission-defaults",
+    {
+      method: "PUT",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }

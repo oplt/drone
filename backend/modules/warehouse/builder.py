@@ -294,7 +294,10 @@ async def _recorder_pump(video: DroneVideoStream):
 
 @router.post("/recording/start")
 async def start_recording(user=Depends(require_user)):
-    from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+    from backend.modules.warehouse.service.video import (
+        warehouse_video_blocked,
+        warehouse_video_skip_reason,
+    )
 
     global _recorder, _recorder_task
 

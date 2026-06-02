@@ -555,7 +555,10 @@ class SharedVideoRuntime:
         }
 
     async def start_recording(self, *, recording_path: str | None = None) -> dict[str, Any]:
-        from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+        from backend.modules.warehouse.service.video import (
+            warehouse_video_blocked,
+            warehouse_video_skip_reason,
+        )
 
         if warehouse_video_blocked():
             return {

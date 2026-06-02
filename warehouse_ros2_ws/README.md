@@ -15,7 +15,7 @@ source install/setup.bash
 ## Run Bridge
 
 ```bash
-export WAREHOUSE_ROS_CAPTURE_ROOT=/data/warehouse_ros
+export WAREHOUSE_ROS_CAPTURE_ROOT=/backend/storage/warehouse_ros
 export WAREHOUSE_ROS_PROFILE=isaac_ros_nvblox_stereo
 export WAREHOUSE_ROS_AUTOLAUNCH=1
 python3 -m warehouse_mapping_bridge.bridge_service

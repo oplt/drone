@@ -105,7 +105,7 @@ def _takeoff_topic_keys() -> tuple[str, ...]:
     }
     if _gazebo_sim_enabled() and not require_lidar:
         keys = [key for key in keys if key != "raw_lidar"]
-    if _gazebo_sim_enabled() and not os.getenv("WAREHOUSE_REQUIRE_LOCAL_ODOMETRY", "0").strip().lower() in {
+    if _gazebo_sim_enabled() and os.getenv("WAREHOUSE_REQUIRE_LOCAL_ODOMETRY", "0").strip().lower() not in {
         "1",
         "true",
         "yes",
@@ -252,10 +252,10 @@ async def ensure_warehouse_takeoff_readiness(
     strict: bool = True,
     force_refresh: bool = False,
 ) -> WarehouseTakeoffReadiness:
-    from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
-
     import asyncio
     import time
+
+    from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
 
     require_nvblox = (
         takeoff_requires_nvblox() if require_nvblox is None else require_nvblox

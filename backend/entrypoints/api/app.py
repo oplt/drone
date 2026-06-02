@@ -43,6 +43,7 @@ from backend.modules.settings.api import router as settings_router
 from backend.modules.settings.repository import SettingsRepository
 from backend.modules.settings.service import get_runtime_settings
 from backend.modules.telemetry.api import (
+    runtime_router,
     router as telemetry_control_router,
 )
 from backend.modules.telemetry.websocket_api import router as websockets_router
@@ -57,6 +58,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
     setup_logging(log_format=settings.log_format)
+    from backend.modules.warehouse.service.bridge_supervisor import validate_bridge_url_config
+
+    bridge_config_ok, bridge_config_error = validate_bridge_url_config()
+    if not bridge_config_ok:
+        logger.warning("Warehouse bridge config mismatch: %s", bridge_config_error)
     # Startup
     logger.info("Starting application...")
     await init_db()
@@ -178,6 +184,7 @@ app.include_router(admin_router)
 app.include_router(missions_router)
 app.include_router(websockets_router)
 app.include_router(telemetry_control_router)
+app.include_router(runtime_router)
 app.include_router(video_router)
 app.include_router(settings_router)
 app.include_router(analytics_router)

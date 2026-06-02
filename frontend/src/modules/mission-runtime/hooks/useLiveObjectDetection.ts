@@ -11,7 +11,8 @@ export function useLiveObjectDetection() {
   const status = useQuery({
     queryKey: liveObjectDetectionKeys.status(),
     queryFn: getLiveObjectDetectionStatus,
-    refetchInterval: (query) => (query.state.data?.running ? 500 : 3000),
+    refetchInterval: (query) => (query.state.data?.running ? 1000 : 5000),
+    staleTime: 2000,
   });
   const toggle = useMutation({
     mutationFn: () =>

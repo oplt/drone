@@ -7,6 +7,7 @@ import {
   Chip,
   CircularProgress,
   FormControlLabel,
+  Tooltip,
   Stack,
   Typography,
 } from "@mui/material";
@@ -35,11 +36,16 @@ function tilesetJsonUrl(rawUrl: string): string {
   return `${rawUrl.replace(/\/+$/, "")}/tileset.json`;
 }
 
-function assetUrl(map: WarehouseScannedMapResponse | null, type: string): string | null {
+function assetUrl(
+  map: WarehouseScannedMapResponse | null,
+  type: string,
+): string | null {
   return map?.assets.find((asset) => asset.type === type)?.url ?? null;
 }
 
-function statusColor(status: string): "success" | "warning" | "error" | "default" {
+function statusColor(
+  status: string,
+): "success" | "warning" | "error" | "default" {
   if (status === "ready") return "success";
   if (status === "failed") return "error";
   if (status === "processing" || status === "queued") return "warning";
@@ -71,7 +77,25 @@ export function WarehouseScanViewer({
     [map],
   );
   const pointCloud = assetUrl(map, "POINT_CLOUD");
-  const quality = map?.assets.find((asset) => asset.type === "QUALITY_REPORT") ?? null;
+  const scanPath = assetUrl(map, "SCAN_PATH");
+  const footprint = assetUrl(map, "FOOTPRINT");
+  const quality =
+    map?.assets.find((asset) => asset.type === "QUALITY_REPORT") ?? null;
+  const qualityReport = quality?.meta_data ?? {};
+  const coverage =
+    typeof qualityReport.coverage_percent === "number"
+      ? qualityReport.coverage_percent
+      : null;
+  const drift =
+    typeof qualityReport.drift_estimate_m === "number"
+      ? qualityReport.drift_estimate_m
+      : null;
+  const availableLayers = {
+    mesh: Boolean(tilesetAsset),
+    pointCloud: Boolean(pointCloud),
+    scanPath: Boolean(scanPath),
+    footprint: Boolean(footprint),
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +116,9 @@ export function WarehouseScanViewer({
       const token = getToken();
       let url: string | null = null;
       if (token) {
-        url = await fetchSignedTilesetUrl(tilesetAsset.id, token).catch(() => null);
+        url = await fetchSignedTilesetUrl(tilesetAsset.id, token).catch(
+          () => null,
+        );
       }
       url = url ?? tilesetJsonUrl(absoluteAssetUrl(apiBase, tilesetAsset.url));
       if (cancelled || !hostRef.current) return;
@@ -127,7 +153,9 @@ export function WarehouseScanViewer({
     })().catch((err: unknown) => {
       if (!cancelled) {
         setStatus("error");
-        setError(err instanceof Error ? err.message : "3D map could not be loaded.");
+        setError(
+          err instanceof Error ? err.message : "3D map could not be loaded.",
+        );
       }
     });
 
@@ -144,7 +172,12 @@ export function WarehouseScanViewer({
 
   return (
     <Stack spacing={1.25}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap">
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+      >
         <Typography variant="subtitle1">
           <InfoLabel
             label="Warehouse 3D Map"
@@ -153,7 +186,13 @@ export function WarehouseScanViewer({
         </Typography>
         <Stack direction="row" spacing={0.75} alignItems="center">
           {status === "loading" && <CircularProgress size={16} />}
-          {map && <Chip size="small" label={map.status} color={statusColor(map.status)} />}
+          {map && (
+            <Chip
+              size="small"
+              label={map.status}
+              color={statusColor(map.status)}
+            />
+          )}
           {typeof map?.progress === "number" && (
             <Chip size="small" variant="outlined" label={`${map.progress}%`} />
           )}
@@ -173,31 +212,83 @@ export function WarehouseScanViewer({
         }}
       >
         {(status === "empty" || (!tilesetAsset && !pointCloud)) && (
-          <ViewerOverlay title="No 3D tiles yet" body="Select a ready scan with map assets." />
+          <ViewerOverlay
+            title="No 3D tiles yet"
+            body="Select a ready scan with map assets."
+          />
         )}
-        {status === "loading" && <ViewerOverlay title="Loading 3D map" body="Opening tileset." />}
-        {status === "error" && <ViewerOverlay title="Map load failed" body={error ?? ""} />}
+        {status === "loading" && (
+          <ViewerOverlay title="Loading 3D map" body="Opening tileset." />
+        )}
+        {status === "error" && (
+          <ViewerOverlay title="Map load failed" body={error ?? ""} />
+        )}
         {!tilesetAsset && pointCloud && (
-          <ViewerOverlay title="Point cloud available" body={absoluteAssetUrl(apiBase, pointCloud)} />
+          <ViewerOverlay
+            title="Point cloud available"
+            body={absoluteAssetUrl(apiBase, pointCloud)}
+          />
         )}
       </Box>
 
       {map?.error && <Alert severity="error">{map.error}</Alert>}
 
       <Stack direction="row" spacing={1} flexWrap="wrap">
-        {(["mesh", "pointCloud", "scanPath", "footprint"] as const).map((key) => (
-          <FormControlLabel
-            key={key}
-            control={
-              <Checkbox
-                size="small"
-                checked={layers[key]}
-                onChange={() => toggleLayer(key)}
-              />
-            }
-            label={key.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)}
+        <Tooltip title="Estimated scanned surface coverage">
+          <Chip
+            size="small"
+            color={coverage != null ? "success" : "default"}
+            label={`coverage ${coverage?.toFixed(0) ?? "--"}%`}
           />
-        ))}
+        </Tooltip>
+        <Tooltip title="Estimated mapping drift">
+          <Chip
+            size="small"
+            color={(drift ?? 0) > 0.5 ? "warning" : "success"}
+            label={`drift ${drift?.toFixed(2) ?? "--"}m`}
+          />
+        </Tooltip>
+        <Tooltip title="Mesh asset availability">
+          <Chip
+            size="small"
+            color={tilesetAsset ? "success" : "warning"}
+            label={tilesetAsset ? "mesh" : "missing mesh"}
+          />
+        </Tooltip>
+        <Tooltip title="Point-cloud asset availability">
+          <Chip
+            size="small"
+            color={pointCloud ? "success" : "warning"}
+            label={pointCloud ? "point cloud" : "missing point cloud"}
+          />
+        </Tooltip>
+        {(["mesh", "pointCloud", "scanPath", "footprint"] as const).map(
+          (key) => (
+            <Tooltip
+              key={key}
+              title={
+                availableLayers[key]
+                  ? "Toggle layer"
+                  : "Layer asset not available for this scan"
+              }
+            >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={layers[key]}
+                    disabled={!availableLayers[key]}
+                    onChange={() => toggleLayer(key)}
+                  />
+                }
+                label={key.replace(
+                  /[A-Z]/g,
+                  (letter) => ` ${letter.toLowerCase()}`,
+                )}
+              />
+            </Tooltip>
+          ),
+        )}
       </Stack>
 
       {map && (
@@ -227,7 +318,10 @@ function ViewerOverlay({ title, body }: { title: string; body: string }) {
       <Typography variant="body2" sx={{ fontWeight: 700 }}>
         {title}
       </Typography>
-      <Typography variant="caption" sx={{ opacity: 0.72, wordBreak: "break-all" }}>
+      <Typography
+        variant="caption"
+        sx={{ opacity: 0.72, wordBreak: "break-all" }}
+      >
         {body}
       </Typography>
     </Box>

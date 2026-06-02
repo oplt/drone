@@ -1,6 +1,7 @@
 from glob import glob
-
+import os
 from setuptools import find_packages, setup
+
 
 package_name = "warehouse_mapping_bridge"
 
@@ -14,8 +15,15 @@ setup(
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
+        (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
     ],
-    install_requires=["setuptools", "pymavlink>=2.4.49", "PyYAML>=6.0"],
+    install_requires=[
+        "setuptools",
+        "fastapi>=0.100",
+        "uvicorn>=0.23",
+        "pymavlink>=2.4.49",
+        "PyYAML>=6.0",
+    ],
     zip_safe=True,
     maintainer="Drone App",
     maintainer_email="operator@example.com",
@@ -28,6 +36,7 @@ setup(
             "warehouse_artifact_exporter = warehouse_mapping_bridge.artifact_exporter_node:main",
             "warehouse_health_monitor = warehouse_mapping_bridge.health_monitor_node:main",
             "warehouse_odometry_export = warehouse_mapping_bridge.odometry_export_node:main",
+            "warehouse_live_map_publisher = warehouse_mapping_bridge.live_map_publisher_node:main",
             "warehouse_vision_mavlink_bridge = warehouse_mapping_bridge.vision_mavlink_bridge_node:main",
             "warehouse_sim_tf_broadcaster = warehouse_mapping_bridge.sim_tf_broadcaster_node:main",
         ],

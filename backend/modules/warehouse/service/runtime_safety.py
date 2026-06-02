@@ -4,11 +4,14 @@ import json
 import os
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from backend.modules.warehouse.service.safety import WarehouseSafetyDecision, evaluate_warehouse_runtime_safety
+from backend.modules.warehouse.service.safety import (
+    WarehouseSafetyDecision,
+    evaluate_warehouse_runtime_safety,
+)
 
 
 def _gazebo_sim_enabled() -> bool:

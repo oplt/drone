@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Environment=WAREHOUSE_ROS_BRIDGE_HOST=0.0.0.0
 Environment=WAREHOUSE_ROS_BRIDGE_PORT=8088
-Environment=WAREHOUSE_ROS_CAPTURE_ROOT=/data/warehouse_ros
+Environment=WAREHOUSE_ROS_CAPTURE_ROOT=/backend/storage/warehouse_ros
 Environment=WAREHOUSE_ROS_PROFILE=isaac_ros_nvblox_stereo
 Environment=WAREHOUSE_ROS_AUTOLAUNCH=1
 Environment=WAREHOUSE_ROS_LAUNCH_CMD=ros2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py

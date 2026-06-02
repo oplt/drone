@@ -13,38 +13,44 @@ from backend.modules.missions.repository import mission_runtime_repo
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
+runtime_router = APIRouter(prefix="/runtime", tags=["runtime"])
+_connect_lock = asyncio.Lock()
 
 
 @router.post("/connect")
 async def connect_drone_and_telemetry(user=Depends(require_user)):
     """Build orchestrator (connects drone) and start telemetry in one call."""
-    try:
-        orch = await _build_orchestrator()
-    except Exception as e:
-        logger.error(f"Failed to connect drone: {e}")
-        raise HTTPException(status_code=500, detail=f"Drone connection failed: {e!s}")
-
-    drone = getattr(orch, "drone", None)
-    if drone and not getattr(drone, "vehicle", None):
+    async with _connect_lock:
         try:
-            await asyncio.to_thread(drone.connect)
-            logger.info("DroneKit vehicle connected via /telemetry/connect")
+            orch = await _build_orchestrator()
         except Exception as e:
-            logger.error(f"DroneKit vehicle connect failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Drone vehicle connection failed: {e!s}")
+            logger.error("Failed to connect drone: %s", e)
+            raise HTTPException(status_code=500, detail=f"Drone connection failed: {e!s}")
 
-    if not telemetry_manager.runtime_snapshot()["running"]:
-        try:
-            await orch.start_live_telemetry()
-        except Exception as e:
-            logger.error(f"Failed to start telemetry: {e}")
-            raise HTTPException(status_code=500, detail=f"Telemetry start failed: {e!s}")
+        drone = getattr(orch, "drone", None)
+        if drone and not getattr(drone, "vehicle", None):
+            try:
+                await asyncio.to_thread(drone.connect)
+                logger.info("DroneKit vehicle connected via /telemetry/connect")
+            except Exception as e:
+                logger.error("DroneKit vehicle connect failed: %s", e)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Drone vehicle connection failed: {e!s}",
+                )
 
-    return {
-        "status": "connected",
-        "drone": drone is not None and getattr(drone, "vehicle", None) is not None,
-        "telemetry_running": telemetry_manager.runtime_snapshot()["running"],
-    }
+        if not telemetry_manager.runtime_snapshot()["running"]:
+            try:
+                await orch.start_live_telemetry()
+            except Exception as e:
+                logger.error("Failed to start telemetry: %s", e)
+                raise HTTPException(status_code=500, detail=f"Telemetry start failed: {e!s}")
+
+        return {
+            "status": "connected",
+            "drone": drone is not None and getattr(drone, "vehicle", None) is not None,
+            "telemetry_running": telemetry_manager.runtime_snapshot()["running"],
+        }
 
 
 @router.post("/start")
@@ -114,6 +120,24 @@ async def get_runtime_metrics(user=Depends(require_user)):
     """Return live orchestrator runtime metrics: queue depths, dropped counts, ingest rate."""
     orch = await _build_orchestrator()
     return orch.get_runtime_metrics()
+
+
+@runtime_router.get("/status")
+async def get_runtime_status(user=Depends(require_user)):
+    telemetry = telemetry_manager.runtime_snapshot()
+    try:
+        from backend.modules.warehouse.service.bridge_stack_lifecycle import (
+            warehouse_bridge_stack_status,
+        )
+
+        bridge = (await warehouse_bridge_stack_status()).to_dict()
+    except Exception as exc:
+        bridge = {"state": "failed", "last_error": str(exc)}
+    return {
+        "telemetry": telemetry,
+        "warehouse_bridge": bridge,
+        "timestamp": time.time(),
+    }
 
 
 @router.get("/shadow-report")

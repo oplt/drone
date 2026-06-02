@@ -110,9 +110,7 @@ class WarehouseFlightStateMachine:
         else:
             target = WarehouseFlightState.SYSTEM_CHECK
 
-        if not bridge_ok:
-            target = WarehouseFlightState.SYSTEM_CHECK
-        elif not autopilot_ok:
+        if not bridge_ok or not autopilot_ok:
             target = WarehouseFlightState.SYSTEM_CHECK
         elif not sensors_ok:
             target = WarehouseFlightState.SENSOR_CHECK

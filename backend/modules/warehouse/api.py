@@ -5,7 +5,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +53,17 @@ from backend.modules.warehouse.ports import (
     WarehouseReplayStartRequest,
 )
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
+from backend.modules.warehouse.service.live_map_stream import (
+    WarehouseLiveMapSnapshot,
+    WarehouseLiveMapUpdate,
+    normalize_live_map_payload,
+    warehouse_live_map_stream,
+)
+from backend.modules.warehouse.service.live_map_storage import (
+    LiveMapStorageError,
+    warehouse_live_map_chunk_storage,
+)
+from backend.modules.telemetry.websocket_api import _authorize_websocket
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
 logger = logging.getLogger(__name__)
@@ -57,8 +79,7 @@ async def _require_warehouse_scan_preflight() -> None:
         raise HTTPException(
             status_code=503,
             detail={
-                "message": readiness.user_message
-                or "Warehouse sensors are not ready for scan.",
+                "message": readiness.user_message or "Warehouse sensors are not ready for scan.",
                 **readiness.to_api_detail(),
             },
         )
@@ -117,6 +138,7 @@ async def _run_warehouse_preflight(mission_payload: routes_flights.MissionCreate
                     },
                 ) from exc
         raise
+
 
 # ------------------------------------------------------------------ schemas
 
@@ -216,6 +238,22 @@ class WarehouseScannedMapCompareOut(BaseModel):
     quality_delta: float | None = None
     coverage_delta: float | None = None
     drift_delta_m: float | None = None
+
+
+class WarehouseLiveMapPublishOut(BaseModel):
+    accepted: bool
+    flight_id: str
+    changed_chunk_count: int
+    removed_chunk_count: int
+
+
+class WarehouseLiveMapChunkUploadOut(BaseModel):
+    accepted: bool
+    flight_id: str
+    chunk_id: str
+    url: str
+    byte_size: int
+    checksum_sha256: str
 
 
 class WarehouseMapCreateIn(BaseModel):
@@ -381,6 +419,9 @@ class WarehouseBridgeHealthOut(BaseModel):
 
 
 class WarehouseGoPreflightOut(BaseModel):
+    ready: bool = False
+    blocking: bool = True
+    checks: dict[str, str] = Field(default_factory=dict)
     ready_to_fly: bool
     bridge_ok: bool
     gazebo_ok: bool | None = None
@@ -396,6 +437,12 @@ class WarehouseGoPreflightOut(BaseModel):
     perception_stable_for_ms: int
     perception_required_stable_ms: int
     ros_topic_count: int | None = None
+    warehouse_bridge_state: str = "stopped"
+    bridge_url: str | None = None
+    last_error: str | None = None
+    restart_count: int = 0
+    diagnostics: dict[str, object] = Field(default_factory=dict)
+    recommended_action: str | None = None
     blocking_reasons: list[str] = Field(default_factory=list)
     suggested_actions: list[str] = Field(default_factory=list)
     categories: dict[str, str] = Field(default_factory=dict)
@@ -589,11 +636,16 @@ def _dock_config_params(
 async def get_warehouse_bridge_health(
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseBridgeHealthOut:
-    status = await get_warehouse_perception_port().status(deep=False)
+    from backend.modules.warehouse.service.idle_health import (
+        fetch_idle_warehouse_perception_status,
+    )
+
+    status = await fetch_idle_warehouse_perception_status()
     components = status.components if isinstance(status.components, dict) else {}
+    bridge_idle = bool(components.get("bridge_idle"))
     return WarehouseBridgeHealthOut(
-        bridge_alive=bool(status.reachable),
-        reachable=bool(status.reachable),
+        bridge_alive=bool(status.reachable and not bridge_idle),
+        reachable=bool(status.reachable and not bridge_idle),
         status=str(status.status or "unknown"),
         ros_bridge_heartbeat=bool(components.get("ros_bridge_heartbeat", True)),
         probe_in_progress=bool(components.get("probe_in_progress")),
@@ -603,7 +655,7 @@ async def get_warehouse_bridge_health(
 @router.get("/preflight", response_model=WarehouseGoPreflightOut)
 async def get_warehouse_preflight(
     mission_loaded: bool = False,
-    deep: bool = True,
+    deep: bool = False,
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseGoPreflightOut:
     from backend.modules.warehouse.service.warehouse_go_preflight import (
@@ -614,21 +666,26 @@ async def get_warehouse_preflight(
         deep=deep,
         mission_loaded=mission_loaded,
     )
-    return WarehouseGoPreflightOut.model_validate(result.to_dict())
+    payload = result.to_dict()
+    return WarehouseGoPreflightOut.model_validate(payload)
 
 
 @router.get("/perception/health", response_model=WarehousePerceptionHealthOut)
 async def get_warehouse_perception_health(
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehousePerceptionHealthOut:
+    from backend.modules.warehouse.service.idle_health import (
+        fetch_idle_warehouse_perception_status,
+    )
     from backend.modules.warehouse.service.warehouse_go_preflight import (
         evaluate_warehouse_go_preflight,
     )
 
-    status = await get_warehouse_perception_port().status()
-    preflight = await evaluate_warehouse_go_preflight(deep=False)
+    status = await fetch_idle_warehouse_perception_status()
+    components = status.components if isinstance(status.components, dict) else {}
+    bridge_idle = bool(components.get("bridge_idle"))
+    preflight = None if bridge_idle else await evaluate_warehouse_go_preflight(deep=False)
     if not status.ready:
-        components = status.components if isinstance(status.components, dict) else {}
         logger.warning(
             (
                 "Warehouse perception health endpoint degraded "
@@ -647,7 +704,7 @@ async def get_warehouse_perception_health(
             },
         )
     payload = status.model_dump(mode="python")
-    payload["flight_ready"] = preflight.ready_to_fly
+    payload["flight_ready"] = bool(preflight.ready_to_fly) if preflight else False
     payload["app_health_only"] = True
     payload["preflight_path"] = "/warehouse/preflight"
     return WarehousePerceptionHealthOut.model_validate(payload)
@@ -662,9 +719,7 @@ async def list_sensor_rigs(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> list[WarehouseSensorRigOut]:
-    rigs = await warehouse_application.list_sensor_rigs(
-        db, user=org_user.user, limit=limit
-    )
+    rigs = await warehouse_application.list_sensor_rigs(db, user=org_user.user, limit=limit)
     return [_sensor_rig_out(rig) for rig in rigs]
 
 
@@ -675,9 +730,7 @@ async def create_sensor_rig(
     org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseSensorRigOut:
     try:
-        rig = await warehouse_application.create_sensor_rig(
-            db, user=org_user.user, payload=payload
-        )
+        rig = await warehouse_application.create_sensor_rig(db, user=org_user.user, payload=payload)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _sensor_rig_out(rig)
@@ -730,7 +783,11 @@ async def get_sensor_rig_health(
     if rig is None:
         raise HTTPException(status_code=404, detail="Sensor rig not found")
 
-    perception = await get_warehouse_perception_port().status()
+    from backend.modules.warehouse.service.idle_health import (
+        fetch_idle_warehouse_perception_status,
+    )
+
+    perception = await fetch_idle_warehouse_perception_status()
     blockers: list[str] = []
     warnings: list[str] = []
     if rig.calibration_status != "valid":
@@ -1195,6 +1252,28 @@ async def stop_warehouse_mapping_stack(
     return _mapping_stack_status_out(await shutdown_warehouse_mapping_stack())
 
 
+@router.get("/bridge-stack/status")
+async def get_warehouse_bridge_stack_status(
+    _org_user: OrgUser = Depends(require_mission_exec),
+) -> dict[str, object]:
+    from backend.modules.warehouse.service.bridge_stack_lifecycle import (
+        warehouse_bridge_stack_status,
+    )
+
+    return (await warehouse_bridge_stack_status()).to_dict()
+
+
+@router.post("/bridge-stack/retry")
+async def retry_warehouse_bridge_stack(
+    _org_user: OrgUser = Depends(require_mission_exec),
+) -> dict[str, object]:
+    from backend.modules.warehouse.service.bridge_stack_lifecycle import (
+        reset_warehouse_bridge_stack,
+    )
+
+    return (await reset_warehouse_bridge_stack()).to_dict()
+
+
 @router.post("/manual-mapping/start")
 async def start_warehouse_manual_mapping(
     payload: WarehouseManualMappingStartIn,
@@ -1359,6 +1438,10 @@ async def stop_warehouse_manual_mapping(
         response["mapping_job"] = {"error": str(exc)}
     else:
         response["mapping_job"] = mapping_job
+        await warehouse_live_map_stream.finalize(
+            payload.flight_id,
+            int(mapping_job["job_id"]) if mapping_job.get("job_id") is not None else None,
+        )
         logger.info(
             "Warehouse manual mapping capture persisted flight_id=%s job_id=%s",
             payload.flight_id,
@@ -1609,6 +1692,134 @@ async def get_scanned_map(
             ],
         )
     raise HTTPException(status_code=404, detail="Scanned map not found")
+
+
+@router.get("/live-map/{flight_id}/snapshot", response_model=WarehouseLiveMapSnapshot)
+async def get_live_map_snapshot(
+    flight_id: str,
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseLiveMapSnapshot:
+    _ = org_user
+    return await warehouse_live_map_stream.snapshot(flight_id)
+
+
+@router.post("/live-map/{flight_id}/updates", response_model=WarehouseLiveMapPublishOut)
+async def publish_live_map_update(
+    flight_id: str,
+    payload: dict[str, Any],
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseLiveMapPublishOut:
+    _ = org_user
+    payload = {**payload, "flight_id": flight_id}
+    update = normalize_live_map_payload(payload)
+    await warehouse_live_map_stream.publish(update)
+    return WarehouseLiveMapPublishOut(
+        accepted=True,
+        flight_id=update.flight_id,
+        changed_chunk_count=len(update.changed_chunks),
+        removed_chunk_count=len(update.removed_chunk_ids),
+    )
+
+
+@router.post(
+    "/live-map/{flight_id}/chunks/{chunk_id}", response_model=WarehouseLiveMapChunkUploadOut
+)
+async def upload_live_map_chunk(
+    flight_id: str,
+    chunk_id: str,
+    kind: Literal["mesh", "point_cloud", "occupancy", "esdf", "costmap"] = Query("mesh"),
+    sequence: int = Query(0, ge=0),
+    bbox_local_m: list[float] | None = Query(default=None),
+    point_count: int | None = Query(default=None, ge=0),
+    file: UploadFile = File(...),
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseLiveMapChunkUploadOut:
+    _ = org_user
+    if bbox_local_m is not None and len(bbox_local_m) != 6:
+        raise HTTPException(status_code=422, detail="bbox_local_m must contain six values")
+    try:
+        stored = await warehouse_live_map_chunk_storage.save_upload(
+            flight_id=flight_id,
+            chunk_id=chunk_id,
+            kind=kind,
+            upload=file,
+        )
+    except LiveMapStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    update = normalize_live_map_payload(
+        {
+            "flight_id": flight_id,
+            "changed_chunks": [
+                {
+                    "id": stored.chunk_id,
+                    "kind": kind,
+                    "url": stored.url,
+                    "content_type": stored.content_type,
+                    "sequence": sequence,
+                    "point_count": point_count,
+                    "byte_size": stored.byte_size,
+                    "checksum_sha256": stored.checksum_sha256,
+                    "bbox_local_m": bbox_local_m,
+                }
+            ],
+            "health": {
+                "missing_mesh": kind != "mesh",
+                "missing_point_cloud": kind != "point_cloud",
+                "nvblox_ready": True,
+                "mapping_recording": True,
+                "stack_running": True,
+            },
+        }
+    )
+    await warehouse_live_map_stream.publish(update)
+    return WarehouseLiveMapChunkUploadOut(
+        accepted=True,
+        flight_id=flight_id,
+        chunk_id=stored.chunk_id,
+        url=stored.url,
+        byte_size=stored.byte_size,
+        checksum_sha256=stored.checksum_sha256,
+    )
+
+
+@router.get("/live-map/{flight_id}/chunks/{chunk_id}/download")
+async def download_live_map_chunk(
+    flight_id: str,
+    chunk_id: str,
+    org_user: OrgUser = Depends(require_org_user),
+):
+    _ = org_user
+    stored = warehouse_live_map_chunk_storage.resolve(flight_id=flight_id, chunk_id=chunk_id)
+    if stored is None:
+        raise HTTPException(status_code=404, detail="Live-map chunk not found")
+    return FileResponse(
+        str(stored.path),
+        media_type=stored.content_type,
+        headers={
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "ETag": f'"{stored.checksum_sha256}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.websocket("/live-map/{flight_id}/stream")
+async def websocket_live_map_stream(websocket: WebSocket, flight_id: str):
+    is_authorized, user_id_or_error = await _authorize_websocket(websocket)
+    if not is_authorized:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=user_id_or_error)
+        return
+
+    await warehouse_live_map_stream.connect(flight_id, websocket)
+    try:
+        while True:
+            message = await websocket.receive_text()
+            if message == "ping" or '"type":"ping"' in message:
+                await websocket.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await warehouse_live_map_stream.disconnect(flight_id, websocket)
 
 
 @router.delete("/scanned-maps/{job_id}", status_code=204)

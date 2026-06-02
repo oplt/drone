@@ -7,7 +7,7 @@ export function useSession() {
   const query = useQuery({
     queryKey: sessionKeys.verified(),
     queryFn: () => sessionApi.verifySession(),
-    staleTime: 0,
+    staleTime: 60_000,
     retry: false,
   });
 

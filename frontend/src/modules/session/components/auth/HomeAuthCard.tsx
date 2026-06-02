@@ -15,7 +15,9 @@ import Typography from '@mui/material/Typography';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { alpha } from '@mui/material/styles';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { sessionKeys } from '../../../../app/config/queryKeys';
 import ForgotPassword from '../ForgotPassword';
 import { ApiError } from "../../../../shared/api/apiError";
 import { login, setToken, signUp } from '../../';
@@ -89,6 +91,7 @@ function SignInForm() {
   const [submitting, setSubmitting] = React.useState(false);
   const [forgotOpen, setForgotOpen] = React.useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     const rememberedEmail = localStorage.getItem('remembered_email');
@@ -149,6 +152,7 @@ function SignInForm() {
         localStorage.removeItem('remembered_email');
       }
 
+      await queryClient.invalidateQueries({ queryKey: sessionKeys.verified() });
       navigate('/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -249,6 +253,7 @@ function SignUpForm() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const validate = React.useCallback(() => {
     const nextErrors: { name?: string; email?: string; password?: string } = {};
@@ -294,6 +299,7 @@ function SignUpForm() {
       if (json.access_token) {
         setToken(json.access_token);
       }
+      await queryClient.invalidateQueries({ queryKey: sessionKeys.verified() });
       navigate('/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {

@@ -14,8 +14,10 @@ profiles:
     pointcloud: /nvblox_node/static_esdf_pointcloud
     mesh: /nvblox_node/mesh
     mesh_marker: /nvblox_node/tsdf_layer_marker
-    occupancy: /nvblox_node/static_occupancy_grid
+    occupancy: /nvblox_node/occupancy_layer
     esdf: /nvblox_node/static_esdf_pointcloud
+    static_map_slice: /nvblox_node/static_map_slice
+    combined_map_slice: /nvblox_node/combined_map_slice
 
   isaac_ros_nvblox_stereo:
     rgb_image: /warehouse/front/rgbd/image
@@ -26,11 +28,13 @@ profiles:
     visual_slam_odom: /visual_slam/tracking/odometry
     local_odometry: /warehouse/local_odometry
     raw_lidar: /lidar/points
-    pointcloud: /nvblox_node/pointcloud
+    pointcloud: /nvblox_node/static_esdf_pointcloud
     mesh: /nvblox_node/mesh
     mesh_marker: /nvblox_node/mesh_marker
     occupancy: /nvblox_node/occupancy_layer
     esdf: /nvblox_node/static_esdf_pointcloud
+    static_map_slice: /nvblox_node/static_map_slice
+    combined_map_slice: /nvblox_node/combined_map_slice
     back_projected_depth: /nvblox_node/back_projected_depth
 
 aliases:
@@ -59,6 +63,10 @@ aliases:
     - /nvblox_node/pointcloud
     - /nvblox_node/static_esdf_pointcloud
     - /nvblox_node/static_map_slice
+  static_map_slice:
+    - /nvblox_node/static_map_slice
+  combined_map_slice:
+    - /nvblox_node/combined_map_slice
 
 required_for_perception:
   - rgb_image
@@ -73,6 +81,8 @@ required_for_nvblox_any:
   - mesh_marker
   - occupancy
   - esdf
+  - static_map_slice
+  - combined_map_slice
 
 gazebo_frames:
   odom: odom

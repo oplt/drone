@@ -4,15 +4,19 @@ import {
   Box,
   Button,
   CircularProgress,
+  FormControlLabel,
   InputAdornment,
   MenuItem,
   Paper,
   Stack,
+  Switch,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
@@ -47,6 +51,7 @@ import {
 } from "../api/warehouseMissionsApi";
 import {
   sendWarehouseFlightCommand,
+  type WarehouseFlightReadiness,
 } from "../api/warehouseFlightApi";
 import { WarehousePreflightChecksPanel } from "../components/WarehousePreflightChecksPanel";
 import { useRunWarehousePreflight } from "../hooks/useRunWarehousePreflight";
@@ -70,7 +75,11 @@ import {
   listWarehouseMaps,
   updateWarehouseSensorRigCalibration,
 } from "../api/warehouseMapsApi";
-import type { WarehouseMapOut, WarehouseSensorRig, WarehouseSensorRigHealth } from "../types";
+import type {
+  WarehouseMapOut,
+  WarehouseSensorRig,
+  WarehouseSensorRigHealth,
+} from "../types";
 import {
   WarehouseMappingHealthPanel,
   type WarehouseMappingRuntimeStatus,
@@ -81,6 +90,14 @@ import { WarehouseExplorationPanel } from "../components/WarehouseExplorationPan
 import { WarehouseManualMappingPanel } from "../components/WarehouseManualMappingPanel";
 import { WarehouseMapQualityPanel } from "../components/WarehouseMapQualityPanel";
 import { WarehouseScanViewer } from "../components/WarehouseScanViewer";
+import { WarehouseLiveVoxelMapViewer } from "../components/WarehouseLiveVoxelMapViewer";
+import { WarehouseFlightReadinessRibbon } from "../components/WarehouseFlightReadinessRibbon";
+import {
+  WarehouseDeleteConfirmationDialog,
+  type WarehouseDeleteTarget,
+} from "../components/WarehouseDeleteConfirmationDialog";
+import { useWarehouseLiveVoxelMap } from "../hooks/useWarehouseLiveVoxelMap";
+import { compareWarehouseScannedMaps } from "../api/warehouseMissionsApi";
 
 type CreateMapForm = {
   name: string;
@@ -181,30 +198,68 @@ const COMPACT_FIELD_SX = {
 } as const;
 
 const SENSOR_RIG_CREATE_FIELDS = [
-  { key: "name" as const, label: "Name", type: "text" as const, adornment: null },
-  { key: "camera_model" as const, label: "Camera", type: "text" as const, adornment: null },
+  {
+    key: "name" as const,
+    label: "Name",
+    type: "text" as const,
+    adornment: null,
+  },
+  {
+    key: "camera_model" as const,
+    label: "Camera",
+    type: "text" as const,
+    adornment: null,
+  },
   {
     key: "stereo_baseline_m" as const,
     label: "Baseline",
     type: "number" as const,
     adornment: "m",
   },
-  { key: "intrinsics_url" as const, label: "Intrinsics", type: "text" as const, adornment: null },
-  { key: "extrinsics_url" as const, label: "Extrinsics", type: "text" as const, adornment: null },
-  { key: "firmware_version" as const, label: "Firmware", type: "text" as const, adornment: null },
-  { key: "isaac_ros_version" as const, label: "Isaac ROS", type: "text" as const, adornment: null },
+  {
+    key: "intrinsics_url" as const,
+    label: "Intrinsics",
+    type: "text" as const,
+    adornment: null,
+  },
+  {
+    key: "extrinsics_url" as const,
+    label: "Extrinsics",
+    type: "text" as const,
+    adornment: null,
+  },
+  {
+    key: "firmware_version" as const,
+    label: "Firmware",
+    type: "text" as const,
+    adornment: null,
+  },
+  {
+    key: "isaac_ros_version" as const,
+    label: "Isaac ROS",
+    type: "text" as const,
+    adornment: null,
+  },
 ] as const;
 
 const toMessage = (error: unknown): string =>
   error instanceof Error ? error.message : "Request failed";
 
-const getWarehouseStartPreflight = (error: unknown): PreflightRunResponse | null => {
-  const body = (error as { body?: unknown } | null)?.body as WarehouseStartErrorBody | undefined;
+const getWarehouseStartPreflight = (
+  error: unknown,
+): PreflightRunResponse | null => {
+  const body = (error as { body?: unknown } | null)?.body as
+    | WarehouseStartErrorBody
+    | undefined;
   return body?.detail?.preflight ?? body?.error?.details?.preflight ?? null;
 };
 
-const getWarehouseStartReadiness = (error: unknown): WarehouseFlightReadiness | null => {
-  const body = (error as { body?: unknown } | null)?.body as WarehouseStartErrorBody | undefined;
+const getWarehouseStartReadiness = (
+  error: unknown,
+): WarehouseFlightReadiness | null => {
+  const body = (error as { body?: unknown } | null)?.body as
+    | WarehouseStartErrorBody
+    | undefined;
   const readiness = body?.detail?.readiness ?? body?.error?.details?.readiness;
   if (!readiness || typeof readiness !== "object") {
     return null;
@@ -213,7 +268,9 @@ const getWarehouseStartReadiness = (error: unknown): WarehouseFlightReadiness | 
 };
 
 const getWarehouseStartMessage = (error: unknown): string => {
-  const body = (error as { body?: unknown } | null)?.body as WarehouseStartErrorBody | undefined;
+  const body = (error as { body?: unknown } | null)?.body as
+    | WarehouseStartErrorBody
+    | undefined;
   const detail = body?.detail ?? body?.error?.details;
   if (detail?.message) {
     const parts = [detail.message];
@@ -278,8 +335,20 @@ type WarehouseMissionDefaultsRow =
     };
 
 const WAREHOUSE_MISSION_DEFAULT_ROWS: WarehouseMissionDefaultsRow[] = [
-  { key: "cruise_alt", label: "Base Layer Altitude (m)", kind: "number", min: 0.1, step: 0.1 },
-  { key: "corridor_spacing_m", label: "Corridor Spacing (m)", kind: "number", min: 0.1, step: 0.1 },
+  {
+    key: "cruise_alt",
+    label: "Base Layer Altitude (m)",
+    kind: "number",
+    min: 0.1,
+    step: 0.1,
+  },
+  {
+    key: "corridor_spacing_m",
+    label: "Corridor Spacing (m)",
+    kind: "number",
+    min: 0.1,
+    step: 0.1,
+  },
   {
     key: "aisle_axis_deg",
     label: "Aisle Axis (deg)",
@@ -288,8 +357,20 @@ const WAREHOUSE_MISSION_DEFAULT_ROWS: WarehouseMissionDefaultsRow[] = [
     step: 1,
     placeholder: "Auto",
   },
-  { key: "clearance_m", label: "Clearance (m)", kind: "number", min: 0.1, step: 0.1 },
-  { key: "perimeter_offset_m", label: "Perimeter Offset (m)", kind: "number", min: 0, step: 0.1 },
+  {
+    key: "clearance_m",
+    label: "Clearance (m)",
+    kind: "number",
+    min: 0.1,
+    step: 0.1,
+  },
+  {
+    key: "perimeter_offset_m",
+    label: "Perimeter Offset (m)",
+    kind: "number",
+    min: 0,
+    step: 0.1,
+  },
   {
     key: "scan_pattern",
     label: "Scan Pattern",
@@ -322,10 +403,34 @@ const WAREHOUSE_MISSION_DEFAULT_ROWS: WarehouseMissionDefaultsRow[] = [
     ],
   },
   { key: "layer_count", label: "Layer Count", kind: "number", min: 1, step: 1 },
-  { key: "layer_spacing_m", label: "Layer Spacing (m)", kind: "number", min: 0, step: 0.1 },
-  { key: "ceiling_height_m", label: "Ceiling Height (m)", kind: "number", min: 0.1, step: 0.1 },
-  { key: "ceiling_margin_m", label: "Ceiling Margin (m)", kind: "number", min: 0, step: 0.1 },
-  { key: "work_speed_mps", label: "Work Speed (m/s)", kind: "number", min: 0.1, step: 0.1 },
+  {
+    key: "layer_spacing_m",
+    label: "Layer Spacing (m)",
+    kind: "number",
+    min: 0,
+    step: 0.1,
+  },
+  {
+    key: "ceiling_height_m",
+    label: "Ceiling Height (m)",
+    kind: "number",
+    min: 0.1,
+    step: 0.1,
+  },
+  {
+    key: "ceiling_margin_m",
+    label: "Ceiling Margin (m)",
+    kind: "number",
+    min: 0,
+    step: 0.1,
+  },
+  {
+    key: "work_speed_mps",
+    label: "Work Speed (m/s)",
+    kind: "number",
+    min: 0.1,
+    step: 0.1,
+  },
   {
     key: "transit_speed_mps",
     label: "Transit Speed (m/s)",
@@ -333,7 +438,13 @@ const WAREHOUSE_MISSION_DEFAULT_ROWS: WarehouseMissionDefaultsRow[] = [
     min: 0.1,
     step: 0.1,
   },
-  { key: "scan_pause_s", label: "Scan Pause (s)", kind: "number", min: 0, step: 0.1 },
+  {
+    key: "scan_pause_s",
+    label: "Scan Pause (s)",
+    kind: "number",
+    min: 0,
+    step: 0.1,
+  },
   {
     key: "interpolate_steps_work_leg",
     label: "Work Leg Interpolation",
@@ -350,16 +461,33 @@ const WAREHOUSE_MISSION_DEFAULT_ROWS: WarehouseMissionDefaultsRow[] = [
   },
 ];
 
-const WAREHOUSE_MISSION_DEFAULT_COLUMN_ROWS = (() => {
-  const columnCount = 4;
-  const rowsPerColumn = Math.ceil(WAREHOUSE_MISSION_DEFAULT_ROWS.length / columnCount);
+const ADVANCED_MISSION_DEFAULT_KEYS = new Set<WarehouseMissionDefaultsKey>([
+  "aisle_axis_deg",
+  "perimeter_offset_m",
+  "scan_pattern",
+  "lane_strategy",
+  "view_mode",
+  "layer_count",
+  "layer_spacing_m",
+  "ceiling_height_m",
+  "ceiling_margin_m",
+  "scan_pause_s",
+  "interpolate_steps_work_leg",
+  "interpolate_steps_transit_leg",
+]);
+
+const toMissionDefaultColumns = (showAdvanced: boolean) => {
+  const visibleRows = showAdvanced
+    ? WAREHOUSE_MISSION_DEFAULT_ROWS
+    : WAREHOUSE_MISSION_DEFAULT_ROWS.filter(
+        (row) => !ADVANCED_MISSION_DEFAULT_KEYS.has(row.key),
+      );
+  const columnCount = showAdvanced ? 4 : 2;
+  const rowsPerColumn = Math.ceil(visibleRows.length / columnCount);
   return Array.from({ length: columnCount }, (_, index) =>
-    WAREHOUSE_MISSION_DEFAULT_ROWS.slice(
-      index * rowsPerColumn,
-      (index + 1) * rowsPerColumn,
-    ),
+    visibleRows.slice(index * rowsPerColumn, (index + 1) * rowsPerColumn),
   ).filter((column) => column.length > 0);
-})();
+};
 
 const MISSION_DEFAULT_VALUE_SX = {
   ...COMPACT_FIELD_SX,
@@ -393,7 +521,8 @@ const toWarehouseMissionDefaultsDraft = (
 ): WarehouseMissionDefaultsDraft => ({
   cruise_alt: String(defaults.cruise_alt),
   corridor_spacing_m: String(defaults.corridor_spacing_m),
-  aisle_axis_deg: defaults.aisle_axis_deg == null ? "" : String(defaults.aisle_axis_deg),
+  aisle_axis_deg:
+    defaults.aisle_axis_deg == null ? "" : String(defaults.aisle_axis_deg),
   clearance_m: String(defaults.clearance_m),
   perimeter_offset_m: String(defaults.perimeter_offset_m),
   scan_pattern: defaults.scan_pattern,
@@ -443,19 +572,36 @@ const toWarehouseMissionDefaultsPayload = (
   draft: WarehouseMissionDefaultsDraft,
 ): WarehouseMissionDefaultsResponse => ({
   cruise_alt: parseRequiredNumber("Cruise altitude", draft.cruise_alt),
-  corridor_spacing_m: parseRequiredNumber("Corridor spacing", draft.corridor_spacing_m),
+  corridor_spacing_m: parseRequiredNumber(
+    "Corridor spacing",
+    draft.corridor_spacing_m,
+  ),
   aisle_axis_deg: parseOptionalNumber("Aisle axis", draft.aisle_axis_deg),
   clearance_m: parseRequiredNumber("Clearance", draft.clearance_m),
-  perimeter_offset_m: parseRequiredNumber("Perimeter offset", draft.perimeter_offset_m),
-  scan_pattern: draft.scan_pattern as WarehouseMissionDefaultsResponse["scan_pattern"],
-  lane_strategy: draft.lane_strategy as WarehouseMissionDefaultsResponse["lane_strategy"],
+  perimeter_offset_m: parseRequiredNumber(
+    "Perimeter offset",
+    draft.perimeter_offset_m,
+  ),
+  scan_pattern:
+    draft.scan_pattern as WarehouseMissionDefaultsResponse["scan_pattern"],
+  lane_strategy:
+    draft.lane_strategy as WarehouseMissionDefaultsResponse["lane_strategy"],
   view_mode: draft.view_mode as WarehouseMissionDefaultsResponse["view_mode"],
   layer_count: parseRequiredNumber("Layer count", draft.layer_count, true),
   layer_spacing_m: parseRequiredNumber("Layer spacing", draft.layer_spacing_m),
-  ceiling_height_m: parseRequiredNumber("Ceiling height", draft.ceiling_height_m),
-  ceiling_margin_m: parseRequiredNumber("Ceiling margin", draft.ceiling_margin_m),
+  ceiling_height_m: parseRequiredNumber(
+    "Ceiling height",
+    draft.ceiling_height_m,
+  ),
+  ceiling_margin_m: parseRequiredNumber(
+    "Ceiling margin",
+    draft.ceiling_margin_m,
+  ),
   work_speed_mps: parseRequiredNumber("Work speed", draft.work_speed_mps),
-  transit_speed_mps: parseRequiredNumber("Transit speed", draft.transit_speed_mps),
+  transit_speed_mps: parseRequiredNumber(
+    "Transit speed",
+    draft.transit_speed_mps,
+  ),
   scan_pause_s: parseRequiredNumber("Scan pause", draft.scan_pause_s),
   interpolate_steps_work_leg: parseRequiredNumber(
     "Work leg interpolation",
@@ -468,7 +614,6 @@ const toWarehouseMissionDefaultsPayload = (
     true,
   ),
 });
-
 
 export default function WarehousePage() {
   const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
@@ -507,27 +652,38 @@ export default function WarehousePage() {
     },
     [closeOtherWarehouseDrawers, warehouseFlightDrawer],
   );
-  const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>([]);
+  const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>(
+    [],
+  );
   const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
   const [deletingScannedMap, setDeletingScannedMap] = useState(false);
   const [selectedMapJobId, setSelectedMapJobId] = useState<number | null>(null);
   const [viewerMapJobId, setViewerMapJobId] = useState<number | null>(null);
-  const [selectedReferenceJobId, setSelectedReferenceJobId] = useState<number | null>(null);
+  const [selectedReferenceJobId, setSelectedReferenceJobId] = useState<
+    number | null
+  >(null);
 
   // Warehouse maps (footprints) — separate from scanned results
   const [warehouseMaps, setWarehouseMaps] = useState<WarehouseMapOut[]>([]);
   const [loadingWarehouseMaps, setLoadingWarehouseMaps] = useState(false);
-  const [selectedWarehouseMapId, setSelectedWarehouseMapId] = useState<number | null>(null);
+  const [selectedWarehouseMapId, setSelectedWarehouseMapId] = useState<
+    number | null
+  >(null);
   const [selectedDockId, setSelectedDockId] = useState<number | null>(null);
-  const [createMapForm, setCreateMapForm] = useState<CreateMapForm>({ name: "", width_m: "", length_m: "" });
+  const [createMapForm, setCreateMapForm] = useState<CreateMapForm>({
+    name: "",
+    width_m: "",
+    length_m: "",
+  });
   const [creatingMap, setCreatingMap] = useState(false);
   const [deletingWarehouseMap, setDeletingWarehouseMap] = useState(false);
   const [showCreateMap, setShowCreateMap] = useState(false);
   const [sensorRigs, setSensorRigs] = useState<WarehouseSensorRig[]>([]);
-  const [selectedSensorRigId, setSelectedSensorRigId] = useState<number | null>(null);
-  const [sensorRigHealth, setSensorRigHealth] = useState<WarehouseSensorRigHealth | null>(null);
-  const [warehousePreflightRun, setWarehousePreflightRun] =
-    useState<PreflightRunResponse | null>(null);
+  const [selectedSensorRigId, setSelectedSensorRigId] = useState<number | null>(
+    null,
+  );
+  const [sensorRigHealth, setSensorRigHealth] =
+    useState<WarehouseSensorRigHealth | null>(null);
   const [loadingSensorRigs, setLoadingSensorRigs] = useState(false);
   const [savingSensorRig, setSavingSensorRig] = useState(false);
   const [deletingSensorRig, setDeletingSensorRig] = useState(false);
@@ -545,20 +701,38 @@ export default function WarehousePage() {
     useState<WarehouseMissionDefaultsDraft | null>(null);
   const [loadingMissionDefaults, setLoadingMissionDefaults] = useState(false);
   const [savingMissionDefaults, setSavingMissionDefaults] = useState(false);
-  const [missionDefaultsMessage, setMissionDefaultsMessage] = useState<string | null>(null);
+  const [missionDefaultsMessage, setMissionDefaultsMessage] = useState<
+    string | null
+  >(null);
+  const [setupTab, setSetupTab] = useState<"map" | "rig" | "dock" | "defaults">(
+    "map",
+  );
+  const [showAdvancedDefaults, setShowAdvancedDefaults] = useState(false);
+  const [showAllScannedMaps, setShowAllScannedMaps] = useState(false);
+  const [scanResultFilter, setScanResultFilter] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<WarehouseDeleteTarget>(null);
+  const [compareMessage, setCompareMessage] = useState<string | null>(null);
+  const [comparingScans, setComparingScans] = useState(false);
 
   const [startingScan, setStartingScan] = useState(false);
-  const [scanLaunchMessage, setScanLaunchMessage] = useState<string | null>(null);
+  const [scanLaunchMessage, setScanLaunchMessage] = useState<string | null>(
+    null,
+  );
 
   const [manualStreamKey, setManualStreamKey] = useState<{
     flightId: string | null;
     key: number;
   } | null>(null);
-  const [videoErrorMessage, setVideoErrorMessage] = useState<string | null>(null);
-  const [videoErrorStreamKey, setVideoErrorStreamKey] = useState<number | null>(null);
+  const [videoErrorMessage, setVideoErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [videoErrorStreamKey, setVideoErrorStreamKey] = useState<number | null>(
+    null,
+  );
   const [videoRetryCount, setVideoRetryCount] = useState(0);
 
   const retryTimerRef = useRef<number | null>(null);
+  const sensorRigHealthRequestRef = useRef(0);
   const viewerSectionRef = useRef<HTMLDivElement | null>(null);
   const previousMissionStateRef = useRef<MissionLifecycleState | null>(null);
   const { errors, addError, clearErrors, dismissError } = useErrors();
@@ -567,6 +741,10 @@ export default function WarehousePage() {
   const apiBase = (apiBaseRaw || "http://localhost:8000").replace(/\/$/, "");
   const videoToken = getToken();
   const authToken = getToken();
+  const localStorageKey = useMemo(
+    () => `warehouse.ops.${authToken ? authToken.slice(-12) : "anonymous"}`,
+    [authToken],
+  );
   const missionLoadedForReadiness =
     selectedWarehouseMapId != null && selectedSensorRigId != null;
   const {
@@ -601,6 +779,16 @@ export default function WarehousePage() {
     resetKey: activeFlightId ?? "none",
   });
 
+  const liveVoxelMap = useWarehouseLiveVoxelMap(activeFlightId, {
+    enabled: Boolean(
+      activeFlightId &&
+      !warehouseSetupDrawer.open &&
+      !warehouseMissionDrawer.open &&
+      !warehouseFlightDrawer.open,
+    ),
+    token: authToken,
+  });
+
   const selectedScannedMap = useMemo(
     () => selectScannedMap(scannedMaps, selectedMapJobId),
     [scannedMaps, selectedMapJobId],
@@ -613,51 +801,69 @@ export default function WarehousePage() {
 
   const loadScannedMaps = useCallback(
     async (options?: { selectJobId?: number; showInViewer?: boolean }) => {
-    const token = getToken();
-    if (!token) return [];
+      const token = getToken();
+      if (!token) return [];
 
-    setLoadingScannedMaps(true);
-    try {
-      const records = await listWarehouseScannedMaps(token);
-      setScannedMaps(records);
+      setLoadingScannedMaps(true);
+      try {
+        const records = await listWarehouseScannedMaps(
+          token,
+          showAllScannedMaps ? null : selectedWarehouseMapId,
+        );
+        setScannedMaps(records);
 
-      const explicitJobId = options?.selectJobId;
-      if (explicitJobId != null) {
-        setSelectedMapJobId(explicitJobId);
-        if (options?.showInViewer) {
-          setViewerMapJobId(explicitJobId);
-        }
-      } else {
-        setSelectedMapJobId((current) => {
-          if (current != null && records.some((record) => record.job_id === current)) {
-            return current;
+        const explicitJobId = options?.selectJobId;
+        if (explicitJobId != null) {
+          setSelectedMapJobId(explicitJobId);
+          if (options?.showInViewer) {
+            setViewerMapJobId(explicitJobId);
           }
-          return records[0]?.job_id ?? null;
-        });
+        } else {
+          setSelectedMapJobId((current) => {
+            if (
+              current != null &&
+              records.some((record) => record.job_id === current)
+            ) {
+              return current;
+            }
+            return records[0]?.job_id ?? null;
+          });
+        }
+        return records;
+      } catch (error) {
+        addError(
+          `Scanned warehouse maps could not be loaded: ${toMessage(error)}`,
+        );
+        return [];
+      } finally {
+        setLoadingScannedMaps(false);
       }
-      return records;
-    } catch (error) {
-      addError(`Scanned warehouse maps could not be loaded: ${toMessage(error)}`);
-      return [];
-    } finally {
-      setLoadingScannedMaps(false);
-    }
-  },
-    [addError],
+    },
+    [addError, selectedWarehouseMapId, showAllScannedMaps],
   );
 
   const showSelectedScanInViewer = useCallback(() => {
     if (!selectedScannedMap) return;
     setViewerMapJobId(selectedScannedMap.job_id);
-    viewerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    viewerSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }, [selectedScannedMap]);
 
   const handleScanResultReady = useCallback(
     (jobId: number) => {
-      void loadScannedMaps({ selectJobId: jobId, showInViewer: true }).then(() => {
-        viewerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-      setScanLaunchMessage(`Scan result #${jobId} saved to Previous Scan Results.`);
+      void loadScannedMaps({ selectJobId: jobId, showInViewer: true }).then(
+        () => {
+          viewerSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        },
+      );
+      setScanLaunchMessage(
+        `Scan result #${jobId} saved to Previous Scan Results.`,
+      );
     },
     [loadScannedMaps],
   );
@@ -670,11 +876,6 @@ export default function WarehousePage() {
       return;
     }
     const jobId = selectedScannedMap.job_id;
-    const label = `${getWarehouseName(selectedScannedMap)} • job #${jobId}`;
-    if (!window.confirm(`Delete scan result "${label}"? This cannot be undone.`)) {
-      return;
-    }
-
     setDeletingScannedMap(true);
     try {
       await deleteWarehouseScannedMap(jobId, token);
@@ -691,6 +892,7 @@ export default function WarehousePage() {
       addError(`Could not delete scan result: ${toMessage(error)}`);
     } finally {
       setDeletingScannedMap(false);
+      setDeleteTarget(null);
     }
   }, [
     addError,
@@ -709,7 +911,9 @@ export default function WarehousePage() {
       const defaults = await fetchWarehouseMissionDefaults(token);
       setMissionDefaultsDraft(toWarehouseMissionDefaultsDraft(defaults));
     } catch (error) {
-      addError(`Warehouse mission defaults could not be loaded: ${toMessage(error)}`);
+      addError(
+        `Warehouse mission defaults could not be loaded: ${toMessage(error)}`,
+      );
     } finally {
       setLoadingMissionDefaults(false);
     }
@@ -724,7 +928,8 @@ export default function WarehousePage() {
       setWarehouseMaps(maps);
       // Auto-select the first map if nothing is selected yet
       setSelectedWarehouseMapId((current) => {
-        if (current != null && maps.some((m) => m.id === current)) return current;
+        if (current != null && maps.some((m) => m.id === current))
+          return current;
         return maps[0]?.id ?? null;
       });
     } catch (error) {
@@ -742,7 +947,8 @@ export default function WarehousePage() {
       const rigs = await listWarehouseSensorRigs(token);
       setSensorRigs(rigs);
       setSelectedSensorRigId((current) => {
-        if (current != null && rigs.some((rig) => rig.id === current)) return current;
+        if (current != null && rigs.some((rig) => rig.id === current))
+          return current;
         return rigs[0]?.id ?? null;
       });
     } catch (error) {
@@ -755,14 +961,18 @@ export default function WarehousePage() {
   const loadSensorRigHealth = useCallback(
     async (sensorRigId: number | null) => {
       const token = getToken();
+      const requestId = sensorRigHealthRequestRef.current + 1;
+      sensorRigHealthRequestRef.current = requestId;
       if (!token || sensorRigId == null) {
         setSensorRigHealth(null);
         return;
       }
       try {
         const health = await fetchWarehouseSensorRigHealth(sensorRigId, token);
+        if (sensorRigHealthRequestRef.current !== requestId) return;
         setSensorRigHealth(health);
       } catch (error) {
+        if (sensorRigHealthRequestRef.current !== requestId) return;
         setSensorRigHealth(null);
         addError(`Sensor rig health could not be loaded: ${toMessage(error)}`);
       }
@@ -774,11 +984,20 @@ export default function WarehousePage() {
     const token = getToken();
     if (!token) return;
     const name = createMapForm.name.trim();
-    if (!name) { addError("Map name is required."); return; }
+    if (!name) {
+      addError("Map name is required.");
+      return;
+    }
     const width = Number(createMapForm.width_m);
     const length = Number(createMapForm.length_m);
-    if (!Number.isFinite(width) || width <= 0) { addError("Width must be a positive number."); return; }
-    if (!Number.isFinite(length) || length <= 0) { addError("Length must be a positive number."); return; }
+    if (!Number.isFinite(width) || width <= 0) {
+      addError("Width must be a positive number.");
+      return;
+    }
+    if (!Number.isFinite(length) || length <= 0) {
+      addError("Length must be a positive number.");
+      return;
+    }
     setCreatingMap(true);
     try {
       const created = await createWarehouseMap(
@@ -810,11 +1029,10 @@ export default function WarehousePage() {
       addError("You must be authenticated to delete warehouse maps.");
       return;
     }
-    const map = warehouseMaps.find((item) => item.id === selectedWarehouseMapId);
+    const map = warehouseMaps.find(
+      (item) => item.id === selectedWarehouseMapId,
+    );
     const label = map?.name ?? `Map #${selectedWarehouseMapId}`;
-    if (!window.confirm(`Delete warehouse map "${label}"? This cannot be undone.`)) {
-      return;
-    }
 
     setDeletingWarehouseMap(true);
     try {
@@ -829,6 +1047,7 @@ export default function WarehousePage() {
       addError(`Could not delete warehouse map: ${toMessage(error)}`);
     } finally {
       setDeletingWarehouseMap(false);
+      setDeleteTarget(null);
     }
   }, [addError, loadWarehouseMaps, selectedWarehouseMapId, warehouseMaps]);
 
@@ -883,7 +1102,8 @@ export default function WarehousePage() {
           created.id,
           {
             calibration_status: "valid",
-            calibration_hash: created.calibration_hash ?? `manual-${Date.now()}`,
+            calibration_hash:
+              created.calibration_hash ?? `manual-${Date.now()}`,
             intrinsics_url: created.intrinsics_url,
             extrinsics_url: created.extrinsics_url,
             imu_transform_json: created.imu_transform_json,
@@ -914,9 +1134,6 @@ export default function WarehousePage() {
     }
     const rig = sensorRigs.find((item) => item.id === selectedSensorRigId);
     const label = rig?.name ?? `Sensor rig #${selectedSensorRigId}`;
-    if (!window.confirm(`Delete sensor rig "${label}"? This cannot be undone.`)) {
-      return;
-    }
 
     setDeletingSensorRig(true);
     try {
@@ -929,6 +1146,7 @@ export default function WarehousePage() {
       addError(`Could not delete sensor rig: ${toMessage(error)}`);
     } finally {
       setDeletingSensorRig(false);
+      setDeleteTarget(null);
     }
   }, [addError, loadSensorRigs, selectedSensorRigId, sensorRigs]);
 
@@ -962,7 +1180,13 @@ export default function WarehousePage() {
     } finally {
       setSavingSensorRig(false);
     }
-  }, [addError, loadSensorRigHealth, loadSensorRigs, selectedSensorRigId, sensorRigs]);
+  }, [
+    addError,
+    loadSensorRigHealth,
+    loadSensorRigs,
+    selectedSensorRigId,
+    sensorRigs,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -994,6 +1218,61 @@ export default function WarehousePage() {
   }, [loadSensorRigHealth, selectedSensorRigId]);
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(localStorageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        selectedWarehouseMapId?: number | null;
+        selectedSensorRigId?: number | null;
+        selectedDockId?: number | null;
+        setupTab?: "map" | "rig" | "dock" | "defaults";
+        showAllScannedMaps?: boolean;
+      };
+      if (typeof saved.selectedWarehouseMapId === "number") {
+        setSelectedWarehouseMapId(saved.selectedWarehouseMapId);
+      }
+      if (typeof saved.selectedSensorRigId === "number") {
+        setSelectedSensorRigId(saved.selectedSensorRigId);
+      }
+      if (typeof saved.selectedDockId === "number") {
+        setSelectedDockId(saved.selectedDockId);
+      }
+      if (saved.setupTab) {
+        setSetupTab(saved.setupTab);
+      }
+      if (typeof saved.showAllScannedMaps === "boolean") {
+        setShowAllScannedMaps(saved.showAllScannedMaps);
+      }
+    } catch {
+      window.localStorage.removeItem(localStorageKey);
+    }
+  }, [localStorageKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        localStorageKey,
+        JSON.stringify({
+          selectedWarehouseMapId,
+          selectedSensorRigId,
+          selectedDockId,
+          setupTab,
+          showAllScannedMaps,
+        }),
+      );
+    } catch {
+      // Local storage is a convenience only.
+    }
+  }, [
+    localStorageKey,
+    selectedDockId,
+    selectedSensorRigId,
+    selectedWarehouseMapId,
+    setupTab,
+    showAllScannedMaps,
+  ]);
+
+  useEffect(() => {
     const handle = window.setInterval(() => {
       void loadScannedMaps();
     }, SCANNED_MAP_REFRESH_MS);
@@ -1010,7 +1289,10 @@ export default function WarehousePage() {
       void loadScannedMaps().then((records) => {
         const scoped =
           selectedWarehouseMapId != null
-            ? records.filter((record) => getWarehouseMapId(record) === selectedWarehouseMapId)
+            ? records.filter(
+                (record) =>
+                  getWarehouseMapId(record) === selectedWarehouseMapId,
+              )
             : records;
         const newest = scoped[0];
         if (newest) {
@@ -1019,7 +1301,11 @@ export default function WarehousePage() {
       });
     }
     previousMissionStateRef.current = state;
-  }, [loadScannedMaps, missionStatus?.mission_lifecycle?.state, selectedWarehouseMapId]);
+  }, [
+    loadScannedMaps,
+    missionStatus?.mission_lifecycle?.state,
+    selectedWarehouseMapId,
+  ]);
 
   const streamKey =
     manualStreamKey?.flightId === (activeFlightId ?? null)
@@ -1072,15 +1358,18 @@ export default function WarehousePage() {
       return;
     }
     if (selectedSensorRigId == null || sensorRigHealth?.ready !== true) {
-      addError("Select a calibrated warehouse sensor rig before starting the scan.");
+      addError(
+        "Select a calibrated warehouse sensor rig before starting the scan.",
+      );
       return;
     }
 
-    const warehouseMap = warehouseMaps.find((m) => m.id === selectedWarehouseMapId);
+    const warehouseMap = warehouseMaps.find(
+      (m) => m.id === selectedWarehouseMapId,
+    );
 
     setStartingScan(true);
     setScanLaunchMessage(null);
-    setWarehousePreflightRun(null);
     try {
       const launch = await startWarehouseScan(
         {
@@ -1091,13 +1380,14 @@ export default function WarehousePage() {
           // Link to the most recent scanned result for this map as reference, if available
           reference_mapping_job_id:
             selectedReferenceJobId ??
-            scannedMaps.find((m) => getWarehouseMapId(m) === selectedWarehouseMapId)?.job_id,
+            scannedMaps.find(
+              (m) => getWarehouseMapId(m) === selectedWarehouseMapId,
+            )?.job_id,
         },
         token,
       );
 
       setPendingFlightId(launch.mission.flight_id);
-      setWarehousePreflightRun(launch.preflight);
       const launchWarehouseName = launch.warehouse_name.trim() || "Warehouse";
       setScanLaunchMessage(
         `Started ${launch.mission.mission_name} in ${launchWarehouseName}. Preflight ${launch.preflight.overall_status}.`,
@@ -1105,10 +1395,10 @@ export default function WarehousePage() {
       void loadScannedMaps();
     } catch (error) {
       const preflight = getWarehouseStartPreflight(error);
-      if (preflight) {
-        setWarehousePreflightRun(preflight);
-      }
-      addError(`Warehouse scan could not be started: ${getWarehouseStartMessage(error)}`);
+      if (preflight) addError(`Latest preflight: ${preflight.overall_status}.`);
+      addError(
+        `Warehouse scan could not be started: ${getWarehouseStartMessage(error)}`,
+      );
     } finally {
       setStartingScan(false);
     }
@@ -1150,7 +1440,6 @@ export default function WarehousePage() {
   const handleExplorationLaunch = useCallback(
     (launch: WarehouseMissionLaunchResponse) => {
       setPendingFlightId(launch.mission.flight_id);
-      setWarehousePreflightRun(launch.preflight);
       const launchWarehouseName = launch.warehouse_name.trim() || "Warehouse";
       setScanLaunchMessage(
         `Started ${launch.mission.mission_name} in ${launchWarehouseName}. Preflight ${launch.preflight.overall_status}.`,
@@ -1162,7 +1451,7 @@ export default function WarehousePage() {
   const handleExplorationError = useCallback(
     (message: string, error?: unknown) => {
       const preflight = getWarehouseStartPreflight(error);
-      if (preflight) setWarehousePreflightRun(preflight);
+      if (preflight) addError(`Latest preflight: ${preflight.overall_status}.`);
       addError(`${message}${error ? ` ${toMessage(error)}` : ""}`);
     },
     [addError],
@@ -1186,7 +1475,9 @@ export default function WarehousePage() {
   const handleUpdateMissionDefaults = useCallback(async () => {
     const token = getToken();
     if (!token) {
-      addError("You must be authenticated to update warehouse mission defaults.");
+      addError(
+        "You must be authenticated to update warehouse mission defaults.",
+      );
       return;
     }
     if (!missionDefaultsDraft) {
@@ -1209,7 +1500,9 @@ export default function WarehousePage() {
       setMissionDefaultsDraft(toWarehouseMissionDefaultsDraft(saved));
       setMissionDefaultsMessage("Warehouse mission defaults updated.");
     } catch (error) {
-      addError(`Warehouse mission defaults could not be updated: ${toMessage(error)}`);
+      addError(
+        `Warehouse mission defaults could not be updated: ${toMessage(error)}`,
+      );
     } finally {
       setSavingMissionDefaults(false);
     }
@@ -1238,8 +1531,90 @@ export default function WarehousePage() {
 
   const selectedWarehouseMapName = useMemo(() => {
     if (selectedWarehouseMapId == null) return null;
-    return warehouseMaps.find((map) => map.id === selectedWarehouseMapId)?.name ?? null;
+    return (
+      warehouseMaps.find((map) => map.id === selectedWarehouseMapId)?.name ??
+      null
+    );
   }, [selectedWarehouseMapId, warehouseMaps]);
+
+  const visibleScannedMaps = useMemo(() => {
+    const normalizedFilter = scanResultFilter.trim().toLowerCase();
+    return scannedMaps.filter((map) => {
+      if (!showAllScannedMaps && selectedWarehouseMapId != null) {
+        if (getWarehouseMapId(map) !== selectedWarehouseMapId) return false;
+      }
+      if (!normalizedFilter) return true;
+      return [
+        getWarehouseName(map),
+        map.status,
+        map.source,
+        String(map.job_id),
+        String(map.model_version),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedFilter);
+    });
+  }, [
+    scanResultFilter,
+    scannedMaps,
+    selectedWarehouseMapId,
+    showAllScannedMaps,
+  ]);
+
+  const selectedReferenceMap = useMemo(
+    () => selectScannedMap(scannedMaps, selectedReferenceJobId),
+    [scannedMaps, selectedReferenceJobId],
+  );
+  const missionDefaultColumns = useMemo(
+    () => toMissionDefaultColumns(showAdvancedDefaults),
+    [showAdvancedDefaults],
+  );
+
+  const handleCompareSelectedScan = useCallback(async () => {
+    if (!selectedReferenceJobId || !selectedScannedMap) return;
+    const token = getToken();
+    if (!token) {
+      addError("You must be authenticated to compare scan results.");
+      return;
+    }
+    setComparingScans(true);
+    setCompareMessage(null);
+    try {
+      const comparison = await compareWarehouseScannedMaps(
+        selectedReferenceJobId,
+        selectedScannedMap.job_id,
+        token,
+      );
+      const parts = [
+        comparison.coverage_delta != null
+          ? `coverage ${comparison.coverage_delta >= 0 ? "+" : ""}${comparison.coverage_delta.toFixed(1)}%`
+          : null,
+        comparison.drift_delta_m != null
+          ? `drift ${comparison.drift_delta_m >= 0 ? "+" : ""}${comparison.drift_delta_m.toFixed(2)}m`
+          : null,
+        comparison.quality_delta != null
+          ? `quality ${comparison.quality_delta >= 0 ? "+" : ""}${comparison.quality_delta.toFixed(2)}`
+          : null,
+      ].filter(Boolean);
+      setCompareMessage(
+        `Baseline #${comparison.baseline_job_id} vs current #${comparison.candidate_job_id}: ${
+          parts.join(", ") || "no comparable quality fields"
+        }.`,
+      );
+    } catch (error) {
+      addError(`Could not compare scan results: ${toMessage(error)}`);
+    } finally {
+      setComparingScans(false);
+    }
+  }, [addError, selectedReferenceJobId, selectedScannedMap]);
+  const handleManualMappingPreflightRun = useCallback(
+    (preflight: PreflightRunResponse | null) => {
+      if (preflight)
+        setScanLaunchMessage(`Keyboard preflight ${preflight.overall_status}.`);
+    },
+    [],
+  );
 
   return (
     <>
@@ -1275,6 +1650,20 @@ export default function WarehousePage() {
           />
         </Stack>
 
+        <Box sx={{ mb: 2 }}>
+          <WarehouseFlightReadinessRibbon
+            hasMap={selectedWarehouseMapId != null}
+            hasRig={selectedSensorRigId != null}
+            hasDock={selectedDockId != null}
+            preflight={warehousePreflight}
+            droneConnected={droneConnected}
+            activeFlightId={activeFlightId}
+            sensorRigHealth={sensorRigHealth}
+            mappingStatus={missionStatus?.warehouse_mapping}
+            liveHealth={liveVoxelMap.health}
+          />
+        </Box>
+
         <ErrorAlerts
           errors={errors}
           onDismiss={dismissError}
@@ -1288,50 +1677,66 @@ export default function WarehousePage() {
         )}
 
         <Stack sx={{ minWidth: 0 }} spacing={2}>
+          <MissionVideoPanel
+            title="Warehouse Camera"
+            imgAlt="Warehouse camera stream"
+            disconnectedMessage="Connect the drone to view the warehouse stream."
+            apiBase={apiBase}
+            streamKey={streamKey}
+            videoToken={videoToken}
+            startingVideo={startingVideo}
+            videoError={videoError}
+            videoRetryCount={videoRetryCount}
+            droneConnected={droneConnected}
+            telemetry={telemetry}
+            onVideoError={handleVideoError}
+            onVideoLoad={handleVideoLoad}
+            onRetry={() => {
+              setManualStreamKey({
+                flightId: activeFlightId ?? null,
+                key: Date.now(),
+              });
+              setVideoErrorMessage(null);
+              setVideoErrorStreamKey(null);
+            }}
+          />
 
-            <MissionVideoPanel
-                title="Warehouse Camera"
-                imgAlt="Warehouse camera stream"
-                disconnectedMessage="Connect the drone to view the warehouse stream."
-                apiBase={apiBase}
-                streamKey={streamKey}
-                videoToken={videoToken}
-                startingVideo={startingVideo}
-                videoError={videoError}
-                videoRetryCount={videoRetryCount}
-                droneConnected={droneConnected}
-                telemetry={telemetry}
-                onVideoError={handleVideoError}
-                onVideoLoad={handleVideoLoad}
-                onRetry={() => {
-                  setManualStreamKey({
-                    flightId: activeFlightId ?? null,
-                    key: Date.now(),
-                  });
-                  setVideoErrorMessage(null);
-                  setVideoErrorStreamKey(null);
-                }}
-            />
+          <WarehouseMappingHealthPanel
+            status={missionStatus?.warehouse_mapping ?? null}
+          />
 
-            <WarehouseMappingHealthPanel status={missionStatus?.warehouse_mapping ?? null} />
-
-            <Stack spacing={1} ref={viewerSectionRef} id="warehouse-3d-map-viewer">
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: 1,
-                  borderColor: "divider",
-                  backgroundColor: "background.paper",
-                }}
-              >
+          <Stack
+            spacing={1}
+            ref={viewerSectionRef}
+            id="warehouse-3d-map-viewer"
+          >
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                borderColor: "divider",
+                backgroundColor: "background.paper",
+              }}
+            >
+              {activeFlightId ? (
+                <WarehouseLiveVoxelMapViewer
+                  state={liveVoxelMap}
+                  hidden={
+                    warehouseSetupDrawer.open ||
+                    warehouseMissionDrawer.open ||
+                    warehouseFlightDrawer.open
+                  }
+                />
+              ) : (
                 <WarehouseScanViewer
                   apiBase={apiBase}
                   getToken={getToken}
                   map={viewerScannedMap}
                 />
-              </Paper>
-            </Stack>
+              )}
+            </Paper>
+          </Stack>
         </Stack>
       </Paper>
 
@@ -1372,7 +1777,10 @@ export default function WarehousePage() {
                   <Typography variant="caption" color="text.secondary">
                     State
                   </Typography>
-                  <Typography variant="body1" sx={{ textTransform: "capitalize" }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ textTransform: "capitalize" }}
+                  >
                     {missionState.replace(/_/g, " ")}
                   </Typography>
                 </Box>
@@ -1418,9 +1826,17 @@ export default function WarehousePage() {
               </Stack>
             </WarehouseDrawerSection>
 
-            {(missionState === "running" || missionState === "airborne") && (
-              <WarehouseDrawerSection title="In-flight controls">
-                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
+            {missionState === "running" && (
+              <WarehouseDrawerSection
+                title="In-flight controls"
+                info="Pause, abort, land, or send mission commands while the warehouse mission is running."
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="wrap"
+                  sx={{ mb: 2 }}
+                >
                   <Button
                     variant="outlined"
                     size="small"
@@ -1480,388 +1896,579 @@ export default function WarehousePage() {
         paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
       >
         <Stack spacing={2}>
-          <WarehouseDrawerSection
-            title="Warehouse Map"
-            info="Select the warehouse footprint. The drone scans using local metric coordinates — no GPS required. Origin (0, 0) is the takeoff position."
-            action={loadingWarehouseMaps ? <CircularProgress size={16} /> : null}
+          <Tabs
+            value={setupTab}
+            onChange={(_, value: "map" | "rig" | "dock" | "defaults") =>
+              setSetupTab(value)
+            }
+            variant="scrollable"
+            allowScrollButtonsMobile
           >
-            <Stack
-              direction="row"
-              spacing={0.75}
-              alignItems="flex-start"
-              useFlexGap
-              sx={{ flexWrap: "wrap", minWidth: 0 }}
+            <Tab value="map" label="Map" />
+            <Tab value="rig" label="Sensor Rig" />
+            <Tab value="dock" label="Dock" />
+            <Tab value="defaults" label="Defaults" />
+          </Tabs>
+          {setupTab === "map" && (
+            <WarehouseDrawerSection
+              title="Warehouse Map"
+              info="Select the warehouse footprint. The drone scans using local metric coordinates — no GPS required. Origin (0, 0) is the takeoff position."
+              action={
+                loadingWarehouseMaps ? <CircularProgress size={16} /> : null
+              }
             >
-              <TextField
-                variant="filled"
-                select
-                size="small"
-                label="Map"
-                value={selectedWarehouseMapId != null ? String(selectedWarehouseMapId) : ""}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  setSelectedWarehouseMapId(raw ? Number(raw) : null);
-                  setSelectedDockId(null);
-                }}
-                disabled={loadingWarehouseMaps}
-                helperText={
-                  warehouseMaps.length === 0
-                    ? "No maps yet"
-                    : selectedWarehouseMapId
-                      ? (() => {
-                          const m = warehouseMaps.find((x) => x.id === selectedWarehouseMapId);
-                          return m
-                            ? `${m.area_m2 != null ? `${Math.round(m.area_m2)} m²` : "area unknown"}`
-                            : `#${selectedWarehouseMapId}`;
-                        })()
-                      : undefined
-                }
-                sx={{ ...COMPACT_FIELD_SX, flex: "1 1 160px", minWidth: 140, maxWidth: 360 }}
-              >
-                {warehouseMaps.length === 0 && (
-                  <MenuItem value="" disabled>
-                    No warehouse maps registered
-                  </MenuItem>
-                )}
-                {warehouseMaps.map((m) => (
-                  <MenuItem key={m.id} value={String(m.id)}>
-                    {`${m.name}${m.area_m2 != null ? ` • ${Math.round(m.area_m2)} m²` : ""}`}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0, pt: 0.25 }}>
-                <ActionIconButton
-                  variant="refresh"
-                  title="Refresh"
-                  loading={loadingWarehouseMaps}
-                  onClick={() => {
-                    void loadWarehouseMaps();
-                  }}
-                />
-                <ActionIconButton
-                  variant="add"
-                  title={showCreateMap ? "Cancel" : "New Map"}
-                  color={showCreateMap ? "primary" : "default"}
-                  onClick={() => setShowCreateMap((v) => !v)}
-                />
-                <ActionIconButton
-                  variant="delete"
-                  title={deletingWarehouseMap ? "Deleting…" : "Delete Map"}
-                  color="error"
-                  loading={deletingWarehouseMap}
-                  disabled={selectedWarehouseMapId == null}
-                  onClick={() => {
-                    void handleDeleteWarehouseMap();
-                  }}
-                />
-              </Stack>
-              {showCreateMap && (
-                <>
-                  <TextField
-                    variant="filled"
-                size="small"
-                    label="Name"
-                    value={createMapForm.name}
-                    onChange={(e) => setCreateMapForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="e.g. Aisle A–F"
-                    sx={{ ...COMPACT_FIELD_SX, flex: "1 1 120px", minWidth: 100 }}
-                  />
-                  <TextField
-                    variant="filled"
-                size="small"
-                    type="number"
-                    label="Width"
-                    inputProps={{ min: 0.1, step: 0.5 }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">m</InputAdornment>,
-                    }}
-                    value={createMapForm.width_m}
-                    onChange={(e) => setCreateMapForm((f) => ({ ...f, width_m: e.target.value }))}
-                    sx={{ ...COMPACT_FIELD_SX, flex: "0 1 88px", minWidth: 72 }}
-                  />
-                  <TextField
-                    variant="filled"
-                size="small"
-                    type="number"
-                    label="Length"
-                    inputProps={{ min: 0.1, step: 0.5 }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">m</InputAdornment>,
-                    }}
-                    value={createMapForm.length_m}
-                    onChange={(e) => setCreateMapForm((f) => ({ ...f, length_m: e.target.value }))}
-                    sx={{ ...COMPACT_FIELD_SX, flex: "0 1 88px", minWidth: 72 }}
-                  />
-                  <ActionIconButton
-                    variant="add"
-                    title={creatingMap ? "Creating…" : "Create Map"}
-                    color="primary"
-                    loading={creatingMap}
-                    onClick={() => {
-                      void handleCreateWarehouseMap();
-                    }}
-                    sx={{ mt: 0.25, flexShrink: 0 }}
-                  />
-                </>
-              )}
-            </Stack>
-          </WarehouseDrawerSection>
-
-          <WarehouseDrawerSection
-            title="Sensor Rig"
-            info="Register calibrated stereo/RGB-D camera and IMU hardware for ROS 2 mapping."
-            action={loadingSensorRigs ? <CircularProgress size={16} /> : null}
-          >
-            <Stack direction="row" spacing={0.75} alignItems="flex-start" sx={{ minWidth: 0 }}>
-              <TextField
-                variant="filled"
-                select
-                size="small"
-                label="Camera + IMU Rig"
-                value={selectedSensorRigId != null ? String(selectedSensorRigId) : ""}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  setSelectedSensorRigId(raw ? Number(raw) : null);
-                }}
-                helperText={
-                  sensorRigHealth
-                    ? sensorRigHealth.ready
-                      ? sensorRigHealth.perception?.ready
-                        ? "Ready"
-                        : sensorRigHealth.warnings?.[0] ??
-                          "Registered — perception stack starts with flight"
-                      : sensorRigHealth.blockers[0] ?? "Not ready"
-                    : undefined
-                }
-                sx={{ ...COMPACT_FIELD_SX, flex: 1 }}
-              >
-                {sensorRigs.length === 0 && (
-                  <MenuItem value="" disabled>
-                    No sensor rigs registered
-                  </MenuItem>
-                )}
-                {sensorRigs.map((rig) => (
-                  <MenuItem key={rig.id} value={String(rig.id)}>
-                    {`${rig.name} • ${rig.camera_model} • ${rig.calibration_status}`}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0, pt: 0.25 }}>
-                <ActionIconButton
-                  variant="refresh"
-                  title="Refresh"
-                  loading={loadingSensorRigs}
-                  onClick={() => {
-                    void loadSensorRigs();
-                    void loadSensorRigHealth(selectedSensorRigId);
-                  }}
-                />
-                <ActionIconButton
-                  variant="check"
-                  title="Calibrated"
-                  loading={savingSensorRig}
-                  disabled={selectedSensorRigId == null}
-                  onClick={() => {
-                    void handleMarkSensorRigCalibrated();
-                  }}
-                />
-                <ActionIconButton
-                  variant="add"
-                  title={showCreateSensorRig ? "Cancel" : "New Sensor Rig"}
-                  color={showCreateSensorRig ? "primary" : "default"}
-                  onClick={() => setShowCreateSensorRig((value) => !value)}
-                />
-                <ActionIconButton
-                  variant="delete"
-                  title={deletingSensorRig ? "Deleting…" : "Delete Sensor Rig"}
-                  color="error"
-                  loading={deletingSensorRig}
-                  disabled={selectedSensorRigId == null}
-                  onClick={() => {
-                    void handleDeleteSensorRig();
-                  }}
-                />
-              </Stack>
-            </Stack>
-            {showCreateSensorRig && (
               <Stack
-                spacing={1}
-                sx={{ mt: 1, p: 1.5, borderRadius: 1, border: "1px solid", borderColor: "divider" }}
+                direction="row"
+                spacing={0.75}
+                alignItems="flex-start"
+                useFlexGap
+                sx={{ flexWrap: "wrap", minWidth: 0 }}
               >
-                <Box
+                <TextField
+                  variant="filled"
+                  select
+                  size="small"
+                  label="Map"
+                  value={
+                    selectedWarehouseMapId != null
+                      ? String(selectedWarehouseMapId)
+                      : ""
+                  }
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    setSelectedWarehouseMapId(raw ? Number(raw) : null);
+                    setSelectedDockId(null);
+                  }}
+                  disabled={loadingWarehouseMaps}
+                  helperText={
+                    warehouseMaps.length === 0
+                      ? "No maps yet"
+                      : selectedWarehouseMapId
+                        ? (() => {
+                            const m = warehouseMaps.find(
+                              (x) => x.id === selectedWarehouseMapId,
+                            );
+                            return m
+                              ? `${m.area_m2 != null ? `${Math.round(m.area_m2)} m²` : "area unknown"}`
+                              : `#${selectedWarehouseMapId}`;
+                          })()
+                        : undefined
+                  }
                   sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, minmax(72px, 1fr))",
-                    gap: 0.75,
-                    minWidth: 0,
+                    ...COMPACT_FIELD_SX,
+                    flex: "1 1 160px",
+                    minWidth: 140,
+                    maxWidth: 360,
                   }}
                 >
-                  {SENSOR_RIG_CREATE_FIELDS.map((field) => (
-                    <TextField
-                      variant="filled"
-                key={field.key}
-                      size="small"
-                      fullWidth
-                      type={field.type}
-                      label={field.label}
-                      value={sensorRigForm[field.key]}
-                      sx={COMPACT_FIELD_SX}
-                      inputProps={field.type === "number" ? { min: 0.01, step: 0.01 } : undefined}
-                      InputProps={
-                        field.adornment
-                          ? {
-                              endAdornment: (
-                                <InputAdornment position="end">{field.adornment}</InputAdornment>
-                              ),
-                            }
-                          : undefined
-                      }
-                      onChange={(event) =>
-                        setSensorRigForm((form) => ({
-                          ...form,
-                          [field.key]: event.target.value,
-                        }))
-                      }
-                    />
+                  {warehouseMaps.length === 0 && (
+                    <MenuItem value="" disabled>
+                      No warehouse maps registered
+                    </MenuItem>
+                  )}
+                  {warehouseMaps.map((m) => (
+                    <MenuItem key={m.id} value={String(m.id)}>
+                      {`${m.name}${m.area_m2 != null ? ` • ${Math.round(m.area_m2)} m²` : ""}`}
+                    </MenuItem>
                   ))}
-                </Box>
-                <Stack direction="row" justifyContent="flex-end">
+                </TextField>
+                <Stack
+                  direction="row"
+                  spacing={0.25}
+                  alignItems="center"
+                  sx={{ flexShrink: 0, pt: 0.25 }}
+                >
+                  <ActionIconButton
+                    variant="refresh"
+                    title="Refresh"
+                    loading={loadingWarehouseMaps}
+                    onClick={() => {
+                      void loadWarehouseMaps();
+                    }}
+                  />
                   <ActionIconButton
                     variant="add"
-                    title={savingSensorRig ? "Saving…" : "Create Sensor Rig"}
-                    color="primary"
-                    loading={savingSensorRig}
+                    title={showCreateMap ? "Cancel" : "New Map"}
+                    color={showCreateMap ? "primary" : "default"}
+                    onClick={() => setShowCreateMap((v) => !v)}
+                  />
+                  <ActionIconButton
+                    variant="delete"
+                    title={deletingWarehouseMap ? "Deleting…" : "Delete Map"}
+                    color="error"
+                    loading={deletingWarehouseMap}
+                    disabled={selectedWarehouseMapId == null}
                     onClick={() => {
-                      void handleCreateSensorRig();
+                      const map = warehouseMaps.find(
+                        (item) => item.id === selectedWarehouseMapId,
+                      );
+                      setDeleteTarget({
+                        kind: "map",
+                        label: map?.name ?? `Map #${selectedWarehouseMapId}`,
+                        assetCount: scannedMaps.filter(
+                          (scan) =>
+                            getWarehouseMapId(scan) === selectedWarehouseMapId,
+                        ).length,
+                        onConfirm: () => {
+                          void handleDeleteWarehouseMap();
+                        },
+                      });
+                    }}
+                  />
+                </Stack>
+                {showCreateMap && (
+                  <>
+                    <TextField
+                      variant="filled"
+                      size="small"
+                      label="Name"
+                      value={createMapForm.name}
+                      onChange={(e) =>
+                        setCreateMapForm((f) => ({
+                          ...f,
+                          name: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g. Aisle A–F"
+                      sx={{
+                        ...COMPACT_FIELD_SX,
+                        flex: "1 1 120px",
+                        minWidth: 100,
+                      }}
+                    />
+                    <TextField
+                      variant="filled"
+                      size="small"
+                      type="number"
+                      label="Width"
+                      inputProps={{ min: 0.1, step: 0.5 }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">m</InputAdornment>
+                        ),
+                      }}
+                      value={createMapForm.width_m}
+                      onChange={(e) =>
+                        setCreateMapForm((f) => ({
+                          ...f,
+                          width_m: e.target.value,
+                        }))
+                      }
+                      sx={{
+                        ...COMPACT_FIELD_SX,
+                        flex: "0 1 88px",
+                        minWidth: 72,
+                      }}
+                    />
+                    <TextField
+                      variant="filled"
+                      size="small"
+                      type="number"
+                      label="Length"
+                      inputProps={{ min: 0.1, step: 0.5 }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">m</InputAdornment>
+                        ),
+                      }}
+                      value={createMapForm.length_m}
+                      onChange={(e) =>
+                        setCreateMapForm((f) => ({
+                          ...f,
+                          length_m: e.target.value,
+                        }))
+                      }
+                      sx={{
+                        ...COMPACT_FIELD_SX,
+                        flex: "0 1 88px",
+                        minWidth: 72,
+                      }}
+                    />
+                    <ActionIconButton
+                      variant="add"
+                      title={creatingMap ? "Creating…" : "Create Map"}
+                      color="primary"
+                      loading={creatingMap}
+                      onClick={() => {
+                        void handleCreateWarehouseMap();
+                      }}
+                      sx={{ mt: 0.25, flexShrink: 0 }}
+                    />
+                  </>
+                )}
+              </Stack>
+            </WarehouseDrawerSection>
+          )}
+
+          {setupTab === "rig" && (
+            <WarehouseDrawerSection
+              title="Sensor Rig"
+              info="Register calibrated stereo/RGB-D camera and IMU hardware for ROS 2 mapping."
+              action={loadingSensorRigs ? <CircularProgress size={16} /> : null}
+            >
+              <Stack
+                direction="row"
+                spacing={0.75}
+                alignItems="flex-start"
+                sx={{ minWidth: 0 }}
+              >
+                <TextField
+                  variant="filled"
+                  select
+                  size="small"
+                  label="Camera + IMU Rig"
+                  value={
+                    selectedSensorRigId != null
+                      ? String(selectedSensorRigId)
+                      : ""
+                  }
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    setSelectedSensorRigId(raw ? Number(raw) : null);
+                  }}
+                  helperText={
+                    sensorRigHealth
+                      ? sensorRigHealth.ready
+                        ? sensorRigHealth.perception?.ready
+                          ? "Ready"
+                          : (sensorRigHealth.warnings?.[0] ??
+                            "Registered — perception stack starts with flight")
+                        : (sensorRigHealth.blockers[0] ?? "Not ready")
+                      : undefined
+                  }
+                  sx={{ ...COMPACT_FIELD_SX, flex: 1 }}
+                >
+                  {sensorRigs.length === 0 && (
+                    <MenuItem value="" disabled>
+                      No sensor rigs registered
+                    </MenuItem>
+                  )}
+                  {sensorRigs.map((rig) => (
+                    <MenuItem key={rig.id} value={String(rig.id)}>
+                      {`${rig.name} • ${rig.camera_model} • ${rig.calibration_status}`}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <Stack
+                  direction="row"
+                  spacing={0.25}
+                  alignItems="center"
+                  sx={{ flexShrink: 0, pt: 0.25 }}
+                >
+                  <ActionIconButton
+                    variant="refresh"
+                    title="Refresh"
+                    loading={loadingSensorRigs}
+                    onClick={() => {
+                      void loadSensorRigs();
+                      void loadSensorRigHealth(selectedSensorRigId);
+                    }}
+                  />
+                  <ActionIconButton
+                    variant="check"
+                    title="Calibrated"
+                    loading={savingSensorRig}
+                    disabled={selectedSensorRigId == null}
+                    onClick={() => {
+                      void handleMarkSensorRigCalibrated();
+                    }}
+                  />
+                  <ActionIconButton
+                    variant="add"
+                    title={showCreateSensorRig ? "Cancel" : "New Sensor Rig"}
+                    color={showCreateSensorRig ? "primary" : "default"}
+                    onClick={() => setShowCreateSensorRig((value) => !value)}
+                  />
+                  <ActionIconButton
+                    variant="delete"
+                    title={
+                      deletingSensorRig ? "Deleting…" : "Delete Sensor Rig"
+                    }
+                    color="error"
+                    loading={deletingSensorRig}
+                    disabled={selectedSensorRigId == null}
+                    onClick={() => {
+                      const rig = sensorRigs.find(
+                        (item) => item.id === selectedSensorRigId,
+                      );
+                      setDeleteTarget({
+                        kind: "sensor rig",
+                        label:
+                          rig?.name ?? `Sensor rig #${selectedSensorRigId}`,
+                        assetCount: 1,
+                        onConfirm: () => {
+                          void handleDeleteSensorRig();
+                        },
+                      });
                     }}
                   />
                 </Stack>
               </Stack>
-            )}
-          </WarehouseDrawerSection>
-
-          <WarehouseDrawerSection
-            title="Dock Station"
-            info="Optional local-frame anchor for takeoff, return, and exploration missions."
-          >
-            <WarehouseDockPanel
-              embedded
-              warehouseMapId={selectedWarehouseMapId}
-              selectedDockId={selectedDockId}
-              onSelectedDockIdChange={setSelectedDockId}
-              getToken={getToken}
-              onError={addError}
-            />
-          </WarehouseDrawerSection>
-
-          <WarehouseDrawerSection
-            title="Default Flight Parameters"
-            info="Controls aisle spacing, scan layers, ceiling clearance, and rack-facing view behavior for automated warehouse scan missions."
-            action={loadingMissionDefaults ? <CircularProgress size={16} /> : null}
-          >
-            {missionDefaultsDraft ? (
-              <>
-                <Box
+              {showCreateSensorRig && (
+                <Stack
+                  spacing={1}
                   sx={{
-                    display: "grid",
-                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
-                    gap: 1,
+                    mt: 1,
+                    p: 1.5,
+                    borderRadius: 1,
+                    border: "1px solid",
+                    borderColor: "divider",
                   }}
                 >
-                  {WAREHOUSE_MISSION_DEFAULT_COLUMN_ROWS.map((columnRows, columnIndex) => (
-                    <Box key={`warehouse-default-column-${columnIndex}`} sx={{ minWidth: 0, overflowX: "hidden" }}>
-                      <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ width: "58%", pr: 0.75, py: 0.5, fontSize: "0.7rem" }}>
-                              Parameter
-                            </TableCell>
-                            <TableCell sx={{ width: "42%", pl: 0.5, py: 0.5, fontSize: "0.7rem" }}>
-                              Value
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {columnRows.map((row) => (
-                            <TableRow key={row.key}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, minmax(72px, 1fr))",
+                      gap: 0.75,
+                      minWidth: 0,
+                    }}
+                  >
+                    {SENSOR_RIG_CREATE_FIELDS.map((field) => (
+                      <TextField
+                        variant="filled"
+                        key={field.key}
+                        size="small"
+                        fullWidth
+                        type={field.type}
+                        label={field.label}
+                        value={sensorRigForm[field.key]}
+                        sx={COMPACT_FIELD_SX}
+                        inputProps={
+                          field.type === "number"
+                            ? { min: 0.01, step: 0.01 }
+                            : undefined
+                        }
+                        InputProps={
+                          field.adornment
+                            ? {
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    {field.adornment}
+                                  </InputAdornment>
+                                ),
+                              }
+                            : undefined
+                        }
+                        onChange={(event) =>
+                          setSensorRigForm((form) => ({
+                            ...form,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                      />
+                    ))}
+                  </Box>
+                  <Stack direction="row" justifyContent="flex-end">
+                    <ActionIconButton
+                      variant="add"
+                      title={savingSensorRig ? "Saving…" : "Create Sensor Rig"}
+                      color="primary"
+                      loading={savingSensorRig}
+                      onClick={() => {
+                        void handleCreateSensorRig();
+                      }}
+                    />
+                  </Stack>
+                </Stack>
+              )}
+            </WarehouseDrawerSection>
+          )}
+
+          {setupTab === "dock" && (
+            <WarehouseDrawerSection
+              title="Dock Station"
+              info="Optional local-frame anchor for takeoff, return, and exploration missions."
+            >
+              <WarehouseDockPanel
+                embedded
+                warehouseMapId={selectedWarehouseMapId}
+                selectedDockId={selectedDockId}
+                onSelectedDockIdChange={setSelectedDockId}
+                getToken={getToken}
+                onError={addError}
+              />
+            </WarehouseDrawerSection>
+          )}
+
+          {setupTab === "defaults" && (
+            <WarehouseDrawerSection
+              title="Default Flight Parameters"
+              info="Controls aisle spacing, scan layers, ceiling clearance, and rack-facing view behavior for automated warehouse scan missions."
+              action={
+                loadingMissionDefaults ? <CircularProgress size={16} /> : null
+              }
+            >
+              {missionDefaultsDraft ? (
+                <>
+                  <Stack
+                    direction="row"
+                    justifyContent="flex-end"
+                    sx={{ mb: 1 }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          size="small"
+                          checked={showAdvancedDefaults}
+                          onChange={(event) =>
+                            setShowAdvancedDefaults(event.target.checked)
+                          }
+                        />
+                      }
+                      label="Advanced"
+                    />
+                  </Stack>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm: "repeat(2, minmax(0, 1fr))",
+                      },
+                      gap: 1,
+                    }}
+                  >
+                    {missionDefaultColumns.map((columnRows, columnIndex) => (
+                      <Box
+                        key={`warehouse-default-column-${columnIndex}`}
+                        sx={{ minWidth: 0, overflowX: "hidden" }}
+                      >
+                        <Table
+                          size="small"
+                          sx={{ width: "100%", tableLayout: "fixed" }}
+                        >
+                          <TableHead>
+                            <TableRow>
                               <TableCell
                                 sx={{
                                   width: "58%",
-                                  py: 0.5,
                                   pr: 0.75,
+                                  py: 0.5,
                                   fontSize: "0.7rem",
-                                  whiteSpace: "normal",
-                                  wordBreak: "break-word",
-                                  lineHeight: 1.2,
                                 }}
                               >
-                                {row.label}
+                                Parameter
                               </TableCell>
-                              <TableCell sx={{ width: "42%", minWidth: 0, py: 0.5, pl: 0.5 }}>
-                                {row.kind === "select" ? (
-                                  <TextField
-                                    variant="filled"
-                select
-                                    size="small"
-                                    value={missionDefaultsDraft[row.key]}
-                                    onChange={(event) => {
-                                      handleMissionDefaultsDraftChange(row.key, event.target.value);
-                                    }}
-                                    sx={MISSION_DEFAULT_VALUE_SX}
-                                  >
-                                    {row.options.map((option) => (
-                                      <MenuItem
-                                        key={option.value}
-                                        value={option.value}
-                                        sx={{ fontSize: "0.68rem", py: 0.25 }}
-                                      >
-                                        {option.label}
-                                      </MenuItem>
-                                    ))}
-                                  </TextField>
-                                ) : (
-                                  <TextField
-                                    variant="filled"
-                size="small"
-                                    type="number"
-                                    value={missionDefaultsDraft[row.key]}
-                                    placeholder={row.placeholder}
-                                    onChange={(event) => {
-                                      handleMissionDefaultsDraftChange(row.key, event.target.value);
-                                    }}
-                                    inputProps={{ min: row.min, step: row.step }}
-                                    sx={MISSION_DEFAULT_VALUE_SX}
-                                  />
-                                )}
+                              <TableCell
+                                sx={{
+                                  width: "42%",
+                                  pl: 0.5,
+                                  py: 0.5,
+                                  fontSize: "0.7rem",
+                                }}
+                              >
+                                Value
                               </TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </Box>
-                  ))}
-                </Box>
-                <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.5 }}>
-                  <ActionIconButton
-                    variant="upgrade"
-                    title={savingMissionDefaults ? "Updating Parameters…" : "Update Parameters"}
-                    color="primary"
-                    loading={savingMissionDefaults}
-                    onClick={() => {
-                      void handleUpdateMissionDefaults();
-                    }}
-                  />
-                </Stack>
-                {missionDefaultsMessage && (
-                  <Alert severity="success" sx={{ mt: 1.5 }}>
-                    {missionDefaultsMessage}
-                  </Alert>
-                )}
-              </>
-            ) : (
-              <Alert severity="info">Warehouse mission defaults are unavailable right now.</Alert>
-            )}
-          </WarehouseDrawerSection>
+                          </TableHead>
+                          <TableBody>
+                            {columnRows.map((row) => (
+                              <TableRow key={row.key}>
+                                <TableCell
+                                  sx={{
+                                    width: "58%",
+                                    py: 0.5,
+                                    pr: 0.75,
+                                    fontSize: "0.7rem",
+                                    whiteSpace: "normal",
+                                    wordBreak: "break-word",
+                                    lineHeight: 1.2,
+                                  }}
+                                >
+                                  {row.label}
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    width: "42%",
+                                    minWidth: 0,
+                                    py: 0.5,
+                                    pl: 0.5,
+                                  }}
+                                >
+                                  {row.kind === "select" ? (
+                                    <TextField
+                                      variant="filled"
+                                      select
+                                      size="small"
+                                      value={missionDefaultsDraft[row.key]}
+                                      onChange={(event) => {
+                                        handleMissionDefaultsDraftChange(
+                                          row.key,
+                                          event.target.value,
+                                        );
+                                      }}
+                                      sx={MISSION_DEFAULT_VALUE_SX}
+                                    >
+                                      {row.options.map((option) => (
+                                        <MenuItem
+                                          key={option.value}
+                                          value={option.value}
+                                          sx={{ fontSize: "0.68rem", py: 0.25 }}
+                                        >
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </TextField>
+                                  ) : (
+                                    <TextField
+                                      variant="filled"
+                                      size="small"
+                                      type="number"
+                                      value={missionDefaultsDraft[row.key]}
+                                      placeholder={row.placeholder}
+                                      onChange={(event) => {
+                                        handleMissionDefaultsDraftChange(
+                                          row.key,
+                                          event.target.value,
+                                        );
+                                      }}
+                                      inputProps={{
+                                        min: row.min,
+                                        step: row.step,
+                                      }}
+                                      sx={MISSION_DEFAULT_VALUE_SX}
+                                    />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </Box>
+                    ))}
+                  </Box>
+                  <Stack
+                    direction="row"
+                    justifyContent="flex-end"
+                    sx={{ mt: 1.5 }}
+                  >
+                    <ActionIconButton
+                      variant="upgrade"
+                      title={
+                        savingMissionDefaults
+                          ? "Updating Parameters…"
+                          : "Update Parameters"
+                      }
+                      color="primary"
+                      loading={savingMissionDefaults}
+                      onClick={() => {
+                        void handleUpdateMissionDefaults();
+                      }}
+                    />
+                  </Stack>
+                  {missionDefaultsMessage && (
+                    <Alert severity="success" sx={{ mt: 1.5 }}>
+                      {missionDefaultsMessage}
+                    </Alert>
+                  )}
+                </>
+              ) : (
+                <Alert severity="info">
+                  Warehouse mission defaults are unavailable right now.
+                </Alert>
+              )}
+            </WarehouseDrawerSection>
+          )}
         </Stack>
       </TaskPreflightCommandsDrawer>
 
@@ -1921,7 +2528,7 @@ export default function WarehousePage() {
               dockId={selectedDockId}
               warehousePreflightPassed={warehousePreflightPassed}
               setPendingFlightId={setPendingFlightId}
-              onPreflightRun={setWarehousePreflightRun}
+              onPreflightRun={handleManualMappingPreflightRun}
               onMessage={setScanLaunchMessage}
               onError={addError}
               onScanResultReady={handleScanResultReady}
@@ -1934,41 +2541,80 @@ export default function WarehousePage() {
             action={loadingScannedMaps ? <CircularProgress size={16} /> : null}
             showDivider={false}
           >
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ mb: 1 }}
+            >
+              <TextField
+                variant="filled"
+                size="small"
+                label="Search results"
+                value={scanResultFilter}
+                onChange={(event) => setScanResultFilter(event.target.value)}
+                sx={{ flex: 1, minWidth: 0 }}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={showAllScannedMaps}
+                    onChange={(event) =>
+                      setShowAllScannedMaps(event.target.checked)
+                    }
+                  />
+                }
+                label="All maps"
+              />
+            </Stack>
             <Stack direction="row" spacing={1} alignItems="flex-start">
               <TextField
                 variant="filled"
                 select
-                disabled={!loadingScannedMaps && scannedMaps.length === 0}
+                disabled={
+                  !loadingScannedMaps && visibleScannedMaps.length === 0
+                }
                 size="small"
                 label="Scanned Maps"
-                value={selectedScannedMap ? String(selectedScannedMap.job_id) : ""}
+                value={
+                  selectedScannedMap ? String(selectedScannedMap.job_id) : ""
+                }
                 onChange={(event) => {
                   const raw = event.target.value;
                   setSelectedMapJobId(raw ? Number(raw) : null);
                 }}
                 helperText={
                   selectedScannedMap
-                    ? selectedScannedMap.status === "failed" && selectedScannedMap.error
+                    ? selectedScannedMap.status === "failed" &&
+                      selectedScannedMap.error
                       ? selectedScannedMap.error
                       : `${getWarehouseName(selectedScannedMap)} (#${getWarehouseMapId(selectedScannedMap)})${
-                          selectedReferenceJobId != null ? ` • Ref #${selectedReferenceJobId}` : ""
+                          selectedReferenceMap
+                            ? ` • baseline #${selectedReferenceMap.job_id}`
+                            : ""
                         }`
                     : undefined
                 }
                 sx={{ flex: 1, minWidth: 0 }}
               >
-                {scannedMaps.length === 0 && (
+                {visibleScannedMaps.length === 0 && (
                   <MenuItem value="" disabled>
                     No scanned maps available
                   </MenuItem>
                 )}
-                {scannedMaps.map((map) => (
+                {visibleScannedMaps.map((map) => (
                   <MenuItem key={map.job_id} value={String(map.job_id)}>
                     {`${getWarehouseName(map)} • ${map.source === "simulation" ? "simulation" : "real flight"} • v${map.model_version} • ${map.status} • ${formatTimestamp(map.created_at)}`}
                   </MenuItem>
                 ))}
               </TextField>
-              <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0, pt: 2.25 }}>
+              <Stack
+                direction="row"
+                spacing={0.25}
+                alignItems="center"
+                sx={{ flexShrink: 0, pt: 2.25 }}
+              >
                 <ActionIconButton
                   variant="map"
                   title="View in 3D Map"
@@ -1986,7 +2632,12 @@ export default function WarehousePage() {
                 />
                 <ActionIconButton
                   variant="check"
-                  title="Use as Reference"
+                  title={
+                    selectedReferenceJobId != null &&
+                    selectedScannedMap?.job_id !== selectedReferenceJobId
+                      ? "Compare with Reference"
+                      : "Use as Reference"
+                  }
                   color={
                     selectedReferenceJobId != null &&
                     selectedScannedMap?.job_id === selectedReferenceJobId
@@ -1995,8 +2646,23 @@ export default function WarehousePage() {
                   }
                   disabled={!selectedScannedMap}
                   onClick={() => {
-                    setSelectedReferenceJobId(selectedScannedMap?.job_id ?? null);
+                    if (
+                      selectedReferenceJobId != null &&
+                      selectedScannedMap?.job_id !== selectedReferenceJobId
+                    ) {
+                      void handleCompareSelectedScan();
+                    } else {
+                      setSelectedReferenceJobId(
+                        selectedScannedMap?.job_id ?? null,
+                      );
+                      setCompareMessage(
+                        selectedScannedMap
+                          ? `Baseline scan set to #${selectedScannedMap.job_id}.`
+                          : null,
+                      );
+                    }
                   }}
+                  loading={comparingScans}
                 />
                 <ActionIconButton
                   variant="delete"
@@ -2005,7 +2671,16 @@ export default function WarehousePage() {
                   loading={deletingScannedMap}
                   disabled={!selectedScannedMap}
                   onClick={() => {
-                    void handleDeleteScannedMap();
+                    setDeleteTarget({
+                      kind: "scan result",
+                      label: selectedScannedMap
+                        ? `${getWarehouseName(selectedScannedMap)} • job #${selectedScannedMap.job_id}`
+                        : "Scan result",
+                      assetCount: selectedScannedMap?.assets.length ?? 0,
+                      onConfirm: () => {
+                        void handleDeleteScannedMap();
+                      },
+                    });
                   }}
                 />
               </Stack>
@@ -2015,9 +2690,19 @@ export default function WarehousePage() {
               getToken={getToken}
               onError={addError}
             />
+            {compareMessage && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                {compareMessage}
+              </Alert>
+            )}
           </WarehouseDrawerSection>
         </Stack>
       </TaskPreflightCommandsDrawer>
+      <WarehouseDeleteConfirmationDialog
+        target={deleteTarget}
+        busy={deletingScannedMap || deletingWarehouseMap || deletingSensorRig}
+        onClose={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

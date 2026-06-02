@@ -36,6 +36,7 @@ class Telemetry:
     heartbeat_age_s: float | None = None
     is_armable: bool | None = None
     home_set: bool | None = None
+    home_source: str | None = None
     home_lat: float | None = None
     home_lon: float | None = None
     ekf_ok: bool | None = None

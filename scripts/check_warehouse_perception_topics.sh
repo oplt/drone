@@ -47,15 +47,31 @@ echo "Required stable window: ${STABLE_SECONDS}s"
 echo "Topics: ${REQUIRED_TOPICS[*]}"
 echo
 
+MAX_WAIT_S="${WAREHOUSE_PERCEPTION_CHECK_MAX_WAIT_S:-60}"
+
+STABLE_MS="${WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS:-8000}"
+STABLE_SECONDS="$(( (STABLE_MS + 999) / 1000 ))"
+
+started_at="$(date +%s)"
 stable_started=""
+
 while true; do
+  now="$(date +%s)"
+  total_elapsed=$(( now - started_at ))
+
+  if (( total_elapsed >= MAX_WAIT_S )); then
+    echo "ERROR: perception topics did not become stable within ${MAX_WAIT_S}s" >&2
+    exit 1
+  fi
+
   if _check_all_topics; then
     if [ -z "${stable_started}" ]; then
-      stable_started="$(date +%s)"
+      stable_started="${now}"
       echo "-- all topics publishing; stability timer started --"
     else
-      elapsed=$(( $(date +%s) - stable_started ))
+      elapsed=$(( now - stable_started ))
       echo "-- stable for ${elapsed}s / ${STABLE_SECONDS}s --"
+
       if (( elapsed >= STABLE_SECONDS )); then
         echo
         echo "Core warehouse perception topics are publishing continuously."
@@ -68,5 +84,6 @@ while true; do
     fi
     stable_started=""
   fi
+
   sleep "${POLL_S}"
 done

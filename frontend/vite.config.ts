@@ -44,6 +44,14 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
+      "/runtime": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/warehouse": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/video": {
         target: "http://localhost:8000",
         changeOrigin: true,

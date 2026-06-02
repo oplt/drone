@@ -10,7 +10,10 @@ from backend.infrastructure.warehouse.mapping_stack_process import (
     MappingStackStatus,
     get_warehouse_mapping_stack_manager,
 )
-from backend.modules.warehouse.ports import WarehousePerceptionCommandResult, WarehousePerceptionStatus
+from backend.modules.warehouse.ports import (
+    WarehousePerceptionCommandResult,
+    WarehousePerceptionStatus,
+)
 from backend.modules.warehouse.service.takeoff_readiness import readiness_from_perception_status
 
 logger = logging.getLogger(__name__)
@@ -263,7 +266,7 @@ async def prepare_warehouse_scan_ros(
     require_nvblox: bool = False,
     sensor_timeout_s: float | None = None,
     nvblox_timeout_s: float | None = None,
-) -> tuple[MappingStackStatus, WarehouseMappingReadiness, "WarehouseTakeoffReadiness"]:
+) -> tuple[MappingStackStatus, WarehouseMappingReadiness, WarehouseTakeoffReadiness]:
     """Start nvblox and confirm sensors in parallel with takeoff readiness (faster flight prep)."""
     from backend.modules.warehouse.service.takeoff_readiness import (
         WarehouseTakeoffReadiness,

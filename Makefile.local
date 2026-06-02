@@ -1,162 +1,77 @@
-ROS_DISTRO ?= jazzy
 PYTHON ?= $(if $(wildcard $(CURDIR)/.venv/bin/python),$(CURDIR)/.venv/bin/python,python3)
 APP_PYTHON ?= $(PYTHON)
-APP_HOST ?= 127.0.0.1
+APP_HOST ?= localhost
 APP_PORT ?= 8000
+FRONTEND_HOST ?= localhost
+FRONTEND_PORT ?= 5173
+REDIS_PORT ?= 6380
+OPEN_BROWSER ?= 1
+RUN_MIGRATIONS ?= 1
 HONCHO ?= $(if $(wildcard $(CURDIR)/.venv/bin/honcho),$(CURDIR)/.venv/bin/honcho,honcho)
-ROS_WS ?= $(CURDIR)/warehouse_ros2_ws
-ROS_WS_SETUP ?= $(ROS_WS)/install/setup.bash
+BACKEND_ENV ?= $(CURDIR)/backend/.env
+# Do not load backend/.env into every Honcho process by default.
+# The backend should load its own settings; loading backend/.env globally can break local auth cookies.
+HONCHO_ENV_ARGS ?=
 
 PYTHONNOUSERSITE ?= 1
 PYTHONDONTWRITEBYTECODE ?= 1
+WAREHOUSE_BRIDGE_PORT ?= 8088
+ROSBRIDGE_PORT ?= 9090
 
 export APP_PYTHON
-export HONCHO
-export PYTHONNOUSERSITE
-export PYTHONDONTWRITEBYTECODE
 export APP_HOST
 export APP_PORT
+export FRONTEND_HOST
+export FRONTEND_PORT
+export REDIS_PORT
+export RUN_MIGRATIONS
+export PYTHONNOUSERSITE
+export PYTHONDONTWRITEBYTECODE
 
-# Backend/FastAPI code may use the app venv. ROS 2 Jazzy nodes must not.
-ROS_PYTHON ?= /usr/bin/python3
-WAREHOUSE_BRIDGE_PYTHON ?= $(APP_PYTHON)
-BACKEND_ENV ?= $(CURDIR)/backend/.env
-WITH_VIDEO ?= 0
-DEV_PROCS := redis backend default_worker photogrammetry_worker frontend browser
-# Always-on warehouse dev services. nvblox starts at flight time via backend mapping stack.
-# Full launch graph: make -f Makefile.local warehouse-session
-WAREHOUSE_DEV_BASE := warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export warehouse_bridge rosbridge_ws
-WAREHOUSE_DEV_PROCS := $(DEV_PROCS) $(WAREHOUSE_DEV_BASE)
-ifeq ($(WITH_VIDEO),1)
-DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker frontend browser
-WAREHOUSE_DEV_PROCS := redis backend default_worker photogrammetry_worker video_analysis_worker warehouse_mapping_worker gazebo_sensor_bridge warehouse_sim_tf warehouse_odometry_export frontend browser warehouse_bridge rosbridge_ws
+DEV_PROCS := redis backend frontend
+ifeq ($(OPEN_BROWSER),1)
+DEV_PROCS += browser
 endif
 
-ROS_DOMAIN_ID ?= 42
-
-export ROS_DOMAIN_ID
-
-
-export ROS_DISTRO
-export ROS_WS_SETUP
-export WAREHOUSE_BRIDGE_PYTHON
-export ROS_PYTHON
-
-.PHONY: local-dev local-dev-warehouse warehouse-session warehouse-stop-session warehouse-build warehouse-doctor kill-dev kill-warehouse-dev kill-celery kill-ports kill-warehouse-ports check-local-tools check-warehouse-tools
+.PHONY: local-dev local-dev-with-backend-env check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev
 
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
 	@$(HONCHO) --help >/dev/null 2>&1 || { echo "honcho executable is not usable: $(HONCHO). Reinstall with: $(PYTHON) -m pip install --force-reinstall honcho"; exit 1; }
 	@$(APP_PYTHON) -c 'import uvicorn, fastapi, alembic, celery' >/dev/null 2>&1 || { echo "Backend Python deps missing for $(APP_PYTHON). Install backend requirements."; exit 1; }
-	@$(PYTHON) -c 'import uvicorn, fastapi' >/dev/null 2>&1 || { echo "Backend Python deps missing for $(PYTHON). Activate .venv or install requirements."; exit 1; }
-ifeq ($(WITH_VIDEO),1)
-	@$(PYTHON) -c 'from ultralytics import YOLO' >/dev/null 2>&1 || { echo "Video analysis dependencies missing for $(PYTHON). Run: $(PYTHON) -m pip install --user 'matplotlib>=3.10.0' 'ultralytics>=8.3.0' opencv-python-headless supervision"; exit 1; }
-endif
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed."; exit 1; }
 	@command -v redis-server >/dev/null 2>&1 || { echo "redis-server is required."; exit 1; }
 
-warehouse-build:
-	@test -d "$(ROS_WS)" || { echo "ROS workspace not found: $(ROS_WS)"; exit 1; }
-	@PYTHONNOUSERSITE=0 $(ROS_PYTHON) -m pip install -q --user --break-system-packages 'pymavlink>=2.4.49'
-	@PYTHONNOUSERSITE=0 $(ROS_PYTHON) -m pip install -q --user --break-system-packages -e "$(ROS_WS)/src/warehouse_mapping_bridge"
-	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && cd "$(ROS_WS)" && colcon build --packages-select warehouse_mapping_bridge --symlink-install --cmake-args -DPython3_EXECUTABLE="$(ROS_PYTHON)"'
+kill-ports:
+	@fuser -k $(APP_PORT)/tcp >/dev/null 2>&1 || true
+	@fuser -k $(FRONTEND_PORT)/tcp >/dev/null 2>&1 || true
+	@fuser -k $(REDIS_PORT)/tcp >/dev/null 2>&1 || true
+	@fuser -k $(WAREHOUSE_BRIDGE_PORT)/tcp >/dev/null 2>&1 || true
+	@fuser -k $(ROSBRIDGE_PORT)/tcp >/dev/null 2>&1 || true
 
-check-warehouse-tools: check-local-tools
-	@$(ROS_PYTHON) -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)' >/dev/null 2>&1 || { echo "ROS_PYTHON=$(ROS_PYTHON) is not Python 3.12+. ROS 2 Jazzy should run with Ubuntu 24.04 / Python 3.12, not the app .venv."; exit 1; }
-	@PYTHONNOUSERSITE=0 $(ROS_PYTHON) -c 'import pymavlink' >/dev/null 2>&1 || { echo "pymavlink missing for ROS Python $(ROS_PYTHON). Run: make -f Makefile.local warehouse-build"; exit 1; }
-	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && command -v ros2 >/dev/null 2>&1' || { echo "ROS 2 is not available. Install/source ROS 2, e.g. /opt/ros/$${ROS_DISTRO}/setup.bash"; exit 1; }
-	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && ros2 pkg prefix rosbridge_server >/dev/null 2>&1' || { echo "rosbridge_server is not installed. Install: sudo apt install ros-$${ROS_DISTRO}-rosbridge-server"; exit 1; }
-	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash && ros2 pkg prefix ros_gz_bridge >/dev/null 2>&1' || { echo "ros_gz_bridge is not installed. Install: sudo apt install ros-$${ROS_DISTRO}-ros-gz-bridge"; exit 1; }
-	@test -f "$${ROS_WS_SETUP}" || { echo "ROS workspace setup file not found: $${ROS_WS_SETUP}"; echo "Build it first with: make -f Makefile.local warehouse-build"; exit 1; }
-	@bash -lc 'source /opt/ros/$${ROS_DISTRO}/setup.bash; source "$${ROS_WS_SETUP}"; ros2 pkg prefix warehouse_mapping_bridge >/dev/null 2>&1' || { echo "warehouse_mapping_bridge was not found after sourcing: $${ROS_WS_SETUP}"; echo "Try: make -f Makefile.local warehouse-build"; exit 1; }
+kill-dev:
+	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill
+	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill
+	-pgrep -f "[r]edis-server --port $(REDIS_PORT)" | xargs -r kill
+	-sleep 1
+	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill -9
+	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill -9
+	-pgrep -f "[r]edis-server --port $(REDIS_PORT)" | xargs -r kill -9
+	-$(MAKE) -f Makefile.local kill-ports
 
-kill-celery:
+
+kill-workers:
 	-pgrep -f "[c]elery.*backend.entrypoints.workers.celery_app" | xargs -r kill
 	-sleep 1
 	-pgrep -f "[c]elery.*backend.entrypoints.workers.celery_app" | xargs -r kill -9
 
-kill-ports:
-	@fuser -k 8000/tcp >/dev/null 2>&1 || true
-	@fuser -k 5173/tcp >/dev/null 2>&1 || true
+reset-frontend-cache:
+	rm -rf frontend/node_modules/.vite
 
-kill-warehouse-ports: kill-ports
-	@echo "Stopping warehouse dev ports..."
-	@redis-cli -p 6380 shutdown >/dev/null 2>&1 || true
-	@for port in 6380 8088 9090; do \
-		echo "Freeing port $$port..."; \
-		fuser -k $$port/tcp >/dev/null 2>&1 || true; \
-	done
-	@sleep 1
-	@for port in 6380 8088 9090; do \
-		if lsof -iTCP:$$port -sTCP:LISTEN -n -P >/dev/null 2>&1; then \
-			echo "WARNING: port $$port is still busy"; \
-			lsof -iTCP:$$port -sTCP:LISTEN -n -P || true; \
-		fi; \
-	done
-
-kill-dev: kill-celery
-	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill
-	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill
-	-pgrep -f "[v]ite" | xargs -r kill
-	-pgrep -f "[n]pm run dev" | xargs -r kill
-	-sleep 1
-	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill -9
-	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill -9
-	-pgrep -f "[v]ite" | xargs -r kill -9
-	-pgrep -f "[n]pm run dev" | xargs -r kill -9
-	-$(MAKE) -f Makefile.local kill-ports
-
-kill-warehouse-dev:
-	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill
-	-pgrep -f "[w]arehouse_mapping_bridge.bridge_service" | xargs -r kill
-	-pgrep -f "[w]arehouse_bridge_service" | xargs -r kill
-	-pgrep -f "[r]os_gz_bridge/parameter_bridge" | xargs -r kill
-	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill
-	-pgrep -f "[r]osbridge_websocket" | xargs -r kill
-	-pgrep -f "[r]os2 launch rosbridge_server rosbridge_websocket_launch.xml" | xargs -r kill
-	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill
-	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill
-	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill
-	-pgrep -f "[n]vblox" | xargs -r kill
-	-sleep 1
-	-pgrep -f "[h]oncho -f Procfile.dev start" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_mapping_bridge.bridge_service" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_bridge_service" | xargs -r kill -9
-	-pgrep -f "[r]os_gz_bridge/parameter_bridge" | xargs -r kill -9
-	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill -9
-	-pgrep -f "[r]osbridge_websocket" | xargs -r kill -9
-	-pgrep -f "[r]os2 launch rosbridge_server rosbridge_websocket_launch.xml" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill -9
-	-pgrep -f "[n]vblox" | xargs -r kill -9
-	-$(MAKE) -f Makefile.local kill-warehouse-ports
+reset-dev: kill-dev kill-workers reset-frontend-cache
 
 local-dev: check-local-tools kill-dev
-	$(HONCHO) -f Procfile.dev start $(DEV_PROCS)
+	$(HONCHO) $(HONCHO_ENV_ARGS) -f Procfile.dev start $(DEV_PROCS)
 
-local-dev-warehouse: check-warehouse-tools kill-dev kill-warehouse-dev
-	$(HONCHO) -e "$(BACKEND_ENV)" -f Procfile.dev start $(WAREHOUSE_DEV_PROCS)
-
-warehouse-session: check-warehouse-tools
-	$(HONCHO) -e "$(BACKEND_ENV)" -f Procfile.dev start warehouse_mapping_stack
-
-warehouse-stop-session:
-	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill
-	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill
-	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill
-	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill
-	-pgrep -f "[n]vblox" | xargs -r kill
-	-sleep 1
-	-pgrep -f "[r]os2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_health_monitor" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_sim_tf_broadcaster" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_odometry_export" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_artifact_exporter" | xargs -r kill -9
-	-pgrep -f "[n]vblox" | xargs -r kill -9
-
-warehouse-doctor: check-warehouse-tools
-	$(HONCHO) -e "$(BACKEND_ENV)" -f Procfile.dev run bash -lc 'set -o pipefail; export PYTHONNOUSERSITE=0; source /opt/ros/$${ROS_DISTRO:-jazzy}/setup.bash && source "$${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}" && echo "Env:" && echo "ROS_DOMAIN_ID=$${ROS_DOMAIN_ID:-unset}" && echo "ros_gz_bridge_count=$$(pgrep -fc "[r]os_gz_bridge/parameter_bridge" || echo 0)" && echo && echo "Gazebo topics:" && (gz topic -l 2>/dev/null | grep -E "warehouse|imu|odometry" | sort || true) && echo && echo "Gazebo hz (3s):" && for t in /warehouse/front/rgbd/image /warehouse/drone/odometry; do printf "  %s: " "$$t"; timeout 3 gz topic -t "$$t" -f 2>/dev/null | tail -1 || echo "no messages"; done && echo && echo "Bridge:" && (curl -fsS --max-time 15 "$${WAREHOUSE_ROS_BRIDGE_URL:-http://127.0.0.1:8088}/health" | python3 -m json.tool 2>/dev/null | head -40 || true) && echo && echo "ROS topics:" && ros2 topic list --no-daemon 2>/dev/null | grep -E "warehouse|nvblox|imu" | sort && echo && echo "ROS hz (3s):" && for t in /warehouse/front/rgbd/image /warehouse/front/rgbd/depth_image /warehouse/drone/odometry /warehouse/local_odometry; do printf "  %s: " "$$t"; timeout 3 ros2 topic hz "$$t" 2>&1 | tail -1 || true; echo; done'
+local-dev-with-backend-env: check-local-tools kill-dev
+	$(HONCHO) -e $(BACKEND_ENV) -f Procfile.dev start $(DEV_PROCS)

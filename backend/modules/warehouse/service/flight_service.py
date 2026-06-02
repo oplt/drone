@@ -17,7 +17,6 @@ from backend.modules.warehouse.service.flight_state_machine import (
     WarehouseFlightState,
     get_warehouse_flight_state_machine,
 )
-from backend.modules.warehouse.service.warehouse_preflight import fetch_warehouse_perception_status
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,18 @@ async def evaluate_warehouse_flight_readiness(
     mapping_stack_running: bool | None = None,
 ) -> WarehouseFlightReadinessSnapshot:
     config = WarehouseFlightConfig.from_env()
-    status = await fetch_warehouse_perception_status(deep=deep, force=force)
+    if deep or force:
+        from backend.modules.warehouse.service.warehouse_preflight import (
+            fetch_warehouse_perception_status,
+        )
+
+        status = await fetch_warehouse_perception_status(deep=deep, force=force)
+    else:
+        from backend.modules.warehouse.service.idle_health import (
+            fetch_idle_warehouse_perception_status,
+        )
+
+        status = await fetch_idle_warehouse_perception_status()
     components = status.components if isinstance(status.components, dict) else {}
     telemetry = await _fetch_autopilot_telemetry()
     stack_running = (

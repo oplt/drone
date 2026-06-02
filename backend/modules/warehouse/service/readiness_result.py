@@ -9,7 +9,6 @@ from backend.modules.warehouse.ports import WarehousePerceptionStatus
 from backend.modules.warehouse.service.runtime_safety import (
     default_odometry_max_age_s,
     evaluate_local_odometry,
-    odometry_state_is_fresh,
 )
 
 FAILURE_USER_MESSAGES: dict[str, str] = {
@@ -81,13 +80,16 @@ def _float_env(name: str, default: float) -> float:
         return default
 
 
-def _gazebo_sim_enabled() -> bool:
-    return os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
+def _gazebo_sim_enabled(components: dict[str, object] | None = None) -> bool:
+    if os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
         "1",
         "true",
         "yes",
         "on",
-    }
+    }:
+        return True
+    data = components or {}
+    return str(data.get("topic_profile") or data.get("profile") or "").lower() == "gazebo"
 
 
 def _topic_diag(components: dict[str, object], key: str) -> dict[str, Any] | None:
@@ -96,6 +98,13 @@ def _topic_diag(components: dict[str, object], key: str) -> dict[str, Any] | Non
         return None
     diag = raw.get(key)
     return diag if isinstance(diag, dict) else None
+
+
+def _component_missing_required_topics(components: dict[str, object]) -> set[str] | None:
+    raw = components.get("missing_required_topics")
+    if not isinstance(raw, list):
+        return None
+    return {str(item) for item in raw if item}
 
 
 def topic_is_strictly_live(
@@ -127,7 +136,7 @@ def evaluate_warehouse_capabilities(
 ) -> dict[str, bool]:
     components = status.components if isinstance(status.components, dict) else {}
     if require_lidar is None:
-        require_lidar = not _gazebo_sim_enabled() or os.getenv(
+        require_lidar = not _gazebo_sim_enabled(status.components) or os.getenv(
             "WAREHOUSE_TAKEOFF_REQUIRE_RAW_LIDAR", "0"
         ).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -150,11 +159,22 @@ def evaluate_warehouse_capabilities(
     can_localize = odom_health.fresh
     can_perceive_depth = topic_is_strictly_live(depth_diag)
     can_perceive_rgb = topic_is_strictly_live(rgb_diag)
-    can_scan_lidar = topic_is_strictly_live(lidar_diag) or not require_lidar
+    bridge_capabilities = components.get("capabilities")
+    bridge_can_scan_lidar = (
+        bool(bridge_capabilities.get("can_scan_lidar"))
+        if isinstance(bridge_capabilities, dict)
+        else False
+    )
+    can_scan_lidar = (
+        topic_is_strictly_live(lidar_diag)
+        or bridge_can_scan_lidar
+        or bool(components.get("raw_lidar_healthy"))
+        or not require_lidar
+    )
     can_perceive_imu = topic_is_strictly_live(imu_diag)
 
     gazebo_ok = True
-    if _gazebo_sim_enabled():
+    if _gazebo_sim_enabled(components):
         gazebo_raw = components.get("gazebo")
         if isinstance(gazebo_raw, dict):
             gazebo_ok = gazebo_raw.get("sim_publishing") is True
@@ -282,6 +302,7 @@ def readiness_from_perception_status_strict(
 
     missing: list[str] = []
     unhealthy: list[str] = []
+    component_missing = _component_missing_required_topics(components)
     flight_topic_keys = ("visual_slam_odom", "depth", "rgb_image", "imu")
     if os.getenv("WAREHOUSE_REQUIRE_LOCAL_ODOMETRY", "0").strip().lower() in {
         "1",
@@ -305,6 +326,8 @@ def readiness_from_perception_status_strict(
         }[key]
         if capabilities.get(cap_key):
             continue
+        if component_missing is not None and key not in component_missing:
+            continue
         if diag is None or diag.get("readiness_state") == "topic_missing":
             missing.append(key)
         else:
@@ -323,7 +346,7 @@ def readiness_from_perception_status_strict(
         failure_code = "bridge_unreachable"
     elif not capabilities["ros_graph_ready"]:
         failure_code = "ros_graph_unavailable"
-    elif _gazebo_sim_enabled():
+    elif _gazebo_sim_enabled(components):
         gazebo_raw = components.get("gazebo")
         if isinstance(gazebo_raw, dict) and gazebo_raw.get("sim_publishing") is False:
             failure_code = "gazebo_sensors_idle"

@@ -102,6 +102,35 @@ async def health(deep: bool = False, force: bool = False) -> dict[str, Any]:
     return payload
 
 
+@app.get("/ready")
+async def ready(force: bool = False) -> dict[str, Any]:
+    started = time.perf_counter()
+    payload = await asyncio.to_thread(state.health, deep=True, force=force)
+    duration_ms = round((time.perf_counter() - started) * 1000, 2)
+    components = payload.get("components") if isinstance(payload.get("components"), dict) else {}
+    blockers = list(components.get("missing_required_topics") or [])
+    if components.get("diagnostics_pending"):
+        blockers.append("diagnostics_pending")
+    if components.get("ros_topic_probe_error"):
+        blockers.append("ros_topic_probe_error")
+    ready_payload = {
+        **payload,
+        "ready": bool(payload.get("ready")),
+        "state": "ready" if payload.get("ready") else "blocked",
+        "blockers": list(dict.fromkeys(str(item) for item in blockers if item)),
+        "retry_after_ms": 1000 if not payload.get("ready") else 0,
+        "duration_ms": duration_ms,
+    }
+    logger.info(
+        "Warehouse bridge ready path=/ready ready=%s state=%s duration_ms=%s blockers=%s",
+        ready_payload["ready"],
+        ready_payload["state"],
+        duration_ms,
+        ready_payload["blockers"],
+    )
+    return ready_payload
+
+
 @app.get("/exploration/snapshot")
 async def exploration_snapshot() -> dict[str, Any]:
     return await asyncio.to_thread(state.exploration_snapshot)

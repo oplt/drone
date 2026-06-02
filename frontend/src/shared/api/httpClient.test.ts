@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiError";
 import { httpRequest, resolveApiUrl, shouldAttachBearerToken } from "./httpClient";
 import { server } from "../../test/msw/server";
@@ -57,5 +57,37 @@ describe("httpClient", () => {
         skipUnauthorizedRedirect: true,
       }),
     ).rejects.toMatchObject({ message: "Video upload failed" });
+  });
+
+  it("retries transient GET network failures", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const originalFetch = window.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls += 1;
+        if (calls === 1) {
+          throw new TypeError("ECONNREFUSED 127.0.0.1:8000");
+        }
+        return new Response(JSON.stringify({ id: "user-1" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    try {
+      const request = httpRequest<{ id: string }>("/auth/me", {
+        skipUnauthorizedRedirect: true,
+      });
+      await vi.advanceTimersByTimeAsync(250);
+
+      await expect(request).resolves.toEqual({ id: "user-1" });
+      expect(calls).toBe(2);
+    } finally {
+      vi.stubGlobal("fetch", originalFetch);
+      vi.useRealTimers();
+    }
   });
 });

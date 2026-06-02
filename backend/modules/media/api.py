@@ -13,7 +13,10 @@ router = APIRouter(prefix="/video", tags=["video"])
 
 @router.post("/start")
 async def start_video_stream(user=Depends(require_user)):
-    from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+    from backend.modules.warehouse.service.video import (
+        warehouse_video_blocked,
+        warehouse_video_skip_reason,
+    )
 
     if warehouse_video_blocked():
         return {

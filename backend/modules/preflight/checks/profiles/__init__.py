@@ -12,8 +12,8 @@ from .warehouse_scan import (
 __all__ = [
     "INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS",
     "INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS",
-    "indoor_warehouse_overrides",
     "WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS",
     "WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS",
+    "indoor_warehouse_overrides",
     "warehouse_scan_preflight_overrides",
 ]

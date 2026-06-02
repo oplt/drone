@@ -7,7 +7,7 @@ import type { MissionLifecycleEvent, MissionStatusPayload } from "../types";
 
 export function useMissionStatusPolling<TStatus extends MissionStatusPayload>({
   enabled = true,
-  pollMs = 1500,
+  pollMs = 5000,
   lifecycleMessage,
   onError,
 }: {
@@ -26,7 +26,9 @@ export function useMissionStatusPolling<TStatus extends MissionStatusPayload>({
     queryKey: missionKeys.flightStatus(),
     queryFn: () => fetchFlightStatus<TStatus>(getSessionMarker()),
     enabled: enabled && Boolean(getSessionMarker()),
-    refetchInterval: pollMs,
+    refetchInterval: () => (document.hidden ? Math.max(10_000, pollMs * 4) : pollMs),
+    refetchIntervalInBackground: false,
+    staleTime: 3_000,
     retry: false,
   });
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import httpx
 
@@ -19,6 +19,38 @@ from backend.modules.warehouse.ports import (
 logger = logging.getLogger(__name__)
 
 _cached_port: WarehousePerceptionPort | None = None
+
+def _json_dict(response: httpx.Response) -> dict[str, Any]:
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"warehouse ROS bridge returned {type(payload).__name__}, expected JSON object"
+        )
+    return payload
+
+
+def _parse_accepted(payload: dict[str, Any]) -> bool:
+    value = payload.get("accepted")
+
+    if isinstance(value, bool):
+        return value
+
+    status = str(payload.get("status") or "").strip().lower()
+    if status in {"accepted", "ok", "ready", "started", "stopped", "success"}:
+        return True
+    if status in {"failed", "error", "rejected", "unreachable", "disabled", "timeout"}:
+        return False
+
+    if value is None:
+        return status not in {"failed", "error", "rejected", "unreachable", "disabled"}
+
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on", "accepted", "ok", "success"}:
+        return True
+    if text in {"0", "false", "no", "off", "failed", "error", "rejected"}:
+        return False
+
+    return False
 
 
 def _as_dict(value: object) -> dict[str, object]:
@@ -41,12 +73,12 @@ def _format_http_error(exc: Exception, *, timeout_s: float) -> str:
 
 class DisabledWarehousePerceptionPort:
     def __init__(
-        self,
-        *,
-        profile: str,
-        bridge_url: str,
-        websocket_url: str,
-        capture_root: str,
+            self,
+            *,
+            profile: str,
+            bridge_url: str,
+            websocket_url: str,
+            capture_root: str,
     ) -> None:
         self.profile = profile
         self.bridge_url = bridge_url
@@ -71,7 +103,7 @@ class DisabledWarehousePerceptionPort:
         return WarehouseExplorationSnapshot()
 
     async def start_mapping(
-        self, request: WarehouseMappingStartRequest
+            self, request: WarehouseMappingStartRequest
     ) -> WarehousePerceptionCommandResult:
         del request
         return self._disabled_result()
@@ -85,7 +117,7 @@ class DisabledWarehousePerceptionPort:
         return []
 
     async def start_replay(
-        self, request: WarehouseReplayStartRequest
+            self, request: WarehouseReplayStartRequest
     ) -> WarehousePerceptionCommandResult:
         del request
         return self._disabled_result()
@@ -105,14 +137,14 @@ class DisabledWarehousePerceptionPort:
 
 class HttpWarehousePerceptionPort:
     def __init__(
-        self,
-        *,
-        bridge_url: str,
-        websocket_url: str,
-        capture_root: str,
-        profile: str,
-        timeout_s: float,
-        deep_timeout_s: float,
+            self,
+            *,
+            bridge_url: str,
+            websocket_url: str,
+            capture_root: str,
+            profile: str,
+            timeout_s: float,
+            deep_timeout_s: float,
     ) -> None:
         self.bridge_url = bridge_url.rstrip("/")
         self.websocket_url = websocket_url.strip()
@@ -131,16 +163,16 @@ class HttpWarehousePerceptionPort:
         await self._client.aclose()
 
     async def status(
-        self,
-        *,
-        deep: bool = False,
-        force: bool = False,
+            self,
+            *,
+            deep: bool = False,
+            force: bool = False,
     ) -> WarehousePerceptionStatus:
         timeout_s = self.deep_timeout_s if deep else self.timeout_s
         if deep and force:
-            path = "/health?deep=1&force=1"
+            path = "/ready?force=1"
         elif deep:
-            path = "/health?deep=1"
+            path = "/ready"
         else:
             path = "/health"
         try:
@@ -168,13 +200,13 @@ class HttpWarehousePerceptionPort:
 
         components = _as_dict(payload.get("components"))
         for bridge_field in (
-            "diagnostics_ready",
-            "probe_in_progress",
-            "cache_ready",
-            "probe_mode",
-            "from_cache",
-            "health_sample_timestamp",
-            "capabilities",
+                "diagnostics_ready",
+                "probe_in_progress",
+                "cache_ready",
+                "probe_mode",
+                "from_cache",
+                "health_sample_timestamp",
+                "capabilities",
         ):
             if bridge_field not in components and bridge_field in payload:
                 components[bridge_field] = payload.get(bridge_field)
@@ -229,7 +261,7 @@ class HttpWarehousePerceptionPort:
         return WarehouseExplorationSnapshot.model_validate(payload)
 
     async def start_mapping(
-        self, request: WarehouseMappingStartRequest
+            self, request: WarehouseMappingStartRequest
     ) -> WarehousePerceptionCommandResult:
         payload = request.model_dump(mode="json")
         if not payload.get("profile"):
@@ -293,7 +325,7 @@ class HttpWarehousePerceptionPort:
         return [str(path) for path in paths]
 
     async def start_replay(
-        self, request: WarehouseReplayStartRequest
+            self, request: WarehouseReplayStartRequest
     ) -> WarehousePerceptionCommandResult:
         payload = request.model_dump(mode="json")
         payload.setdefault("profile", self.profile)
@@ -302,16 +334,20 @@ class HttpWarehousePerceptionPort:
     async def stop_replay(self, *, replay_id: str) -> WarehousePerceptionCommandResult:
         return self._command_result(await self._post_json("/replay/stop", {"replay_id": replay_id}))
 
+
     async def _get_json(self, path: str, *, timeout_s: float | None = None) -> dict[str, Any]:
         effective_timeout = self.timeout_s if timeout_s is None else timeout_s
         timeout = httpx.Timeout(effective_timeout, connect=min(2.0, effective_timeout))
         response = await self._client.get(f"{self.bridge_url}{path}", timeout=timeout)
+
         logger.debug(
             "Warehouse ROS bridge GET",
             extra={"url": f"{self.bridge_url}{path}", "status_code": response.status_code},
         )
+
         response.raise_for_status()
-        return cast(dict[str, Any], response.json())
+        return _json_dict(response)
+
 
     async def _post_json(
             self,
@@ -323,24 +359,42 @@ class HttpWarehousePerceptionPort:
         effective_timeout = self.deep_timeout_s if timeout_s is None else timeout_s
         timeout = httpx.Timeout(effective_timeout, connect=min(2.0, effective_timeout))
         url = f"{self.bridge_url}{path}"
+
         try:
             response = await self._client.post(url, json=payload, timeout=timeout)
+
             logger.info(
                 "Warehouse ROS bridge POST url=%s status_code=%s",
                 url,
                 response.status_code,
                 extra={"url": url, "status_code": response.status_code},
             )
+
             response.raise_for_status()
-            return cast(dict[str, Any], response.json())
+            return _json_dict(response)
+
+        except httpx.HTTPStatusError as exc:
+            detail = _format_http_error(exc, timeout_s=effective_timeout)
+            status_code = exc.response.status_code
+
+            return {
+                "accepted": False,
+                "status": "failed" if status_code < 500 else "unreachable",
+                "detail": detail,
+                "data": {"http_status": status_code},
+                "paths": [],
+            }
+
         except Exception as exc:
             detail = _format_http_error(exc, timeout_s=effective_timeout)
+
             logger.warning(
                 "Warehouse ROS bridge POST failed url=%s error=%s",
                 url,
                 detail,
                 extra={"url": url, "error": detail},
             )
+
             return {
                 "accepted": False,
                 "status": "unreachable",
@@ -349,41 +403,41 @@ class HttpWarehousePerceptionPort:
                 "paths": [],
             }
 
+
     @staticmethod
     def _command_result(payload: dict[str, Any]) -> WarehousePerceptionCommandResult:
-        data = _as_dict(payload.get("data"))
-        accepted_raw = payload.get("accepted", True)
-        accepted = (
-            accepted_raw
-            if isinstance(accepted_raw, bool)
-            else str(accepted_raw).strip().lower() not in {"0", "false", "no", "off"}
-        )
+        accepted = _parse_accepted(payload)
+
         return WarehousePerceptionCommandResult(
             accepted=accepted,
             status=_string(payload.get("status")) or ("accepted" if accepted else "failed"),
             detail=_string(payload.get("detail")),
-            data=data,
+            data=_as_dict(payload.get("data")),
         )
-
 
 def build_warehouse_perception_port() -> WarehousePerceptionPort:
     global _cached_port
+
     if _cached_port is not None:
         return _cached_port
+
     bridge_url = settings.WAREHOUSE_ROS_BRIDGE_URL.strip()
     websocket_url = settings.WAREHOUSE_ROS_WS_URL.strip()
     capture_root = settings.WAREHOUSE_ROS_CAPTURE_ROOT.strip()
-    profile = settings.WAREHOUSE_ROS_PROFILE.strip() or "isaac_ros_nvblox_stereo"
-    timeout_s = max(0.1, float(settings.WAREHOUSE_ROS_BRIDGE_TIMEOUT_S))
-    deep_timeout_s = max(timeout_s, float(settings.WAREHOUSE_ROS_BRIDGE_DEEP_TIMEOUT_S))
+    profile = settings.WAREHOUSE_ROS_PROFILE.strip() or "gazebo"
+
     if not bridge_url:
         _cached_port = DisabledWarehousePerceptionPort(
             profile=profile,
-            bridge_url=bridge_url,
+            bridge_url="",
             websocket_url=websocket_url,
             capture_root=capture_root,
         )
         return _cached_port
+
+    timeout_s = max(0.1, float(settings.WAREHOUSE_ROS_BRIDGE_TIMEOUT_S))
+    deep_timeout_s = max(timeout_s, float(settings.WAREHOUSE_ROS_BRIDGE_DEEP_TIMEOUT_S))
+
     _cached_port = HttpWarehousePerceptionPort(
         bridge_url=bridge_url,
         websocket_url=websocket_url,
@@ -398,3 +452,14 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
 def reset_warehouse_perception_port_for_tests() -> None:
     global _cached_port
     _cached_port = None
+
+
+async def close_warehouse_perception_port() -> None:
+    global _cached_port
+
+    port = _cached_port
+    _cached_port = None
+
+    close = getattr(port, "aclose", None)
+    if close is not None:
+        await close()

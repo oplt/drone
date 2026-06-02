@@ -79,6 +79,33 @@ class DailyDateFileHandler(logging.Handler):
                 super().close()
 
 
+class RepeatedAutopilotLogFilter(logging.Filter):
+    """Suppress same autopilot identification line repeated during MAVLink handshakes."""
+
+    def __init__(self, window_s: float = 2.0) -> None:
+        super().__init__()
+        self.window_s = window_s
+        self._last_by_message: dict[str, float] = {}
+        self._lock = threading.RLock()
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name != "autopilot":
+            return True
+        message = record.getMessage()
+        now = datetime.now().timestamp()
+        with self._lock:
+            last_at = self._last_by_message.get(message)
+            if last_at is not None and now - last_at <= self.window_s:
+                return False
+            self._last_by_message = {
+                cached: cached_at
+                for cached, cached_at in self._last_by_message.items()
+                if now - cached_at <= self.window_s
+            }
+            self._last_by_message[message] = now
+        return True
+
+
 def _make_formatter(log_format: str) -> logging.Formatter:
     if log_format == "json":
         try:
@@ -134,6 +161,10 @@ def setup_logging(
         stream_handler.setLevel(level)
         stream_handler.setFormatter(formatter)
         root_logger.addHandler(stream_handler)
+
+    autopilot_logger = logging.getLogger("autopilot")
+    if not any(isinstance(item, RepeatedAutopilotLogFilter) for item in autopilot_logger.filters):
+        autopilot_logger.addFilter(RepeatedAutopilotLogFilter())
 
 
 class BootstrapSettings(BaseSettings):
@@ -294,7 +325,7 @@ class RuntimeSettings(BaseSettings):
 
     # Warehouse ROS 2 / Isaac perception bridge. The FastAPI backend talks to
     # this companion service; ROS nodes stay outside the API process.
-    WAREHOUSE_ROS_BRIDGE_URL: str = ""
+    WAREHOUSE_ROS_BRIDGE_URL: str = "http://127.0.0.1:8088"
     WAREHOUSE_ROS_WS_URL: str = ""
     WAREHOUSE_ROS_CAPTURE_ROOT: str = "backend/storage/warehouse_ros"
     WAREHOUSE_ROS_PROFILE: str = "isaac_ros_nvblox_stereo"

@@ -5,6 +5,7 @@ import {
   Chip,
   LinearProgress,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import type {
@@ -49,6 +50,10 @@ const SUBSYSTEM_LABELS: Record<string, string> = {
   planner: "Planner",
   failsafe: "Failsafe",
 };
+
+function readinessChipLabel(label: string, status: string): string {
+  return `${label} ${status}`;
+}
 
 type Props = {
   readiness?: WarehouseFlightReadiness | null;
@@ -131,7 +136,9 @@ export function WarehouseFlightReadinessPanel({
           </Stack>
           <Stack direction="row" spacing={0.5} flexWrap="wrap">
             {categoryChips.map((chip) => (
-              <Chip key={chip.key} size="small" label={chip.label} color={chip.color} variant="outlined" />
+              <Tooltip key={chip.key} title={chip.label}>
+                <Chip size="small" label={chip.label} color={chip.color} variant="outlined" />
+              </Tooltip>
             ))}
           </Stack>
           <Typography variant="caption" color="text.secondary">
@@ -205,13 +212,14 @@ export function WarehouseFlightReadinessPanel({
             const subsystem = readiness.subsystems[key];
             if (!subsystem) return null;
             return (
-              <Chip
-                key={key}
-                size="small"
-                label={`${SUBSYSTEM_LABELS[key]}: ${subsystem.status}`}
-                color={statusColor(subsystem.status)}
-                variant="outlined"
-              />
+              <Tooltip key={key} title={subsystem.message || SUBSYSTEM_LABELS[key]}>
+                <Chip
+                  size="small"
+                  label={readinessChipLabel(SUBSYSTEM_LABELS[key], subsystem.status)}
+                  color={statusColor(subsystem.status)}
+                  variant="outlined"
+                />
+              </Tooltip>
             );
           })}
         </Stack>

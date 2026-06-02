@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+import hashlib
+import os
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+from fastapi import UploadFile
+
+_SAFE_ID = re.compile(r"[^a-zA-Z0-9_.-]+")
+_EXTENSIONS = {
+    "mesh": ".glb",
+    "point_cloud": ".xyz32",
+    "occupancy": ".vox",
+    "esdf": ".vox",
+    "costmap": ".grid",
+}
+
+
+class LiveMapStorageError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class StoredLiveMapChunk:
+    chunk_id: str
+    path: Path
+    url: str
+    content_type: str
+    byte_size: int
+    checksum_sha256: str
+
+
+def _clean_id(value: str) -> str:
+    cleaned = _SAFE_ID.sub("-", value.strip())[:160].strip(".-")
+    if not cleaned:
+        raise LiveMapStorageError("Invalid live-map chunk id.")
+    return cleaned
+
+
+def _root() -> Path:
+    return Path(
+        os.getenv("WAREHOUSE_LIVE_MAP_CHUNK_DIR", "backend/storage/warehouse-live-map")
+    ).resolve()
+
+
+class WarehouseLiveMapChunkStorage:
+    def __init__(self, root: Path | None = None) -> None:
+        self.root = (root or _root()).resolve()
+
+    async def save_upload(
+        self,
+        *,
+        flight_id: str,
+        chunk_id: str,
+        kind: str,
+        upload: UploadFile,
+        max_bytes: int = 32 * 1024 * 1024,
+    ) -> StoredLiveMapChunk:
+        safe_flight = _clean_id(flight_id)
+        safe_chunk = _clean_id(chunk_id)
+        ext = _EXTENSIONS.get(kind, ".bin")
+        content_type = upload.content_type or "application/octet-stream"
+        target_dir = self.root / safe_flight
+        target_dir.mkdir(parents=True, exist_ok=True)
+        temp_path = target_dir / f"{safe_chunk}.uploading"
+        digest = hashlib.sha256()
+        total = 0
+
+        with temp_path.open("wb") as handle:
+            while True:
+                block = await upload.read(1024 * 1024)
+                if not block:
+                    break
+                total += len(block)
+                if total > max_bytes:
+                    temp_path.unlink(missing_ok=True)
+                    raise LiveMapStorageError("Live-map chunk exceeds maximum size.")
+                digest.update(block)
+                handle.write(block)
+
+        if total <= 0:
+            temp_path.unlink(missing_ok=True)
+            raise LiveMapStorageError("Live-map chunk is empty.")
+
+        checksum = digest.hexdigest()
+        final_path = target_dir / f"{safe_chunk}-{checksum[:16]}{ext}"
+        temp_path.replace(final_path)
+        return StoredLiveMapChunk(
+            chunk_id=safe_chunk,
+            path=final_path,
+            url=f"/warehouse/live-map/{safe_flight}/chunks/{safe_chunk}/download",
+            content_type=content_type,
+            byte_size=total,
+            checksum_sha256=checksum,
+        )
+
+    def resolve(self, *, flight_id: str, chunk_id: str) -> StoredLiveMapChunk | None:
+        safe_flight = _clean_id(flight_id)
+        safe_chunk = _clean_id(chunk_id)
+        root = (self.root / safe_flight).resolve()
+        if not root.exists():
+            return None
+        matches = sorted(
+            root.glob(f"{safe_chunk}-*"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if not matches:
+            return None
+        path = matches[0].resolve()
+        if not str(path).startswith(str(root)):
+            return None
+        checksum = path.stem.rsplit("-", 1)[-1]
+        return StoredLiveMapChunk(
+            chunk_id=safe_chunk,
+            path=path,
+            url=f"/warehouse/live-map/{safe_flight}/chunks/{safe_chunk}/download",
+            content_type="application/octet-stream",
+            byte_size=path.stat().st_size,
+            checksum_sha256=checksum.ljust(64, "0")[:64],
+        )
+
+
+warehouse_live_map_chunk_storage = WarehouseLiveMapChunkStorage()

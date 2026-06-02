@@ -13,6 +13,8 @@ export type LoginRequest = {
 };
 
 export type LoginResponse = {
+  user?: SessionUser;
+  /** Legacy body token; session is cookie-based when absent. */
   access_token?: string;
 };
 

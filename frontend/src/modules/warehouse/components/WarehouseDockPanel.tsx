@@ -19,6 +19,10 @@ import {
 import type { WarehouseDockPayload, WarehouseDockStation } from "../types";
 import InfoLabel from "../../../shared/ui/InfoLabel";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import {
+  WarehouseDeleteConfirmationDialog,
+  type WarehouseDeleteTarget,
+} from "./WarehouseDeleteConfirmationDialog";
 
 const DOCK_FIELD_SX = {
   "& .MuiFilledInput-root": {
@@ -44,7 +48,8 @@ function markerStatus(dock: WarehouseDockStation | undefined): {
   color: "success" | "warning" | "default";
 } {
   if (!dock) return { label: "No dock", color: "default" };
-  if (dock.marker_visible === true) return { label: "Marker visible", color: "success" };
+  if (dock.marker_visible === true)
+    return { label: "Marker visible", color: "success" };
   if (dock.marker_id) return { label: "Marker pending", color: "warning" };
   return { label: "No marker", color: "default" };
 }
@@ -64,6 +69,7 @@ export function WarehouseDockPanel({
   const [markerId, setMarkerId] = useState("");
   const [markerFamily, setMarkerFamily] = useState("apriltag_36h11");
   const [markerSizeM, setMarkerSizeM] = useState("0.16");
+  const [deleteTarget, setDeleteTarget] = useState<WarehouseDeleteTarget>(null);
 
   const selectedDock = useMemo(
     () => docks.find((dock) => dock.id === selectedDockId),
@@ -82,15 +88,26 @@ export function WarehouseDockPanel({
     try {
       const next = await listWarehouseDocks(warehouseMapId, token);
       setDocks(next);
-      if (selectedDockId != null && !next.some((dock) => dock.id === selectedDockId)) {
+      if (
+        selectedDockId != null &&
+        !next.some((dock) => dock.id === selectedDockId)
+      ) {
         onSelectedDockIdChange(null);
       }
     } catch (error) {
-      onError(`Dock stations could not be loaded: ${error instanceof Error ? error.message : error}`);
+      onError(
+        `Dock stations could not be loaded: ${error instanceof Error ? error.message : error}`,
+      );
     } finally {
       setLoading(false);
     }
-  }, [getToken, onError, onSelectedDockIdChange, selectedDockId, warehouseMapId]);
+  }, [
+    getToken,
+    onError,
+    onSelectedDockIdChange,
+    selectedDockId,
+    warehouseMapId,
+  ]);
 
   useEffect(() => {
     void loadDocks();
@@ -116,13 +133,20 @@ export function WarehouseDockPanel({
       const dock =
         selectedDockId == null
           ? await createWarehouseDock(warehouseMapId, payload, token)
-          : await updateWarehouseDock(warehouseMapId, selectedDockId, payload, token);
+          : await updateWarehouseDock(
+              warehouseMapId,
+              selectedDockId,
+              payload,
+              token,
+            );
       onSelectedDockIdChange(dock.id);
       setName("");
       setMarkerId("");
       await loadDocks();
     } catch (error) {
-      onError(`Dock station could not be saved: ${error instanceof Error ? error.message : error}`);
+      onError(
+        `Dock station could not be saved: ${error instanceof Error ? error.message : error}`,
+      );
     } finally {
       setSaving(false);
     }
@@ -137,30 +161,40 @@ export function WarehouseDockPanel({
       if (selectedDockId === dockId) onSelectedDockIdChange(null);
       await loadDocks();
     } catch (error) {
-      onError(`Dock station could not be deleted: ${error instanceof Error ? error.message : error}`);
+      onError(
+        `Dock station could not be deleted: ${error instanceof Error ? error.message : error}`,
+      );
     } finally {
       setSaving(false);
+      setDeleteTarget(null);
     }
   };
 
   const content = (
-    <Stack spacing={1.25}>
-      <Stack direction="row" alignItems="center" justifyContent={embedded ? "flex-end" : "space-between"}>
-        {!embedded && <Typography variant="subtitle1">Dock Station</Typography>}
-        <Stack direction="row" spacing={0.25} alignItems="center">
-          <Chip size="small" label={status.label} color={status.color} />
-          {loading && <CircularProgress size={16} />}
-          <ActionIconButton
-            variant="refresh"
-            title="Refresh"
-            disabled={!warehouseMapId}
-            loading={loading}
-            onClick={() => {
-              void loadDocks();
-            }}
-          />
+    <>
+      <Stack spacing={1.25}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent={embedded ? "flex-end" : "space-between"}
+        >
+          {!embedded && (
+            <Typography variant="subtitle1">Dock Station</Typography>
+          )}
+          <Stack direction="row" spacing={0.25} alignItems="center">
+            <Chip size="small" label={status.label} color={status.color} />
+            {loading && <CircularProgress size={16} />}
+            <ActionIconButton
+              variant="refresh"
+              title="Refresh"
+              disabled={!warehouseMapId}
+              loading={loading}
+              onClick={() => {
+                void loadDocks();
+              }}
+            />
+          </Stack>
         </Stack>
-      </Stack>
 
         <TextField
           variant="filled"
@@ -176,8 +210,16 @@ export function WarehouseDockPanel({
           }
           disabled={!warehouseMapId || loading}
           value={selectedDockId != null ? String(selectedDockId) : ""}
-          onChange={(event) => onSelectedDockIdChange(event.target.value ? Number(event.target.value) : null)}
-          helperText={selectedDock?.last_observed_at ? `Last marker ${selectedDock.last_observed_at}` : undefined}
+          onChange={(event) =>
+            onSelectedDockIdChange(
+              event.target.value ? Number(event.target.value) : null,
+            )
+          }
+          helperText={
+            selectedDock?.last_observed_at
+              ? `Last marker ${selectedDock.last_observed_at}`
+              : undefined
+          }
         >
           <MenuItem value="">No dock anchor</MenuItem>
           {docks.map((dock) => (
@@ -188,14 +230,18 @@ export function WarehouseDockPanel({
         </TextField>
 
         {warehouseMapId == null ? (
-          <Alert severity="info">Select a warehouse map before configuring a dock.</Alert>
+          <Alert severity="info">
+            Select a warehouse map before configuring a dock.
+          </Alert>
         ) : (
           <Stack spacing={1}>
             <TextField
               variant="filled"
               size="small"
               sx={DOCK_FIELD_SX}
-              label={selectedDockId == null ? "New dock name" : "Edit dock name"}
+              label={
+                selectedDockId == null ? "New dock name" : "Edit dock name"
+              }
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -223,7 +269,11 @@ export function WarehouseDockPanel({
                 label="Size"
                 type="number"
                 value={markerSizeM}
-                InputProps={{ endAdornment: <InputAdornment position="end">m</InputAdornment> }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">m</InputAdornment>
+                  ),
+                }}
                 onChange={(event) => setMarkerSizeM(event.target.value)}
               />
             </Stack>
@@ -244,7 +294,14 @@ export function WarehouseDockPanel({
                   color="error"
                   loading={saving}
                   onClick={() => {
-                    void removeDock(selectedDockId);
+                    setDeleteTarget({
+                      kind: "dock",
+                      label: selectedDock?.name ?? `Dock #${selectedDockId}`,
+                      assetCount: 1,
+                      onConfirm: () => {
+                        void removeDock(selectedDockId);
+                      },
+                    });
                   }}
                 />
               )}
@@ -252,12 +309,21 @@ export function WarehouseDockPanel({
           </Stack>
         )}
       </Stack>
+      <WarehouseDeleteConfirmationDialog
+        target={deleteTarget}
+        busy={saving}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </>
   );
 
   if (embedded) return content;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}
+    >
       {content}
     </Paper>
   );

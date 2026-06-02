@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
+import shlex
 
 logger = logging.getLogger(__name__)
 
@@ -52,16 +53,17 @@ def _nvblox_topics_in_graph() -> bool:
     env.setdefault("ROS_DOMAIN_ID", "42")
     env.setdefault("ROS_DISTRO", "jazzy")
     env.setdefault("ROS_WS_SETUP", str(repo_root / "warehouse_ros2_ws/install/setup.bash"))
+
+    command = (
+        f"cd {shlex.quote(str(repo_root))} && "
+        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+        "source \"${ROS_WS_SETUP}\" && "
+        "ros2 topic list"
+    )
+
     try:
         result = subprocess.run(
-            [
-                "bash",
-                "-lc",
-                f"cd {repo_root} && "
-                "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-                "source \"${ROS_WS_SETUP}\" && "
-                "ros2 topic list",
-            ],
+            ["bash", "-lc", command],
             env=env,
             check=False,
             capture_output=True,
@@ -70,13 +72,11 @@ def _nvblox_topics_in_graph() -> bool:
         )
     except (OSError, subprocess.TimeoutExpired):
         return False
-    if result.returncode != 0:
-        return False
-    return "/nvblox_node/" in result.stdout
+
+    return result.returncode == 0 and "/nvblox_node/" in result.stdout
 
 
 def _launch_shell_command() -> str:
-    """Prefer lightweight nvblox-only launch; use full isaac launch when requested."""
     mode = os.getenv("WAREHOUSE_MAPPING_STACK_MODE", "nvblox").strip().lower()
     if mode in {"full", "isaac", "launch"}:
         return _FULL_LAUNCH_SHELL
@@ -84,7 +84,8 @@ def _launch_shell_command() -> str:
     nvblox_cmd = os.getenv("WAREHOUSE_NVBLOX_LAUNCH_CMD", "").strip()
     if not nvblox_cmd:
         repo_root = Path(__file__).resolve().parents[3]
-        nvblox_cmd = f"bash {repo_root / 'scripts' / 'start_warehouse_nvblox.sh'}"
+        script = repo_root / "scripts" / "start_warehouse_nvblox.sh"
+        nvblox_cmd = f"bash {shlex.quote(str(script))}"
 
     prefix = (
         "if [ -n \"${VIRTUAL_ENV:-}\" ]; then "
@@ -94,10 +95,11 @@ def _launch_shell_command() -> str:
         "unset VIRTUAL_ENV; "
         "fi; "
         "unset PYTHONPATH PYTHONHOME; "
-        "export PYTHONNOUSERSITE=0; "
+        "export PYTHONNOUSERSITE=1; "
         "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
         "source \"${ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}\" && "
     )
+
     return f"{prefix}exec {nvblox_cmd}"
 
 
@@ -135,6 +137,7 @@ class WarehouseMappingStackProcessManager:
         self._last_error: str | None = None
         self._log_dir = (log_dir or _DEFAULT_LOG_DIR).resolve()
         self._log_dir.mkdir(parents=True, exist_ok=True)
+        self._external_nvblox = False
 
     def status(self) -> MappingStackStatus:
         with self._lock:
@@ -144,6 +147,7 @@ class WarehouseMappingStackProcessManager:
     def start(self) -> MappingStackStatus:
         with self._lock:
             self._refresh_process_state_locked()
+
             if self._process is not None and self._process.poll() is None:
                 return self._status_locked()
 
@@ -153,30 +157,29 @@ class WarehouseMappingStackProcessManager:
                 "yes",
                 "on",
             }
+
             if reuse and _nvblox_process_running() and _nvblox_topics_in_graph():
+                self._external_nvblox = True
                 self._started_at = self._started_at or _utc_now_iso()
                 self._last_error = None
-                logger.info(
-                    "Warehouse mapping stack reusing existing nvblox_node from dev stack"
-                )
-                return MappingStackStatus(
-                    running=True,
-                    pid=None,
-                    started_at=self._started_at,
-                    last_exit_code=None,
-                    last_error=None,
-                )
+                self._last_exit_code = None
 
-            log_path = self._log_dir / "warehouse_mapping_stack.log"
+                logger.info("Warehouse mapping stack reusing existing nvblox_node from dev stack")
+                return self._status_locked()
+
+            self._external_nvblox = False
+
+            log_path = self._log_dir / f"warehouse_mapping_stack_{_utc_now_iso().replace(':', '')}.log"
+
             try:
                 log_handle = log_path.open("a", encoding="utf-8")
                 log_handle.write(f"\n--- mapping stack start {_utc_now_iso()} ---\n")
                 log_handle.flush()
-                env = self._ros_launch_env()
-                launch_shell = _launch_shell_command()
+
                 process = subprocess.Popen(
-                    ["bash", "-lc", launch_shell],
-                    env=env,
+                    ["bash", "-lc", _launch_shell_command()],
+                    env=self._ros_launch_env(),
+                    cwd=str(Path(__file__).resolve().parents[3]),
                     stdout=log_handle,
                     stderr=subprocess.STDOUT,
                     start_new_session=True,
@@ -191,17 +194,27 @@ class WarehouseMappingStackProcessManager:
             self._started_at = _utc_now_iso()
             self._last_exit_code = None
             self._last_error = None
+
             logger.info(
                 "Warehouse mapping stack started pid=%s log=%s",
                 process.pid,
                 log_path,
                 extra={"pid": process.pid, "log_path": str(log_path)},
             )
+
             return self._status_locked()
+
 
     def stop(self) -> MappingStackStatus:
         with self._lock:
             self._refresh_process_state_locked()
+
+            if self._external_nvblox:
+                # Do not kill a developer-owned external nvblox process unless you add an explicit force flag.
+                self._external_nvblox = False
+                self._started_at = None
+                return self._status_locked()
+
             if self._process is None:
                 return self._status_locked()
 
@@ -210,20 +223,35 @@ class WarehouseMappingStackProcessManager:
             self._process = None
             self._close_log_handle()
             self._started_at = None
+
             return self._status_locked()
 
-    def shutdown(self) -> None:
-        self.stop()
 
     def _status_locked(self) -> MappingStackStatus:
-        running = self._process is not None and self._process.poll() is None
+        managed_running = self._process is not None and self._process.poll() is None
+        external_running = (
+                self._external_nvblox
+                and _nvblox_process_running()
+                and _nvblox_topics_in_graph()
+        )
+
+        if self._external_nvblox and not external_running:
+            self._external_nvblox = False
+            self._started_at = None
+            self._last_error = "external nvblox_node is no longer available"
+
+        running = managed_running or external_running
+
         return MappingStackStatus(
             running=running,
-            pid=self._process.pid if running and self._process is not None else None,
+            pid=self._process.pid if managed_running and self._process is not None else None,
             started_at=self._started_at if running else None,
             last_exit_code=self._last_exit_code,
             last_error=self._last_error,
         )
+        def shutdown(self) -> None:
+            self.stop()
+
 
     def _refresh_process_state_locked(self) -> None:
         if self._process is None:
@@ -247,61 +275,68 @@ class WarehouseMappingStackProcessManager:
         if process.poll() is not None:
             self._last_exit_code = int(process.returncode or 0)
             return
+
         pid = process.pid
-        logger.info("Stopping warehouse mapping stack pid=%s", pid, extra={"pid": pid})
+
         for sig in (signal.SIGINT, signal.SIGTERM):
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 os.killpg(pid, sig)
-            except ProcessLookupError:
-                self._last_exit_code = int(process.poll() or 0)
-                return
+
             deadline = time.monotonic() + _TERMINATE_TIMEOUT_S
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     self._last_exit_code = int(process.returncode or 0)
                     return
                 time.sleep(_POLL_INTERVAL_S)
+
         with contextlib.suppress(ProcessLookupError):
             os.killpg(pid, signal.SIGKILL)
+
         try:
             process.wait(timeout=5.0)
         except subprocess.TimeoutExpired:
-            logger.warning("Warehouse mapping stack did not exit after SIGKILL pid=%s", pid)
-        self._last_exit_code = int(process.returncode or 0)
-
-    def _close_log_handle(self) -> None:
-        if self._log_handle is None:
+            self._last_exit_code = -signal.SIGKILL
+            self._last_error = f"process group {pid} did not exit after SIGKILL"
+            logger.warning(self._last_error)
             return
-        try:
-            self._log_handle.flush()
-            self._log_handle.close()
-        except OSError:
-            pass
-        self._log_handle = None
+
+        self._last_exit_code = (
+            int(process.returncode)
+            if process.returncode is not None
+            else -signal.SIGKILL
+        )
+
+
+        def _close_log_handle(self) -> None:
+            if self._log_handle is None:
+                return
+            try:
+                self._log_handle.flush()
+                self._log_handle.close()
+            except OSError:
+                pass
+            self._log_handle = None
 
     @staticmethod
     def _ros_launch_env() -> dict[str, str]:
         env = os.environ.copy()
+        repo_root = Path(__file__).resolve().parents[3]
+
         for key in ("VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME"):
             env.pop(key, None)
+
         path = env.get("PATH", "")
-        venv_bin = os.path.join(os.getcwd(), ".venv", "bin")
-        if venv_bin in path:
-            parts = [part for part in path.split(":") if part and part != venv_bin]
-            env["PATH"] = ":".join(parts)
+        venv_bin = str(repo_root / ".venv/bin")
+        env["PATH"] = ":".join(part for part in path.split(":") if part and part != venv_bin)
+
         env.setdefault("ROS_DISTRO", "jazzy")
         env.setdefault("ROS_DOMAIN_ID", "42")
-        env.setdefault("ROS_WS_SETUP", "warehouse_ros2_ws/install/setup.bash")
+        env.setdefault("ROS_WS_SETUP", str(repo_root / "warehouse_ros2_ws/install/setup.bash"))
         env.setdefault("WAREHOUSE_GAZEBO_SIM", "1")
         env.setdefault("WAREHOUSE_TOPIC_PROFILE", "gazebo")
         env.setdefault("WAREHOUSE_ROS_PROFILE", "gazebo")
         env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
         env.setdefault("PYTHONNOUSERSITE", "0")
-        if "WAREHOUSE_NVBLOX_LAUNCH_CMD" not in env:
-            repo_root = Path(__file__).resolve().parents[3]
-            env["WAREHOUSE_NVBLOX_LAUNCH_CMD"] = (
-                f"bash {repo_root / 'scripts' / 'start_warehouse_nvblox.sh'}"
-            )
         return env
 
 

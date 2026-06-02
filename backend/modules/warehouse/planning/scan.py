@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate
+from backend.modules.warehouse.exceptions import WarehouseMissionFailure
 from backend.modules.warehouse.planning.local_planner import (
     WarehouseDockConfig,
     WarehouseLaneStrategy,
@@ -29,9 +30,7 @@ from backend.modules.warehouse.ports import (
 )
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
-from backend.modules.warehouse.exceptions import WarehouseMissionFailure
 from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
-from backend.modules.warehouse.service.takeoff_readiness import ensure_warehouse_takeoff_readiness
 from backend.modules.warehouse.service.video import (
     warehouse_video_recording_enabled,
     warehouse_video_skip_reason,

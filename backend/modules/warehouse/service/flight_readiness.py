@@ -143,9 +143,7 @@ def _blocking_reasons(
         if planner and planner.status != SubsystemStatus.OK:
             reasons.append(planner.message)
         nvblox = subsystems.get("nvblox")
-        if nvblox and nvblox.status in {SubsystemStatus.FAIL, SubsystemStatus.WARN}:
-            reasons.append(nvblox.message)
-        elif nvblox and nvblox.status == SubsystemStatus.WAITING:
+        if (nvblox and nvblox.status in {SubsystemStatus.FAIL, SubsystemStatus.WARN}) or (nvblox and nvblox.status == SubsystemStatus.WAITING):
             reasons.append(nvblox.message)
 
     return reasons
@@ -216,7 +214,7 @@ def compute_warehouse_flight_readiness(
 
     ready_to_takeoff = (
         ready_to_arm
-        and sensors.status == SubsystemStatus.OK
+        and sensors.status in {SubsystemStatus.OK, SubsystemStatus.WARN}
         and slam.status == SubsystemStatus.OK
     )
     if nvblox.status == SubsystemStatus.FAIL:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any, cast
 
-from sqlalchemy import Index, or_, select, text
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.warehouse.models import WarehouseSensorRig

@@ -71,6 +71,7 @@ class MavlinkDrone(DroneClient):
         self.dead_mans_switch_active = False
         self.dead_mans_switch_triggered = False
         self.home_location = None
+        self.home_source = "unknown"
         self._heartbeat_thread = None
         self._running = False
         self._groundspeed_override_mps = None
@@ -79,6 +80,7 @@ class MavlinkDrone(DroneClient):
         self._mission_abort_requested = threading.Event()
         self._mission_control_changed = threading.Event()
         self._mission_control_lock = threading.Lock()
+        self._connect_lock = threading.Lock()
         self._warehouse_odometry_overlay: dict[str, object] = {}
         self._warehouse_odometry_overlay_loaded_at = 0.0
         # Segment-follower config; replace or mutate before calling follow_waypoints
@@ -86,11 +88,15 @@ class MavlinkDrone(DroneClient):
         self.follower_config: WaypointFollowerConfig = WaypointFollowerConfig()
 
     def connect(self) -> None:
-        self.vehicle = connect(
-            self.connection_str,
-            wait_ready=True,
-            heartbeat_timeout=self.heartbeat_timeout,
-        )
+        with self._connect_lock:
+            if self.vehicle is not None:
+                logger.info("MAVLink vehicle already connected endpoint=%s", self.connection_str)
+                return
+            self.vehicle = connect(
+                self.connection_str,
+                wait_ready=True,
+                heartbeat_timeout=self.heartbeat_timeout,
+            )
 
         # Wait until autopilot sets home_location (requires GPS fix; often set after arm, but we try early)
         # print("Waiting for home location...")
@@ -110,6 +116,7 @@ class MavlinkDrone(DroneClient):
 
         if self.vehicle.home_location:
             self.home_location = self.vehicle.home_location
+            self.home_source = "gps_home"
         else:
             # Fallback: use current global frame as a provisional "home"
             loc = self.vehicle.location.global_frame
@@ -119,11 +126,17 @@ class MavlinkDrone(DroneClient):
                 and getattr(loc, "lon", None) is not None
             ):
                 self.home_location = loc
+                self.home_source = "simulated_home"
             else:
                 self.home_location = None
+                self.home_source = "local_frame_origin"
 
         # print(f"Home location set: {self.home_location}")
-        logger.info(f"Home location set: {self.home_location}")
+        logger.info(
+            "Home location set source=%s value=%s",
+            self.home_source,
+            self.home_location,
+        )
 
         """this function and heart beat flow should be added on raspberry pi on drone"""
         # Start the dead man's switch monitoring
@@ -539,6 +552,7 @@ class MavlinkDrone(DroneClient):
             heartbeat_age_s=getattr(v, "last_heartbeat", None),
             is_armable=getattr(v, "is_armable", None),
             home_set=home_set,
+            home_source=self.home_source,
             home_lat=home_lat,
             home_lon=home_lon,
             ekf_ok=getattr(v, "ekf_ok", None),

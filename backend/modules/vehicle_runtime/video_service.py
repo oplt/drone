@@ -23,7 +23,10 @@ class RuntimeVideoServiceMixin:
             logger.info("Drone video streaming disabled in configuration")
             return
         try:
-            from backend.modules.warehouse.service.video import warehouse_video_blocked, warehouse_video_skip_reason
+            from backend.modules.warehouse.service.video import (
+                warehouse_video_blocked,
+                warehouse_video_skip_reason,
+            )
 
             if warehouse_video_blocked():
                 logger.info(

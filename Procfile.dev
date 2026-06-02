@@ -1,17 +1,18 @@
-redis: sh -c 'mkdir -p backend/storage/redis && exec redis-server --port ${REDIS_PORT:-6380} --save "" --appendonly no --dir backend/storage/redis'
-backend: sh -c '"${APP_PYTHON:-.venv/bin/python}" -m alembic -c backend/alembic.ini upgrade head && exec "${APP_PYTHON:-.venv/bin/python}" -m uvicorn backend.entrypoints.api.app:app --reload --reload-dir backend --host "${APP_HOST:-127.0.0.1}" --port "${APP_PORT:-8000}"'
-default_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=default --hostname=default@%h'
-photogrammetry_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=photogrammetry --hostname=photogrammetry@%h'
-video_analysis_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=video-analysis --hostname=video-analysis@%h'
-warehouse_mapping_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=warehouse-mapping --hostname=warehouse-mapping@%h'
-frontend: cd frontend && rm -rf node_modules/.vite && npm run dev -- --force
-browser: sh -c 'until curl -s http://localhost:5173 >/dev/null 2>&1; do sleep 1; done; xdg-open "http://localhost:5173/?dev_ts=$(date +%s)" >/dev/null 2>&1 || true; tail -f /dev/null'
-# llama_cpp: sh -c 'curl -s http://localhost:8081/v1/models >/dev/null 2>&1 && echo "llama.cpp already running, skipping..." && tail -f /dev/null || /home/polat/Desktop/Projects/llama.cpp/build/bin/llama-server -m /home/polat/Desktop/Projects/llama.cpp/models/qwen2.5-14b-instruct-q5_k_m.gguf --host 127.0.0.1 --port 8081 -c 4096 -ngl 99 -fa -b 512 -ub 256 -t 8 --cache-type-k q8_0 --cache-type-v q8_0'
-# ollama: sh -c 'curl -s http://localhost:11434/api/tags >/dev/null 2>&1 && echo "Ollama already running, skipping..." && tail -f /dev/null || ollama serve'
+redis: sh -c 'mkdir -p backend/storage/redis && exec redis-server --bind 127.0.0.1 --port ${REDIS_PORT:-6380} --save "" --appendonly no --dir backend/storage/redis'
+backend: sh -c 'if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then "${APP_PYTHON:-.venv/bin/python}" -m alembic -c backend/alembic.ini upgrade head; fi; exec "${APP_PYTHON:-.venv/bin/python}" -m uvicorn backend.entrypoints.api.app:app --reload --reload-dir backend --host "${APP_HOST:-localhost}" --port "${APP_PORT:-8000}"'
+frontend: sh -c 'cd frontend && exec npm run dev -- --host "${FRONTEND_HOST:-localhost}" --port "${FRONTEND_PORT:-5173}"'
+browser: sh -c 'until curl -s "http://${FRONTEND_HOST:-localhost}:${FRONTEND_PORT:-5173}" >/dev/null 2>&1; do sleep 1; done; xdg-open "http://${FRONTEND_HOST:-localhost}:${FRONTEND_PORT:-5173}/?dev_ts=$(date +%s)" >/dev/null 2>&1 || true; tail -f /dev/null'
+
+default_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=default --hostname=default@%h --concurrency="${CELERY_DEV_DEFAULT_CONCURRENCY:-2}" --without-gossip --without-mingle'
+photogrammetry_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=photogrammetry --hostname=photogrammetry@%h --concurrency="${CELERY_DEV_PHOTOGRAMMETRY_CONCURRENCY:-1}" --without-gossip --without-mingle'
+video_analysis_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=video-analysis --hostname=video-analysis@%h --concurrency="${CELERY_DEV_VIDEO_ANALYSIS_CONCURRENCY:-1}" --without-gossip --without-mingle'
+warehouse_mapping_worker: sh -c 'exec "${APP_PYTHON:-.venv/bin/python}" -m celery -A backend.entrypoints.workers.celery_app:celery_app worker --loglevel=INFO --queues=warehouse-mapping --hostname=warehouse-mapping@%h --concurrency="${CELERY_DEV_WAREHOUSE_MAPPING_CONCURRENCY:-1}" --without-gossip --without-mingle'
+
+# Optional task/session services. Keep these as a local-dev process registry.
+# Your backend lifecycle manager can call these process names or equivalent scripts on demand.
 gazebo_sensor_bridge: bash -lc 'exec "$(pwd)/scripts/start_gazebo_sensor_bridge.sh"'
 warehouse_sim_tf: scripts/procfile.sh ros2 run warehouse_mapping_bridge warehouse_sim_tf_broadcaster
 warehouse_odometry_export: scripts/procfile.sh ros2 run warehouse_mapping_bridge warehouse_odometry_export
 warehouse_bridge: bash -lc './scripts/warehouse_bridge.sh'
-# nvblox starts when a warehouse flight begins (backend mapping_stack_lifecycle). Optional full graph:
 warehouse_mapping_stack: scripts/procfile.sh ros2 launch warehouse_mapping_bridge isaac_warehouse_mapping.launch.py
 rosbridge_ws: scripts/procfile.sh ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=${ROSBRIDGE_PORT:-9090}

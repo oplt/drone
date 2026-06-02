@@ -81,7 +81,9 @@ def main() -> None:
                 "odometry_drift_m": 0.0,
             }
             self.state_path.parent.mkdir(parents=True, exist_ok=True)
-            self.state_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+            tmp_path = self.state_path.with_suffix(f"{self.state_path.suffix}.tmp")
+            tmp_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+            tmp_path.replace(self.state_path)
             self.publisher.publish(message)
 
     rclpy.init()

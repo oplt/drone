@@ -136,6 +136,15 @@ def sim_ros_odometry_fallback_ok(
 ) -> bool:
     if not config.gazebo_sim:
         return False
+    if components.get("odometry_state_unreadable"):
+        return False
+    if (
+        components.get("visual_slam_healthy")
+        or components.get("visual_slam")
+        or components.get("local_odometry_healthy")
+        or components.get("odometry_fresh")
+    ):
+        return True
     odom = components.get("local_odometry_state")
     odom_dict = odom if isinstance(odom, dict) else {}
     return odometry_state_is_fresh(

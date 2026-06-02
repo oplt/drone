@@ -15,7 +15,6 @@ from backend.modules.warehouse.service.readiness_result import (
 from backend.modules.warehouse.service.runtime_safety import (
     evaluate_local_odometry,
     odometry_display_name,
-    odometry_state_age_s,
     odometry_state_is_fresh,
     odometry_topic_path,
 )
@@ -115,11 +114,17 @@ def check_bridge(
     last_seen_ms = None
     if isinstance(sample_ts, (int, float)):
         last_seen_ms = max(0, int((time.time() - float(sample_ts)) * 1000.0))
-    if last_seen_ms is not None and last_seen_ms > 5000:
+    max_sample_age_ms = int(
+        components.get("health_sample_max_age_ms")
+        or components.get("health_cache_ttl_ms")
+        or 30_000
+    )
+    if last_seen_ms is not None and last_seen_ms > max_sample_age_ms:
         return SubsystemHealth(
             SubsystemStatus.WARN,
             "Bridge health sample aging",
             last_seen_ms=last_seen_ms,
+            details={"max_age_ms": max_sample_age_ms},
         )
     return SubsystemHealth(
         SubsystemStatus.OK,
@@ -295,11 +300,17 @@ def check_sensors(
     lidar_diag = _topic_diag(components, "raw_lidar")
     vslam_diag = _topic_diag(components, "visual_slam_odom")
 
+    require_raw_lidar = bool(
+        components.get("require_raw_lidar")
+        or (
+            not config.gazebo_sim and str(components.get("topic_profile") or "").lower() != "gazebo"
+        )
+    )
     checks: list[tuple[str, dict[str, Any] | None, int, bool]] = [
         ("imu", imu_diag, config.imu_max_age_ms, True),
         ("depth", depth_diag, config.depth_max_age_ms, True),
         ("rgb", rgb_diag, config.rgb_max_age_ms, True),
-        ("lidar", lidar_diag, config.depth_max_age_ms, False),
+        ("lidar", lidar_diag, config.depth_max_age_ms, require_raw_lidar),
         ("visual_slam_odom", vslam_diag, config.pose_max_age_ms, True),
     ]
 
@@ -353,7 +364,7 @@ def check_sensors(
             f"max {int(config.odometry_max_age_s * 1000)}ms)"
         )
     elif odom_health.age_s is not None and odom_health.age_s > (config.odometry_max_age_s * 0.8):
-        warnings.append(f"local pose near threshold ({odom_health.display_name})")
+        details["local_pose_warning"] = f"local pose near threshold ({odom_health.display_name})"
 
     if failures:
         return SubsystemHealth(
@@ -444,10 +455,7 @@ def check_nvblox(
     *,
     mapping_stack_running: bool = False,
 ) -> SubsystemHealth:
-    checks_active = bool(
-        mapping_stack_running
-        or components.get("nvblox_checks_active")
-    )
+    checks_active = bool(mapping_stack_running or components.get("nvblox_checks_active"))
     if components.get("nvblox_deferred") and not checks_active:
         return SubsystemHealth(
             SubsystemStatus.WAITING,

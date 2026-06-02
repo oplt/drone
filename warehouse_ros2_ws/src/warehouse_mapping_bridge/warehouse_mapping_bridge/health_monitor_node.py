@@ -36,9 +36,9 @@ def main() -> None:
             }
             payload = {
                 "timestamp_utc": datetime.now(UTC).isoformat(),
-                "ready": all(components.values()),
-                "components": components,
-                "topics": self.topics,
+                "ready": None,
+                "status": "heartbeat",
+                "source": "warehouse_health_monitor",
             }
             msg = String()
             msg.data = json.dumps(payload, sort_keys=True)

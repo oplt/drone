@@ -10,9 +10,9 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from time import monotonic
+from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 from .config import BridgeConfig, topic_aliases, topic_env, topic_registry
@@ -43,7 +43,7 @@ _ARTIFACT_EXTENSIONS = {
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def safe_token(value: object) -> str:
@@ -251,11 +251,15 @@ class BridgeState:
         if force:
             return self._run_deep_health_probe(probe_mode="deep_forced")
 
+        if self._background_probe_enabled():
+            return self._health_from_cache(deep=True, force=False)
+
         stale_s = float(os.getenv("WAREHOUSE_HEALTH_DEEP_STALE_S", str(self.DEEP_HEALTH_STALE_S)))
 
         with self._health_lock:
             probe_in_progress = self._deep_probe_in_progress
             deep_cache = self._deep_health_cache
+            shallow_cache = self._shallow_health_cache
 
             if probe_in_progress and deep_cache is not None:
                 return self._decorate_cached_health(
@@ -329,6 +333,8 @@ class BridgeState:
 
     def _health_from_cache(self, *, deep: bool, force: bool = False) -> dict[str, Any]:
         del deep
+        refresh_candidate: tuple[float, dict[str, Any]] | None = None
+        force_refresh_candidate: dict[str, Any] | None = None
 
         with self._health_lock:
             probe_in_progress = self._deep_probe_in_progress
@@ -338,29 +344,52 @@ class BridgeState:
             if shallow_cache is not None and not force:
                 cached_at, cached_payload = shallow_cache
                 age_s = monotonic() - cached_at
-                refresh_s = float(os.getenv("WAREHOUSE_HEALTH_SHALLOW_REFRESH_S", "3.0"))
-                if age_s > refresh_s:
-                    refreshed = self._refresh_shallow_payload(cached_payload)
-                    if refreshed is not None:
-                        return refreshed
-                return self._decorate_cached_health(
-                    shallow_cache,
-                    probe_mode="shallow_cached",
-                    probe_in_progress=probe_in_progress,
-                )
+                refresh_s = float(os.getenv("WAREHOUSE_HEALTH_SHALLOW_REFRESH_S", "8.0"))
+                if age_s > refresh_s and not probe_in_progress:
+                    refresh_candidate = (cached_at, dict(cached_payload))
+                else:
+                    return self._decorate_cached_health(
+                        shallow_cache,
+                        probe_mode="shallow_cached",
+                        probe_in_progress=probe_in_progress,
+                    )
 
-            if deep_cache is not None:
+            elif deep_cache is not None:
                 cached_at, deep_payload = deep_cache
                 out = self._shallow_from_deep(deep_payload)
-                if force:
-                    refreshed = self._refresh_shallow_payload(out)
-                    if refreshed is not None:
-                        return refreshed
-                out["probe_in_progress"] = probe_in_progress
-                out["probe_age_s"] = round(monotonic() - cached_at, 2)
-                out["cache_ready"] = True
-                out["diagnostics_ready"] = True
-                return out
+                if force and not probe_in_progress:
+                    force_refresh_candidate = out
+                else:
+                    out["probe_in_progress"] = probe_in_progress
+                    out["probe_age_s"] = round(monotonic() - cached_at, 2)
+                    out["cache_ready"] = True
+                    out["diagnostics_ready"] = True
+                    return out
+
+        if refresh_candidate is not None:
+            refreshed = self._refresh_shallow_payload(refresh_candidate[1])
+            if refreshed is not None:
+                with self._health_lock:
+                    self._shallow_health_cache = (monotonic(), dict(refreshed))
+                return refreshed
+
+            return self._decorate_cached_health(
+                refresh_candidate,
+                probe_mode="shallow_cached",
+                probe_in_progress=False,
+            )
+
+        if force_refresh_candidate is not None:
+            refreshed = self._refresh_shallow_payload(force_refresh_candidate)
+            if refreshed is not None:
+                with self._health_lock:
+                    self._shallow_health_cache = (monotonic(), dict(refreshed))
+                return refreshed
+
+            force_refresh_candidate["probe_in_progress"] = False
+            force_refresh_candidate["cache_ready"] = True
+            force_refresh_candidate["diagnostics_ready"] = True
+            return force_refresh_candidate
 
         return self._empty_health_payload(probe_in_progress=probe_in_progress)
 
@@ -602,9 +631,7 @@ class BridgeState:
         disk = shutil.disk_usage(self.config.capture_root)
         odometry_state, odometry_state_unreadable = self._read_odometry_state()
 
-        probe_keys = sorted(
-            set(registry.required_for_perception) | {"left_image", "right_image", "mesh"}
-        )
+        probe_keys = sorted(set(registry.required_for_perception) | {"left_image", "right_image"})
         if check_nvblox:
             probe_keys = sorted(set(probe_keys) | set(registry.required_for_nvblox_any))
         deep_probe = deep or self._deep_probe_enabled()
@@ -824,6 +851,8 @@ class BridgeState:
                 "capabilities": capabilities,
                 "health_layers": health_layers,
                 "health_sample_timestamp": sample_ts,
+                "health_sample_max_age_ms": int(self.DEEP_HEALTH_STALE_S * 1000),
+                "health_cache_ttl_ms": int(self.HEALTH_CACHE_TTL_S * 1000),
             }
         return {
             "status": health_status,
@@ -1022,12 +1051,12 @@ class BridgeState:
             expected=primary,
             matched=alias if matched else None,
             listed=bool(matched),
-            publisher_count=0,
-            publishing=False,
+            publisher_count=1 if matched else 0,
+            publishing=bool(matched),
             hz=None,
             last_message_age_s=None,
             message_type=None,
-            healthy=False,
+            healthy=bool(matched),
             error=None if matched else "topic not listed in graph",
             readiness_state="shallow_present" if matched else "topic_missing",
         )
