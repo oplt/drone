@@ -2,507 +2,646 @@
 
 ## 1. Executive Summary
 
-Reviewed `warehouse_ros2_ws` and all visible subfolders: source package, launch files, configs, RViz config, tests, build/install/log artifacts. Workspace contains one ROS 2 Python package, `warehouse_mapping_bridge`, focused on bridge/health/session/export helpers. It does not contain actual robot description, Gazebo world, ros_gz parameter bridge mappings, Isaac ROS nvblox launch files, camera drivers, IMU drivers, visual SLAM launch files, or lifecycle-managed mapping nodes.
+The `warehouse_ros2_ws` workspace is in much better shape than a raw prototype: Python package metadata exists, launch files are importable when dependencies are installed, core node tests pass, session management has validation, and the bridge service has useful safety checks.
 
-Overall health: build logs show no recorded build errors, Python syntax compiles, and existing unit tests pass when package source path is added manually. System-level ROS 2 flow is fragile because most critical behavior is delegated to environment variables and shell commands. Biggest risks are incomplete launch composition, topic/config drift, missing package dependencies, incorrect external-vision frame conversion, TF frame mismatch between config and broadcaster, and blocking filesystem/network/subprocess work in callback/API paths.
+The main remaining risk is integration correctness. The Isaac path is mostly an orchestration wrapper around externally supplied commands. The Gazebo path has a packaged world and bridges, but the default world does not contain a drone, sensors, or Gazebo plugins that produce the bridged topics. There is also a serious profile/config mismatch: the Gazebo launch passes `defaults.yaml`, whose default topics are Isaac-oriented, into helper nodes. That can make Gazebo helper nodes monitor or consume Isaac topic names instead of Gazebo topic names.
+
+Runtime reliability is moderate. Several nodes publish status, export artifacts, and validate paths, but health and map readiness are still based on topic presence or simplified metadata, not end-to-end data freshness. Process supervision and background export behavior are usable but should be hardened for long-running sessions.
 
 Verification performed:
 
-- `python -m compileall -q warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge warehouse_ros2_ws/src/warehouse_mapping_bridge/launch`: passed.
-- `PYTHONPATH=warehouse_ros2_ws/src/warehouse_mapping_bridge pytest -q warehouse_ros2_ws/src/warehouse_mapping_bridge/tests`: 17 passed.
-- `pytest -q warehouse_ros2_ws/src/warehouse_mapping_bridge/tests`: failed from repo root because `warehouse_mapping_bridge` is not importable without install/PYTHONPATH.
-- Existing `warehouse_ros2_ws/log/build_*` package stderr/stdout_stderr logs contained no errors or warnings.
+* `python -m compileall -q warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge warehouse_ros2_ws/src/warehouse_mapping_bridge/launch`
+* `pytest -q warehouse_ros2_ws/src/warehouse_mapping_bridge/tests`
+* Result: `27 passed, 1 skipped`
+* The skipped test is the launch import check when local Python lacks `lark`; `package.xml` declares `python3-lark`, so this is an environment caveat rather than a package omission.
 
 ## 2. Critical Issues
 
-### C1. Gazebo launch does not launch Gazebo, ros_gz_bridge, world, or bridge mappings
+### C1. Default Gazebo launch does not produce the bridged sensor topics
 
-- Where: `src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py:9-59`.
-- Problem: File name says `gazebo_warehouse_stack`, package declares `ros_gz_bridge`, config references Gazebo topics, but launch starts only bridge helper nodes and rosbridge websocket. No `gz sim`, no world, no `ros_gz_bridge parameter_bridge`, no camera/depth/IMU/odom bridges.
-- Why it matters: `/warehouse/front/rgbd/image`, `/warehouse/front/rgbd/depth_image`, `/warehouse/drone/odometry`, IMU, and point cloud topics will not exist from this launch alone. Health can stay `waiting_for_gazebo` or `degraded`; mapping/sensor flow cannot run.
-- Severity: Critical.
-- Best fix: Add launch arguments for world path, `GZ_PARTITION`, bridge config, `use_sim_time`, and start `ros_gz_sim` plus `ros_gz_bridge` parameter bridges for image/depth/camera_info/point cloud/IMU/odometry/clock/TF as needed.
-- Alternative: Rename this launch to `warehouse_bridge_helpers.launch.py` and provide a separate full simulation launch.
-- Fix type: Launch changes, dependency changes, config changes.
+* Severity: Critical
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/worlds/warehouse_empty.sdf`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`, bridge declarations around the `/warehouse/front/rgbd/*`, `/warehouse/drone/odometry`, and IMU topics
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/warehouse_topics.yaml`, Gazebo topic profile
+* Problem: The packaged default world is essentially an empty warehouse/floor scene. It does not spawn a drone model with RGB-D camera, lidar/pointcloud, odometry, or IMU publishers. The launch file still starts `ros_gz_bridge` for those topics.
+* Why it matters: The Gazebo launch can start successfully while mapping, odometry export, health checks, and frontend map flow remain empty. This is a false-positive launch: processes run, but required sensor flow does not exist.
+* Best fix: Add a Gazebo model/spawn path that creates the warehouse drone with the expected camera, depth, pointcloud, odometry, and IMU publishers. Use the packaged URDF/SDF consistently and add `robot_state_publisher` plus a spawn node or Gazebo entity insertion command.
+* Alternative fix: Change the default Gazebo launch to require a user-provided world/model path and fail fast if the default empty world is selected for a full-stack run.
+* Change type: Simulation, launch, config, model changes.
 
-### C2. Isaac launch does not launch Isaac ROS stack unless env vars are manually populated
+### C2. Gazebo helper nodes receive Isaac default topic parameters
 
-- Where: `src/warehouse_mapping_bridge/launch/isaac_warehouse_mapping.launch.py:24-35`.
-- Problem: Camera, IMU, image pipeline, visual SLAM, depth, nvblox, and RViz are optional `ExecuteProcess` values read from env vars. With defaults, only health monitor, MAVLink bridge, and artifact exporter start.
-- Why it matters: Default `WAREHOUSE_ROS_LAUNCH_CMD` points to this launch (`config.py:355-358`), so autolaunch can start a graph with no perception producers.
-- Severity: Critical.
-- Best fix: Provide explicit launch arguments and include known Isaac ROS launch descriptions or fail fast when required commands are missing. Log/raise a clear launch error if `WAREHOUSE_*_LAUNCH_CMD` needed for selected profile is empty.
-- Alternative: Keep env override model but add required profile validation before starting bridge helper nodes.
-- Fix type: Launch changes, config validation.
+* Severity: Critical
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`, helper node parameter list uses `defaults.yaml`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/defaults.yaml`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/warehouse_topics.yaml`
+* Problem: `defaults.yaml` contains Isaac-oriented defaults such as `/visual_slam/tracking/odometry`, `/front_stereo_camera/left/image_raw`, `/depth`, and `/lidar/points`. The Gazebo launch passes that same file into Gazebo helper nodes. Those declared parameters can override profile-derived Gazebo topics.
+* Why it matters: Health monitor, TF broadcaster, odometry export, and artifact/export helpers may watch or subscribe to the wrong topics even though `WAREHOUSE_TOPIC_PROFILE=gazebo` is set.
+* Best fix: Split defaults by profile, for example `defaults_isaac.yaml` and `defaults_gazebo.yaml`, and pass the matching file from each launch. Keep topic defaults in one registry and generate node parameters from that registry where practical.
+* Alternative fix: Remove topic parameters from `defaults.yaml` and let helper nodes resolve topics from `WAREHOUSE_TOPIC_PROFILE` only.
+* Change type: Config and launch changes.
 
-### C3. ROS package misses required runtime dependencies for used interfaces and tools
+### C3. Gazebo IMU bridge points at a model/topic that the default world does not create
 
-- Where: `src/warehouse_mapping_bridge/package.xml:9-24`; `src/warehouse_mapping_bridge/warehouse_mapping_bridge/nvblox_export.py:59`; `src/warehouse_mapping_bridge/rviz/nvblox_warehouse.rviz:2-64`.
-- Problem: Code calls `nvblox_msgs/srv/FilePath`, uses RViz configs/plugins, records rosbags, and probes Gazebo with `gz`, but `package.xml` does not declare `nvblox_msgs`, `rosbag2_transport`, `rviz2`, `rviz_common`, `rviz_default_plugins`, `ros_gz_sim`, or Gazebo/gz tools.
-- Why it matters: Launch/export/RViz can fail on a clean machine even if Python package builds.
-- Severity: Critical.
-- Best fix: Add exec dependencies for every runtime interface/tool actually used. At minimum: `nvblox_msgs`, `rosbag2_transport`, `rviz2`, `rviz_common`, `rviz_default_plugins`, `ros_gz_sim` if Gazebo launch is implemented.
-- Alternative: Gate optional features behind dependency checks and document install extras.
-- Fix type: Dependency changes.
-
-### C4. External vision MAVLink pose uses ENU/NED position conversion but not full attitude/frame conversion
-
-- Where: `src/warehouse_mapping_bridge/warehouse_mapping_bridge/vision_mavlink.py:46-64`; publisher in `vision_mavlink_bridge_node.py:63-77`.
-- Problem: Position swaps ENU-like ROS x/y/z into NED-like north/east/down (`x_north=position.y`, `y_east=position.x`, `z_down=-z`), but roll/pitch/yaw are raw Euler angles from the ROS quaternion. MAVLink `VISION_POSITION_ESTIMATE` expects vehicle-local frame convention aligned with autopilot EKF expectations.
-- Why it matters: Autopilot may fuse wrong yaw/attitude, causing localization drift or unsafe position estimate jumps.
-- Severity: Critical.
-- Best fix: Implement explicit ROS ENU/body frame to MAVLink local NED/FRD transform for both position and orientation, with tests for identity, 90-degree yaw, and pitch/roll signs. Prefer using a proven frame conversion helper if available.
-- Alternative: Send only position through a message/path configured for ENU if autopilot supports it, or disable by default until conversion is validated.
-- Fix type: Code changes, tests, flight-stack config.
-
-### C5. TF broadcaster can publish frames inconsistent with configured health frame registry
-
-- Where: `config/warehouse_topics.yaml:87-95`; `sim_tf_broadcaster_node.py:46-57`, `105-141`.
-- Problem: Topic registry uses Gazebo frames such as `iris_with_standoffs/base_link`, but `sim_tf_broadcaster_node` defaults to `WAREHOUSE_BASE_LINK_FRAME` or `base_link`, ignoring `topic_registry().frames`. It subscribes to `visual_slam_odom` unless `WAREHOUSE_ODOM_TOPIC` is set.
-- Why it matters: Health probes can expect `odom -> iris_with_standoffs/base_link -> iris_rplidar_rgbd/...`, while broadcaster publishes `odom -> base_link`; nvblox and RViz may see disconnected TF.
-- Severity: Critical.
-- Best fix: In TF broadcaster, load `topic_registry().frames` and use profile-specific `odom`, `base_link`, and `camera` defaults. Add launch params/env propagation for Gazebo profile.
-- Alternative: Remove profile-specific Gazebo frames from config and standardize all bridge nodes on `base_link` and `front_rgbd_camera_link`.
-- Fix type: Code changes, config changes, launch changes.
+* Severity: Critical
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`, IMU bridge mapping
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/warehouse_topics.yaml`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/worlds/warehouse_empty.sdf`
+* Problem: The bridge maps a long Gazebo world/model IMU topic, but the packaged world does not define that model or sensor. Topic config also leaves Gazebo IMU discovery opt-in.
+* Why it matters: IMU consumers and health checks can wait forever. If a different Gazebo model name is used, the bridge silently targets a stale topic path.
+* Best fix: Make the IMU topic come from the Gazebo profile registry and launch argument, and ensure the default model actually publishes it.
+* Alternative fix: Enable robust discovery by default for Gazebo and fail fast when no IMU topic is discovered.
+* Change type: Launch, config, simulation changes.
 
 ## 3. High-Priority Bugs
 
-### H1. Topic defaults conflict across `config.py`, `warehouse_topics.yaml`, `defaults.yaml`, RViz, and nodes
+### H1. Isaac launch is not a complete simulation integration
 
-- Where: `config.py:60-94`, `config/warehouse_topics.yaml:22-38`, `config/defaults.yaml:4-18`, `rviz/nvblox_warehouse.rviz:16-52`, `live_map_publisher_node.py:64-73`.
-- Problem: Isaac defaults in `config.py` use stereo image topics `/warehouse/stereo/...`, while YAML profile uses `/left/image_rect` and `/right/image_rect`. Raw lidar is `/scan` in `config.py`, `/lidar/points` in YAML/defaults/RViz, and Gazebo raw lidar is `/warehouse/front/rgbd/points`. Pointcloud is `/nvblox_node/static_esdf_pointcloud` in registry but `/nvblox_node/pointcloud` in RViz/defaults.
-- Why it matters: If YAML file is not found or an installed share path differs, topic behavior changes. RViz and live-map can subscribe to different streams than health/export.
-- Severity: High.
-- Best fix: Keep one topic registry source. Remove duplicate hardcoded defaults or generate node/RViz params from the same config.
-- Alternative: Add tests asserting `config.py`, YAML, RViz, and node env defaults agree for each profile.
-- Fix type: Config changes, code changes, tests.
+* Severity: High
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/isaac_warehouse_mapping.launch.py`
+* Problem: The launch file validates optional environment commands such as `WAREHOUSE_ISAAC_LAUNCH`, `WAREHOUSE_NVBL0X_LAUNCH`, and `WAREHOUSE_VISUAL_SLAM_LAUNCH`, but the package does not provide real Isaac/NVBlox/Visual SLAM launch includes.
+* Why it matters: A user can install the package and still not have a complete Isaac pipeline. The launch wrapper depends on external shell commands and environment variables.
+* Best fix: Provide first-class launch arguments for Isaac Sim, Visual SLAM, and NVBlox package launch files. Prefer `IncludeLaunchDescription` over opaque shell commands when possible.
+* Alternative fix: Keep env command mode, but document it as external integration and add a preflight command that prints exact missing commands and expected topic outputs.
+* Change type: Launch, package integration, documentation.
 
-### H2. No ROS parameters are declared or consumed despite YAML parameter file
+### H2. Process supervisor leaks parent-side log file descriptors
 
-- Where: `config/defaults.yaml:1-18`; all node files.
-- Problem: `defaults.yaml` is shaped like a ROS params file, but launch files do not pass it and nodes read environment variables via `topic_env()` instead of `declare_parameter`.
-- Why it matters: `ros2 launch ... params_file:=...` style config will not affect these nodes. Parameter override/debug tooling cannot configure them.
-- Severity: High.
-- Best fix: Convert nodes to declare parameters for topics, frames, rates, paths, and flags. Pass `defaults.yaml`/profile config through launch.
-- Alternative: Rename `defaults.yaml` to avoid implying ROS params and document env-only config.
-- Fix type: Code changes, launch changes, config changes.
+* Severity: High
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/process_supervisor.py`, `start_process`
+* Problem: When `log_path` is provided, the function opens the log file and passes it as stdout/stderr to `subprocess.Popen`, but the parent-side file handle is not closed or retained for lifecycle management.
+* Why it matters: Repeated autolaunch/replay sessions can accumulate open descriptors. Long-running services can eventually hit OS limits or hold files open unexpectedly.
+* Best fix: Close the parent handle immediately after `Popen` succeeds, while leaving the child with its duplicated descriptor. On `Popen` failure, close in a `finally`.
+* Alternative fix: Store the log handle in a process wrapper and close it during termination.
+* Change type: Code change.
 
-### H3. `use_sim_time` and `/clock` are not configured for simulation
+### H3. MAVLink vision conversion is simplified and not fully validated
 
-- Where: all launch files; no `use_sim_time` parameter in nodes.
-- Problem: Gazebo profile has no `/clock` bridge and no `use_sim_time` setting passed to nodes.
-- Why it matters: TF timestamps and sensor timestamps can be inconsistent in sim. Health code partly ignores sim stamps, but TF, RViz, and nvblox still depend on coherent time.
-- Severity: High.
-- Best fix: Bridge `/clock`, set `use_sim_time:=true` for simulation nodes, and pass it through launch.
-- Alternative: Keep wall time only, but then do not use Gazebo sim-time stamps in TF/sensor pipelines.
-- Fix type: Launch changes, config changes.
+* Severity: High
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/vision_mavlink.py`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/tests/test_vision_mavlink.py`
+* Problem: ENU-to-NED position/yaw conversion is covered, but full attitude conversion for roll/pitch/body frame semantics is simplified. Tests do not prove correctness for full quaternion orientation.
+* Why it matters: Wrong attitude can destabilize downstream PX4/ArduPilot vision fusion if vision messages are enabled.
+* Best fix: Convert orientation with a full quaternion or rotation-matrix transform for ENU/FLU to NED/FRD, then test roll, pitch, yaw, and identity cases.
+* Alternative fix: Keep position-only MAVLink by default and explicitly disable or zero attitude unless full conversion is verified.
+* Change type: Code and test changes.
 
-### H4. Health monitor computes topic components but drops them from published payload
+### H4. Odometry exporter overstates SLAM readiness
 
-- Where: `health_monitor_node.py:21-45`.
-- Problem: `components` is built at lines 34-36 and never included in `payload`.
-- Why it matters: `/warehouse/mapping/health` only publishes heartbeat metadata, not actual topic readiness. Consumers cannot use it for health.
-- Severity: High.
-- Best fix: Include `components`, `ready`, and missing topic list in the message. Use shared diagnostic logic instead of duplicating shallow topic checks.
-- Alternative: Rename topic to `/warehouse/mapping/heartbeat` and let FastAPI `/health` be the only diagnostics API.
-- Fix type: Code changes.
+* Severity: High
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/odometry_export_node.py`
+* Problem: Exported state marks fields such as SLAM readiness and tracking as successful instead of deriving them from real tracking status, covariance, diagnostics, or source-specific state.
+* Why it matters: Backend/UI consumers may treat a weak or invalid odometry stream as healthy SLAM.
+* Best fix: Add explicit tracking status inputs where available, include covariance quality thresholds, and publish `unknown` when the source cannot prove tracking health.
+* Alternative fix: Rename hardcoded flags to `odom_received` and avoid claiming SLAM tracking quality.
+* Change type: Code and config changes.
 
-### H5. Live map node reports `nvblox_ready=True` without validating nvblox data
+### H5. Health monitor checks topic names, not message freshness
 
-- Where: `live_map_publisher_node.py:113-120`.
-- Problem: Health payload hardcodes `nvblox_ready`, `mapping_recording`, and `stack_running` to `True`.
-- Why it matters: Backend may display false readiness when pointcloud is stale, token missing, nvblox absent, or stack stopped.
-- Severity: High.
-- Best fix: Subscribe to `/warehouse/mapping/health` or query shared health state and publish real flags.
-- Alternative: Omit health fields from live-map payload unless validated.
-- Fix type: Code changes.
+* Severity: High
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/health_monitor_node.py`
+* Problem: The node uses ROS graph topic presence to mark required data flow as available. It does not subscribe to messages, track last receive time, check publisher count, or verify rate.
+* Why it matters: A topic can exist with no data, stale data, wrong QoS, or a dead publisher. Health can report OK while mapping cannot progress.
+* Best fix: Subscribe to required topics with appropriate QoS, maintain last-message timestamps, and report stale/missing/rate-low states.
+* Alternative fix: Use the FastAPI strict health probes as the only authoritative health result and make this node a coarse graph monitor.
+* Change type: Code and diagnostics changes.
 
-### H6. Autolaunch process failure is not checked after `Popen`
+### H6. Gazebo bridge mapping is duplicated and config file is not consumed
 
-- Where: `session.py:1574-1583`, `1805-1818`.
-- Problem: `_launch_mapping_graph` starts a process and stores PID, but no post-start health check or immediate return-code check verifies launch success.
-- Why it matters: `/mapping/start` can return accepted/running when `ros2 launch ...` immediately fails due missing package/env/dependency.
-- Severity: High.
-- Best fix: After `Popen`, wait a short grace period, check `poll()`, capture logs, and mark session `failed` if launch exits. Tie session status to `/ready`.
-- Alternative: Use ROS 2 launch API and event handlers instead of shelling out.
-- Fix type: Code changes, launch changes.
+* Severity: High
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/gazebo_bridge.yaml`
+* Problem: Bridge mappings exist in a YAML config, but the launch file declares mappings inline.
+* Why it matters: Topic changes must be updated in multiple places. The config can become stale while the launch still uses old mappings.
+* Best fix: Build the bridge command from `gazebo_bridge.yaml`, or remove the unused YAML and keep one source of truth.
+* Alternative fix: Add tests that compare the launch bridge list with YAML mappings.
+* Change type: Launch/config/test changes.
 
-### H7. nvblox export assumes service names and type without discovery
+### H7. Packaged URDF is not connected to launch or TF publication
 
-- Where: `nvblox_export.py:47-78`, `99-109`.
-- Problem: Hardcoded `/nvblox_node/save_ply`, `/nvblox_node/save_map`, and `nvblox_msgs/srv/FilePath`.
-- Why it matters: Isaac ROS nvblox service names/types vary by version/config. Export silently returns zero artifacts when service API differs.
-- Severity: High.
-- Best fix: Make service names/types configurable and verify via `ros2 service list -t` before call.
-- Alternative: Record bag snapshot first, then try service export opportunistically.
-- Fix type: Code changes, config changes, dependency changes.
-
-### H8. Plain repo-root pytest fails
-
-- Where: test invocation from repo root; package layout in `setup.py:8-44`.
-- Problem: `pytest -q warehouse_ros2_ws/src/warehouse_mapping_bridge/tests` fails with `ModuleNotFoundError: No module named 'warehouse_mapping_bridge'` unless package is installed or `PYTHONPATH` is set.
-- Why it matters: CI/local validation can fail despite passing tests under sourced/installed environment.
-- Severity: High.
-- Best fix: Run tests through `colcon test` after build, add tox/pytest config with `pythonpath = src/warehouse_mapping_bridge`, or install package in editable mode for non-colcon testing.
-- Alternative: Document exact command.
-- Fix type: Test/config changes.
+* Severity: High
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/urdf/warehouse_drone.urdf`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`
+* Problem: A drone URDF exists, but the Gazebo stack does not run `robot_state_publisher` or spawn this model.
+* Why it matters: The TF tree and simulated sensors can diverge. The URDF gives a false sense of model integration.
+* Best fix: Add `robot_state_publisher`, pass `robot_description`, and spawn the model into Gazebo with matching sensor/plugin definitions.
+* Alternative fix: Remove the unused URDF until a proper model is available.
+* Change type: Launch, simulation, TF changes.
 
 ## 4. Bottlenecks and Performance Problems
 
-### P1. Live map callback performs blocking HTTP request
+### P1. Session start holds the session lock during launch grace waiting
 
-- Where: `live_map_publisher_node.py:25-42`, `83-122`.
-- Problem: `on_pointcloud` calls `urllib.request.urlopen(..., timeout=2.0).read()` inside the ROS subscription callback.
-- Why it matters: A slow backend can block pointcloud callback execution for up to 2 seconds, causing backlog and stale live map updates.
-- Severity: High.
-- Best fix: Move HTTP publishing to a worker thread/async queue with bounded size and drop old updates under load.
-- Alternative: Use a timer to publish latest sampled state, not every pointcloud callback.
-- Fix type: Code changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/session.py`, `start_mapping`
+* Problem: Autolaunch starts the mapping graph and waits during a launch grace period while still inside the session lock.
+* Why it matters: Status, stop, or other session operations can block for several seconds at the worst possible time.
+* Best fix: Reduce lock scope. Reserve/update session state under lock, release the lock for process start/grace wait, then reacquire to finalize state.
+* Alternative fix: Move launch startup into a supervisor thread and expose a `starting` state.
+* Change type: Code change.
 
-### P2. Artifact exporter recursively scans and copies every 2 seconds forever
+### P2. Artifact exporter recursively scans output directories every interval
 
-- Where: `artifact_exporter_node.py:37-43`, `63-68`.
-- Problem: Timer calls `_copy_outputs(output_dir.rglob("*"))` every 2 seconds and copies matching files each time.
-- Why it matters: Large map output directories can cause repeated disk reads/writes and high CPU/IO.
-- Severity: High.
-- Best fix: Track copied file mtime/size, use event-triggered export on stop, or increase timer and only copy deltas.
-- Alternative: Disable periodic node and rely on `stop_mapping` harvest.
-- Fix type: Code changes, launch changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/artifact_exporter_node.py`
+* Problem: The exporter walks the output directory repeatedly, tracks copied state in memory, and writes `artifact_index.json` frequently.
+* Why it matters: Large bag/map/output trees can cause repeated filesystem cost and memory growth.
+* Best fix: Track changed files incrementally by mtime/size, throttle index writes, and cap or compact copied-state metadata.
+* Alternative fix: Increase export interval and exclude large transient directories by default.
+* Change type: Code/config changes.
 
-### P3. Odometry export writes JSON to disk on every odometry callback
+### P3. Live map publisher sends approximate metadata, not real map chunks
 
-- Where: `odometry_export_node.py:45-87`.
-- Problem: Every odometry message writes temp JSON and renames it.
-- Why it matters: At 30-100 Hz this creates continuous filesystem writes on Jetson storage and can hurt latency/storage lifetime.
-- Severity: Medium.
-- Best fix: Throttle state file writes to 2-5 Hz while still republishing odometry at full rate.
-- Alternative: Use in-memory health subscription and write only session snapshots.
-- Fix type: Code changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/live_map_publisher_node.py`
+* Problem: The node derives a bounding box/sample from `PointCloud2` metadata and sends that to the backend. It does not transmit actual point data, voxel blocks, ESDF/TSDF data, or occupancy slices.
+* Why it matters: The frontend/backend may display a map status that looks richer than the data really is.
+* Best fix: Define a real live-map payload contract: downsampled point batches, occupancy chunks, or nvblox mesh/ESDF updates.
+* Alternative fix: Rename the payload to `pointcloud_summary` and present it only as telemetry.
+* Change type: Code/API changes.
 
-### P4. Health diagnostics spawn many subprocesses
+### P4. Backend POST failures in live map worker are silent
 
-- Where: `topic_diagnostics.py:101-153`, `424-434`, `437-455`; `session.py:608-872`, `1379-1468`.
-- Problem: Deep health can run `ros2 topic list`, `ros2 topic info`, `ros2 topic hz`, `tf2_echo`, and `gz topic` via subprocesses. Background loop runs every 8 seconds by default (`session.py:202-245`).
-- Why it matters: Shelling out repeatedly is expensive and brittle under load; `ros2 topic hz` can block on sensor streams.
-- Severity: Medium.
-- Best fix: Replace subprocess probes with rclpy graph APIs where possible, cache QoS/topic metadata, and make deep probes explicit or lower frequency.
-- Alternative: Keep current presence mode for fast health and disable background deep probe by default on resource-limited Jetson.
-- Fix type: Code changes, config changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/live_map_publisher_node.py`
+* Problem: Network/backend errors are swallowed in the worker.
+* Why it matters: Operators cannot distinguish a quiet backend from a broken live-map stream.
+* Best fix: Add throttled warning logs and diagnostics for failed POSTs, queue drops, and last successful publish time.
+* Alternative fix: Publish a ROS diagnostic topic only.
+* Change type: Code/diagnostics changes.
 
-### P5. `stop_mapping` can block API thread for export/record/copy
+### P5. Deep health probes can be expensive if run frequently
 
-- Where: `session.py:1600-1637`, `nvblox_export.py:97-120`, `123-180`.
-- Problem: Stop path calls ROS topic probe, nvblox services with 30 s timeouts, file waits up to 20 s per export, optional rosbag record, and recursive harvest before response returns.
-- Why it matters: HTTP stop request can hang for tens of seconds or minutes.
-- Severity: Medium.
-- Best fix: Return stop accepted quickly and run export finalization as a background job with status polling.
-- Alternative: Lower timeouts and expose explicit `/mapping/export` endpoint.
-- Fix type: Code changes, API behavior changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/session.py`, background health loop and strict health helpers
+* Problem: The health path uses rclpy graph probes where possible, but strict/deep checks can still use subprocess-style ROS CLI probes depending on environment and requested detail.
+* Why it matters: Repeated CLI probes in a service can add CPU/process overhead and latency.
+* Best fix: Keep a persistent graph observer node and sampled subscriber health cache, then serve HTTP health from that cache.
+* Alternative fix: Keep deep checks manual/on-demand and default background checks to shallow mode.
+* Change type: Code/architecture changes.
 
-### P6. Excessive health logging under probe failures
+### P6. Excessive generated artifacts remain inside the workspace
 
-- Where: `session.py:232-239`, `1479-1520`; `bridge_service.py:93-100`, `124-130`.
-- Problem: `/health` logs every request plus background deep refresh logs. Degraded graph can produce repeated warning/info logs.
-- Why it matters: Log spam makes real failures harder to find and can add IO overhead.
-- Severity: Low.
-- Best fix: Rate-limit or sample health logs, keep state-change logging only.
-- Alternative: Demote request logs to debug.
-- Fix type: Code changes/config changes.
+* Severity: Low
+* Location:
+  * `warehouse_ros2_ws/build`
+  * `warehouse_ros2_ws/install`
+  * `warehouse_ros2_ws/log`
+  * Python `__pycache__` and package egg-info paths
+* Problem: Generated build/install/log/cache folders are present under the reviewed workspace.
+* Why it matters: They make reviews noisier, can hide stale generated files, and can be mistaken for source truth.
+* Best fix: Keep generated folders out of version control and clean them before audits/CI snapshots.
+* Alternative fix: Clearly document them as generated and ignore them in tooling.
+* Change type: Repository hygiene/config changes.
 
 ## 5. Architecture and Flow Problems
 
-### A1. Single package mixes HTTP API, ROS nodes, diagnostics, export, MAVLink, TF, and simulation helpers
+### A1. Topic registry and parameter defaults are split across multiple sources
 
-- Where: `src/warehouse_mapping_bridge/warehouse_mapping_bridge/*.py`.
-- Problem: One package owns many responsibilities with mostly env-var coupling.
-- Severity: High.
-- Recommended solution: Split into focused modules/packages: `warehouse_bridge_api`, `warehouse_ros_health`, `warehouse_mapping_export`, `warehouse_sim_bringup`, `warehouse_mavlink_bridge`.
-- Fix type: Architecture/code changes.
+* Severity: High
+* Location:
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/warehouse_topics.yaml`
+  * `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/defaults.yaml`
+  * Launch files under `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch`
+* Problem: Topic names live in both the registry and node parameter YAML. Launch files also embed bridge mappings.
+* Why it matters: Isaac/Gazebo profile changes can drift. The Gazebo helper-node bug is a direct result.
+* Best fix: Make one canonical profile registry. Generate node parameters and bridge mappings from it.
+* Alternative fix: Keep separate files but add validation tests that prove every launch uses profile-matching topics.
+* Change type: Architecture/config/test changes.
 
-### A2. Environment variables are the main configuration API
+### A2. Bridge service mixes API, process supervision, ROS graph probing, artifact harvesting, and session finalization
 
-- Where: `config.py:40-58`, `142-166`, `343-366`; launch env command files.
-- Problem: Most runtime settings bypass ROS parameters and launch args.
-- Severity: High.
-- Recommended solution: Use ROS launch arguments and node parameters for topics/frames/QoS/rates; keep env vars for deployment-level secrets/paths only.
-- Fix type: Code/config/launch changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/session.py`
+* Problem: Session orchestration owns many responsibilities.
+* Why it matters: It is hard to test state transitions and failure recovery independently.
+* Best fix: Split into smaller services: `SessionStore`, `LaunchSupervisor`, `HealthProbe`, `ArtifactHarvester`, and `ReplaySupervisor`.
+* Alternative fix: Keep the file but move pure helpers into modules and add focused tests.
+* Change type: Architecture/code changes.
 
-### A3. No lifecycle/state management for mapping helper nodes
+### A3. Isaac launch depends on shell command environment variables
 
-- Where: all ROS nodes use plain `Node`.
-- Problem: Nodes do not expose configured/inactive/active/error states.
-- Severity: Medium.
-- Recommended solution: Use lifecycle nodes for mapping/export/health where state matters, or expose explicit status topics/services.
-- Fix type: Code changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/isaac_warehouse_mapping.launch.py`
+* Problem: External processes are injected through environment variables rather than typed launch arguments or included launch descriptions.
+* Why it matters: Quoting, shell behavior, missing environment, and command portability are fragile.
+* Best fix: Use launch arguments for package/share paths and `IncludeLaunchDescription` for known ROS launch files.
+* Alternative fix: Validate and print command provenance in a startup manifest.
+* Change type: Launch architecture.
 
-### A4. Mapping sessions are only in memory
+### A4. Export finalization is performed in daemon threads
 
-- Where: `session.py:121`, `1522-1661`.
-- Problem: Active sessions live in `self.sessions`; service restart loses active session/process tracking. `.mapping_session_active` stores only flight id.
-- Severity: Medium.
-- Recommended solution: Persist active session metadata including PID/status and reconcile on bridge startup.
-- Fix type: Code changes.
+* Severity: Medium
+* Location: `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/session.py`, stop/finalization path
+* Problem: Stop requests start asynchronous daemon work for final output harvesting.
+* Why it matters: Daemon threads can be interrupted on process exit. Export state is partly runtime memory plus session files, not a durable job queue.
+* Best fix: Add durable finalization jobs with persisted state and retry behavior.
+* Alternative fix: Make stop synchronous by default and expose async finalization only as an explicit option.
+* Change type: Architecture/code changes.
 
-### A5. Replay endpoints do not replay ROS bags
+### A5. Diagnostics are present but not unified
 
-- Where: `session.py:1694-1725`.
-- Problem: `start_replay` writes a manifest only. No `ros2 bag play`, topic remapping, clock, or process control.
-- Severity: Medium.
-- Recommended solution: Either implement rosbag playback with process tracking or rename endpoint to register replay metadata only.
-- Fix type: Code/API changes.
-
-### A6. Generated build/install artifacts are inside inspected workspace
-
-- Where: `warehouse_ros2_ws/build`, `warehouse_ros2_ws/install`, `warehouse_ros2_ws/log`.
-- Problem: Build artifacts are present under workspace and can obscure source review. `src/warehouse_mapping_bridge/warehouse_mapping_bridge.egg-info` also exists.
-- Severity: Low.
-- Recommended solution: Keep artifacts ignored/cleaned in repo and review source-only state when possible.
-- Fix type: Repo hygiene.
+* Severity: Medium
+* Location:
+  * `health_monitor_node.py`
+  * `artifact_exporter_node.py`
+  * `odometry_export_node.py`
+  * `live_map_publisher_node.py`
+  * bridge service health endpoints
+* Problem: Different nodes report health/status in different formats and levels of truth.
+* Why it matters: Operators need one clear answer for simulation/mapping readiness.
+* Best fix: Standardize diagnostics keys, levels, timestamps, and source identity. Expose a single aggregate health endpoint.
+* Alternative fix: Document which health endpoint is authoritative.
+* Change type: Architecture/diagnostics changes.
 
 ## 6. ROS 2 Topic / TF / QoS / Parameter Problems
 
-### R1. Sensor QoS uses integer depth defaults, not sensor-data QoS
+### R1. Gazebo and Isaac topics can conflict through default parameters
 
-- Where: `health_monitor_node.py:18`; `odometry_export_node.py:33-42`; `live_map_publisher_node.py:72-73`; `sim_tf_broadcaster_node.py:58-66`; `vision_mavlink_bridge_node.py:47-52`.
-- Problem: Publishers/subscribers use integer queue depths. Camera/depth/pointcloud/IMU flows commonly use `SensorDataQoS` best-effort; reliable/default QoS can mismatch Gazebo/Isaac publishers.
-- Severity: High.
-- Recommended solution: Use `QoSProfile` per stream: `SensorDataQoS` for images/depth/pointcloud/IMU, reliable for odometry if source uses reliable, transient local for static-like latched data where relevant.
-- Fix type: Code changes.
+* Severity: Critical
+* Location:
+  * `defaults.yaml`
+  * `warehouse_topics.yaml`
+  * `gazebo_warehouse_stack.launch.py`
+* Problem: Profile registry says Gazebo, but parameter defaults can still say Isaac.
+* Fix: Split or generate per-profile parameter YAML.
+* Change type: Config/launch.
 
-### R2. TF probe can block readiness and depends on shell tools
+### R2. Health monitor QoS and graph checks do not prove subscriber compatibility
 
-- Where: `topic_diagnostics.py:424-434`, `487-520`; enabled by `session.py:1344-1347`.
-- Problem: Default `WAREHOUSE_TF_PROBE_ON_HEALTH=1` triggers `tf2_echo` subprocesses in deep health.
-- Severity: Medium.
-- Recommended solution: Probe TF via `tf2_ros.Buffer` inside a ROS node or make TF strict mode opt-in for health.
-- Fix type: Code/config changes.
+* Severity: High
+* Location: `health_monitor_node.py`
+* Problem: Topic presence does not prove matching QoS or live messages.
+* Fix: Use actual subscriptions with sensor-data QoS for sensors and track last-message age/rate.
+* Change type: Code.
 
-### R3. Static camera transform orientation is identity for camera link frames
+### R3. TF broadcaster can publish identity odom-to-base before valid odometry
 
-- Where: `sim_tf_broadcaster_node.py:163-186`.
-- Problem: Only frames ending `_optical` get REP-103 optical rotation. Defaults create `front_rgbd_camera_link`, `front_left_camera_link`, `front_right_camera_link` with identity orientation.
-- Severity: Medium.
-- Recommended solution: Publish both camera link and optical frames with correct rotations, and ensure sensor `frame_id` matches optical frame for images/depth where required by nvblox.
-- Fix type: Code/config changes.
+* Severity: Medium
+* Location: `sim_tf_broadcaster_node.py`
+* Problem: The node can publish a default odom/base transform even before the first odometry message.
+* Why it matters: Consumers may see a valid-looking robot pose at origin when no odometry has arrived.
+* Best fix: Publish dynamic `odom -> base_link` only after a valid odometry message unless a `publish_initial_identity_tf` parameter is explicitly enabled.
+* Alternative fix: Mark health as not ready until first odometry timestamp.
+* Change type: Code/config.
 
-### R4. RViz fixed frame is `map`, but config/TF mostly uses `odom`
+### R4. TF broadcaster ignores incoming odometry frame IDs
 
-- Where: `rviz/nvblox_warehouse.rviz:54-56`; config frames `warehouse_topics.yaml:87-95`; TF broadcaster `sim_tf_broadcaster_node.py:46-47`.
-- Problem: RViz uses `map`; TF broadcaster publishes `odom -> base_link`. No `map -> odom` transform is launched.
-- Severity: Medium.
-- Recommended solution: Set RViz fixed frame to configured odom frame or publish `map -> odom` explicitly.
-- Fix type: Config/TF changes.
+* Severity: Medium
+* Location: `sim_tf_broadcaster_node.py`
+* Problem: The broadcaster uses configured frame IDs instead of validating `Odometry.header.frame_id` and `child_frame_id`.
+* Why it matters: Upstream frame mismatch can be hidden.
+* Best fix: Validate incoming frames and publish diagnostics/warnings when they differ.
+* Alternative fix: Add a strict parameter that rejects mismatched odometry.
+* Change type: Code/config.
 
-### R5. Health topic and artifact topic are hardcoded string messages
+### R5. Camera/optical frame publication is not tied to robot_state_publisher
 
-- Where: `health_monitor_node.py:18`, `43-45`; `artifact_exporter_node.py:63`, `83-85`.
-- Problem: Uses `std_msgs/String` JSON for structured health/artifact data.
-- Severity: Low.
-- Recommended solution: Define custom messages or use diagnostics_msgs/DiagnosticArray for health and structured service/action for artifacts.
-- Fix type: Interface/code changes.
+* Severity: Medium
+* Location:
+  * `sim_tf_broadcaster_node.py`
+  * `urdf/warehouse_drone.urdf`
+  * `gazebo_warehouse_stack.launch.py`
+* Problem: Static camera frames are hand-published while URDF is unused.
+* Why it matters: TF maintenance is duplicated and can drift from the robot model.
+* Best fix: Move static link geometry into URDF and publish with `robot_state_publisher`.
+* Alternative fix: Keep hand-published transforms but remove unused URDF.
+* Change type: TF/launch/model.
+
+### R6. Sim time is mostly configured but should be validated per node
+
+* Severity: Low
+* Location:
+  * Launch files under `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch`
+  * Helper nodes under `warehouse_mapping_bridge`
+* Problem: Launches pass `use_sim_time`, but not every externally supplied Isaac/Gazebo process is controlled by these launch files.
+* Why it matters: Mixed wall time and sim time breaks TF and sensor synchronization.
+* Best fix: Add startup diagnostics that verify `/clock` and each helper node's `use_sim_time`.
+* Alternative fix: Document sim-time requirements for external commands.
+* Change type: Launch/diagnostics.
 
 ## 7. Launch and Configuration Problems
 
-### L1. Launch files lack launch arguments
+### L1. Gazebo launch starts an empty default world for a full mapping stack
 
-- Where: all `launch/*.launch.py`.
-- Problem: No `DeclareLaunchArgument` for profile, params file, `use_sim_time`, bridge port, topic config, world, or backend options.
-- Severity: High.
-- Recommended solution: Add launch args and pass params/env explicitly.
-- Fix type: Launch changes.
+* Severity: Critical
+* Location: `gazebo_warehouse_stack.launch.py`, `warehouse_empty.sdf`
+* Fix: Package and launch a sensor-producing model or make the full stack fail fast when only the empty world is selected.
+* Change type: Launch/simulation.
 
-### L2. README workspace path is wrong
+### L2. Gazebo bridge config YAML is unused
 
-- Where: `README.md:9-12`.
-- Problem: Instructions say `cd jetson_ros2_ws`, but actual folder is `warehouse_ros2_ws`.
-- Severity: Medium.
-- Recommended solution: Correct README and include `source install/setup.bash` plus test command.
-- Fix type: Documentation changes.
+* Severity: High
+* Location: `gazebo_bridge.yaml`, `gazebo_warehouse_stack.launch.py`
+* Fix: Build bridge mappings from YAML or remove YAML.
+* Change type: Launch/config.
 
-### L3. Duplicate launch install data entry
+### L3. Isaac launch uses fail-fast validation but lacks integrated packages
 
-- Where: `setup.py:15` and `setup.py:18`.
-- Problem: Launch files are installed twice to same destination via two equivalent entries.
-- Severity: Low.
-- Recommended solution: Remove one entry.
-- Fix type: Packaging changes.
+* Severity: High
+* Location: `isaac_warehouse_mapping.launch.py`
+* Fix: Provide actual ROS launch includes or a documented integration package.
+* Change type: Launch/package.
 
-### L4. `defaults.yaml` is installed but unused
+### L4. Rosbridge port argument form should be verified on target ROS distro
 
-- Where: `setup.py:16`; `config/defaults.yaml:1-18`.
-- Problem: No launch passes this file, and nodes do not consume ROS params.
-- Severity: Medium.
-- Recommended solution: Use it as actual params file or remove it.
-- Fix type: Launch/config/code changes.
+* Severity: Low
+* Location: `gazebo_warehouse_stack.launch.py`
+* Problem: `rosbridge_websocket` is launched with `["port:=", rosbridge_port]`. This may work through ROS argument concatenation, but it is brittle.
+* Best fix: Use a single substitution string or standard ROS parameter passing tested on the target distro.
+* Alternative fix: Add launch test coverage for rosbridge arguments.
+* Change type: Launch/test.
 
-### L5. Package declares `rosbridge_server` and launch starts websocket, but README advertises different WS port
+### L5. Local launch import test can skip when `lark` is absent
 
-- Where: `gazebo_warehouse_stack.launch.py:48-58`; `README.md:27-28`.
-- Problem: Launch starts rosbridge on `9090`; README example says `WAREHOUSE_ROS_WS_URL=ws://jetson.local:8089/ws`.
-- Severity: Medium.
-- Recommended solution: Align docs/config/launch. Either expose port as launch arg and set bridge URL accordingly, or change README.
-- Fix type: Launch/doc changes.
+* Severity: Low
+* Location:
+  * `package.xml`
+  * tests under `warehouse_ros2_ws/src/warehouse_mapping_bridge/tests`
+* Problem: Local verification skipped launch import without `lark`.
+* Why it matters: Developers without ROS launch dependencies cannot fully test launch import locally.
+* Best fix: Document dev dependency installation or add a lightweight launch import test environment in CI.
+* Alternative fix: Keep skip behavior for non-ROS Python environments.
+* Change type: Dependency/CI.
 
 ## 8. File-by-File Findings
 
-### `warehouse_ros2_ws/README.md`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/worlds/warehouse_empty.sdf`
 
-- Problem: Build path says `jetson_ros2_ws`, not `warehouse_ros2_ws`; WS URL example port/path does not match rosbridge launch.
-- Severity: Medium.
-- Recommended solution: Correct workspace path and websocket URL, document required env vars and full launch expectations.
+* Problem: Default world has no drone, no RGB-D camera, no lidar/pointcloud, no odometry plugin, and no IMU sensor.
+* Severity: Critical
+* Recommended solution: Add a full model or use a world that includes the expected sensors and topics.
 
-### `src/warehouse_mapping_bridge/package.xml`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`
 
-- Problem: Missing runtime deps for `nvblox_msgs`, RViz, rosbag recording, Gazebo sim launch tools. `ros_gz_bridge` declared but not used in launch.
-- Severity: Critical.
-- Recommended solution: Add actual deps or remove unused ones; align with implemented launch.
+* Problem: Bridges topics that the default world does not create.
+* Severity: Critical
+* Recommended solution: Spawn a sensor model and validate topic availability.
+* Problem: Passes Isaac-oriented `defaults.yaml` into Gazebo helper nodes.
+* Severity: Critical
+* Recommended solution: Use Gazebo-specific parameters or topic registry-generated params.
+* Problem: Duplicates bridge mappings instead of consuming `gazebo_bridge.yaml`.
+* Severity: High
+* Recommended solution: Generate bridge command from one config source.
+* Problem: Rosbridge argument style is brittle.
+* Severity: Low
+* Recommended solution: Normalize launch arguments and add launch tests.
 
-### `src/warehouse_mapping_bridge/setup.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/isaac_warehouse_mapping.launch.py`
 
-- Problem: Duplicate launch install destination at lines 15 and 18.
-- Severity: Low.
-- Recommended solution: Remove duplicate entry.
+* Problem: It orchestrates external env commands but does not include first-class Isaac/NVBlox/Visual SLAM launch descriptions.
+* Severity: High
+* Recommended solution: Add package launch includes or explicit documented integration contracts.
+* Problem: External shell commands are fragile.
+* Severity: Medium
+* Recommended solution: Prefer typed launch arguments and ROS launch includes.
 
-### `src/warehouse_mapping_bridge/config/defaults.yaml`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/launch/bridge_service.launch.py`
 
-- Problem: Looks like ROS params but unused by launch/nodes.
-- Severity: Medium.
-- Recommended solution: Pass to nodes or replace with shared topic registry.
+* Problem: Minimal launch is valid, but it only starts the API service and relies on runtime autolaunch/env for ROS graph creation.
+* Severity: Low
+* Recommended solution: Document service-only behavior and provide profile-specific examples.
 
-### `src/warehouse_mapping_bridge/config/warehouse_topics.yaml`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/defaults.yaml`
 
-- Problem: Topic/frame registry conflicts with `config.py`, RViz, and node defaults; Gazebo IMU comment says auto-discovered, but default fallback in `config.py` still has `/imu`.
-- Severity: High.
-- Recommended solution: Make it single source of truth and test all profiles.
+* Problem: Topic defaults are Isaac-oriented and unsafe for Gazebo launch reuse.
+* Severity: Critical
+* Recommended solution: Split per profile or remove topic defaults in favor of registry resolution.
 
-### `src/warehouse_mapping_bridge/launch/bridge_service.launch.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/warehouse_topics.yaml`
 
-- Problem: Starts only bridge service with no params/env validation.
-- Severity: Medium.
-- Recommended solution: Add launch args for host/port/profile/topic config/capture root and pass env/params.
+* Problem: Gazebo IMU default can be empty/discovery-dependent, while launch hardcodes a long IMU topic.
+* Severity: High
+* Recommended solution: Put the exact IMU topic in the profile and use it from launch.
+* Problem: Aliases are useful, but they can hide stale topic naming if not validated against actual graph data.
+* Severity: Medium
+* Recommended solution: Add profile validation tests and runtime graph diagnostics.
 
-### `src/warehouse_mapping_bridge/launch/isaac_warehouse_mapping.launch.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/config/gazebo_bridge.yaml`
 
-- Problem: No default Isaac ROS graph; env commands are optional and unchecked.
-- Severity: Critical.
-- Recommended solution: Include actual launch files or fail fast when required commands absent.
+* Problem: Config is not consumed by the Gazebo launch.
+* Severity: High
+* Recommended solution: Make launch read this file or delete it.
 
-### `src/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/urdf/warehouse_drone.urdf`
 
-- Problem: Does not launch Gazebo or bridge sensor topics; starts helper nodes and rosbridge only.
-- Severity: Critical.
-- Recommended solution: Add Gazebo sim + ros_gz_bridge mappings + clock/use_sim_time.
+* Problem: Model is packaged but not spawned or used by `robot_state_publisher`.
+* Severity: High
+* Recommended solution: Connect it to Gazebo launch and TF publication.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/config.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/package.xml`
 
-- Problem: Duplicate hardcoded defaults conflict with YAML; invalid env values silently fall back; profile fallback can hide typo by using Gazebo topics.
-- Severity: High.
-- Recommended solution: Validate profile name, log config source, and fail on invalid critical env vars.
+* Problem: Core dependencies are mostly declared. Local test skip shows dev machines still need launch parser dependency installed.
+* Severity: Low
+* Recommended solution: Keep `python3-lark` and document/CI-check dependency installation.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/session.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/setup.py`
 
-- Problem: Large mixed-responsibility class; heavy subprocess/file work in health/stop paths; launch failure not checked; replay only writes manifests; sessions in memory only.
-- Severity: High.
-- Recommended solution: Split services, add process supervision, background export jobs, persistent session state.
+* Problem: Package data includes launch/config/worlds/urdf, which is correct. No major packaging break found.
+* Severity: Low
+* Recommended solution: Keep package data coverage and add tests for installed resource lookup.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/topic_diagnostics.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/process_supervisor.py`
 
-- Problem: Deep probes shell out to ROS/Gazebo/TF tools; presence mode can mark listed-but-not-publishing topics healthy.
-- Severity: Medium.
-- Recommended solution: Prefer rclpy graph APIs and optional strict mode for message rate validation.
+* Problem: Parent-side log file handles are not closed after `Popen`.
+* Severity: High
+* Recommended solution: Close handles safely after process spawn or retain and close through a process wrapper.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/health_monitor_node.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/session.py`
 
-- Problem: Drops computed `components`, does not use shared diagnostics, no QoS config.
-- Severity: High.
-- Recommended solution: Publish real health payload or remove duplicate monitor.
+* Problem: `start_mapping` holds session lock during process startup/grace wait.
+* Severity: Medium
+* Recommended solution: Reduce lock scope and model startup as a state transition.
+* Problem: Final export uses daemon background work rather than durable jobs.
+* Severity: Medium
+* Recommended solution: Add persisted finalization job state and retry behavior.
+* Problem: Session orchestration has broad responsibilities.
+* Severity: Medium
+* Recommended solution: Split store, supervisor, health, replay, and artifact concerns.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/odometry_export_node.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/health_monitor_node.py`
 
-- Problem: Writes JSON every odometry callback; republishes same topic message without frame normalization; no QoS config.
-- Severity: Medium.
-- Recommended solution: Throttle file writes and validate frame semantics.
+* Problem: Health is based on topic graph presence, not live message freshness/rate/QoS compatibility.
+* Severity: High
+* Recommended solution: Subscribe and sample required topics; report stale age and rates.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/sim_tf_broadcaster_node.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/artifact_exporter_node.py`
 
-- Problem: Uses env defaults, not profile registry; may publish `base_link` while health expects Gazebo frame; default camera transforms may not match optical frames.
-- Severity: Critical.
-- Recommended solution: Consume registry frames and publish correct link/optical tree.
+* Problem: Recursive scans and in-memory copied state can grow with large output trees.
+* Severity: Medium
+* Recommended solution: Incremental scan, exclusions, state compaction, and throttled index writes.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/vision_mavlink.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/live_map_publisher_node.py`
 
-- Problem: Incomplete ENU-to-NED attitude conversion.
-- Severity: Critical.
-- Recommended solution: Implement tested frame conversion.
+* Problem: Publishes approximate pointcloud metadata instead of real live map data.
+* Severity: Medium
+* Recommended solution: Define and send real downsampled point or map chunk payloads.
+* Problem: Backend failures are silent.
+* Severity: Medium
+* Recommended solution: Add throttled logs and diagnostic status.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/vision_mavlink_bridge_node.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/odometry_export_node.py`
 
-- Problem: Sends external vision only when session active file exists; reads file on every odom callback; no send-rate throttling; no MAVLink error handling.
-- Severity: Medium.
-- Recommended solution: Cache session-active state via timer, throttle MAVLink rate, catch send exceptions.
+* Problem: Exported SLAM status fields are hardcoded optimistic values.
+* Severity: High
+* Recommended solution: Derive readiness/tracking from source diagnostics, covariance, or explicit status topics.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/nvblox_export.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/sim_tf_broadcaster_node.py`
 
-- Problem: Hardcoded service names/types; blocking export; missing dependency declaration.
-- Severity: High.
-- Recommended solution: Discover/configure services and run export asynchronously.
+* Problem: Can publish an initial identity dynamic transform before odometry arrives.
+* Severity: Medium
+* Recommended solution: Delay dynamic TF until first valid odometry unless explicitly configured.
+* Problem: Incoming odometry frame IDs are not validated.
+* Severity: Medium
+* Recommended solution: Warn or fail strict mode on mismatched frames.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/artifact_exporter_node.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/vision_mavlink.py`
 
-- Problem: Recursive copy every 2 seconds forever; hardcoded artifact topic.
-- Severity: High.
-- Recommended solution: Delta-copy or export on stop only.
+* Problem: Full attitude frame conversion is not strongly proven.
+* Severity: High
+* Recommended solution: Use full quaternion/matrix ENU/FLU to NED/FRD conversion and expand tests.
 
-### `src/warehouse_mapping_bridge/warehouse_mapping_bridge/live_map_publisher_node.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/vision_mavlink_bridge_node.py`
 
-- Problem: Blocking HTTP in callback; hardcoded topic defaults; false health flags.
-- Severity: High.
-- Recommended solution: Queue outbound updates and consume shared topic registry/health.
+* Problem: Runtime depends on active-session polling and optional pymavlink availability.
+* Severity: Low
+* Recommended solution: Keep disabled by default, add diagnostics for inactive session and MAVLink connection state.
 
-### `src/warehouse_mapping_bridge/rviz/nvblox_warehouse.rviz`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/warehouse_mapping_bridge/ros_graph.py`
 
-- Problem: Fixed frame `map` may not exist; topic values conflict with registry; RViz dependencies not declared.
-- Severity: Medium.
-- Recommended solution: Align fixed frame/topics with profile config and add RViz deps.
+* Problem: Creates a temporary probe node for graph lookups.
+* Severity: Low
+* Recommended solution: Reuse a persistent observer for high-frequency health checks.
 
-### `src/warehouse_mapping_bridge/tests/*.py`
+### `warehouse_ros2_ws/src/warehouse_mapping_bridge/tests`
 
-- Problem: Tests cover health cache/topic summary/export only. No launch tests, TF tests, frame conversion tests, QoS tests, config consistency tests, or package dependency tests.
-- Severity: Medium.
-- Recommended solution: Add targeted unit and launch tests for critical ROS flow.
+* Problem: Test coverage is useful but does not yet cover full Gazebo launch topic/profile consistency, real TF tree validity, full MAVLink attitude conversion, or artifact exporter scaling.
+* Severity: Medium
+* Recommended solution: Add integration and consistency tests.
+
+### `warehouse_ros2_ws/build`, `warehouse_ros2_ws/install`, `warehouse_ros2_ws/log`
+
+* Problem: Generated artifacts are present in the workspace.
+* Severity: Low
+* Recommended solution: Clean before review and keep ignored from source control.
 
 ## 9. Recommended Refactor Plan
 
-1. Fix launch truth: make Gazebo and Isaac launch files either start full graphs or fail fast with clear missing requirements.
-2. Add missing dependencies: `nvblox_msgs`, RViz, rosbag2, Gazebo sim tools, and any message packages used by bridge mappings.
-3. Unify topic/frame config into one registry and remove drift between Python defaults, YAML, RViz, and node hardcodes.
-4. Correct MAVLink external-vision frame conversion with tests before enabling by default.
-5. Fix TF broadcaster to use profile registry frames and publish coherent `map/odom/base_link/camera/optical` tree.
-6. Add `use_sim_time`, `/clock` bridge, and simulation launch args.
-7. Replace env-var-only node config with declared ROS parameters and launch args.
-8. Move blocking export/copy/HTTP/subprocess work out of callbacks and request paths.
-9. Add process supervision for autolaunch and persistent session recovery.
-10. Expand tests: config consistency, launch import, frame math, QoS selection, nvblox service config, live-map queue behavior.
+1. Fix profile/topic configuration first.
+   * Split `defaults.yaml` into Isaac and Gazebo variants, or generate node params from `warehouse_topics.yaml`.
+   * Make launch files pass only profile-matching topic parameters.
+   * Add a test that loads each launch/profile pair and verifies required topics match the profile.
+
+2. Make Gazebo full-stack launch real.
+   * Add or spawn a drone model with camera, depth, pointcloud, odometry, and IMU.
+   * Connect the packaged URDF/model to `robot_state_publisher`.
+   * Validate that every bridged Gazebo topic exists after startup.
+
+3. Consolidate bridge mappings.
+   * Use `gazebo_bridge.yaml` as the single source for `ros_gz_bridge`, or remove it.
+   * Generate launch bridge arguments from config.
+   * Add tests that fail on missing/duplicated bridge mappings.
+
+4. Harden health truth.
+   * Change `health_monitor_node` from graph-presence checks to freshness/rate checks.
+   * Track last message time per required topic.
+   * Include QoS-sensitive subscriptions for sensor topics.
+
+5. Fix process/file lifecycle.
+   * Close process log handles correctly.
+   * Reduce session lock scope during startup.
+   * Replace daemon finalization with durable job state.
+
+6. Correct MAVLink vision conversion.
+   * Implement full quaternion/matrix frame conversion.
+   * Expand tests for roll, pitch, yaw, identity, and combined rotations.
+   * Keep `WAREHOUSE_SEND_VISION_POSITION=0` as the safe default until validated.
+
+7. Improve odometry truth.
+   * Replace hardcoded SLAM-ready fields with measured state.
+   * Include covariance and source tracking status when available.
+   * Publish `unknown` instead of `true` when status cannot be proven.
+
+8. Define real live-map data flow.
+   * Decide whether backend expects point summaries, downsampled points, mesh chunks, or occupancy data.
+   * Rename approximate telemetry if it is not a map.
+   * Add diagnostics for backend POST failures and dropped updates.
+
+9. Split session architecture.
+   * Extract `SessionStore`, `LaunchSupervisor`, `ReplaySupervisor`, `HealthProbe`, and `ArtifactHarvester`.
+   * Add focused unit tests for each component.
+   * Keep API route behavior stable during the split.
+
+10. Add integration observability.
+   * Add a startup manifest listing selected profile, topics, frames, sim-time state, bridge mappings, and external commands.
+   * Add `/diagnostics` aggregation and backend-visible status.
 
 ## 10. Quick Wins
 
-- Correct README path from `jetson_ros2_ws` to `warehouse_ros2_ws`.
-- Remove duplicate launch install entry in `setup.py`.
-- Add `components` to `health_monitor_node` payload or rename to heartbeat.
-- Add missing package dependencies for `nvblox_msgs`, RViz, rosbag2, and Gazebo tools used.
-- Align RViz fixed frame with `odom` or publish `map -> odom`.
-- Add `PYTHONPATH`/pytest config or use `colcon test` in docs/CI.
-- Make `WAREHOUSE_SEND_VISION_POSITION=0` default until frame conversion is validated.
-- Add launch-time validation for missing `WAREHOUSE_*_LAUNCH_CMD` in Isaac profile.
-- Throttle odometry JSON writes.
-- Queue live-map HTTP publishing off the pointcloud callback.
+1. Create `defaults_gazebo.yaml` and use it from `gazebo_warehouse_stack.launch.py`.
+2. Remove topic defaults from shared `defaults.yaml` if profile registry already supplies them.
+3. Close `process_supervisor.py` log handles after `Popen`.
+4. Add warning logs in `live_map_publisher_node.py` for backend POST failures.
+5. Delay dynamic TF publication in `sim_tf_broadcaster_node.py` until first odometry message.
+6. Add frame mismatch warnings for incoming odometry frame IDs.
+7. Add a launch/config test proving Gazebo launch does not use Isaac topic defaults.
+8. Add a launch/config test proving `gazebo_bridge.yaml` and launch mappings match, or remove the unused YAML.
+9. Clean generated `build`, `install`, `log`, `__pycache__`, and egg-info artifacts before commits.
+10. Document the exact external Isaac commands required when using `isaac_warehouse_mapping.launch.py`.
+11. Change odometry exporter labels from hardcoded `slam_ready=true` to `odom_received=true` until real tracking status exists.
+12. Add throttled artifact exporter index writes so unchanged scans do not rewrite `artifact_index.json`.
 
 ## 11. Long-Term Improvements
 
-- Split bridge API, health diagnostics, simulation bringup, mapping export, and MAVLink bridge into smaller packages or at least smaller modules.
-- Move ROS graph diagnostics from subprocess shell calls to rclpy/tf2 APIs.
-- Introduce lifecycle/state model for mapping sessions and export jobs.
-- Use typed ROS interfaces for health/artifact status instead of JSON in `std_msgs/String`.
-- Build a full simulation integration package with world files, robot description, ros_gz bridge config, `/clock`, and deterministic launch tests.
-- Add observability: diagnostics topic, structured session state, export job status, launch process logs, and failure reasons.
-- Add CI that runs `colcon build`, `colcon test`, launch file import checks, config consistency checks, and frame conversion tests.
+1. Build a real profile system.
+   * One canonical registry should define topics, frames, QoS expectations, bridge mappings, and required sensors per profile.
+   * Launch files, nodes, and tests should consume that registry.
+
+2. Provide complete simulation packages.
+   * Gazebo should include a working model/world and spawn flow.
+   * Isaac should include first-class launch integration or a clearly versioned external integration package.
+
+3. Move from topic presence to data-quality observability.
+   * Track freshness, rate, latency, frame IDs, timestamp source, QoS compatibility, and transform availability.
+   * Expose one aggregate readiness result.
+
+4. Make mapping sessions durable.
+   * Persist finalization jobs, process metadata, export progress, replay state, and failure reasons.
+   * Recover incomplete jobs after service restart.
+
+5. Standardize TF ownership.
+   * Prefer URDF plus `robot_state_publisher` for fixed transforms.
+   * Keep dynamic transforms tied to validated odometry.
+   * Add automated TF tree tests.
+
+6. Define the live-map contract.
+   * Choose pointcloud, mesh, occupancy, ESDF, or summary mode.
+   * Version the payload schema.
+   * Add load tests for update rate and payload size.
+
+7. Separate API and ROS orchestration modules.
+   * Keep FastAPI request handling thin.
+   * Move ROS/process/session/artifact logic into independently tested services.
+
+8. Add CI that runs ROS-aware tests.
+   * Compile Python.
+   * Import launch files with launch dependencies installed.
+   * Run unit tests.
+   * Validate package manifests.
+   * Optionally run a headless Gazebo smoke test that verifies required topics appear.
+
+9. Add lifecycle/state management for helper nodes.
+   * Use lifecycle-style readiness states or explicit startup phases.
+   * Avoid reporting healthy before required topics, transforms, and sim time are valid.
+
+10. Add performance guardrails.
+   * Limit artifact scans.
+   * Bound queues and state caches.
+   * Track dropped live-map updates.
+   * Keep health probes persistent instead of spawning repeated checks.

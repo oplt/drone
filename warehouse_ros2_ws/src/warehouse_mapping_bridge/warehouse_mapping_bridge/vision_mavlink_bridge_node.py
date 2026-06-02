@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 from .config import load_config, topic_env
 from .session import mapping_session_active_path
@@ -11,6 +12,7 @@ def main() -> None:
     import rclpy
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
+    from rclpy.qos import QoSProfile
 
     try:
         from pymavlink import mavutil
@@ -21,12 +23,18 @@ def main() -> None:
         def __init__(self) -> None:
             super().__init__("warehouse_vision_mavlink_bridge")
             self.config = load_config()
-            self.enabled = os.getenv("WAREHOUSE_SEND_VISION_POSITION", "1").lower() in {
+            self.enabled = os.getenv("WAREHOUSE_SEND_VISION_POSITION", "0").lower() in {
                 "1",
                 "true",
                 "yes",
                 "on",
             }
+            self.min_period_s = max(
+                0.02,
+                float(os.getenv("WAREHOUSE_MAVLINK_VISION_PERIOD_S", "0.1")),
+            )
+            self._last_send_s = 0.0
+            self._session_active = False
             self.mav = None
             if self.enabled and mavutil is None:
                 self.get_logger().warning(
@@ -44,11 +52,14 @@ def main() -> None:
                     f"Sending VISION_POSITION_ESTIMATE to {self.config.mavlink_vision_url}"
                 )
             self._session_active_path = mapping_session_active_path(self.config.capture_root)
+            self.create_timer(0.5, self._refresh_session_active)
+            topics = topic_env()
+            self.declare_parameter("visual_slam_odom_topic", topics["visual_slam_odom"])
             self.create_subscription(
                 Odometry,
-                topic_env()["visual_slam_odom"],
+                str(self.get_parameter("visual_slam_odom_topic").value or topics["visual_slam_odom"]),
                 self.on_odometry,
-                20,
+                QoSProfile(depth=20),
             )
 
         def _mapping_session_active(self) -> bool:
@@ -60,21 +71,31 @@ def main() -> None:
             except OSError:
                 return False
 
+        def _refresh_session_active(self) -> None:
+            self._session_active = self._mapping_session_active()
+
         def on_odometry(self, message: Odometry) -> None:
-            if self.mav is None or not self._mapping_session_active():
+            now = time.monotonic()
+            if self.mav is None or not self._session_active:
                 return
+            if now - self._last_send_s < self.min_period_s:
+                return
+            self._last_send_s = now
             estimate = odometry_to_vision_pose(message)
-            self.mav.mav.vision_position_estimate_send(
-                estimate.usec,
-                estimate.x_north_m,
-                estimate.y_east_m,
-                estimate.z_down_m,
-                estimate.roll_rad,
-                estimate.pitch_rad,
-                estimate.yaw_rad,
-                estimate.covariance,
-                estimate.reset_counter,
-            )
+            try:
+                self.mav.mav.vision_position_estimate_send(
+                    estimate.usec,
+                    estimate.x_north_m,
+                    estimate.y_east_m,
+                    estimate.z_down_m,
+                    estimate.roll_rad,
+                    estimate.pitch_rad,
+                    estimate.yaw_rad,
+                    estimate.covariance,
+                    estimate.reset_counter,
+                )
+            except Exception as exc:
+                self.get_logger().warning(f"VISION_POSITION_ESTIMATE send failed: {exc}")
 
     rclpy.init()
     node = WarehouseVisionMavlinkBridge()

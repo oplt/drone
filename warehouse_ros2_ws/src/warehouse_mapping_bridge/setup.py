@@ -1,5 +1,4 @@
 from glob import glob
-import os
 from setuptools import find_packages, setup
 
 
@@ -15,7 +14,8 @@ setup(
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
-        (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
+        (f"share/{package_name}/worlds", glob("worlds/*.sdf")),
+        (f"share/{package_name}/urdf", glob("urdf/*")),
     ],
     install_requires=[
         "setuptools",

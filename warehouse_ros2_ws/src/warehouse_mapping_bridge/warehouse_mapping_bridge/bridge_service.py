@@ -90,7 +90,7 @@ async def health(deep: bool = False, force: bool = False) -> dict[str, Any]:
     duration_ms = round((time.perf_counter() - started) * 1000, 2)
     payload["duration_ms"] = duration_ms
 
-    logger.info(
+    logger.debug(
         "Warehouse bridge health path=%s deep=%s from_cache=%s duration_ms=%s probe_in_progress=%s",
         path,
         deep,
@@ -121,7 +121,7 @@ async def ready(force: bool = False) -> dict[str, Any]:
         "retry_after_ms": 1000 if not payload.get("ready") else 0,
         "duration_ms": duration_ms,
     }
-    logger.info(
+    logger.debug(
         "Warehouse bridge ready path=/ready ready=%s state=%s duration_ms=%s blockers=%s",
         ready_payload["ready"],
         ready_payload["state"],
@@ -160,6 +160,11 @@ async def stop_mapping(payload: MappingStopIn) -> dict[str, Any]:
         extra={"flight_id": payload.flight_id},
     )
     return await asyncio.to_thread(state.stop_mapping, payload.flight_id)
+
+
+@app.get("/mapping/status")
+async def mapping_status(flight_id: str | None = None) -> dict[str, Any]:
+    return await asyncio.to_thread(state.mapping_status, flight_id)
 
 
 @app.post("/mapping/artifacts/download")

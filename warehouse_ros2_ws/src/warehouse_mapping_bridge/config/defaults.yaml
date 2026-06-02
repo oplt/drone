@@ -1,4 +1,4 @@
-warehouse_mapping_bridge:
+/**:
   ros__parameters:
     profile: isaac_ros_nvblox_stereo
     left_image_topic: /left/image_rect
@@ -9,7 +9,7 @@ warehouse_mapping_bridge:
     mavlink_vision_url: udpout:127.0.0.1:14550
     depth_topic: /depth
     raw_lidar_topic: /lidar/points
-    pointcloud_topic: /nvblox_node/pointcloud
+    pointcloud_topic: /nvblox_node/static_esdf_pointcloud
     mesh_topic: /nvblox_node/mesh
     mesh_marker_topic: /nvblox_node/mesh_marker
     occupancy_topic: /nvblox_node/occupancy_layer

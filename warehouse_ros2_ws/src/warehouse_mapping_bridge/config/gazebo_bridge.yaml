@@ -1,0 +1,33 @@
+# Reference ros_gz bridge mapping for the warehouse simulation launch.
+# The launch file also declares these mappings directly so it can run without
+# depending on parser support in older ros_gz_bridge versions.
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+- ros_topic_name: /warehouse/front/rgbd/image
+  gz_topic_name: /warehouse/front/rgbd/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+- ros_topic_name: /warehouse/front/rgbd/depth_image
+  gz_topic_name: /warehouse/front/rgbd/depth_image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+- ros_topic_name: /warehouse/front/rgbd/camera_info
+  gz_topic_name: /warehouse/front/rgbd/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+- ros_topic_name: /warehouse/front/rgbd/points
+  gz_topic_name: /warehouse/front/rgbd/points
+  ros_type_name: sensor_msgs/msg/PointCloud2
+  gz_type_name: gz.msgs.PointCloudPacked
+  direction: GZ_TO_ROS
+- ros_topic_name: /warehouse/drone/odometry
+  gz_topic_name: /warehouse/drone/odometry
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: gz.msgs.Odometry
+  direction: GZ_TO_ROS

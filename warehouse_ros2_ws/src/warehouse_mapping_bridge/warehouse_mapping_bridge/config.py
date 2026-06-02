@@ -63,12 +63,13 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
         "left_image": "/warehouse/stereo/left/image",
         "right_image": "/warehouse/stereo/right/image",
         "depth": "/warehouse/front/rgbd/depth_image",
-        "imu": "/imu",
+        "imu": "",
         "visual_slam_odom": "/warehouse/drone/odometry",
         "local_odometry": "/warehouse/drone/odometry",
         "raw_lidar": "/warehouse/front/rgbd/points",
         "pointcloud": "/nvblox_node/static_esdf_pointcloud",
         "mesh": "/nvblox_node/mesh",
+        "mesh_marker": "/nvblox_node/tsdf_layer_marker",
         "occupancy": "/nvblox_node/occupancy_layer",
         "esdf": "/nvblox_node/static_esdf_pointcloud",
         "static_map_slice": "/nvblox_node/static_map_slice",
@@ -77,19 +78,21 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
     },
     "isaac_ros_nvblox_stereo": {
         "rgb_image": "/warehouse/front/rgbd/image",
-        "left_image": "/warehouse/stereo/left/image",
-        "right_image": "/warehouse/stereo/right/image",
-        "depth": "/warehouse/front/rgbd/depth_image",
+        "left_image": "/left/image_rect",
+        "right_image": "/right/image_rect",
+        "depth": "/depth",
         "imu": "/imu",
         "visual_slam_odom": "/visual_slam/tracking/odometry",
         "local_odometry": "/warehouse/local_odometry",
-        "raw_lidar": "/scan",
+        "raw_lidar": "/lidar/points",
         "pointcloud": "/nvblox_node/static_esdf_pointcloud",
         "mesh": "/nvblox_node/mesh",
+        "mesh_marker": "/nvblox_node/mesh_marker",
         "occupancy": "/nvblox_node/occupancy_layer",
         "esdf": "/nvblox_node/static_esdf_pointcloud",
         "static_map_slice": "/nvblox_node/static_map_slice",
         "combined_map_slice": "/nvblox_node/combined_map_slice",
+        "back_projected_depth": "/nvblox_node/back_projected_depth",
         "health": "/warehouse/mapping/health",
     },
 }
@@ -151,6 +154,17 @@ def _topics_yaml_path() -> Path:
     ]
     if share:
         candidates.insert(0, Path(share) / "config" / "warehouse_topics.yaml")
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        candidates.insert(
+            0,
+            Path(get_package_share_directory("warehouse_mapping_bridge"))
+            / "config"
+            / "warehouse_topics.yaml",
+        )
+    except Exception:
+        pass
     for candidate in candidates:
         if candidate.is_file():
             return candidate
@@ -215,6 +229,13 @@ def topic_registry() -> TopicRegistry:
     payload = _load_yaml_registry()
     profile = _default_topic_profile()
     profiles = payload.get("profiles", {})
+    known_profiles = set(_DEFAULT_TOPICS_BY_PROFILE)
+    if isinstance(profiles, dict):
+        known_profiles.update(str(key) for key in profiles)
+    if profile not in known_profiles:
+        raise ValueError(
+            f"Unknown warehouse topic profile {profile!r}; expected one of {sorted(known_profiles)}"
+        )
     profile_topics = profiles.get(profile, {})
     if not isinstance(profile_topics, dict):
         profile_topics = {}

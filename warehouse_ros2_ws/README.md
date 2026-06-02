@@ -7,9 +7,10 @@ camera/IMU/Isaac ROS mapping graph.
 ## Build
 
 ```bash
-cd jetson_ros2_ws
+cd warehouse_ros2_ws
 colcon build --symlink-install
 source install/setup.bash
+colcon test --packages-select warehouse_mapping_bridge
 ```
 
 ## Run Bridge
@@ -25,7 +26,7 @@ Backend should point `WAREHOUSE_ROS_BRIDGE_URL` at this service, for example:
 
 ```bash
 WAREHOUSE_ROS_BRIDGE_URL=http://jetson.local:8088
-WAREHOUSE_ROS_WS_URL=ws://jetson.local:8089/ws
+WAREHOUSE_ROS_WS_URL=ws://jetson.local:9090
 ```
 
 ## Isaac Commands
@@ -47,3 +48,5 @@ Each command is shell-like, for example:
 WAREHOUSE_VISUAL_SLAM_LAUNCH_CMD="ros2 launch isaac_ros_visual_slam isaac_ros_visual_slam_realsense.launch.py"
 ```
 
+Set `WAREHOUSE_ALLOW_PARTIAL_ISAAC_LAUNCH=1` only when you intentionally want
+to start bridge helper nodes without the full camera/SLAM/nvblox stack.

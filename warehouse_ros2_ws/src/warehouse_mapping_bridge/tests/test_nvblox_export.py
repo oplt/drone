@@ -17,7 +17,14 @@ def test_export_nvblox_artifacts_calls_save_ply(tmp_path: Path) -> None:
     session_dir.mkdir()
     mesh_path = session_dir / "artifacts" / "mesh.ply"
 
-    def fake_call(service_name: str, file_path: Path, *, timeout_s: float = 30.0) -> bool:
+    def fake_call(
+        service_name: str,
+        file_path: Path,
+        *,
+        service_type: str = "nvblox_msgs/srv/FilePath",
+        timeout_s: float = 30.0,
+    ) -> bool:
+        assert service_type == "nvblox_msgs/srv/FilePath"
         if service_name == "/nvblox_node/save_ply":
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text("ply", encoding="utf-8")

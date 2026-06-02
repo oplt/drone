@@ -9,6 +9,7 @@ from pathlib import Path
 from time import monotonic
 
 logger = logging.getLogger(__name__)
+_DEFAULT_FILEPATH_SERVICE_TYPE = "nvblox_msgs/srv/FilePath"
 
 
 def _bool_env(name: str, default: bool) -> bool:
@@ -44,8 +45,34 @@ def _wait_for_file(path: Path, *, timeout_s: float) -> bool:
     return path.is_file() and path.stat().st_size > 0
 
 
-def call_filepath_service(service_name: str, file_path: Path, *, timeout_s: float = 30.0) -> bool:
+def _service_has_type(service_name: str, service_type: str, *, timeout_s: float = 3.0) -> bool:
+    try:
+        result = subprocess.run(
+            ["ros2", "service", "list", "-t"],
+            timeout=timeout_s,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return True
+    if result.returncode != 0:
+        return True
+    expected = f"{service_name} [{service_type}]"
+    return expected in result.stdout
+
+
+def call_filepath_service(
+    service_name: str,
+    file_path: Path,
+    *,
+    service_type: str = _DEFAULT_FILEPATH_SERVICE_TYPE,
+    timeout_s: float = 30.0,
+) -> bool:
     if not shutil.which("ros2"):
+        return False
+    if not _service_has_type(service_name, service_type):
+        logger.warning("nvblox service unavailable or wrong type service=%s type=%s", service_name, service_type)
         return False
     file_path.parent.mkdir(parents=True, exist_ok=True)
     request = f'{{file_path: "{file_path.as_posix()}"}}'
@@ -56,7 +83,7 @@ def call_filepath_service(service_name: str, file_path: Path, *, timeout_s: floa
                 "service",
                 "call",
                 service_name,
-                "nvblox_msgs/srv/FilePath",
+                service_type,
                 request,
             ],
             timeout=timeout_s,
@@ -95,9 +122,12 @@ def export_nvblox_artifacts(
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     exported = 0
     wait_s = float(os.getenv("WAREHOUSE_NVBLOX_EXPORT_WAIT_S", "20"))
+    service_type = os.getenv("WAREHOUSE_NVBLOX_FILEPATH_SERVICE_TYPE", _DEFAULT_FILEPATH_SERVICE_TYPE)
+    save_ply_service = os.getenv("WAREHOUSE_NVBLOX_SAVE_PLY_SERVICE", "/nvblox_node/save_ply")
+    save_map_service = os.getenv("WAREHOUSE_NVBLOX_SAVE_MAP_SERVICE", "/nvblox_node/save_map")
 
     mesh_path = artifacts_dir / "mesh.ply"
-    if call_filepath_service("/nvblox_node/save_ply", mesh_path):
+    if call_filepath_service(save_ply_service, mesh_path, service_type=service_type):
         if _wait_for_file(mesh_path, timeout_s=wait_s):
             exported += 1
             logger.info("Exported nvblox mesh to %s", mesh_path)
@@ -105,7 +135,7 @@ def export_nvblox_artifacts(
             logger.warning("nvblox save_ply did not produce %s within %.0fs", mesh_path, wait_s)
 
     map_path = artifacts_dir / "nvblox_map.bin"
-    if call_filepath_service("/nvblox_node/save_map", map_path):
+    if call_filepath_service(save_map_service, map_path, service_type=service_type):
         if _wait_for_file(map_path, timeout_s=wait_s):
             exported += 1
             logger.info("Exported nvblox map to %s", map_path)

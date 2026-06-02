@@ -5,17 +5,24 @@ import logging
 import os
 import shlex
 import shutil
-import signal
 import subprocess
 import threading
 import time
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
 from typing import Any
 
 from .config import BridgeConfig, topic_aliases, topic_env, topic_registry
+from .process_supervisor import exited_during_grace, start_process, terminate_process
+from .session_model import (
+    MappingSession,
+    clear_mapping_session_active,
+    mapping_session_active_path,
+    mark_mapping_session_active,
+    safe_token,
+    utc_now_iso,
+    write_json,
+)
 from .topic_diagnostics import (
     probe_gazebo_sensors,
     probe_topics,
@@ -42,68 +49,6 @@ _ARTIFACT_EXTENSIONS = {
 }
 
 
-def utc_now_iso() -> str:
-    return datetime.now(UTC).isoformat()
-
-
-def safe_token(value: object) -> str:
-    raw = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in str(value or ""))
-    return raw.strip("._-") or "unknown"
-
-
-def write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def mapping_session_active_path(capture_root: Path) -> Path:
-    override = os.getenv("WAREHOUSE_MAPPING_SESSION_ACTIVE_FILE", "").strip()
-    if override:
-        return Path(override).expanduser()
-    return capture_root / ".mapping_session_active"
-
-
-def mark_mapping_session_active(capture_root: Path, flight_id: str) -> None:
-    path = mapping_session_active_path(capture_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(flight_id.strip(), encoding="utf-8")
-
-
-def clear_mapping_session_active(capture_root: Path) -> None:
-    path = mapping_session_active_path(capture_root)
-    if path.exists():
-        path.unlink()
-
-
-@dataclass
-class MappingSession:
-    flight_id: str
-    warehouse_map_id: int | None
-    profile: str
-    session_dir: Path
-    started_at: str = field(default_factory=utc_now_iso)
-    stopped_at: str | None = None
-    launch_pid: int | None = None
-    status: str = "running"
-
-    @property
-    def manifest_path(self) -> Path:
-        return self.session_dir / "warehouse_mapping_manifest.json"
-
-    def to_manifest(self) -> dict[str, Any]:
-        return {
-            "flight_id": self.flight_id,
-            "warehouse_map_id": self.warehouse_map_id,
-            "profile": self.profile,
-            "status": self.status,
-            "started_at": self.started_at,
-            "stopped_at": self.stopped_at,
-            "session_dir": str(self.session_dir),
-            "launch_pid": self.launch_pid,
-            "topics": topic_env(),
-        }
-
-
 class BridgeState:
     TOPIC_CACHE_GRACE_S = 30.0
     TOPIC_PROBE_ATTEMPTS = 3
@@ -120,6 +65,9 @@ class BridgeState:
         self.config.capture_root.mkdir(parents=True, exist_ok=True)
         self.sessions: dict[str, MappingSession] = {}
         self.processes: dict[str, subprocess.Popen[bytes]] = {}
+        self.replay_processes: dict[str, subprocess.Popen[bytes]] = {}
+        self.export_jobs: dict[str, threading.Thread] = {}
+        self.export_status: dict[str, dict[str, Any]] = {}
         self._session_lock = threading.RLock()
         self._last_nonempty_topics: set[str] | None = None
         self._last_nonempty_topics_at = 0.0
@@ -143,6 +91,7 @@ class BridgeState:
                 daemon=True,
                 name="warehouse-health-probe",
             ).start()
+        self._recover_active_session()
 
     @staticmethod
     def _background_probe_enabled() -> bool:
@@ -153,6 +102,40 @@ class BridgeState:
     def _deep_probe_enabled() -> bool:
         raw = os.getenv("WAREHOUSE_HEALTH_DEEP_PROBE", "0").strip().lower()
         return raw in {"1", "true", "yes", "on"}
+
+    def _recover_active_session(self) -> None:
+        active_path = mapping_session_active_path(self.config.capture_root)
+        if not active_path.exists():
+            return
+        try:
+            flight_id = safe_token(active_path.read_text(encoding="utf-8").strip())
+        except OSError:
+            return
+        if not flight_id or flight_id == "unknown":
+            return
+        session_dir = self.config.capture_root / f"flight_{flight_id}"
+        manifest_path = session_dir / "warehouse_mapping_manifest.json"
+        warehouse_map_id: int | None = None
+        profile = self.config.profile
+        started_at = utc_now_iso()
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if isinstance(manifest, dict):
+                    profile = str(manifest.get("profile") or profile)
+                    started_at = str(manifest.get("started_at") or started_at)
+                    raw_map_id = manifest.get("warehouse_map_id")
+                    warehouse_map_id = int(raw_map_id) if raw_map_id is not None else None
+            except Exception:
+                logger.warning("Failed to recover warehouse mapping manifest", extra={"path": str(manifest_path)})
+        self.sessions[flight_id] = MappingSession(
+            flight_id=flight_id,
+            warehouse_map_id=warehouse_map_id,
+            profile=profile,
+            session_dir=session_dir,
+            started_at=started_at,
+            status="recovered",
+        )
 
     @classmethod
     def _topic_list_probe_config(cls, *, background: bool) -> tuple[float, int]:
@@ -200,7 +183,7 @@ class BridgeState:
             time.sleep(startup_delay_s)
 
         interval_s = float(
-            os.getenv("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", str(self.DEEP_REFRESH_INTERVAL_S))
+            os.getenv("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", "15.0")
         )
 
         while True:
@@ -1343,7 +1326,7 @@ class BridgeState:
 
     @staticmethod
     def _tf_probe_enabled() -> bool:
-        raw = os.getenv("WAREHOUSE_TF_PROBE_ON_HEALTH", "1").strip().lower()
+        raw = os.getenv("WAREHOUSE_TF_PROBE_ON_HEALTH", "0").strip().lower()
         return raw in {"1", "true", "yes", "on"}
 
     @classmethod
@@ -1377,6 +1360,18 @@ class BridgeState:
 
     @staticmethod
     def _ros2_topics(*, timeout_s: float = 2.5, attempts: int = 1) -> set[str] | None:
+        if os.getenv("WAREHOUSE_GRAPH_PROBE_BACKEND", "rclpy").strip().lower() in {
+            "rclpy",
+            "auto",
+        }:
+            from .ros_graph import rclpy_topic_names
+
+            graph_topics = rclpy_topic_names(timeout_s=min(timeout_s, 1.0))
+            if graph_topics:
+                return graph_topics
+            if os.getenv("WAREHOUSE_GRAPH_PROBE_BACKEND", "rclpy").strip().lower() == "rclpy":
+                return graph_topics
+
         if not shutil.which("ros2"):
             logger.warning("ROS 2 CLI not found while probing warehouse topics")
             return None
@@ -1574,6 +1569,21 @@ class BridgeState:
             if self.config.autolaunch:
                 process = self._launch_mapping_graph(session)
                 session.launch_pid = process.pid
+                launch_grace_s = float(os.getenv("WAREHOUSE_LAUNCH_STARTUP_GRACE_S", "1.0"))
+                if exited_during_grace(process, grace_s=launch_grace_s):
+                    session.status = "failed"
+                    self._write_session_files(session, payload)
+                    return {
+                        "accepted": False,
+                        "status": "failed",
+                        "detail": f"Warehouse mapping launch exited immediately with rc={process.returncode}",
+                        "data": {
+                            "flight_id": flight_id,
+                            "session_dir": str(session_dir),
+                            "launch_pid": session.launch_pid,
+                            "returncode": process.returncode,
+                        },
+                    }
                 self.processes[flight_id] = process
                 logger.info(
                     "Warehouse mapping launch process started flight_id=%s pid=%s",
@@ -1597,6 +1607,53 @@ class BridgeState:
             },
         }
 
+    def mapping_status(self, flight_id: str | None = None) -> dict[str, Any]:
+        with self._session_lock:
+            sessions = dict(self.sessions)
+            processes = dict(self.processes)
+            export_status = {key: dict(value) for key, value in self.export_status.items()}
+
+        if flight_id:
+            safe_flight_id = safe_token(flight_id)
+            session = sessions.get(safe_flight_id)
+            session_dir = self.config.capture_root / f"flight_{safe_flight_id}"
+            manifest_path = session_dir / "warehouse_mapping_manifest.json"
+            manifest: dict[str, Any] = {}
+            if session is None and manifest_path.exists():
+                try:
+                    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest = payload if isinstance(payload, dict) else {}
+                except Exception:
+                    manifest = {}
+            process = processes.get(safe_flight_id)
+            data = session.to_manifest() if session else manifest
+            if not data:
+                return {
+                    "accepted": False,
+                    "status": "not_found",
+                    "data": {"flight_id": safe_flight_id},
+                }
+            data["process_alive"] = bool(process and process.poll() is None)
+            data["export"] = export_status.get(safe_flight_id, {})
+            return {"accepted": True, "status": data.get("status", "unknown"), "data": data}
+
+        out: list[dict[str, Any]] = []
+        for key, session in sessions.items():
+            process = processes.get(key)
+            payload = session.to_manifest()
+            payload["process_alive"] = bool(process and process.poll() is None)
+            payload["export"] = export_status.get(key, {})
+            out.append(payload)
+        return {
+            "accepted": True,
+            "status": "ok",
+            "data": {
+                "sessions": out,
+                "active_count": len(out),
+                "export_jobs": sorted(self.export_jobs.keys()),
+            },
+        }
+
     def stop_mapping(self, flight_id: str) -> dict[str, Any]:
         safe_flight_id = safe_token(flight_id)
 
@@ -1617,23 +1674,9 @@ class BridgeState:
         if process is not None:
             self._terminate_mapping_process(process)
 
-        listed_topics = self._stable_ros2_topics()
-        from .nvblox_export import export_nvblox_artifacts
-
-        export_nvblox_artifacts(
-            session.session_dir,
-            listed_topics=listed_topics,
-            profile=session.profile,
-        )
-
-        harvested = self._harvest_mapping_outputs(session)
-        if harvested == 0 and self._try_record_mapping_bag(session):
-            harvested = self._harvest_mapping_outputs(session)
-
-        session.status = "stopped"
+        session.status = "finalizing"
         session.stopped_at = utc_now_iso()
         self._write_session_files(session, {})
-        self._write_artifact_index(session)
 
         with self._session_lock:
             if self.sessions:
@@ -1642,23 +1685,81 @@ class BridgeState:
             else:
                 clear_mapping_session_active(self.config.capture_root)
 
+        export_thread = threading.Thread(
+            target=self._finalize_mapping_outputs,
+            args=(session,),
+            daemon=True,
+            name=f"warehouse-export-{safe_flight_id}",
+        )
+        self.export_jobs[safe_flight_id] = export_thread
+        self.export_status[safe_flight_id] = {
+            "status": "running",
+            "started_at": utc_now_iso(),
+            "finished_at": None,
+            "harvested_artifacts": 0,
+            "error": None,
+        }
+        export_thread.start()
+
         logger.info(
-            "Warehouse mapping session stopped flight_id=%s session_dir=%s harvested=%s",
+            "Warehouse mapping session stop accepted flight_id=%s session_dir=%s",
             safe_flight_id,
             session.session_dir,
-            harvested,
             extra={
                 "flight_id": safe_flight_id,
                 "session_dir": str(session.session_dir),
-                "harvested_artifacts": harvested,
             },
         )
         return {
             "accepted": True,
-            "status": "stopped",
-            "detail": "Warehouse mapping session stopped",
+            "status": "finalizing",
+            "detail": "Warehouse mapping session stopped; artifact export is finalizing in background",
             "data": {"flight_id": safe_flight_id, "session_dir": str(session.session_dir)},
         }
+
+    def _finalize_mapping_outputs(self, session: MappingSession) -> None:
+        harvested = 0
+        try:
+            listed_topics = self._stable_ros2_topics()
+            from .nvblox_export import export_nvblox_artifacts
+
+            export_nvblox_artifacts(
+                session.session_dir,
+                listed_topics=listed_topics,
+                profile=session.profile,
+            )
+            harvested = self._harvest_mapping_outputs(session)
+            if harvested == 0 and self._try_record_mapping_bag(session):
+                harvested = self._harvest_mapping_outputs(session)
+            session.status = "stopped"
+            session.stopped_at = session.stopped_at or utc_now_iso()
+            self._write_session_files(session, {})
+            self._write_artifact_index(session)
+            self.export_status[session.flight_id] = {
+                **self.export_status.get(session.flight_id, {}),
+                "status": "complete",
+                "finished_at": utc_now_iso(),
+                "harvested_artifacts": harvested,
+                "error": None,
+            }
+            logger.info(
+                "Warehouse mapping artifact finalization complete flight_id=%s harvested=%s",
+                session.flight_id,
+                harvested,
+                extra={"flight_id": session.flight_id, "harvested_artifacts": harvested},
+            )
+        except Exception:
+            session.status = "export_failed"
+            self.export_status[session.flight_id] = {
+                **self.export_status.get(session.flight_id, {}),
+                "status": "failed",
+                "finished_at": utc_now_iso(),
+                "error": "artifact finalization failed",
+            }
+            self._write_session_files(session, {})
+            logger.exception("Warehouse mapping artifact finalization failed flight_id=%s", session.flight_id)
+        finally:
+            self.export_jobs.pop(session.flight_id, None)
 
     def download_artifacts(self, flight_id: str, destination_dir: Path) -> dict[str, Any]:
         session_dir = self.config.capture_root / f"flight_{safe_token(flight_id)}"
@@ -1695,29 +1796,53 @@ class BridgeState:
         replay_id = safe_token(payload.get("replay_id"))
         replay_dir = self.config.capture_root / f"replay_{replay_id}"
         replay_dir.mkdir(parents=True, exist_ok=True)
+        rosbag_path = Path(str(payload.get("rosbag_path") or "")).expanduser()
+        if not rosbag_path.exists():
+            return {
+                "accepted": False,
+                "status": "not_found",
+                "detail": "rosbag_path does not exist",
+                "data": {"replay_id": replay_id, "rosbag_path": str(rosbag_path)},
+            }
+        if replay_id in self.replay_processes and self.replay_processes[replay_id].poll() is None:
+            return {
+                "accepted": True,
+                "status": "running",
+                "detail": "Replay session is already running",
+                "data": {"replay_id": replay_id, "session_dir": str(replay_dir)},
+            }
         logger.info(
             "Warehouse replay start requested",
-            extra={"replay_id": replay_id, "rosbag_path": payload.get("rosbag_path")},
+            extra={"replay_id": replay_id, "rosbag_path": str(rosbag_path)},
         )
+        env = os.environ.copy()
+        env["WAREHOUSE_ROS_PROFILE"] = str(payload.get("profile") or self.config.profile)
+        cmd = ["ros2", "bag", "play", str(rosbag_path), "--clock"]
+        process = start_process(cmd, env=env, log_path=replay_dir / "replay.log")
+        self.replay_processes[replay_id] = process
         write_json(
             replay_dir / "replay_manifest.json",
             {
                 "replay_id": replay_id,
-                "rosbag_path": payload.get("rosbag_path"),
+                "rosbag_path": str(rosbag_path),
                 "profile": payload.get("profile") or self.config.profile,
                 "started_at": utc_now_iso(),
+                "launch_pid": process.pid,
             },
             )
         return {
             "accepted": True,
             "status": "running",
-            "detail": "Replay session registered",
-            "data": {"replay_id": replay_id, "session_dir": str(replay_dir)},
+            "detail": "Replay session started",
+            "data": {"replay_id": replay_id, "session_dir": str(replay_dir), "launch_pid": process.pid},
         }
 
     def stop_replay(self, replay_id: str) -> dict[str, Any]:
         safe_replay_id = safe_token(replay_id)
         replay_dir = self.config.capture_root / f"replay_{safe_replay_id}"
+        process = self.replay_processes.pop(safe_replay_id, None)
+        if process is not None:
+            self._terminate_mapping_process(process)
         write_json(
             replay_dir / "replay_stop.json",
             {"replay_id": safe_replay_id, "stopped_at": utc_now_iso()},
@@ -1738,22 +1863,9 @@ class BridgeState:
             extra={"pid": process.pid},
         )
         try:
-            os.killpg(process.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            return
-        try:
-            process.wait(timeout=timeout_s)
-            return
-        except subprocess.TimeoutExpired:
-            logger.warning("Warehouse mapping process did not exit after SIGTERM pid=%s", process.pid)
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            return
-        try:
-            process.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            logger.warning("Warehouse mapping process did not exit after SIGKILL pid=%s", process.pid)
+            terminate_process(process, timeout_s=timeout_s)
+        except Exception:
+            logger.warning("Warehouse mapping process termination failed pid=%s", process.pid)
 
     def _harvest_mapping_outputs(self, session: MappingSession) -> int:
         artifacts_dir = session.session_dir / "artifacts"
@@ -1811,11 +1923,7 @@ class BridgeState:
                 "WAREHOUSE_ROS_PROFILE": session.profile,
             }
         )
-        return subprocess.Popen(
-            shlex.split(self.config.launch_cmd),
-            env=env,
-            start_new_session=True,
-        )
+        return start_process(self.config.launch_cmd, env=env, log_path=session.session_dir / "launch.log")
 
     def _write_session_files(self, session: MappingSession, payload: dict[str, Any]) -> None:
         write_json(session.manifest_path, session.to_manifest())

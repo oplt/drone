@@ -25,7 +25,7 @@ Visualization Manager:
       Enabled: true
       Name: nvBlox Pointcloud
       Topic:
-        Value: /nvblox_node/pointcloud
+        Value: /nvblox_node/static_esdf_pointcloud
       Reliability Policy: Best Effort
       Style: Points
       Size (Pixels): 2
@@ -52,7 +52,7 @@ Visualization Manager:
         Value: /nvblox_node/mesh_marker
   Enabled: true
   Global Options:
-    Fixed Frame: map
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:

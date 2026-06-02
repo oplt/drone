@@ -32,6 +32,21 @@ def quaternion_to_euler_rad(x: float, y: float, z: float, w: float) -> tuple[flo
     return roll, pitch, yaw
 
 
+def enu_quaternion_to_ned_euler_rad(
+    x: float,
+    y: float,
+    z: float,
+    w: float,
+) -> tuple[float, float, float]:
+    """Convert ROS ENU FLU body orientation to MAVLink local NED FRD Euler angles."""
+    roll_enu, pitch_enu, yaw_enu = quaternion_to_euler_rad(x, y, z, w)
+    roll_ned = roll_enu
+    pitch_ned = -pitch_enu
+    yaw_ned = math.pi / 2.0 - yaw_enu
+    yaw_ned = (yaw_ned + math.pi) % (2.0 * math.pi) - math.pi
+    return roll_ned, pitch_ned, yaw_ned
+
+
 def covariance21(position_var_m2: float, angle_var_rad2: float) -> list[float]:
     cov = [0.0] * 21
     cov[0] = position_var_m2
@@ -47,7 +62,7 @@ def odometry_to_vision_pose(message: object, *, now_usec: int | None = None) -> 
     pose = message.pose.pose
     position = pose.position
     orientation = pose.orientation
-    roll, pitch, yaw = quaternion_to_euler_rad(
+    roll, pitch, yaw = enu_quaternion_to_ned_euler_rad(
         float(orientation.x),
         float(orientation.y),
         float(orientation.z),

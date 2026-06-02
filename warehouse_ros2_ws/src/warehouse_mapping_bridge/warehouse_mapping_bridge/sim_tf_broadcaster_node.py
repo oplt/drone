@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 
-from .config import topic_env
+from .config import topic_env, topic_registry
 
 
 def _normalize_frame_id(frame_id: str) -> str:
@@ -36,6 +36,7 @@ def main() -> None:
     from nav_msgs.msg import Odometry
     from rclpy.executors import ExternalShutdownException
     from rclpy.node import Node
+    from rclpy.qos import QoSProfile
     from sensor_msgs.msg import CameraInfo
     from tf2_ros import StaticTransformBroadcaster, TransformBroadcaster
 
@@ -43,8 +44,22 @@ def main() -> None:
         def __init__(self) -> None:
             super().__init__("warehouse_sim_tf_broadcaster")
             self.topics = topic_env()
-            self.base_link_frame = os.getenv("WAREHOUSE_BASE_LINK_FRAME", "base_link")
-            self.odom_frame = os.getenv("WAREHOUSE_ODOM_FRAME", "odom")
+            registry_frames = topic_registry().frames
+            self.base_link_frame = _normalize_frame_id(
+                os.getenv("WAREHOUSE_BASE_LINK_FRAME", registry_frames.get("base_link", "base_link"))
+            )
+            self.odom_frame = _normalize_frame_id(
+                os.getenv("WAREHOUSE_ODOM_FRAME", registry_frames.get("odom", "odom"))
+            )
+            self.rgbd_frame = _normalize_frame_id(
+                os.getenv("WAREHOUSE_RGBD_FRAME", registry_frames.get("camera", "front_rgbd_camera_link"))
+            )
+            self.declare_parameter("odom_frame", self.odom_frame)
+            self.declare_parameter("base_link_frame", self.base_link_frame)
+            self.declare_parameter("rgbd_frame", self.rgbd_frame)
+            self.odom_frame = _normalize_frame_id(str(self.get_parameter("odom_frame").value))
+            self.base_link_frame = _normalize_frame_id(str(self.get_parameter("base_link_frame").value))
+            self.rgbd_frame = _normalize_frame_id(str(self.get_parameter("rgbd_frame").value))
             self.camera_offsets = _camera_offsets()
             self.tf_broadcaster = TransformBroadcaster(self)
             self.static_broadcaster = StaticTransformBroadcaster(self)
@@ -55,14 +70,16 @@ def main() -> None:
                 "WAREHOUSE_ODOM_TOPIC",
                 self.topics["visual_slam_odom"],
             )
-            self.create_subscription(Odometry, odom_topic, self.on_odometry, 20)
+            self.declare_parameter("visual_slam_odom_topic", odom_topic)
+            odom_topic = str(self.get_parameter("visual_slam_odom_topic").value or odom_topic)
+            self.create_subscription(Odometry, odom_topic, self.on_odometry, QoSProfile(depth=20))
             self.create_timer(0.05, self._republish_odometry_tf)
             for camera_info_topic in self.camera_offsets:
                 self.create_subscription(
                     CameraInfo,
                     camera_info_topic,
                     lambda message, topic=camera_info_topic: self.on_camera_info(message, topic),
-                    10,
+                    QoSProfile(depth=10),
                 )
             self._publish_default_camera_transforms()
             self._republish_odometry_tf()
@@ -73,7 +90,7 @@ def main() -> None:
 
         def _publish_default_camera_transforms(self) -> None:
             defaults = {
-                os.getenv("WAREHOUSE_RGBD_FRAME", "front_rgbd_camera_link"): self.camera_offsets[
+                self.rgbd_frame: self.camera_offsets[
                     os.getenv("WAREHOUSE_RGB_CAMERA_INFO_TOPIC", "/warehouse/front/rgbd/camera_info")
                 ],
                 os.getenv("WAREHOUSE_LEFT_CAMERA_FRAME", "front_left_camera_link"): self.camera_offsets[
@@ -96,6 +113,16 @@ def main() -> None:
                     )
                 )
                 self.published_static_frames.add(normalized)
+                optical = f"{normalized}_optical"
+                if optical not in self.published_static_frames:
+                    transforms.append(
+                        self._static_transform(
+                            parent_frame=normalized,
+                            child_frame=optical,
+                            translation=(0.0, 0.0, 0.0),
+                        )
+                    )
+                    self.published_static_frames.add(optical)
             if transforms:
                 self.static_broadcaster.sendTransform(transforms)
                 self.get_logger().info(
@@ -107,7 +134,7 @@ def main() -> None:
             child_frame = _normalize_frame_id(self.base_link_frame)
             transform = TransformStamped()
             transform.header.stamp = self.get_clock().now().to_msg()
-            transform.header.frame_id = _normalize_frame_id(message.header.frame_id or self.odom_frame)
+            transform.header.frame_id = self.odom_frame
             transform.child_frame_id = child_frame
 
             # Odometry.pose.pose is geometry_msgs/Pose, but TransformStamped.transform
@@ -156,6 +183,16 @@ def main() -> None:
             )
             self.static_broadcaster.sendTransform(transform)
             self.published_static_frames.add(child_frame)
+            optical = f"{child_frame}_optical"
+            if optical not in self.published_static_frames:
+                self.static_broadcaster.sendTransform(
+                    self._static_transform(
+                        parent_frame=child_frame,
+                        child_frame=optical,
+                        translation=(0.0, 0.0, 0.0),
+                    )
+                )
+                self.published_static_frames.add(optical)
             self.get_logger().info(
                 f"Published static TF {self.base_link_frame} -> {child_frame} from {topic}"
             )

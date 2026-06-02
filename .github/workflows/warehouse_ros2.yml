@@ -1,0 +1,40 @@
+name: warehouse-ros2
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  warehouse-ros2:
+    runs-on: ubuntu-24.04
+    container:
+      image: osrf/ros:jazzy-desktop
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apt-get update
+          rosdep update || true
+          cd warehouse_ros2_ws
+          rosdep install --from-paths src --ignore-src -r -y
+          apt-get install -y python3-pip python3-pytest python3-lark
+      - name: Build
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd warehouse_ros2_ws
+          colcon build --symlink-install --packages-select warehouse_mapping_bridge
+      - name: Test
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd warehouse_ros2_ws
+          colcon test --packages-select warehouse_mapping_bridge --event-handlers console_direct+
+          colcon test-result --verbose
+      - name: Direct pytest
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          pytest -q warehouse_ros2_ws/src/warehouse_mapping_bridge/tests

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<robot name="warehouse_mapping_drone">
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.35 0.35 0.08"/>
+      </geometry>
+      <material name="body">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+  </link>
+  <link name="front_rgbd_camera_link"/>
+  <joint name="front_rgbd_camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_rgbd_camera_link"/>
+    <origin xyz="0.20 0 0.08" rpy="0 0 0"/>
+  </joint>
+</robot>
