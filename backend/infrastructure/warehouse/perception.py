@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,11 @@ logger = logging.getLogger(__name__)
 _cached_port: WarehousePerceptionPort | None = None
 _BRIDGE_WARN_INTERVAL_S = 30.0
 _BRIDGE_WARN_AFTER_S = 20.0
+
+
+def _sync_forced_deep_probe_enabled() -> bool:
+    raw = os.getenv("WAREHOUSE_PERCEPTION_SYNC_FORCE_DEEP", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
 
 
 def _bridge_state_from_payload(
@@ -202,7 +208,7 @@ class HttpWarehousePerceptionPort:
             force: bool = False,
     ) -> WarehousePerceptionStatus:
         timeout_s = self.deep_timeout_s if deep else self.timeout_s
-        if deep and force:
+        if deep and force and _sync_forced_deep_probe_enabled():
             path = "/ready?force=1"
         elif deep:
             path = "/ready"

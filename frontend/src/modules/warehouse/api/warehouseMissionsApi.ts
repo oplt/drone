@@ -55,6 +55,8 @@ export type WarehouseMappingStackStatus = {
   started_at: string | null;
   last_exit_code: number | null;
   last_error: string | null;
+  nvblox_running?: boolean;
+  phase?: "stopped" | "waiting_sensors" | "running" | string;
 };
 
 export async function fetchWarehouseMappingStackStatus(

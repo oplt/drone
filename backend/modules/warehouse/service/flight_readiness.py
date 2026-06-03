@@ -329,7 +329,15 @@ def evaluate_subsystems_from_components(
     )
     stability_reset_reason: str | None = None
     if diagnostics_probe_pending(components):
-        perception_stable_ms = perception_tracker.hold_stable_ms()
+        # Deep ROS probes drop contract topics briefly; hold elapsed time instead of zeroing.
+        held_ms = perception_tracker.hold_stable_ms()
+        if held_ms > 0:
+            perception_stable_ms = held_ms
+        else:
+            perception_stable_ms = perception_tracker.stable_for_ms(
+                perception_ok=False,
+                reset_reason="ROS health probe in progress",
+            )
     elif not core_ok:
         if bridge.status != SubsystemStatus.OK:
             stability_reset_reason = f"bridge status is {bridge.status.value}"

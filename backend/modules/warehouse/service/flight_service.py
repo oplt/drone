@@ -22,6 +22,95 @@ from backend.modules.warehouse.service.flight_state_machine import (
 logger = logging.getLogger(__name__)
 
 
+async def _bootstrap_telemetry_for_flight() -> list[str]:
+    """Mirror POST /telemetry/connect so flight start does not fail on a cold runtime."""
+    import asyncio
+
+    from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
+
+    if telemetry_manager.runtime_snapshot().get("running"):
+        return []
+
+    notes: list[str] = []
+    try:
+        from backend.modules.missions.api.routes import get_orchestrator
+
+        orch = await get_orchestrator()
+    except Exception as exc:
+        logger.warning("Warehouse flight telemetry bootstrap: orchestrator unavailable: %s", exc)
+        return [f"Mission orchestrator unavailable: {exc}"]
+
+    drone = getattr(orch, "drone", None)
+    if drone is not None and not getattr(drone, "vehicle", None):
+        try:
+            await asyncio.to_thread(drone.connect)
+            logger.info("Warehouse flight gate: DroneKit session connected")
+        except Exception as exc:
+            logger.warning("Warehouse flight gate: DroneKit connect failed: %s", exc)
+            notes.append(
+                f"Autopilot connection failed: {exc}. "
+                "Start SITL/MAVProxy (e.g. udp:127.0.0.1:14550) and use Connect Drone."
+            )
+
+    if not telemetry_manager.runtime_snapshot().get("running"):
+        try:
+            await orch.start_live_telemetry()
+            logger.info("Warehouse flight gate: live telemetry ingest started")
+        except Exception as exc:
+            logger.warning("Warehouse flight gate: telemetry start failed: %s", exc)
+            notes.append(f"Telemetry start failed: {exc}")
+    return notes
+
+
+async def _mavlink_flight_start_blockers() -> list[str]:
+    """Warehouse missions move the vehicle via MAVLink; ROS odom alone is insufficient."""
+    config = WarehouseFlightConfig.from_env()
+    if not config.require_mavlink_for_flight:
+        return []
+
+    import time
+
+    from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
+
+    reasons: list[str] = await _bootstrap_telemetry_for_flight()
+    runtime = telemetry_manager.runtime_snapshot()
+    if not runtime.get("running"):
+        reasons.append(
+            "Telemetry runtime is not running. Click Connect Drone in the app "
+            "(or POST /api/telemetry/connect), then retry warehouse flight."
+        )
+    if not runtime.get("source_connected"):
+        reasons.append(
+            "MAVLink not connected. Connect drone/SITL telemetry before flight "
+            "(Gazebo: ArduPilot SITL or MAVProxy on udp:127.0.0.1:14550)"
+        )
+    last_update = float(runtime.get("last_update") or 0.0)
+    if last_update > 0.0 and (time.time() - last_update) > 15.0:
+        reasons.append(
+            f"MAVLink telemetry stale ({time.time() - last_update:.0f}s old)"
+        )
+    try:
+        from backend.modules.missions.api.routes import get_orchestrator
+
+        orch = await get_orchestrator()
+        if getattr(orch.drone, "vehicle", None) is None:
+            reasons.append(
+                "Autopilot session not initialized. Use Connect Drone before warehouse flight."
+            )
+    except Exception as exc:
+        logger.debug("Orchestrator unavailable for MAVLink flight gate: %s", exc)
+        if not any("orchestrator" in item.lower() for item in reasons):
+            reasons.append("Mission orchestrator unavailable for MAVLink flight")
+    # De-dupe while preserving order
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in reasons:
+        if item and item not in seen:
+            seen.add(item)
+            deduped.append(item)
+    return deduped
+
+
 @dataclass(frozen=True)
 class WarehouseFlightMissionContext:
     loaded: bool = False
@@ -193,6 +282,7 @@ async def assert_ready_for_warehouse_flight_start(
 
     stack_status, mapping_readiness, _takeoff_ready = await prepare_warehouse_scan_ros(
         require_nvblox=True,
+        parallel_takeoff=False,
     )
     if not stack_status.running:
         detail = stack_status.last_error or "mapping stack failed to start"
@@ -208,8 +298,13 @@ async def assert_ready_for_warehouse_flight_start(
         missing = mapping_readiness.missing_nvblox
         if missing and "missing outputs" not in detail:
             detail = f"{detail}; missing outputs: {', '.join(missing)}"
+        actions = [
+            "Ensure bridge stack is running (not only Gazebo: need ros2 topic hz on /warehouse/front/rgbd/image)",
+            "Restart mapping: bash scripts/start_warehouse_nvblox.sh (ROS_DOMAIN_ID=42)",
+            f"Then verify: ros2 topic hz /nvblox_node/static_esdf_pointcloud",
+        ]
         raise WarehouseFlightNotReadyError(
-            blocking_reasons=[f"nvblox: {detail}"],
+            blocking_reasons=[f"nvblox: {detail}", *actions[:2]],
             readiness=snapshot.to_dict(),
         )
 
@@ -228,6 +323,18 @@ async def assert_ready_for_warehouse_flight_start(
             blocking_reasons=snapshot.readiness.blocking_reasons,
             readiness=snapshot.to_dict(),
         )
+
+    mavlink_blockers = await _mavlink_flight_start_blockers()
+    if mavlink_blockers:
+        logger.warning(
+            "Warehouse flight start refused: MAVLink required blocking=%s",
+            mavlink_blockers,
+        )
+        raise WarehouseFlightNotReadyError(
+            blocking_reasons=mavlink_blockers,
+            readiness=snapshot.to_dict(),
+        )
+
     logger.info(
         "Warehouse flight start readiness passed state=%s",
         snapshot.current_state.value,

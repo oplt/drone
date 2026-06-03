@@ -37,7 +37,8 @@ source_profiles:
     imu: /imu
     visual_slam_odom: /warehouse/drone/odometry
     local_odometry: /warehouse/drone/odometry
-    raw_lidar: /warehouse/front/rgbd/points
+    # 3D LiDAR (Gazebo Mid-360); topic_adapter relays into /warehouse/contract/points
+    raw_lidar: /warehouse/mid360/scan/points
     pointcloud: /nvblox_node/static_esdf_pointcloud
     mesh: /nvblox_node/mesh
     mesh_marker: /nvblox_node/tsdf_layer_marker
@@ -88,7 +89,10 @@ aliases:
   depth:
     - /warehouse/front/rgbd/depth_image
   raw_lidar:
+    - /warehouse/mid360/scan/points
+    - /warehouse/mid360/scan
     - /scan/points
+    - /scan
     - /warehouse/front/rgbd/points
     - /lidar/points
   imu:

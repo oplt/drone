@@ -32,6 +32,9 @@ async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
         token = websocket.cookies.get("access_token")
 
     if not token:
+        token = websocket.query_params.get("token")
+
+    if not token:
         return False, "Missing authentication token"
 
     try:

@@ -28,6 +28,51 @@ def _gazebo_sim_enabled() -> bool:
     }
 
 
+def _gazebo_ground_truth_odometry(odom_state: dict[str, Any]) -> bool:
+    """Gazebo sim uses bridged model odometry — not VSLAM loss semantics."""
+    if not _gazebo_sim_enabled():
+        return False
+    mode = str(odom_state.get("localization_mode") or "").strip().lower()
+    if mode in {"gazebo_ground_truth", "gazebo_gt", "gazebo", "sim"}:
+        return True
+    status = str(odom_state.get("slam_tracking_status") or "").strip().upper()
+    if status.startswith("GAZEBO_GROUND_TRUTH"):
+        return True
+    return False
+
+
+def merge_runtime_odometry_components(components: dict[str, Any]) -> dict[str, Any]:
+    """Align bridge health flags with odometry export state (Gazebo GT vs VSLAM)."""
+    merged = dict(components)
+    state_raw = merged.get("local_odometry_state")
+    if not isinstance(state_raw, dict):
+        read = read_odometry_state_file()
+        if read.payload:
+            state_raw = read.payload
+            merged["local_odometry_state"] = state_raw
+        else:
+            state_raw = {}
+
+    if _gazebo_ground_truth_odometry(state_raw):
+        merged["slam_tracking_ok"] = True
+        merged["visual_slam"] = True
+        merged["slam_ready"] = True
+        merged.setdefault(
+            "slam_tracking_status",
+            state_raw.get("slam_tracking_status") or "GAZEBO_GROUND_TRUTH_OK",
+        )
+        merged.setdefault(
+            "localization_mode",
+            state_raw.get("localization_mode") or "gazebo_ground_truth",
+        )
+        merged["odometry_source"] = "sim_odom"
+    elif state_raw.get("slam_tracking_ok") is True:
+        merged["slam_tracking_ok"] = True
+        if merged.get("visual_slam") is False:
+            merged["visual_slam"] = True
+    return merged
+
+
 def default_odometry_max_age_s() -> float:
     """Hard limit for local pose freshness during takeoff and in-flight safety."""
     return _float_env("WAREHOUSE_ODOMETRY_MAX_AGE_S", 2.0)
@@ -282,6 +327,8 @@ class WarehouseRuntimeSafetyTracker:
         min_obstacle_distance_m: float = 0.6,
         min_ceiling_distance_m: float = 0.5,
     ) -> WarehouseSafetyDecision:
+        components = merge_runtime_odometry_components(components)
+
         if components.get("ros_bridge_heartbeat") is False:
             return WarehouseSafetyDecision(False, "land", "ros_bridge_heartbeat_lost")
 
@@ -336,7 +383,7 @@ class WarehouseRuntimeSafetyTracker:
                         "elapsed_s": round(self.mission_elapsed_s(), 2),
                     },
                 )
-            if explicit_tracking_lost:
+            if explicit_tracking_lost and not _gazebo_ground_truth_odometry(odom_state):
                 return WarehouseSafetyDecision(
                     False,
                     "return_or_land",
@@ -407,7 +454,7 @@ class WarehouseRuntimeSafetyTracker:
                 },
             )
 
-        if explicit_tracking_lost:
+        if explicit_tracking_lost and not _gazebo_ground_truth_odometry(odom_state):
             now = time.monotonic()
             if self.vslam_recovery_grace_s <= 0:
                 return WarehouseSafetyDecision(

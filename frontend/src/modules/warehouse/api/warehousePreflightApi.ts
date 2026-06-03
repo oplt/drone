@@ -81,7 +81,7 @@ export type WarehouseGoPreflight = {
 
 export async function fetchWarehousePreflight(
   token: string,
-  options?: { missionLoaded?: boolean; deep?: boolean },
+  options?: { missionLoaded?: boolean; deep?: boolean; force?: boolean },
 ): Promise<WarehouseGoPreflight> {
   const params = new URLSearchParams();
   if (options?.missionLoaded) {
@@ -89,6 +89,9 @@ export async function fetchWarehousePreflight(
   }
   if (options?.deep != null) {
     params.set("deep", String(options.deep));
+  }
+  if (options?.force) {
+    params.set("force", "true");
   }
   const query = params.toString();
   const path = query ? `/warehouse/preflight?${query}` : "/warehouse/preflight";

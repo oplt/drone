@@ -156,6 +156,8 @@ class MappingStackStatus:
     started_at: str | None = None
     last_exit_code: int | None = None
     last_error: str | None = None
+    nvblox_running: bool = False
+    phase: str = "stopped"
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -164,6 +166,8 @@ class MappingStackStatus:
             "started_at": self.started_at,
             "last_exit_code": self.last_exit_code,
             "last_error": self.last_error,
+            "nvblox_running": self.nvblox_running,
+            "phase": self.phase,
         }
 
 
@@ -282,11 +286,20 @@ class WarehouseMappingStackProcessManager:
             self._started_at = None
             self._last_error = "external nvblox_node is no longer available"
 
-        running = managed_running or external_running
+        nvblox_running = _nvblox_process_running()
+        running = managed_running or external_running or nvblox_running
+        if nvblox_running:
+            phase = "running"
+        elif managed_running or external_running:
+            phase = "waiting_sensors"
+        else:
+            phase = "stopped"
 
         return MappingStackStatus(
             running=running,
             pid=self._process.pid if managed_running and self._process is not None else None,
+            nvblox_running=nvblox_running,
+            phase=phase,
             started_at=self._started_at if running else None,
             last_exit_code=self._last_exit_code,
             last_error=self._last_error,

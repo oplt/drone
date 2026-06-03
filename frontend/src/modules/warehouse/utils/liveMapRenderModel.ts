@@ -51,7 +51,7 @@ export function toRenderChunks(
       center: bbox ? centerFromBbox(bbox) : fallbackCenter,
       size: bbox ? sizeFromBbox(bbox) : [0.28, 0.28, 0.28],
       pointCount: chunk.point_count ?? 0,
-      hasGeometry: Boolean(chunk.url),
+      hasGeometry: Boolean(chunk.url) || (chunk.point_count ?? 0) > 0,
     };
   });
 }

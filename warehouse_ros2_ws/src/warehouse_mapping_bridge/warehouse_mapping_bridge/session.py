@@ -894,7 +894,7 @@ class BridgeState:
                 "odometry_drift_m": odometry_state.get("odometry_drift_m"),
                 "local_odometry_state": odometry_state,
                 "nvblox": nvblox_ready,
-                "nvblox_healthy": nvblox_ready,
+                "nvblox_healthy": nvblox_ready and not nvblox_warming,
                 "nvblox_warming_up": nvblox_warming,
                 "nvblox_process_running": self._nvblox_process_running(),
                 "nvblox_checks_active": check_nvblox,
@@ -1163,10 +1163,16 @@ class BridgeState:
     def _tf_from_deep_cache(self):
         from .topic_diagnostics import TfChainDiagnostic
 
+        max_age_s = max(
+            5.0,
+            float(os.getenv("WAREHOUSE_TF_DEEP_CACHE_MAX_AGE_S", "25.0")),
+        )
         with self._health_lock:
             if self._deep_health_cache is None:
                 return None
-            _, payload = self._deep_health_cache
+            cached_at, payload = self._deep_health_cache
+            if monotonic() - cached_at > max_age_s:
+                return None
         tf_chain = (
             payload.get("components", {}).get("tf_chain")
             if isinstance(payload, dict)

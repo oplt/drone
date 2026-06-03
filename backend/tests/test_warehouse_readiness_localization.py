@@ -317,3 +317,25 @@ def test_bridge_ok_without_ready_to_fly_gate() -> None:
     )
     assert readiness.subsystems["bridge"].status == SubsystemStatus.OK
     assert readiness.ready_to_takeoff is False
+
+
+def test_gazebo_runtime_safety_ignores_stale_bridge_slam_flags(
+    gazebo_localization_mode: None,
+) -> None:
+    from backend.modules.warehouse.service.runtime_safety import (
+        merge_runtime_odometry_components,
+    )
+    from backend.modules.warehouse.service.safety import evaluate_warehouse_runtime_safety
+
+    components = _gazebo_components(slam_tracking_ok=False)
+    components["local_odometry_state"] = {
+        "updated_at_monotonic": __import__("time").monotonic(),
+        "slam_tracking_ok": True,
+        "localization_mode": "gazebo_ground_truth",
+        "slam_tracking_status": "GAZEBO_GROUND_TRUTH_OK",
+    }
+    merged = merge_runtime_odometry_components(components)
+    assert merged["slam_tracking_ok"] is True
+    decision = evaluate_warehouse_runtime_safety(merged)
+    assert decision.safe is True
+    assert decision.reason is None

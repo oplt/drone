@@ -4,12 +4,50 @@ import { describe, expect, it, vi } from "vitest";
 import { server } from "../../../test/msw/server";
 import {
   useRunWarehousePreflight,
+  warehousePreflightPassed,
   warehousePreflightPollIntervalMs,
 } from "../hooks/useRunWarehousePreflight";
 
 vi.mock("../../mission-runtime/api/telemetryConnectApi", () => ({
   connectDroneTelemetry: vi.fn(() => Promise.reject(new Error("offline"))),
 }));
+
+describe("warehousePreflightPassed", () => {
+  it("rejects ready_to_fly when rgb_depth_imu panel shows FAIL", () => {
+    expect(
+      warehousePreflightPassed({
+        ready_to_fly: true,
+        bridge_ok: true,
+        gazebo_ok: true,
+        sensors_ok: true,
+        odom_ok: true,
+        localization_ok: true,
+        tf_ok: true,
+        nvblox_ok: null,
+        stability_ok: true,
+        vehicle_link_ok: true,
+        telemetry_stream_ok: true,
+        battery_ok: true,
+        perception_stable_for_ms: 8000,
+        perception_required_stable_ms: 8000,
+        ros_topic_count: 20,
+        blocking_reasons: [],
+        suggested_actions: [],
+        categories: { rgb_depth_imu: "FAIL", sensors: "OK" },
+        note: "",
+        diagnostics: {
+          topics: {
+            by_category: {
+              rgb: { status: "FAIL" },
+              depth: { status: "OK" },
+              imu: { status: "OK" },
+            },
+          },
+        },
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("useRunWarehousePreflight", () => {
   it("uses faster polling when stability window is almost satisfied", () => {

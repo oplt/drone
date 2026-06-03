@@ -49,7 +49,17 @@ def check_telemetry_stream(
     config: WarehouseFlightConfig,
     sim_ros_fallback: bool,
     recent_threshold_sec: float = 15.0,
+    autopilot_sample_at: float | None = None,
 ) -> SubsystemHealth:
+    if autopilot_sample_at is not None and autopilot_sample_at > 0:
+        age_s = max(0.0, time.time() - autopilot_sample_at)
+        if age_s <= recent_threshold_sec:
+            return SubsystemHealth(
+                SubsystemStatus.OK,
+                f"MAVLink telemetry live (autopilot sample {age_s:.1f}s ago)",
+                last_seen_ms=int(age_s * 1000.0),
+            )
+
     if (
         runtime.telemetry_running
         and runtime.telemetry_source_connected
@@ -73,6 +83,13 @@ def check_telemetry_stream(
             SubsystemStatus.OK,
             "Gazebo sim: ROS odometry substituting MAVLink telemetry stream",
             details={"sim_mode": True},
+        )
+
+    if runtime.drone_connected and runtime.telemetry_running:
+        return SubsystemHealth(
+            SubsystemStatus.WARN,
+            "Telemetry ingest running; waiting for first MAVLink sample",
+            details={"hint": "Wait a few seconds after Connect Drone, then retry preflight"},
         )
 
     if not runtime.telemetry_running:

@@ -52,6 +52,7 @@ class WarehouseFlightConfig:
     require_mission_for_autonomy: bool = True
     require_gazebo_publishing: bool = True
     gazebo_sim: bool = False
+    require_mavlink_for_flight: bool = True
 
     @classmethod
     def from_env(cls) -> WarehouseFlightConfig:
@@ -78,4 +79,5 @@ class WarehouseFlightConfig:
             require_mission_for_autonomy=True,
             require_gazebo_publishing=_bool_env("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", True),
             gazebo_sim=gazebo_flow,
+            require_mavlink_for_flight=_bool_env("WAREHOUSE_FLIGHT_REQUIRE_MAVLINK", True),
         )

@@ -12,9 +12,16 @@ _last_sensor_ready_payload: dict[str, object] | None = None
 def record_sensor_readiness(*, ready: bool, payload: dict[str, object] | None = None) -> None:
     global _last_sensor_ready_at, _last_sensor_ready_payload
     if not ready:
+        clear_sensor_readiness()
         return
     _last_sensor_ready_at = time.monotonic()
     _last_sensor_ready_payload = payload
+
+
+def clear_sensor_readiness() -> None:
+    global _last_sensor_ready_at, _last_sensor_ready_payload
+    _last_sensor_ready_at = None
+    _last_sensor_ready_payload = None
 
 
 def sensor_readiness_recent(*, max_age_s: float = 45.0) -> bool:

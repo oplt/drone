@@ -223,28 +223,46 @@ export function useWarehouseLiveVoxelMap(
     const openSocket = () => {
       if (cancelled) return;
       setConnectionState(reconnectAttempt > 0 ? "reconnecting" : "connecting");
-      socketRef.current = connectWarehouseLiveMap(flightId, {
-        onOpen: () => {
-          reconnectAttempt = 0;
-          setError(null);
-          scheduleStaleCheck();
+      socketRef.current = connectWarehouseLiveMap(
+        flightId,
+        {
+          onOpen: () => {
+            reconnectAttempt = 0;
+            setError(null);
+            setConnectionState("live");
+            scheduleStaleCheck();
+            if (socketRef.current?.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({ type: "ping" }));
+            }
+          },
+          onMessage: applyMessage,
+          onError: () => {
+            setError("Live voxel stream error.");
+          },
+            onClose: () => {
+            if (cancelled) return;
+            reconnectAttempt += 1;
+            setConnectionState((current) =>
+              current === "finalized" ? current : "reconnecting",
+            );
+            reconnectTimerRef.current = window.setTimeout(
+              openSocket,
+              RECONNECT_AFTER_MS,
+            );
+          },
         },
-        onMessage: applyMessage,
-        onError: () => {
-          setError("Live voxel stream error.");
-        },
-        onClose: () => {
-          if (cancelled) return;
-          reconnectAttempt += 1;
-          setConnectionState((current) =>
-            current === "finalized" ? current : "reconnecting",
-          );
-          reconnectTimerRef.current = window.setTimeout(
-            openSocket,
-            RECONNECT_AFTER_MS,
-          );
-        },
-      });
+        options.token,
+      );
+    };
+
+    const pollSnapshot = () => {
+      void fetchWarehouseLiveMapSnapshot(flightId, options.token)
+        .then((snapshot) => {
+          if (!cancelled) applyMessage(snapshot);
+        })
+        .catch(() => {
+          /* keep websocket path; snapshot is a bootstrap fallback */
+        });
     };
 
     void fetchWarehouseLiveMapSnapshot(flightId, options.token)
@@ -256,8 +274,10 @@ export function useWarehouseLiveVoxelMap(
       });
 
     openSocket();
+    const snapshotPoll = window.setInterval(pollSnapshot, 3000);
 
     return () => {
+      window.clearInterval(snapshotPoll);
       cancelled = true;
       clearTimers();
       disconnectWarehouseLiveMap(socketRef.current);

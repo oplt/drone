@@ -66,7 +66,7 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
         "imu": "/imu",
         "visual_slam_odom": "/warehouse/drone/odometry",
         "local_odometry": "/warehouse/drone/odometry",
-        "raw_lidar": "/warehouse/front/rgbd/points",
+        "raw_lidar": "/warehouse/mid360/scan/points",
         "pointcloud": "/nvblox_node/static_esdf_pointcloud",
         "mesh": "/nvblox_node/mesh",
         "mesh_marker": "/nvblox_node/tsdf_layer_marker",

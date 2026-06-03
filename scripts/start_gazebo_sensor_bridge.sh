@@ -52,6 +52,8 @@ REQUIRE_PUBLISHING="${WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING:-1}"
 MIN_SENSOR_MESSAGES="${WAREHOUSE_GAZEBO_MIN_SENSOR_MESSAGES:-2}"
 SENSOR_SAMPLE_S="${WAREHOUSE_GAZEBO_SENSOR_SAMPLE_S:-3}"
 REQUIRE_LIDAR_POINTS="${WAREHOUSE_GAZEBO_REQUIRE_LIDAR_POINTS:-0}"
+MID360_SCAN_TOPIC="${WAREHOUSE_GAZEBO_LIDAR_SCAN_TOPIC:-/warehouse/mid360/scan}"
+MID360_POINTS_TOPIC="${WAREHOUSE_GAZEBO_LIDAR_POINTS_TOPIC:-/warehouse/mid360/scan/points}"
 
 _gazebo_listed() {
   gz topic -l 2>/dev/null | grep -Fxq "$1"
@@ -74,6 +76,7 @@ _gazebo_sensors_publishing() {
     && _gazebo_publishing "${DEPTH_TOPIC}" "${SENSOR_SAMPLE_S}" "${MIN_SENSOR_MESSAGES}" \
     && _gazebo_publishing "${ODOM_TOPIC}" "${SENSOR_SAMPLE_S}" "${MIN_SENSOR_MESSAGES}" \
     && { [ "${REQUIRE_LIDAR_POINTS}" != "1" ] \
+      || _gazebo_publishing "${MID360_POINTS_TOPIC}" "${SENSOR_SAMPLE_S}" "${MIN_SENSOR_MESSAGES}" \
       || _gazebo_publishing "/scan/points" "${SENSOR_SAMPLE_S}" "${MIN_SENSOR_MESSAGES}"; }
 }
 
@@ -120,6 +123,7 @@ if [ "${REQUIRE_PUBLISHING}" = "1" ] && [ "${sensors_ok}" != "1" ]; then
   echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${DEPTH_TOPIC}" >&2
   echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${ODOM_TOPIC}" >&2
   if [ "${REQUIRE_LIDAR_POINTS}" = "1" ]; then
+    echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${MID360_POINTS_TOPIC}" >&2
     echo "[gazebo_sensor_bridge] Verify: gz topic -e -t /scan/points" >&2
   fi
   exit 1
@@ -190,6 +194,18 @@ if _gazebo_listed "/warehouse/stereo/left/image"; then
   )
 fi
 
+if _gazebo_listed "${MID360_SCAN_TOPIC}"; then
+  _bridge_specs+=("${MID360_SCAN_TOPIC}@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan")
+  echo "[gazebo_sensor_bridge] LiDAR scan bridge ${MID360_SCAN_TOPIC}"
+fi
+
+if _gazebo_listed "${MID360_POINTS_TOPIC}"; then
+  _bridge_specs+=(
+    "${MID360_POINTS_TOPIC}@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked"
+  )
+  echo "[gazebo_sensor_bridge] LiDAR points bridge ${MID360_POINTS_TOPIC}"
+fi
+
 if _gazebo_listed "/scan"; then
   _bridge_specs+=("/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan")
 fi
@@ -229,13 +245,14 @@ _start_imu_source_relay() {
     || echo "[gazebo_sensor_bridge] WARN: ${src} has no ROS publisher yet; starting /imu relay anyway" >&2
   echo "[gazebo_sensor_bridge] relay ${src} -> /imu (topic_adapter source)"
   ros2 run topic_tools relay "${src}" /imu sensor_msgs/msg/Imu \
-    --ros-args -p use_sim_time:=true &
+    --ros-args -r __node:=warehouse_imu_relay -p use_sim_time:=true &
   children+=("$!")
 }
 
 # Contract topics (/warehouse/contract/*) are published by warehouse_topic_adapter in the bridge stack.
-# Drop stale topic_tools relays so health probes see a single publisher per contract topic.
-pkill -f 'topic_tools relay.*warehouse/contract' 2>/dev/null || true
+# Drop stale topic_tools relays (duplicate /relay nodes break DDS discovery and health probes).
+pkill -f '[t]opic_tools relay' 2>/dev/null || true
+sleep 0.5
 
 # Sim time: /clock must publish before TF and depth probes can succeed.
 if ! _wait_ros_publishers "/clock" 20; then

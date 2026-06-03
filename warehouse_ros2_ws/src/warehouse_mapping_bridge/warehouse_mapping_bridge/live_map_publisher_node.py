@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import queue
+import shutil
 import struct
+import subprocess
 import threading
 import time
 import urllib.error
@@ -11,7 +13,23 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from .config import topic_env
+from .config import source_topic_env, topic_env, topic_registry
+
+
+def _nvblox_node_running() -> bool:
+    if not shutil.which("pgrep"):
+        return False
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "[n]vblox_ros.*nvblox_node"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
 
 
 def _float_env(name: str, default: float) -> float:
@@ -84,14 +102,17 @@ class BackendPublisher:
             return False, "backend_not_configured"
         url = f"{self.base_url.rstrip('/')}/warehouse/live-map/{self.flight_id}/updates"
         body = json.dumps(payload).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        ingest_key = os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "").strip()
+        if ingest_key:
+            headers["X-Warehouse-Live-Map-Ingest-Key"] = ingest_key
+        elif self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
         req = urllib.request.Request(
             url,
             data=body,
             method="POST",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.token}",
-            },
+            headers=headers,
         )
         try:
             urllib.request.urlopen(req, timeout=self.timeout_s).read()
@@ -174,9 +195,11 @@ def main() -> None:
         def __init__(self) -> None:
             super().__init__("warehouse_live_map_publisher")
             topics = topic_env()
+            profile = topic_registry().profile
+            source_topics = source_topic_env(profile)
             self.flight_id = os.getenv("WAREHOUSE_ACTIVE_FLIGHT_ID", "unknown")
             backend = BackendPublisher(
-                base_url=os.getenv("WAREHOUSE_BACKEND_URL", ""),
+                base_url=os.getenv("WAREHOUSE_BACKEND_URL", "http://127.0.0.1:8000"),
                 flight_id=self.flight_id,
                 token=os.getenv("WAREHOUSE_BACKEND_TOKEN", ""),
                 timeout_s=max(0.1, _float_env("WAREHOUSE_LIVE_MAP_HTTP_TIMEOUT_S", 1.0)),
@@ -194,8 +217,21 @@ def main() -> None:
             )
             self.last_publish_s = 0.0
             self.last_pointcloud_s = 0.0
-            self.pointcloud_topic = os.getenv("WAREHOUSE_ESDF_TOPIC", topics["esdf"])
-            self.odom_topic = os.getenv("WAREHOUSE_ODOMETRY_TOPIC", topics["visual_slam_odom"])
+            default_esdf = (
+                source_topics.get("esdf")
+                if profile == "gazebo"
+                else topics.get("esdf", "/nvblox_node/static_esdf_pointcloud")
+            )
+            self.pointcloud_topic = os.getenv(
+                "WAREHOUSE_ESDF_TOPIC",
+                default_esdf or "/nvblox_node/static_esdf_pointcloud",
+            )
+            default_odom = (
+                source_topics.get("visual_slam_odom")
+                if profile == "gazebo"
+                else topics.get("visual_slam_odom", "/warehouse/contract/odometry")
+            )
+            self.odom_topic = os.getenv("WAREHOUSE_ODOMETRY_TOPIC", default_odom)
             self.declare_parameter("esdf_topic", self.pointcloud_topic)
             self.declare_parameter("visual_slam_odom_topic", self.odom_topic)
             self.pointcloud_topic = str(self.get_parameter("esdf_topic").value or self.pointcloud_topic)
@@ -209,7 +245,24 @@ def main() -> None:
                 QoSProfile(depth=10),
             )
             self._last_reported_failures = 0
+            self._last_heartbeat_s = 0.0
             self.create_timer(2.0, self.publish_diagnostics)
+
+        def _live_health_flags(self, *, point_count: int = 0) -> dict[str, Any]:
+            now = time.monotonic()
+            nvblox_running = _nvblox_node_running()
+            receiving = point_count > 0 or (
+                self.last_pointcloud_s > 0.0 and (now - self.last_pointcloud_s) < 8.0
+            )
+            return {
+                "stale_costmap": False,
+                "missing_mesh": True,
+                "missing_point_cloud": not receiving,
+                "nvblox_ready": receiving or nvblox_running,
+                "mapping_recording": receiving
+                and self.flight_id not in {"", "unknown"},
+                "stack_running": nvblox_running or receiving,
+            }
 
         def on_odom(self, msg: Odometry) -> None:
             self.pose = {
@@ -230,34 +283,44 @@ def main() -> None:
             sample = pointcloud_xyz_sample(msg, max_points=self.max_points_per_chunk)
             chunk_id = f"pointcloud-{self.sequence:08d}"
             payload = {
-                "schema": "warehouse.live_map.v1",
+                "type": "live_map_update",
                 "flight_id": self.flight_id,
                 "frame_id": msg.header.frame_id or "map",
                 "pose": self.pose,
+                "removed_chunk_ids": [],
                 "scan_path_sample": [self.pose],
                 "changed_chunks": [
                     {
                         "id": chunk_id,
-                        "kind": "pointcloud_xyz",
+                        "kind": "point_cloud",
                         "sequence": self.sequence,
                         "point_count": point_count,
-                        "sampled_point_count": len(sample),
-                        "points_xyz_m": sample,
                         "bbox_local_m": bbox_from_points(sample, self.pose),
                     }
                 ],
-                "health": {
-                    "stale_costmap": False,
-                    "missing_mesh": False,
-                    "missing_point_cloud": False,
-                    "nvblox_ready": point_count > 0,
-                    "mapping_recording": self.flight_id not in {"", "unknown"},
-                    "stack_running": point_count > 0,
-                },
+                "health": self._live_health_flags(point_count=point_count),
             }
             self.publisher.submit(payload)
 
         def publish_diagnostics(self) -> None:
+            now = time.monotonic()
+            if (
+                self.flight_id not in {"", "unknown"}
+                and now - self._last_heartbeat_s >= self.min_period_s
+            ):
+                self._last_heartbeat_s = now
+                self.publisher.submit(
+                    {
+                        "type": "live_map_update",
+                        "flight_id": self.flight_id,
+                        "frame_id": str(self.pose.get("frame_id") or "map"),
+                        "pose": self.pose,
+                        "removed_chunk_ids": [],
+                        "scan_path_sample": [self.pose],
+                        "changed_chunks": [],
+                        "health": self._live_health_flags(point_count=0),
+                    }
+                )
             stats = self.publisher.snapshot()
             failures = int(stats["failed"])
             if failures > self._last_reported_failures:

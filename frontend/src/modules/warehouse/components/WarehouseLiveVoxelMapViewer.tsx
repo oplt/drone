@@ -9,15 +9,25 @@ import {
 import {
   WarehouseLiveVoxelHeader,
   WarehouseLiveVoxelHealthChips,
+  WarehouseLiveVoxelMetrics,
   WarehouseLiveVoxelOverlay,
 } from "./WarehouseLiveVoxelStatus";
+import {
+  WarehouseMappingHealthPanel,
+  type WarehouseMappingRuntimeStatus,
+} from "./WarehouseMappingHealthPanel";
+import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
 
 export function WarehouseLiveVoxelMapViewer({
   state,
   hidden = false,
+  mappingStatus = null,
+  mappingStackStatus = null,
 }: {
   state: WarehouseLiveVoxelMapState;
   hidden?: boolean;
+  mappingStatus?: WarehouseMappingRuntimeStatus | null;
+  mappingStackStatus?: WarehouseMappingStackStatus | null;
 }) {
   const [layers, setLayers] = useState<LiveVoxelLayers>({
     mesh: true,
@@ -39,6 +49,16 @@ export function WarehouseLiveVoxelMapViewer({
   return (
     <Stack spacing={1.25}>
       <WarehouseLiveVoxelHeader state={state} cachedBytes={cachedBytes} />
+      <WarehouseMappingHealthPanel
+        status={mappingStatus}
+        liveHealth={state.health}
+        mappingStackStatus={mappingStackStatus}
+      />
+
+      <WarehouseLiveVoxelMetrics
+        state={state}
+        mappingStackStatus={mappingStackStatus}
+      />
 
       <Box
         sx={{

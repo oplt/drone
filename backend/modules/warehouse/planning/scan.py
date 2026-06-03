@@ -5,6 +5,7 @@ import logging
 import math
 import os
 import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -270,6 +271,9 @@ class WarehouseScanMission:
                 "WarehouseScanMission requires area_polygon_local_m "
                 "([[x_m, y_m], ...] in the dock-relative local frame)."
             )
+        flight_id = self._flight_token(orch)
+        os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
+        self._restart_live_map_publisher(flight_id)
         await self._plan_scan(orch)
 
         self._last_speed_mps = None
@@ -896,6 +900,87 @@ class WarehouseScanMission:
             or "unknown"
         )
 
+    def _restart_live_map_publisher(self, flight_id: str) -> None:
+        """Bind live-map HTTP ingest to this flight (nvblox may already be running)."""
+        if os.getenv("WAREHOUSE_LIVE_MAP_PUBLISH", "1").strip().lower() in {
+            "0",
+            "false",
+            "no",
+            "off",
+        }:
+            return
+        os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
+        try:
+            subprocess.run(
+                ["pkill", "-f", "[w]arehouse_live_map_publisher"],
+                check=False,
+                timeout=3.0,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        repo_root = Path(__file__).resolve().parents[4]
+        from backend.modules.warehouse.service.bridge_flow import (
+            flow_env_overrides,
+            resolve_warehouse_bridge_flow,
+        )
+
+        flow = resolve_warehouse_bridge_flow()
+        esdf_topic = os.getenv(
+            "WAREHOUSE_ESDF_TOPIC",
+            "/nvblox_node/static_esdf_pointcloud"
+            if flow.gazebo_sim
+            else "/warehouse/contract/map/esdf",
+        )
+        ros_setup = (
+            f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
+            f"source {repo_root / 'warehouse_ros2_ws/install/setup.bash'} && "
+            f"export ROS_DOMAIN_ID=${{ROS_DOMAIN_ID:-42}} && "
+            f"export WAREHOUSE_ESDF_TOPIC={esdf_topic} && "
+            f"export WAREHOUSE_ACTIVE_FLIGHT_ID={flight_id} && "
+            "ros2 run warehouse_mapping_bridge warehouse_live_map_publisher"
+        )
+        env = os.environ.copy()
+        env.update(flow_env_overrides(flow))
+        env.setdefault("ROS_DOMAIN_ID", "42")
+        env.setdefault("WAREHOUSE_ACTIVE_FLIGHT_ID", str(flight_id))
+        env.setdefault("WAREHOUSE_ESDF_TOPIC", esdf_topic)
+        backend_url = os.getenv("WAREHOUSE_BACKEND_URL", "").strip()
+        if not backend_url:
+            try:
+                from backend.core.config.runtime import settings
+
+                backend_url = str(
+                    getattr(settings, "WAREHOUSE_BACKEND_URL", "")
+                    or getattr(settings, "BACKEND_URL", "")
+                    or "http://127.0.0.1:8000"
+                ).strip()
+            except Exception:
+                backend_url = "http://127.0.0.1:8000"
+        env.setdefault("WAREHOUSE_BACKEND_URL", backend_url)
+        env.setdefault(
+            "WAREHOUSE_LIVE_MAP_INGEST_TOKEN",
+            os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "dev-live-map-ingest"),
+        )
+        try:
+            subprocess.Popen(
+                ["bash", "-lc", ros_setup],
+                cwd=str(repo_root),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=open(
+                    repo_root / "backend/storage/warehouse_ros/logs/live_map_publisher.log",
+                    "a",
+                    encoding="utf-8",
+                ),
+                start_new_session=True,
+            )
+            logger.info(
+                "Restarted warehouse_live_map_publisher for flight_id=%s",
+                flight_id,
+            )
+        except OSError as exc:
+            logger.warning("Could not start warehouse_live_map_publisher: %s", exc)
+
     def _latest_odometry_drift(self, orch: Orchestrator) -> float | None:
         snapshot = getattr(orch, "_last_telemetry_snapshot", None)
         if not isinstance(snapshot, dict):
@@ -962,7 +1047,7 @@ class WarehouseScanMission:
         try:
             status = await build_warehouse_perception_port().status(
                 deep=deep,
-                force=deep,
+                force=False,
             )
         except Exception as exc:
             logger.warning("Warehouse runtime safety health check failed: %s", exc)
@@ -980,6 +1065,11 @@ class WarehouseScanMission:
             components["local_odometry_state"] = {}
         elif odom_read.payload:
             components["local_odometry_state"] = odom_read.payload
+        from backend.modules.warehouse.service.runtime_safety import (
+            merge_runtime_odometry_components,
+        )
+
+        components = merge_runtime_odometry_components(components)
         decision = self._runtime_safety.evaluate(
             components,
             deep_health=deep,
@@ -1092,6 +1182,7 @@ class WarehouseScanMission:
             )
         port = build_warehouse_perception_port()
         flight_id = self._flight_token(orch)
+        os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
         bridge_flow = resolve_warehouse_bridge_flow()
         request = WarehouseMappingStartRequest(
             flight_id=flight_id,

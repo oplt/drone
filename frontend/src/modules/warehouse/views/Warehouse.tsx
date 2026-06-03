@@ -41,10 +41,12 @@ import {
 import { getToken } from "../../session";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import {
+  fetchWarehouseMappingStackStatus,
   fetchWarehouseMissionDefaults,
   listWarehouseScannedMaps,
   startWarehouseScan,
   updateWarehouseMissionDefaults,
+  type WarehouseMappingStackStatus,
 } from "../api/warehouseMissionsApi";
 import {
   sendWarehouseFlightCommand,
@@ -76,10 +78,7 @@ import type {
   WarehouseSensorRig,
   WarehouseSensorRigHealth,
 } from "../types";
-import {
-  WarehouseMappingHealthPanel,
-  type WarehouseMappingRuntimeStatus,
-} from "../components/WarehouseMappingHealthPanel";
+import type { WarehouseMappingRuntimeStatus } from "../components/WarehouseMappingHealthPanel";
 import { WarehouseDrawerSection } from "../components/WarehouseDrawerSection";
 import { WarehouseDockPanel } from "../components/WarehouseDockPanel";
 import { WarehouseExplorationPanel } from "../components/WarehouseExplorationPanel";
@@ -770,6 +769,35 @@ export default function WarehousePage() {
     ),
     token: authToken,
   });
+
+  const [mappingStackStatus, setMappingStackStatus] =
+    useState<WarehouseMappingStackStatus | null>(null);
+
+  useEffect(() => {
+    if (!activeFlightId) {
+      setMappingStackStatus(null);
+      return;
+    }
+    let cancelled = false;
+    const refresh = async () => {
+      const token = getToken();
+      if (!token) return;
+      try {
+        const status = await fetchWarehouseMappingStackStatus(token);
+        if (!cancelled) setMappingStackStatus(status);
+      } catch {
+        if (!cancelled) setMappingStackStatus(null);
+      }
+    };
+    void refresh();
+    const interval = window.setInterval(() => {
+      void refresh();
+    }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [activeFlightId]);
 
   const selectedScannedMap = useMemo(
     () => selectScannedMap(scannedMaps, selectedMapJobId),
@@ -1576,15 +1604,14 @@ export default function WarehousePage() {
             }}
           />
 
-          <WarehouseMappingHealthPanel
-            status={missionStatus?.warehouse_mapping ?? null}
-          />
-
           <Stack
             spacing={1}
             ref={viewerSectionRef}
             id="warehouse-3d-map-viewer"
           >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Warehouse Map
+            </Typography>
             <Paper
               variant="outlined"
               sx={{
@@ -1594,22 +1621,39 @@ export default function WarehousePage() {
                 backgroundColor: "background.paper",
               }}
             >
-              {activeFlightId ? (
-                <WarehouseLiveVoxelMapViewer
-                  state={liveVoxelMap}
-                  hidden={
-                    warehouseSetupDrawer.open ||
-                    warehouseMissionDrawer.open
-                  }
-                />
-              ) : (
-                <WarehouseScanViewer
-                  apiBase={apiBase}
-                  getToken={getToken}
-                  map={viewerScannedMap}
-                />
-              )}
+              <WarehouseScanViewer
+                apiBase={apiBase}
+                getToken={getToken}
+                map={viewerScannedMap}
+              />
             </Paper>
+
+            {activeFlightId ? (
+              <>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1 }}>
+                  Live Voxel Map
+                </Typography>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 1,
+                    borderColor: "divider",
+                    backgroundColor: "background.paper",
+                  }}
+                >
+                  <WarehouseLiveVoxelMapViewer
+                    state={liveVoxelMap}
+                    mappingStatus={missionStatus?.warehouse_mapping ?? null}
+                    mappingStackStatus={mappingStackStatus}
+                    hidden={
+                      warehouseSetupDrawer.open ||
+                      warehouseMissionDrawer.open
+                    }
+                  />
+                </Paper>
+              </>
+            ) : null}
             <Paper
               variant="outlined"
               sx={{

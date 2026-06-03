@@ -25,6 +25,7 @@ echo "Gazebo source topics (ros_gz_bridge):"
 echo "  /warehouse/front/rgbd/image"
 echo "  /warehouse/front/rgbd/depth_image"
 echo "  /warehouse/drone/odometry"
+echo "  /warehouse/mid360/scan/points (3D LiDAR for nvblox)"
 echo
 
 REQUIRED_TOPICS=(
@@ -33,6 +34,12 @@ REQUIRED_TOPICS=(
   "${WAREHOUSE_IMU_TOPIC:-/warehouse/contract/imu}"
   "${WAREHOUSE_ODOMETRY_TOPIC:-/warehouse/contract/odometry}"
 )
+
+if [ "${WAREHOUSE_NVBLOX_USE_LIDAR:-0}" = "1" ] || [ "${WAREHOUSE_REQUIRE_RAW_LIDAR:-0}" = "1" ]; then
+  REQUIRED_TOPICS+=(
+    "${WAREHOUSE_RAW_LIDAR_TOPIC:-/warehouse/contract/points}"
+  )
+fi
 
 
 _topic_publishing() {

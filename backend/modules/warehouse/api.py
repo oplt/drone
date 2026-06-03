@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -9,6 +10,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Header,
     HTTPException,
     Query,
     UploadFile,
@@ -680,6 +682,7 @@ async def get_warehouse_bridge_health(
 async def get_warehouse_preflight(
     mission_loaded: bool = False,
     deep: bool = False,
+    force: bool = False,
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseGoPreflightOut:
     from backend.modules.warehouse.service.warehouse_go_preflight import (
@@ -688,6 +691,7 @@ async def get_warehouse_preflight(
 
     result = await evaluate_warehouse_go_preflight(
         deep=deep,
+        force=force or deep,
         mission_loaded=mission_loaded,
     )
     payload = result.to_dict()
@@ -1252,6 +1256,8 @@ class WarehouseMappingStackStatusOut(BaseModel):
     started_at: str | None = None
     last_exit_code: int | None = None
     last_error: str | None = None
+    nvblox_running: bool = False
+    phase: str = "stopped"
 
 
 def _mapping_stack_status_out(status: object) -> WarehouseMappingStackStatusOut:
@@ -1753,13 +1759,24 @@ async def get_live_map_snapshot(
     return await warehouse_live_map_stream.snapshot(flight_id)
 
 
+def _live_map_ingest_authorized(ingest_key: str | None) -> bool:
+    expected = os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "").strip()
+    return bool(expected and ingest_key and ingest_key == expected)
+
+
 @router.post("/live-map/{flight_id}/updates", response_model=WarehouseLiveMapPublishOut)
 async def publish_live_map_update(
     flight_id: str,
     payload: dict[str, Any],
-    org_user: OrgUser = Depends(require_org_user),
+    x_warehouse_live_map_ingest_key: str | None = Header(
+        None, alias="X-Warehouse-Live-Map-Ingest-Key"
+    ),
 ) -> WarehouseLiveMapPublishOut:
-    _ = org_user
+    if not _live_map_ingest_authorized(x_warehouse_live_map_ingest_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid X-Warehouse-Live-Map-Ingest-Key",
+        )
     payload = {**payload, "flight_id": flight_id}
     update = normalize_live_map_payload(payload)
     await warehouse_live_map_stream.publish(update)

@@ -35,7 +35,7 @@ ifeq ($(OPEN_BROWSER),1)
 DEV_PROCS += browser
 endif
 
-.PHONY: local-dev local-dev-with-backend-env check-local-tools kill-dev kill-ports kill-workers kill-warehouse reset-frontend-cache reset-dev
+.PHONY: local-dev local-dev-with-backend-env check-local-tools kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-frontend-cache reset-dev
 
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
@@ -45,24 +45,32 @@ check-local-tools:
 	@command -v redis-server >/dev/null 2>&1 || { echo "redis-server is required."; exit 1; }
 
 kill-ports:
-	@fuser -k $(APP_PORT)/tcp >/dev/null 2>&1 || true
-	@fuser -k $(FRONTEND_PORT)/tcp >/dev/null 2>&1 || true
-	@fuser -k $(REDIS_PORT)/tcp >/dev/null 2>&1 || true
-	@fuser -k $(WAREHOUSE_BRIDGE_PORT)/tcp >/dev/null 2>&1 || true
-	@fuser -k $(ROSBRIDGE_PORT)/tcp >/dev/null 2>&1 || true
+	@for port in $(APP_PORT) $(FRONTEND_PORT) $(REDIS_PORT) $(WAREHOUSE_BRIDGE_PORT) $(ROSBRIDGE_PORT); do \
+		pids="$$(lsof -ti tcp:$$port 2>/dev/null || true)"; \
+		if [ -n "$$pids" ]; then \
+			echo "[kill-ports] killing tcp:$$port pids=$$pids"; \
+			kill $$pids 2>/dev/null || true; \
+			sleep 0.3; \
+			kill -9 $$pids 2>/dev/null || true; \
+		fi; \
+	done
+	@pgrep -f '[g]st-launch-1.0' | xargs -r kill 2>/dev/null || true
+	@sleep 0.3
+	@pgrep -f '[g]st-launch-1.0' | xargs -r kill -9 2>/dev/null || true
+	@pgrep -f '[f]fplay' | xargs -r kill 2>/dev/null || true
+	@sleep 0.3
+	@pgrep -f '[f]fplay' | xargs -r kill -9 2>/dev/null || true
 
-kill-warehouse:
-	-pgrep -f "[w]arehouse_bridge.sh" | xargs -r kill
-	-pgrep -f "[s]tart_gazebo_sensor_bridge.sh" | xargs -r kill
-	-pgrep -f "[w]arehouse_mapping_bridge" | xargs -r kill
-	-pgrep -f "[i]saac_warehouse_mapping.launch.py" | xargs -r kill
-	-pgrep -f "[r]osbridge_websocket_launch.xml" | xargs -r kill
+# Safe bridge cleanup (scripts/kill_warehouse_ros_bridge.sh — explicit patterns, no bare "relay")
+kill-ros-bridge:
+	@bash "$(CURDIR)/scripts/kill_warehouse_ros_bridge.sh" || true
+
+kill-warehouse: kill-ros-bridge
+	-pgrep -f "[i]saac_warehouse_mapping.launch.py" | xargs -r kill 2>/dev/null || true
 	-sleep 1
-	-pgrep -f "[w]arehouse_bridge.sh" | xargs -r kill -9
-	-pgrep -f "[s]tart_gazebo_sensor_bridge.sh" | xargs -r kill -9
-	-pgrep -f "[w]arehouse_mapping_bridge" | xargs -r kill -9
-	-pgrep -f "[i]saac_warehouse_mapping.launch.py" | xargs -r kill -9
-	-pgrep -f "[r]osbridge_websocket_launch.xml" | xargs -r kill -9
+	-pgrep -f "[i]saac_warehouse_mapping.launch.py" | xargs -r kill -9 2>/dev/null || true
+
+stop-bridge: kill-ros-bridge kill-ports
 
 kill-dev:
 	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill

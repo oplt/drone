@@ -109,6 +109,7 @@ def main() -> None:
             now_mono = time.monotonic()
             max_position_variance = _covariance_max_diagonal(message.pose.covariance)
             localization_mode = os.getenv("WAREHOUSE_LOCALIZATION_MODE", "").strip().lower()
+            profile = topic_registry().profile
             gazebo_gt = localization_mode in {
                 "",
                 "gazebo_ground_truth",
@@ -116,7 +117,8 @@ def main() -> None:
                 "gazebo",
                 "sim",
             } and (
-                os.getenv("WAREHOUSE_TOPIC_PROFILE", "").strip().lower() == "gazebo"
+                profile == "gazebo"
+                or os.getenv("WAREHOUSE_TOPIC_PROFILE", "").strip().lower() == "gazebo"
                 or os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower()
                 in {"1", "true", "yes", "on"}
                 or os.getenv("WAREHOUSE_BRIDGE_FLOW", "").strip().lower() == "gazebo"

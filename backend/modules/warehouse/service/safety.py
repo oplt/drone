@@ -25,8 +25,13 @@ def evaluate_warehouse_runtime_safety(
     min_obstacle_distance_m: float = 0.6,
     min_ceiling_distance_m: float = 0.5,
 ) -> WarehouseSafetyDecision:
+    from backend.modules.warehouse.service.runtime_safety import _gazebo_ground_truth_odometry
+
     if components.get("ros_bridge_heartbeat") is False:
         return WarehouseSafetyDecision(False, "land", "ros_bridge_heartbeat_lost")
+    odom_state_raw = components.get("local_odometry_state")
+    if isinstance(odom_state_raw, dict) and _gazebo_ground_truth_odometry(odom_state_raw):
+        return WarehouseSafetyDecision(True, "continue")
     slam_tracking = components.get("slam_tracking_ok")
     visual_slam = components.get("visual_slam")
     if slam_tracking is False:

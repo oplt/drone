@@ -597,6 +597,17 @@ def _gazebo_imu_topic() -> str:
     ).strip()
 
 
+def _gazebo_lidar_points_topic() -> str:
+    return os.getenv(
+        "WAREHOUSE_GAZEBO_LIDAR_POINTS_TOPIC",
+        os.getenv("WAREHOUSE_RAW_LIDAR_TOPIC", "/warehouse/mid360/scan/points"),
+    ).strip()
+
+
+def _gazebo_lidar_scan_topic() -> str:
+    return os.getenv("WAREHOUSE_GAZEBO_LIDAR_SCAN_TOPIC", "/warehouse/mid360/scan").strip()
+
+
 def _gazebo_sensor_stream_live(key: str) -> bool:
     if topic_registry().profile != "gazebo":
         return False
@@ -605,7 +616,7 @@ def _gazebo_sensor_stream_live(key: str) -> bool:
         "rgb_image": "rgb_publishing",
         "depth": "depth_publishing",
         "visual_slam_odom": "odom_publishing",
-        "raw_lidar": "rgb_publishing",
+        "raw_lidar": "lidar_publishing",
         "imu": "imu_publishing",
     }
     field = field_by_key.get(key)
@@ -627,6 +638,12 @@ def probe_gazebo_sensors() -> dict[str, Any]:
     depth = probe_gazebo_publishing(depth_topic, timeout_s=timeout_s)
     odom = probe_gazebo_publishing(odom_topic, timeout_s=timeout_s)
     imu = probe_gazebo_publishing(imu_topic, timeout_s=timeout_s)
+    lidar_points_topic = _gazebo_lidar_points_topic()
+    lidar_scan_topic = _gazebo_lidar_scan_topic()
+    lidar_points = probe_gazebo_publishing(lidar_points_topic, timeout_s=timeout_s)
+    if not lidar_points:
+        lidar_points = probe_gazebo_publishing("/scan/points", timeout_s=timeout_s)
+    lidar_scan = probe_gazebo_publishing(lidar_scan_topic, timeout_s=timeout_s)
     partition = os.getenv("GZ_PARTITION", "").strip() or None
     sim_publishing = bool(rgb and depth and odom)
     return {
@@ -635,10 +652,14 @@ def probe_gazebo_sensors() -> dict[str, Any]:
         "depth_topic": depth_topic,
         "odom_topic": odom_topic,
         "imu_topic": imu_topic,
+        "lidar_scan_topic": lidar_scan_topic,
+        "lidar_points_topic": lidar_points_topic,
         "rgb_publishing": rgb,
         "depth_publishing": depth,
         "odom_publishing": odom,
         "imu_publishing": imu,
+        "lidar_scan_publishing": lidar_scan,
+        "lidar_publishing": lidar_points,
         "sim_publishing": sim_publishing,
         "start_hint": (
             "Start Gazebo running (gz sim -r world.sdf) or press Play, then verify with: "
@@ -705,12 +726,33 @@ def probe_tf_chain() -> TfChainDiagnostic:
     if odom_base and not base_camera:
         missing_edges.append((resolved_base, resolved_camera))
 
+    sim_tf_running = False
+    if registry.profile == "gazebo" and not odom_base:
+        try:
+            result = _run_ros_cmd(
+                "pgrep -f '[w]arehouse_sim_tf_broadcaster'",
+                timeout_s=2.0,
+            )
+            sim_tf_running = result.returncode == 0 and bool(result.stdout.strip())
+        except (subprocess.TimeoutExpired, OSError):
+            sim_tf_running = False
+
     chain_ok = odom_base and base_camera
     if chain_ok:
         detail = "ok"
     elif not sim_clock_ready and registry.profile == "gazebo":
         detail = (
             "waiting for /clock (Gazebo sim time); press Play or start with gz sim -r <world>.sdf"
+        )
+    elif not odom_base and registry.profile == "gazebo" and not sim_tf_running:
+        detail = (
+            "warehouse_sim_tf_broadcaster not running; restart bridge stack "
+            "(make -f Makefile.local kill-ros-bridge && preflight)"
+        )
+    elif not odom_base and registry.profile == "gazebo" and sim_tf_running:
+        detail = (
+            "sim_tf running but odom→base_link not in TF buffer yet; "
+            "wait for /warehouse/drone/odometry or press Play in Gazebo"
         )
     else:
         detail = "; ".join(f"{parent}->{child} missing" for parent, child in missing_edges)

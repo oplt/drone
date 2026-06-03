@@ -7,6 +7,7 @@ import time
 
 from backend.modules.warehouse.ports import WarehousePerceptionStatus
 from backend.modules.warehouse.service.readiness_cache import (
+    clear_sensor_readiness,
     record_sensor_readiness,
     sensor_readiness_payload,
     sensor_readiness_recent,
@@ -131,6 +132,16 @@ async def ensure_warehouse_scan_preflight(
             components = status.components if isinstance(status.components, dict) else {}
             if _preflight_sample_usable(quick, components):
                 return quick
+            clear_sensor_readiness()
+            logger.warning(
+                "Warehouse scan preflight refused stale go-preflight reuse; "
+                "failure_code=%s missing=%s unhealthy=%s",
+                quick.failure_code,
+                list(quick.missing_required_topics),
+                list(quick.unhealthy_topics),
+            )
+            return quick
+        clear_sensor_readiness()
         return reused
 
     stable_required_ms = _int_env("WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS", 8000)
@@ -206,6 +217,7 @@ async def ensure_warehouse_scan_preflight(
         else:
             consecutive_ok = 0
             stable_started_at = None
+            clear_sensor_readiness()
             logger.info(
                 "Warehouse scan preflight not ready failure_code=%s missing=%s unhealthy=%s "
                 "probe_mode=%s topic_count=%s",

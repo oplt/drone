@@ -1,4 +1,6 @@
 import { Alert, Box, Chip, LinearProgress, Stack, Typography } from "@mui/material";
+import type { WarehouseLiveHealthFlags } from "../api/warehouseLiveMapApi";
+import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
 
 export type WarehouseMappingRuntimeStatus = {
   bridge_connected?: boolean;
@@ -66,16 +68,40 @@ function chipColorForStatus(
 
 export function WarehouseMappingHealthPanel({
   status,
+  liveHealth,
+  mappingStackStatus,
 }: {
   status?: WarehouseMappingRuntimeStatus | null;
+  liveHealth?: WarehouseLiveHealthFlags | null;
+  mappingStackStatus?: WarehouseMappingStackStatus | null;
 }) {
   if (!status) return null;
 
-  const confidence = pct(status.localization_confidence);
+  const confidence = pct(status.localization_confidence ?? liveHealth?.coverage_percent);
+  const nvbloxReady = status.nvblox_ready ?? liveHealth?.nvblox_ready;
+  const driftM = status.odometry_drift_m ?? liveHealth?.drift_estimate_m;
+  const stackWaitingSensors =
+    mappingStackStatus?.phase === "waiting_sensors" ||
+    (mappingStackStatus?.running === true &&
+      mappingStackStatus?.nvblox_running === false);
+  const stackStopped =
+    mappingStackStatus?.running === false &&
+    mappingStackStatus?.nvblox_running !== true &&
+    liveHealth?.stack_running !== true;
   const warnings = [
     status.bridge_connected === false ? "ROS bridge disconnected." : null,
     status.vslam_tracking === false ? "VSLAM tracking lost." : null,
     status.depth_healthy === false ? "Depth stream unhealthy." : null,
+    stackWaitingSensors
+      ? "Mapping stack waiting for Gazebo sensors (press Play or gz sim -r)."
+      : stackStopped
+        ? "Mapping stack stopped."
+        : null,
+    !stackStopped &&
+    !stackWaitingSensors &&
+    liveHealth?.mapping_recording === false
+      ? "Mapping not recording live voxel updates yet (nvblox ESDF not publishing)."
+      : null,
     typeof status.dropped_frames === "number" && status.dropped_frames > 0
       ? `${status.dropped_frames} dropped frames.`
       : null,
@@ -110,7 +136,7 @@ export function WarehouseMappingHealthPanel({
           <Chip
             size="small"
             label="Nvblox"
-            color={chipColor(status.nvblox_ready)}
+            color={chipColor(nvbloxReady)}
             variant="outlined"
           />
           <Chip
@@ -125,8 +151,9 @@ export function WarehouseMappingHealthPanel({
           <Metric label="Mapped" value={formatMetric(status.mapped_area_m2, "m2")} />
           <Metric label="Volume" value={formatMetric(status.mapped_volume_m3, "m3")} />
           <Metric label="Nvblox FPS" value={formatMetric(status.nvblox_fps, "fps")} />
+          <Metric label="Coverage" value={formatPercentMetric(liveHealth?.coverage_percent)} />
           <Metric label="Frontiers" value={formatMetric(status.frontier_count, "")} />
-          <Metric label="Drift" value={formatMetric(status.odometry_drift_m, "m")} />
+          <Metric label="Drift" value={formatMetric(driftM, "m")} />
           <Metric label="Disk" value={formatMetric(status.disk_free_gb, "GB")} />
         </Stack>
 
@@ -176,4 +203,9 @@ function Metric({ label, value }: { label: string; value: string }) {
 function formatMetric(value: number | null | undefined, unit: string): string {
   if (typeof value !== "number") return "--";
   return `${value.toFixed(value >= 10 ? 0 : 1)}${unit ? ` ${unit}` : ""}`;
+}
+
+function formatPercentMetric(value: number | null | undefined): string {
+  if (typeof value !== "number") return "--";
+  return `${pct(value).toFixed(0)} %`;
 }

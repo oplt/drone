@@ -10,7 +10,7 @@ const POLL_MS_MID = 600;
 const POLL_MS_FAST = 350;
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEEP_REFRESH_MS = 30000;
-const TRANSIENT_FAILURE_KEYS = new Set(["stability"]);
+const TRANSIENT_FAILURE_KEYS = new Set(["stability", "telemetry_stream"]);
 const TRANSIENT_STATUSES = new Set(["WAITING", "UNKNOWN"]);
 
 function sleep(ms: number) {
@@ -23,8 +23,26 @@ function hasProbeInProgress(preflight: WarehouseGoPreflight): boolean {
   );
 }
 
+/** Backend ready_to_fly must match panel topic categories (no PASS with RGB/depth/IMU FAIL). */
+export function warehousePreflightPassed(
+  preflight: WarehouseGoPreflight | null,
+): boolean {
+  if (!preflight?.ready_to_fly) return false;
+  const rgbDepthImu = preflight.categories?.rgb_depth_imu;
+  const sensors = preflight.categories?.sensors;
+  if (rgbDepthImu === "FAIL" || sensors === "FAIL") return false;
+  const topicRows = preflight.diagnostics?.topics?.by_category ?? {};
+  for (const key of ["rgb", "depth", "imu"] as const) {
+    const row = topicRows[key];
+    if (row && typeof row === "object" && "status" in row && row.status === "FAIL") {
+      return false;
+    }
+  }
+  return true;
+}
+
 function isTerminalPreflightFailure(preflight: WarehouseGoPreflight): boolean {
-  if (preflight.ready_to_fly || hasProbeInProgress(preflight)) return false;
+  if (warehousePreflightPassed(preflight) || hasProbeInProgress(preflight)) return false;
 
   return Object.entries(preflight.categories ?? {}).some(([key, status]) => {
     if (TRANSIENT_FAILURE_KEYS.has(key)) return false;
@@ -166,6 +184,9 @@ export function useRunWarehousePreflight(token: string | null) {
             fetchWarehousePreflight(token, {
               missionLoaded: options?.missionLoaded,
               deep: useDeep,
+              // Only the first poll forces a ROS deep probe; periodic deep refresh must
+              // not reset the 5s perception stability window every 30s.
+              force: pollIndex === 0,
             });
 
           const snapshot =
@@ -178,7 +199,7 @@ export function useRunWarehousePreflight(token: string | null) {
 
           latest = snapshot;
           setResult(snapshot);
-          if (snapshot.ready_to_fly) {
+          if (warehousePreflightPassed(snapshot)) {
             setRunning(false);
             return snapshot;
           }
@@ -210,6 +231,6 @@ export function useRunWarehousePreflight(token: string | null) {
     error,
     runChecks,
     reset,
-    passed: result?.ready_to_fly === true,
+    passed: warehousePreflightPassed(result),
   };
 }

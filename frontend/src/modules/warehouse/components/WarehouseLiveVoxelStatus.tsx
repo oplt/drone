@@ -10,6 +10,41 @@ import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongR
 import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
+import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
+
+function formatTime(value: string | null): string {
+  if (!value) return "--";
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return value;
+  return new Date(parsed).toLocaleTimeString();
+}
+
+function metricRow(label: string, value: string) {
+  return (
+    <Box
+      key={label}
+      sx={{
+        px: 1,
+        py: 0.75,
+        borderRadius: 1,
+        border: "1px solid",
+        borderColor: "divider",
+        minWidth: 0,
+      }}
+    >
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", lineHeight: 1.2 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
 
 const STATUS_LABELS: Record<
   WarehouseLiveVoxelMapState["connectionState"],
@@ -54,7 +89,9 @@ export function WarehouseLiveVoxelHeader({
       flexWrap="wrap"
     >
       <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
-        <Typography variant="subtitle1">Live Voxel Map</Typography>
+        <Typography variant="subtitle2" color="text.secondary">
+          Stream
+        </Typography>
         <Chip
           size="small"
           label={STATUS_LABELS[state.connectionState]}
@@ -99,6 +136,48 @@ export function WarehouseLiveVoxelHeader({
   );
 }
 
+export function WarehouseLiveVoxelMetrics({
+  state,
+  mappingStackStatus,
+}: {
+  state: WarehouseLiveVoxelMapState;
+  mappingStackStatus?: WarehouseMappingStackStatus | null;
+}) {
+  const pose = state.latestUpdate?.pose;
+  const lastChunk = state.chunks.at(-1);
+  const stackPhase = mappingStackStatus?.phase ?? "stopped";
+  const rows = [
+    ["Stream", STATUS_LABELS[state.connectionState]],
+    ["Last update", formatTime(state.lastUpdateAt)],
+    ["Sequence", String(state.latestUpdate?.changed_chunks?.[0]?.sequence ?? lastChunk?.sequence ?? "--")],
+    ["Points (last)", String(lastChunk?.point_count ?? "--")],
+    ["Pose X", pose ? `${pose.x_m.toFixed(2)} m` : "--"],
+    ["Pose Y", pose ? `${pose.y_m.toFixed(2)} m` : "--"],
+    ["Pose Z", pose ? `${pose.z_m.toFixed(2)} m` : "--"],
+    ["Nvblox", state.health.nvblox_ready ? "ready" : "off"],
+    ["Recording", state.health.mapping_recording ? "yes" : "no"],
+    ["Stack", mappingStackStatus?.nvblox_running ? "nvblox running" : stackPhase],
+    ["Chunks", String(state.chunks.length)],
+    ["Path samples", String(state.scanPath.length)],
+  ] as const;
+
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "repeat(2, minmax(0, 1fr))",
+          sm: "repeat(3, minmax(0, 1fr))",
+          md: "repeat(4, minmax(0, 1fr))",
+        },
+        gap: 0.75,
+      }}
+    >
+      {rows.map(([label, value]) => metricRow(label, value))}
+    </Box>
+  );
+}
+
 export function WarehouseLiveVoxelHealthChips({
   state,
 }: {
@@ -108,6 +187,23 @@ export function WarehouseLiveVoxelHealthChips({
     value ? "success" : "warning";
   return (
     <Stack direction="row" spacing={0.75} flexWrap="wrap">
+      <Chip
+        size="small"
+        color={badgeColor(state.health.nvblox_ready)}
+        label={state.health.nvblox_ready ? "nvblox ready" : "nvblox off"}
+      />
+      <Chip
+        size="small"
+        color={badgeColor(state.health.mapping_recording)}
+        label={
+          state.health.mapping_recording ? "recording" : "not recording"
+        }
+      />
+      <Chip
+        size="small"
+        color={badgeColor(state.health.stack_running)}
+        label={state.health.stack_running ? "stack up" : "stack down"}
+      />
       <Tooltip title="Estimated scanned surface coverage">
         <Chip
           size="small"

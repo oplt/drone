@@ -128,4 +128,10 @@ def flow_env_overrides(flow: WarehouseBridgeFlow | None = None) -> dict[str, str
         env["WAREHOUSE_LOCALIZATION_MODE"] = localization_mode_env_value()
     if selected.name == "real_device":
         env.setdefault("WAREHOUSE_SEND_VISION_POSITION", "0")
+    backend_url = os.getenv("WAREHOUSE_BACKEND_URL", "").strip()
+    if backend_url:
+        env.setdefault("WAREHOUSE_BACKEND_URL", backend_url)
+    ingest_token = os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "").strip()
+    if ingest_token:
+        env.setdefault("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", ingest_token)
     return env

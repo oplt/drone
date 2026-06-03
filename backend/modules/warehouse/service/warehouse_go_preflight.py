@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from dataclasses import dataclass, field, replace
 from typing import Any
 
@@ -75,8 +76,29 @@ def _topic_label(key: str, components: dict[str, Any]) -> str:
         "depth": "/warehouse/contract/depth/image",
         "imu": "/warehouse/contract/imu",
         "visual_slam_odom": "/warehouse/contract/odometry",
+        "raw_lidar": "/warehouse/contract/points",
     }
     return defaults.get(key, key)
+
+
+def _gazebo_lidar_scan_topic() -> str:
+    return os.getenv("WAREHOUSE_GAZEBO_LIDAR_SCAN_TOPIC", "/warehouse/mid360/scan").strip()
+
+
+def _gazebo_lidar_points_source_topic() -> str:
+    return os.getenv(
+        "WAREHOUSE_GAZEBO_LIDAR_POINTS_TOPIC",
+        os.getenv("WAREHOUSE_RAW_LIDAR_TOPIC", "/warehouse/mid360/scan/points"),
+    ).strip()
+
+
+_LIDAR_TOPIC_ALIASES: tuple[str, ...] = (
+    "/warehouse/mid360/scan/points",
+    "/warehouse/mid360/scan",
+    "/scan/points",
+    "/scan",
+    "/warehouse/front/rgbd/points",
+)
 
 
 def _topic_blocker(
@@ -280,7 +302,17 @@ def _topic_hz_action(key: str, components: dict[str, Any]) -> str:
     return f"Verify: timeout 5 ros2 topic hz {_topic_path(key, components)}"
 
 
-def _topic_status(key: str, components: dict[str, Any]) -> str:
+def _topic_status(
+    key: str,
+    components: dict[str, Any],
+    *,
+    strict_missing: tuple[str, ...] = (),
+    strict_unhealthy: tuple[str, ...] = (),
+) -> str:
+    if key in strict_missing:
+        return "FAIL"
+    if key in strict_unhealthy:
+        return "FAIL"
     diag_raw = components.get("topic_diagnostics")
     diag = diag_raw.get(key) if isinstance(diag_raw, dict) else None
     if isinstance(diag, dict):
@@ -301,12 +333,19 @@ def _topic_category(
     *,
     aliases: tuple[str, ...] = (),
     status_override: str | None = None,
+    strict_missing: tuple[str, ...] = (),
+    strict_unhealthy: tuple[str, ...] = (),
 ) -> dict[str, object]:
-    status = status_override or _topic_status(key, components)
+    status = status_override or _topic_status(
+        key,
+        components,
+        strict_missing=strict_missing,
+        strict_unhealthy=strict_unhealthy,
+    )
     topic = _topic_path(key, components)
     alternatives = list(aliases)
     if key == "raw_lidar":
-        alternatives = list(dict.fromkeys([*alternatives, "/scan", "/scan/points"]))
+        alternatives = list(dict.fromkeys([*alternatives, *_LIDAR_TOPIC_ALIASES]))
     return {
         "topic": topic,
         "status": status,
@@ -404,6 +443,14 @@ async def evaluate_warehouse_go_preflight(
     mission_loaded: bool = False,
 ) -> WarehouseGoPreflight:
     autostart_bridge = bool(deep or force or mission_loaded)
+    config = WarehouseFlightConfig.from_env()
+    if config.require_mavlink_for_flight:
+        from backend.modules.warehouse.service.flight_service import (
+            _bootstrap_telemetry_for_flight,
+        )
+
+        await _bootstrap_telemetry_for_flight()
+
     bridge_supervisor_status, (
         runtime_snapshot,
         autopilot_telemetry,
@@ -413,7 +460,9 @@ async def evaluate_warehouse_go_preflight(
         _fetch_vehicle_runtime(),
     )
 
-    config = WarehouseFlightConfig.from_env()
+    autopilot_sample_at: float | None = None
+    if autopilot_telemetry is not None:
+        autopilot_sample_at = time.time()
     localization_mode = resolve_localization_mode()
     status = await fetch_warehouse_perception_status(deep=deep, force=force or deep)
     components = status.components if isinstance(status.components, dict) else {}
@@ -432,7 +481,12 @@ async def evaluate_warehouse_go_preflight(
         config = replace(config, gazebo_sim=True)
     strict = readiness_from_perception_status_strict(status)
 
-    sim_ros_fallback = sim_ros_odometry_fallback_ok(components, config=config)
+    allow_vehicle_sim_fallback = config.gazebo_sim and not config.require_mavlink_for_flight
+    sim_ros_fallback = (
+        sim_ros_odometry_fallback_ok(components, config=config)
+        if allow_vehicle_sim_fallback
+        else False
+    )
     vehicle_runtime = vehicle_runtime_from_parts(
         drone_connected=drone_connected,
         runtime_snapshot=runtime_snapshot,
@@ -447,6 +501,7 @@ async def evaluate_warehouse_go_preflight(
         runtime=vehicle_runtime,
         config=config,
         sim_ros_fallback=sim_ros_fallback,
+        autopilot_sample_at=autopilot_sample_at,
     )
     autopilot_for_battery = autopilot_telemetry
     if autopilot_for_battery is None and config.gazebo_sim:
@@ -479,7 +534,22 @@ async def evaluate_warehouse_go_preflight(
     failsafe = check_failsafe()
 
     gazebo_ok, gazebo_reason = _gazebo_status(components)
+    sample_age_ms = _wall_health_sample_age_ms(components)
+    max_sample_age_ms = int(
+        components.get("health_sample_max_age_ms")
+        or components.get("health_cache_ttl_ms")
+        or 90_000
+    )
+    diagnostics_stale = (
+        sample_age_ms is not None
+        and sample_age_ms > min(8000, max(5000, max_sample_age_ms // 2))
+    )
     tf_ok, tf_reason = _tf_ok(components, bridge_reachable=status.reachable)
+    if diagnostics_stale and not tf_ok:
+        tf_reason = (
+            f"{tf_reason or 'TF not verified'} "
+            f"(health sample {sample_age_ms}ms old — run Warehouse Preflight to refresh)"
+        )
     nvblox_ok, _nvblox_message = _nvblox_category(components)
 
     perception_stable_ms = flight.perception_stable_for_ms
@@ -497,10 +567,27 @@ async def evaluate_warehouse_go_preflight(
     )
     bridge_ok = bridge_api_reachable and bridge.status != SubsystemStatus.FAIL
     bridge_flight_ready = bridge_api_reachable and bridge.status == SubsystemStatus.OK
+    strict_missing = tuple(str(item) for item in strict.missing_required_topics)
+    strict_unhealthy = tuple(str(item) for item in strict.unhealthy_topics)
     rgb_depth_imu_statuses = [
-        _topic_status("rgb_image", components),
-        _topic_status("depth", components),
-        _topic_status("imu", components),
+        _topic_status(
+            "rgb_image",
+            components,
+            strict_missing=strict_missing,
+            strict_unhealthy=strict_unhealthy,
+        ),
+        _topic_status(
+            "depth",
+            components,
+            strict_missing=strict_missing,
+            strict_unhealthy=strict_unhealthy,
+        ),
+        _topic_status(
+            "imu",
+            components,
+            strict_missing=strict_missing,
+            strict_unhealthy=strict_unhealthy,
+        ),
     ]
     rgb_depth_imu_category = _aggregate_status(rgb_depth_imu_statuses)
     lidar_category = (
@@ -518,6 +605,16 @@ async def evaluate_warehouse_go_preflight(
     )
     odom_ok = slam.status != SubsystemStatus.FAIL and strict.can_localize
     localization_ok = slam.status == SubsystemStatus.OK
+    probe_blocks_ready = bool(
+        components.get("probe_in_progress") and not components.get("cache_ready", True)
+    )
+    core_topics_live = (
+        strict.can_perceive_rgb
+        and strict.can_perceive_depth
+        and "imu" not in strict.missing_required_topics
+        and "imu" not in strict.unhealthy_topics
+        and rgb_depth_imu_category == "OK"
+    )
 
     blocking: list[str] = []
     suggested: list[str] = []
@@ -576,15 +673,24 @@ async def evaluate_warehouse_go_preflight(
             "Wait until perception remains stable for "
             f"{config.perception_required_stable_ms // 1000} seconds"
         )
-    if components.get("probe_in_progress") and not components.get("cache_ready"):
+    if probe_blocks_ready:
+        blocking.append("ROS health probe in progress (wait for probe to finish)")
+    elif components.get("probe_in_progress") and not components.get("cache_ready"):
         blocking.append("ROS health probe in progress (ignoring transient topic drop)")
+    if not core_topics_live and bridge_flight_ready:
+        for key, label in (("rgb_image", "RGB"), ("depth", "Depth"), ("imu", "IMU")):
+            if key in strict_missing or key in strict_unhealthy:
+                blocking.append(_topic_blocker(label, key, components, missing=key in strict_missing))
     if components.get("ros_topic_probe_error"):
         blocking.append(f"ROS topic probe: {components['ros_topic_probe_error']}")
     if not vehicle_link_ok:
         blocking.append(f"Drone telemetry missing: {vehicle_link.message}")
         suggested.append("Connect drone telemetry (Connect Drone) before warehouse flight")
     if not telemetry_stream_ok:
-        blocking.append(f"Telemetry stream missing: {telemetry_stream.message}")
+        if telemetry_stream.status == SubsystemStatus.WARN:
+            blocking.append(f"Telemetry stream warming: {telemetry_stream.message}")
+        else:
+            blocking.append(f"Telemetry stream missing: {telemetry_stream.message}")
         suggested.append("Start MAVLink telemetry ingest and verify /ws/telemetry updates")
     if battery.status == SubsystemStatus.FAIL:
         blocking.append(f"Battery unavailable: {battery.message}")
@@ -612,6 +718,7 @@ async def evaluate_warehouse_go_preflight(
         bridge_flight_ready
         and (gazebo_ok is not False)
         and sensors_ok
+        and core_topics_live
         and odom_ok
         and tf_ok
         and stability_ok
@@ -620,6 +727,7 @@ async def evaluate_warehouse_go_preflight(
         and battery_ok
         and flight.ready_to_takeoff
         and not components.get("odometry_state_unreadable")
+        and not probe_blocks_ready
     )
 
     ros_count_raw = components.get("ros_topic_count")
@@ -667,19 +775,38 @@ async def evaluate_warehouse_go_preflight(
             "deferred_missing": deferred_missing,
             "topic_diagnostics": components.get("topic_diagnostics") or {},
             "by_category": {
-                "rgb": _topic_category("rgb_image", components),
-                "depth": _topic_category("depth", components),
-                "imu": _topic_category("imu", components),
-                "lidar_scan": _topic_category(
-                    "raw_lidar",
+                "rgb": _topic_category(
+                    "rgb_image",
                     components,
-                    aliases=("/scan", "/scan/points"),
-                    status_override=lidar_category,
+                    strict_missing=strict_missing,
+                    strict_unhealthy=strict_unhealthy,
                 ),
-                "lidar_points": {
-                    "topic": "/scan/points",
+                "depth": _topic_category(
+                    "depth",
+                    components,
+                    strict_missing=strict_missing,
+                    strict_unhealthy=strict_unhealthy,
+                ),
+                "imu": _topic_category(
+                    "imu",
+                    components,
+                    strict_missing=strict_missing,
+                    strict_unhealthy=strict_unhealthy,
+                ),
+                "lidar_scan": {
+                    "topic": _gazebo_lidar_scan_topic(),
                     "status": "OK" if lidar_category == "OK" else lidar_category,
-                    "verify_cmd": "timeout 5 ros2 topic hz /scan/points",
+                    "verify_cmd": f"timeout 5 ros2 topic hz {_gazebo_lidar_scan_topic()}",
+                    "alternatives": ["/scan", "/warehouse/mid360/scan"],
+                },
+                "lidar_points": {
+                    "topic": _topic_path("raw_lidar", components),
+                    "status": "OK" if lidar_category == "OK" else lidar_category,
+                    "verify_cmd": (
+                        f"timeout 5 ros2 topic hz {_topic_path('raw_lidar', components)}"
+                    ),
+                    "alternatives": list(_LIDAR_TOPIC_ALIASES),
+                    "source_topic": _gazebo_lidar_points_source_topic(),
                 },
             },
         },
@@ -765,6 +892,10 @@ async def evaluate_warehouse_go_preflight(
         from backend.modules.warehouse.service.readiness_cache import record_sensor_readiness
 
         record_sensor_readiness(ready=True, payload=strict.to_dict())
+    else:
+        from backend.modules.warehouse.service.readiness_cache import clear_sensor_readiness
+
+        clear_sensor_readiness()
 
     return WarehouseGoPreflight(
         ready_to_fly=ready_to_fly,

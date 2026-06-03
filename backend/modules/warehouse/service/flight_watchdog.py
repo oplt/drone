@@ -13,7 +13,10 @@ from backend.modules.warehouse.service.flight_health import (
 from backend.modules.warehouse.service.flight_state_machine import (
     get_warehouse_flight_state_machine,
 )
-from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
+from backend.modules.warehouse.service.runtime_safety import (
+    WarehouseRuntimeSafetyTracker,
+    merge_runtime_odometry_components,
+)
 from backend.modules.warehouse.service.safety import (
     WarehouseSafetyDecision,
     evaluate_warehouse_runtime_safety,
@@ -66,6 +69,8 @@ class WarehouseFlightWatchdog:
     ) -> WatchdogAction:
         if not self._active:
             return WatchdogAction(False, "continue")
+
+        components = merge_runtime_odometry_components(components)
 
         bridge = check_bridge(status, components)
         if bridge.status == SubsystemStatus.FAIL:
@@ -123,7 +128,9 @@ class WarehouseFlightWatchdog:
             return self._trigger(decision.action, decision.reason, decision.details)
 
         nvblox_ok = bool(components.get("nvblox_healthy", components.get("nvblox")))
-        if not nvblox_ok:
+        if not nvblox_ok and config.gazebo_sim:
+            nvblox_ok = bool(components.get("nvblox_process_running"))
+        if not nvblox_ok and not config.gazebo_sim:
             return self._trigger("hover", "nvblox_stale")
 
         runtime = evaluate_warehouse_runtime_safety(components)

@@ -399,8 +399,7 @@ class WarehouseBridgeStackProcessManager:
     
       # Contract-topic producers / relays
       safe_kill_pattern 'warehouse_topic_adapter'
-      safe_kill_pattern 'topic_tools relay.*warehouse'
-      safe_kill_pattern 'topic_tools relay.*/imu'
+      safe_kill_pattern 'topic_tools relay'
       safe_kill_pattern 'ros2 topic pub /imu'
       safe_kill_pattern 'ros2 topic pub /warehouse/contract/imu'
     
@@ -491,7 +490,7 @@ class WarehouseBridgeStackProcessManager:
         if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
             # topic_adapter relays /warehouse/front/* -> /warehouse/contract/* (stable with stack).
             env.setdefault("WAREHOUSE_GAZEBO_DIRECT_CONTRACT_BRIDGE", "0")
-            env.setdefault("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "0")
+            env.setdefault("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "1")
             env.setdefault("WAREHOUSE_PREFLIGHT_PERCEPTION_WAIT_S", "45")
             env.setdefault("WAREHOUSE_PREFLIGHT_CHECK_INTERVAL_S", "1.5")
             env.setdefault("WAREHOUSE_USE_SIM_TIME", "1")
