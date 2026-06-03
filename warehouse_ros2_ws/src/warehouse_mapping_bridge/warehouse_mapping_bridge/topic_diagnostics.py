@@ -470,24 +470,38 @@ def _parse_odometry_frames_from_echo(output: str) -> tuple[str | None, str | Non
 
 
 def _gazebo_odom_declares_tf_edge(odom_frame: str, base_candidates: list[str]) -> tuple[bool, str | None]:
+    registry = topic_registry()
+    topics_to_try: list[str] = []
     contract_odom = topic_env().get("visual_slam_odom", "/warehouse/contract/odometry")
-    timeout_s = max(1.0, float(os.getenv("WAREHOUSE_TF_ODOM_FRAME_PROBE_TIMEOUT_S", "3.0")))
-    try:
-        result = _run_ros_cmd(
-            f"timeout {timeout_s} ros2 topic echo {shlex.quote(contract_odom)} --once --no-daemon",
-            timeout_s=timeout_s + 1.0,
+    if contract_odom:
+        topics_to_try.append(str(contract_odom))
+    if registry.profile == "gazebo":
+        from .config import source_topic_env
+
+        source_odom = source_topic_env("gazebo").get(
+            "visual_slam_odom",
+            "/warehouse/drone/odometry",
         )
-    except (subprocess.TimeoutExpired, OSError):
-        return False, None
-    output = f"{result.stdout}\n{result.stderr}"
-    parent, child = _parse_odometry_frames_from_echo(output)
-    if not parent or not child:
-        return False, None
-    if parent.strip() != odom_frame:
-        return False, None
-    for candidate in base_candidates:
-        if child.strip() == candidate:
-            return True, candidate
+        if source_odom and source_odom not in topics_to_try:
+            topics_to_try.insert(0, str(source_odom))
+    timeout_s = max(1.0, float(os.getenv("WAREHOUSE_TF_ODOM_FRAME_PROBE_TIMEOUT_S", "3.0")))
+    for odom_topic in topics_to_try:
+        try:
+            result = _run_ros_cmd(
+                f"timeout {timeout_s} ros2 topic echo {shlex.quote(odom_topic)} --once --no-daemon",
+                timeout_s=timeout_s + 1.0,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            continue
+        output = f"{result.stdout}\n{result.stderr}"
+        parent, child = _parse_odometry_frames_from_echo(output)
+        if not parent or not child:
+            continue
+        if parent.strip() != odom_frame:
+            continue
+        for candidate in base_candidates:
+            if child.strip() == candidate:
+                return True, candidate
     return False, None
 
 
@@ -512,20 +526,30 @@ def _tf_echo_ok(parent: str, child: str, *, timeout_s: float | None = None) -> b
     if timeout_s is None:
         timeout_s = float(os.getenv("WAREHOUSE_TF_PROBE_TIMEOUT_S", "8.0"))
     sim_args = _ros_sim_time_args()
-    try:
-        result = _run_ros_cmd(
-            f"timeout {timeout_s} ros2 run tf2_ros tf2_echo "
-            f"{shlex.quote(parent)} {shlex.quote(child)}{sim_args}",
-            timeout_s=timeout_s + 2.0,
-        )
-    except (subprocess.TimeoutExpired, OSError):
-        return False
-    output = f"{result.stdout}\n{result.stderr}"
-    if "At time" in output or "Translation:" in output:
-        return True
-    if "frame does not exist" in output.lower():
-        return False
-    return result.returncode == 0 and bool(output.strip())
+    attempts = max(1, int(os.getenv("WAREHOUSE_TF_PROBE_ATTEMPTS", "2")))
+    for attempt in range(attempts):
+        try:
+            result = _run_ros_cmd(
+                f"timeout {timeout_s} ros2 run tf2_ros tf2_echo "
+                f"{shlex.quote(parent)} {shlex.quote(child)}{sim_args}",
+                timeout_s=timeout_s + 2.0,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            if attempt + 1 < attempts:
+                time.sleep(0.75)
+            continue
+        output = f"{result.stdout}\n{result.stderr}"
+        if "At time" in output or "Translation:" in output:
+            return True
+        if "frame does not exist" in output.lower():
+            if attempt + 1 < attempts:
+                time.sleep(0.75)
+            continue
+        if result.returncode == 0 and bool(output.strip()):
+            return True
+        if attempt + 1 < attempts:
+            time.sleep(0.75)
+    return False
 
 
 def probe_gazebo_publishing(gz_topic: str, *, timeout_s: float = 3.0) -> bool:
@@ -565,6 +589,14 @@ def _gazebo_sensor_snapshot() -> dict[str, Any]:
     return status
 
 
+def _gazebo_imu_topic() -> str:
+    return os.getenv(
+        "WAREHOUSE_GAZEBO_IMU_TOPIC",
+        "/world/iris_warehouse/model/iris_rplidar_rgbd/model/iris_with_standoffs/"
+        "link/imu_link/sensor/imu_sensor/imu",
+    ).strip()
+
+
 def _gazebo_sensor_stream_live(key: str) -> bool:
     if topic_registry().profile != "gazebo":
         return False
@@ -574,6 +606,7 @@ def _gazebo_sensor_stream_live(key: str) -> bool:
         "depth": "depth_publishing",
         "visual_slam_odom": "odom_publishing",
         "raw_lidar": "rgb_publishing",
+        "imu": "imu_publishing",
     }
     field = field_by_key.get(key)
     if field is None:
@@ -588,10 +621,12 @@ def probe_gazebo_sensors() -> dict[str, Any]:
         os.getenv("WAREHOUSE_DEPTH_TOPIC", "/warehouse/front/rgbd/depth_image"),
     )
     odom_topic = os.getenv("WAREHOUSE_GAZEBO_ODOM_TOPIC", "/warehouse/drone/odometry")
+    imu_topic = _gazebo_imu_topic()
     timeout_s = float(os.getenv("WAREHOUSE_GAZEBO_PROBE_TIMEOUT_S", "3.0"))
     rgb = probe_gazebo_publishing(rgb_topic, timeout_s=timeout_s)
     depth = probe_gazebo_publishing(depth_topic, timeout_s=timeout_s)
     odom = probe_gazebo_publishing(odom_topic, timeout_s=timeout_s)
+    imu = probe_gazebo_publishing(imu_topic, timeout_s=timeout_s)
     partition = os.getenv("GZ_PARTITION", "").strip() or None
     sim_publishing = bool(rgb and depth and odom)
     return {
@@ -599,9 +634,11 @@ def probe_gazebo_sensors() -> dict[str, Any]:
         "rgb_topic": rgb_topic,
         "depth_topic": depth_topic,
         "odom_topic": odom_topic,
+        "imu_topic": imu_topic,
         "rgb_publishing": rgb,
         "depth_publishing": depth,
         "odom_publishing": odom,
+        "imu_publishing": imu,
         "sim_publishing": sim_publishing,
         "start_hint": (
             "Start Gazebo running (gz sim -r world.sdf) or press Play, then verify with: "

@@ -109,12 +109,14 @@ async def _require_warehouse_flight_readiness_gate(
             ),
         )
     except WarehouseFlightNotReadyError as exc:
+        blocking = exc.blocking_reasons
+        summary = blocking[0] if blocking else "Warehouse flight not ready"
         raise HTTPException(
             status_code=412,
             detail={
-                "message": "Warehouse flight readiness gate blocked mission start.",
+                "message": f"Warehouse flight readiness gate blocked mission start: {summary}",
                 "reason": "WAREHOUSE_FLIGHT_NOT_READY",
-                "blocking_reasons": exc.blocking_reasons,
+                "blocking_reasons": blocking,
                 "readiness": exc.readiness,
             },
         ) from exc
@@ -1194,10 +1196,33 @@ async def start_warehouse_scan(
         ),
     )
 
+    from backend.modules.warehouse.service.flight_service import (
+        WarehouseFlightMissionContext,
+        _mission_planner_blocking_reasons,
+    )
+
+    planner_blockers = _mission_planner_blocking_reasons(
+        WarehouseFlightMissionContext(
+            loaded=True,
+            valid=True,
+            speed_mps=float(mission_defaults.work_speed_mps),
+            altitude_m=mission_defaults.max_planned_altitude_m(),
+        ),
+    )
+    if planner_blockers:
+        raise HTTPException(
+            status_code=412,
+            detail={
+                "message": f"Warehouse flight readiness gate blocked mission start: {planner_blockers[0]}",
+                "reason": "WAREHOUSE_FLIGHT_NOT_READY",
+                "blocking_reasons": planner_blockers,
+            },
+        )
+
     await _require_warehouse_scan_preflight()
     await _require_warehouse_flight_readiness_gate(
         speed_mps=float(mission_defaults.work_speed_mps),
-        altitude_m=float(mission_defaults.cruise_alt),
+        altitude_m=mission_defaults.max_planned_altitude_m(),
     )
     preflight = await _run_warehouse_preflight(mission_payload, user=user)
     if not preflight.can_start_mission:

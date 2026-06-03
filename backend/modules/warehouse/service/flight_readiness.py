@@ -328,10 +328,10 @@ def evaluate_subsystems_from_components(
         mapping_stack_running=mapping_stack_running,
     )
     stability_reset_reason: str | None = None
-    if not core_ok:
-        if diagnostics_probe_pending(components):
-            stability_reset_reason = "ROS diagnostics cache is warming"
-        elif bridge.status != SubsystemStatus.OK:
+    if diagnostics_probe_pending(components):
+        perception_stable_ms = perception_tracker.hold_stable_ms()
+    elif not core_ok:
+        if bridge.status != SubsystemStatus.OK:
             stability_reset_reason = f"bridge status is {bridge.status.value}"
         elif sensors.status == SubsystemStatus.FAIL:
             stability_reset_reason = sensors.message
@@ -343,10 +343,15 @@ def evaluate_subsystems_from_components(
             and nvblox.status != SubsystemStatus.OK
         ):
             stability_reset_reason = nvblox.message
-    perception_stable_ms = perception_tracker.stable_for_ms(
-        perception_ok=core_ok,
-        reset_reason=stability_reset_reason,
-    )
+        perception_stable_ms = perception_tracker.stable_for_ms(
+            perception_ok=False,
+            reset_reason=stability_reset_reason,
+        )
+    else:
+        perception_stable_ms = perception_tracker.stable_for_ms(
+            perception_ok=True,
+            reset_reason=None,
+        )
     perception_tracker.maybe_log_progress(
         stable_ms=perception_stable_ms,
         required_ms=config.perception_required_stable_ms,

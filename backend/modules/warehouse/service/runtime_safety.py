@@ -110,14 +110,22 @@ def odometry_topic_is_live(
     *,
     strict: bool = True,
 ) -> bool:
-    from backend.modules.warehouse.service.readiness_result import topic_is_strictly_live
+    from backend.modules.warehouse.service.readiness_result import (
+        gazebo_sensor_stream_live,
+        topic_is_live_with_gazebo_fallback,
+        topic_is_strictly_live,
+    )
 
     for key in ("visual_slam_odom", "local_odometry"):
         diag = _topic_diag_entry(components, key)
         if strict:
             if topic_is_strictly_live(diag):
                 return True
+            if topic_is_live_with_gazebo_fallback(diag, components, key):
+                return True
         elif isinstance(diag, dict) and diag.get("healthy"):
+            return True
+        elif gazebo_sensor_stream_live(components, key):
             return True
     return False
 

@@ -83,7 +83,10 @@ _discover_imu_topic() {
     echo "${topic}"
     return 0
   fi
-  gz topic -l 2>/dev/null | grep -iE 'imu' | grep -E '^/' | head -1 || true
+  # Prefer the Iris standoff IMU in iris_warehouse (matches ros_gz_bridge default).
+  gz topic -l 2>/dev/null | grep -E 'imu_sensor/imu$' | head -1 \
+    || gz topic -l 2>/dev/null | grep -iE '/imu$' | grep -E '^/' | head -1 \
+    || true
 }
 
 echo "[gazebo_sensor_bridge] waiting for external Gazebo on ${RGB_TOPIC} (up to ${WAIT_S}s)..."
@@ -156,12 +159,13 @@ _gz_bridge_specs=(
 )
 _bridge_specs=("${_gz_bridge_specs[@]}")
 
+IMU_RELAY_SOURCE=""
 if [ -n "${IMU_TOPIC}" ] && _gazebo_listed "${IMU_TOPIC}"; then
   _bridge_specs+=("${IMU_TOPIC}@sensor_msgs/msg/Imu[gz.msgs.IMU")
   echo "[gazebo_sensor_bridge] IMU bridge ${IMU_TOPIC}"
 
   if [ "${IMU_TOPIC}" != "/imu" ]; then
-    export WAREHOUSE_IMU_RELAY_SOURCE="${IMU_TOPIC}"
+    IMU_RELAY_SOURCE="${IMU_TOPIC}"
   fi
 elif [ -n "${IMU_TOPIC}" ]; then
   echo "[gazebo_sensor_bridge] WARN: IMU topic not listed yet (${IMU_TOPIC}); using neutral /imu fallback"
@@ -216,6 +220,19 @@ _wait_ros_publishers() {
   return 1
 }
 
+_start_imu_source_relay() {
+  local src="${1:-}"
+  if [ -z "${src}" ] || [ "${src}" = "/imu" ]; then
+    return 0
+  fi
+  _wait_ros_publishers "${src}" 25 \
+    || echo "[gazebo_sensor_bridge] WARN: ${src} has no ROS publisher yet; starting /imu relay anyway" >&2
+  echo "[gazebo_sensor_bridge] relay ${src} -> /imu (topic_adapter source)"
+  ros2 run topic_tools relay "${src}" /imu sensor_msgs/msg/Imu \
+    --ros-args -p use_sim_time:=true &
+  children+=("$!")
+}
+
 # Contract topics (/warehouse/contract/*) are published by warehouse_topic_adapter in the bridge stack.
 # Drop stale topic_tools relays so health probes see a single publisher per contract topic.
 pkill -f 'topic_tools relay.*warehouse/contract' 2>/dev/null || true
@@ -226,6 +243,12 @@ if ! _wait_ros_publishers "/clock" 20; then
 fi
 _wait_ros_publishers "${RGB_TOPIC}" 20 \
   || echo "[gazebo_sensor_bridge] WARN: ${RGB_TOPIC} has no ROS publisher yet; adapter will relay when sim publishes"
+
+if [ -n "${IMU_RELAY_SOURCE}" ]; then
+  _start_imu_source_relay "${IMU_RELAY_SOURCE}"
+  _wait_ros_publishers "/imu" 20 \
+    || echo "[gazebo_sensor_bridge] WARN: /imu has no publisher yet; contract IMU will appear once Gazebo publishes" >&2
+fi
 
 # Stay alive while ros_gz_bridge runs.
 echo "[gazebo_sensor_bridge] watching ros_gz_bridge pid=${bridge_pid}"

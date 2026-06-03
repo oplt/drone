@@ -37,3 +37,14 @@ export type AnalyticsOverview = {
     mavlink_connected: boolean;
   };
 };
+
+export type DashboardStatCard = {
+  title: string;
+  value: string;
+  interval: string;
+  trend: "up" | "down" | "neutral";
+  deltaLabel?: string;
+  data: number[];
+  labels?: string[];
+  tooltip?: string;
+};

@@ -1,22 +1,16 @@
-import { useId } from 'react';
-import { useTheme } from '@mui/material/styles';
-import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-import { SparkLineChart } from '@mui/x-charts/SparkLineChart';
-import { areaElementClasses } from '@mui/x-charts/LineChart';
+import { useId } from "react";
+import { useTheme } from "@mui/material/styles";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import { SparkLineChart } from "@mui/x-charts/SparkLineChart";
+import { areaElementClasses } from "@mui/x-charts/LineChart";
+import type { DashboardStatCard } from "../types";
 
-export type StatCardProps = {
-  title: string;
-  value: string;
-  interval: string;
-  trend: 'up' | 'down' | 'neutral';
-  deltaLabel?: string;
-  data: number[];
-  labels?: string[];
-};
+export type StatCardProps = DashboardStatCard;
 
 function AreaGradient({ color, id }: { color: string; id: string }) {
   return (
@@ -37,9 +31,10 @@ export default function StatCard({
   data,
   deltaLabel,
   labels,
+  tooltip,
 }: StatCardProps) {
   const theme = useTheme();
-  const gradientId = useId().replace(/:/g, '-');
+  const gradientId = useId().replace(/:/g, "-");
 
   const trendColors = {
     up: theme.palette.success.main,
@@ -48,9 +43,9 @@ export default function StatCard({
   };
 
   const labelColors = {
-    up: 'success' as const,
-    down: 'error' as const,
-    neutral: 'default' as const,
+    up: "success" as const,
+    down: "error" as const,
+    neutral: "default" as const,
   };
 
   const color = labelColors[trend];
@@ -61,25 +56,40 @@ export default function StatCard({
       : data.map((_, index) => `${index + 1}`);
 
   return (
-    <Card variant="outlined" sx={{ height: '100%', flexGrow: 1 }}>
-      <Stack spacing={2} sx={{ height: '100%' }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+    <Card variant="outlined" sx={{ height: "100%", flexGrow: 1 }}>
+      <Stack spacing={2} sx={{ height: "100%" }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          spacing={2}
+        >
           <Stack spacing={0.75}>
-            <Typography component="h2" variant="subtitle2">
-              {title}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Tooltip
+              title={tooltip ?? ""}
+              arrow
+              disableHoverListener={!tooltip}
+            >
+              <Typography component="h2" variant="subtitle2">
+                {title}
+              </Typography>
+            </Tooltip>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
               {interval}
             </Typography>
           </Stack>
-          {deltaLabel ? <Chip size="small" color={color} label={deltaLabel} /> : null}
+          {deltaLabel ? (
+            <Tooltip title="Change versus previous period" arrow>
+              <Chip size="small" color={color} label={deltaLabel} />
+            </Tooltip>
+          ) : null}
         </Stack>
 
         <Typography variant="h4" component="p">
           {value}
         </Typography>
 
-        <Box sx={{ width: '100%', minHeight: 68, mt: 'auto' }}>
+        <Box sx={{ width: "100%", minHeight: 68, mt: "auto" }}>
           {data.length > 0 ? (
             <SparkLineChart
               color={chartColor}
@@ -88,7 +98,7 @@ export default function StatCard({
               showHighlight
               showTooltip
               xAxis={{
-                scaleType: 'band',
+                scaleType: "band",
                 data: xLabels,
               }}
               sx={{
@@ -97,10 +107,13 @@ export default function StatCard({
                 },
               }}
             >
-              <AreaGradient color={chartColor} id={`area-gradient-${gradientId}`} />
+              <AreaGradient
+                color={chartColor}
+                id={`area-gradient-${gradientId}`}
+              />
             </SparkLineChart>
           ) : (
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
               No data yet
             </Typography>
           )}

@@ -124,12 +124,21 @@ _ensure_odometry_export() {
 
 _ensure_odometry_export
 
-if pgrep -f "[n]vblox_ros.*nvblox_node" >/dev/null 2>&1; then
-  echo "[warehouse_nvblox] nvblox_node already running — reusing"
-  tail -f /dev/null &
-  tail_pid="$!"
-  children+=("${tail_pid}")
-  wait "${tail_pid}"
+mapfile -t _nvblox_pids < <(pgrep -f "[n]vblox_ros.*nvblox_node" 2>/dev/null || true)
+if ((${#_nvblox_pids[@]} > 0)); then
+  if ((${#_nvblox_pids[@]} > 1)); then
+    echo "[warehouse_nvblox] WARN: ${#_nvblox_pids[@]} nvblox_node processes (duplicate names confuse ROS); stopping all"
+    for pid in "${_nvblox_pids[@]}"; do
+      kill "${pid}" 2>/dev/null || true
+    done
+    sleep 1.5
+  elif [ "${WAREHOUSE_NVBLOX_REUSE_RUNNING:-1}" = "1" ]; then
+    echo "[warehouse_nvblox] nvblox_node already running — reusing pid=${_nvblox_pids[0]}"
+    tail -f /dev/null &
+    tail_pid="$!"
+    children+=("${tail_pid}")
+    wait "${tail_pid}"
+  fi
 fi
 
 echo "[warehouse_nvblox] starting nvblox_node ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"

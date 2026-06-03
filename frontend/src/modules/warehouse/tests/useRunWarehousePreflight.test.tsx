@@ -2,13 +2,43 @@ import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "../../../test/msw/server";
-import { useRunWarehousePreflight } from "../hooks/useRunWarehousePreflight";
+import {
+  useRunWarehousePreflight,
+  warehousePreflightPollIntervalMs,
+} from "../hooks/useRunWarehousePreflight";
 
 vi.mock("../../mission-runtime/api/telemetryConnectApi", () => ({
   connectDroneTelemetry: vi.fn(() => Promise.reject(new Error("offline"))),
 }));
 
 describe("useRunWarehousePreflight", () => {
+  it("uses faster polling when stability window is almost satisfied", () => {
+    expect(
+      warehousePreflightPollIntervalMs({
+        ready_to_fly: false,
+        bridge_ok: true,
+        gazebo_ok: true,
+        sensors_ok: true,
+        odom_ok: true,
+        localization_ok: true,
+        tf_ok: true,
+        nvblox_ok: null,
+        stability_ok: false,
+        vehicle_link_ok: true,
+        telemetry_stream_ok: true,
+        battery_ok: true,
+        perception_stable_for_ms: 6200,
+        perception_required_stable_ms: 8000,
+        ros_topic_count: 20,
+        blocking_reasons: [],
+        suggested_actions: [],
+        categories: { stability: "WAITING" },
+        note: "",
+        diagnostics: { stability: { remaining_ms: 1800 } },
+      }),
+    ).toBe(350);
+  });
+
   it("finishes immediately on terminal preflight blockers", async () => {
     const requests: URL[] = [];
     server.use(
@@ -66,6 +96,6 @@ describe("useRunWarehousePreflight", () => {
     expect(result.current.running).toBe(false);
     expect(result.current.error).toContain("Preflight blocked");
     expect(requests).toHaveLength(1);
-    expect(requests[0].searchParams.get("deep")).toBe("false");
+    expect(requests[0].searchParams.get("deep")).toBe("true");
   });
 });

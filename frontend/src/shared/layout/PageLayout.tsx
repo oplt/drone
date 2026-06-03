@@ -4,12 +4,14 @@ import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 
 export type PageMetric = {
   label: string;
   value: string;
   caption?: string;
+  tooltip?: string;
 };
 
 type PageLayoutProps = {
@@ -56,17 +58,17 @@ export default function PageLayout({
                   <Typography
                     sx={{
                       fontFamily: '"Space Mono", monospace',
-                      fontSize: '0.6875rem',
+                      fontSize: "0.6875rem",
                       fontWeight: 400,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'text.secondary',
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "text.secondary",
                     }}
                   >
                     {eyebrow}
                   </Typography>
                 ) : null}
-                <Typography variant="h3" sx={{ color: 'text.primary' }}>
+                <Typography variant="h3" sx={{ color: "text.primary" }}>
                   {title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -84,55 +86,71 @@ export default function PageLayout({
                   <Grid size={{ xs: 12, xl: hero ? 7 : 12 }}>
                     <Grid container spacing={2}>
                       {metrics.map((metric) => (
-                        <Grid key={`${metric.label}-${metric.value}`} size={{ xs: 12, sm: 4 }}>
-                          <Paper
-                            variant="outlined"
-                            sx={{
-                              p: 2.5,
-                              height: "100%",
-                              borderRadius: 3,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              backgroundColor: 'background.paper',
-                            }}
+                        <Grid
+                          key={`${metric.label}-${metric.value}`}
+                          size={{ xs: 12, sm: 4 }}
+                        >
+                          <Tooltip
+                            title={metric.tooltip ?? ""}
+                            arrow
+                            disableHoverListener={!metric.tooltip}
                           >
-                            <Stack spacing={0.5}>
-                              <Typography
-                                sx={{
-                                  fontFamily: '"Space Mono", monospace',
-                                  fontSize: '0.6875rem',
-                                  fontWeight: 400,
-                                  letterSpacing: '0.08em',
-                                  textTransform: 'uppercase',
-                                  color: 'text.secondary',
-                                }}
-                              >
-                                {metric.label}
-                              </Typography>
-                              <Typography
-                                sx={{
-                                  fontFamily: '"Space Mono", monospace',
-                                  fontSize: '1.5rem',
-                                  fontWeight: 400,
-                                  lineHeight: 1.1,
-                                  color: 'text.primary',
-                                }}
-                              >
-                                {metric.value}
-                              </Typography>
-                              {metric.caption ? (
-                                <Typography variant="body2" color="text.secondary">
-                                  {metric.caption}
+                            <Paper
+                              variant="outlined"
+                              sx={{
+                                p: 2,
+                                height: "100%",
+                                borderRadius: 2,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                backgroundColor: "background.paper",
+                              }}
+                            >
+                              <Stack spacing={0.5}>
+                                <Typography
+                                  sx={{
+                                    fontFamily: '"Space Mono", monospace',
+                                    fontSize: "0.6875rem",
+                                    fontWeight: 400,
+                                    letterSpacing: "0.08em",
+                                    textTransform: "uppercase",
+                                    color: "text.secondary",
+                                  }}
+                                >
+                                  {metric.label}
                                 </Typography>
-                              ) : null}
-                            </Stack>
-                          </Paper>
+                                <Typography
+                                  sx={{
+                                    fontFamily: '"Space Mono", monospace',
+                                    fontSize: "1.5rem",
+                                    fontWeight: 400,
+                                    lineHeight: 1.1,
+                                    color: "text.primary",
+                                  }}
+                                >
+                                  {metric.value}
+                                </Typography>
+                                {metric.caption ? (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {metric.caption}
+                                  </Typography>
+                                ) : null}
+                              </Stack>
+                            </Paper>
+                          </Tooltip>
                         </Grid>
                       ))}
                     </Grid>
                   </Grid>
                 ) : null}
-                {hero ? <Grid size={{ xs: 12, xl: metrics.length > 0 ? 5 : 12 }}>{hero}</Grid> : null}
+                {hero ? (
+                  <Grid size={{ xs: 12, xl: metrics.length > 0 ? 5 : 12 }}>
+                    {hero}
+                  </Grid>
+                ) : null}
               </Grid>
             )}
           </Stack>
@@ -158,9 +176,9 @@ export function PageSection({
         {
           p: { xs: 2.5, md: 3 },
           borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: 'background.paper',
+          border: "1px solid",
+          borderColor: "divider",
+          backgroundColor: "background.paper",
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
@@ -175,7 +193,7 @@ export function PageSection({
         >
           <Stack spacing={0.5}>
             {title ? (
-              <Typography variant="h6" sx={{ color: 'text.primary' }}>
+              <Typography variant="h6" sx={{ color: "text.primary" }}>
                 {title}
               </Typography>
             ) : null}

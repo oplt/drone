@@ -16,6 +16,17 @@ if [ -f "${ROOT}/warehouse_ros2_ws/install/setup.bash" ]; then
   source "${ROOT}/warehouse_ros2_ws/install/setup.bash"
 fi
 
+echo "ROS_DOMAIN_ID=${ROS_DOMAIN_ID} (must match bridge stack, usually 42)"
+echo "Contract topics (health/preflight):"
+echo "  /warehouse/contract/rgb/image"
+echo "  /warehouse/contract/depth/image"
+echo "  /warehouse/contract/odometry"
+echo "Gazebo source topics (ros_gz_bridge):"
+echo "  /warehouse/front/rgbd/image"
+echo "  /warehouse/front/rgbd/depth_image"
+echo "  /warehouse/drone/odometry"
+echo
+
 REQUIRED_TOPICS=(
   "${WAREHOUSE_RGB_TOPIC:-/warehouse/contract/rgb/image}"
   "${WAREHOUSE_DEPTH_TOPIC:-/warehouse/contract/depth/image}"

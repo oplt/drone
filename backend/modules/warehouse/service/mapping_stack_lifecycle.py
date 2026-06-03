@@ -135,6 +135,55 @@ def _suggested_actions(
     return tuple(dict.fromkeys(actions))
 
 
+def _nvblox_readiness_detail(
+    components: dict[str, object],
+    *,
+    missing_nvblox: tuple[str, ...],
+) -> str:
+    parts: list[str] = []
+    if missing_nvblox:
+        parts.append(f"missing outputs: {', '.join(missing_nvblox)}")
+    matches = components.get("topic_matches")
+    if isinstance(matches, dict):
+        for key in ("esdf", "pointcloud", "mesh", "occupancy"):
+            payload = matches.get(key)
+            if not isinstance(payload, dict) or payload.get("healthy"):
+                continue
+            expected = payload.get("expected")
+            matched = payload.get("matched")
+            error = payload.get("error")
+            verify_cmd = payload.get("verify_cmd")
+            bit = f"{key}: expected={expected} matched={matched or 'none'} reason={error or 'unhealthy'}"
+            if verify_cmd:
+                bit = f"{bit} verify=`{verify_cmd}`"
+            parts.append(bit)
+    if components.get("nvblox_warming_up") or components.get("nvblox_process_running"):
+        parts.append(
+            "nvblox_node is running; wait for "
+            "/nvblox_node/static_esdf_pointcloud to publish (Gazebo Play + RGB/depth/odom)"
+        )
+    return "; ".join(parts) if parts else "nvblox outputs not publishing yet"
+
+
+def _nvblox_ready_from_components(
+    components: dict[str, object],
+    *,
+    stack_running: bool,
+) -> bool:
+    if components.get("nvblox_healthy") or components.get("nvblox"):
+        return True
+    if components.get("nvblox_warming_up"):
+        return True
+    if components.get("nvblox_process_running"):
+        return True
+    listed = components.get("listed_topics")
+    if isinstance(listed, list) and any(
+        str(topic).startswith("/nvblox_node/") for topic in listed
+    ):
+        return True
+    return bool(stack_running and components.get("nvblox_process_running"))
+
+
 def _readiness_from_status(status: WarehousePerceptionStatus, *, stack_status: MappingStackStatus) -> WarehouseMappingReadiness:
     components = status.components if isinstance(status.components, dict) else {}
     missing_required = tuple(
@@ -153,9 +202,16 @@ def _readiness_from_status(status: WarehousePerceptionStatus, *, stack_status: M
         if diagnostics_ready
         else False
     )
+    if not nvblox_ready and stack_status.running:
+        nvblox_ready = _nvblox_ready_from_components(
+            components,
+            stack_running=True,
+        )
     topic_diagnostics = takeoff.topic_diagnostics
     detail = status.detail if diagnostics_ready else "waiting for warehouse bridge diagnostics"
-    if diagnostics_ready and not sensors_ready and takeoff.detail:
+    if not nvblox_ready:
+        detail = _nvblox_readiness_detail(components, missing_nvblox=missing_nvblox)
+    elif diagnostics_ready and not sensors_ready and takeoff.detail:
         detail = takeoff.detail
     if takeoff.missing_topics or takeoff.stale_topics:
         missing_required = tuple(
@@ -324,7 +380,7 @@ async def _wait_bridge_after_stack_start(
     from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
 
     wait_s = timeout_s if timeout_s is not None else float(
-        os.getenv("WAREHOUSE_FLIGHT_MAPPING_WAIT_S", "30")
+        os.getenv("WAREHOUSE_FLIGHT_MAPPING_WAIT_S", "60")
     )
     port = build_warehouse_perception_port()
     deadline = time.monotonic() + max(3.0, wait_s)

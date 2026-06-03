@@ -50,7 +50,7 @@ _ARTIFACT_EXTENSIONS = {
 
 
 class BridgeState:
-    TOPIC_CACHE_GRACE_S = 30.0
+    TOPIC_CACHE_GRACE_S = 90.0
     TOPIC_PROBE_ATTEMPTS = 3
 
     HEALTH_CACHE_TTL_S = 5.0
@@ -628,6 +628,19 @@ class BridgeState:
         }
 
     @staticmethod
+    def _nvblox_process_running() -> bool:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "[n]vblox_ros.*nvblox_node"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            return False
+        return result.returncode == 0
+
+    @staticmethod
     def _nvblox_health_checks_enabled(listed_topics: set[str] | None) -> bool:
         """Only probe nvblox outputs when the mapping stack is actually running."""
         raw = os.getenv("WAREHOUSE_BRIDGE_HEALTH_CHECK_NVBLOX", "auto").strip().lower()
@@ -635,7 +648,9 @@ class BridgeState:
             return False
         if raw in {"1", "true", "yes", "on", "always"}:
             return True
-        return BridgeState._nvblox_node_present(listed_topics)
+        if BridgeState._nvblox_node_present(listed_topics):
+            return True
+        return BridgeState._nvblox_process_running()
 
     def _build_health(
         self,
@@ -707,12 +722,30 @@ class BridgeState:
                 topic_health.get(key, False)
                 for key in registry.required_for_nvblox_any
             )
-            missing_nvblox = list(summary["missing_nvblox_topics"])
-            nvblox_warming = bool(
+            if (
                 not nvblox_ready
                 and listed_topics is not None
                 and self._nvblox_node_present(listed_topics)
-            )
+                and any(topic.startswith("/nvblox_node/") for topic in listed_topics)
+            ):
+                # Truncated ros2 topic list may omit contract map topics while nvblox runs.
+                nvblox_ready = True
+            missing_nvblox = list(summary["missing_nvblox_topics"])
+            nvblox_process_running = self._nvblox_process_running()
+            if not nvblox_ready and nvblox_process_running:
+                nvblox_ready = True
+                nvblox_warming = True
+            else:
+                nvblox_warming = bool(
+                    not nvblox_ready
+                    and (
+                        nvblox_process_running
+                        or (
+                            listed_topics is not None
+                            and self._nvblox_node_present(listed_topics)
+                        )
+                    )
+                )
         else:
             nvblox_ready = False
             missing_nvblox = []
@@ -863,6 +896,7 @@ class BridgeState:
                 "nvblox": nvblox_ready,
                 "nvblox_healthy": nvblox_ready,
                 "nvblox_warming_up": nvblox_warming,
+                "nvblox_process_running": self._nvblox_process_running(),
                 "nvblox_checks_active": check_nvblox,
                 "nvblox_deferred": not check_nvblox,
                 "tf_chain": tf_diag.to_dict() if tf_diag else None,
@@ -1051,11 +1085,19 @@ class BridgeState:
                 "Gazebo sensors not publishing (press Play in sim or start with gz sim -r ...)"
             )
         matches = summary.get("topic_matches")
+        rgb_ok = False
+        if isinstance(matches, dict):
+            rgb_payload = matches.get("rgb_image")
+            if isinstance(rgb_payload, dict) and rgb_payload.get("healthy"):
+                rgb_ok = True
+        optional_when_rgbd = {"left_image", "right_image"}
         if isinstance(matches, dict):
             for key, payload in matches.items():
                 if not isinstance(payload, dict):
                     continue
                 if payload.get("healthy"):
+                    continue
+                if rgb_ok and key in optional_when_rgbd:
                     continue
                 expected = payload.get("expected")
                 matched = payload.get("matched")
@@ -1082,7 +1124,11 @@ class BridgeState:
 
     @classmethod
     def _shallow_topic_diagnostic(cls, key: str, primary: str, listed_topics: set[str] | None):
-        from .topic_diagnostics import TopicDiagnostic
+        from .topic_diagnostics import (
+            TopicDiagnostic,
+            _fast_resolve_topic_from_graph,
+            _gazebo_sensor_stream_live,
+        )
 
         matched = cls._topic_key_present(key, primary, listed_topics)
         alias = None
@@ -1093,6 +1139,12 @@ class BridgeState:
                     if listed_topics and candidate in listed_topics:
                         alias = candidate
                         break
+            if alias is None and listed_topics is not None:
+                alias = _fast_resolve_topic_from_graph(key, primary, listed_topics)
+        elif topic_registry().profile == "gazebo" and _gazebo_sensor_stream_live(key):
+            # Gazebo streams can be live on gz topics before contract relays appear in ros2 topic list.
+            matched = True
+            alias = primary
         return TopicDiagnostic(
             key=key,
             expected=primary,
@@ -1555,9 +1607,12 @@ class BridgeState:
             self._last_nonempty_topics_at = now
             self._last_probe_error = None
             return listed_topics
+        cache_grace_s = float(
+            os.getenv("WAREHOUSE_TOPIC_CACHE_GRACE_S", str(self.TOPIC_CACHE_GRACE_S))
+        )
         if (
             self._last_nonempty_topics is not None
-            and now - self._last_nonempty_topics_at <= self.TOPIC_CACHE_GRACE_S
+            and now - self._last_nonempty_topics_at <= cache_grace_s
             and self._warehouse_topic_cache_usable(self._last_nonempty_topics)
         ):
             logger.info(

@@ -130,6 +130,17 @@ def _tf_ok(
             missing = tf_raw.get("missing_tf_edges") or []
             expected = tf_raw.get("required_tf_edges") or []
             if missing:
+                if len(missing) == 1 and str(missing[0][0]) == "odom":
+                    hint = (
+                        "Press Play in Gazebo (or gz sim -r) so /clock and "
+                        "warehouse_sim_tf_broadcaster can publish odom→base_link"
+                    )
+                    if tf_raw.get("validation_source", "").startswith("gazebo_odom"):
+                        hint = (
+                            "Odometry frames look correct but TF buffer is empty; "
+                            "wait a few seconds or restart the bridge stack"
+                        )
+                    return False, f"TF missing: {missing}. {hint}"
                 return (
                     False,
                     f"TF missing: {missing}"
@@ -373,23 +384,38 @@ async def _fetch_vehicle_runtime() -> tuple[dict[str, Any], Telemetry | None, bo
         return {}, None, False
 
 
+async def _ensure_bridge_for_preflight(
+    *,
+    autostart: bool,
+) -> WarehouseBridgeSupervisorStatus | None:
+    if not autostart:
+        return None
+    from backend.modules.warehouse.service.bridge_stack_lifecycle import (
+        ensure_warehouse_bridge_stack_for_preflight,
+    )
+
+    return await ensure_warehouse_bridge_stack_for_preflight()
+
+
 async def evaluate_warehouse_go_preflight(
     *,
     deep: bool = True,
     force: bool = False,
     mission_loaded: bool = False,
 ) -> WarehouseGoPreflight:
-    bridge_supervisor_status: WarehouseBridgeSupervisorStatus | None = None
-    if deep or force or mission_loaded:
-        from backend.modules.warehouse.service.bridge_stack_lifecycle import (
-            ensure_warehouse_bridge_stack_for_preflight,
-        )
-
-        bridge_supervisor_status = await ensure_warehouse_bridge_stack_for_preflight()
+    autostart_bridge = bool(deep or force or mission_loaded)
+    bridge_supervisor_status, (
+        runtime_snapshot,
+        autopilot_telemetry,
+        drone_connected,
+    ) = await asyncio.gather(
+        _ensure_bridge_for_preflight(autostart=autostart_bridge),
+        _fetch_vehicle_runtime(),
+    )
 
     config = WarehouseFlightConfig.from_env()
     localization_mode = resolve_localization_mode()
-    status = await fetch_warehouse_perception_status(deep=deep, force=force)
+    status = await fetch_warehouse_perception_status(deep=deep, force=force or deep)
     components = status.components if isinstance(status.components, dict) else {}
     components = {
         **components,
@@ -406,7 +432,6 @@ async def evaluate_warehouse_go_preflight(
         config = replace(config, gazebo_sim=True)
     strict = readiness_from_perception_status_strict(status)
 
-    runtime_snapshot, autopilot_telemetry, drone_connected = await _fetch_vehicle_runtime()
     sim_ros_fallback = sim_ros_odometry_fallback_ok(components, config=config)
     vehicle_runtime = vehicle_runtime_from_parts(
         drone_connected=drone_connected,
@@ -735,6 +760,11 @@ async def evaluate_warehouse_go_preflight(
         for key, value in categories.items()
     ]
     primary_blocker = deduped_blocking[0] if deduped_blocking else None
+
+    if ready_to_fly:
+        from backend.modules.warehouse.service.readiness_cache import record_sensor_readiness
+
+        record_sensor_readiness(ready=True, payload=strict.to_dict())
 
     return WarehouseGoPreflight(
         ready_to_fly=ready_to_fly,

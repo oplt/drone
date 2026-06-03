@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -143,11 +144,41 @@ async def assert_ready_for_core_takeoff(
     return snapshot
 
 
+def _mission_planner_blocking_reasons(
+    mission: WarehouseFlightMissionContext,
+    *,
+    config: WarehouseFlightConfig | None = None,
+) -> list[str]:
+    """Fast mission constraint checks before ROS/nvblox bootstrap waits."""
+    cfg = config or WarehouseFlightConfig.from_env()
+    reasons: list[str] = []
+    if not mission.loaded:
+        reasons.append("Mission not loaded")
+    if not mission.valid:
+        reasons.append("Mission path or waypoints invalid")
+    if mission.speed_mps is not None and mission.speed_mps > cfg.max_indoor_speed_mps:
+        reasons.append(
+            f"Speed above indoor limit ({mission.speed_mps:.2f} m/s > {cfg.max_indoor_speed_mps:.2f} m/s)"
+        )
+    if mission.altitude_m is not None and mission.altitude_m > cfg.max_indoor_altitude_m:
+        reasons.append(
+            f"Altitude above indoor limit ({mission.altitude_m:.2f} m > {cfg.max_indoor_altitude_m:.2f} m)"
+        )
+    return reasons
+
+
 async def assert_ready_for_warehouse_flight_start(
     *,
     mission: WarehouseFlightMissionContext,
     wait_for_stability: bool = True,
 ) -> WarehouseFlightReadinessSnapshot:
+    planner_blockers = _mission_planner_blocking_reasons(mission)
+    if planner_blockers:
+        raise WarehouseFlightNotReadyError(
+            blocking_reasons=planner_blockers,
+            readiness={},
+        )
+
     snapshot = await assert_ready_for_core_takeoff(
         mission=mission,
         wait_for_stability=wait_for_stability,
@@ -155,6 +186,9 @@ async def assert_ready_for_warehouse_flight_start(
 
     from backend.modules.warehouse.service.mapping_stack_lifecycle import (
         prepare_warehouse_scan_ros,
+    )
+    from backend.modules.warehouse.service.perception_stable_preflight import (
+        ensure_warehouse_perception_stable,
     )
 
     stack_status, mapping_readiness, _takeoff_ready = await prepare_warehouse_scan_ros(
@@ -167,19 +201,22 @@ async def assert_ready_for_warehouse_flight_start(
             readiness=snapshot.to_dict(),
         )
     if not mapping_readiness.nvblox_ready:
-        detail = mapping_readiness.detail or "nvblox topics not healthy after stack start"
+        detail = (
+            mapping_readiness.detail
+            or "nvblox outputs not publishing after mapping stack start"
+        )
         missing = mapping_readiness.missing_nvblox
-        if missing:
-            detail = f"{detail} (missing: {', '.join(missing)})"
+        if missing and "missing outputs" not in detail:
+            detail = f"{detail}; missing outputs: {', '.join(missing)}"
         raise WarehouseFlightNotReadyError(
             blocking_reasons=[f"nvblox: {detail}"],
             readiness=snapshot.to_dict(),
         )
 
-    snapshot = await evaluate_warehouse_flight_readiness(
+    snapshot = await ensure_warehouse_perception_stable(
         mission=mission,
-        force=True,
         mapping_stack_running=True,
+        timeout_s=float(os.getenv("WAREHOUSE_FLIGHT_POST_NVBLOX_STABLE_S", "45")),
     )
     if not snapshot.readiness.ready_for_autonomy:
         logger.warning(

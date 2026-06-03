@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 
-from .config import topic_env, topic_registry
+from .config import source_topic_env, topic_env, topic_registry
 from .ros_node_utils import configure_use_sim_time, use_sim_time_from_env
 
 
@@ -111,13 +111,32 @@ def main() -> None:
             self._sim_clock_stamp: Time | None = None
             self._waiting_for_clock_logged = False
 
-            odom_topic = os.getenv(
+            profile = topic_registry().profile
+            source_topics = source_topic_env(profile)
+            contract_odom = os.getenv(
                 "WAREHOUSE_ODOM_TOPIC",
-                self.topics["visual_slam_odom"],
+                self.topics.get("visual_slam_odom", "/warehouse/contract/odometry"),
             )
-            self.declare_parameter("visual_slam_odom_topic", odom_topic)
-            odom_topic = str(self.get_parameter("visual_slam_odom_topic").value or odom_topic)
-            self.create_subscription(Odometry, odom_topic, self.on_odometry, QoSProfile(depth=20))
+            self.declare_parameter("visual_slam_odom_topic", contract_odom)
+            contract_odom = str(
+                self.get_parameter("visual_slam_odom_topic").value or contract_odom
+            )
+            odom_qos = QoSProfile(depth=20)
+            subscribed: set[str] = set()
+            for topic in (
+                contract_odom,
+                source_topics.get("visual_slam_odom", ""),
+            ):
+                normalized = str(topic or "").strip()
+                if not normalized or normalized in subscribed:
+                    continue
+                subscribed.add(normalized)
+                self.create_subscription(
+                    Odometry,
+                    normalized,
+                    self.on_odometry,
+                    odom_qos,
+                )
             self.create_subscription(Clock, "/clock", self._on_clock, QoSProfile(depth=10))
             self.create_timer(0.05, self._republish_odometry_tf)
             for camera_info_topic in self.camera_offsets:
@@ -131,11 +150,24 @@ def main() -> None:
             self._republish_odometry_tf()
             self.get_logger().info(
                 f"Publishing sim TF odom={self.odom_frame} base_link={self.base_link_frame} "
-                f"odom_topic={odom_topic}"
+                f"odom_topics={sorted(subscribed)}"
             )
 
+        def _publish_identity_odom_tf(self) -> None:
+            transform = TransformStamped()
+            transform.header.stamp = self._current_stamp()
+            transform.header.frame_id = self.odom_frame
+            transform.child_frame_id = self.base_link_frame
+            transform.transform.rotation.w = 1.0
+            self.tf_broadcaster.sendTransform(transform)
+            self._last_odom_transform = transform
+
         def _on_clock(self, message: Clock) -> None:
+            first_clock = self._sim_clock_stamp is None
             self._sim_clock_stamp = message.clock
+            if first_clock and self.publish_initial_identity_tf and self._last_odom_transform is None:
+                self._publish_identity_odom_tf()
+                self._waiting_for_clock_logged = False
 
         def _current_stamp(self) -> Time:
             if self._sim_clock_stamp is not None:
@@ -261,14 +293,8 @@ def main() -> None:
                 transform.transform = self._last_odom_transform.transform
                 self.tf_broadcaster.sendTransform(transform)
                 return
-            if not self.publish_initial_identity_tf:
-                return
-            transform = TransformStamped()
-            transform.header.stamp = self._current_stamp()
-            transform.header.frame_id = self.odom_frame
-            transform.child_frame_id = self.base_link_frame
-            transform.transform.rotation.w = 1.0
-            self.tf_broadcaster.sendTransform(transform)
+            if self.publish_initial_identity_tf:
+                self._publish_identity_odom_tf()
 
         def _warn_frame_mismatch(self, role: str, source: str, configured: str) -> None:
             key = (role, source)

@@ -15,6 +15,7 @@ from backend.modules.warehouse.service.localization_mode import (
 )
 from backend.modules.warehouse.service.readiness_result import (
     _topic_diag,
+    topic_is_live_with_gazebo_fallback,
     topic_is_strictly_live,
 )
 from backend.modules.warehouse.service.runtime_safety import (
@@ -329,6 +330,13 @@ def check_sensors(
             not config.gazebo_sim and str(components.get("topic_profile") or "").lower() != "gazebo"
         )
     )
+    _sensor_keys = {
+        "imu": "imu",
+        "depth": "depth",
+        "rgb": "rgb_image",
+        "lidar": "raw_lidar",
+        "visual_slam_odom": "visual_slam_odom",
+    }
     checks: list[tuple[str, dict[str, Any] | None, int, bool]] = [
         ("imu", imu_diag, config.imu_max_age_ms, True),
         ("depth", depth_diag, config.depth_max_age_ms, True),
@@ -348,7 +356,11 @@ def check_sensors(
                 failures.append(f"{label} missing")
             continue
         age_ms = _age_ms_from_diag(diag)
-        live = topic_is_strictly_live(diag)
+        topic_key = _sensor_keys.get(name, name)
+        live = topic_is_strictly_live(diag) or (
+            config.gazebo_sim
+            and topic_is_live_with_gazebo_fallback(diag, components, topic_key)
+        )
         details[f"{name}_age_ms"] = age_ms
         details[f"{name}_live"] = live
         if not live:
@@ -574,6 +586,29 @@ def check_slam(
     )
 
 
+def _nvblox_costmap_diag(components: dict[str, Any]) -> dict[str, Any] | None:
+    for key in ("esdf", "pointcloud", "occupancy", "mesh"):
+        diag = _topic_diag(components, key)
+        if isinstance(diag, dict):
+            return diag
+    return None
+
+
+def _nvblox_outputs_present(components: dict[str, Any]) -> bool:
+    for key in ("esdf", "pointcloud", "occupancy", "mesh"):
+        diag = _topic_diag(components, key)
+        if not isinstance(diag, dict):
+            continue
+        if topic_is_strictly_live(diag):
+            return True
+        state = diag.get("readiness_state")
+        if state in {"shallow_present", "ok_graph_presence"} and (
+            diag.get("listed") or diag.get("matched")
+        ):
+            return True
+    return False
+
+
 def check_nvblox(
     components: dict[str, Any],
     config: WarehouseFlightConfig,
@@ -608,17 +643,23 @@ def check_nvblox(
             details={"missing_nvblox_topics": list(missing) if missing else []},
         )
 
-    esdf_diag = _topic_diag(components, "esdf") or _topic_diag(components, "occupancy")
-    costmap_age_ms = _age_ms_from_diag(esdf_diag if isinstance(esdf_diag, dict) else None)
+    costmap_diag = _nvblox_costmap_diag(components)
+    costmap_age_ms = _age_ms_from_diag(costmap_diag)
     if costmap_age_ms is None:
         nvblox_fps = components.get("nvblox_fps")
         if isinstance(nvblox_fps, (int, float)) and float(nvblox_fps) > 0:
             costmap_age_ms = int(1000.0 / float(nvblox_fps))
-        else:
-            costmap_age_ms = None
 
     details: dict[str, Any] = {"costmap_age_ms": costmap_age_ms}
     if costmap_age_ms is None:
+        # Fast /health probes often omit hz/echo on nvblox outputs; do not block flight
+        # when the bridge already reports nvblox healthy or native outputs are listed.
+        if _nvblox_outputs_present(components) or nvblox_ready:
+            return SubsystemHealth(
+                SubsystemStatus.OK,
+                "Nvblox active; costmap freshness not sampled",
+                details=details,
+            )
         return SubsystemHealth(
             SubsystemStatus.WARN,
             "Costmap freshness unknown",

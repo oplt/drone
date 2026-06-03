@@ -38,6 +38,11 @@ def perception_core_ok(
     if slam.status == SubsystemStatus.FAIL:
         return False
     if require_nvblox and mapping_stack_running and nvblox.status != SubsystemStatus.OK:
+        if (
+            nvblox.status == SubsystemStatus.WAITING
+            and components.get("nvblox_warming_up")
+        ):
+            return True
         return False
     return True
 
@@ -70,6 +75,12 @@ class PerceptionStabilityTracker:
         self._last_ok = False
         if reason:
             self._last_reset_reason = reason
+
+    def hold_stable_ms(self) -> int:
+        """Return accumulated stable time without starting or resetting the window."""
+        if self._stable_since is None:
+            return 0
+        return max(0, int((time.monotonic() - self._stable_since) * 1000.0))
 
     def stable_for_ms(
         self,

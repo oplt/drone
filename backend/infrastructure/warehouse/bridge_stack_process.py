@@ -400,6 +400,7 @@ class WarehouseBridgeStackProcessManager:
       # Contract-topic producers / relays
       safe_kill_pattern 'warehouse_topic_adapter'
       safe_kill_pattern 'topic_tools relay.*warehouse'
+      safe_kill_pattern 'topic_tools relay.*/imu'
       safe_kill_pattern 'ros2 topic pub /imu'
       safe_kill_pattern 'ros2 topic pub /warehouse/contract/imu'
     
@@ -483,22 +484,38 @@ class WarehouseBridgeStackProcessManager:
         env.update(flow_env_overrides())
         if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
             env.setdefault("WAREHOUSE_BASE_LINK_FRAME", "iris_with_standoffs/base_link")
+            env.setdefault("WAREHOUSE_PUBLISH_INITIAL_IDENTITY_TF", "1")
+            env.setdefault("WAREHOUSE_ODOM_FRAME", "odom")
 
         # Important for real Gazebo readiness, not only HTTP-process readiness.
         if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
             # topic_adapter relays /warehouse/front/* -> /warehouse/contract/* (stable with stack).
             env.setdefault("WAREHOUSE_GAZEBO_DIRECT_CONTRACT_BRIDGE", "0")
             env.setdefault("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "0")
+            env.setdefault("WAREHOUSE_PREFLIGHT_PERCEPTION_WAIT_S", "45")
+            env.setdefault("WAREHOUSE_PREFLIGHT_CHECK_INTERVAL_S", "1.5")
             env.setdefault("WAREHOUSE_USE_SIM_TIME", "1")
             env.setdefault("WAREHOUSE_TOPIC_INFO_TIMEOUT_S", "8.0")
             env.setdefault("WAREHOUSE_TOPIC_HZ_TIMEOUT_S", "5.0")
             env.setdefault("WAREHOUSE_BRIDGE_SUPERVISOR_DEEP_READY", "0")
-            env.setdefault("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", "8")
+            env.setdefault("WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS", "5000")
+            env.setdefault("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", "4")
             env.setdefault("WAREHOUSE_HEALTH_SAMPLE_MAX_AGE_S", "90")
+            env.setdefault("WAREHOUSE_TOPIC_CACHE_GRACE_S", "90")
+            env.setdefault("WAREHOUSE_ROS_TOPIC_LIST_TIMEOUT_S", "12")
+            env.setdefault("WAREHOUSE_ROS_TOPIC_LIST_ATTEMPTS", "2")
+            env.setdefault("WAREHOUSE_ROS_TOPIC_LIST_BG_TIMEOUT_S", "12")
+            env.setdefault("WAREHOUSE_ROS_TOPIC_LIST_BG_ATTEMPTS", "2")
+            env.setdefault("WAREHOUSE_GRAPH_PROBE_BACKEND", "rclpy")
             env.setdefault("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", "0")
             env.setdefault("WAREHOUSE_GAZEBO_SENSOR_WAIT_S", "60")
             env.setdefault("WAREHOUSE_BRIDGE_WAIT_FOR_TOPICS", "0")
             env.setdefault("WAREHOUSE_GAZEBO_PROBE_ON_HEALTH", "1")
+            env.setdefault(
+                "WAREHOUSE_GAZEBO_IMU_TOPIC",
+                "/world/iris_warehouse/model/iris_rplidar_rgbd/model/"
+                "iris_with_standoffs/link/imu_link/sensor/imu_sensor/imu",
+            )
             env.setdefault("WAREHOUSE_TF_PROBE_ON_HEALTH", "1")
             env.setdefault("WAREHOUSE_TF_PROBE_TIMEOUT_S", "8.0")
             env.setdefault("WAREHOUSE_BRIDGE_PYTHON", str(repo_root / ".venv/bin/python"))

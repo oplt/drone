@@ -23,6 +23,7 @@ from backend.modules.warehouse.service.perception_stability import (
     perception_core_ok,
 )
 from backend.modules.warehouse.service.readiness_result import (
+    evaluate_warehouse_capabilities,
     readiness_from_perception_status_strict,
 )
 from backend.modules.warehouse.service.flight_health import (
@@ -153,6 +154,26 @@ def test_nvblox_deferred_during_preflight(gazebo_localization_mode: None) -> Non
     assert nvblox.details.get("deferred") is True
 
 
+def test_nvblox_ok_when_costmap_age_not_sampled(gazebo_localization_mode: None) -> None:
+    components = _gazebo_components(nvblox_deferred=False, mapping_stack_running=True)
+    components["nvblox_checks_active"] = True
+    components["nvblox_healthy"] = True
+    components["nvblox"] = True
+    components["topic_diagnostics"]["esdf"] = {
+        "key": "esdf",
+        "healthy": True,
+        "readiness_state": "shallow_present",
+        "listed": True,
+        "matched": "/nvblox_node/static_esdf_pointcloud",
+        "publisher_count": 1,
+        "publishing": True,
+    }
+    config = WarehouseFlightConfig.from_env()
+    nvblox = check_nvblox(components, config, mapping_stack_running=True)
+    assert nvblox.status == SubsystemStatus.OK
+    assert "not sampled" in nvblox.message
+
+
 def test_nvblox_fails_during_active_mapping(visual_slam_mode: None) -> None:
     components = _gazebo_components(nvblox_deferred=False, mapping_stack_running=True)
     components["nvblox_checks_active"] = True
@@ -227,6 +248,58 @@ def test_flight_readiness_blocks_takeoff_when_slam_fails(visual_slam_mode: None)
         config=WarehouseFlightConfig.from_env(),
     )
     assert readiness.ready_to_takeoff is False
+
+
+def _shallow_listed_diag() -> dict[str, object]:
+    return {
+        "healthy": True,
+        "readiness_state": "shallow_present",
+        "listed": True,
+        "publisher_count": 1,
+        "publishing": True,
+    }
+
+
+def test_gazebo_sim_publishing_passes_with_shallow_ros_probes(
+    gazebo_localization_mode: None,
+) -> None:
+    components = {
+        "ros_graph": False,
+        "ros_topic_count": 0,
+        "topic_profile": "gazebo",
+        "topics": {
+            "visual_slam_odom": "/warehouse/contract/odometry",
+            "depth": "/warehouse/contract/depth/image",
+            "rgb_image": "/warehouse/contract/rgb/image",
+            "imu": "/warehouse/contract/imu",
+        },
+        "topic_diagnostics": {
+            "visual_slam_odom": _shallow_listed_diag(),
+            "rgb_image": _shallow_listed_diag(),
+            "depth": _shallow_listed_diag(),
+            "imu": _shallow_listed_diag(),
+        },
+        "gazebo": {
+            "sim_publishing": True,
+            "rgb_publishing": True,
+            "depth_publishing": True,
+            "odom_publishing": True,
+            "imu_publishing": True,
+        },
+        "health_sample_timestamp": __import__("time").time(),
+    }
+    caps = evaluate_warehouse_capabilities(_status(components))
+    assert caps["can_perceive_rgb"] is True
+    assert caps["can_perceive_depth"] is True
+    assert caps["can_localize"] is True
+    assert caps["ros_graph_ready"] is True
+
+    config = WarehouseFlightConfig.from_env()
+    sensors = check_sensors(components, config)
+    assert sensors.status != SubsystemStatus.FAIL
+
+    strict = readiness_from_perception_status_strict(_status(components))
+    assert strict.can_fly_warehouse_scan is True
 
 
 def test_bridge_ok_without_ready_to_fly_gate() -> None:

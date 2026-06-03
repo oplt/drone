@@ -31,6 +31,40 @@ def test_odometry_frames_normalize_to_gazebo_canonical(monkeypatch) -> None:
     topic_registry.cache_clear()
 
 
+def test_gazebo_odom_declares_tf_edge_checks_source_odometry(monkeypatch) -> None:
+    monkeypatch.setenv("WAREHOUSE_TOPIC_PROFILE", "gazebo")
+    topic_registry.cache_clear()
+    calls: list[str] = []
+
+    def _fake_run(command: str, *, timeout_s: float) -> object:
+        del timeout_s
+        for token in ("/warehouse/drone/odometry", "/warehouse/contract/odometry"):
+            if token in command:
+                calls.append(token)
+        output = (
+            "header:\n  frame_id: odom\n"
+            "child_frame_id: iris_with_standoffs/base_link\n"
+        )
+        return types.SimpleNamespace(returncode=0, stdout=output, stderr="")
+
+    monkeypatch.setattr(
+        "warehouse_mapping_bridge.topic_diagnostics._run_ros_cmd",
+        _fake_run,
+    )
+
+    from warehouse_mapping_bridge.topic_diagnostics import _gazebo_odom_declares_tf_edge
+
+    ok, child = _gazebo_odom_declares_tf_edge(
+        "odom",
+        ["iris_with_standoffs/base_link", "base_link"],
+    )
+
+    assert ok is True
+    assert child == "iris_with_standoffs/base_link"
+    assert "/warehouse/drone/odometry" in calls
+    topic_registry.cache_clear()
+
+
 def test_missing_odom_to_base_transform_fails_tf_validation(monkeypatch) -> None:
     monkeypatch.setenv("WAREHOUSE_TOPIC_PROFILE", "gazebo")
     topic_registry.cache_clear()

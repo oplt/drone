@@ -6,8 +6,9 @@ import {
 } from "../api/warehousePreflightApi";
 
 const POLL_MS = 1000;
+const POLL_MS_MID = 600;
+const POLL_MS_FAST = 350;
 const DEFAULT_TIMEOUT_MS = 120000;
-const TELEMETRY_STARTUP_MS = 1500;
 const DEEP_REFRESH_MS = 30000;
 const TRANSIENT_FAILURE_KEYS = new Set(["stability"]);
 const TRANSIENT_STATUSES = new Set(["WAITING", "UNKNOWN"]);
@@ -30,6 +31,42 @@ function isTerminalPreflightFailure(preflight: WarehouseGoPreflight): boolean {
     if (TRANSIENT_STATUSES.has(status)) return false;
     return status === "FAIL";
   });
+}
+
+/** Exported for unit tests (adaptive poll cadence). */
+export function warehousePreflightPollIntervalMs(
+  preflight: WarehouseGoPreflight | null,
+): number {
+  return pollIntervalMs(preflight);
+}
+
+function pollIntervalMs(preflight: WarehouseGoPreflight | null): number {
+  if (!preflight) return POLL_MS;
+
+  const remaining =
+    preflight.diagnostics?.stability?.remaining_ms ??
+    Math.max(
+      0,
+      (preflight.perception_required_stable_ms ?? 0) -
+        (preflight.perception_stable_for_ms ?? 0),
+    );
+
+  if (remaining <= 2500) return POLL_MS_FAST;
+  if (remaining <= 5000) return POLL_MS_MID;
+
+  const required = preflight.perception_required_stable_ms ?? 0;
+  const stable = preflight.perception_stable_for_ms ?? 0;
+  if (required > 0 && stable >= required * 0.5) return POLL_MS_MID;
+
+  if (
+    preflight.categories?.bridge === "WAITING" ||
+    preflight.categories?.stability === "WAITING" ||
+    preflight.warehouse_bridge_state === "starting"
+  ) {
+    return POLL_MS;
+  }
+
+  return POLL_MS;
 }
 
 function blockedMessage(
@@ -109,26 +146,36 @@ export function useRunWarehousePreflight(token: string | null) {
       let latest: WarehouseGoPreflight | null = null;
       let connectWarning: string | null = null;
 
-      try {
-        try {
-          await connectDroneTelemetry(token);
-          await sleep(TELEMETRY_STARTUP_MS);
-        } catch (err) {
-          connectWarning =
-            err instanceof Error
-              ? `Drone telemetry connect failed: ${err.message}`
-              : "Drone telemetry connect failed.";
-        }
+      const connectPromise = connectDroneTelemetry(token).catch((err) => {
+        connectWarning =
+          err instanceof Error
+            ? `Drone telemetry connect failed: ${err.message}`
+            : "Drone telemetry connect failed.";
+      });
 
-        let nextDeepRefreshAt = Date.now() + DEEP_REFRESH_MS;
+      try {
+        let nextDeepRefreshAt = Date.now();
+        let pollIndex = 0;
+
         while (!abortRef.current && Date.now() < deadline) {
           const now = Date.now();
-          const useDeep = now >= nextDeepRefreshAt;
+          const useDeep = pollIndex === 0 || now >= nextDeepRefreshAt;
           if (useDeep) nextDeepRefreshAt = now + DEEP_REFRESH_MS;
-          const snapshot = await fetchWarehousePreflight(token, {
-            missionLoaded: options?.missionLoaded,
-            deep: useDeep,
-          });
+
+          const fetchSnapshot = () =>
+            fetchWarehousePreflight(token, {
+              missionLoaded: options?.missionLoaded,
+              deep: useDeep,
+            });
+
+          const snapshot =
+            pollIndex === 0
+              ? await Promise.all([connectPromise, fetchSnapshot()]).then(
+                  ([, value]) => value,
+                )
+              : await fetchSnapshot();
+          pollIndex += 1;
+
           latest = snapshot;
           setResult(snapshot);
           if (snapshot.ready_to_fly) {
@@ -139,7 +186,7 @@ export function useRunWarehousePreflight(token: string | null) {
             setError(blockedMessage(snapshot, connectWarning));
             return snapshot;
           }
-          await sleep(POLL_MS);
+          await sleep(pollIntervalMs(snapshot));
         }
         if (abortRef.current) {
           return null;

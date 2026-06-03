@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from typing import Any
 
@@ -41,6 +42,25 @@ class WarehouseMissionDefaults(BaseModel):
     scan_pause_s: float = Field(default=0.0, ge=0.0, le=30.0)
     interpolate_steps_work_leg: int = Field(default=4, ge=0, le=100)
     interpolate_steps_transit_leg: int = Field(default=1, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _cruise_within_indoor_limit(self) -> WarehouseMissionDefaults:
+        try:
+            max_indoor = float(os.getenv("WAREHOUSE_MAX_INDOOR_ALTITUDE_M", "6"))
+        except ValueError:
+            max_indoor = 6.0
+        max_planned = self.max_planned_altitude_m()
+        if max_planned > max_indoor:
+            raise ValueError(
+                f"Planned scan altitude {max_planned:.2f}m exceeds indoor limit {max_indoor:.2f}m "
+                f"(cruise_alt={self.cruise_alt}, layers={self.layer_count}). "
+                "Lower cruise_alt/layer_count or raise WAREHOUSE_MAX_INDOOR_ALTITUDE_M."
+            )
+        return self
+
+    def max_planned_altitude_m(self) -> float:
+        layers = max(1, int(self.layer_count))
+        return float(self.cruise_alt) + float(max(0, layers - 1) * self.layer_spacing_m)
 
 
 DEFAULT_WAREHOUSE_MISSION_DEFAULTS = WarehouseMissionDefaults()

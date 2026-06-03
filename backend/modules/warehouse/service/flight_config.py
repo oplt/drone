@@ -47,7 +47,7 @@ class WarehouseFlightConfig:
     max_command_latency_ms: int = 150
     takeoff_clear_radius_m: float = 1.5
     max_indoor_speed_mps: float = 1.0
-    max_indoor_altitude_m: float = 3.0
+    max_indoor_altitude_m: float = 6.0
     require_nvblox_for_autonomy: bool = True
     require_mission_for_autonomy: bool = True
     require_gazebo_publishing: bool = True
@@ -55,6 +55,8 @@ class WarehouseFlightConfig:
 
     @classmethod
     def from_env(cls) -> WarehouseFlightConfig:
+        gazebo_flow = resolve_warehouse_bridge_flow().name == "gazebo"
+        default_perception_stable_ms = 5000 if gazebo_flow else 8000
         return cls(
             imu_max_age_ms=_int_env("WAREHOUSE_IMU_MAX_AGE_MS", 50),
             pose_max_age_ms=_int_env("WAREHOUSE_POSE_MAX_AGE_MS", 100),
@@ -64,15 +66,16 @@ class WarehouseFlightConfig:
             costmap_max_age_ms=_int_env("WAREHOUSE_COSTMAP_MAX_AGE_MS", 500),
             slam_required_stable_ms=_int_env("WAREHOUSE_SLAM_REQUIRED_STABLE_MS", 5000),
             perception_required_stable_ms=_int_env(
-                "WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS", 8000
+                "WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS",
+                default_perception_stable_ms,
             ),
             min_battery_percent=_float_env("WAREHOUSE_MIN_BATTERY_PERCENT", 30.0),
             max_command_latency_ms=_int_env("WAREHOUSE_MAX_COMMAND_LATENCY_MS", 150),
             takeoff_clear_radius_m=_float_env("WAREHOUSE_TAKEOFF_CLEAR_RADIUS_M", 1.5),
             max_indoor_speed_mps=_float_env("WAREHOUSE_MAX_INDOOR_SPEED_MPS", 1.0),
-            max_indoor_altitude_m=_float_env("WAREHOUSE_MAX_INDOOR_ALTITUDE_M", 3.0),
+            max_indoor_altitude_m=_float_env("WAREHOUSE_MAX_INDOOR_ALTITUDE_M", 6.0),
             require_nvblox_for_autonomy=_bool_env("WAREHOUSE_TAKEOFF_REQUIRE_NVBLOX", True),
             require_mission_for_autonomy=True,
             require_gazebo_publishing=_bool_env("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", True),
-            gazebo_sim=resolve_warehouse_bridge_flow().name == "gazebo",
+            gazebo_sim=gazebo_flow,
         )

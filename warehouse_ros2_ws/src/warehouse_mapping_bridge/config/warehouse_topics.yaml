@@ -1,5 +1,12 @@
 # Warehouse ROS topic registry. Env vars (WAREHOUSE_*_TOPIC) override these values.
 # Select profile via WAREHOUSE_TOPIC_PROFILE (defaults to gazebo when WAREHOUSE_GAZEBO_SIM=1).
+#
+# Naming layers (intentional, not a single flat prefix):
+#   /warehouse/contract/*  — stable API for health, preflight, and flight gates (use in docs/scripts)
+#   /warehouse/front/*     — Gazebo RGB-D rig (sensors on the airframe nose)
+#   /warehouse/drone/*     — vehicle state (odometry from the drone model)
+#   /warehouse/stereo/*    — optional stereo pair when the world provides it
+# topic_adapter relays source_profiles -> contract at runtime.
 
 contract:
   rgb_image: /warehouse/contract/rgb/image

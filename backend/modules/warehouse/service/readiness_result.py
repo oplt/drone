@@ -144,6 +144,38 @@ def _diagnostics_warming(components: dict[str, object]) -> bool:
     return reason in {"diagnostics_cache_warming", "waiting_for_gazebo", "bridge_connect_failed"}
 
 
+_GAZEBO_STREAM_FIELDS: dict[str, str] = {
+    "rgb_image": "rgb_publishing",
+    "depth": "depth_publishing",
+    "visual_slam_odom": "odom_publishing",
+    "local_odometry": "odom_publishing",
+    "imu": "imu_publishing",
+}
+
+
+def gazebo_sensor_stream_live(components: dict[str, object], key: str) -> bool:
+    """True when gz-side probes report the stream live (ROS graph may be shallow/stale)."""
+    if not _gazebo_sim_enabled(components):
+        return False
+    gazebo_raw = components.get("gazebo")
+    if not isinstance(gazebo_raw, dict) or gazebo_raw.get("sim_publishing") is not True:
+        return False
+    field = _GAZEBO_STREAM_FIELDS.get(key)
+    if field is None:
+        return False
+    return bool(gazebo_raw.get(field))
+
+
+def topic_is_live_with_gazebo_fallback(
+    diag: dict[str, Any] | None,
+    components: dict[str, object],
+    key: str,
+) -> bool:
+    if topic_is_strictly_live(diag):
+        return True
+    return gazebo_sensor_stream_live(components, key)
+
+
 def topic_is_strictly_live(
     diag: dict[str, Any] | None,
     *,
@@ -193,8 +225,14 @@ def evaluate_warehouse_capabilities(
     imu_diag = _topic_diag(components, "imu")
 
     can_localize = odom_health.fresh
-    can_perceive_depth = topic_is_strictly_live(depth_diag)
-    can_perceive_rgb = topic_is_strictly_live(rgb_diag)
+    if not can_localize and gazebo_sensor_stream_live(components, "visual_slam_odom"):
+        can_localize = True
+    can_perceive_depth = topic_is_live_with_gazebo_fallback(
+        depth_diag, components, "depth"
+    )
+    can_perceive_rgb = topic_is_live_with_gazebo_fallback(
+        rgb_diag, components, "rgb_image"
+    )
     bridge_capabilities = components.get("capabilities")
     bridge_can_scan_lidar = (
         bool(bridge_capabilities.get("can_scan_lidar"))
@@ -207,7 +245,7 @@ def evaluate_warehouse_capabilities(
         or bool(components.get("raw_lidar_healthy"))
         or not require_lidar
     )
-    can_perceive_imu = topic_is_strictly_live(imu_diag)
+    can_perceive_imu = topic_is_live_with_gazebo_fallback(imu_diag, components, "imu")
 
     gazebo_ok = True
     if _gazebo_sim_enabled(components):
@@ -226,6 +264,8 @@ def evaluate_warehouse_capabilities(
 
     bridge_alive = bool(status.reachable)
     ros_graph_ready = bool(components.get("ros_graph"))
+    if gazebo_ok and _gazebo_sim_enabled(components):
+        ros_graph_ready = ros_graph_ready or bridge_alive
 
     can_fly = bool(
         bridge_alive
@@ -355,7 +395,11 @@ def readiness_from_perception_status_strict(
     configured_topic_keys = _configured_topic_keys(components)
     required_config_missing = not configured_topic_keys.intersection(flight_topic_keys)
     warming = _diagnostics_warming(components)
-    if topic_count == 0 and not warming:
+    gazebo_sim_publishing = gazebo_sensor_stream_live(components, "rgb_image") and (
+        gazebo_sensor_stream_live(components, "depth")
+        and gazebo_sensor_stream_live(components, "visual_slam_odom")
+    )
+    if topic_count == 0 and not warming and not gazebo_sim_publishing:
         component_missing = set(flight_topic_keys)
 
     for key in flight_topic_keys:
