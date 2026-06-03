@@ -431,8 +431,20 @@ class WarehouseBridgeHealthOut(BaseModel):
 class WarehouseGoPreflightOut(BaseModel):
     ready: bool = False
     blocking: bool = True
-    checks: dict[str, str] = Field(default_factory=dict)
+    checks: list[dict[str, object]] | dict[str, str] = Field(default_factory=dict)
     ready_to_fly: bool
+    service_health: bool = False
+    ros_graph_ready: bool = False
+    mapping_ok: bool | None = None
+    primary_blocker: str | None = None
+    blockers: list[str] = Field(default_factory=list)
+    diagnostics_age_ms: int | None = None
+    mode: str = "preflight"
+    localization_mode: str = "visual_slam"
+    topic_health: dict[str, object] = Field(default_factory=dict)
+    tf_health: dict[str, object] = Field(default_factory=dict)
+    stability_window_ms: int = 0
+    required_stability_window_ms: int = 8000
     bridge_ok: bool
     gazebo_ok: bool | None = None
     sensors_ok: bool

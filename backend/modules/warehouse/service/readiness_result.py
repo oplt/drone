@@ -46,8 +46,13 @@ FAILURE_USER_MESSAGES: dict[str, str] = {
     "warehouse_sensors_not_ready": (
         "Required warehouse sensor topics are not ready. Press Play in Gazebo and wait for sensors."
     ),
+    "required_topics_not_configured": (
+        "Warehouse perception is required, but required ROS topics are not configured. "
+        "Select a sensor rig or bridge profile with explicit topic mappings."
+    ),
     "gazebo_sensors_idle": (
-        "Gazebo sensors are listed but not publishing. Start with gz sim -r <world>.sdf or press Play, "
+        "Gazebo sensors are listed but not publishing. "
+        "Start with gz sim -r <world>.sdf or press Play, "
         "then verify RGB, depth, and odometry with gz topic -e."
     ),
 }
@@ -113,6 +118,32 @@ def _component_missing_required_topics(components: dict[str, object]) -> set[str
     return {str(item) for item in raw if item}
 
 
+def _configured_topic_keys(components: dict[str, object]) -> set[str]:
+    topics = components.get("topics")
+    if not isinstance(topics, dict):
+        return set()
+    configured: set[str] = set()
+    for key, value in topics.items():
+        if (isinstance(value, str) and value.strip()) or (
+            isinstance(value, (list, tuple))
+            and any(str(item).strip() for item in value)
+        ):
+            configured.add(str(key))
+    return configured
+
+
+def _diagnostics_warming(components: dict[str, object]) -> bool:
+    from backend.modules.warehouse.service.perception_stability import diagnostics_probe_pending
+
+    if diagnostics_probe_pending(components):
+        return True
+    reason = str(components.get("readiness_reason") or "").strip().lower()
+    state = str(components.get("warehouse_bridge_state") or "").strip().lower()
+    if state in {"starting", "waiting_for_gazebo", "not_started"}:
+        return True
+    return reason in {"diagnostics_cache_warming", "waiting_for_gazebo", "bridge_connect_failed"}
+
+
 def topic_is_strictly_live(
     diag: dict[str, Any] | None,
     *,
@@ -146,17 +177,16 @@ def evaluate_warehouse_capabilities(
             "WAREHOUSE_TAKEOFF_REQUIRE_RAW_LIDAR", "0"
         ).strip().lower() in {"1", "true", "yes", "on"}
 
-    odom_max_age_s = _float_env("WAREHOUSE_TAKEOFF_ODOMETRY_MAX_AGE_S", default_odometry_max_age_s())
-    odom_state_raw = components.get("local_odometry_state")
-    odom_state = odom_state_raw if isinstance(odom_state_raw, dict) else {}
+    odom_max_age_s = _float_env(
+        "WAREHOUSE_TAKEOFF_ODOMETRY_MAX_AGE_S",
+        default_odometry_max_age_s(),
+    )
     odom_health = evaluate_local_odometry(
         components if isinstance(components, dict) else {},
         max_age_s=odom_max_age_s,
         strict_topic=True,
     )
 
-    vslam_diag = _topic_diag(components, "visual_slam_odom")
-    local_odom_diag = _topic_diag(components, "local_odometry")
     depth_diag = _topic_diag(components, "depth")
     rgb_diag = _topic_diag(components, "rgb_image")
     lidar_diag = _topic_diag(components, "raw_lidar")
@@ -309,6 +339,8 @@ def readiness_from_perception_status_strict(
     missing: list[str] = []
     unhealthy: list[str] = []
     component_missing = _component_missing_required_topics(components)
+    topic_count_raw = components.get("ros_topic_count")
+    topic_count = int(topic_count_raw) if isinstance(topic_count_raw, int) else None
     flight_topic_keys = ("visual_slam_odom", "depth", "rgb_image", "imu")
     if os.getenv("WAREHOUSE_REQUIRE_LOCAL_ODOMETRY", "0").strip().lower() in {
         "1",
@@ -319,6 +351,12 @@ def readiness_from_perception_status_strict(
         flight_topic_keys = (*flight_topic_keys, "local_odometry")
     if not capabilities["can_scan_lidar"]:
         flight_topic_keys = (*flight_topic_keys, "raw_lidar")
+
+    configured_topic_keys = _configured_topic_keys(components)
+    required_config_missing = not configured_topic_keys.intersection(flight_topic_keys)
+    warming = _diagnostics_warming(components)
+    if topic_count == 0 and not warming:
+        component_missing = set(flight_topic_keys)
 
     for key in flight_topic_keys:
         diag = _topic_diag(components, key)
@@ -332,24 +370,30 @@ def readiness_from_perception_status_strict(
         }[key]
         if capabilities.get(cap_key):
             continue
-        if component_missing is not None and key not in component_missing:
+        if topic_count != 0 and component_missing is not None and key not in component_missing:
             continue
         if diag is None or diag.get("readiness_state") == "topic_missing":
             missing.append(key)
         else:
             unhealthy.append(key)
 
-    if not capabilities["can_localize"] and "visual_slam_odom" not in missing:
-        if "visual_slam_odom" not in unhealthy and "local_odometry" not in unhealthy:
-            unhealthy.append("visual_slam_odom")
+    if (
+        not capabilities["can_localize"]
+        and "visual_slam_odom" not in missing
+        and "visual_slam_odom" not in unhealthy
+        and "local_odometry" not in unhealthy
+    ):
+        unhealthy.append("visual_slam_odom")
 
     missing_nvblox = tuple(
         str(item) for item in (components.get("missing_nvblox_topics") or []) if item
     )
 
     failure_code: str | None = None
-    if not status.reachable:
+    if not status.reachable and not warming:
         failure_code = "bridge_unreachable"
+    elif required_config_missing:
+        failure_code = "required_topics_not_configured"
     elif not capabilities["ros_graph_ready"]:
         failure_code = "ros_graph_unavailable"
     elif _gazebo_sim_enabled(components):

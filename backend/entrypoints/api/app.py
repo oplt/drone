@@ -43,8 +43,10 @@ from backend.modules.settings.api import router as settings_router
 from backend.modules.settings.repository import SettingsRepository
 from backend.modules.settings.service import get_runtime_settings
 from backend.modules.telemetry.api import (
-    runtime_router,
     router as telemetry_control_router,
+)
+from backend.modules.telemetry.api import (
+    runtime_router,
 )
 from backend.modules.telemetry.websocket_api import router as websockets_router
 from backend.modules.vehicle_runtime.cleanup import start_cleanup_jobs, stop_cleanup_jobs
@@ -98,19 +100,6 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application...")
 
-    from backend.infrastructure.warehouse.mapping_stack_process import (
-        get_warehouse_mapping_stack_manager,
-    )
-
-    get_warehouse_mapping_stack_manager().shutdown()
-    logger.info("Warehouse mapping stack stopped")
-
-    orchestrator = await _build_orchestrator()
-
-    # Mark any active mission as failed before the process exits so it isn't
-    # left in a non-terminal state that restart recovery must handle later.
-    await recover_interrupted_missions(orchestrator)
-
     if orchestrator.telemetry_running():
         await orchestrator.stop_live_telemetry()
         logger.info("Orchestrator telemetry ingest stopped")
@@ -133,6 +122,10 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
 register_error_handlers(app)
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    return {"status": "ok"}
 
 # Prometheus metrics instrumentation
 try:

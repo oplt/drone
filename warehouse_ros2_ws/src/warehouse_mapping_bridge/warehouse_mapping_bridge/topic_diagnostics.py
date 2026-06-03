@@ -73,6 +73,10 @@ class TfChainDiagnostic:
     base_link_to_camera: bool
     chain_ok: bool
     detail: str
+    required_tf_edges: tuple[tuple[str, str], ...] = ()
+    missing_tf_edges: tuple[tuple[str, str], ...] = ()
+    sim_clock_ready: bool = True
+    validation_source: str = "tf2_echo"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -83,6 +87,11 @@ class TfChainDiagnostic:
             "base_link_to_camera": self.base_link_to_camera,
             "chain_ok": self.chain_ok,
             "detail": self.detail,
+            "tf_available": self.chain_ok,
+            "required_tf_edges": [list(edge) for edge in self.required_tf_edges],
+            "missing_tf_edges": [list(edge) for edge in self.missing_tf_edges],
+            "sim_clock_ready": self.sim_clock_ready,
+            "validation_source": self.validation_source,
         }
 
 
@@ -91,11 +100,17 @@ def _ros_shell_prefix() -> str:
     ros_domain_id = os.getenv("ROS_DOMAIN_ID", "0")
     ros_ws_setup = os.getenv("ROS_WS_SETUP", "").strip()
     source_ws = f'source "{ros_ws_setup}" && ' if ros_ws_setup else ""
+    sim_time = "export ROS_USE_SIM_TIME=1 && " if _use_sim_time_enabled() else ""
     return (
         f"source /opt/ros/{ros_distro}/setup.bash && "
         f"{source_ws}"
         f"export ROS_DOMAIN_ID={ros_domain_id} && "
+        f"{sim_time}"
     )
+
+
+def _ros_sim_time_args() -> str:
+    return " --ros-args -p use_sim_time:=true" if _use_sim_time_enabled() else ""
 
 
 def _run_ros_cmd(command: str, *, timeout_s: float) -> subprocess.CompletedProcess[str]:
@@ -108,7 +123,7 @@ def _run_ros_cmd(command: str, *, timeout_s: float) -> subprocess.CompletedProce
     )
 
 def _topic_info(topic: str) -> tuple[int, str | None]:
-    timeout_s = max(0.5, float(os.getenv("WAREHOUSE_TOPIC_INFO_TIMEOUT_S", "1.5")))
+    timeout_s = max(1.0, float(os.getenv("WAREHOUSE_TOPIC_INFO_TIMEOUT_S", "8.0")))
     try:
         result = _run_ros_cmd(
             f"ros2 topic info -v {shlex.quote(topic)} --no-daemon",
@@ -139,12 +154,13 @@ def _publisher_count(topic: str) -> int:
 
 def _topic_hz(topic: str) -> float | None:
     window = max(1, int(os.getenv("WAREHOUSE_TOPIC_HZ_WINDOW", "2")))
-    timeout_s = max(0.75, float(os.getenv("WAREHOUSE_TOPIC_HZ_TIMEOUT_S", "2.0")))
+    timeout_s = max(2.0, float(os.getenv("WAREHOUSE_TOPIC_HZ_TIMEOUT_S", "5.0")))
 
     try:
         result = _run_ros_cmd(
-            f"timeout {timeout_s} ros2 topic hz {shlex.quote(topic)} --window {window} --no-daemon",
-            timeout_s=timeout_s + 0.75,
+            f"timeout {timeout_s} ros2 topic hz {shlex.quote(topic)} --window {window}"
+            f" --no-daemon{_ros_sim_time_args()}",
+            timeout_s=timeout_s + 1.0,
         )
     except (subprocess.TimeoutExpired, OSError):
         return None
@@ -286,6 +302,11 @@ def _probe_single_topic(
     # while Gazebo is paused or not yet running (gz sim without -r).
     if key in message_required_keys:
         publishing = bool(hz is not None or echo_publishing)
+        # Gazebo contract relays can be slow to answer `ros2 topic hz`; trust publishers
+        # when the graph lists the topic and gz-side sensors are live.
+        if not publishing and topic_registry().profile == "gazebo" and _gazebo_sensor_stream_live(key):
+            if publishers > 0 or listed:
+                publishing = True
     else:
         publishing = bool(hz is not None or publishers > 0 or echo_publishing)
 
@@ -421,17 +442,90 @@ def _frame_candidates(frame_key: str, primary: str) -> list[str]:
     return ordered
 
 
-def _tf_echo_ok(parent: str, child: str, *, timeout_s: float = 2.0) -> bool:
+def _use_sim_time_enabled() -> bool:
+    return _bool_env("WAREHOUSE_USE_SIM_TIME", False) or _bool_env("WAREHOUSE_GAZEBO_SIM", False)
+
+
+def _sim_clock_publishing() -> bool:
+    if not _use_sim_time_enabled():
+        return True
+    timeout_s = max(1.0, float(os.getenv("WAREHOUSE_SIM_CLOCK_PROBE_TIMEOUT_S", "3.0")))
     try:
         result = _run_ros_cmd(
-            f"timeout {timeout_s} ros2 run tf2_ros tf2_echo "
-            f"{shlex.quote(parent)} {shlex.quote(child)}",
+            f"timeout {timeout_s} ros2 topic echo /clock --once --no-daemon",
+            timeout_s=timeout_s + 1.0,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    output = f"{result.stdout}\n{result.stderr}".strip()
+    return bool(output) and "sec:" in output
+
+
+def _parse_odometry_frames_from_echo(output: str) -> tuple[str | None, str | None]:
+    parent_match = re.search(r"frame_id:\s*(\S+)", output)
+    child_match = re.search(r"child_frame_id:\s*(\S+)", output)
+    parent = parent_match.group(1) if parent_match else None
+    child = child_match.group(1) if child_match else None
+    return parent, child
+
+
+def _gazebo_odom_declares_tf_edge(odom_frame: str, base_candidates: list[str]) -> tuple[bool, str | None]:
+    contract_odom = topic_env().get("visual_slam_odom", "/warehouse/contract/odometry")
+    timeout_s = max(1.0, float(os.getenv("WAREHOUSE_TF_ODOM_FRAME_PROBE_TIMEOUT_S", "3.0")))
+    try:
+        result = _run_ros_cmd(
+            f"timeout {timeout_s} ros2 topic echo {shlex.quote(contract_odom)} --once --no-daemon",
+            timeout_s=timeout_s + 1.0,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False, None
+    output = f"{result.stdout}\n{result.stderr}"
+    parent, child = _parse_odometry_frames_from_echo(output)
+    if not parent or not child:
+        return False, None
+    if parent.strip() != odom_frame:
+        return False, None
+    for candidate in base_candidates:
+        if child.strip() == candidate:
+            return True, candidate
+    return False, None
+
+
+def _static_tf_edge_ok(parent: str, child: str) -> bool:
+    timeout_s = max(1.0, float(os.getenv("WAREHOUSE_TF_STATIC_PROBE_TIMEOUT_S", "3.0")))
+    try:
+        result = _run_ros_cmd(
+            f"timeout {timeout_s} ros2 topic echo /tf_static --once --no-daemon",
             timeout_s=timeout_s + 1.0,
         )
     except (subprocess.TimeoutExpired, OSError):
         return False
     output = f"{result.stdout}\n{result.stderr}"
-    return "At time" in output or "Translation:" in output
+    parent_pattern = re.compile(
+        rf"frame_id:\s*{re.escape(parent)}[\s\S]*?child_frame_id:\s*{re.escape(child)}",
+        re.MULTILINE,
+    )
+    return bool(parent_pattern.search(output))
+
+
+def _tf_echo_ok(parent: str, child: str, *, timeout_s: float | None = None) -> bool:
+    if timeout_s is None:
+        timeout_s = float(os.getenv("WAREHOUSE_TF_PROBE_TIMEOUT_S", "8.0"))
+    sim_args = _ros_sim_time_args()
+    try:
+        result = _run_ros_cmd(
+            f"timeout {timeout_s} ros2 run tf2_ros tf2_echo "
+            f"{shlex.quote(parent)} {shlex.quote(child)}{sim_args}",
+            timeout_s=timeout_s + 2.0,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    output = f"{result.stdout}\n{result.stderr}"
+    if "At time" in output or "Translation:" in output:
+        return True
+    if "frame does not exist" in output.lower():
+        return False
+    return result.returncode == 0 and bool(output.strip())
 
 
 def probe_gazebo_publishing(gz_topic: str, *, timeout_s: float = 3.0) -> bool:
@@ -453,6 +547,38 @@ def probe_gazebo_publishing(gz_topic: str, *, timeout_s: float = 3.0) -> bool:
     except (subprocess.TimeoutExpired, OSError):
         return False
     return bool(result.stdout.strip())
+
+
+_GAZEBO_SENSOR_PROBE_CACHE: tuple[float, dict[str, Any]] | None = None
+
+
+def _gazebo_sensor_snapshot() -> dict[str, Any]:
+    global _GAZEBO_SENSOR_PROBE_CACHE
+    ttl_s = max(0.5, float(os.getenv("WAREHOUSE_GAZEBO_PROBE_CACHE_S", "2.0")))
+    now = time.monotonic()
+    if _GAZEBO_SENSOR_PROBE_CACHE is not None:
+        cached_at, cached = _GAZEBO_SENSOR_PROBE_CACHE
+        if now - cached_at < ttl_s:
+            return cached
+    status = probe_gazebo_sensors()
+    _GAZEBO_SENSOR_PROBE_CACHE = (now, status)
+    return status
+
+
+def _gazebo_sensor_stream_live(key: str) -> bool:
+    if topic_registry().profile != "gazebo":
+        return False
+    status = _gazebo_sensor_snapshot()
+    field_by_key = {
+        "rgb_image": "rgb_publishing",
+        "depth": "depth_publishing",
+        "visual_slam_odom": "odom_publishing",
+        "raw_lidar": "rgb_publishing",
+    }
+    field = field_by_key.get(key)
+    if field is None:
+        return False
+    return bool(status.get(field))
 
 
 def probe_gazebo_sensors() -> dict[str, Any]:
@@ -484,39 +610,86 @@ def probe_gazebo_sensors() -> dict[str, Any]:
     }
 
 
+def _resolve_tf_edge(
+    parent_candidates: list[str],
+    child_candidates: list[str],
+) -> tuple[str, str] | None:
+    for parent in parent_candidates:
+        for child in child_candidates:
+            if _tf_echo_ok(parent, child):
+                return parent, child
+    return None
+
+
 def probe_tf_chain() -> TfChainDiagnostic:
-    frames = topic_registry().frames
+    registry = topic_registry()
+    frames = registry.frames
     odom = frames.get("odom", "odom")
-    base_candidates = _frame_candidates("base_link", frames.get("base_link", "base_link"))
-    camera_candidates = _frame_candidates("camera", frames.get("camera", "front_rgbd_camera_link"))
+    base_primary = frames.get("base_link", "base_link")
+    camera_primary = frames.get("camera", "front_rgbd_camera_link")
+    base_candidates = _frame_candidates("base_link", base_primary)
+    camera_candidates = _frame_candidates("camera", camera_primary)
+    sim_clock_ready = _sim_clock_publishing()
+    validation_source = "tf2_echo"
 
-    matched_base = next((frame for frame in base_candidates if _tf_echo_ok(odom, frame)), None)
-    odom_base = matched_base is not None
+    odom_base_edge = _resolve_tf_edge([odom], base_candidates)
+    odom_base = odom_base_edge is not None
+    resolved_base = odom_base_edge[1] if odom_base_edge else base_primary
 
-    matched_camera = None
-    base_camera = False
-    if matched_base is not None:
-        matched_camera = next(
-            (frame for frame in camera_candidates if _tf_echo_ok(matched_base, frame)),
-            None,
-        )
-        base_camera = matched_camera is not None
+    if not odom_base and registry.profile == "gazebo":
+        declared, resolved_child = _gazebo_odom_declares_tf_edge(odom, base_candidates)
+        if declared and resolved_child:
+            odom_base = True
+            resolved_base = resolved_child
+            validation_source = "gazebo_odom_frames"
+
+    base_camera_edge = (
+        _resolve_tf_edge([resolved_base], camera_candidates) if odom_base else None
+    )
+    base_camera = base_camera_edge is not None
+    resolved_camera = base_camera_edge[1] if base_camera_edge else camera_primary
+
+    if odom_base and not base_camera:
+        for camera in camera_candidates:
+            if _static_tf_edge_ok(resolved_base, camera):
+                base_camera = True
+                resolved_camera = camera
+                validation_source = (
+                    f"{validation_source}+tf_static"
+                    if validation_source != "tf2_echo"
+                    else "tf_static"
+                )
+                break
+
+    required_edges = ((odom, resolved_base), (resolved_base, resolved_camera))
+    missing_edges: list[tuple[str, str]] = []
+    if not odom_base:
+        missing_edges.append((odom, resolved_base))
+    if odom_base and not base_camera:
+        missing_edges.append((resolved_base, resolved_camera))
 
     chain_ok = odom_base and base_camera
-    parts: list[str] = []
-    if not odom_base:
-        parts.append(f"{odom}->[{','.join(base_candidates)}] missing")
-    if matched_base and not base_camera:
-        parts.append(f"{matched_base}->[{','.join(camera_candidates)}] missing")
-    detail = "ok" if chain_ok else "; ".join(parts)
+    if chain_ok:
+        detail = "ok"
+    elif not sim_clock_ready and registry.profile == "gazebo":
+        detail = (
+            "waiting for /clock (Gazebo sim time); press Play or start with gz sim -r <world>.sdf"
+        )
+    else:
+        detail = "; ".join(f"{parent}->{child} missing" for parent, child in missing_edges)
+
     return TfChainDiagnostic(
         odom_frame=odom,
-        base_link_frame=matched_base or base_candidates[0],
-        camera_frame=matched_camera or camera_candidates[0],
+        base_link_frame=resolved_base,
+        camera_frame=resolved_camera,
         odom_to_base_link=odom_base,
         base_link_to_camera=base_camera,
         chain_ok=chain_ok,
         detail=detail,
+        required_tf_edges=tuple(required_edges),
+        missing_tf_edges=tuple(missing_edges),
+        sim_clock_ready=sim_clock_ready,
+        validation_source=validation_source,
     )
 
 
@@ -552,7 +725,11 @@ def _coerce_topic_diagnostic(
             else None
         ),
         healthy=bool(diag.get("healthy")),
-        message_type=diag.get("message_type") if isinstance(diag.get("message_type"), str) else None,
+        message_type=(
+            diag.get("message_type")
+            if isinstance(diag.get("message_type"), str)
+            else None
+        ),
         error=diag.get("error") if isinstance(diag.get("error"), str) else None,
         readiness_state=(
             diag.get("readiness_state")
@@ -578,7 +755,9 @@ def summarize_diagnostics(
             return True
         return bool(diag.healthy)
 
-    missing_required = [key for key in registry.required_for_perception if not _healthy_for_summary(key)]
+    missing_required = [
+        key for key in registry.required_for_perception if not _healthy_for_summary(key)
+    ]
     camera_ok = _healthy_for_summary("rgb_image") or (
         _healthy_for_summary("left_image") and _healthy_for_summary("right_image")
     )

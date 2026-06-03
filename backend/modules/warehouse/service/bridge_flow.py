@@ -118,6 +118,14 @@ def flow_env_overrides(flow: WarehouseBridgeFlow | None = None) -> dict[str, str
         "WAREHOUSE_USE_SIM_TIME": "1" if selected.use_sim_time else "0",
         "DRONE_VIDEO_USE_GAZEBO": "1" if selected.video_uses_gazebo else "0",
     }
+    if selected.gazebo_sim:
+        env.setdefault("WAREHOUSE_GAZEBO_DIRECT_CONTRACT_BRIDGE", "0")
+    if not os.getenv("WAREHOUSE_LOCALIZATION_MODE", "").strip():
+        from backend.modules.warehouse.service.localization_mode import (
+            localization_mode_env_value,
+        )
+
+        env["WAREHOUSE_LOCALIZATION_MODE"] = localization_mode_env_value()
     if selected.name == "real_device":
         env.setdefault("WAREHOUSE_SEND_VISION_POSITION", "0")
     return env

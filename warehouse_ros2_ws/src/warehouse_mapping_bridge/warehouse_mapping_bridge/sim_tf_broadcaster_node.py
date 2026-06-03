@@ -4,6 +4,7 @@ import os
 from collections.abc import Iterable
 
 from .config import topic_env, topic_registry
+from .ros_node_utils import configure_use_sim_time, use_sim_time_from_env
 
 
 def _normalize_frame_id(frame_id: str) -> str:
@@ -11,12 +12,19 @@ def _normalize_frame_id(frame_id: str) -> str:
 
 
 def _camera_offsets() -> dict[str, tuple[float, float, float]]:
+    rgb_offset = (
+        float(os.getenv("WAREHOUSE_RGB_CAMERA_TX", "0.20")),
+        float(os.getenv("WAREHOUSE_RGB_CAMERA_TY", "0.0")),
+        float(os.getenv("WAREHOUSE_RGB_CAMERA_TZ", "0.08")),
+    )
     return {
         os.getenv("WAREHOUSE_RGB_CAMERA_INFO_TOPIC", "/warehouse/front/rgbd/camera_info"): (
-            float(os.getenv("WAREHOUSE_RGB_CAMERA_TX", "0.20")),
-            float(os.getenv("WAREHOUSE_RGB_CAMERA_TY", "0.0")),
-            float(os.getenv("WAREHOUSE_RGB_CAMERA_TZ", "0.08")),
+            rgb_offset
         ),
+        os.getenv(
+            "WAREHOUSE_CONTRACT_RGB_CAMERA_INFO_TOPIC",
+            "/warehouse/contract/rgb/camera_info",
+        ): rgb_offset,
         os.getenv("WAREHOUSE_LEFT_CAMERA_INFO_TOPIC", "/warehouse/stereo/left/camera_info"): (
             float(os.getenv("WAREHOUSE_LEFT_CAMERA_TX", "0.20")),
             float(os.getenv("WAREHOUSE_LEFT_CAMERA_TY", "0.04")),
@@ -32,34 +40,50 @@ def _camera_offsets() -> dict[str, tuple[float, float, float]]:
 
 def main() -> None:
     import rclpy
+    from builtin_interfaces.msg import Time
     from geometry_msgs.msg import TransformStamped
     from nav_msgs.msg import Odometry
     from rclpy.executors import ExternalShutdownException
     from rclpy.node import Node
     from rclpy.qos import QoSProfile
+    from rosgraph_msgs.msg import Clock
     from sensor_msgs.msg import CameraInfo
     from tf2_ros import StaticTransformBroadcaster, TransformBroadcaster
 
     class WarehouseSimTfBroadcaster(Node):
         def __init__(self) -> None:
             super().__init__("warehouse_sim_tf_broadcaster")
+            configure_use_sim_time(self)
             self.topics = topic_env()
             registry_frames = topic_registry().frames
             self.base_link_frame = _normalize_frame_id(
-                os.getenv("WAREHOUSE_BASE_LINK_FRAME", registry_frames.get("base_link", "base_link"))
+                os.getenv(
+                    "WAREHOUSE_BASE_LINK_FRAME",
+                    registry_frames.get("base_link", "base_link"),
+                )
             )
             self.odom_frame = _normalize_frame_id(
                 os.getenv("WAREHOUSE_ODOM_FRAME", registry_frames.get("odom", "odom"))
             )
             self.rgbd_frame = _normalize_frame_id(
-                os.getenv("WAREHOUSE_RGBD_FRAME", registry_frames.get("camera", "front_rgbd_camera_link"))
+                os.getenv(
+                    "WAREHOUSE_RGBD_FRAME",
+                    registry_frames.get("camera", "front_rgbd_camera_link"),
+                )
             )
+            self.imu_frame = _normalize_frame_id(os.getenv("WAREHOUSE_IMU_FRAME", "imu_link"))
+            self.lidar_frame = _normalize_frame_id(os.getenv("WAREHOUSE_LIDAR_FRAME", "lidar_link"))
             self.declare_parameter("odom_frame", self.odom_frame)
             self.declare_parameter("base_link_frame", self.base_link_frame)
             self.declare_parameter("rgbd_frame", self.rgbd_frame)
+            self.declare_parameter("imu_frame", self.imu_frame)
+            self.declare_parameter("lidar_frame", self.lidar_frame)
             self.declare_parameter(
                 "publish_initial_identity_tf",
-                os.getenv("WAREHOUSE_PUBLISH_INITIAL_IDENTITY_TF", "0").lower()
+                os.getenv(
+                    "WAREHOUSE_PUBLISH_INITIAL_IDENTITY_TF",
+                    "1" if topic_registry().profile == "gazebo" else "0",
+                ).lower()
                 in {"1", "true", "yes", "on"},
             )
             self.declare_parameter(
@@ -68,8 +92,12 @@ def main() -> None:
                 in {"1", "true", "yes", "on"},
             )
             self.odom_frame = _normalize_frame_id(str(self.get_parameter("odom_frame").value))
-            self.base_link_frame = _normalize_frame_id(str(self.get_parameter("base_link_frame").value))
+            self.base_link_frame = _normalize_frame_id(
+                str(self.get_parameter("base_link_frame").value)
+            )
             self.rgbd_frame = _normalize_frame_id(str(self.get_parameter("rgbd_frame").value))
+            self.imu_frame = _normalize_frame_id(str(self.get_parameter("imu_frame").value))
+            self.lidar_frame = _normalize_frame_id(str(self.get_parameter("lidar_frame").value))
             self.publish_initial_identity_tf = bool(
                 self.get_parameter("publish_initial_identity_tf").value
             )
@@ -80,6 +108,8 @@ def main() -> None:
             self.published_static_frames: set[str] = set()
             self._last_odom_transform: TransformStamped | None = None
             self._warned_frame_mismatches: set[tuple[str, str]] = set()
+            self._sim_clock_stamp: Time | None = None
+            self._waiting_for_clock_logged = False
 
             odom_topic = os.getenv(
                 "WAREHOUSE_ODOM_TOPIC",
@@ -88,6 +118,7 @@ def main() -> None:
             self.declare_parameter("visual_slam_odom_topic", odom_topic)
             odom_topic = str(self.get_parameter("visual_slam_odom_topic").value or odom_topic)
             self.create_subscription(Odometry, odom_topic, self.on_odometry, QoSProfile(depth=20))
+            self.create_subscription(Clock, "/clock", self._on_clock, QoSProfile(depth=10))
             self.create_timer(0.05, self._republish_odometry_tf)
             for camera_info_topic in self.camera_offsets:
                 self.create_subscription(
@@ -103,17 +134,55 @@ def main() -> None:
                 f"odom_topic={odom_topic}"
             )
 
+        def _on_clock(self, message: Clock) -> None:
+            self._sim_clock_stamp = message.clock
+
+        def _current_stamp(self) -> Time:
+            if self._sim_clock_stamp is not None:
+                return self._sim_clock_stamp
+            return self.get_clock().now().to_msg()
+
+        def _sim_time_ready(self) -> bool:
+            if not use_sim_time_from_env():
+                return True
+            return self._sim_clock_stamp is not None
+
         def _publish_default_camera_transforms(self) -> None:
             defaults = {
                 self.rgbd_frame: self.camera_offsets[
-                    os.getenv("WAREHOUSE_RGB_CAMERA_INFO_TOPIC", "/warehouse/front/rgbd/camera_info")
+                    os.getenv(
+                        "WAREHOUSE_RGB_CAMERA_INFO_TOPIC",
+                        "/warehouse/front/rgbd/camera_info",
+                    )
                 ],
-                os.getenv("WAREHOUSE_LEFT_CAMERA_FRAME", "front_left_camera_link"): self.camera_offsets[
-                    os.getenv("WAREHOUSE_LEFT_CAMERA_INFO_TOPIC", "/warehouse/stereo/left/camera_info")
+                os.getenv(
+                    "WAREHOUSE_LEFT_CAMERA_FRAME",
+                    "front_left_camera_link",
+                ): self.camera_offsets[
+                    os.getenv(
+                        "WAREHOUSE_LEFT_CAMERA_INFO_TOPIC",
+                        "/warehouse/stereo/left/camera_info",
+                    )
                 ],
-                os.getenv("WAREHOUSE_RIGHT_CAMERA_FRAME", "front_right_camera_link"): self.camera_offsets[
-                    os.getenv("WAREHOUSE_RIGHT_CAMERA_INFO_TOPIC", "/warehouse/stereo/right/camera_info")
+                os.getenv(
+                    "WAREHOUSE_RIGHT_CAMERA_FRAME",
+                    "front_right_camera_link",
+                ): self.camera_offsets[
+                    os.getenv(
+                        "WAREHOUSE_RIGHT_CAMERA_INFO_TOPIC",
+                        "/warehouse/stereo/right/camera_info",
+                    )
                 ],
+                self.imu_frame: (
+                    float(os.getenv("WAREHOUSE_IMU_TX", "0.0")),
+                    float(os.getenv("WAREHOUSE_IMU_TY", "0.0")),
+                    float(os.getenv("WAREHOUSE_IMU_TZ", "0.0")),
+                ),
+                self.lidar_frame: (
+                    float(os.getenv("WAREHOUSE_LIDAR_TX", "0.0")),
+                    float(os.getenv("WAREHOUSE_LIDAR_TY", "0.0")),
+                    float(os.getenv("WAREHOUSE_LIDAR_TZ", "0.05")),
+                ),
             }
             transforms: list[TransformStamped] = []
             for child_frame, offset in defaults.items():
@@ -158,7 +227,7 @@ def main() -> None:
             # Always publish the configured base_link frame so nvblox/TF agree with Gazebo sim.
             child_frame = _normalize_frame_id(self.base_link_frame)
             transform = TransformStamped()
-            transform.header.stamp = self.get_clock().now().to_msg()
+            transform.header.stamp = message.header.stamp
             transform.header.frame_id = self.odom_frame
             transform.child_frame_id = child_frame
 
@@ -176,9 +245,17 @@ def main() -> None:
             self.tf_broadcaster.sendTransform(transform)
 
         def _republish_odometry_tf(self) -> None:
+            if not self._sim_time_ready():
+                if not self._waiting_for_clock_logged:
+                    self._waiting_for_clock_logged = True
+                    self.get_logger().warning(
+                        "Waiting for /clock before publishing odom TF "
+                        "(start Gazebo with gz sim -r or press Play)"
+                    )
+                return
             if self._last_odom_transform is not None:
                 transform = TransformStamped()
-                transform.header.stamp = self.get_clock().now().to_msg()
+                transform.header.stamp = self._current_stamp()
                 transform.header.frame_id = self._last_odom_transform.header.frame_id
                 transform.child_frame_id = self._last_odom_transform.child_frame_id
                 transform.transform = self._last_odom_transform.transform
@@ -187,7 +264,7 @@ def main() -> None:
             if not self.publish_initial_identity_tf:
                 return
             transform = TransformStamped()
-            transform.header.stamp = self.get_clock().now().to_msg()
+            transform.header.stamp = self._current_stamp()
             transform.header.frame_id = self.odom_frame
             transform.child_frame_id = self.base_link_frame
             transform.transform.rotation.w = 1.0
@@ -242,7 +319,7 @@ def main() -> None:
         ) -> TransformStamped:
             tx, ty, tz = translation
             transform = TransformStamped()
-            transform.header.stamp = self.get_clock().now().to_msg()
+            transform.header.stamp = self._current_stamp()
             transform.header.frame_id = parent_frame
             transform.child_frame_id = child_frame
             transform.transform.translation.x = float(tx)

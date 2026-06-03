@@ -3,6 +3,7 @@ import json
 import logging
 import threading
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 
 import orjson
@@ -44,6 +45,7 @@ class TelemetryWebSocketManager:
         self._lock = threading.Lock()
         self._redis = None
         self._subscriber_task: asyncio.Task | None = None
+        self._shutting_down = False
 
         # Last telemetry data for new connections
         self.last_telemetry: dict = {
@@ -94,6 +96,8 @@ class TelemetryWebSocketManager:
     async def _redis_subscriber(self):
         from backend.core.config.runtime import settings
 
+        r = None
+        pubsub = None
         try:
             import redis.asyncio as aioredis
 
@@ -106,7 +110,31 @@ class TelemetryWebSocketManager:
         except asyncio.CancelledError:
             pass
         except Exception as exc:
-            logger.error("Redis subscriber error: %s", exc)
+            message = str(exc).lower()
+            if self._shutting_down or "connection closed" in message:
+                logger.info("Redis subscriber closed during shutdown: %s", exc)
+            else:
+                logger.error("Redis subscriber error: %s", exc)
+        finally:
+            if pubsub is not None:
+                with suppress(Exception):
+                    await pubsub.close()
+            if r is not None:
+                with suppress(Exception):
+                    await r.aclose()
+
+    async def shutdown(self) -> None:
+        self._shutting_down = True
+        task = self._subscriber_task
+        self._subscriber_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        if self._redis is not None:
+            with suppress(Exception):
+                await self._redis.aclose()
+            self._redis = None
 
     def get_last_telemetry_payload(self) -> TelemetryPayloadV1 | None:
         return self.last_telemetry_payload
@@ -175,20 +203,16 @@ class TelemetryWebSocketManager:
         )
         payload = orjson.dumps(envelope.to_legacy_websocket_message())
         if self._redis is not None:
-            try:
+            with suppress(Exception):
                 await self._redis.set(REDIS_LAST_TELEMETRY_KEY, payload, ex=300)
-            except Exception:
-                pass
         await self.broadcast_bytes(payload)
 
     async def ingest_mission_lifecycle_envelope(self, envelope: MissionLifecycleEnvelopeV1) -> None:
         self.last_mission_lifecycle_envelope = envelope
         payload = orjson.dumps({"type": envelope.kind, "data": envelope.model_dump_jsonable()})
         if self._redis is not None:
-            try:
+            with suppress(Exception):
                 await self._redis.set(REDIS_LAST_LIFECYCLE_KEY, payload, ex=300)
-            except Exception:
-                pass
         await self.broadcast_bytes(payload)
 
     # websocket.py (update the connect method)
@@ -349,10 +373,8 @@ class TelemetryWebSocketManager:
         """Add payload to client queue, dropping old messages if queue is full"""
         try:
             if q.full():
-                try:
+                with suppress(asyncio.QueueEmpty):
                     q.get_nowait()  # Drop oldest message
-                except asyncio.QueueEmpty:
-                    pass
 
             q.put_nowait(payload)
         except asyncio.QueueFull:

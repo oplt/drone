@@ -1,6 +1,7 @@
 import collections.abc
 import json
 import math
+import os
 
 for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
     if not hasattr(collections, _name):
@@ -62,6 +63,16 @@ class WaypointFollowerConfig:
 logger = logging.getLogger(__name__)
 
 
+def _sim_or_indoor_home_fallback_allowed() -> bool:
+    enabled_values = {"1", "true", "yes", "on"}
+    if str(settings.WAREHOUSE_BRIDGE_FLOW or "").strip().lower() == "gazebo":
+        return True
+    for name in ("SIM_MODE", "INDOOR_NAV", "WAREHOUSE_GAZEBO_SIM"):
+        if os.getenv(name, "").strip().lower() in enabled_values:
+            return True
+    return False
+
+
 class MavlinkDrone(DroneClient):
     def __init__(self, connection_str: str, heartbeat_timeout: float):
         self.connection_str = connection_str
@@ -102,15 +113,28 @@ class MavlinkDrone(DroneClient):
         # print("Waiting for home location...")
         logger.info("Waiting for home location...")
         tries = 0
+        allow_home_fallback = _sim_or_indoor_home_fallback_allowed()
         while not getattr(self.vehicle, "home_location", None) and tries < 30:
             local = getattr(getattr(self.vehicle, "location", None), "local_frame", None)
+            if (
+                allow_home_fallback
+                and local is not None
+                and getattr(local, "north", None) is not None
+                and getattr(local, "east", None) is not None
+            ):
+                logger.info(
+                    "Local indoor frame is available; proceeding without GPS home "
+                    "(simulation/indoor mode)"
+                )
+                break
             if (
                 local is not None
                 and getattr(local, "north", None) is not None
                 and getattr(local, "east", None) is not None
             ):
-                logger.info("Local indoor frame is available; proceeding without GPS home")
-                break
+                logger.warning(
+                    "Local frame present but GPS home fallback is disabled for real flight"
+                )
             time.sleep(1)
             tries += 1
 
@@ -125,9 +149,19 @@ class MavlinkDrone(DroneClient):
                 and getattr(loc, "lat", None) is not None
                 and getattr(loc, "lon", None) is not None
             ):
+                if not allow_home_fallback:
+                    raise RuntimeError(
+                        "GPS home is required for real-flight mode; "
+                        "simulated home fallback is disabled"
+                    )
                 self.home_location = loc
                 self.home_source = "simulated_home"
             else:
+                if not allow_home_fallback:
+                    raise RuntimeError(
+                        "GPS home is required for real-flight mode; "
+                        "local-frame origin fallback is disabled"
+                    )
                 self.home_location = None
                 self.home_source = "local_frame_origin"
 

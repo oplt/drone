@@ -89,18 +89,37 @@ class WarehouseFlightStateMachine:
 
         sub = readiness.subsystems
         bridge_ok = sub["bridge"].status == SubsystemStatus.OK
+        bridge_waiting = sub["bridge"].status == SubsystemStatus.WAITING
         autopilot_ok = sub["autopilot"].status in {SubsystemStatus.OK, SubsystemStatus.WARN}
-        sensors_ok = sub["sensors"].status == SubsystemStatus.OK
+        sensors_status = sub["sensors"].status
+        sensors_ok = sensors_status == SubsystemStatus.OK
+        sensors_waiting_or_failed = sensors_status in {
+            SubsystemStatus.FAIL,
+            SubsystemStatus.WAITING,
+            SubsystemStatus.UNKNOWN,
+        }
         slam_ok = sub["slam"].status == SubsystemStatus.OK
         nvblox_ok = sub["nvblox"].status == SubsystemStatus.OK
         planner_ok = sub["planner"].status == SubsystemStatus.OK
 
-        if readiness.ready_for_autonomy:
+        if bridge_waiting:
+            target = WarehouseFlightState.SYSTEM_CHECK
+        elif bridge_ok and sensors_waiting_or_failed:
+            target = WarehouseFlightState.SENSOR_CHECK
+        elif readiness.ready_for_autonomy:
             target = WarehouseFlightState.MISSION_READY
         elif readiness.ready_to_takeoff:
-            target = WarehouseFlightState.ARM_READY if not user_armed else WarehouseFlightState.TAKEOFF
+            target = (
+                WarehouseFlightState.ARM_READY
+                if not user_armed
+                else WarehouseFlightState.TAKEOFF
+            )
         elif slam_ok and sensors_ok:
-            target = WarehouseFlightState.MAPPING_CHECK if not nvblox_ok else WarehouseFlightState.ARM_READY
+            target = (
+                WarehouseFlightState.MAPPING_CHECK
+                if not nvblox_ok
+                else WarehouseFlightState.ARM_READY
+            )
         elif sensors_ok:
             target = WarehouseFlightState.LOCALIZATION_CHECK
         elif bridge_ok and autopilot_ok:
@@ -110,7 +129,11 @@ class WarehouseFlightStateMachine:
         else:
             target = WarehouseFlightState.SYSTEM_CHECK
 
-        if not bridge_ok or not autopilot_ok:
+        if bridge_waiting:
+            target = WarehouseFlightState.SYSTEM_CHECK
+        elif bridge_ok and sensors_waiting_or_failed:
+            target = WarehouseFlightState.SENSOR_CHECK
+        elif not bridge_ok or not autopilot_ok:
             target = WarehouseFlightState.SYSTEM_CHECK
         elif not sensors_ok:
             target = WarehouseFlightState.SENSOR_CHECK

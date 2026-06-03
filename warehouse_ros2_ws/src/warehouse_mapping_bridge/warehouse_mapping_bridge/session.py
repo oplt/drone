@@ -128,7 +128,10 @@ class BridgeState:
                     raw_map_id = manifest.get("warehouse_map_id")
                     warehouse_map_id = int(raw_map_id) if raw_map_id is not None else None
             except Exception:
-                logger.warning("Failed to recover warehouse mapping manifest", extra={"path": str(manifest_path)})
+                logger.warning(
+                    "Failed to recover warehouse mapping manifest",
+                    extra={"path": str(manifest_path)},
+                )
         self.sessions[flight_id] = MappingSession(
             flight_id=flight_id,
             warehouse_map_id=warehouse_map_id,
@@ -179,6 +182,21 @@ class BridgeState:
                 return None
             return round(monotonic() - self._deep_probe_started_at, 2)
 
+    @classmethod
+    def _health_sample_max_age_s(cls) -> float:
+        """Wall-clock age allowed for health_sample_timestamp before preflight warns."""
+        override = os.getenv("WAREHOUSE_HEALTH_SAMPLE_MAX_AGE_S", "").strip()
+        if override:
+            try:
+                return max(5.0, float(override))
+            except ValueError:
+                pass
+        if cls._background_probe_enabled():
+            refresh_s = float(os.getenv("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", "15.0"))
+            probe_budget_s = float(os.getenv("WAREHOUSE_HEALTH_DEEP_PROBE_BUDGET_S", "45.0"))
+            return max(cls.DEEP_HEALTH_STALE_S, refresh_s * 2.0 + probe_budget_s)
+        return cls.DEEP_HEALTH_STALE_S
+
     def _cache_deep_payload(self, payload: dict[str, Any]) -> None:
         components = payload.get("components")
         if isinstance(components, dict):
@@ -186,12 +204,11 @@ class BridgeState:
             topic_count = int(components.get("ros_topic_count") or 0)
             if probe_error and topic_count == 0:
                 logger.warning(
-                    "Skipping warehouse health cache update due to topic probe failure: %s",
+                    "Warehouse health probe incomplete (topic_count=0): %s",
                     probe_error,
                 )
                 payload["diagnostics_ready"] = False
                 payload["cache_ready"] = False
-                return
 
         now = monotonic()
         with self._health_lock:
@@ -234,7 +251,8 @@ class BridgeState:
                 self._cache_deep_payload(payload)
 
                 logger.info(
-                    "Warehouse deep health refresh complete duration_ms=%s status=%s ready=%s topic_count=%s",
+                    "Warehouse deep health refresh complete duration_ms=%s "
+                    "status=%s ready=%s topic_count=%s",
                     payload["probe_duration_ms"],
                     payload.get("status"),
                     payload.get("ready"),
@@ -495,6 +513,7 @@ class BridgeState:
             ),
             odom_fresh=odom_fresh or vslam_ready,
             require_lidar=require_raw_lidar,
+            tf_tree=bool(components.get("tf_tree", True)),
         )
         components["capabilities"] = capabilities
         core_ready = bool(capabilities.get("can_fly_warehouse_scan"))
@@ -511,6 +530,11 @@ class BridgeState:
         out["capabilities"] = capabilities
         out["probe_mode"] = "shallow_refreshed"
         out["from_cache"] = True
+        sample_ts = time.time()
+        out["health_sample_timestamp"] = sample_ts
+        components["health_sample_timestamp"] = sample_ts
+        components["health_sample_max_age_ms"] = int(self._health_sample_max_age_s() * 1000)
+        out["components"] = components
         return out
 
     @staticmethod
@@ -535,8 +559,8 @@ class BridgeState:
         shallow["probe_mode"] = "shallow_cached"
         shallow["from_cache"] = True
         shallow["probe_in_progress"] = False
-        shallow["cache_ready"] = True
-        shallow["diagnostics_ready"] = True
+        shallow["cache_ready"] = bool(deep_payload.get("cache_ready", True))
+        shallow["diagnostics_ready"] = bool(deep_payload.get("diagnostics_ready", True))
         return shallow
 
     def _empty_health_payload(self, *, probe_in_progress: bool) -> dict[str, Any]:
@@ -567,7 +591,10 @@ class BridgeState:
                 sensors_listed=False,
             ),
             "ready": False,
-            "detail": "Health diagnostics warming; /health is alive but ROS diagnostics cache is not ready yet",
+            "detail": (
+                "Health diagnostics warming; /health is alive but ROS diagnostics "
+                "cache is not ready yet"
+            ),
             "profile": self.config.profile,
             "topic_profile": self._topic_profile,
             "bridge_flow": os.getenv("WAREHOUSE_BRIDGE_FLOW", self._topic_profile),
@@ -588,7 +615,7 @@ class BridgeState:
                 "listed_topics": [],
                 "ros_topic_count": 0,
                 "ros_topic_probe_error": "diagnostics cache is warming",
-                "missing_required_topics": [],
+                "missing_required_topics": list(topic_registry().required_for_perception),
                 "missing_nvblox_topics": [],
                 "topic_presence": {},
                 "topic_diagnostics": {},
@@ -651,7 +678,10 @@ class BridgeState:
 
         summary = summarize_diagnostics(diagnostics, include_nvblox=check_nvblox)
         topic_health = {key: diag.healthy for key, diag in diagnostics.items()}
-        topic_presence = {key: diag.listed or diag.publishing or diag.healthy for key, diag in diagnostics.items()}
+        topic_presence = {
+            key: diag.listed or diag.publishing or diag.healthy
+            for key, diag in diagnostics.items()
+        }
 
         rgb_ok = topic_health.get("rgb_image", False)
         left_ok = topic_health.get("left_image", False)
@@ -697,6 +727,8 @@ class BridgeState:
         ]
         if not camera_ready:
             missing_required.append("rgb_image")
+        if listed_topics is not None and len(listed_topics) == 0:
+            missing_required = list(dict.fromkeys(registry.required_for_perception))
 
         gazebo_status = None
         gazebo_probe_disabled = os.getenv(
@@ -732,10 +764,6 @@ class BridgeState:
         require_raw_lidar = registry.profile != "gazebo" or os.getenv(
             "WAREHOUSE_REQUIRE_RAW_LIDAR", "0"
         ).strip().lower() in {"1", "true", "yes", "on"}
-        lidar_ready = topic_health.get("raw_lidar", False) or not require_raw_lidar
-        odom_ready = bool(
-            (vslam_ready or local_odom_ready or odom_fresh) and not odometry_state_unreadable
-        )
         capabilities = self._build_capabilities(
             bridge_alive=True,
             ros_graph_ready=ros_graph_ready,
@@ -743,6 +771,7 @@ class BridgeState:
             nvblox_ready=nvblox_ready,
             odom_fresh=odom_fresh or vslam_ready,
             require_lidar=require_raw_lidar,
+            tf_tree=tf_tree,
         )
         core_ready = bool(capabilities.get("can_fly_warehouse_scan"))
         perception_ready = core_ready
@@ -837,6 +866,13 @@ class BridgeState:
                 "nvblox_checks_active": check_nvblox,
                 "nvblox_deferred": not check_nvblox,
                 "tf_chain": tf_diag.to_dict() if tf_diag else None,
+                "tf_available": bool(tf_diag.chain_ok) if tf_diag else tf_tree,
+                "required_tf_edges": (
+                    [list(edge) for edge in tf_diag.required_tf_edges] if tf_diag else []
+                ),
+                "missing_tf_edges": (
+                    [list(edge) for edge in tf_diag.missing_tf_edges] if tf_diag else []
+                ),
                 "ros_bridge_heartbeat": True,
                 "obstacle_distance_m": self._optional_float_env("WAREHOUSE_OBSTACLE_DISTANCE_M"),
                 "ceiling_distance_m": self._optional_float_env("WAREHOUSE_CEILING_DISTANCE_M"),
@@ -844,6 +880,8 @@ class BridgeState:
                 "exploration_state": self._optional_str_env("WAREHOUSE_EXPLORATION_STATE"),
                 "stereo_sync": stereo_sync,
                 "tf_tree": tf_tree,
+                "odometry_frame_id": odometry_state.get("frame_id"),
+                "odometry_child_frame_id": odometry_state.get("child_frame_id"),
                 "dock_marker": self._optional_bool_env("WAREHOUSE_DOCK_MARKER_VISIBLE"),
                 "dock_marker_family": self._optional_str_env("WAREHOUSE_DOCK_MARKER_FAMILY"),
                 "dock_marker_id": self._optional_str_env("WAREHOUSE_DOCK_MARKER_ID"),
@@ -857,7 +895,7 @@ class BridgeState:
                 "capabilities": capabilities,
                 "health_layers": health_layers,
                 "health_sample_timestamp": sample_ts,
-                "health_sample_max_age_ms": int(self.DEEP_HEALTH_STALE_S * 1000),
+                "health_sample_max_age_ms": int(self._health_sample_max_age_s() * 1000),
                 "health_cache_ttl_ms": int(self.HEALTH_CACHE_TTL_S * 1000),
             }
         return {
@@ -955,6 +993,7 @@ class BridgeState:
         nvblox_ready: bool,
         odom_fresh: bool,
         require_lidar: bool,
+        tf_tree: bool = True,
     ) -> dict[str, bool]:
         can_localize = bool(
             odom_fresh
@@ -965,7 +1004,7 @@ class BridgeState:
         can_perceive_rgb = bool(topic_health.get("rgb_image"))
         can_scan_lidar = bool(topic_health.get("raw_lidar")) or not require_lidar
         can_perceive_imu = bool(topic_health.get("imu"))
-        can_map_3d = bool(nvblox_ready)
+        can_map_3d = bool(nvblox_ready and tf_tree)
         can_fly = bool(
             bridge_alive
             and ros_graph_ready
@@ -985,6 +1024,7 @@ class BridgeState:
             "can_perceive_imu": can_perceive_imu,
             "can_map_3d": can_map_3d,
             "can_avoid_obstacles": can_map_3d,
+            "tf_available": bool(tf_tree),
             "can_fly_warehouse_scan": can_fly,
             "can_build_warehouse_map": can_map_3d,
         }
@@ -1075,7 +1115,11 @@ class BridgeState:
             if self._deep_health_cache is None:
                 return None
             _, payload = self._deep_health_cache
-        tf_chain = payload.get("components", {}).get("tf_chain") if isinstance(payload, dict) else None
+        tf_chain = (
+            payload.get("components", {}).get("tf_chain")
+            if isinstance(payload, dict)
+            else None
+        )
         if not isinstance(tf_chain, dict):
             return None
         return TfChainDiagnostic(
@@ -1086,6 +1130,16 @@ class BridgeState:
             base_link_to_camera=bool(tf_chain.get("base_link_to_camera")),
             chain_ok=bool(tf_chain.get("chain_ok")),
             detail=str(tf_chain.get("detail") or "unknown"),
+            required_tf_edges=tuple(
+                tuple(str(part) for part in edge)
+                for edge in tf_chain.get("required_tf_edges", [])
+                if isinstance(edge, list | tuple) and len(edge) == 2
+            ),
+            missing_tf_edges=tuple(
+                tuple(str(part) for part in edge)
+                for edge in tf_chain.get("missing_tf_edges", [])
+                if isinstance(edge, list | tuple) and len(edge) == 2
+            ),
         )
 
     def _cached_tf_chain_probe(self):
@@ -1188,7 +1242,22 @@ class BridgeState:
                     fresh = False
 
         explicit_tracking = odometry_state.get("slam_tracking_ok")
+        localization_mode = os.getenv("WAREHOUSE_LOCALIZATION_MODE", "").strip().lower()
+        gazebo_gt = localization_mode in {
+            "",
+            "gazebo_ground_truth",
+            "gazebo_gt",
+            "gazebo",
+            "sim",
+        } and (
+            os.getenv("WAREHOUSE_TOPIC_PROFILE", "").strip().lower() == "gazebo"
+            or os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower()
+            in {"1", "true", "yes", "on"}
+            or os.getenv("WAREHOUSE_BRIDGE_FLOW", "").strip().lower() == "gazebo"
+        )
         if fresh:
+            if gazebo_gt:
+                return fresh, age_s, True
             if explicit_tracking is False and not vslam_topic_ready:
                 return fresh, age_s, False
             return fresh, age_s, True
@@ -1643,7 +1712,10 @@ class BridgeState:
                     return {
                         "accepted": False,
                         "status": "failed",
-                        "detail": f"Warehouse mapping launch exited immediately with rc={process.returncode}",
+                        "detail": (
+                            "Warehouse mapping launch exited immediately with "
+                            f"rc={process.returncode}"
+                        ),
                         "data": {
                             "flight_id": flight_id,
                             "session_dir": str(session_dir),
@@ -1793,7 +1865,10 @@ class BridgeState:
         return {
             "accepted": True,
             "status": "finalizing",
-            "detail": "Warehouse mapping session stopped; artifact export is finalizing in background",
+            "detail": (
+                "Warehouse mapping session stopped; artifact export is finalizing "
+                "in background"
+            ),
             "data": {"flight_id": safe_flight_id, "session_dir": str(session.session_dir)},
         }
 
@@ -1839,7 +1914,10 @@ class BridgeState:
             }
             self._write_session_files(session, {})
             self._write_export_status(session)
-            logger.exception("Warehouse mapping artifact finalization failed flight_id=%s", session.flight_id)
+            logger.exception(
+                "Warehouse mapping artifact finalization failed flight_id=%s",
+                session.flight_id,
+            )
         finally:
             self.export_jobs.pop(session.flight_id, None)
 
@@ -1922,7 +2000,11 @@ class BridgeState:
             "accepted": True,
             "status": "running",
             "detail": "Replay session started",
-            "data": {"replay_id": replay_id, "session_dir": str(replay_dir), "launch_pid": process.pid},
+            "data": {
+                "replay_id": replay_id,
+                "session_dir": str(replay_dir),
+                "launch_pid": process.pid,
+            },
         }
 
     def stop_replay(self, replay_id: str) -> dict[str, Any]:
@@ -2012,7 +2094,11 @@ class BridgeState:
                 "WAREHOUSE_BRIDGE_FLOW": os.getenv("WAREHOUSE_BRIDGE_FLOW", session.profile),
             }
         )
-        return start_process(self.config.launch_cmd, env=env, log_path=session.session_dir / "launch.log")
+        return start_process(
+            self.config.launch_cmd,
+            env=env,
+            log_path=session.session_dir / "launch.log",
+        )
 
     def _write_session_files(self, session: MappingSession, payload: dict[str, Any]) -> None:
         write_json(session.manifest_path, session.to_manifest())

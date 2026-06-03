@@ -113,11 +113,20 @@ class WarehouseBridgeSupervisor:
                 return current
             if self._circuit_open:
                 return current
-            if self._startup_task is None or self._startup_task.done():
-                self._startup_task = asyncio.create_task(
-                    self._start_until_ready(deep=deep_ready)
-                )
-            task = self._startup_task
+            if self._startup_task is not None and not self._startup_task.done():
+                task = self._startup_task
+            elif current.running and current.state in {
+                "starting",
+                "process_running",
+                "degraded",
+            }:
+                return current
+            else:
+                if self._startup_task is None or self._startup_task.done():
+                    self._startup_task = asyncio.create_task(
+                        self._start_until_ready(deep=deep_ready)
+                    )
+                task = self._startup_task
 
         return await task
 

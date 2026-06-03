@@ -14,7 +14,10 @@ import {
 } from "../../fields";
 import { DEFAULT_MISSION_MAP_ENGINE, type MissionMapEngine } from "../../maps";
 import type { TerraDrawEditorMode } from "../../maps";
-import { useFieldBorderEditor, type MissionStatus } from "../../mission-workflow";
+import {
+  useFieldBorderEditor,
+  type MissionStatus,
+} from "../../mission-workflow";
 import { useFieldSurveyIrrigation } from "./useFieldSurveyIrrigation";
 import { useFieldSurveyMap } from "./useFieldSurveyMap";
 import { useFieldSurveyMission } from "./useFieldSurveyMission";
@@ -23,12 +26,14 @@ export function useFieldSurveyPage() {
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(
-    null
-  );
+  const [pendingDeleteField, setPendingDeleteField] =
+    useState<FieldFeature | null>(null);
   const [lastMissionId, setLastMissionId] = useState<string | null>(null);
-  const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("static");
-  const [mapEngine, setMapEngine] = useState<MissionMapEngine>(DEFAULT_MISSION_MAP_ENGINE);
+  const [terraDrawMode, setTerraDrawMode] =
+    useState<TerraDrawEditorMode>("static");
+  const [mapEngine, setMapEngine] = useState<MissionMapEngine>(
+    DEFAULT_MISSION_MAP_ENGINE,
+  );
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const terraDrawRef = useRef<TerraDraw | null>(null);
@@ -37,14 +42,17 @@ export function useFieldSurveyPage() {
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
+  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
+    /\/$/,
+    "",
+  );
 
   const toAbsoluteAssetUrl = useCallback(
     (url: string) => {
       if (/^https?:\/\//i.test(url)) return url;
       return `${API_BASE_CLEAN}${url.startsWith("/") ? "" : "/"}${url}`;
     },
-    [API_BASE_CLEAN]
+    [API_BASE_CLEAN],
   );
 
   const {
@@ -131,7 +139,7 @@ export function useFieldSurveyPage() {
     selectedField:
       selectedFieldId == null
         ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
+        : (fields.find((f) => f.id === selectedFieldId) ?? null),
     mapEngine,
     addError,
     onMapEngineChange: handleMapEngineChange,
@@ -143,8 +151,8 @@ export function useFieldSurveyPage() {
     () =>
       selectedFieldId == null
         ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
-    [fields, selectedFieldId]
+        : (fields.find((f) => f.id === selectedFieldId) ?? null),
+    [fields, selectedFieldId],
   );
 
   const metrics = useMemo(() => {
@@ -157,14 +165,13 @@ export function useFieldSurveyPage() {
 
   const selectField = useCallback(
     (f: FieldFeature) => {
-      map.handleMapEngineChange("google");
       setSelectedFieldId(f.id);
       setFieldName(f.name);
       setFieldBorder(f.ring);
       borderEditor.loadRingIntoEditor(f.ring);
       borderEditor.focusRingOnMap(f.ring);
     },
-    [borderEditor, map]
+    [borderEditor],
   );
 
   const handleSavedFieldSelect = useCallback(
@@ -176,7 +183,7 @@ export function useFieldSurveyPage() {
       const field = fields.find((f) => f.id === fieldId);
       if (field) selectField(field);
     },
-    [borderEditor, fields, selectField]
+    [borderEditor, fields, selectField],
   );
 
   const handleNewField = useCallback(() => {
@@ -222,8 +229,7 @@ export function useFieldSurveyPage() {
   }, [disconnect]);
 
   const googleMapsReady =
-    map.mapEngine !== "google" ||
-    (Boolean(map.apiKey) && !map.loadError);
+    map.mapEngine !== "google" || (Boolean(map.apiKey) && !map.loadError);
 
   const cesiumZoom = mission.cesiumZoomFor(map.mapZoom);
 

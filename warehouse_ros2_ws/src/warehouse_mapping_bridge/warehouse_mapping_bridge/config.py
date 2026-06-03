@@ -118,6 +118,9 @@ _DEFAULT_TOPICS_BY_PROFILE: dict[str, dict[str, str]] = {
 
 _CONTRACT_TOPICS: dict[str, str] = {
     "rgb_image": "/warehouse/contract/rgb/image",
+    "rgb_camera_info": "/warehouse/contract/rgb/camera_info",
+    "depth_camera_info": "/warehouse/contract/depth/camera_info",
+    "camera_info": "/warehouse/contract/rgb/camera_info",
     "left_image": "/warehouse/contract/stereo/left/image",
     "right_image": "/warehouse/contract/stereo/right/image",
     "depth": "/warehouse/contract/depth/image",
@@ -367,11 +370,7 @@ def topic_registry() -> TopicRegistry:
         }
         if not require_lidar:
             required_tuple = tuple(key for key in required_tuple if key != "raw_lidar")
-        if not os.getenv("WAREHOUSE_LOCAL_ODOMETRY_TOPIC", "").strip():
-            topics["local_odometry"] = topics.get(
-                "visual_slam_odom",
-                topics.get("local_odometry", "/warehouse/drone/odometry"),
-            )
+        # local_odometry stays on /warehouse/contract/local_odometry (warehouse_odometry_export).
     nvblox_required_tuple = (
         tuple(str(x) for x in nvblox_required)
         if isinstance(nvblox_required, list)

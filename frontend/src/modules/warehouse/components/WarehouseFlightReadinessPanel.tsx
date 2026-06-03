@@ -110,6 +110,7 @@ export function WarehouseFlightReadinessPanel({
       ? Math.min(100, (perceptionStableMs / perceptionRequiredMs) * 100)
       : 0;
 
+  const flightGateOpen = preflight?.ready_to_fly === true;
   const categoryChips = preflight?.categories
     ? Object.entries(preflight.categories).map(([key, value]) => ({
         key,
@@ -117,12 +118,13 @@ export function WarehouseFlightReadinessPanel({
         color: statusColor(
           value === "OK"
             ? "OK"
-            : value === "WAITING" || value === "DEFERRED"
+            : value === "WAITING" || value === "DEFERRED" || value === "WARMING"
               ? "WAITING"
               : value === "FAIL"
                 ? "FAIL"
                 : "UNKNOWN",
         ),
+        variant: !flightGateOpen && value === "OK" ? ("outlined" as const) : ("filled" as const),
       }))
     : [];
 
@@ -140,8 +142,20 @@ export function WarehouseFlightReadinessPanel({
           </Stack>
           <Stack direction="row" spacing={0.5} flexWrap="wrap">
             {categoryChips.map((chip) => (
-              <Tooltip key={chip.key} title={chip.label}>
-                <Chip size="small" label={chip.label} color={chip.color} variant="outlined" />
+              <Tooltip
+                key={chip.key}
+                title={
+                  !flightGateOpen && chip.color === "success"
+                    ? `${chip.label} (subsystem OK; ready_to_fly still blocked)`
+                    : chip.label
+                }
+              >
+                <Chip
+                  size="small"
+                  label={chip.label}
+                  color={chip.color}
+                  variant={chip.variant ?? "outlined"}
+                />
               </Tooltip>
             ))}
           </Stack>

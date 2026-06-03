@@ -3,6 +3,8 @@
 PYTHON ?= python3
 BACKEND_QUALITY_PATHS := backend/modules backend/infrastructure backend/entrypoints backend/core backend/tests backend/scripts
 
+start: local-dev
+
 local-dev:
 	$(MAKE) -f Makefile.local local-dev
 

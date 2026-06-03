@@ -49,21 +49,51 @@ class PerceptionStabilityTracker:
     _stable_since: float | None = field(default=None, init=False, repr=False)
     _last_ok: bool = field(default=False, init=False, repr=False)
     _last_log_at: float = field(default=0.0, init=False, repr=False)
+    _last_reset_reason: str | None = field(default=None, init=False, repr=False)
+    _last_stable_ms: int = field(default=0, init=False, repr=False)
 
-    def reset(self) -> None:
+    @property
+    def last_reset_reason(self) -> str | None:
+        return self._last_reset_reason
+
+    @property
+    def last_successful_stable_ms(self) -> int:
+        return self._last_stable_ms
+
+    def reset(self, *, reason: str | None = None) -> None:
+        if self._stable_since is not None:
+            self._last_stable_ms = max(
+                self._last_stable_ms,
+                max(0, int((time.monotonic() - self._stable_since) * 1000.0)),
+            )
         self._stable_since = None
         self._last_ok = False
+        if reason:
+            self._last_reset_reason = reason
 
-    def stable_for_ms(self, *, perception_ok: bool) -> int:
+    def stable_for_ms(
+        self,
+        *,
+        perception_ok: bool,
+        reset_reason: str | None = None,
+    ) -> int:
         now = time.monotonic()
         if perception_ok:
             if self._stable_since is None:
                 self._stable_since = now
+                self._last_reset_reason = None
                 logger.info("Perception stability window started")
             self._last_ok = True
         else:
-            if self._last_ok:
-                logger.info("Perception stability window reset")
+            if self._last_ok or self._stable_since is not None:
+                if self._stable_since is not None:
+                    self._last_stable_ms = max(
+                        self._last_stable_ms,
+                        max(0, int((now - self._stable_since) * 1000.0)),
+                    )
+                reason = reset_reason or self._last_reset_reason or "core perception not OK"
+                self._last_reset_reason = reason
+                logger.info("Perception stability window reset: %s", reason)
             self._stable_since = None
             self._last_ok = False
 

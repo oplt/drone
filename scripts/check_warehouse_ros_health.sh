@@ -51,6 +51,18 @@ echo
 
 echo "=== ROS topics (warehouse/imu/odom/nvblox) ==="
 ros2 topic list --no-daemon 2>/dev/null | grep -E 'warehouse|imu|odom|nvblox' | sort || true
+
+echo ""
+echo "=== Local verification (preflight / localization) ==="
+echo "ros2 topic hz /warehouse/contract/odometry"
+echo "ros2 topic info /warehouse/contract/odometry --verbose"
+echo "ros2 topic echo --once /warehouse/contract/odometry"
+echo "ros2 run tf2_ros tf2_echo odom base_link"
+echo "ros2 topic hz /warehouse/contract/depth/image"
+echo "ros2 topic hz /warehouse/contract/rgb/image"
+echo "ros2 topic hz /warehouse/contract/imu"
+echo "ros2 topic hz /warehouse/contract/points"
+echo "ros2 topic list | grep -E 'clock|camera_info|odometry|slam|tracking|nvblox|depth'"
 echo
 
 TOPICS=(
@@ -58,7 +70,13 @@ TOPICS=(
   /warehouse/front/rgbd/depth_image
   /warehouse/front/rgbd/points
   /warehouse/drone/odometry
-  /warehouse/local_odometry
+  /imu
+
+  /warehouse/contract/rgb/image
+  /warehouse/contract/depth/image
+  /warehouse/contract/points
+  /warehouse/contract/imu
+  /warehouse/contract/odometry
 )
 
 for topic in "${TOPICS[@]}"; do

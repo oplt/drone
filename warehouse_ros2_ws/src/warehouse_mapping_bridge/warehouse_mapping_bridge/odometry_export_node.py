@@ -6,7 +6,16 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .config import load_config, topic_env
+from .config import load_config, topic_env, topic_registry
+from .ros_node_utils import configure_use_sim_time
+
+
+def normalize_odometry_frames(
+    message: object, *, odom_frame: str, base_link_frame: str
+) -> object:
+    message.header.frame_id = odom_frame
+    message.child_frame_id = base_link_frame
+    return message
 
 
 def _stamp_to_sec(stamp: object) -> float | None:
@@ -36,21 +45,40 @@ def main() -> None:
     class WarehouseOdometryExport(Node):
         def __init__(self) -> None:
             super().__init__("warehouse_odometry_export")
+            configure_use_sim_time(self)
             self.topics = topic_env()
             self.config = load_config()
+            registry_frames = topic_registry().frames
+            self.odom_frame = os.getenv(
+                "WAREHOUSE_ODOM_FRAME",
+                registry_frames.get("odom", "odom"),
+            )
+            self.base_link_frame = os.getenv(
+                "WAREHOUSE_BASE_LINK_FRAME",
+                registry_frames.get("base_link", "base_link"),
+            )
             self.declare_parameter("visual_slam_odom_topic", self.topics["visual_slam_odom"])
             self.declare_parameter("local_odometry_topic", self.topics["local_odometry"])
+            self.declare_parameter("odom_frame", self.odom_frame)
+            self.declare_parameter("base_link_frame", self.base_link_frame)
             self.topics["visual_slam_odom"] = str(
-                self.get_parameter("visual_slam_odom_topic").value or self.topics["visual_slam_odom"]
+                self.get_parameter("visual_slam_odom_topic").value
+                or self.topics["visual_slam_odom"]
             )
             self.topics["local_odometry"] = str(
                 self.get_parameter("local_odometry_topic").value or self.topics["local_odometry"]
+            )
+            self.odom_frame = str(self.get_parameter("odom_frame").value or self.odom_frame)
+            self.base_link_frame = str(
+                self.get_parameter("base_link_frame").value or self.base_link_frame
             )
             self.state_path = Path(
                 os.getenv("WAREHOUSE_ODOMETRY_STATE_PATH", str(self.config.odometry_state_path))
             ).expanduser()
             self.declare_parameter("odometry_state_path", str(self.state_path))
-            self.state_path = Path(str(self.get_parameter("odometry_state_path").value)).expanduser()
+            self.state_path = Path(
+                str(self.get_parameter("odometry_state_path").value)
+            ).expanduser()
             self.state_write_period_s = max(
                 0.05,
                 float(os.getenv("WAREHOUSE_ODOMETRY_STATE_WRITE_PERIOD_S", "0.25")),
@@ -69,17 +97,41 @@ def main() -> None:
             )
 
         def on_odometry(self, message: Odometry) -> None:
+            message = normalize_odometry_frames(
+                message,
+                odom_frame=self.odom_frame,
+                base_link_frame=self.base_link_frame,
+            )
             position = message.pose.pose.position
             orientation = message.pose.pose.orientation
             linear = message.twist.twist.linear
             angular = message.twist.twist.angular
             now_mono = time.monotonic()
             max_position_variance = _covariance_max_diagonal(message.pose.covariance)
+            localization_mode = os.getenv("WAREHOUSE_LOCALIZATION_MODE", "").strip().lower()
+            gazebo_gt = localization_mode in {
+                "",
+                "gazebo_ground_truth",
+                "gazebo_gt",
+                "gazebo",
+                "sim",
+            } and (
+                os.getenv("WAREHOUSE_TOPIC_PROFILE", "").strip().lower() == "gazebo"
+                or os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower()
+                in {"1", "true", "yes", "on"}
+                or os.getenv("WAREHOUSE_BRIDGE_FLOW", "").strip().lower() == "gazebo"
+            )
             local_position_ok = (
                 max_position_variance is None
-                or max_position_variance <= float(os.getenv("WAREHOUSE_ODOM_MAX_POSITION_VAR_M2", "4.0"))
+                or max_position_variance
+                <= float(os.getenv("WAREHOUSE_ODOM_MAX_POSITION_VAR_M2", "4.0"))
             )
-            tracking_ok = bool(local_position_ok)
+            tracking_ok = True if gazebo_gt else bool(local_position_ok)
+            tracking_status = (
+                "GAZEBO_GROUND_TRUTH_OK"
+                if gazebo_gt and tracking_ok
+                else ("tracking" if tracking_ok else "covariance_high")
+            )
             payload = {
                 "timestamp_utc": datetime.now(UTC).isoformat(),
                 "updated_at_monotonic": now_mono,
@@ -109,7 +161,10 @@ def main() -> None:
                 "odom_received": True,
                 "slam_ready": tracking_ok,
                 "slam_tracking_ok": tracking_ok,
-                "slam_tracking_status": "tracking" if tracking_ok else "covariance_high",
+                "slam_tracking_status": tracking_status,
+                "localization_mode": (
+                    "gazebo_ground_truth" if gazebo_gt else "visual_slam"
+                ),
                 "local_position_ok": local_position_ok,
                 "localization_confidence": None,
                 "max_position_variance_m2": max_position_variance,

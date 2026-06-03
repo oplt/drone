@@ -209,6 +209,8 @@ class WarehouseBridgeStackProcessManager:
         if flow.name != "gazebo":
             return textwrap.dedent(f"""
             set -Eeuo pipefail
+            
+            set +u
             source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash
             if [ -f "${{ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}}" ]; then
               source "${{ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}}"
@@ -216,6 +218,7 @@ class WarehouseBridgeStackProcessManager:
               echo "[warehouse_bridge_stack] WARNING: ROS workspace setup not found: ${{ROS_WS_SETUP:-warehouse_ros2_ws/install/setup.bash}}"
               export PYTHONPATH="$(pwd)/warehouse_ros2_ws/src/warehouse_mapping_bridge:${{PYTHONPATH:-}}"
             fi
+            set -u            
             export WAREHOUSE_BRIDGE_FLOW={flow.name}
             export WAREHOUSE_TOPIC_PROFILE={flow.topic_profile}
             export WAREHOUSE_ROS_PROFILE={flow.ros_profile}
@@ -228,9 +231,7 @@ class WarehouseBridgeStackProcessManager:
         bridge_up = cls._external_bridge_alive()
         rosbridge_up = cls._local_port_in_use(cls._rosbridge_port())
 
-        clean_stale_raw = (
-            "0" if bridge_up else os.getenv("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "1")
-        )
+        clean_stale_raw = os.getenv("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "1")
         clean_stale = (
             "1"
             if str(clean_stale_raw).strip().lower() in {"1", "true", "yes", "on"}
@@ -259,8 +260,8 @@ class WarehouseBridgeStackProcessManager:
     trap 'echo "[warehouse_bridge_stack] SIGINT received"; jobs -l || true; shutdown_children INT; exit 130' INT
     
     export WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE={clean_stale}
-    export WAREHOUSE_SKIP_BRIDGE_LAUNCH={'1' if bridge_up else '0'}
-    export WAREHOUSE_SKIP_ROSBRIDGE_LAUNCH={'1' if rosbridge_up else '0'}
+    export WAREHOUSE_SKIP_BRIDGE_LAUNCH={"1" if bridge_up and clean_stale != "1" else "0"}
+    export WAREHOUSE_SKIP_ROSBRIDGE_LAUNCH={"1" if rosbridge_up and clean_stale != "1" else "0"}
     export WAREHOUSE_ROS_BRIDGE_PORT={bridge_port}
     export ROSBRIDGE_PORT="${{ROSBRIDGE_PORT:-{rosbridge_port}}}"
     
@@ -318,34 +319,48 @@ class WarehouseBridgeStackProcessManager:
     safe_kill_pattern() {{
       local pattern="$1"
       local sig="${{2:-TERM}}"
-      local self="$$"
-      local self_pgid
-      self_pgid="$(ps -o pgid= -p "$self" 2>/dev/null | tr -d ' ' || true)"
+      local pids=()
     
       while read -r pid cmd; do
         [ -z "${{pid:-}}" ] && continue
-        [ "$pid" = "$self" ] && continue
-    
-        local pgid
-        pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
-    
-        # Never kill the current launcher process group.
-        if [ -n "$self_pgid" ] && [ "$pgid" = "$self_pgid" ]; then
-          continue
-        fi
-
-        # The generated supervisor script contains every child command in its
-        # own "bash -lc ..." argv. A plain pgrep match against the full command
-        # line would therefore treat launcher shells as component processes.
+        [ "$pid" = "$$" ] && continue
+        [ "$pid" = "${{PPID:-}}" ] && continue
+        
         case "$cmd" in
-          *"[warehouse_bridge_stack]"*|*"safe_kill_pattern"*|*"start_if_missing"*)
+            *"[warehouse_bridge_stack]"*|*"safe_kill_pattern"*|*"start_if_missing"*)
             continue
             ;;
         esac
-    
+        
         echo "[warehouse_bridge_stack] killing stale pid=$pid pattern=$pattern cmd=$cmd"
         kill -s "$sig" "$pid" 2>/dev/null || true
+        pids+=("$pid")
       done < <(pgrep -af "$pattern" 2>/dev/null || true)
+      
+      if [ "${{#pids[@]}}" -eq 0 ]; then
+        return
+      fi
+      
+      local deadline=$((SECONDS + 3))
+      while (( SECONDS < deadline )); do
+        local alive=0
+        for pid in "${{pids[@]}}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                alive=1
+            fi
+        done
+        [ "$alive" = "0" ] && return 0
+        sleep 0.2
+      done
+      
+      for pid in "${{pids[@]}}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "[warehouse_bridge_stack] force killing stale pid=$pid pattern=$pattern"
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+      done    
+        
+
     }}
     
     start_if_missing() {{
@@ -371,9 +386,24 @@ class WarehouseBridgeStackProcessManager:
     
     source_ros
     
+    
     if [ "${{WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE}}" = "1" ]; then
       echo "[warehouse_bridge_stack] cleaning stale bridge processes"
+    
+      # HTTP bridge service
       safe_kill_pattern 'warehouse_bridge_service'
+    
+      # Gazebo bridge + wrapper script
+      safe_kill_pattern 'start_gazebo_sensor_bridge.sh'
+      safe_kill_pattern 'ros_gz_bridge'
+    
+      # Contract-topic producers / relays
+      safe_kill_pattern 'warehouse_topic_adapter'
+      safe_kill_pattern 'topic_tools relay.*warehouse'
+      safe_kill_pattern 'ros2 topic pub /imu'
+      safe_kill_pattern 'ros2 topic pub /warehouse/contract/imu'
+    
+      # TF / odometry helpers
       safe_kill_pattern 'warehouse_sim_tf_broadcaster'
       safe_kill_pattern 'warehouse_odometry_export'
     
@@ -382,9 +412,10 @@ class WarehouseBridgeStackProcessManager:
         safe_kill_pattern 'rosapi_node'
       fi
     
-      safe_kill_pattern 'ros_gz_bridge'
-      sleep 0.5
+      sleep 1.0
     fi
+    
+    
 
     if [ "${{WAREHOUSE_SKIP_BRIDGE_LAUNCH}}" != "1" ] && port_in_use "${{WAREHOUSE_ROS_BRIDGE_PORT}}"; then
       echo "[warehouse_bridge_stack] ERROR: port ${{WAREHOUSE_ROS_BRIDGE_PORT}} is occupied, but /health is not a valid warehouse bridge"
@@ -424,8 +455,10 @@ class WarehouseBridgeStackProcessManager:
       echo "[warehouse_bridge_stack] no managed children; keeping supervisor process alive"
       while true; do sleep 3600; done
     fi
-    
-    wait -n || exit "$?"
+
+    # Hold the supervisor open; background children (gz bridge, rosbridge, adapter) stay independent.
+    echo "[warehouse_bridge_stack] holding supervisor with ${{#children[@]}} background children"
+    while true; do sleep 3600; done
     """).strip()
 
     @classmethod
@@ -453,20 +486,33 @@ class WarehouseBridgeStackProcessManager:
 
         # Important for real Gazebo readiness, not only HTTP-process readiness.
         if env["WAREHOUSE_BRIDGE_FLOW"] == "gazebo":
+            # topic_adapter relays /warehouse/front/* -> /warehouse/contract/* (stable with stack).
+            env.setdefault("WAREHOUSE_GAZEBO_DIRECT_CONTRACT_BRIDGE", "0")
+            env.setdefault("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "0")
+            env.setdefault("WAREHOUSE_USE_SIM_TIME", "1")
+            env.setdefault("WAREHOUSE_TOPIC_INFO_TIMEOUT_S", "8.0")
+            env.setdefault("WAREHOUSE_TOPIC_HZ_TIMEOUT_S", "5.0")
+            env.setdefault("WAREHOUSE_BRIDGE_SUPERVISOR_DEEP_READY", "0")
+            env.setdefault("WAREHOUSE_HEALTH_REFRESH_INTERVAL_S", "8")
+            env.setdefault("WAREHOUSE_HEALTH_SAMPLE_MAX_AGE_S", "90")
             env.setdefault("WAREHOUSE_GAZEBO_REQUIRE_PUBLISHING", "0")
             env.setdefault("WAREHOUSE_GAZEBO_SENSOR_WAIT_S", "60")
             env.setdefault("WAREHOUSE_BRIDGE_WAIT_FOR_TOPICS", "0")
             env.setdefault("WAREHOUSE_GAZEBO_PROBE_ON_HEALTH", "1")
-        env.setdefault("WAREHOUSE_TF_PROBE_ON_HEALTH", "1")
-        env.setdefault("WAREHOUSE_BRIDGE_PYTHON", str(repo_root / ".venv/bin/python"))
-        env.setdefault("PYTHONNOUSERSITE", "0")
+            env.setdefault("WAREHOUSE_TF_PROBE_ON_HEALTH", "1")
+            env.setdefault("WAREHOUSE_TF_PROBE_TIMEOUT_S", "8.0")
+            env.setdefault("WAREHOUSE_BRIDGE_PYTHON", str(repo_root / ".venv/bin/python"))
+            env.setdefault("PYTHONNOUSERSITE", "0")
 
         bridge_up = cls._external_bridge_alive()
         rosbridge_up = cls._local_port_in_use(cls._rosbridge_port())
 
-        env["WAREHOUSE_SKIP_BRIDGE_LAUNCH"] = "1" if bridge_up else "0"
-        env["WAREHOUSE_SKIP_ROSBRIDGE_LAUNCH"] = "1" if rosbridge_up else "0"
-        env.setdefault("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "0" if bridge_up else "1")
+        clean_stale_raw = env.get("WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE", "1")
+        clean_stale = clean_stale_raw.strip().lower() in {"1", "true", "yes", "on"}
+        env["WAREHOUSE_PREFLIGHT_CLEAN_STALE_BRIDGE"] = "1" if clean_stale else "0"
+
+        env["WAREHOUSE_SKIP_BRIDGE_LAUNCH"] = "1" if bridge_up and not clean_stale else "0"
+        env["WAREHOUSE_SKIP_ROSBRIDGE_LAUNCH"] = "1" if rosbridge_up and not clean_stale else "0"
 
         return env
 

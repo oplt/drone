@@ -18,7 +18,10 @@ from backend.modules.warehouse.service.flight_health import (
     check_sensors,
     check_slam,
 )
-from backend.modules.warehouse.service.flight_readiness import evaluate_subsystems_from_components
+from backend.modules.warehouse.service.flight_readiness import (
+    evaluate_subsystems_from_components,
+    get_perception_stability_tracker,
+)
 from backend.modules.warehouse.service.readiness_result import (
     readiness_from_perception_status_strict,
 )
@@ -34,6 +37,7 @@ from backend.modules.warehouse.service.warehouse_vehicle_checks import (
     vehicle_runtime_from_parts,
 )
 from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
+from backend.modules.warehouse.service.localization_mode import resolve_localization_mode
 
 
 def _gazebo_sim_enabled(components: dict[str, Any] | None = None) -> bool:
@@ -115,7 +119,23 @@ def _tf_ok(
     tf_raw = components.get("tf_chain")
     if isinstance(tf_raw, dict):
         if tf_raw.get("chain_ok") is False:
-            return False, "Required TF chain missing"
+            if tf_raw.get("sim_clock_ready") is False:
+                return (
+                    False,
+                    str(
+                        tf_raw.get("detail")
+                        or "Waiting for Gazebo /clock (press Play or gz sim -r <world>.sdf)"
+                    ),
+                )
+            missing = tf_raw.get("missing_tf_edges") or []
+            expected = tf_raw.get("required_tf_edges") or []
+            if missing:
+                return (
+                    False,
+                    f"TF missing: {missing}"
+                    + (f" (expected {expected})" if expected else ""),
+                )
+            return False, "Required TF chain missing (odom→base_link→camera)"
         if tf_raw.get("chain_ok") is True:
             return True, None
     if tf_tree is True:
@@ -138,11 +158,24 @@ def _nvblox_category(components: dict[str, Any]) -> tuple[bool | None, str]:
 @dataclass(frozen=True)
 class WarehouseGoPreflight:
     ready_to_fly: bool
+    service_health: bool
+    ros_graph_ready: bool
+    sensors_ok: bool
+    localization_ok: bool
+    mapping_ok: bool | None
+    primary_blocker: str | None
+    blockers: list[str]
+    checks: list[dict[str, object]]
+    diagnostics_age_ms: int | None
+    mode: str
+    localization_mode: str
+    topic_health: dict[str, object]
+    tf_health: dict[str, object]
+    stability_window_ms: int
+    required_stability_window_ms: int
     bridge_ok: bool
     gazebo_ok: bool | None
-    sensors_ok: bool
     odom_ok: bool
-    localization_ok: bool
     tf_ok: bool
     nvblox_ok: bool | None
     stability_ok: bool
@@ -169,8 +202,22 @@ class WarehouseGoPreflight:
         return {
             "ready": self.ready_to_fly,
             "blocking": not self.ready_to_fly,
-            "checks": self.categories,
+            "checks": self.checks or [
+                {"id": key, "status": value} for key, value in self.categories.items()
+            ],
             "ready_to_fly": self.ready_to_fly,
+            "service_health": self.service_health,
+            "ros_graph_ready": self.ros_graph_ready,
+            "mapping_ok": self.mapping_ok,
+            "primary_blocker": self.primary_blocker,
+            "blockers": self.blockers,
+            "diagnostics_age_ms": self.diagnostics_age_ms,
+            "mode": self.mode,
+            "localization_mode": self.localization_mode,
+            "topic_health": self.topic_health,
+            "tf_health": self.tf_health,
+            "stability_window_ms": self.stability_window_ms,
+            "required_stability_window_ms": self.required_stability_window_ms,
             "bridge_ok": self.bridge_ok,
             "gazebo_ok": self.gazebo_ok,
             "sensors_ok": self.sensors_ok,
@@ -191,7 +238,7 @@ class WarehouseGoPreflight:
             "restart_count": self.restart_count,
             "diagnostics": self.diagnostics,
             "recommended_action": self.suggested_actions[0] if self.suggested_actions else None,
-            "blocking_reasons": self.blocking_reasons,
+            "blocking_reasons": self.blockers or self.blocking_reasons,
             "suggested_actions": self.suggested_actions,
             "categories": self.categories,
             "note": self.note,
@@ -341,9 +388,20 @@ async def evaluate_warehouse_go_preflight(
         bridge_supervisor_status = await ensure_warehouse_bridge_stack_for_preflight()
 
     config = WarehouseFlightConfig.from_env()
+    localization_mode = resolve_localization_mode()
     status = await fetch_warehouse_perception_status(deep=deep, force=force)
     components = status.components if isinstance(status.components, dict) else {}
-    components = {**components, "topic_profile": status.profile}
+    components = {
+        **components,
+        "topic_profile": status.profile,
+        "localization_mode": localization_mode.value,
+    }
+    if bridge_supervisor_status is not None:
+        components = {
+            **components,
+            "bridge_stack_running": bridge_supervisor_status.running,
+            "bridge_supervisor_state": bridge_supervisor_status.state,
+        }
     if not config.gazebo_sim and str(status.profile or "").lower() == "gazebo":
         config = replace(config, gazebo_sim=True)
     strict = readiness_from_perception_status_strict(status)
@@ -403,7 +461,15 @@ async def evaluate_warehouse_go_preflight(
     stability_ok = perception_stable_ms >= config.perception_required_stable_ms
     stability_remaining_ms = max(0, config.perception_required_stable_ms - perception_stable_ms)
 
-    bridge_api_reachable = bool(status.reachable and strict.bridge_alive)
+    stack_warming = bool(
+        bridge_supervisor_status
+        and bridge_supervisor_status.running
+        and bridge_supervisor_status.state
+        in {"starting", "process_running", "degraded"}
+    )
+    bridge_api_reachable = bool(
+        (status.reachable and strict.bridge_alive) or stack_warming
+    )
     bridge_ok = bridge_api_reachable and bridge.status != SubsystemStatus.FAIL
     bridge_flight_ready = bridge_api_reachable and bridge.status == SubsystemStatus.OK
     rgb_depth_imu_statuses = [
@@ -437,9 +503,15 @@ async def evaluate_warehouse_go_preflight(
         else:
             blocking.append(bridge.message or "ROS bridge unreachable")
         suggested.append("Click Warehouse Preflight to start the ROS bridge stack")
-    elif bridge.status in {SubsystemStatus.WARN, SubsystemStatus.WAITING, SubsystemStatus.UNKNOWN}:
+    elif stack_warming and not status.reachable:
+        blocking.append("Warehouse ROS bridge stack is starting")
+        suggested.append("Wait for bridge HTTP on port 8088 and Gazebo contract topics")
+    elif bridge.status in {SubsystemStatus.WAITING, SubsystemStatus.UNKNOWN}:
         blocking.append("Waiting for fresh bridge health sample")
         suggested.append("Wait for bridge health refresh to complete")
+    elif bridge.status == SubsystemStatus.WARN:
+        blocking.append(bridge.message or "Bridge health sample aging")
+        suggested.append("Wait for background ROS health probe or run preflight with deep refresh")
     if gazebo_ok is False and gazebo_reason:
         blocking.append(gazebo_reason)
         suggested.append("Start the selected warehouse bridge flow and wait for adapter topics")
@@ -591,6 +663,8 @@ async def evaluate_warehouse_go_preflight(
             "required_ms": config.perception_required_stable_ms,
             "remaining_ms": stability_remaining_ms,
             "last_reset_reason": stability_reset_reason,
+            "last_successful_stable_ms": get_perception_stability_tracker().last_successful_stable_ms,
+            "localization_mode": localization_mode.value,
             "tracking_ok": components.get("slam_tracking_ok"),
             "pose_quality_status": (
                 "WARN"
@@ -646,13 +720,42 @@ async def evaluate_warehouse_go_preflight(
     )
     bridge_restart_count = bridge_supervisor_status.restart_count if bridge_supervisor_status else 0
 
+    topic_health_payload = {
+        key: diag if isinstance(diag, dict) else {}
+        for key, diag in (components.get("topic_diagnostics") or {}).items()
+    }
+    tf_chain_raw = components.get("tf_chain")
+    tf_health_payload = (
+        tf_chain_raw
+        if isinstance(tf_chain_raw, dict)
+        else {"chain_ok": components.get("tf_tree"), "detail": tf_reason}
+    )
+    check_rows = [
+        {"id": key, "label": key, "status": value}
+        for key, value in categories.items()
+    ]
+    primary_blocker = deduped_blocking[0] if deduped_blocking else None
+
     return WarehouseGoPreflight(
         ready_to_fly=ready_to_fly,
+        service_health=bridge_api_reachable,
+        ros_graph_ready=bool(strict.ros_graph_ready),
+        sensors_ok=sensors_ok,
+        localization_ok=localization_ok,
+        mapping_ok=nvblox_ok,
+        primary_blocker=primary_blocker,
+        blockers=deduped_blocking,
+        checks=check_rows,
+        diagnostics_age_ms=_wall_health_sample_age_ms(components),
+        mode="preflight",
+        localization_mode=localization_mode.value,
+        topic_health=topic_health_payload,
+        tf_health=tf_health_payload,
+        stability_window_ms=perception_stable_ms,
+        required_stability_window_ms=config.perception_required_stable_ms,
         bridge_ok=bridge_ok,
         gazebo_ok=gazebo_ok,
-        sensors_ok=sensors_ok,
         odom_ok=odom_ok,
-        localization_ok=localization_ok,
         tf_ok=tf_ok,
         nvblox_ok=nvblox_ok,
         stability_ok=stability_ok,

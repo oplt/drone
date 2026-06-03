@@ -76,6 +76,10 @@ source_profiles:
     back_projected_depth: /nvblox_node/back_projected_depth
 
 aliases:
+  rgb_image:
+    - /warehouse/front/rgbd/image
+  depth:
+    - /warehouse/front/rgbd/depth_image
   raw_lidar:
     - /scan/points
     - /warehouse/front/rgbd/points

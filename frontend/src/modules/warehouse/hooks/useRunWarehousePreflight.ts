@@ -5,10 +5,10 @@ import {
   type WarehouseGoPreflight,
 } from "../api/warehousePreflightApi";
 
-const POLL_MS = 3000;
+const POLL_MS = 1000;
 const DEFAULT_TIMEOUT_MS = 120000;
 const TELEMETRY_STARTUP_MS = 1500;
-const DEEP_REFRESH_MS = 15000;
+const DEEP_REFRESH_MS = 30000;
 const TRANSIENT_FAILURE_KEYS = new Set(["stability"]);
 const TRANSIENT_STATUSES = new Set(["WAITING", "UNKNOWN"]);
 
@@ -120,7 +120,7 @@ export function useRunWarehousePreflight(token: string | null) {
               : "Drone telemetry connect failed.";
         }
 
-        let nextDeepRefreshAt = 0;
+        let nextDeepRefreshAt = Date.now() + DEEP_REFRESH_MS;
         while (!abortRef.current && Date.now() < deadline) {
           const now = Date.now();
           const useDeep = now >= nextDeepRefreshAt;

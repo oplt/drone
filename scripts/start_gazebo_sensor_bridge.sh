@@ -27,13 +27,17 @@ unset PYTHONPATH PYTHONHOME
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
 
 BRIDGE_MATCH='[r]os_gz_bridge/parameter_bridge.*/warehouse/front/rgbd/image'
+REUSE_EXISTING_BRIDGE="${WAREHOUSE_REUSE_EXISTING_GAZEBO_BRIDGE:-0}"
+
 if pgrep -f "${BRIDGE_MATCH}" >/dev/null 2>&1; then
   RGB_TOPIC="${WAREHOUSE_GAZEBO_RGB_TOPIC:-/warehouse/front/rgbd/image}"
-  if timeout 2 ros2 topic info "${RGB_TOPIC}" >/dev/null 2>&1; then
+
+  if [ "${REUSE_EXISTING_BRIDGE}" = "1" ] && timeout 2 ros2 topic info "${RGB_TOPIC}" >/dev/null 2>&1; then
     echo "[gazebo_sensor_bridge] bridge already running with ${RGB_TOPIC}; keeping it"
     exit 0
   fi
-  echo "[gazebo_sensor_bridge] stopping stale ros_gz_bridge instances..."
+
+  echo "[gazebo_sensor_bridge] stopping existing ros_gz_bridge instances..."
   pkill -f "${BRIDGE_MATCH}" || true
   sleep 1
 fi
@@ -85,36 +89,29 @@ _discover_imu_topic() {
 echo "[gazebo_sensor_bridge] waiting for external Gazebo on ${RGB_TOPIC} (up to ${WAIT_S}s)..."
 deadline=$((SECONDS + WAIT_S))
 saw_topic=0
+sensors_ok=0
 while (( SECONDS < deadline )); do
-  if _gazebo_listed "${RGB_TOPIC}"; then
-    saw_topic=1
-    if _gazebo_sensors_publishing; then
-      echo "[gazebo_sensor_bridge] Gazebo required sensors publishing"
-      break
-    fi
-    echo "[gazebo_sensor_bridge] topic listed but not publishing yet (press Play or use: gz sim -r <world>.sdf)"
-    if [ "${REQUIRE_PUBLISHING}" != "1" ]; then
-      echo "[gazebo_sensor_bridge] starting bridge anyway; ROS publishers appear once sim publishes"
-      break
-    fi
-  fi
-  sleep 2
-done
+   if _gazebo_listed "${RGB_TOPIC}"; then
+     saw_topic=1
 
-if ! _gazebo_listed "${RGB_TOPIC}"; then
-  if [ "${REQUIRE_PUBLISHING}" != "1" ]; then
-    echo "[gazebo_sensor_bridge] WARN: ${RGB_TOPIC} not found yet; starting bridge and waiting for Gazebo"
-  else
-    if (( saw_topic == 0 )); then
-      echo "[gazebo_sensor_bridge] ERROR: ${RGB_TOPIC} not found — start external Gazebo first" >&2
-    else
-      echo "[gazebo_sensor_bridge] ERROR: ${RGB_TOPIC} listed but never published within ${WAIT_S}s" >&2
-    fi
-    exit 1
-  fi
-fi
+     if _gazebo_sensors_publishing; then
+       sensors_ok=1
+       echo "[gazebo_sensor_bridge] Gazebo required sensors publishing"
+       break
+     fi
 
-if [ "${REQUIRE_PUBLISHING}" = "1" ] && ! _gazebo_sensors_publishing; then
+     echo "[gazebo_sensor_bridge] topic listed but not publishing yet (press Play or use: gz sim -r <world>.sdf)"
+
+     if [ "${REQUIRE_PUBLISHING}" != "1" ]; then
+       echo "[gazebo_sensor_bridge] starting bridge anyway; ROS publishers appear once sim publishes"
+       break
+     fi
+   fi
+   sleep 2
+ done
+
+
+if [ "${REQUIRE_PUBLISHING}" = "1" ] && [ "${sensors_ok}" != "1" ]; then
   echo "[gazebo_sensor_bridge] ERROR: Gazebo sensors idle after ${WAIT_S}s — start with gz sim -r or press Play" >&2
   echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${RGB_TOPIC}" >&2
   echo "[gazebo_sensor_bridge] Verify: gz topic -e -t ${DEPTH_TOPIC}" >&2
@@ -125,9 +122,10 @@ if [ "${REQUIRE_PUBLISHING}" = "1" ] && ! _gazebo_sensors_publishing; then
   exit 1
 fi
 
-if ! _gazebo_sensors_publishing; then
+if [ "${sensors_ok}" != "1" ]; then
   echo "[gazebo_sensor_bridge] WARN: Gazebo not publishing yet; bridge will relay once sim runs"
 fi
+
 
 IMU_TOPIC="$(_discover_imu_topic)"
 
@@ -146,13 +144,17 @@ trap 'cleanup TERM' EXIT
 trap 'cleanup INT; exit 130' INT
 trap 'cleanup TERM; exit 143' TERM
 
-_bridge_specs=(
+# ros_gz_bridge mirrors Gazebo-native topic names on ROS; warehouse_topic_adapter
+# relays those sources into /warehouse/contract/* for health and flight code.
+_gz_bridge_specs=(
+  "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
   "${RGB_TOPIC}@sensor_msgs/msg/Image[gz.msgs.Image"
   "${DEPTH_TOPIC}@sensor_msgs/msg/Image[gz.msgs.Image"
   "${CAMERA_INFO_TOPIC}@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"
   "${POINTS_TOPIC}@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked"
   "${ODOM_TOPIC}@nav_msgs/msg/Odometry[gz.msgs.Odometry"
 )
+_bridge_specs=("${_gz_bridge_specs[@]}")
 
 if [ -n "${IMU_TOPIC}" ] && _gazebo_listed "${IMU_TOPIC}"; then
   _bridge_specs+=("${IMU_TOPIC}@sensor_msgs/msg/Imu[gz.msgs.IMU")
@@ -192,12 +194,6 @@ if _gazebo_listed "/scan/points"; then
   _bridge_specs+=("/scan/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked")
 fi
 
-if [ -n "${WAREHOUSE_IMU_RELAY_SOURCE:-}" ]; then
-  echo "[gazebo_sensor_bridge] starting IMU relay ${WAREHOUSE_IMU_RELAY_SOURCE} -> /imu"
-  ros2 run topic_tools relay "${WAREHOUSE_IMU_RELAY_SOURCE}" /imu sensor_msgs/msg/Imu &
-  children+=("$!")
-fi
-
 echo "[gazebo_sensor_bridge] starting bridge ROS_DOMAIN_ID=${ROS_DOMAIN_ID} bridges=${#_bridge_specs[@]}"
 
 ros2 run ros_gz_bridge parameter_bridge \
@@ -207,4 +203,34 @@ ros2 run ros_gz_bridge parameter_bridge \
 bridge_pid="$!"
 children+=("${bridge_pid}")
 
-wait "${bridge_pid}"
+_wait_ros_publishers() {
+  local topic="$1"
+  local wait_s="${2:-15}"
+  local deadline=$((SECONDS + wait_s))
+  while (( SECONDS < deadline )); do
+    if timeout 3 ros2 topic info "${topic}" 2>/dev/null | grep -qE 'Publisher count: [1-9]'; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
+
+# Contract topics (/warehouse/contract/*) are published by warehouse_topic_adapter in the bridge stack.
+# Drop stale topic_tools relays so health probes see a single publisher per contract topic.
+pkill -f 'topic_tools relay.*warehouse/contract' 2>/dev/null || true
+
+# Sim time: /clock must publish before TF and depth probes can succeed.
+if ! _wait_ros_publishers "/clock" 20; then
+  echo "[gazebo_sensor_bridge] WARN: /clock not publishing yet; start Gazebo with gz sim -r or press Play" >&2
+fi
+_wait_ros_publishers "${RGB_TOPIC}" 20 \
+  || echo "[gazebo_sensor_bridge] WARN: ${RGB_TOPIC} has no ROS publisher yet; adapter will relay when sim publishes"
+
+# Stay alive while ros_gz_bridge runs.
+echo "[gazebo_sensor_bridge] watching ros_gz_bridge pid=${bridge_pid}"
+while kill -0 "${bridge_pid}" 2>/dev/null; do
+  sleep 2
+done
+echo "[gazebo_sensor_bridge] ros_gz_bridge exited" >&2
+exit 1

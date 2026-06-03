@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
 import httpx
 
 from backend.core.config.runtime import settings
-from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.warehouse.ports import (
     WarehouseExplorationSnapshot,
     WarehouseMappingStartRequest,
@@ -16,10 +16,35 @@ from backend.modules.warehouse.ports import (
     WarehousePerceptionStatus,
     WarehouseReplayStartRequest,
 )
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
 logger = logging.getLogger(__name__)
 
 _cached_port: WarehousePerceptionPort | None = None
+_BRIDGE_WARN_INTERVAL_S = 30.0
+_BRIDGE_WARN_AFTER_S = 20.0
+
+
+def _bridge_state_from_payload(
+    *,
+    reachable: bool,
+    ready: bool,
+    status: str,
+    components: dict[str, object],
+) -> tuple[str, str | None]:
+    if not reachable:
+        return "failed", "bridge_connect_failed"
+    if ready:
+        return "ready", None
+    if components.get("probe_in_progress") or components.get("diagnostics_pending"):
+        return "starting", "diagnostics_cache_warming"
+    if components.get("ros_graph") is False or int(components.get("ros_topic_count") or 0) == 0:
+        return "waiting_for_gazebo", "waiting_for_gazebo"
+    if components.get("missing_required_topics"):
+        return "degraded", "required_topics_missing"
+    if status in {"starting", "waiting_for_gazebo", "degraded", "failed"}:
+        return status, status
+    return "degraded", status or "bridge_degraded"
 
 def _json_dict(response: httpx.Response) -> dict[str, Any]:
     payload = response.json()
@@ -158,6 +183,8 @@ class HttpWarehousePerceptionPort:
         self.bridge_flow = bridge_flow
         self.timeout_s = timeout_s
         self.deep_timeout_s = deep_timeout_s
+        self._first_failure_at: float | None = None
+        self._last_warning_at = 0.0
         limits = httpx.Limits(max_connections=20, max_keepalive_connections=10)
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(deep_timeout_s, connect=min(2.0, timeout_s)),
@@ -185,13 +212,25 @@ class HttpWarehousePerceptionPort:
             payload = await self._get_json(path, timeout_s=timeout_s)
         except Exception as exc:
             detail = _format_http_error(exc, timeout_s=timeout_s)
-            logger.warning(
-                "Warehouse ROS bridge health check failed bridge_url=%s deep=%s error=%s",
-                self.bridge_url,
-                deep,
-                detail,
-                extra={"bridge_url": self.bridge_url, "deep": deep, "error": detail},
+            now = time.monotonic()
+            if self._first_failure_at is None:
+                self._first_failure_at = now
+            level = (
+                logging.WARNING
+                if now - self._first_failure_at >= _BRIDGE_WARN_AFTER_S
+                else logging.INFO
             )
+            if level == logging.INFO or now - self._last_warning_at >= _BRIDGE_WARN_INTERVAL_S:
+                logger.log(
+                    level,
+                    "Warehouse ROS bridge warming/unreachable bridge_url=%s deep=%s error=%s",
+                    self.bridge_url,
+                    deep,
+                    detail,
+                    extra={"bridge_url": self.bridge_url, "deep": deep, "error": detail},
+                )
+                if level == logging.WARNING:
+                    self._last_warning_at = now
             return WarehousePerceptionStatus(
                 configured=True,
                 reachable=False,
@@ -202,8 +241,13 @@ class HttpWarehousePerceptionPort:
                 websocket_url=self.websocket_url or None,
                 capture_root=self.capture_root,
                 detail=detail,
+                components={
+                    "warehouse_bridge_state": "not_started",
+                    "readiness_reason": "bridge_connect_failed",
+                },
             )
 
+        self._first_failure_at = None
         components = _as_dict(payload.get("components"))
         for bridge_field in (
                 "bridge_flow",
@@ -221,20 +265,38 @@ class HttpWarehousePerceptionPort:
             components["capabilities"] = payload.get("capabilities")
         ready = bool(payload.get("ready", payload.get("healthy", False)))
         status = _string(payload.get("status")) or ("ready" if ready else "degraded")
+        bridge_state, readiness_reason = _bridge_state_from_payload(
+            reachable=True,
+            ready=ready,
+            status=status,
+            components=components,
+        )
+        components["warehouse_bridge_state"] = bridge_state
+        if readiness_reason:
+            components["readiness_reason"] = readiness_reason
         if not ready:
-            logger.warning(
+            level = (
+                logging.INFO
+                if bridge_state in {"starting", "waiting_for_gazebo"}
+                else logging.WARNING
+            )
+            logger.log(
+                level,
                 (
                     "Warehouse ROS bridge reports degraded health status=%s topic_count=%s "
-                    "missing_required=%s missing_nvblox=%s probe_error=%s"
+                    "missing_required=%s missing_nvblox=%s probe_error=%s reason=%s"
                 ),
                 status,
                 components.get("ros_topic_count"),
                 components.get("missing_required_topics"),
                 components.get("missing_nvblox_topics"),
                 components.get("ros_topic_probe_error"),
+                readiness_reason,
                 extra={
                     "bridge_url": self.bridge_url,
                     "status": status,
+                    "warehouse_bridge_state": bridge_state,
+                    "readiness_reason": readiness_reason,
                     "ros_topic_count": components.get("ros_topic_count"),
                     "missing_required_topics": components.get("missing_required_topics"),
                     "missing_nvblox_topics": components.get("missing_nvblox_topics"),

@@ -66,6 +66,6 @@ describe("useRunWarehousePreflight", () => {
     expect(result.current.running).toBe(false);
     expect(result.current.error).toContain("Preflight blocked");
     expect(requests).toHaveLength(1);
-    expect(requests[0].searchParams.get("deep")).toBe("true");
+    expect(requests[0].searchParams.get("deep")).toBe("false");
   });
 });

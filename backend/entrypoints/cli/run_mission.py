@@ -1,5 +1,8 @@
 import asyncio
 import logging
+from uuid import uuid4
+import socket
+import os
 
 # from backend.infrastructure.messaging.opcua_server import DroneOpcUaServer
 from backend.core.config.runtime import settings, setup_logging
@@ -43,6 +46,18 @@ async def _build_orchestrator() -> Orchestrator:
         )
         mqtt = None
         try:
+            mqtt_client_id = (
+                    getattr(settings, "mqtt_client_id", None)
+                    or f"drone-backend-{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
+            )
+            logger.info(
+                "Creating MQTT publisher broker=%s:%s client_id=%s pid=%s",
+                settings.mqtt_broker,
+                settings.mqtt_port,
+                mqtt_client_id,
+                os.getpid(),
+            )
+
             mqtt = MqttPublisherAdapter(
                 settings.mqtt_broker,
                 settings.mqtt_port,
@@ -50,8 +65,9 @@ async def _build_orchestrator() -> Orchestrator:
                 settings.mqtt_pass,
                 # use_tls=settings.mqtt_use_tls,
                 # ca_certs=settings.mqtt_ca_certs or None,
-                client_id="drone-1",
+                client_id=mqtt_client_id,
             )
+
         except Exception as e:
             logger.warning(
                 "MQTT broker unavailable (%s:%s). Continuing without MQTT. Error: %s",

@@ -17,7 +17,10 @@ import {
   type MissionMapEngine,
   type TerraDrawEditorMode,
 } from "../../maps";
-import { useFieldBorderEditor, type MissionStatus } from "../../mission-workflow";
+import {
+  useFieldBorderEditor,
+  type MissionStatus,
+} from "../../mission-workflow";
 import { usePhotogrammetryMap } from "./usePhotogrammetryMap";
 import { usePhotogrammetryMapping } from "./usePhotogrammetryMapping";
 import { usePhotogrammetryMission } from "./usePhotogrammetryMission";
@@ -26,11 +29,13 @@ export function usePhotogrammetryPage() {
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(
-    null
+  const [pendingDeleteField, setPendingDeleteField] =
+    useState<FieldFeature | null>(null);
+  const [terraDrawMode, setTerraDrawMode] =
+    useState<TerraDrawEditorMode>("static");
+  const [mapEngine, setMapEngine] = useState<MissionMapEngine>(
+    DEFAULT_MISSION_MAP_ENGINE,
   );
-  const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("static");
-  const [mapEngine, setMapEngine] = useState<MissionMapEngine>(DEFAULT_MISSION_MAP_ENGINE);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const terraDrawRef = useRef<TerraDraw | null>(null);
@@ -39,7 +44,10 @@ export function usePhotogrammetryPage() {
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
+  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
+    /\/$/,
+    "",
+  );
 
   const {
     fields,
@@ -118,7 +126,7 @@ export function usePhotogrammetryPage() {
     selectedField:
       selectedFieldId == null
         ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
+        : (fields.find((f) => f.id === selectedFieldId) ?? null),
     mapEngine,
     addError,
     onMapEngineChange: handleMapEngineChange,
@@ -129,7 +137,9 @@ export function usePhotogrammetryPage() {
   const ensureFieldForMapping = useCallback(
     async (options?: { announce?: boolean }) => {
       if (!fieldBorder || fieldBorder.length < 3) {
-        throw new Error("Draw a field polygon (min 3 points) before continuing.");
+        throw new Error(
+          "Draw a field polygon (min 3 points) before continuing.",
+        );
       }
       if (!fieldName.trim()) {
         throw new Error("Please enter a field name before continuing.");
@@ -148,7 +158,7 @@ export function usePhotogrammetryPage() {
 
       return data;
     },
-    [createFieldRecord, fieldBorder, fieldName]
+    [createFieldRecord, fieldBorder, fieldName],
   );
 
   const mapping = usePhotogrammetryMapping({
@@ -168,8 +178,8 @@ export function usePhotogrammetryPage() {
     () =>
       selectedFieldId == null
         ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
-    [fields, selectedFieldId]
+        : (fields.find((f) => f.id === selectedFieldId) ?? null),
+    [fields, selectedFieldId],
   );
 
   const metrics = useMemo(() => {
@@ -182,14 +192,13 @@ export function usePhotogrammetryPage() {
 
   const selectField = useCallback(
     (f: FieldFeature) => {
-      map.handleMapEngineChange("google");
       setSelectedFieldId(f.id);
       setFieldName(f.name);
       setFieldBorder(f.ring);
       borderEditor.loadRingIntoEditor(f.ring);
       borderEditor.focusRingOnMap(f.ring);
     },
-    [borderEditor, map]
+    [borderEditor],
   );
 
   const handleSavedFieldSelect = useCallback(
@@ -201,7 +210,7 @@ export function usePhotogrammetryPage() {
       const field = fields.find((f) => f.id === fieldId);
       if (field) selectField(field);
     },
-    [borderEditor, fields, selectField]
+    [borderEditor, fields, selectField],
   );
 
   const handleNewField = useCallback(() => {

@@ -6,9 +6,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-42}"
 export ROS_DISTRO="${ROS_DISTRO:-jazzy}"
 
-STABLE_SECONDS="${WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS:-8000}"
-STABLE_SECONDS="$(("${STABLE_SECONDS}" / 1000))"
-HZ_TIMEOUT="${WAREHOUSE_TOPIC_HZ_TIMEOUT_S:-8}"
+STABLE_MS="${WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS:-8000}"
+STABLE_SECONDS="$(( (STABLE_MS + 999) / 1000 ))"
+HZ_TIMEOUT="${WAREHOUSE_TOPIC_HZ_TIMEOUT_S:-2}"
 POLL_S="${WAREHOUSE_READINESS_POLL_S:-0.5}"
 
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
@@ -17,11 +17,12 @@ if [ -f "${ROOT}/warehouse_ros2_ws/install/setup.bash" ]; then
 fi
 
 REQUIRED_TOPICS=(
-  "${WAREHOUSE_RGB_TOPIC:-/warehouse/front/rgbd/image}"
-  "${WAREHOUSE_DEPTH_TOPIC:-/warehouse/front/rgbd/depth_image}"
-  "${WAREHOUSE_IMU_TOPIC:-/imu}"
-  "${WAREHOUSE_ODOMETRY_TOPIC:-/warehouse/drone/odometry}"
+  "${WAREHOUSE_RGB_TOPIC:-/warehouse/contract/rgb/image}"
+  "${WAREHOUSE_DEPTH_TOPIC:-/warehouse/contract/depth/image}"
+  "${WAREHOUSE_IMU_TOPIC:-/warehouse/contract/imu}"
+  "${WAREHOUSE_ODOMETRY_TOPIC:-/warehouse/contract/odometry}"
 )
+
 
 _topic_publishing() {
   local topic="$1"
@@ -48,9 +49,6 @@ echo "Topics: ${REQUIRED_TOPICS[*]}"
 echo
 
 MAX_WAIT_S="${WAREHOUSE_PERCEPTION_CHECK_MAX_WAIT_S:-60}"
-
-STABLE_MS="${WAREHOUSE_PERCEPTION_REQUIRED_STABLE_MS:-8000}"
-STABLE_SECONDS="$(( (STABLE_MS + 999) / 1000 ))"
 
 started_at="$(date +%s)"
 stable_started=""

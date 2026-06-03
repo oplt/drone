@@ -27,13 +27,15 @@ export REDIS_PORT
 export RUN_MIGRATIONS
 export PYTHONNOUSERSITE
 export PYTHONDONTWRITEBYTECODE
+export WAREHOUSE_BRIDGE_PORT
+export ROSBRIDGE_PORT
 
 DEV_PROCS := redis backend frontend
 ifeq ($(OPEN_BROWSER),1)
 DEV_PROCS += browser
 endif
 
-.PHONY: local-dev local-dev-with-backend-env check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev
+.PHONY: local-dev local-dev-with-backend-env check-local-tools kill-dev kill-ports kill-workers kill-warehouse reset-frontend-cache reset-dev
 
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
@@ -49,6 +51,19 @@ kill-ports:
 	@fuser -k $(WAREHOUSE_BRIDGE_PORT)/tcp >/dev/null 2>&1 || true
 	@fuser -k $(ROSBRIDGE_PORT)/tcp >/dev/null 2>&1 || true
 
+kill-warehouse:
+	-pgrep -f "[w]arehouse_bridge.sh" | xargs -r kill
+	-pgrep -f "[s]tart_gazebo_sensor_bridge.sh" | xargs -r kill
+	-pgrep -f "[w]arehouse_mapping_bridge" | xargs -r kill
+	-pgrep -f "[i]saac_warehouse_mapping.launch.py" | xargs -r kill
+	-pgrep -f "[r]osbridge_websocket_launch.xml" | xargs -r kill
+	-sleep 1
+	-pgrep -f "[w]arehouse_bridge.sh" | xargs -r kill -9
+	-pgrep -f "[s]tart_gazebo_sensor_bridge.sh" | xargs -r kill -9
+	-pgrep -f "[w]arehouse_mapping_bridge" | xargs -r kill -9
+	-pgrep -f "[i]saac_warehouse_mapping.launch.py" | xargs -r kill -9
+	-pgrep -f "[r]osbridge_websocket_launch.xml" | xargs -r kill -9
+
 kill-dev:
 	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill
 	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill
@@ -57,8 +72,8 @@ kill-dev:
 	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill -9
 	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill -9
 	-pgrep -f "[r]edis-server --port $(REDIS_PORT)" | xargs -r kill -9
+	-$(MAKE) -f Makefile.local kill-warehouse
 	-$(MAKE) -f Makefile.local kill-ports
-
 
 kill-workers:
 	-pgrep -f "[c]elery.*backend.entrypoints.workers.celery_app" | xargs -r kill

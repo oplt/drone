@@ -20,6 +20,7 @@ from backend.modules.warehouse.service.flight_health import (
     check_slam,
 )
 from backend.modules.warehouse.service.perception_stability import (
+    diagnostics_probe_pending,
     get_perception_stability_tracker,
     perception_core_ok,
 )
@@ -326,7 +327,26 @@ def evaluate_subsystems_from_components(
         require_nvblox=config.require_nvblox_for_autonomy,
         mapping_stack_running=mapping_stack_running,
     )
-    perception_stable_ms = perception_tracker.stable_for_ms(perception_ok=core_ok)
+    stability_reset_reason: str | None = None
+    if not core_ok:
+        if diagnostics_probe_pending(components):
+            stability_reset_reason = "ROS diagnostics cache is warming"
+        elif bridge.status != SubsystemStatus.OK:
+            stability_reset_reason = f"bridge status is {bridge.status.value}"
+        elif sensors.status == SubsystemStatus.FAIL:
+            stability_reset_reason = sensors.message
+        elif slam.status == SubsystemStatus.FAIL:
+            stability_reset_reason = slam.message
+        elif (
+            config.require_nvblox_for_autonomy
+            and mapping_stack_running
+            and nvblox.status != SubsystemStatus.OK
+        ):
+            stability_reset_reason = nvblox.message
+    perception_stable_ms = perception_tracker.stable_for_ms(
+        perception_ok=core_ok,
+        reset_reason=stability_reset_reason,
+    )
     perception_tracker.maybe_log_progress(
         stable_ms=perception_stable_ms,
         required_ms=config.perception_required_stable_ms,

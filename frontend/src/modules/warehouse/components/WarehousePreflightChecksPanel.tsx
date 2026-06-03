@@ -54,7 +54,11 @@ function statusIcon(value: string) {
     return <CheckCircleOutlineRoundedIcon fontSize="small" color="success" />;
   if (value === "FAIL")
     return <HighlightOffRoundedIcon fontSize="small" color="error" />;
-  if (value === "WARN")
+  if (value === "DEFERRED")
+    return <PendingRoundedIcon fontSize="small" color="info" />;
+  if (value === "WARMING" || value === "WAITING")
+    return <PendingRoundedIcon fontSize="small" color="warning" />;
+  if (value === "WARN" || value === "STALE")
     return <PendingRoundedIcon fontSize="small" color="warning" />;
   return <PendingRoundedIcon fontSize="small" color="warning" />;
 }
@@ -65,7 +69,17 @@ function statusLabel(value: string) {
   if (value === "WARN") return "WARN";
   if (value === "DEFERRED") return "DEFERRED";
   if (value === "WAITING") return "WAITING";
+  if (value === "WARMING") return "WARMING";
+  if (value === "STALE") return "STALE";
   return value;
+}
+
+function cardAccent(value: string): string | undefined {
+  if (value === "OK") return "success.light";
+  if (value === "FAIL") return "error.light";
+  if (value === "DEFERRED") return "info.light";
+  if (value === "WAITING" || value === "WARMING") return "warning.light";
+  return undefined;
 }
 
 type Props = {
@@ -103,6 +117,10 @@ export function WarehousePreflightChecksPanel({
     preflight?.diagnostics?.stability?.last_reset_reason;
   const topicCategories = preflight?.diagnostics?.topics?.by_category ?? {};
 
+  const diagnosticsAgeMs = preflight?.diagnostics_age_ms;
+  const diagnosticsStale =
+    typeof diagnosticsAgeMs === "number" && diagnosticsAgeMs > 5000;
+
   return (
     <Box
       sx={{
@@ -110,6 +128,7 @@ export function WarehousePreflightChecksPanel({
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 1,
+        overflow: "visible",
       }}
     >
       <Stack spacing={1.25}>
@@ -118,11 +137,36 @@ export function WarehousePreflightChecksPanel({
           {preflight && (
             <Chip
               size="small"
-              label={preflight.ready_to_fly ? "PASSED" : "NOT READY"}
+              label={preflight.ready_to_fly ? "READY TO FLY" : "NOT READY TO FLY"}
               color={preflight.ready_to_fly ? "success" : "warning"}
+              sx={{ fontWeight: 700 }}
             />
           )}
+          {preflight?.localization_mode && (
+            <Chip size="small" variant="outlined" label={preflight.localization_mode} />
+          )}
         </Stack>
+
+        {preflight && (
+          <Alert
+            severity={preflight.ready_to_fly ? "success" : "warning"}
+            sx={{ py: 0.5, "& .MuiAlert-message": { width: "100%" } }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Ready to fly: {preflight.ready_to_fly ? "YES" : "NO"}
+            </Typography>
+            {!preflight.ready_to_fly && preflight.primary_blocker && (
+              <Typography variant="body2" sx={{ mt: 0.5, wordBreak: "break-word" }}>
+                Primary blocker: {preflight.primary_blocker}
+              </Typography>
+            )}
+            {diagnosticsStale && (
+              <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>
+                Diagnostics sample stale ({diagnosticsAgeMs}ms old)
+              </Typography>
+            )}
+          </Alert>
+        )}
 
         <Typography variant="caption" color="text.secondary">
           Polls telemetry, ROS, battery, and perception stability (~
@@ -230,6 +274,8 @@ export function WarehousePreflightChecksPanel({
                   border: "1px solid",
                   borderColor: "divider",
                   minWidth: 0,
+                  bgcolor: cardAccent(value),
+                  opacity: !preflight?.ready_to_fly && value === "OK" ? 0.85 : 1,
                 }}
               >
                 {statusIcon(value)}
@@ -246,30 +292,52 @@ export function WarehousePreflightChecksPanel({
           </Box>
         )}
 
-        {preflight?.blocking_reasons?.length ? (
+        {preflight && !preflight.ready_to_fly ? (
+          <Stack spacing={0.75}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Root causes
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Stability {stableMs}ms / {requiredMs}ms
+              {stabilityResetReason ? ` · reset: ${stabilityResetReason}` : ""}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              TF: {preflight.tf_ok ? "odom → base_link OK" : preflight.categories?.tf ?? "missing"}
+            </Typography>
+            {preflight.diagnostics?.stability?.odometry_topic ? (
+              <Typography variant="caption" color="text.secondary">
+                Odometry: {preflight.diagnostics.stability.odometry_topic}
+              </Typography>
+            ) : null}
+          </Stack>
+        ) : null}
+
+        {(preflight?.blockers?.length || preflight?.blocking_reasons?.length) ? (
           <Stack spacing={0.5}>
-            {preflight.blocking_reasons.map((reason, index) => (
+            {(preflight.blockers ?? preflight.blocking_reasons).map((reason, index) => (
               <Accordion
-                key={reason}
+                key={`${index}-${reason}`}
                 disableGutters
                 elevation={0}
-                sx={{ border: "1px solid", borderColor: "divider" }}
+                sx={{ border: "1px solid", borderColor: "divider", overflow: "visible" }}
               >
                 <AccordionSummary
                   expandIcon={<ExpandMoreRoundedIcon fontSize="small" />}
+                  sx={{ overflow: "visible", "& .MuiAccordionSummary-content": { minWidth: 0 } }}
                 >
                   <Stack
                     direction="row"
                     spacing={1}
-                    alignItems="center"
-                    sx={{ minWidth: 0 }}
+                    alignItems="flex-start"
+                    sx={{ minWidth: 0, width: "100%", pl: 0.25 }}
                   >
                     <Chip
                       size="small"
                       color="warning"
                       label={`Blocker ${index + 1}`}
+                      sx={{ flexShrink: 0 }}
                     />
-                    <Typography variant="body2" noWrap>
+                    <Typography variant="body2" sx={{ wordBreak: "break-word", flex: 1 }}>
                       {reason}
                     </Typography>
                   </Stack>

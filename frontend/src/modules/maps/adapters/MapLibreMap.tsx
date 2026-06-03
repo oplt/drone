@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Box, Typography } from "@mui/material";
 import type { Map as MapLibreMapInstance, Marker } from "maplibre-gl";
 import type { Feature, Geometry } from "geojson";
@@ -6,13 +6,12 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
 import {
   closeRing,
-  completeShape,
-  moveTwoCornerShapePreview,
   shapePreview,
   type ShapeDrawMode,
   type ShapeDrawResult,
 } from "../../../modules/maps/utils/drawingShapes";
-import { handleFlatMapShapeClick } from "../utils/flatMapShapeClick";
+import droneIconUrl from "../../../assets/Drone.svg?url";
+import { useFlatMapDrawing } from "../hooks/useFlatMapDrawing";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt?: number };
@@ -64,6 +63,23 @@ function makeMarkerElement(label: string, color: string) {
   return el;
 }
 
+function makeDroneMarkerElement() {
+  const el = document.createElement("div");
+  el.style.width = "40px";
+  el.style.height = "40px";
+  el.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
+
+  const img = document.createElement("img");
+  img.src = droneIconUrl;
+  img.alt = "Drone";
+  img.style.width = "40px";
+  img.style.height = "40px";
+  img.style.display = "block";
+  el.appendChild(img);
+
+  return el;
+}
+
 export default function MapLibreMap({
   center,
   zoom,
@@ -81,20 +97,21 @@ export default function MapLibreMap({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMapInstance | null>(null);
   const markersRef = useRef<Marker[]>([]);
-  const drawingRef = useRef<LonLat[]>([]);
-  const freehandDrawingRef = useRef(false);
-  const drawModeRef = useRef(drawMode);
-  const onDrawCompleteRef = useRef(onDrawComplete);
-  const onPickRef = useRef(onPickLatLng);
+  const setDrawingModeState = useCallback((mode: FlatDrawMode) => {
+    if (!mapRef.current) return;
+    if (mode === "none") mapRef.current.doubleClickZoom.enable();
+    else mapRef.current.doubleClickZoom.disable();
+  }, []);
+  const drawing = useFlatMapDrawing({
+    drawMode,
+    onDrawComplete,
+    onPickLatLng,
+    onPreview: updateDrawingPreview,
+    onModeStateChange: setDrawingModeState,
+  });
 
-  useEffect(() => {
-    onPickRef.current = onPickLatLng;
-  }, [onPickLatLng]);
-  function updateDrawingPreview(
-    map: MapLibreMapInstance | null,
-    mode: FlatDrawMode,
-    coords: LonLat[],
-  ) {
+  function updateDrawingPreview(mode: FlatDrawMode, coords: LonLat[]) {
+    const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
     const previewCoords = shapePreview(mode, coords);
     const features: MapFeature[] = coords.map(([lng, lat]) => ({
@@ -109,7 +126,12 @@ export default function MapLibreMap({
         geometry: { type: "LineString", coordinates: previewCoords },
       });
     }
-    if (["polygon", "rectangle", "circle", "triangle", "freehand"].includes(mode) && previewCoords.length >= 3) {
+    if (
+      ["polygon", "rectangle", "circle", "triangle", "freehand"].includes(
+        mode,
+      ) &&
+      previewCoords.length >= 3
+    ) {
       features.push({
         type: "Feature",
         properties: { kind: "polygon" },
@@ -118,7 +140,9 @@ export default function MapLibreMap({
     }
 
     const data = { type: "FeatureCollection" as const, features };
-    const source = map.getSource(drawSourceId) as maplibregl.GeoJSONSource | undefined;
+    const source = map.getSource(drawSourceId) as
+      | maplibregl.GeoJSONSource
+      | undefined;
     if (source) {
       source.setData(data);
       return;
@@ -137,7 +161,11 @@ export default function MapLibreMap({
       type: "line",
       source: drawSourceId,
       filter: ["in", ["get", "kind"], ["literal", ["line", "polygon"]]],
-      paint: { "line-color": "#1976d2", "line-width": 3, "line-dasharray": [2, 2] },
+      paint: {
+        "line-color": "#1976d2",
+        "line-width": 3,
+        "line-dasharray": [2, 2],
+      },
     });
     map.addLayer({
       id: drawPointLayerId,
@@ -154,20 +182,6 @@ export default function MapLibreMap({
   }
 
   useEffect(() => {
-    drawModeRef.current = drawMode;
-    drawingRef.current = [];
-    updateDrawingPreview(mapRef.current, drawMode, []);
-    if (mapRef.current) {
-      if (drawMode === "none") mapRef.current.doubleClickZoom.enable();
-      else mapRef.current.doubleClickZoom.disable();
-    }
-  }, [drawMode]);
-
-  useEffect(() => {
-    onDrawCompleteRef.current = onDrawComplete;
-  }, [onDrawComplete]);
-
-  useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
@@ -177,67 +191,29 @@ export default function MapLibreMap({
       style: "https://tiles.stadiamaps.com/styles/alidade_smooth.json",
     });
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(
+      new maplibregl.NavigationControl({ visualizePitch: true }),
+      "top-right",
+    );
     map.once("load", () => {
       setTimeout(() => map.resize(), 0);
-      updateDrawingPreview(map, drawModeRef.current, drawingRef.current);
+      updateDrawingPreview("none", []);
     });
     map.on("click", (event: maplibregl.MapMouseEvent) => {
-      const mode = drawModeRef.current;
-      if (mode !== "none") {
-        const coord: LonLat = [event.lngLat.lng, event.lngLat.lat];
-        if (mode === "point") {
-          onDrawCompleteRef.current?.({ type: "point", coordinates: coord });
-          return;
-        }
-        if (mode === "freehand") return;
-        drawingRef.current = handleFlatMapShapeClick(
-          mode,
-          coord,
-          drawingRef.current,
-          (coords) => updateDrawingPreview(map, mode, coords),
-          finishDrawing,
-        );
-        return;
-      }
-      onPickRef.current?.({ lat: event.lngLat.lat, lng: event.lngLat.lng });
+      drawing.handleClick([event.lngLat.lng, event.lngLat.lat]);
     });
-    const finishDrawing = () => {
-      const mode = drawModeRef.current;
-      const coords = drawingRef.current;
-      const result = completeShape(mode, coords);
-      if (result) onDrawCompleteRef.current?.(result);
-      drawingRef.current = [];
-      freehandDrawingRef.current = false;
-      updateDrawingPreview(map, mode, []);
-    };
     map.on("mousedown", (event: maplibregl.MapMouseEvent) => {
-      if (drawModeRef.current !== "freehand") return;
-      freehandDrawingRef.current = true;
-      map.dragPan.disable();
-      drawingRef.current = [[event.lngLat.lng, event.lngLat.lat]];
-      updateDrawingPreview(map, "freehand", drawingRef.current);
+      if (drawing.startFreehand([event.lngLat.lng, event.lngLat.lat]))
+        map.dragPan.disable();
     });
     map.on("mousemove", (event: maplibregl.MapMouseEvent) => {
-      const mode = drawModeRef.current;
-      const coord: LonLat = [event.lngLat.lng, event.lngLat.lat];
-      const twoCornerPreview = moveTwoCornerShapePreview(mode, drawingRef.current, coord);
-      if (twoCornerPreview) {
-        drawingRef.current = twoCornerPreview;
-        updateDrawingPreview(map, mode, drawingRef.current);
-        return;
-      }
-      if (mode !== "freehand" || !freehandDrawingRef.current) return;
-      drawingRef.current = [...drawingRef.current, coord];
-      updateDrawingPreview(map, mode, drawingRef.current);
+      drawing.movePointer([event.lngLat.lng, event.lngLat.lat]);
     });
     map.on("mouseup", () => {
-      if (drawModeRef.current !== "freehand" || !freehandDrawingRef.current) return;
-      map.dragPan.enable();
-      finishDrawing();
+      if (drawing.endFreehand()) map.dragPan.enable();
     });
-    map.on("dblclick", finishDrawing);
-    map.on("contextmenu", finishDrawing);
+    map.on("dblclick", drawing.finishDrawing);
+    map.on("contextmenu", drawing.finishDrawing);
     mapRef.current = map;
 
     return () => {
@@ -246,7 +222,7 @@ export default function MapLibreMap({
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [drawing]);
 
   useEffect(() => {
     mapRef.current?.jumpTo({ center: [center.lng, center.lat], zoom });
@@ -266,7 +242,9 @@ export default function MapLibreMap({
 
     waypoints.forEach((point, index) => {
       markersRef.current.push(
-        new maplibregl.Marker({ element: makeMarkerElement(String(index + 1), "#1976d2") })
+        new maplibregl.Marker({
+          element: makeMarkerElement(String(index + 1), "#1976d2"),
+        })
           .setLngLat([point.lon, point.lat])
           .addTo(map),
       );
@@ -274,7 +252,7 @@ export default function MapLibreMap({
 
     if (droneCenter) {
       markersRef.current.push(
-        new maplibregl.Marker({ element: makeMarkerElement("D", "#1976d2") })
+        new maplibregl.Marker({ element: makeDroneMarkerElement() })
           .setLngLat([droneCenter.lng, droneCenter.lat])
           .addTo(map),
       );
@@ -304,7 +282,9 @@ export default function MapLibreMap({
               features: [],
             };
 
-      const source = map.getSource(routeSourceId) as maplibregl.GeoJSONSource | undefined;
+      const source = map.getSource(routeSourceId) as
+        | maplibregl.GeoJSONSource
+        | undefined;
       if (source) {
         source.setData(data);
         return;
@@ -340,7 +320,10 @@ export default function MapLibreMap({
         features.push({
           type: "Feature",
           properties: { kind: "field" },
-          geometry: { type: "Polygon", coordinates: [[...fieldBoundary, fieldBoundary[0]]] },
+          geometry: {
+            type: "Polygon",
+            coordinates: [[...fieldBoundary, fieldBoundary[0]]],
+          },
         });
       }
       exclusionZones.forEach((zone) => {
@@ -360,7 +343,9 @@ export default function MapLibreMap({
       }
 
       const data = { type: "FeatureCollection" as const, features };
-      const source = map.getSource(overlaySourceId) as maplibregl.GeoJSONSource | undefined;
+      const source = map.getSource(overlaySourceId) as
+        | maplibregl.GeoJSONSource
+        | undefined;
       if (source) {
         source.setData(data);
         return;
@@ -373,8 +358,18 @@ export default function MapLibreMap({
         source: overlaySourceId,
         filter: ["==", ["geometry-type"], "Polygon"],
         paint: {
-          "fill-color": ["case", ["==", ["get", "kind"], "exclusion"], "#d32f2f", "#1565c0"],
-          "fill-opacity": ["case", ["==", ["get", "kind"], "exclusion"], 0.24, 0.12],
+          "fill-color": [
+            "case",
+            ["==", ["get", "kind"], "exclusion"],
+            "#d32f2f",
+            "#1565c0",
+          ],
+          "fill-opacity": [
+            "case",
+            ["==", ["get", "kind"], "exclusion"],
+            0.24,
+            0.12,
+          ],
         },
       });
       map.addLayer({
@@ -418,5 +413,7 @@ export default function MapLibreMap({
     );
   }
 
-  return <div ref={hostRef} style={{ width: "100%", height, minHeight: 320 }} />;
+  return (
+    <div ref={hostRef} style={{ width: "100%", height, minHeight: 320 }} />
+  );
 }

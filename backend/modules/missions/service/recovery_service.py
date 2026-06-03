@@ -15,6 +15,9 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import text
+
+from backend.core.database.session import Session
 from backend.modules.missions.command_repository import operator_command_repo
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.missions.repository import mission_runtime_repo
@@ -38,10 +41,14 @@ async def recover_interrupted_missions(orchestrator: Any) -> None:
     * Persist a synthetic ``operator_command`` audit row so the incident is
       traceable in the command history.
     """
+    if not await _database_available():
+        logger.warning("restart_recovery: database unavailable; skipping recovery check")
+        return
+
     try:
         active_row = await mission_runtime_repo.get_active()
-    except Exception:
-        logger.exception("restart_recovery: failed to query active mission runtime")
+    except Exception as exc:
+        logger.warning("restart_recovery: failed to query active mission runtime: %s", exc)
         return
 
     if active_row is None:
@@ -124,6 +131,15 @@ async def recover_interrupted_missions(orchestrator: Any) -> None:
         active_row.client_flight_id,
         active_row.state,
     )
+
+
+async def _database_available() -> bool:
+    try:
+        async with Session() as session:
+            await session.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 def _restore_orchestrator_context(orchestrator: Any, row: Any) -> None:

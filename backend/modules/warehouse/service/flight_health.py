@@ -8,6 +8,11 @@ from typing import Any
 from backend.modules.vehicle_runtime.types import Telemetry
 from backend.modules.warehouse.ports import WarehousePerceptionStatus
 from backend.modules.warehouse.service.flight_config import WarehouseFlightConfig
+from backend.modules.warehouse.service.localization_mode import (
+    LocalizationMode,
+    resolve_localization_mode,
+    tracking_status_for_mode,
+)
 from backend.modules.warehouse.service.readiness_result import (
     _topic_diag,
     topic_is_strictly_live,
@@ -103,6 +108,17 @@ def check_bridge(
             "Warehouse ROS bridge not configured",
         )
     if not status.reachable:
+        bridge_state = str(components.get("warehouse_bridge_state") or "").strip().lower()
+        if components.get("bridge_stack_running") or bridge_state in {
+            "starting",
+            "waiting_for_gazebo",
+            "process_running",
+        }:
+            return SubsystemHealth(
+                SubsystemStatus.WAITING,
+                "Warehouse ROS bridge starting (HTTP not ready yet)",
+                details={"warehouse_bridge_state": bridge_state or "starting"},
+            )
         return SubsystemHealth(
             SubsystemStatus.FAIL,
             "Warehouse ROS bridge unreachable",
@@ -120,6 +136,13 @@ def check_bridge(
         or 30_000
     )
     if last_seen_ms is not None and last_seen_ms > max_sample_age_ms:
+        if components.get("probe_in_progress") or components.get("diagnostics_pending"):
+            return SubsystemHealth(
+                SubsystemStatus.WAITING,
+                "Bridge health refresh in progress",
+                last_seen_ms=last_seen_ms,
+                details={"max_age_ms": max_sample_age_ms},
+            )
         return SubsystemHealth(
             SubsystemStatus.WARN,
             "Bridge health sample aging",
@@ -383,49 +406,155 @@ def check_sensors(
     return SubsystemHealth(SubsystemStatus.OK, "Sensor streams fresh", details=details)
 
 
+def _tf_chain_ok(components: dict[str, Any]) -> tuple[bool, str | None]:
+    tf_raw = components.get("tf_chain")
+    if isinstance(tf_raw, dict):
+        if tf_raw.get("chain_ok") is False:
+            missing = tf_raw.get("missing_tf_edges") or []
+            if missing:
+                return False, f"TF missing: {missing}"
+            return False, "Required TF chain missing (odom→base_link→camera)"
+        if tf_raw.get("chain_ok") is True:
+            return True, None
+    if components.get("tf_tree") is False:
+        return False, "TF tree invalid"
+    if components.get("tf_tree") is True:
+        return True, None
+    return True, None
+
+
 def check_slam(
     components: dict[str, Any],
     config: WarehouseFlightConfig,
     *,
     stable_for_ms: int = 0,
 ) -> SubsystemHealth:
+    mode_raw = components.get("localization_mode")
+    if isinstance(mode_raw, str):
+        try:
+            mode = LocalizationMode(mode_raw)
+        except ValueError:
+            mode = resolve_localization_mode()
+    else:
+        mode = resolve_localization_mode()
     odom_display = odometry_display_name(components, gazebo_sim=config.gazebo_sim)
+    details: dict[str, Any] = {
+        "localization_mode": mode.value,
+        "odometry_display_name": odom_display,
+        "stable_for_ms": stable_for_ms,
+        "required_stable_ms": config.slam_required_stable_ms,
+    }
+
     if components.get("odometry_state_unreadable"):
         return SubsystemHealth(
             SubsystemStatus.FAIL,
             f"Localization odometry unreadable ({odom_display})",
-            details={"odometry_display_name": odom_display},
+            details=details,
         )
 
     odom_state = components.get("local_odometry_state")
     odom_dict = odom_state if isinstance(odom_state, dict) else {}
-    tracking_ok = components.get("slam_tracking_ok")
-    if tracking_ok is None:
-        tracking_ok = odom_dict.get("slam_tracking_ok")
-    if tracking_ok is False:
-        return SubsystemHealth(
-            SubsystemStatus.FAIL,
-            "SLAM tracking lost",
-            details={
-                "stable_for_ms": stable_for_ms,
-                "required_stable_ms": config.slam_required_stable_ms,
-                "odometry_display_name": odom_display,
-            },
-        )
-
     odom_health = evaluate_local_odometry(
         components,
         max_age_s=config.odometry_max_age_s,
         gazebo_sim=config.gazebo_sim,
         strict_topic=True,
     )
+    details["odometry_age_s"] = odom_health.age_s
     if not odom_health.fresh:
         return SubsystemHealth(
             SubsystemStatus.FAIL,
             f"Localization odometry unavailable ({odom_health.display_name})",
+            details={**details, "max_age_s": config.odometry_max_age_s},
+        )
+
+    tf_ok, tf_reason = _tf_chain_ok(components)
+    if not tf_ok:
+        return SubsystemHealth(
+            SubsystemStatus.FAIL,
+            tf_reason or "TF chain unavailable",
+            details=details,
+        )
+
+    frame_id = str(odom_dict.get("frame_id") or "")
+    child_frame = str(odom_dict.get("child_frame_id") or "")
+    tf_raw = components.get("tf_chain")
+    expected_base = (
+        str(tf_raw.get("base_link_frame"))
+        if isinstance(tf_raw, dict) and tf_raw.get("base_link_frame")
+        else ("iris_with_standoffs/base_link" if config.gazebo_sim else "base_link")
+    )
+    acceptable_child_frames = {expected_base, "base_link", "iris_with_standoffs/base_link"}
+    if frame_id and frame_id not in {"odom", ""}:
+        return SubsystemHealth(
+            SubsystemStatus.FAIL,
+            f"Odometry frame must be odom (got {frame_id})",
+            details={**details, "frame_id": frame_id, "child_frame_id": child_frame},
+        )
+    if child_frame and child_frame not in acceptable_child_frames:
+        return SubsystemHealth(
+            SubsystemStatus.FAIL,
+            f"Odometry child frame must be {expected_base} (got {child_frame})",
             details={
-                "odometry_age_s": odom_health.age_s,
-                "max_age_s": config.odometry_max_age_s,
+                **details,
+                "frame_id": frame_id,
+                "child_frame_id": child_frame,
+                "expected_base_link": expected_base,
+            },
+        )
+
+    tracking_ok = components.get("slam_tracking_ok")
+    if tracking_ok is None:
+        tracking_ok = odom_dict.get("slam_tracking_ok")
+    tracking_status = odom_dict.get("slam_tracking_status")
+    details["tracking_status"] = tracking_status
+
+    if mode == LocalizationMode.GAZEBO_GROUND_TRUTH:
+        details["tracking_status"] = tracking_status_for_mode(
+            mode,
+            tracking_ok=True,
+        )
+        return SubsystemHealth(
+            SubsystemStatus.OK,
+            f"Gazebo ground-truth odometry trusted ({odom_display})",
+            details=details,
+        )
+
+    vslam_diag = _topic_diag(components, "visual_slam_odom")
+    if vslam_diag is None:
+        return SubsystemHealth(
+            SubsystemStatus.FAIL,
+            "No SLAM/VIO odometry topic configured",
+            details={**details, "failure": "no_slam_odometry_topic"},
+        )
+    if vslam_diag.get("readiness_state") == "topic_missing":
+        return SubsystemHealth(
+            SubsystemStatus.FAIL,
+            "SLAM odometry topic missing",
+            details={**details, "failure": "slam_topic_missing"},
+        )
+    if not topic_is_strictly_live(vslam_diag):
+        state = vslam_diag.get("readiness_state")
+        if state in {"no_messages", "unhealthy", "probe_error"}:
+            return SubsystemHealth(
+                SubsystemStatus.FAIL,
+                "SLAM odometry topic stale or not publishing",
+                details={**details, "failure": "slam_topic_stale"},
+            )
+
+    if tracking_ok is False:
+        status_label = (
+            str(tracking_status)
+            if isinstance(tracking_status, str) and tracking_status
+            else "TRACKING_LOST"
+        )
+        return SubsystemHealth(
+            SubsystemStatus.FAIL,
+            f"SLAM tracking lost ({status_label})",
+            details={
+                **details,
+                "failure": "tracking_lost",
+                "tracking_status": status_label,
             },
         )
 
@@ -434,18 +563,14 @@ def check_slam(
         return SubsystemHealth(
             SubsystemStatus.WARN,
             "SLAM localization confidence low",
-            details={"localization_confidence": confidence},
+            details={**details, "localization_confidence": confidence},
         )
 
+    details["tracking_status"] = tracking_status_for_mode(mode, tracking_ok=True)
     return SubsystemHealth(
         SubsystemStatus.OK,
-        f"Localization tracking via {odom_display}",
-        details={
-            "localization_confidence": confidence,
-            "odometry_display_name": odom_display,
-            "stable_for_ms": stable_for_ms,
-            "required_stable_ms": config.slam_required_stable_ms,
-        },
+        f"Visual SLAM tracking via {odom_display}",
+        details=details,
     )
 
 

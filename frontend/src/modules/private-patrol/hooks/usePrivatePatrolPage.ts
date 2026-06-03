@@ -15,7 +15,11 @@ import {
 import { DEFAULT_MISSION_MAP_ENGINE, type MissionMapEngine } from "../../maps";
 import type { TerraDrawEditorMode } from "../../maps";
 import { useFieldBorderEditor } from "../../mission-workflow";
-import type { NoticeSeverity, PrivatePatrolMissionStatus, UiNotice } from "../types";
+import type {
+  NoticeSeverity,
+  PrivatePatrolMissionStatus,
+  UiNotice,
+} from "../types";
 import { usePrivatePatrolMap } from "./usePrivatePatrolMap";
 import { usePrivatePatrolMission } from "./usePrivatePatrolMission";
 
@@ -23,9 +27,13 @@ export function usePrivatePatrolPage() {
   const [fieldName, setFieldName] = useState("Field A");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [pendingDeleteField, setPendingDeleteField] = useState<FieldFeature | null>(null);
-  const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("static");
-  const [mapEngine, setMapEngine] = useState<MissionMapEngine>(DEFAULT_MISSION_MAP_ENGINE);
+  const [pendingDeleteField, setPendingDeleteField] =
+    useState<FieldFeature | null>(null);
+  const [terraDrawMode, setTerraDrawMode] =
+    useState<TerraDrawEditorMode>("static");
+  const [mapEngine, setMapEngine] = useState<MissionMapEngine>(
+    DEFAULT_MISSION_MAP_ENGINE,
+  );
   const [uiNotice, setUiNotice] = useState<UiNotice>({
     open: false,
     severity: "success",
@@ -39,16 +47,25 @@ export function usePrivatePatrolPage() {
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
   const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(/\/$/, "");
+  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
+    /\/$/,
+    "",
+  );
 
-  const showUiNotice = useCallback((message: string, severity: NoticeSeverity = "success") => {
-    setUiNotice({ open: true, severity, message });
-  }, []);
+  const showUiNotice = useCallback(
+    (message: string, severity: NoticeSeverity = "success") => {
+      setUiNotice({ open: true, severity, message });
+    },
+    [],
+  );
 
-  const handleUiNoticeClose = useCallback((_event?: unknown, reason?: string) => {
-    if (reason === "clickaway") return;
-    setUiNotice((prev) => ({ ...prev, open: false }));
-  }, []);
+  const handleUiNoticeClose = useCallback(
+    (_event?: unknown, reason?: string) => {
+      if (reason === "clickaway") return;
+      setUiNotice((prev) => ({ ...prev, open: false }));
+    },
+    [],
+  );
 
   const {
     fields,
@@ -138,7 +155,14 @@ export function usePrivatePatrolPage() {
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Failed to update field");
     }
-  }, [addError, fieldBorder, fieldName, selectedFieldId, showUiNotice, updateFieldRecord]);
+  }, [
+    addError,
+    fieldBorder,
+    fieldName,
+    selectedFieldId,
+    showUiNotice,
+    updateFieldRecord,
+  ]);
 
   const handleMapEngineChange = useCallback((next: MissionMapEngine) => {
     setMapEngine(next);
@@ -180,7 +204,7 @@ export function usePrivatePatrolPage() {
     selectedField:
       selectedFieldId == null
         ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
+        : (fields.find((f) => f.id === selectedFieldId) ?? null),
     mapEngine,
     addError,
     onMapEngineChange: handleMapEngineChange,
@@ -192,8 +216,8 @@ export function usePrivatePatrolPage() {
     () =>
       selectedFieldId == null
         ? null
-        : fields.find((f) => f.id === selectedFieldId) ?? null,
-    [fields, selectedFieldId]
+        : (fields.find((f) => f.id === selectedFieldId) ?? null),
+    [fields, selectedFieldId],
   );
 
   const metrics = useMemo(() => {
@@ -206,14 +230,13 @@ export function usePrivatePatrolPage() {
 
   const selectField = useCallback(
     (f: FieldFeature) => {
-      map.handleMapEngineChange("google");
       setSelectedFieldId(f.id);
       setFieldName(f.name);
       setFieldBorder(f.ring);
       borderEditor.loadRingIntoEditor(f.ring);
       borderEditor.focusRingOnMap(f.ring);
     },
-    [borderEditor, map]
+    [borderEditor],
   );
 
   const handleSavedFieldSelect = useCallback(
@@ -225,7 +248,7 @@ export function usePrivatePatrolPage() {
       const field = fields.find((f) => f.id === fieldId);
       if (field) selectField(field);
     },
-    [borderEditor, fields, selectField]
+    [borderEditor, fields, selectField],
   );
 
   const handleNewField = useCallback(() => {
@@ -263,7 +286,13 @@ export function usePrivatePatrolPage() {
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Failed to delete field");
     }
-  }, [addError, borderEditor, deleteFieldRecord, pendingDeleteField, showUiNotice]);
+  }, [
+    addError,
+    borderEditor,
+    deleteFieldRecord,
+    pendingDeleteField,
+    showUiNotice,
+  ]);
 
   useEffect(() => {
     return () => {

@@ -44,6 +44,8 @@ def test_gazebo_topic_profile_has_sensor_topics(monkeypatch) -> None:
     assert registry.topics["depth"] == "/warehouse/contract/depth/image"
     assert registry.topics["imu"] == "/warehouse/contract/imu"
     assert registry.topics["visual_slam_odom"] == "/warehouse/contract/odometry"
+    assert registry.topics["local_odometry"] == "/warehouse/contract/local_odometry"
+    assert registry.topics["local_odometry"] != registry.topics["visual_slam_odom"]
     assert registry.topics["raw_lidar"] == "/warehouse/contract/points"
     assert source_topic_env("gazebo")["depth"] == "/warehouse/front/rgbd/depth_image"
 

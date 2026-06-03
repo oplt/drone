@@ -22,6 +22,20 @@ DEPTH_TOPIC="${WAREHOUSE_DEPTH_TOPIC:-/warehouse/front/rgbd/depth_image}"
 ODOM_TOPIC="${WAREHOUSE_VISUAL_SLAM_ODOM_TOPIC:-/warehouse/drone/odometry}"
 BASE_LINK_FRAME="${WAREHOUSE_BASE_LINK_FRAME:-base_link}"
 WAIT_S="${WAREHOUSE_NVBLOX_SENSOR_WAIT_S:-120}"
+WAREHOUSE_NVBLOX_TOPIC_HZ_TIMEOUT_S="${WAREHOUSE_NVBLOX_TOPIC_HZ_TIMEOUT_S:-2}"
+
+
+children=()
+
+cleanup() {
+  for pid in "${children[@]:-}"; do
+    if [ -n "${pid:-}" ] && kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+trap cleanup EXIT
 
 _ros_topic_listed() {
   local topic="$1"
@@ -37,12 +51,12 @@ _ros_topic_listed() {
 
 _ros_topic_publishing() {
   local topic="$1"
-  local timeout_s="${2:-5}"
-  timeout "${timeout_s}" ros2 topic hz "${topic}" --window 3 2>/dev/null | grep -q "average rate"
+  timeout "${WAREHOUSE_NVBLOX_TOPIC_HZ_TIMEOUT_S}" \
+    ros2 topic hz "${topic}" --window 2 2>/dev/null | grep -q "average rate"
 }
 
 _sensors_publishing() {
-  _ros_topic_publishing "${RGB_TOPIC}" 5 \
+  _ros_topic_publishing "${RGB_TOPIC}"  \
     && _ros_topic_publishing "${DEPTH_TOPIC}" 5 \
     && _ros_topic_publishing "${ODOM_TOPIC}" 5
 }
@@ -84,6 +98,7 @@ _ensure_sim_tf() {
   fi
   echo "[warehouse_nvblox] starting warehouse_sim_tf_broadcaster (required for base_link TF)"
   ros2 run warehouse_mapping_bridge warehouse_sim_tf_broadcaster &
+  children+=("$!")
   local wait_deadline=$((SECONDS + 8))
   while (( SECONDS < wait_deadline )); do
     if ros2 topic info "${ODOM_TOPIC}" 2>/dev/null | grep -q "Publisher count: [1-9]"; then
@@ -104,18 +119,24 @@ _ensure_odometry_export() {
   fi
   echo "[warehouse_nvblox] starting warehouse_odometry_export (live odometry state for safety)"
   ros2 run warehouse_mapping_bridge warehouse_odometry_export &
+  children+=("$!")
 }
 
 _ensure_odometry_export
 
 if pgrep -f "[n]vblox_ros.*nvblox_node" >/dev/null 2>&1; then
   echo "[warehouse_nvblox] nvblox_node already running — reusing"
-  exec tail -f /dev/null
+  tail -f /dev/null &
+  tail_pid="$!"
+  children+=("${tail_pid}")
+  wait "${tail_pid}"
 fi
 
 echo "[warehouse_nvblox] starting nvblox_node ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"
 
-exec ros2 run nvblox_ros nvblox_node --ros-args \
+CAMERA_INFO_TOPIC="${WAREHOUSE_CAMERA_INFO_TOPIC:-/warehouse/front/rgbd/camera_info}"
+
+ros2 run nvblox_ros nvblox_node --ros-args \
   -p num_cameras:=1 \
   -p mapping_type:=static_tsdf \
   -p use_depth:=true \
@@ -127,6 +148,10 @@ exec ros2 run nvblox_ros nvblox_node --ros-args \
   -p print_rates_to_console:=false \
   -r camera_0/depth/image:=${DEPTH_TOPIC} \
   -r camera_0/depth/camera_info:=${CAMERA_INFO_TOPIC} \
-  -r camera_0/color/camera_info:=${CAMERA_INFO_TOPIC}
   -r camera_0/color/image:=${RGB_TOPIC} \
-  -r camera_0/color/camera_info:=/warehouse/front/rgbd/camera_info
+  -r camera_0/color/camera_info:=${CAMERA_INFO_TOPIC} &
+
+nvblox_pid="$!"
+children+=("${nvblox_pid}")
+
+wait "${nvblox_pid}"
