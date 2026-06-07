@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.infrastructure.camera.runtime import (
@@ -8,24 +10,12 @@ from backend.infrastructure.camera.runtime import (
 )
 from backend.modules.identity.dependencies import require_user, require_user_header_or_query
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/video", tags=["video"])
 
 
 @router.post("/start")
 async def start_video_stream(user=Depends(require_user)):
-    from backend.modules.warehouse.service.video import (
-        warehouse_video_blocked,
-        warehouse_video_skip_reason,
-    )
-
-    if warehouse_video_blocked():
-        return {
-            "status": "skipped",
-            "source": None,
-            "proxy": "/video/mjpeg",
-            "message": warehouse_video_skip_reason(),
-        }
-
     availability = await shared_video_runtime.ensure_source_available()
     if availability.get("status") == "skipped":
         return {
@@ -37,11 +27,17 @@ async def start_video_stream(user=Depends(require_user)):
     try:
         status = await shared_video_runtime.ensure_running()
     except RuntimeError as exc:
+        logger.warning(
+            "Video stream unavailable source=%s status=%s error=%s",
+            availability.get("source"),
+            availability.get("status"),
+            exc,
+        )
         return {
             "status": "unavailable",
             "source": availability.get("source"),
             "proxy": "/video/mjpeg",
-            "message": str(exc),
+            "message": f"Video source is not accessible: {exc}",
         }
     return {
         "status": availability.get("status", "started"),
@@ -56,6 +52,24 @@ async def mjpeg_proxy(
     request: Request,
     user=Depends(require_user_header_or_query),
 ) -> StreamingResponse:
+    try:
+        await shared_video_runtime.ensure_running()
+    except RuntimeError as exc:
+        status = await shared_video_runtime.status()
+        logger.warning(
+            "Video stream unavailable source=%s error=%s",
+            status.get("source"),
+            exc,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Camera unavailable",
+                "reason": str(exc),
+                "source": status.get("source"),
+            },
+        ) from exc
+
     headers = {
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         "Pragma": "no-cache",

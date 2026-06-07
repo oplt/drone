@@ -1,4 +1,6 @@
 .PHONY: start local-dev docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
+.PHONY: kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-dev reset-frontend-cache
+
 
 PYTHON ?= python3
 BACKEND_QUALITY_PATHS := backend/modules backend/infrastructure backend/entrypoints backend/core backend/tests backend/scripts
@@ -63,3 +65,6 @@ install-hooks:
 	pre-commit install
 
 commit-ready: fix check
+
+kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-dev reset-frontend-cache:
+	$(MAKE) -f Makefile.local $@

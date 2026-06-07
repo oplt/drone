@@ -1,5 +1,6 @@
 import { httpRequest } from "../../../shared/api/httpClient";
 import { ApiError } from "../../../shared/api/apiError";
+import { ensureDroneConnectionForMissionStart } from "./telemetryConnectApi";
 import type {
   MissionCommand,
   MissionCommandAuditResponse,
@@ -38,6 +39,13 @@ export async function startMissionWithPreflight(
   missionPayload: Record<string, unknown>,
   token?: string | null,
 ): Promise<{ preflight: PreflightRunResponse; mission: MissionCreateResponse }> {
+  const missionType =
+    typeof missionPayload.mission_type === "string" ? missionPayload.mission_type : null;
+  const flightEnvironment =
+    typeof missionPayload.flight_environment === "string"
+      ? missionPayload.flight_environment
+      : null;
+  await ensureDroneConnectionForMissionStart(token, missionType, flightEnvironment);
   const preflight = await runPreflight(missionPayload, token);
   if (!preflight.preflight_run_id) {
     throw new ApiError(400, "Preflight run did not return a run id.");

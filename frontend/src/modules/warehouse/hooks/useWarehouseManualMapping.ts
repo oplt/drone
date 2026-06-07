@@ -101,7 +101,7 @@ export function useWarehouseManualMapping({
     if (!token) return onError("Not authenticated");
     setConnecting(true);
     try {
-      await connectDroneTelemetry(token);
+      await connectDroneTelemetry(token, "controlled", "indoor_local");
       onMessage("Drone telemetry connected.");
     } catch (error) {
       onError(error instanceof Error ? error.message : "Drone connection failed");
@@ -120,7 +120,12 @@ export function useWarehouseManualMapping({
     setStartingSession(true);
     try {
       const { preflight: run, mission } = await startMissionWithPreflight(
-        { name: "Warehouse Manual Mapping", cruise_alt: 2.5, mission_type: "controlled" },
+        {
+          name: "Warehouse Manual Mapping",
+          cruise_alt: 2.5,
+          mission_type: "controlled",
+          flight_environment: "indoor_local",
+        },
         token,
       );
       onPreflightRun(run);

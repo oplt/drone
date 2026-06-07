@@ -82,7 +82,7 @@ export function useFieldSurveyMap({
   const [center, setCenter] = useState(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [mapZoom, setMapZoom] = useState(12);
-  const [streamKey, setStreamKey] = useState(Date.now());
+  const [streamKey, setStreamKey] = useState(() => Date.now());
   const [mapReady, setMapReady] = useState(false);
   const mapEngine = controlledMapEngine;
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
@@ -90,6 +90,7 @@ export function useFieldSurveyMap({
   const [videoRetryCount, setVideoRetryCount] = useState(0);
   const waypointMarkersRef = useRef<unknown[]>([]);
   const lastSyncedCenterRef = useRef<LatLng | null>(null);
+  const locationRequestedRef = useRef(false);
   const videoToken = getToken();
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
@@ -126,6 +127,9 @@ export function useFieldSurveyMap({
   }, [fieldTilesetUrl, handleMapEngineChange]);
 
   useEffect(() => {
+    if (locationRequestedRef.current) return;
+    locationRequestedRef.current = true;
+
     if (!navigator.geolocation) {
       console.warn("Geolocation is not supported by this browser.");
       setLoadingLocation(false);
@@ -142,8 +146,14 @@ export function useFieldSurveyMap({
         setLoadingLocation(false);
       },
       (error) => {
-        console.error("Error getting location:", error);
-        addError(`Failed to get location: ${error.message}`);
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? "Location access denied. Using default map center."
+            : error.message || "Could not determine current location. Using default map center.";
+        console.warn(message);
+        if (error.code !== error.PERMISSION_DENIED) {
+          addError(message);
+        }
         setLoadingLocation(false);
       },
       {
@@ -368,7 +378,10 @@ export function useFieldSurveyMap({
     focusRingOnMap(selectedField.ring);
   }, [focusRingOnMap, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
 
-  const mapCenter = useMemo(() => userCenter || center, [userCenter, center]);
+  const mapCenter = useMemo(
+    () => droneCenter || userCenter || center,
+    [droneCenter, userCenter, center]
+  );
 
   const mapOptions = useMemo(
     () => ({

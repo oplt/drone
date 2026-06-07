@@ -25,18 +25,12 @@ class WarehouseMissionFailure(Exception):
         return base
 
     def to_event_payload(self) -> dict[str, Any]:
-        from backend.modules.warehouse.service.readiness_result import user_message_for_failure
-
-        user_message = user_message_for_failure(
-            self.reason,
-            topic=str(self.details.get("topic")) if self.details.get("topic") else None,
-        )
         return {
             "reason": self.reason,
             "failure_code": self.reason,
             "action": self.action,
             "message": self.message,
-            "user_message": user_message,
+            "user_message": self.message,
             "developer_message": self.message,
             "stage": self.stage,
             "details": self.details,

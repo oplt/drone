@@ -11,11 +11,20 @@ type LatLngSource = {
   Lon?: unknown;
   Lng?: unknown;
   Longitude?: unknown;
+  coordinates?: unknown;
+  coords?: unknown;
   position?: LatLngSource;
+  location?: LatLngSource;
+  global_position?: LatLngSource;
+  globalPosition?: LatLngSource;
+  global_frame?: LatLngSource;
+  globalFrame?: LatLngSource;
   payload?: LatLngSource;
   data?: LatLngSource;
   telemetry?: LatLngSource;
   runtime_metrics?: LatLngSource;
+  vehicle?: LatLngSource;
+  drone?: LatLngSource;
 };
 
 function toFiniteNumber(value: unknown): number | null {
@@ -48,16 +57,48 @@ function readLatLng(value: LatLngSource): LatLng | null {
   return { lat, lng: lon };
 }
 
+function readCoordinateArray(value: unknown): LatLng | null {
+  if (!Array.isArray(value) || value.length < 2) return null;
+
+  const first = toFiniteNumber(value[0]);
+  const second = toFiniteNumber(value[1]);
+  if (first === null || second === null) return null;
+
+  const lonLat =
+    first >= -180 && first <= 180 && second >= -90 && second <= 90
+      ? { lat: second, lng: first }
+      : null;
+  const latLng =
+    first >= -90 && first <= 90 && second >= -180 && second <= 180
+      ? { lat: first, lng: second }
+      : null;
+
+  const result = lonLat ?? latLng;
+  if (!result) return null;
+  if (Math.abs(result.lat) < 1e-8 && Math.abs(result.lng) < 1e-8) return null;
+  return result;
+}
+
 export function extractLatLng(value: unknown): LatLng | null {
   if (!value || typeof value !== "object") return null;
   const source = value as LatLngSource;
 
   return (
     readLatLng(source) ??
+    readCoordinateArray(source.coordinates) ??
+    readCoordinateArray(source.coords) ??
     (source.position ? readLatLng(source.position) : null) ??
+    (source.position ? readCoordinateArray(source.position.coordinates) : null) ??
+    (source.location ? extractLatLng(source.location) : null) ??
+    (source.global_position ? extractLatLng(source.global_position) : null) ??
+    (source.globalPosition ? extractLatLng(source.globalPosition) : null) ??
+    (source.global_frame ? extractLatLng(source.global_frame) : null) ??
+    (source.globalFrame ? extractLatLng(source.globalFrame) : null) ??
     (source.payload ? extractLatLng(source.payload) : null) ??
     (source.data ? extractLatLng(source.data) : null) ??
     (source.telemetry ? extractLatLng(source.telemetry) : null) ??
-    (source.runtime_metrics ? extractLatLng(source.runtime_metrics) : null)
+    (source.runtime_metrics ? extractLatLng(source.runtime_metrics) : null) ??
+    (source.vehicle ? extractLatLng(source.vehicle) : null) ??
+    (source.drone ? extractLatLng(source.drone) : null)
   );
 }

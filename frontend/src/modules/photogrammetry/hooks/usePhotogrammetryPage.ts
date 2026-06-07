@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { TerraDraw } from "terra-draw";
 import { getToken } from "../../../modules/session";
 import { useErrors } from "../../../shared/hooks/useErrors";
@@ -69,12 +69,12 @@ export function usePhotogrammetryPage() {
     setPendingFlightId,
     telemetry,
     wsConnected,
-    disconnect,
     droneConnected,
   } = useMissionWebsocketRuntime<MissionStatus>({
     apiBase: API_BASE_CLEAN,
     getTokenFn: getToken,
     onError: addError,
+    alwaysConnect: true,
   });
 
   const borderEditor = useFieldBorderEditor({
@@ -248,12 +248,6 @@ export function usePhotogrammetryPage() {
       addError(e instanceof Error ? e.message : "Failed to delete field");
     }
   }, [addError, borderEditor, deleteFieldRecord, pendingDeleteField]);
-
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
 
   const googleMapsReady =
     map.mapEngine !== "google" || (Boolean(map.apiKey) && !map.loadError);

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -12,7 +11,7 @@ from backend.core.config.runtime import settings, setup_logging
 from backend.core.database.session import close_db, init_db
 from backend.core.errors.handlers import RequestIDMiddleware, register_error_handlers
 from backend.core.observability.tracing import setup_tracing
-from backend.entrypoints.cli.run_mission import _build_orchestrator
+from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
 from backend.modules.alerts.api import router as alerts_router
 from backend.modules.alerts.evaluation_service import alert_engine
@@ -35,7 +34,6 @@ from backend.modules.livestock.api import router as animal_farm_router
 from backend.modules.mapping.api import router as mapping_router
 from backend.modules.media.api import router as video_router
 from backend.modules.missions.api.routes import router as missions_router
-from backend.modules.missions.service.recovery_service import recover_interrupted_missions
 from backend.modules.patrol.api import router as patrol_debug_router
 from backend.modules.patrol.live_detection_api import router as live_detection_router
 from backend.modules.patrol.vision_api import router as ml_router
@@ -60,31 +58,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
     setup_logging(log_format=settings.log_format)
-    from backend.modules.warehouse.service.bridge_supervisor import validate_bridge_url_config
-
-    bridge_config_ok, bridge_config_error = validate_bridge_url_config()
-    if not bridge_config_ok:
-        logger.warning("Warehouse bridge config mismatch: %s", bridge_config_error)
     # Startup
     logger.info("Starting application...")
     await init_db()
 
     # Load settings from DB once
     app.state.settings = await get_runtime_settings(SettingsRepository())
-
-    # Initialize WebSocket manager
-    from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
-
-    await telemetry_manager.initialize()
-    logger.info("WebSocket manager initialized")
-
-    orchestrator = await _build_orchestrator()
-    orchestrator.bind_event_loop(asyncio.get_running_loop())
-    orchestrator.start_background_workers()
-    logger.info("Orchestrator runtime loop and background workers initialized")
-
-    await recover_interrupted_missions(orchestrator)
-    logger.info("Restart recovery check complete")
 
     start_cleanup_jobs()
     logger.info("Cleanup jobs started")
@@ -100,12 +79,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application...")
 
-    if orchestrator.telemetry_running():
-        await orchestrator.stop_live_telemetry()
-        logger.info("Orchestrator telemetry ingest stopped")
-
-    await orchestrator.stop_background_workers()
-    logger.info("Orchestrator background workers stopped")
+    await shared_video_runtime.stop()
 
     await stop_cleanup_jobs()
     logger.info("Cleanup jobs stopped")
@@ -186,7 +160,6 @@ app.include_router(animal_farm_router)
 app.include_router(fields_router)
 app.include_router(irrigation_router)
 app.include_router(mapping_router)
-app.include_router(warehouse_router)
 app.include_router(alerts_router)
 app.include_router(ml_router)
 app.include_router(patrol_debug_router)
@@ -199,6 +172,7 @@ app.include_router(fleet_router, prefix="/tasks")
 app.include_router(integrations_router)
 app.include_router(deliverables_share_router)
 app.include_router(video_analysis_router)
+app.include_router(warehouse_router)
 
 mapping_assets_dir = Path(
     os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")

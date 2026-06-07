@@ -40,6 +40,22 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
+      "/fields": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/geofences": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/mapping": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/mapping-assets": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/telemetry": {
         target: "http://localhost:8000",
         changeOrigin: true,

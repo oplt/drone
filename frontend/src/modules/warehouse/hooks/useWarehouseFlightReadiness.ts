@@ -1,13 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchWarehouseFlightReadiness } from "../api/warehouseFlightApi";
-
-const READINESS_POLL_MS = 5000;
+import { FLIGHT_READINESS_POLL_MS } from "./preflightPolling";
 
 export function useWarehouseFlightReadiness(
   token: string | null,
-  options?: { missionLoaded?: boolean; enabled?: boolean },
+  options?: {
+    missionLoaded?: boolean;
+    enabled?: boolean;
+    /** Pause polling while an explicit preflight refresh owns bridge probes. */
+    preflightRunning?: boolean;
+  },
 ) {
-  const enabled = Boolean(token) && (options?.enabled ?? true);
+  const enabled =
+    Boolean(token) &&
+    (options?.enabled ?? true) &&
+    !(options?.preflightRunning ?? false);
   return useQuery({
     queryKey: [
       "warehouse-flight-readiness",
@@ -18,11 +25,11 @@ export function useWarehouseFlightReadiness(
     refetchInterval: () =>
       enabled
         ? document.hidden
-          ? READINESS_POLL_MS * 5
-          : READINESS_POLL_MS
+          ? FLIGHT_READINESS_POLL_MS * 2
+          : FLIGHT_READINESS_POLL_MS
         : false,
     refetchIntervalInBackground: false,
-    staleTime: 3_000,
+    staleTime: 6_000,
     queryFn: () =>
       fetchWarehouseFlightReadiness(token as string, {
         missionLoaded: options?.missionLoaded,

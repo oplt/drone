@@ -709,7 +709,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                   <Typography variant="h6" gutterBottom>Drone Camera Parameters</Typography>
                   <Stack spacing={3}>
                     <SecretField fullWidth label="Camera Source" value={doc.camera?.drone_video_source} onChange={e => update("camera", "drone_video_source", e.target.value)} />
-                    <SecretField fullWidth label="Gazebo Camera Source" value={doc.camera?.drone_video_source_gazebo} onChange={e => update("camera", "drone_video_source_gazebo", e.target.value)} />
+                    <SecretField fullWidth label="Sim UDP Camera Source" value={doc.camera?.drone_video_source_gazebo} onChange={e => update("camera", "drone_video_source_gazebo", e.target.value)} />
                     <TextField variant="filled" fullWidth label="Width" type="number" value={doc.camera?.drone_video_width} onChange={e => update("camera", "drone_video_width", Number(e.target.value))} />
                     <TextField variant="filled" fullWidth label="Height" type="number" value={doc.camera?.drone_video_height} onChange={e => update("camera", "drone_video_height", Number(e.target.value))} />
                     <TextField variant="filled" fullWidth label="FPS" type="number" value={doc.camera?.drone_video_fps} onChange={e => update("camera", "drone_video_fps", Number(e.target.value))} />
@@ -728,7 +728,7 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
                       />
                       <FormControlLabel
                         control={<Switch checked={doc.camera?.drone_video_use_gazebo} onChange={e => update("camera", "drone_video_use_gazebo", e.target.checked)} />}
-                        label="Use Gazebo"
+                        label="Use sim transport video"
                       />
                     </Stack>
                   </Stack>

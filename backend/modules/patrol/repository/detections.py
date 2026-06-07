@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.modules.missions.flight_models import FlightEvent
+from backend.modules.missions.flight_models import Flight, FlightEvent
 from backend.modules.patrol.models import (
     PatrolDetection,
 )
@@ -24,6 +25,25 @@ class PatrolAlertDecision:
 class PatrolDetectionMixin:
     def utcnow(self) -> datetime:
         return datetime.now(UTC)
+
+    async def list_live_object_detections(
+        self,
+        db: AsyncSession,
+        *,
+        org_id: int | None,
+        limit: int,
+    ) -> list[PatrolDetection]:
+        filters = [PatrolDetection.source == "live_object_detection"]
+        if org_id is not None:
+            filters.append(Flight.org_id == org_id)
+        stmt = (
+            select(PatrolDetection)
+            .join(Flight, Flight.id == PatrolDetection.flight_id)
+            .where(*filters)
+            .order_by(desc(PatrolDetection.created_at), desc(PatrolDetection.id))
+            .limit(limit)
+        )
+        return list((await db.scalars(stmt)).all())
 
     async def add_patrol_detection(
         self,

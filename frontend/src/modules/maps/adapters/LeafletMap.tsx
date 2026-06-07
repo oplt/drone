@@ -15,6 +15,7 @@ import { useFlatMapDrawing } from "../hooks/useFlatMapDrawing";
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt?: number };
 type LonLat = [number, number];
+type SavedFieldBoundary = { id: number; name?: string | null; ring: LonLat[] };
 export type FlatDrawMode = ShapeDrawMode;
 export type FlatDrawResult = ShapeDrawResult;
 
@@ -28,6 +29,9 @@ export type LeafletMapProps = {
   drawMode?: FlatDrawMode;
   onDrawComplete?: (result: FlatDrawResult) => void;
   fieldBoundary?: LonLat[] | null;
+  savedFields?: SavedFieldBoundary[];
+  selectedFieldId?: number | null;
+  onSavedFieldClick?: (fieldId: number) => void;
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   height?: number | string;
@@ -65,6 +69,9 @@ export default function LeafletMap({
   drawMode = "none",
   onDrawComplete,
   fieldBoundary = null,
+  savedFields = [],
+  selectedFieldId = null,
+  onSavedFieldClick,
   plannedRoute = null,
   exclusionZones = [],
   height = 400,
@@ -72,7 +79,9 @@ export default function LeafletMap({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMapInstance | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const liveLayerRef = useRef<L.LayerGroup | null>(null);
   const drawLayerRef = useRef<L.LayerGroup | null>(null);
+  const drawingRef = useRef<ReturnType<typeof useFlatMapDrawing> | null>(null);
   const setDrawingModeState = useCallback((mode: FlatDrawMode) => {
     if (!mapRef.current) return;
     if (mode === "none") mapRef.current.doubleClickZoom.enable();
@@ -130,6 +139,7 @@ export default function LeafletMap({
     onPreview: updateDrawingPreview,
     onModeStateChange: setDrawingModeState,
   });
+  drawingRef.current = drawing;
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
@@ -148,8 +158,10 @@ export default function LeafletMap({
     }).addTo(map);
 
     const layers = L.layerGroup().addTo(map);
+    const liveLayers = L.layerGroup().addTo(map);
     const drawLayers = L.layerGroup().addTo(map);
     layerRef.current = layers;
+    liveLayerRef.current = liveLayers;
     drawLayerRef.current = drawLayers;
     mapRef.current = map;
 
@@ -158,28 +170,29 @@ export default function LeafletMap({
     });
 
     map.on("click", (event: L.LeafletMouseEvent) => {
-      drawing.handleClick([event.latlng.lng, event.latlng.lat]);
+      drawingRef.current?.handleClick([event.latlng.lng, event.latlng.lat]);
     });
     map.on("mousedown", (event: L.LeafletMouseEvent) => {
-      if (drawing.startFreehand([event.latlng.lng, event.latlng.lat]))
+      if (drawingRef.current?.startFreehand([event.latlng.lng, event.latlng.lat]))
         map.dragging.disable();
     });
     map.on("mousemove", (event: L.LeafletMouseEvent) => {
-      drawing.movePointer([event.latlng.lng, event.latlng.lat]);
+      drawingRef.current?.movePointer([event.latlng.lng, event.latlng.lat]);
     });
     map.on("mouseup", () => {
-      if (drawing.endFreehand()) map.dragging.enable();
+      if (drawingRef.current?.endFreehand()) map.dragging.enable();
     });
-    map.on("dblclick", drawing.finishDrawing);
-    map.on("contextmenu", drawing.finishDrawing);
+    map.on("dblclick", () => drawingRef.current?.finishDrawing());
+    map.on("contextmenu", () => drawingRef.current?.finishDrawing());
 
     return () => {
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      liveLayerRef.current = null;
       drawLayerRef.current = null;
     };
-  }, [drawing]);
+  }, []);
 
   useEffect(() => {
     mapRef.current?.setView(toLatLng(center), zoom);
@@ -197,6 +210,25 @@ export default function LeafletMap({
     layers.clearLayers();
 
     const boundary = fieldBoundary ?? [];
+    savedFields.forEach((field) => {
+      if (field.ring.length < 3) return;
+      L.polygon(
+        field.ring.map(([lng, lat]) => [lat, lng] as LatLngExpression),
+        {
+          color: field.id === selectedFieldId ? "#1976d2" : "#1565c0",
+          weight: field.id === selectedFieldId ? 4 : 2,
+          fillColor: "#1565c0",
+          fillOpacity: 0.08,
+        },
+      )
+        .bindTooltip(field.name ?? `Field #${field.id}`, { permanent: false })
+        .on("click", (event) => {
+          event.originalEvent.stopPropagation();
+          onSavedFieldClick?.(field.id);
+        })
+        .addTo(layers);
+    });
+
     if (boundary.length >= 3) {
       L.polygon(
         boundary.map(([lng, lat]) => [lat, lng] as LatLngExpression),
@@ -242,13 +274,30 @@ export default function LeafletMap({
       );
     }
 
+  }, [
+    exclusionZones,
+    fieldBoundary,
+    plannedRoute,
+    route,
+    savedFields,
+    selectedFieldId,
+    waypoints,
+    onSavedFieldClick,
+  ]);
+
+  useEffect(() => {
+    const liveLayers = liveLayerRef.current;
+    if (!liveLayers) return;
+
+    liveLayers.clearLayers();
+
     if (droneCenter) {
       L.marker(toLatLng(droneCenter), {
         icon: makeDroneIcon(),
         zIndexOffset: 1000,
       })
         .bindTooltip("DRONE", { permanent: false })
-        .addTo(layers);
+        .addTo(liveLayers);
     }
 
     if (userCenter) {
@@ -259,17 +308,9 @@ export default function LeafletMap({
         fillOpacity: 0.9,
       })
         .bindTooltip("You", { permanent: false })
-        .addTo(layers);
+        .addTo(liveLayers);
     }
-  }, [
-    droneCenter,
-    exclusionZones,
-    fieldBoundary,
-    plannedRoute,
-    route,
-    userCenter,
-    waypoints,
-  ]);
+  }, [droneCenter, userCenter]);
 
   if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) {
     return (

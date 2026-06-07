@@ -40,6 +40,12 @@ from backend.modules.missions.domain.state_machine import (
     is_terminal as _sm_is_terminal,
 )
 from backend.modules.missions.flight_models import FlightStatus
+from backend.modules.missions.flight_profile import (
+    FlightEnvironment,
+    FlightProfile,
+    flight_profile_for_environment,
+    flight_profile_for_mission_type,
+)
 from backend.modules.missions.launch_service import mission_launch_service
 from backend.modules.missions.planning.controlled_flight import ControlledFlightMission
 from backend.modules.missions.planning.grid import GridMission
@@ -70,16 +76,6 @@ from backend.modules.preflight.checks.schemas import PreflightReport
 from backend.modules.vehicle_runtime.types import Coordinate
 from backend.modules.vehicle_runtime.vehicle_port import MissionAbortRequested
 from backend.modules.warehouse.exceptions import WarehouseMissionFailure
-from backend.modules.warehouse.planning.exploration import (
-    WarehouseExplorationMissionParams,
-    build_unknown_warehouse_exploration_mission,
-)
-from backend.modules.warehouse.planning.mission import (
-    WarehouseScanMissionParams,
-    build_warehouse_scan_mission,
-)
-from backend.modules.warehouse.ports import WarehousePerceptionStatus
-from backend.modules.warehouse.service.runtime_status import get_warehouse_mapping_runtime_status
 
 logger = logging.getLogger(__name__)
 
@@ -96,33 +92,6 @@ ALLOW_WARN_PREFLIGHT_START = (
 )
 
 
-async def _warehouse_perception_preflight_overrides(
-    mission_payload: dict[str, object] | None,
-) -> dict[str, object]:
-    from backend.modules.warehouse.service.warehouse_preflight import (
-        fetch_warehouse_perception_status,
-        uses_warehouse_ros_preflight,
-        warehouse_perception_config_overrides,
-    )
-
-    if not mission_payload or not uses_warehouse_ros_preflight(
-        str(mission_payload.get("type") or "")
-    ):
-        return {}
-    try:
-        status = await fetch_warehouse_perception_status(deep=True)
-    except Exception as exc:
-        logger.warning("Warehouse perception preflight status failed: %s", exc)
-        status = WarehousePerceptionStatus(
-            configured=True,
-            reachable=False,
-            ready=False,
-            status="unreachable",
-            detail=str(exc),
-        )
-    return warehouse_perception_config_overrides(status)
-
-
 async def _run_preflight_report(
     orch: Any,
     payload: MissionCreateIn,
@@ -130,39 +99,14 @@ async def _run_preflight_report(
     mission: Any,
     mission_data_override: dict[str, object] | None,
 ) -> PreflightReport:
-    from backend.core.config.runtime import settings
-    from backend.modules.warehouse.service.warehouse_preflight import (
-        run_warehouse_ros_preflight_report,
-        uses_warehouse_ros_preflight,
-    )
-
-    if uses_warehouse_ros_preflight(payload.mission_type):
-        mission_data = mission_data_override or {
-            "type": payload.mission_type.value,
-            "waypoints": [
-                {
-                    "lat": w.lat,
-                    "lon": w.lon,
-                    "alt": getattr(w, "alt", None) or payload.cruise_alt,
-                }
-                for w in mission.get_waypoints()
-            ],
-            "speed": settings.cruise_speed_mps,
-            "altitude_agl": payload.cruise_alt,
-        }
-        return await run_warehouse_ros_preflight_report(
-            mission_data,
-            cruise_alt=payload.cruise_alt,
-        )
-
-    await _ensure_drone_ready_for_preflight(orch, payload)
-    config_overrides = await _warehouse_perception_preflight_overrides(mission_data_override)
+    profile = flight_profile_for_payload(payload)
+    await _ensure_drone_ready_for_preflight(orch, profile=profile)
     return await orch._run_preflight_checks(
         mission.get_waypoints(),
         payload.cruise_alt,
         raise_on_fail=False,
         mission_data=mission_data_override,
-        config_overrides=config_overrides,
+        config_overrides={"FLIGHT_ENVIRONMENT": profile.environment.value},
     )
 
 
@@ -332,15 +276,21 @@ class MissionCreateIn(BaseModel):
     name: str = Field(default="mission", min_length=1, max_length=120)
     cruise_alt: float = Field(default=30.0, gt=0, le=500)
     mission_type: MissionType = MissionType.WAYPOINT
+    flight_environment: FlightEnvironment | None = Field(
+        default=None,
+        description=(
+            "Optional control profile override. Use indoor_local only for warehouse/local-frame "
+            "missions; default is derived from mission_type."
+        ),
+    )
 
     # Waypoints mission data
     waypoints: list[Waypoint] | None = None
 
     # Grid mission data
     grid: GridMissionParams | None = None
-    warehouse_scan: WarehouseScanMissionParams | None = None
-    warehouse_exploration: WarehouseExplorationMissionParams | None = None
     private_patrol: PrivatePatrolMissionParams | None = None
+    warehouse_scan: Any | None = None
     mission_profile: PhotogrammetryMissionProfile | None = None
     preflight_run_id: str | None = Field(
         default=None,
@@ -364,15 +314,18 @@ class MissionCreateIn(BaseModel):
                 raise ValueError("mission_type requires a 'grid' object with field_polygon_lonlat.")
             if len(self.grid.field_polygon_lonlat) < 3:
                 raise ValueError("field_polygon_lonlat must have at least 3 coordinate pairs.")
-        elif self.mission_type == MissionType.WAREHOUSE_SCAN:
-            if self.warehouse_scan is None:
+        elif self.mission_type in {
+            MissionType.WAREHOUSE_SCAN,
+            MissionType.INDOOR_EXPLORATION,
+        }:
+            if self.mission_type == MissionType.WAREHOUSE_SCAN:
+                if self.warehouse_scan is None:
+                    raise ValueError(
+                        "mission_type='warehouse_scan' requires a 'warehouse_scan' object."
+                    )
+            else:
                 raise ValueError(
-                    "mission_type='warehouse_scan' requires a 'warehouse_scan' object."
-                )
-        elif self.mission_type == MissionType.INDOOR_EXPLORATION:
-            if self.warehouse_exploration is None:
-                raise ValueError(
-                    "mission_type='indoor_exploration' requires a 'warehouse_exploration' object."
+                    f"mission_type='{self.mission_type.value}' is no longer supported."
                 )
         elif self.mission_type in {
             MissionType.PERIMETER_PATROL,
@@ -843,25 +796,41 @@ def _preflight_record_out(rec: _PreflightRunRecord) -> PreflightRunOut:
     )
 
 
-async def _ensure_drone_ready_for_preflight(orch: Any, payload: MissionCreateIn | None = None) -> None:
-    if payload is not None and payload.mission_type in {
-        MissionType.WAREHOUSE_SCAN,
-        MissionType.INDOOR_EXPLORATION,
-    }:
-        logger.info(
-            "Skipping MAVLink connect for %s preflight; using warehouse ROS perception checks",
-            payload.mission_type.value,
-        )
-        return
+def flight_profile_for_payload(payload: MissionCreateIn | None) -> FlightProfile:
+    if payload is None:
+        return flight_profile_for_mission_type(None)
+    if payload.flight_environment is not None:
+        return flight_profile_for_environment(payload.flight_environment)
+    return flight_profile_for_mission_type(payload.mission_type)
+
+
+async def _ensure_drone_ready_for_preflight(
+    orch: Any,
+    *,
+    profile: FlightProfile,
+) -> None:
     try:
         await asyncio.to_thread(orch.drone.get_telemetry)
-        return
+        if getattr(getattr(orch, "drone", None), "vehicle", None) is not None:
+            return
     except Exception:
         logger.info("Telemetry unavailable, attempting to connect drone for preflight run")
 
-    await asyncio.to_thread(orch.drone.connect)
-    # Ensure connect actually yielded a readable state.
-    await asyncio.to_thread(orch.drone.get_telemetry)
+    try:
+        await asyncio.to_thread(
+            orch.drone.connect,
+            home_fallback_allowed=profile.allows_home_fallback,
+        )
+        # Ensure connect actually yielded a readable state.
+        await asyncio.to_thread(orch.drone.get_telemetry)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Drone connection could not be established for "
+                f"{profile.environment.value}: {exc}"
+            ),
+        ) from exc
 
 
 def _polygon_centroid_lonlat(
@@ -1001,21 +970,30 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
         )
         return mission, len(poly)
 
-    if payload.mission_type == MissionType.WAREHOUSE_SCAN:
-        scan = payload.warehouse_scan  # validated non-None by model validator
-        return build_warehouse_scan_mission(
-            base_height_m=float(payload.cruise_alt),
-            scan=scan,
-            owner_id=owner_id,
-        )
+    if payload.mission_type in {
+        MissionType.WAREHOUSE_SCAN,
+        MissionType.INDOOR_EXPLORATION,
+    }:
+        if payload.mission_type == MissionType.WAREHOUSE_SCAN:
+            scan = payload.warehouse_scan
+            if scan is None:
+                raise ValueError("mission_type='warehouse_scan' requires warehouse_scan params")
+            from backend.modules.warehouse.planning.mission import (
+                WarehouseScanMissionParams,
+                build_warehouse_scan_mission,
+            )
 
-    if payload.mission_type == MissionType.INDOOR_EXPLORATION:
-        exploration = payload.warehouse_exploration  # validated non-None by model validator
-        return build_unknown_warehouse_exploration_mission(
-            hover_alt_m=float(payload.cruise_alt),
-            exploration=exploration,
-            owner_id=owner_id,
-        )
+            scan_params = (
+                scan
+                if isinstance(scan, WarehouseScanMissionParams)
+                else WarehouseScanMissionParams.model_validate(scan)
+            )
+            return build_warehouse_scan_mission(
+                base_height_m=float(payload.cruise_alt),
+                scan=scan_params,
+                owner_id=owner_id,
+            )
+        raise ValueError(f"mission_type='{payload.mission_type.value}' is no longer supported")
 
     if payload.mission_type in {
         MissionType.PERIMETER_PATROL,
@@ -1220,6 +1198,8 @@ async def execute_mission(
             orch.current_client_flight_id = None
             orch.current_mission_name = None
             orch.current_mission_type = None
+            orch.current_flight_environment = None
+            orch.current_control_mode = None
             orch.current_mission_task_type = None
             orch.current_preflight_run_id = None
 
@@ -1566,25 +1546,6 @@ async def run_preflight(
         )
     except HTTPException:
         raise
-    except RuntimeError as exc:
-        from backend.modules.warehouse.service.warehouse_preflight import (
-            uses_warehouse_ros_preflight,
-        )
-
-        if uses_warehouse_ros_preflight(payload.mission_type):
-            logger.exception("Warehouse ROS preflight run failed")
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "message": "Warehouse ROS preflight failed",
-                    "error": str(exc),
-                },
-            ) from exc
-        logger.exception("Manual preflight run failed")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Preflight execution failed: {exc}",
-        ) from exc
     except Exception as exc:
         logger.exception("Manual preflight run failed")
         raise HTTPException(
@@ -1685,9 +1646,22 @@ async def create_mission(
             detail="Another mission is already running. Wait for it to complete before starting a new one.",
         )
 
+    profile = flight_profile_for_payload(payload)
+    try:
+        await _ensure_drone_ready_for_preflight(orch, profile=profile)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Drone connection could not be established: {exc}",
+        ) from exc
+
     orch.current_mission_name = payload.name
     orch.current_client_flight_id = client_flight_id
     orch.current_mission_type = payload.mission_type.value
+    orch.current_flight_environment = profile.environment.value
+    orch.current_control_mode = profile.control_mode
     orch.current_mission_task_type = (
         getattr(payload.private_patrol, "task_type", None)
         if payload.private_patrol is not None
@@ -1980,10 +1954,11 @@ async def issue_mission_command(
 async def get_flight_status():
     """Current flight status + telemetry summary."""
     try:
-        orch = await get_orchestrator()
         runtime_out: MissionRuntimeOut | None = None
         active_db_row = await mission_application.get_active()
+        orch = None
         if active_db_row is not None:
+            orch = await get_orchestrator()
             runtime = _MissionRuntimeRecord.from_db(active_db_row)
             await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
             runtime_out = _runtime_to_out(runtime)
@@ -1992,10 +1967,14 @@ async def get_flight_status():
         mission_name = (
             runtime_out.mission_name
             if runtime_out is not None
-            else getattr(orch, "current_mission_name", "Unknown")
+            else "No active mission"
         )
         telemetry = telemetry_manager.runtime_snapshot()
         position_snapshot = telemetry_manager.latest_position_snapshot()
+        drone_connected = bool(
+            telemetry["source_connected"]
+            or (orch is not None and getattr(orch, "drone", None) is not None)
+        )
 
         return {
             "flight_id": flight_id,
@@ -2010,15 +1989,10 @@ async def get_flight_status():
             },
             "orchestrator": {
                 "ready": orch is not None,
-                "has_drone": getattr(orch, "drone", None) is not None,
-                "drone_connected": bool(
-                    telemetry["source_connected"] or getattr(orch, "drone", None) is not None
-                ),
+                "has_drone": orch is not None and getattr(orch, "drone", None) is not None,
+                "drone_connected": drone_connected,
             },
             "mission_lifecycle": runtime_out.model_dump() if runtime_out is not None else None,
-            "warehouse_mapping": await get_warehouse_mapping_runtime_status(
-                runtime_out.mission_type if runtime_out is not None else None
-            ),
             "command_capabilities": {
                 "pause": runtime_out is not None and runtime_out.state in {"airborne", "running"},
                 "resume": runtime_out is not None and runtime_out.state == "paused",

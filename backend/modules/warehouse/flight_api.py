@@ -6,7 +6,6 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import OrgUser, require_mission_exec, require_org_user
@@ -151,7 +150,7 @@ async def get_warehouse_flight_readiness(
 @router.post("/start", response_model=WarehouseFlightStartOut)
 async def start_warehouse_flight(
     payload: WarehouseFlightStartIn,
-    db: AsyncSession = Depends(get_db),
+    db: Any = Depends(get_db),
     org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseFlightStartOut:
     mission_ctx = WarehouseFlightMissionContext(

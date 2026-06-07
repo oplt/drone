@@ -2,6 +2,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getToken } from "../../session";
 import { useTelemetryStream } from "../../mission-runtime";
+import { frontendLogger } from "../../../shared/logging";
 import {
   acknowledgeAlert as acknowledgeAlertApi,
   fetchActiveAlerts,
@@ -37,6 +38,17 @@ const upsertAlert = (items: AlertItem[], incoming: AlertItem): AlertItem[] => {
   }
   return sortAlerts(next);
 };
+
+function isAlertSocketMessage(value: unknown): value is { type: "alert_event"; alert: AlertItem } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      "type" in value &&
+      (value as { type?: unknown }).type === "alert_event" &&
+      "alert" in value,
+  );
+}
 
 export function AlertCenterProvider({ children }: { children: React.ReactNode }) {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -103,7 +115,9 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
     Promise.all([fetchAlerts(), fetchOpenCount()])
       .catch((error) => {
         if (!cancelled) {
-          console.warn("Failed to initialize alert center:", error);
+          frontendLogger.warn("frontend", "Failed to initialize alert center", {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       })
       .finally(() => {
@@ -115,7 +129,9 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
     const interval = window.setInterval(() => {
       void Promise.all([fetchAlerts(), fetchOpenCount()]).catch((error) => {
         if (!cancelled) {
-          console.warn("Failed to refresh alerts:", error);
+          frontendLogger.warn("frontend", "Failed to refresh alert center", {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       });
     }, 30000);
@@ -129,12 +145,14 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
   useTelemetryStream({
     enabled: Boolean(token),
     onMessage: (msg) => {
-      if (!msg || msg.type !== "alert_event" || !msg.alert) {
+      if (!isAlertSocketMessage(msg)) {
         return;
       }
-      setAlerts((prev) => upsertAlert(prev, msg.alert as AlertItem));
+      setAlerts((prev) => upsertAlert(prev, msg.alert));
       void fetchOpenCount().catch((error) => {
-        console.warn("Failed to refresh open alert count after event:", error);
+        frontendLogger.warn("frontend", "Failed to refresh open alert count after event", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
     },
   });

@@ -178,6 +178,7 @@ export default function CesiumMap({
   const fieldTilesetUrlRef = useRef<string | null>(fieldTilesetUrl);
   const tilesetLoadSeqRef = useRef(0);
   const onPickLatLngRef = useRef<Props["onPickLatLng"]>(onPickLatLng);
+  const lastCameraSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     drawModeRef.current = drawMode;
@@ -207,6 +208,10 @@ export default function CesiumMap({
     () => computeFieldCameraView(fieldBoundary),
     [fieldBoundary],
   );
+  const hasDroneCenter = Boolean(droneCenter);
+  const cameraCenterKey = hasDroneCenter
+    ? "drone-live"
+    : `${center.lat.toFixed(7)}:${center.lng.toFixed(7)}`;
 
   const latestValuesRef = useRef({
     droneCenter,
@@ -285,6 +290,62 @@ export default function CesiumMap({
 
   const viewerReadyRef = useRef(false);
 
+  function updateDroneEntity() {
+    const CesiumModule = CesiumRef.current;
+    const viewer = viewerRef.current;
+    if (!CesiumModule || !viewer) return;
+
+    const dc = latestValuesRef.current.droneCenter;
+    if (!dc) {
+      if (droneEntityRef.current) {
+        viewer.entities.remove(droneEntityRef.current);
+        droneEntityRef.current = null;
+      }
+      return;
+    }
+
+    const markerHeightM = clamp(
+      Number.isFinite(planningAltitudeM) ? planningAltitudeM : 25,
+      10,
+      120,
+    );
+    const position = CesiumModule.Cartesian3.fromDegrees(
+      dc.lng,
+      dc.lat,
+      markerHeightM,
+    );
+    if (!droneEntityRef.current) {
+      droneEntityRef.current = viewer.entities.add({
+        position,
+        billboard: {
+          image: droneIconUrl,
+          width: 40,
+          height: 40,
+          rotation: latestValuesRef.current.safeHeadingRad,
+          alignedAxis: CesiumModule.Cartesian3.UNIT_Z,
+          verticalOrigin: CesiumModule.VerticalOrigin.CENTER,
+          horizontalOrigin: CesiumModule.HorizontalOrigin.CENTER,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+        label: {
+          text: "DRONE",
+          pixelOffset: new CesiumModule.Cartesian2(0, -22),
+          scale: 0.85,
+          showBackground: true,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+      });
+      return;
+    }
+
+    droneEntityRef.current.position =
+      new CesiumModule.ConstantPositionProperty(position);
+    if (droneEntityRef.current.billboard) {
+      droneEntityRef.current.billboard.rotation =
+        new CesiumModule.ConstantProperty(latestValuesRef.current.safeHeadingRad);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -313,7 +374,7 @@ export default function CesiumMap({
         shouldAnimate: true,
       });
 
-      viewer.scene.globe.depthTestAgainstTerrain = true;
+      viewer.scene.globe.depthTestAgainstTerrain = false;
 
       if (useWorldTerrain) {
         try {
@@ -379,6 +440,7 @@ export default function CesiumMap({
 
       viewerReadyRef.current = true;
       drawEntities();
+      updateDroneEntity();
       void loadFieldTileset(fieldTilesetUrlRef.current);
       applyCameraMode();
     })();
@@ -482,7 +544,6 @@ export default function CesiumMap({
     const viewer = viewerRef.current;
     if (!CesiumModule || !viewer) return;
 
-    if (droneEntityRef.current) viewer.entities.remove(droneEntityRef.current);
     if (polylineEntityRef.current)
       viewer.entities.remove(polylineEntityRef.current);
     if (completedDrawEntityRef.current)
@@ -597,35 +658,16 @@ export default function CesiumMap({
       waypointPolygonEntityRef.current = null;
     }
 
-    const dc = latestValuesRef.current.droneCenter;
-    if (dc) {
-      droneEntityRef.current = viewer.entities.add({
-        position: CesiumModule.Cartesian3.fromDegrees(dc.lng, dc.lat),
-        billboard: {
-          image: droneIconUrl,
-          width: 40,
-          height: 40,
-          rotation: latestValuesRef.current.safeHeadingRad,
-          alignedAxis: CesiumModule.Cartesian3.UNIT_Z,
-          verticalOrigin: CesiumModule.VerticalOrigin.CENTER,
-          horizontalOrigin: CesiumModule.HorizontalOrigin.CENTER,
-        },
-        label: {
-          text: "DRONE",
-          pixelOffset: new CesiumModule.Cartesian2(0, -22),
-          scale: 0.85,
-          showBackground: true,
-        },
-      });
-    } else {
-      droneEntityRef.current = null;
-    }
+    updateDroneEntity();
   }
 
-  // FIX: Removed viewerReadyRef check - drawEntities handles it internally
   useEffect(() => {
     drawEntities();
-  }, [waypoints, droneCenter, fieldBoundary, plannedRoute, exclusionZones]);
+  }, [waypoints, fieldBoundary, plannedRoute, exclusionZones]);
+
+  useEffect(() => {
+    updateDroneEntity();
+  }, [droneCenter, safeHeadingRad]);
 
   useEffect(() => {
     void loadFieldTileset(fieldTilesetUrl);
@@ -1007,7 +1049,11 @@ export default function CesiumMap({
     const followHeight = lockCameraToPlanningAltitude
       ? clamp(baseHeight + 4, 20, 30)
       : Math.max(300, Math.round(baseHeight * 0.4));
-    const target = dc ?? fieldView?.center ?? c;
+    const overviewTarget = fieldView?.center ?? c;
+    const target =
+      viewMode === "follow" || viewMode === "fpv" || viewMode === "orbit"
+        ? dc ?? overviewTarget
+        : overviewTarget;
 
     const setView = (opts: {
       lat: number;
@@ -1017,7 +1063,14 @@ export default function CesiumMap({
       pitchRad?: number;
       rollRad?: number;
       fly?: boolean;
+      signature?: string;
     }) => {
+      if (opts.signature && lastCameraSignatureRef.current === opts.signature) {
+        return;
+      }
+      if (opts.signature) {
+        lastCameraSignatureRef.current = opts.signature;
+      }
       const destination = CesiumModule.Cartesian3.fromDegrees(
         opts.lng,
         opts.lat,
@@ -1036,6 +1089,13 @@ export default function CesiumMap({
     };
 
     if (viewMode === "top") {
+      const signature = [
+        viewMode,
+        target.lat.toFixed(7),
+        target.lng.toFixed(7),
+        Math.round(baseHeight),
+        fieldView ? "field" : "center",
+      ].join(":");
       setView({
         lat: target.lat,
         lng: target.lng,
@@ -1043,11 +1103,19 @@ export default function CesiumMap({
         headingRad: 0,
         pitchRad: CesiumModule.Math.toRadians(-90),
         fly: true,
+        signature,
       });
       return;
     }
 
     if (viewMode === "tilted") {
+      const signature = [
+        viewMode,
+        target.lat.toFixed(7),
+        target.lng.toFixed(7),
+        Math.round(tiltedHeight),
+        fieldView ? "field" : "center",
+      ].join(":");
       setView({
         lat: target.lat,
         lng: target.lng,
@@ -1055,11 +1123,13 @@ export default function CesiumMap({
         headingRad: 0,
         pitchRad: CesiumModule.Math.toRadians(-45),
         fly: true,
+        signature,
       });
       return;
     }
 
     if (viewMode === "follow") {
+      lastCameraSignatureRef.current = null;
       if (droneEntityRef.current) {
         viewer.trackedEntity = droneEntityRef.current;
         setView({
@@ -1160,10 +1230,12 @@ export default function CesiumMap({
     };
 
     if (viewMode === "fpv") {
+      lastCameraSignatureRef.current = null;
       tickFPV();
       return;
     }
     if (viewMode === "orbit") {
+      lastCameraSignatureRef.current = null;
       tickOrbit();
       return;
     }
@@ -1177,15 +1249,12 @@ export default function CesiumMap({
     };
   }, [
     viewMode,
-    center.lat,
-    center.lng,
+    cameraCenterKey,
     zoom,
-    droneCenter?.lat,
-    droneCenter?.lng,
+    hasDroneCenter,
     fieldCameraView?.center.lat,
     fieldCameraView?.center.lng,
     fieldCameraView?.topHeight,
-    safeHeadingRad,
     planningAltitudeM,
     lockCameraToPlanningAltitude,
   ]);

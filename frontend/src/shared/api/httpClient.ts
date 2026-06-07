@@ -1,4 +1,5 @@
 import { getApiBaseUrl, SIGN_IN_PATH } from "../../app/config/env";
+import { emitAppLog } from "../logging";
 import { ApiError } from "./apiError";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -14,9 +15,19 @@ export type HttpRequestOptions = {
   skipUnauthorizedRedirect?: boolean;
   /** Retry transient fetch/network failures. Defaults to 2 for GET, 0 otherwise. */
   networkRetries?: number;
+  /** Expected response statuses that should not emit app-log warnings/errors. */
+  suppressErrorLogStatuses?: number[];
 };
 
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
+let refreshRequest: Promise<boolean> | null = null;
+
+function createRequestId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
 
 export function resolveApiUrl(path: string): string {
   const base = getApiBaseUrl();
@@ -37,6 +48,24 @@ function redirectToSignIn(): void {
   if (typeof window === "undefined") return;
   if (window.location.pathname === SIGN_IN_PATH) return;
   window.location.replace(SIGN_IN_PATH);
+}
+
+async function refreshAccessSession(): Promise<boolean> {
+  if (refreshRequest) return refreshRequest;
+  refreshRequest = (async () => {
+    try {
+      const response = await fetch(resolveApiUrl("/auth/refresh"), {
+        method: "POST",
+        credentials: "include",
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      refreshRequest = null;
+    }
+  })();
+  return refreshRequest;
 }
 
 /** session_present is a UI marker ("1"), not a JWT — never send it as Bearer auth. */
@@ -98,17 +127,36 @@ async function performHttpRequestWithRetry<T>(
   method: HttpMethod,
   options: HttpRequestOptions,
 ): Promise<T> {
+  const headers = new Headers(options.headers ?? {});
+  if (!headers.has("X-Request-ID")) {
+    headers.set("X-Request-ID", createRequestId());
+  }
+  const requestId = headers.get("X-Request-ID") ?? undefined;
+  const attemptOptions = { ...options, headers };
   const retryCount = options.networkRetries ?? (method === "GET" ? 2 : 0);
   let lastError: unknown;
   for (let attempt = 0; attempt <= retryCount; attempt += 1) {
     try {
-      return await performHttpRequest<T>(url, method, options);
+      return await performHttpRequest<T>(url, method, attemptOptions);
     } catch (error) {
       if (error instanceof ApiError || isAbortError(error) || attempt >= retryCount) {
+        if (!(error instanceof ApiError) && !isAbortError(error)) {
+          emitAppLog({
+            level: "error",
+            source: "api",
+            message: "Backend request could not be reached",
+            requestId,
+            details: {
+              method,
+              path: new URL(url, window.location.origin).pathname,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
         throw error;
       }
       lastError = error;
-      await sleep(250 * 2 ** attempt, options.signal);
+      await sleep(250 * 2 ** attempt, attemptOptions.signal);
     }
   }
   throw lastError;
@@ -120,6 +168,10 @@ async function performHttpRequest<T>(
   options: HttpRequestOptions,
 ): Promise<T> {
   const headers = new Headers(options.headers ?? {});
+  if (!headers.has("X-Request-ID")) {
+    headers.set("X-Request-ID", createRequestId());
+  }
+  const requestId = headers.get("X-Request-ID") ?? undefined;
 
   const payload = options.body;
   const isFormData = payload instanceof FormData;
@@ -137,7 +189,7 @@ async function performHttpRequest<T>(
         ? payload
         : JSON.stringify(payload);
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     method,
     headers,
     credentials: "include",
@@ -145,16 +197,37 @@ async function performHttpRequest<T>(
     body: requestBody,
   });
 
-  if (
-    response.status === 401 &&
-    !options.skipUnauthorizedRedirect &&
-    !isAuthPath(url)
-  ) {
-    redirectToSignIn();
+  if (response.status === 401 && !isAuthPath(url)) {
+    const refreshed = await refreshAccessSession();
+    if (refreshed) {
+      response = await fetch(url, {
+        method,
+        headers,
+        credentials: "include",
+        signal: options.signal,
+        body: requestBody,
+      });
+    } else if (!options.skipUnauthorizedRedirect) {
+      redirectToSignIn();
+    }
   }
 
   if (!response.ok) {
-    throw await ApiError.fromResponse(response);
+    const apiError = await ApiError.fromResponse(response);
+    if (!options.suppressErrorLogStatuses?.includes(response.status)) {
+      emitAppLog({
+        level: response.status >= 500 ? "error" : "warn",
+        source: "api",
+        message: apiError.detail || apiError.message || "Backend request failed",
+        requestId: apiError.requestId ?? requestId,
+        details: {
+          method,
+          status: response.status,
+          path: new URL(url, window.location.origin).pathname,
+        },
+      });
+    }
+    throw apiError;
   }
 
   if (response.status === 204) {

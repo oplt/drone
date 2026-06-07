@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import time
 from collections.abc import AsyncIterator
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -24,14 +25,17 @@ logger = logging.getLogger(__name__)
 PI_PORT = 5000
 _GAZEBO_ENABLE_COOLDOWN_S = 10.0
 _last_gazebo_enable_attempt = 0.0
+_gazebo_no_topic_warning_logged = False
 
 
 def gazebo_subprocess_fallback_required() -> bool:
-    try:
-        from backend.modules.warehouse.service.video import effective_drone_video_use_gazebo
-    except Exception:
-        return bool(settings.drone_video_use_gazebo and not opencv_has_gstreamer())
-    return bool(effective_drone_video_use_gazebo() and not opencv_has_gstreamer())
+    """Use gst-launch when Gazebo UDP/RTP must be decoded outside OpenCV."""
+    if not settings.drone_video_use_gazebo:
+        return False
+    source = (settings.drone_video_source_gazebo or "").strip().lower()
+    if not source.startswith("udp://"):
+        return False
+    return not opencv_has_gstreamer()
 
 
 def _get_gazebo_udp_port() -> int:
@@ -68,7 +72,7 @@ def _discover_gazebo_enable_topics() -> list[str]:
 
 
 def _ensure_gazebo_streaming_enabled() -> None:
-    global _last_gazebo_enable_attempt
+    global _gazebo_no_topic_warning_logged, _last_gazebo_enable_attempt
 
     now = time.monotonic()
     if now - _last_gazebo_enable_attempt < _GAZEBO_ENABLE_COOLDOWN_S:
@@ -77,7 +81,9 @@ def _ensure_gazebo_streaming_enabled() -> None:
 
     topics = _discover_gazebo_enable_topics()
     if not topics:
-        logger.warning("No Gazebo /enable_streaming topic discovered.")
+        if not _gazebo_no_topic_warning_logged:
+            logger.warning("No Gazebo /enable_streaming topic discovered.")
+            _gazebo_no_topic_warning_logged = True
         return
 
     for topic in topics:
@@ -185,42 +191,20 @@ class SharedVideoRuntime:
         self._fallback_recording_path: str | None = None
 
     def source_url(self) -> str:
-        from backend.modules.warehouse.service.video import (
-            effective_drone_video_source,
-            effective_drone_video_use_gazebo,
-            warehouse_video_blocked,
-        )
-
-        if warehouse_video_blocked():
-            raise RuntimeError(
-                "Warehouse Gazebo sim does not use Raspberry Pi / TCP video streams"
-            )
-        if effective_drone_video_use_gazebo():
-            return effective_drone_video_source() or settings.drone_video_source_gazebo
-        return effective_drone_video_source() or f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
+        if settings.drone_video_use_gazebo:
+            return settings.drone_video_source_gazebo
+        return f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
     async def ensure_source_available(self) -> dict[str, Any]:
-        from backend.modules.warehouse.service.video import (
-            effective_drone_video_use_gazebo,
-            warehouse_video_blocked,
-            warehouse_video_skip_reason,
-        )
-
-        if warehouse_video_blocked():
-            return {
-                "status": "skipped",
-                "source": None,
-                "proxy": "/video/mjpeg",
-                "message": warehouse_video_skip_reason(),
-            }
 
         source = self.source_url()
-        if effective_drone_video_use_gazebo():
-            await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
+        if settings.drone_video_use_gazebo:
+            _ensure_gazebo_streaming_enabled()
             return {
-                "status": "ready",
+                "status": "starting",
                 "source": source,
                 "proxy": "/video/mjpeg",
+                "message": "Gazebo video source selected; waiting for first frame.",
             }
 
         try:
@@ -251,6 +235,7 @@ class SharedVideoRuntime:
 
         reachable = await _wait_for_stream(source, timeout_s=20.0)
         if not reachable:
+            logger.warning("Video source is not reachable after start attempt: %s", source)
             return {
                 "status": "started_with_warnings",
                 "source": source,
@@ -278,6 +263,9 @@ class SharedVideoRuntime:
 
         if self._frame_seq == 0:
             detail = self._last_error or "Timed out waiting for first video frame."
+            async with self._condition:
+                self._last_error = detail
+                self._condition.notify_all()
             raise RuntimeError(detail)
 
     async def _publish_jpeg_frame(self, encoded_frame: bytes) -> None:
@@ -458,7 +446,10 @@ class SharedVideoRuntime:
                 already_running = True
 
         if already_running:
-            return await self.status()
+            status = await self.status()
+            if not status.get("healthy") and status.get("error") and status.get("frame_count") == 0:
+                raise RuntimeError(str(status["error"]))
+            return status
 
         availability = await self.ensure_source_available()
         source = str(availability.get("source") or self.source_url())
@@ -510,7 +501,31 @@ class SharedVideoRuntime:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            logger.exception("Shared video runtime failed")
+            if (
+                self._frame_seq == 0
+                and settings.drone_video_use_gazebo
+                and "GStreamer support" in str(exc)
+            ):
+                logger.warning(
+                    "OpenCV Gazebo stream failed; falling back to gst-launch source=%s err=%s",
+                    source,
+                    exc,
+                )
+                try:
+                    await self._worker_loop_gazebo_fallback()
+                    return
+                except Exception as fallback_exc:
+                    exc = fallback_exc
+
+            if self._frame_seq == 0:
+                logger.warning(
+                    "Video stream unavailable source=%s: %s",
+                    source,
+                    exc,
+                    exc_info=True,
+                )
+            else:
+                logger.exception("Shared video runtime failed source=%s", source)
             async with self._condition:
                 self._last_error = str(exc)
                 self._condition.notify_all()
@@ -555,19 +570,6 @@ class SharedVideoRuntime:
         }
 
     async def start_recording(self, *, recording_path: str | None = None) -> dict[str, Any]:
-        from backend.modules.warehouse.service.video import (
-            warehouse_video_blocked,
-            warehouse_video_skip_reason,
-        )
-
-        if warehouse_video_blocked():
-            return {
-                "recording": False,
-                "recording_file": None,
-                "recording_path": None,
-                "skipped": True,
-                "message": warehouse_video_skip_reason(),
-            }
 
         await self.ensure_running()
         recording_root = _recording_root_from_path(recording_path)
@@ -616,8 +618,23 @@ class SharedVideoRuntime:
         )
         return status
 
+    async def stop(self) -> None:
+        async with self._lock:
+            task = self._worker_task
+            video = self._video
+            self._worker_task = None
+            self._video = None
+            self._last_error = "Video runtime stopped."
+            self._stop_fallback_recording_locked()
+
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        if video is not None:
+            video.close()
+
     async def stream(self, request: Request) -> AsyncIterator[bytes]:
-        await self.ensure_running()
         last_seq = -1
 
         while not await request.is_disconnected():

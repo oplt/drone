@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import Session
+from backend.core.logging.diagnostics import build_diagnostics_bundle, list_latest_runtime_logs
+from backend.core.logging.paths import runtime_log_root
 from backend.modules.deliverables.models import ExportJob
 from backend.modules.identity.dependencies import require_admin
 from backend.modules.identity.models import User, UserRole
@@ -63,8 +65,8 @@ async def update_user_role(
     role_str = body.get("role")
     try:
         role = UserRole(role_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid role: {role_str}")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid role: {role_str}") from exc
 
     await db.execute(update(User).where(User.id == user_id).values(role=role))
     await db.commit()
@@ -198,3 +200,29 @@ async def worker_health():
         }
     except Exception as exc:
         return {"error": str(exc), "workers": [], "total_active": 0}
+
+
+@router.get("/diagnostics/logs")
+async def latest_runtime_logs(limit: int = 50):
+    bounded_limit = min(max(limit, 1), 200)
+    logs = list_latest_runtime_logs(limit=bounded_limit)
+    return {
+        "runtime_log_root": str(runtime_log_root()),
+        "logs": [item.to_dict() for item in logs],
+    }
+
+
+@router.get("/diagnostics/bundle")
+async def download_diagnostics_bundle():
+    bundle = build_diagnostics_bundle()
+    logger.info(
+        "Admin diagnostics bundle generated filename=%s size_bytes=%d",
+        bundle.filename,
+        len(bundle.data),
+        extra={"filename": bundle.filename, "size_bytes": len(bundle.data)},
+    )
+    return Response(
+        content=bundle.data,
+        media_type=bundle.content_type,
+        headers={"Content-Disposition": f'attachment; filename="{bundle.filename}"'},
+    )

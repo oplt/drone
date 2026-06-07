@@ -1,1 +1,0 @@
-/home/polat/Desktop/Projects/drone_app/build/warehouse_mapping_bridge/launch/gazebo_warehouse_stack.launch.py

@@ -1,7 +1,6 @@
 import collections.abc
 import json
 import math
-import os
 
 for _name in ("MutableMapping", "MutableSequence", "MutableSet"):
     if not hasattr(collections, _name):
@@ -17,6 +16,7 @@ from dronekit import LocationGlobalRelative, VehicleMode, connect
 from pymavlink import mavutil
 
 from backend.core.config.runtime import settings
+from backend.modules.missions.flight_profile import explicit_sim_home_fallback_enabled
 from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate, Telemetry
 from backend.modules.vehicle_runtime.vehicle_port import DroneClient, MissionAbortRequested
 
@@ -64,13 +64,7 @@ logger = logging.getLogger(__name__)
 
 
 def _sim_or_indoor_home_fallback_allowed() -> bool:
-    enabled_values = {"1", "true", "yes", "on"}
-    if str(settings.WAREHOUSE_BRIDGE_FLOW or "").strip().lower() == "gazebo":
-        return True
-    for name in ("SIM_MODE", "INDOOR_NAV", "WAREHOUSE_GAZEBO_SIM"):
-        if os.getenv(name, "").strip().lower() in enabled_values:
-            return True
-    return False
+    return explicit_sim_home_fallback_enabled()
 
 
 class MavlinkDrone(DroneClient):
@@ -92,13 +86,14 @@ class MavlinkDrone(DroneClient):
         self._mission_control_changed = threading.Event()
         self._mission_control_lock = threading.Lock()
         self._connect_lock = threading.Lock()
+        self._home_fallback_warning_logged = False
         self._warehouse_odometry_overlay: dict[str, object] = {}
         self._warehouse_odometry_overlay_loaded_at = 0.0
         # Segment-follower config; replace or mutate before calling follow_waypoints
         # to tune acceptance radii, lookahead, or attach a progress callback.
         self.follower_config: WaypointFollowerConfig = WaypointFollowerConfig()
 
-    def connect(self) -> None:
+    def connect(self, *, home_fallback_allowed: bool | None = None) -> None:
         with self._connect_lock:
             if self.vehicle is not None:
                 logger.info("MAVLink vehicle already connected endpoint=%s", self.connection_str)
@@ -113,7 +108,12 @@ class MavlinkDrone(DroneClient):
         # print("Waiting for home location...")
         logger.info("Waiting for home location...")
         tries = 0
-        allow_home_fallback = _sim_or_indoor_home_fallback_allowed()
+        self._home_fallback_warning_logged = False
+        allow_home_fallback = (
+            _sim_or_indoor_home_fallback_allowed()
+            if home_fallback_allowed is None
+            else bool(home_fallback_allowed)
+        )
         while not getattr(self.vehicle, "home_location", None) and tries < 30:
             local = getattr(getattr(self.vehicle, "location", None), "local_frame", None)
             if (
@@ -131,10 +131,14 @@ class MavlinkDrone(DroneClient):
                 local is not None
                 and getattr(local, "north", None) is not None
                 and getattr(local, "east", None) is not None
+                and not self._home_fallback_warning_logged
             ):
                 logger.warning(
-                    "Local frame present but GPS home fallback is disabled for real flight"
+                    "Local frame present but GPS home fallback is disabled for real flight. "
+                    "Set SIM_MODE=1 for SITL/local development, or wait for GPS home before "
+                    "starting a real flight."
                 )
+                self._home_fallback_warning_logged = True
             time.sleep(1)
             tries += 1
 

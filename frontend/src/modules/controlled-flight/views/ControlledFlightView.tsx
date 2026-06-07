@@ -122,7 +122,6 @@ export function ControlledFlightView() {
     setPendingFlightId,
     telemetry,
     wsConnected,
-    disconnect,
     droneConnected,
   } = useMissionWebsocketRuntime<MissionStatus>({
     apiBase: API_BASE_CLEAN,
@@ -356,12 +355,6 @@ export function ControlledFlightView() {
     );
   }, [addError]);
 
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
-
   useDroneMapFollow({
     mapRef,
     droneCenter,
@@ -456,7 +449,10 @@ export function ControlledFlightView() {
     setAlt(num);
   };
 
-  const mapCenter = useMemo(() => userCenter || center, [userCenter, center]);
+  const mapCenter = useMemo(
+    () => droneCenter || userCenter || center,
+    [droneCenter, userCenter, center]
+  );
   const mapOptions = useMemo(
       () => ({
         streetViewControl: false,

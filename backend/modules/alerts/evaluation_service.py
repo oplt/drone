@@ -9,6 +9,7 @@ from typing import Any
 from geoalchemy2.shape import to_shape
 from shapely.geometry import Point
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
@@ -59,6 +60,7 @@ class AlertEngine:
         self._repo = AlertRepository()
         self._outbox = OutboxRepository()
         self._risk = RiskEngine()
+        self._last_db_error_log_at = 0.0
 
     async def start(self) -> None:
         if self._running:
@@ -83,6 +85,11 @@ class AlertEngine:
             started = time.monotonic()
             try:
                 await self.evaluate_once()
+            except SQLAlchemyError as exc:
+                now = time.monotonic()
+                if now - self._last_db_error_log_at >= 60.0:
+                    logger.warning("Operational alert evaluation skipped: database unavailable: %s", exc)
+                    self._last_db_error_log_at = now
             except Exception:
                 logger.exception("Operational alert evaluation failed")
 

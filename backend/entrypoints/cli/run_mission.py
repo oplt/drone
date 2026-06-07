@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from uuid import uuid4
-import socket
 import os
+import socket
+from uuid import uuid4
 
 # from backend.infrastructure.messaging.opcua_server import DroneOpcUaServer
 from backend.core.config.runtime import settings, setup_logging

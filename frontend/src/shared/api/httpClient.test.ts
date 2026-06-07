@@ -1,10 +1,15 @@
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiError";
 import { httpRequest, resolveApiUrl, shouldAttachBearerToken } from "./httpClient";
 import { server } from "../../test/msw/server";
+import { clearAppLogsForTests, getAppLogs } from "../logging";
 
 describe("httpClient", () => {
+  afterEach(() => {
+    clearAppLogsForTests();
+  });
+
   it("resolves relative API paths", () => {
     expect(resolveApiUrl("/analytics/overview")).toBe("/analytics/overview");
   });
@@ -57,6 +62,105 @@ describe("httpClient", () => {
         skipUnauthorizedRedirect: true,
       }),
     ).rejects.toMatchObject({ message: "Video upload failed" });
+  });
+
+  it("attaches request ids and records failed API calls", async () => {
+    let requestId: string | null = null;
+    server.use(
+      http.get("*/telemetry/status", ({ request }) => {
+        requestId = request.headers.get("X-Request-ID");
+        return HttpResponse.json(
+          {
+            error: {
+              code: "INTERNAL_ERROR",
+              message: "Telemetry status failed",
+              request_id: requestId,
+            },
+          },
+          {
+            status: 500,
+            headers: requestId ? { "X-Request-ID": requestId } : undefined,
+          },
+        );
+      }),
+    );
+
+    const error = await httpRequest("/telemetry/status", {
+      skipUnauthorizedRedirect: true,
+    }).catch((caught: unknown) => caught);
+
+    expect(requestId).toBeTruthy();
+    expect(error).toMatchObject({ requestId });
+    expect(getAppLogs()[0]).toMatchObject({
+      level: "error",
+      source: "api",
+      requestId,
+      message: "Telemetry status failed",
+    });
+  });
+
+  it("refreshes the session and retries a non-auth 401 once", async () => {
+    let overviewCalls = 0;
+    let refreshCalls = 0;
+    server.use(
+      http.get("*/analytics/overview", () => {
+        overviewCalls += 1;
+        if (overviewCalls === 1) {
+          return new HttpResponse(null, { status: 401 });
+        }
+        return HttpResponse.json({ summary: { active_flights: 3 } });
+      }),
+      http.post("*/auth/refresh", () => {
+        refreshCalls += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(
+      httpRequest<{ summary: { active_flights: number } }>(
+        "/analytics/overview",
+        { skipUnauthorizedRedirect: true },
+      ),
+    ).resolves.toEqual({ summary: { active_flights: 3 } });
+
+    expect(refreshCalls).toBe(1);
+    expect(overviewCalls).toBe(2);
+    expect(getAppLogs()).toHaveLength(0);
+  });
+
+  it("shares one refresh request across concurrent non-auth 401s", async () => {
+    let refreshCalls = 0;
+    const seenPaths: string[] = [];
+    server.use(
+      http.get("*/telemetry/status", ({ request }) => {
+        seenPaths.push(new URL(request.url).pathname);
+        if (seenPaths.filter((path) => path === "/telemetry/status").length === 1) {
+          return new HttpResponse(null, { status: 401 });
+        }
+        return HttpResponse.json({ ok: true });
+      }),
+      http.get("*/warehouse/preflight", ({ request }) => {
+        seenPaths.push(new URL(request.url).pathname);
+        if (seenPaths.filter((path) => path === "/warehouse/preflight").length === 1) {
+          return new HttpResponse(null, { status: 401 });
+        }
+        return HttpResponse.json({ ready_to_fly: true });
+      }),
+      http.post("*/auth/refresh", async () => {
+        refreshCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(
+      Promise.all([
+        httpRequest("/telemetry/status", { skipUnauthorizedRedirect: true }),
+        httpRequest("/warehouse/preflight", { skipUnauthorizedRedirect: true }),
+      ]),
+    ).resolves.toEqual([{ ok: true }, { ready_to_fly: true }]);
+
+    expect(refreshCalls).toBe(1);
   });
 
   it("retries transient GET network failures", async () => {

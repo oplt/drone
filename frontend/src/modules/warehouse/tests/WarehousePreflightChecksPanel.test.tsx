@@ -6,7 +6,7 @@ import type { WarehouseGoPreflight } from "../api/warehousePreflightApi";
 const basePreflight: WarehouseGoPreflight = {
   ready_to_fly: false,
   bridge_ok: true,
-  gazebo_ok: true,
+  source_transport_ok: true,
   sensors_ok: false,
   odom_ok: false,
   localization_ok: false,
@@ -64,5 +64,18 @@ describe("WarehousePreflightChecksPanel", () => {
       />,
     );
     expect(screen.getByText(/Diagnostics sample stale/i)).toBeInTheDocument();
+  });
+
+  it("disables preflight button while backend refresh is running", () => {
+    render(
+      <WarehousePreflightChecksPanel
+        preflight={{
+          ...basePreflight,
+          diagnostics: { cache: { refresh_in_progress: true } },
+        }}
+        onRunChecks={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Running checks/i })).toBeDisabled();
   });
 });

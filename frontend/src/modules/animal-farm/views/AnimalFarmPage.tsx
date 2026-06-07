@@ -142,12 +142,12 @@ export default function AnimalFarmPage() {
     setPendingFlightId,
     telemetry,
     wsConnected,
-    disconnect,
     droneConnected,
   } = useMissionWebsocketRuntime<MissionStatus>({
     apiBase: API_BASE_CLEAN,
     getTokenFn: getToken,
     onError: addError,
+    alwaysConnect: true,
   });
   const droneCenter = useDroneCenter(telemetry);
   const { heading, armed } = useMissionCommandMetrics(telemetry);
@@ -432,12 +432,6 @@ useEffect(() => {
   })();
 }, [selectedHerdId, fetchLatestPositions, fetchRisk, addError]);
   // Cleanup on unmount (disconnect WS)
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
-
   useDroneMapFollow({
     mapRef,
     droneCenter,
@@ -622,11 +616,14 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
 
   // If drone exists, keep map centered near it initially
   const mapCenter = useMemo(() => {
+    if (droneCenter) {
+      return droneCenter;
+    }
     if (waypoints.length > 0) {
       return { lat: waypoints[0].lat, lng: waypoints[0].lon };
     }
     return userCenter || center;
-  }, [waypoints, userCenter, center]);
+  }, [droneCenter, waypoints, userCenter, center]);
 
   const mapOptions = useMemo(
     () => ({

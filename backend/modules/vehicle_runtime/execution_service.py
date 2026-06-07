@@ -10,6 +10,7 @@ from backend.core.events import (
     FlightEventSeverityV1,
     MissionLifecyclePayloadV1,
 )
+from backend.core.logging import emit_app_log
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.telemetry.repository import TelemetryBatcher
 from backend.modules.vehicle_runtime.types import Coordinate
@@ -115,14 +116,33 @@ class RuntimeExecutionServiceMixin:
             # ------------------------------------------------------------------
             try:
                 if getattr(self.drone, "vehicle", None):
-                    logger.info("🔌 Drone already connected, skipping connect")
+                    logger.info(
+                        "Drone already connected, skipping connect",
+                        extra={"source": "drone", "operation": "mission_connect"},
+                    )
                 else:
-                    logger.info("🔌 Connecting to drone...")
+                    logger.info(
+                        "Connecting to drone for mission",
+                        extra={"source": "drone", "operation": "mission_connect"},
+                    )
                     await asyncio.to_thread(self.drone.connect)
-                    logger.info("✅ Drone connected successfully")
+                    logger.info(
+                        "Drone connected successfully",
+                        extra={"source": "drone", "operation": "mission_connect"},
+                    )
                 self._init_video()
             except Exception as e:
-                logger.exception(f"❌ Drone Connection failed: {e}")
+                logger.critical(
+                    "Drone connection failed before mission start",
+                    extra={"source": "drone", "operation": "mission_connect"},
+                    exc_info=True,
+                )
+                await emit_app_log(
+                    level="critical",
+                    source="drone",
+                    message="Drone connection failed before mission start",
+                    details={"stage": "connect", "error": str(e)},
+                )
                 raise
 
             # ------------------------------------------------------------------
@@ -172,9 +192,28 @@ class RuntimeExecutionServiceMixin:
                     category="connection",
                     severity=FlightEventSeverityV1.INFO,
                 )
-                logger.info(f"✅ Created flight record with ID: {self._flight_id}")
+                logger.info(
+                    "Created flight record",
+                    extra={"source": "mission", "flight_id": self._flight_id},
+                )
+                await emit_app_log(
+                    level="info",
+                    source="mission",
+                    message="Mission started",
+                    details={"waypoints": len(waypoints), "alt_m": cruise_alt},
+                    flight_id=self._flight_id,
+                )
             except Exception as e:  # FIX (Bug 2)
-                logger.exception(f"❌ Flight record generation failed: {e}")
+                logger.exception(
+                    "Flight record generation failed",
+                    extra={"source": "mission", "stage": "flight_record"},
+                )
+                await emit_app_log(
+                    level="critical",
+                    source="mission",
+                    message="Mission could not create a flight record",
+                    details={"stage": "flight_record", "error": str(e)},
+                )
                 raise
 
             # ------------------------------------------------------------------
@@ -190,7 +229,17 @@ class RuntimeExecutionServiceMixin:
                 await self._run_preflight_checks(waypoints, alt, mission_data=mission_data)
                 logger.info("✅ Preflight checks passed")
             except Exception as e:  # FIX (Bug 2)
-                logger.exception(f"❌ Preflight checks failed: {e}")
+                logger.exception(
+                    "Preflight checks failed",
+                    extra={"source": "mission", "stage": "preflight", "flight_id": self._flight_id},
+                )
+                await emit_app_log(
+                    level="critical",
+                    source="mission",
+                    message="Preflight blocked mission start",
+                    details={"stage": "preflight", "error": str(e)},
+                    flight_id=self._flight_id,
+                )
                 await self._finalize_started_flight(
                     status=FlightStatus.INTERRUPTED,
                     note=f"Preflight blocked mission start: {e}",
@@ -213,7 +262,22 @@ class RuntimeExecutionServiceMixin:
                 )
                 await asyncio.sleep(1)
             except Exception as e:  # FIX (Bug 2)
-                logger.warning(f"⚠️ Failed to start telemetry stream: {e}")
+                logger.error(
+                    "Failed to start telemetry stream for mission",
+                    extra={
+                        "source": "telemetry",
+                        "stage": "telemetry_start",
+                        "flight_id": self._flight_id,
+                    },
+                    exc_info=True,
+                )
+                await emit_app_log(
+                    level="critical",
+                    source="telemetry",
+                    message="Telemetry startup failed; mission cannot continue",
+                    details={"stage": "telemetry_start", "error": str(e)},
+                    flight_id=self._flight_id,
+                )
                 await self._finalize_started_flight(
                     status=FlightStatus.FAILED,
                     note=f"Telemetry startup failed: {e}",
@@ -254,7 +318,18 @@ class RuntimeExecutionServiceMixin:
                     )
 
             except MissionAbortRequested as e:
-                logger.warning("🛑 Mission aborted by operator: %s", e)
+                logger.warning(
+                    "Mission aborted by operator: %s",
+                    e,
+                    extra={"source": "mission", "flight_id": self._flight_id},
+                )
+                await emit_app_log(
+                    level="warn",
+                    source="mission",
+                    message="Mission aborted by operator",
+                    details={"reason": str(e)},
+                    flight_id=self._flight_id,
+                )
                 await self._finalize_started_flight(
                     status=FlightStatus.INTERRUPTED,
                     note=f"Mission interrupted: {e}",
@@ -263,7 +338,11 @@ class RuntimeExecutionServiceMixin:
                 )
                 raise
             except Exception as e:
-                logger.exception(f"❌ Mission failed: {e}")
+                logger.critical(
+                    "Mission failed",
+                    extra={"source": "mission", "flight_id": self._flight_id},
+                    exc_info=True,
+                )
                 event_data: dict[str, object] = {"error": str(e)}
                 from backend.modules.warehouse.exceptions import WarehouseMissionFailure
 
@@ -274,6 +353,13 @@ class RuntimeExecutionServiceMixin:
                     note=f"Mission failed: {e}",
                     event_type="mission_failed",
                     event_data=event_data,
+                )
+                await emit_app_log(
+                    level="critical",
+                    source="mission",
+                    message="Mission failed",
+                    details=event_data,
+                    flight_id=self._flight_id,
                 )
                 raise
         finally:
@@ -293,9 +379,31 @@ class RuntimeExecutionServiceMixin:
                 try:
                     await self.stop_live_telemetry()
                 except Exception as e:
-                    logger.warning(f"Failed to stop orchestrator telemetry ingest: {e}")
+                    logger.warning(
+                        "Failed to stop orchestrator telemetry ingest: %s",
+                        e,
+                        extra={"source": "telemetry", "flight_id": self._flight_id},
+                    )
+                    await emit_app_log(
+                        level="warn",
+                        source="telemetry",
+                        message="Telemetry ingest did not stop cleanly",
+                        details={"error": str(e)},
+                        flight_id=self._flight_id,
+                    )
 
             try:
                 await self._cleanup()
             except Exception as e:
-                logger.warning(f"Failed during mission cleanup: {e}")
+                logger.warning(
+                    "Failed during mission cleanup: %s",
+                    e,
+                    extra={"source": "mission", "flight_id": self._flight_id},
+                )
+                await emit_app_log(
+                    level="warn",
+                    source="mission",
+                    message="Mission cleanup did not complete cleanly",
+                    details={"error": str(e)},
+                    flight_id=self._flight_id,
+                )

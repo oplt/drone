@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { TerraDraw } from "terra-draw";
+import { getApiBaseUrl } from "../../../app/config/env";
 import { getToken } from "../../../modules/session";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import { useMissionWebsocketRuntime } from "../../../modules/mission-runtime";
@@ -41,11 +42,7 @@ export function useFieldSurveyPage() {
 
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
-  const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
-    /\/$/,
-    "",
-  );
+  const API_BASE_CLEAN = getApiBaseUrl();
 
   const toAbsoluteAssetUrl = useCallback(
     (url: string) => {
@@ -75,12 +72,12 @@ export function useFieldSurveyPage() {
     setPendingFlightId,
     telemetry,
     wsConnected,
-    disconnect,
     droneConnected,
   } = useMissionWebsocketRuntime<MissionStatus>({
     apiBase: API_BASE_CLEAN,
     getTokenFn: getToken,
     onError: addError,
+    alwaysConnect: true,
   });
 
   const trackedMissionId = activeFlightId ?? lastMissionId;
@@ -221,12 +218,6 @@ export function useFieldSurveyPage() {
       addError(e instanceof Error ? e.message : "Failed to delete field");
     }
   }, [addError, borderEditor, deleteFieldRecord, pendingDeleteField]);
-
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
 
   const googleMapsReady =
     map.mapEngine !== "google" || (Boolean(map.apiKey) && !map.loadError);

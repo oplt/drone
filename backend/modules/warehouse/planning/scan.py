@@ -1021,7 +1021,7 @@ class WarehouseScanMission:
             "result": (
                 "failed"
                 if mission_error
-                else ("partial_failure" if not mapping_saved and mapping_error else "completed")
+                else ("partial_failure" if not mapping_saved else "completed")
             ),
             "failure_code": failure_code,
             "mapping_saved": mapping_saved,

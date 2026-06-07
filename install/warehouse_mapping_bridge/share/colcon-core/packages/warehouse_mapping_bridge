@@ -1,1 +1,0 @@
-geometry_msgs:launch:launch_ros:nav_msgs:python3-fastapi:python3-pymavlink:python3-uvicorn:python3-yaml:rclpy:ros_gz_bridge:rosbridge_server:sensor_msgs:std_msgs:tf2_ros

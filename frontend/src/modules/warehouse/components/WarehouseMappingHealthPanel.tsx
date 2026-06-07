@@ -43,8 +43,9 @@ function statusLabel(status: string | undefined): string {
   switch (status) {
     case "starting":
       return "Starting";
+    case "waiting_for_sources":
     case "waiting_for_gazebo":
-      return "Waiting for Gazebo/sensors";
+      return "Waiting for source sensors";
     case "bridging":
       return "Bridging sensors";
     case "ready":
@@ -60,7 +61,12 @@ function chipColorForStatus(
   status: string | undefined,
   ready: boolean | null | undefined,
 ): "success" | "warning" | "error" {
-  if (status === "starting" || status === "waiting_for_gazebo" || status === "bridging") {
+  if (
+    status === "starting" ||
+    status === "waiting_for_sources" ||
+    status === "waiting_for_gazebo" ||
+    status === "bridging"
+  ) {
     return "warning";
   }
   return chipColor(ready ?? false);
@@ -93,7 +99,7 @@ export function WarehouseMappingHealthPanel({
     status.vslam_tracking === false ? "VSLAM tracking lost." : null,
     status.depth_healthy === false ? "Depth stream unhealthy." : null,
     stackWaitingSensors
-      ? "Mapping stack waiting for Gazebo sensors (press Play or gz sim -r)."
+      ? "Mapping stack waiting for source sensors (unpause sim or gz sim -r)."
       : stackStopped
         ? "Mapping stack stopped."
         : null,

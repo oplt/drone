@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Box, IconButton, Paper, Stack, Tooltip } from "@mui/material";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
@@ -31,6 +32,15 @@ export function PhotogrammetryMapColumn({
   onSelectField: (field: FieldFeature) => void;
 }) {
   const { apiBase, map, mission, exclusionZones, fieldBorder } = vm;
+  const savedFieldBoundaries = useMemo(
+    () =>
+      vm.fields.map((field) => ({
+        id: field.id,
+        name: field.name,
+        ring: field.ring,
+      })),
+    [vm.fields],
+  );
 
   return (
     <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
@@ -95,6 +105,9 @@ export function PhotogrammetryMapColumn({
             zoom: map.mapZoom,
             waypoints: mission.waypoints,
             fieldBoundary: map.cesiumFieldBoundary,
+            savedFields: savedFieldBoundaries,
+            selectedFieldId: vm.selectedFieldId,
+            onSavedFieldClick: vm.handleSavedFieldSelect,
             plannedRoute: mission.cesiumPlannedRoute,
             exclusionZones,
             droneCenter: map.droneCenter,
@@ -109,6 +122,9 @@ export function PhotogrammetryMapColumn({
             zoom: map.mapZoom,
             waypoints: mission.waypoints,
             fieldBoundary: map.cesiumFieldBoundary,
+            savedFields: savedFieldBoundaries,
+            selectedFieldId: vm.selectedFieldId,
+            onSavedFieldClick: vm.handleSavedFieldSelect,
             plannedRoute: mission.cesiumPlannedRoute,
             exclusionZones,
             droneCenter: map.droneCenter,

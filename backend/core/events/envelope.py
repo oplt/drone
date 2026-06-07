@@ -66,6 +66,13 @@ def _int_or_none(value: Any) -> int | None:
         return None
 
 
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
 class MissionContextV1(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -267,11 +274,28 @@ class TelemetryPayloadV1(BaseModel):
 
         return cls(
             position=TelemetryPositionV1(
-                lat=_float_or_none(position.get("lat")),
-                lon=_float_or_none(position.get("lon")),
-                alt_m=_float_or_none(position.get("alt_m", position.get("alt"))),
+                lat=_float_or_none(
+                    _first_present(position.get("lat"), snap.get("lat"), snap.get("latitude"))
+                ),
+                lon=_float_or_none(
+                    _first_present(
+                        position.get("lon"),
+                        position.get("lng"),
+                        snap.get("lon"),
+                        snap.get("lng"),
+                        snap.get("longitude"),
+                    )
+                ),
+                alt_m=_float_or_none(
+                    _first_present(position.get("alt_m"), position.get("alt"), snap.get("alt"))
+                ),
                 relative_alt_m=_float_or_none(
-                    position.get("relative_alt_m", position.get("relative_alt"))
+                    _first_present(
+                        position.get("relative_alt_m"),
+                        position.get("relative_alt"),
+                        snap.get("relative_alt_m"),
+                        snap.get("relative_alt"),
+                    )
                 ),
             ),
             attitude=TelemetryAttitudeV1(
@@ -289,19 +313,45 @@ class TelemetryPayloadV1(BaseModel):
                 ),
             ),
             battery=TelemetryBatteryV1(
-                voltage_v=_float_or_none(battery.get("voltage_v", battery.get("voltage"))),
-                current_a=_float_or_none(battery.get("current_a", battery.get("current"))),
-                remaining_pct=_int_or_none(battery.get("remaining_pct", battery.get("remaining"))),
+                voltage_v=_float_or_none(
+                    _first_present(
+                        battery.get("voltage_v"),
+                        battery.get("voltage"),
+                        snap.get("battery_voltage"),
+                    )
+                ),
+                current_a=_float_or_none(
+                    _first_present(
+                        battery.get("current_a"),
+                        battery.get("current"),
+                        snap.get("battery_current"),
+                    )
+                ),
+                remaining_pct=_int_or_none(
+                    _first_present(
+                        battery.get("remaining_pct"),
+                        battery.get("remaining"),
+                        snap.get("battery_remaining"),
+                    )
+                ),
                 temperature_c=_float_or_none(
                     battery.get("temperature_c", battery.get("temperature"))
                 ),
             ),
             gps=TelemetryGpsV1(
-                fix_type=_int_or_none(gps.get("fix_type")),
-                satellites_visible=_int_or_none(
-                    gps.get("satellites_visible", gps.get("satellites"))
+                fix_type=_int_or_none(
+                    _first_present(gps.get("fix_type"), snap.get("gps_fix_type"))
                 ),
-                hdop=_float_or_none(gps.get("hdop")),
+                satellites_visible=_int_or_none(
+                    _first_present(
+                        gps.get("satellites_visible"),
+                        gps.get("satellites"),
+                        snap.get("satellites_visible"),
+                    )
+                ),
+                hdop=_float_or_none(
+                    _first_present(gps.get("hdop"), snap.get("hdop"))
+                ),
             ),
             link=TelemetryLinkV1(
                 rc_quality_pct=_int_or_none(link.get("rc_quality_pct", link.get("rc"))),
@@ -316,12 +366,40 @@ class TelemetryPayloadV1(BaseModel):
             ),
             motion=TelemetryMotionV1(
                 groundspeed_mps=_float_or_none(
-                    motion.get("groundspeed_mps", motion.get("groundspeed"))
+                    _first_present(
+                        motion.get("groundspeed_mps"),
+                        motion.get("groundspeed"),
+                        snap.get("groundspeed"),
+                    )
                 ),
-                airspeed_mps=_float_or_none(motion.get("airspeed_mps", motion.get("airspeed"))),
-                heading_deg=_float_or_none(motion.get("heading_deg", motion.get("heading"))),
-                throttle_pct=_float_or_none(motion.get("throttle_pct", motion.get("throttle"))),
-                climb_mps=_float_or_none(motion.get("climb_mps", motion.get("climb"))),
+                airspeed_mps=_float_or_none(
+                    _first_present(
+                        motion.get("airspeed_mps"),
+                        motion.get("airspeed"),
+                        snap.get("airspeed"),
+                    )
+                ),
+                heading_deg=_float_or_none(
+                    _first_present(
+                        motion.get("heading_deg"),
+                        motion.get("heading"),
+                        snap.get("heading"),
+                    )
+                ),
+                throttle_pct=_float_or_none(
+                    _first_present(
+                        motion.get("throttle_pct"),
+                        motion.get("throttle"),
+                        snap.get("throttle"),
+                    )
+                ),
+                climb_mps=_float_or_none(
+                    _first_present(
+                        motion.get("climb_mps"),
+                        motion.get("climb"),
+                        snap.get("climb"),
+                    )
+                ),
             ),
             system=TelemetrySystemV1(status=system.get("status")),
             failsafe=TelemetryFailsafeV1(state=failsafe.get("state")),

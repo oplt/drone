@@ -128,25 +128,6 @@ class RuntimeRecoveryServiceMixin:
             "altitude_agl": alt,
         }
 
-        from backend.modules.warehouse.service.warehouse_preflight import (
-            uses_warehouse_ros_preflight,
-        )
-
-        mission_type = str(mission_data.get("type") or "").lower()
-        if uses_warehouse_ros_preflight(mission_type):
-            from backend.modules.warehouse.service.warehouse_preflight import (
-                run_warehouse_ros_preflight_report,
-            )
-
-            return await run_warehouse_ros_preflight_report(
-                mission_data,
-                cruise_alt=alt,
-                flight_id=str(self._flight_id) if self._flight_id is not None else None,
-                preflight_config=kwargs.pop("preflight_config", {}),
-                mission_speed=kwargs.pop("mission_speed", settings.cruise_speed_mps),
-                **kwargs,
-            )
-
         vehicle_state = await asyncio.to_thread(self.drone.get_telemetry)
         orchestrator = PreflightOrchestrator(config=kwargs.pop("preflight_config", {}))
         config_overrides = dict(kwargs.pop("config_overrides", {}) or {})

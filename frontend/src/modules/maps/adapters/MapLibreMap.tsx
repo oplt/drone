@@ -16,6 +16,7 @@ import { useFlatMapDrawing } from "../hooks/useFlatMapDrawing";
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt?: number };
 type LonLat = [number, number];
+type SavedFieldBoundary = { id: number; name?: string | null; ring: LonLat[] };
 export type FlatDrawMode = ShapeDrawMode;
 export type FlatDrawResult = ShapeDrawResult;
 
@@ -29,6 +30,9 @@ export type MapLibreMapProps = {
   drawMode?: FlatDrawMode;
   onDrawComplete?: (result: FlatDrawResult) => void;
   fieldBoundary?: LonLat[] | null;
+  savedFields?: SavedFieldBoundary[];
+  selectedFieldId?: number | null;
+  onSavedFieldClick?: (fieldId: number) => void;
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   height?: number | string;
@@ -43,7 +47,10 @@ const drawSourceId = "mission-draw-preview";
 const drawPointLayerId = "mission-draw-preview-points";
 const drawLineLayerId = "mission-draw-preview-line";
 const drawFillLayerId = "mission-draw-preview-fill";
-type MapFeature = Feature<Geometry, { kind?: string }>;
+type MapFeature = Feature<
+  Geometry,
+  { kind?: string; fieldId?: number; selected?: boolean }
+>;
 
 function makeMarkerElement(label: string, color: string) {
   const el = document.createElement("div");
@@ -90,13 +97,22 @@ export default function MapLibreMap({
   drawMode = "none",
   onDrawComplete,
   fieldBoundary = null,
+  savedFields = [],
+  selectedFieldId = null,
+  onSavedFieldClick,
   plannedRoute = null,
   exclusionZones = [],
   height = 400,
 }: MapLibreMapProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMapInstance | null>(null);
-  const markersRef = useRef<Marker[]>([]);
+  const waypointMarkersRef = useRef<Marker[]>([]);
+  const droneMarkerRef = useRef<Marker | null>(null);
+  const userMarkerRef = useRef<Marker | null>(null);
+  const drawingRef = useRef<ReturnType<typeof useFlatMapDrawing> | null>(null);
+  const onSavedFieldClickRef = useRef<MapLibreMapProps["onSavedFieldClick"]>(
+    onSavedFieldClick,
+  );
   const setDrawingModeState = useCallback((mode: FlatDrawMode) => {
     if (!mapRef.current) return;
     if (mode === "none") mapRef.current.doubleClickZoom.enable();
@@ -109,6 +125,8 @@ export default function MapLibreMap({
     onPreview: updateDrawingPreview,
     onModeStateChange: setDrawingModeState,
   });
+  drawingRef.current = drawing;
+  onSavedFieldClickRef.current = onSavedFieldClick;
 
   function updateDrawingPreview(mode: FlatDrawMode, coords: LonLat[]) {
     const map = mapRef.current;
@@ -200,29 +218,54 @@ export default function MapLibreMap({
       updateDrawingPreview("none", []);
     });
     map.on("click", (event: maplibregl.MapMouseEvent) => {
-      drawing.handleClick([event.lngLat.lng, event.lngLat.lat]);
+      if (map.getLayer(overlayFillLayerId)) {
+        const feature = map
+          .queryRenderedFeatures(event.point, { layers: [overlayFillLayerId] })
+          .find((item) => item.properties?.kind === "saved-field");
+        const fieldId = feature?.properties?.fieldId;
+        if (typeof fieldId === "number") {
+          onSavedFieldClickRef.current?.(fieldId);
+          return;
+        }
+        if (typeof fieldId === "string") {
+          onSavedFieldClickRef.current?.(Number(fieldId));
+          return;
+        }
+      }
+      drawingRef.current?.handleClick([event.lngLat.lng, event.lngLat.lat]);
     });
     map.on("mousedown", (event: maplibregl.MapMouseEvent) => {
-      if (drawing.startFreehand([event.lngLat.lng, event.lngLat.lat]))
+      if (drawingRef.current?.startFreehand([event.lngLat.lng, event.lngLat.lat]))
         map.dragPan.disable();
     });
     map.on("mousemove", (event: maplibregl.MapMouseEvent) => {
-      drawing.movePointer([event.lngLat.lng, event.lngLat.lat]);
+      drawingRef.current?.movePointer([event.lngLat.lng, event.lngLat.lat]);
     });
     map.on("mouseup", () => {
-      if (drawing.endFreehand()) map.dragPan.enable();
+      if (drawingRef.current?.endFreehand()) map.dragPan.enable();
     });
-    map.on("dblclick", drawing.finishDrawing);
-    map.on("contextmenu", drawing.finishDrawing);
+    map.on("dblclick", () => drawingRef.current?.finishDrawing());
+    map.on("contextmenu", () => drawingRef.current?.finishDrawing());
+    map.on("mousemove", (event: maplibregl.MapMouseEvent) => {
+      if (!map.getLayer(overlayFillLayerId)) return;
+      const hasSavedField = map
+        .queryRenderedFeatures(event.point, { layers: [overlayFillLayerId] })
+        .some((item) => item.properties?.kind === "saved-field");
+      map.getCanvas().style.cursor = hasSavedField ? "pointer" : "";
+    });
     mapRef.current = map;
 
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
+      waypointMarkersRef.current.forEach((marker) => marker.remove());
+      waypointMarkersRef.current = [];
+      droneMarkerRef.current?.remove();
+      droneMarkerRef.current = null;
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, [drawing]);
+  }, []);
 
   useEffect(() => {
     mapRef.current?.jumpTo({ center: [center.lng, center.lat], zoom });
@@ -237,11 +280,11 @@ export default function MapLibreMap({
     const map = mapRef.current;
     if (!map) return;
 
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+    waypointMarkersRef.current.forEach((marker) => marker.remove());
+    waypointMarkersRef.current = [];
 
     waypoints.forEach((point, index) => {
-      markersRef.current.push(
+      waypointMarkersRef.current.push(
         new maplibregl.Marker({
           element: makeMarkerElement(String(index + 1), "#1976d2"),
         })
@@ -249,22 +292,6 @@ export default function MapLibreMap({
           .addTo(map),
       );
     });
-
-    if (droneCenter) {
-      markersRef.current.push(
-        new maplibregl.Marker({ element: makeDroneMarkerElement() })
-          .setLngLat([droneCenter.lng, droneCenter.lat])
-          .addTo(map),
-      );
-    }
-
-    if (userCenter) {
-      markersRef.current.push(
-        new maplibregl.Marker({ element: makeMarkerElement("U", "#2e7d32") })
-          .setLngLat([userCenter.lng, userCenter.lat])
-          .addTo(map),
-      );
-    }
 
     const updateRoute = () => {
       const data =
@@ -308,7 +335,47 @@ export default function MapLibreMap({
     } else {
       map.once("load", updateRoute);
     }
-  }, [droneCenter, routeCoordinates, userCenter, waypoints]);
+  }, [routeCoordinates, waypoints]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (droneCenter) {
+      if (!droneMarkerRef.current) {
+        droneMarkerRef.current = new maplibregl.Marker({
+          element: makeDroneMarkerElement(),
+        })
+          .setLngLat([droneCenter.lng, droneCenter.lat])
+          .addTo(map);
+      } else {
+        droneMarkerRef.current.setLngLat([droneCenter.lng, droneCenter.lat]);
+      }
+    } else if (droneMarkerRef.current) {
+      droneMarkerRef.current.remove();
+      droneMarkerRef.current = null;
+    }
+  }, [droneCenter]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (userCenter) {
+      if (!userMarkerRef.current) {
+        userMarkerRef.current = new maplibregl.Marker({
+          element: makeMarkerElement("U", "#2e7d32"),
+        })
+          .setLngLat([userCenter.lng, userCenter.lat])
+          .addTo(map);
+      } else {
+        userMarkerRef.current.setLngLat([userCenter.lng, userCenter.lat]);
+      }
+    } else if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+  }, [userCenter]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -316,6 +383,21 @@ export default function MapLibreMap({
 
     const updateOverlays = () => {
       const features: MapFeature[] = [];
+      savedFields.forEach((field) => {
+        if (field.ring.length < 3) return;
+        features.push({
+          type: "Feature",
+          properties: {
+            kind: "saved-field",
+            fieldId: field.id,
+            selected: field.id === selectedFieldId,
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [[...field.ring, field.ring[0]]],
+          },
+        });
+      });
       if (fieldBoundary && fieldBoundary.length >= 3) {
         features.push({
           type: "Feature",
@@ -362,12 +444,16 @@ export default function MapLibreMap({
             "case",
             ["==", ["get", "kind"], "exclusion"],
             "#d32f2f",
+            ["==", ["get", "selected"], true],
+            "#1976d2",
             "#1565c0",
           ],
           "fill-opacity": [
             "case",
             ["==", ["get", "kind"], "exclusion"],
             0.24,
+            ["==", ["get", "kind"], "saved-field"],
+            0.08,
             0.12,
           ],
         },
@@ -383,16 +469,25 @@ export default function MapLibreMap({
             "#b71c1c",
             ["==", ["get", "kind"], "planned"],
             "#2e7d32",
+            ["==", ["get", "selected"], true],
+            "#1976d2",
             "#1565c0",
           ],
-          "line-width": ["case", ["==", ["get", "kind"], "planned"], 4, 2],
+          "line-width": [
+            "case",
+            ["==", ["get", "kind"], "planned"],
+            4,
+            ["==", ["get", "selected"], true],
+            4,
+            2,
+          ],
         },
       });
     };
 
     if (map.loaded()) updateOverlays();
     else map.once("load", updateOverlays);
-  }, [exclusionZones, fieldBoundary, plannedRoute]);
+  }, [exclusionZones, fieldBoundary, plannedRoute, savedFields, selectedFieldId]);
 
   if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) {
     return (

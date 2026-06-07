@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSessionMarker } from "../../session";
 import type {
   MissionLifecycleEvent,
   MissionRuntimeFacade,
   MissionStatusPayload,
   RuntimeConnectionState,
-  TelemetrySocketMessage,
 } from "../types";
 import { useMissionStatusPolling } from "./useMissionStatusPolling";
 import { useTelemetryStream } from "./useTelemetryStream";
@@ -17,7 +16,8 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
   onError: (message: string) => void;
   alwaysConnect?: boolean;
 }): MissionRuntimeFacade<TStatus> {
-  const [pendingFlightId, setPendingFlightId] = useState<string | null>(null);
+  const [pendingFlightId, setPendingFlightIdState] = useState<string | null>(null);
+  const pendingFlightClearTimerRef = useRef<number | null>(null);
   const [latestLifecycleMessage, setLatestLifecycleMessage] =
     useState<MissionLifecycleEvent | null>(null);
 
@@ -30,12 +30,29 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
   const activeFlightId = polledActiveFlightId ?? pendingFlightId;
   const sessionPresent = Boolean(getSessionMarker());
 
+  const setPendingFlightId = useCallback((flightId: string | null) => {
+    if (pendingFlightClearTimerRef.current !== null) {
+      window.clearTimeout(pendingFlightClearTimerRef.current);
+      pendingFlightClearTimerRef.current = null;
+    }
+
+    setPendingFlightIdState(flightId);
+
+    if (flightId) {
+      pendingFlightClearTimerRef.current = window.setTimeout(() => {
+        setPendingFlightIdState((current) => (current === flightId ? null : current));
+        pendingFlightClearTimerRef.current = null;
+      }, 30_000);
+    }
+  }, []);
+
   const wsEnabled = alwaysConnect
     ? sessionPresent
     : Boolean(
-        missionStatus?.orchestrator?.drone_connected &&
-          missionStatus?.telemetry?.running &&
-          activeFlightId,
+        sessionPresent &&
+          (missionStatus?.orchestrator?.drone_connected ||
+            missionStatus?.telemetry?.running ||
+            activeFlightId),
       );
 
   const {
@@ -47,7 +64,7 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
     reconnectAttempt,
   } = useTelemetryStream({
     enabled: wsEnabled,
-    onMessage: (message: TelemetrySocketMessage) => {
+    onMessage: (message) => {
       if (message && typeof message === "object" && "type" in message && message.type === "mission_lifecycle") {
         setLatestLifecycleMessage(message as MissionLifecycleEvent);
       }
@@ -66,11 +83,14 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
     missionStatus?.orchestrator?.drone_connected || wsConnected,
   );
 
-  useEffect(() => {
-    if (polledActiveFlightId) {
-      setPendingFlightId(null);
-    }
-  }, [polledActiveFlightId]);
+  useEffect(
+    () => () => {
+      if (pendingFlightClearTimerRef.current !== null) {
+        window.clearTimeout(pendingFlightClearTimerRef.current);
+      }
+    },
+    [],
+  );
 
   return {
     missionStatus,

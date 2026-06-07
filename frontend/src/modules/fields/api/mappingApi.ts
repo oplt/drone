@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "../../../app/config/env";
+import { ApiError } from "../../../shared/api/apiError";
 import { httpRequest, resolveApiUrl } from "../../../shared/api/httpClient";
 import type { FieldMappingReadyResponse } from "../types";
 
@@ -14,10 +15,18 @@ export async function fetchFieldLatestTileset(
   fieldId: number,
   token?: string | null,
 ): Promise<string | null> {
-  const payload = await httpRequest<FieldMappingReadyResponse>(
-    `/mapping/fields/${fieldId}/latest-ready`,
-    { token },
-  );
+  let payload: FieldMappingReadyResponse;
+  try {
+    payload = await httpRequest<FieldMappingReadyResponse>(
+      `/mapping/fields/${fieldId}/latest-ready`,
+      { token, suppressErrorLogStatuses: [404] },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
   const assets = Array.isArray(payload?.assets) ? payload.assets : [];
   const tilesetAsset = assets.find((a) => a?.type === "TILESET_3D");
   const rawUrl = typeof tilesetAsset?.url === "string" ? tilesetAsset.url : "";

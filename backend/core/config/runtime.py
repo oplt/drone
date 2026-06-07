@@ -3,14 +3,18 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from backend.core.logging.paths import runtime_log_dir
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class DailyDateFileHandler(logging.Handler):
     """
-    File handler that writes to backend/logs/YYYY-MM-DD.log and rolls over at day change.
+    File handler that writes to a source-specific runtime log directory and rolls over at day
+    change.
     """
 
     def __init__(self, log_dir: Path, *, encoding: str = "utf-8") -> None:
@@ -127,7 +131,7 @@ def setup_logging(
 ) -> None:
     """Centralized logging configuration with environment variable support"""
     level = log_level if isinstance(log_level, int) else getattr(logging, log_level, logging.INFO)
-    log_dir = (log_file.parent if log_file else (BASE_DIR / "logs")).resolve()
+    log_dir = (log_file.parent if log_file else runtime_log_dir("backend")).resolve()
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
@@ -292,8 +296,20 @@ class RuntimeSettings(BaseSettings):
 
     # Video streaming configuration
     drone_video_source: str = "rtsp://192.168.4.1:8554/stream"
-    drone_video_source_gazebo: str = "udp://127.0.0.1:5600"
-    drone_video_use_gazebo: bool = False
+    drone_video_source_gazebo: str = Field(
+        default="udp://127.0.0.1:5600",
+        validation_alias=AliasChoices(
+            "DRONE_VIDEO_SOURCE_SIM",
+            "DRONE_VIDEO_SOURCE_GAZEBO",
+        ),
+    )
+    drone_video_use_gazebo: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "DRONE_VIDEO_USE_SIM",
+            "DRONE_VIDEO_USE_GAZEBO",
+        ),
+    )
     drone_video_enabled: bool = True
     drone_video_width: int = 640
     drone_video_height: int = 480
@@ -323,13 +339,11 @@ class RuntimeSettings(BaseSettings):
     CELERY_PHOTOGRAMMETRY_QUEUE: str = "photogrammetry"
     PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: str = ""
 
-    # Warehouse ROS 2 / Isaac perception bridge. The FastAPI backend talks to
-    # this companion service; ROS nodes stay outside the API process.
-    WAREHOUSE_BRIDGE_FLOW: str = "isaac"
-    WAREHOUSE_ROS_BRIDGE_URL: str = "http://127.0.0.1:8088"
+    # Warehouse perception bridge removed; fields remain only for backward-compatible settings.
+    WAREHOUSE_BRIDGE_FLOW: str = "disabled"
+    WAREHOUSE_ROS_BRIDGE_URL: str = ""
     WAREHOUSE_ROS_WS_URL: str = ""
-    WAREHOUSE_ROS_CAPTURE_ROOT: str = "backend/storage/warehouse_ros"
-    WAREHOUSE_ROS_PROFILE: str = "isaac_ros_nvblox_stereo"
+    WAREHOUSE_ROS_CAPTURE_ROOT: str = "backend/storage/warehouse"
     WAREHOUSE_ROS_BRIDGE_TIMEOUT_S: float = 3.0
     WAREHOUSE_ROS_BRIDGE_DEEP_TIMEOUT_S: float = 90.0
     WAREHOUSE_ODOMETRY_STATE_PATH: str = ""

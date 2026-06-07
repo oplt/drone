@@ -11,10 +11,13 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import InfoLabel from "../../../shared/ui/InfoLabel";
 import { fetchSignedTilesetUrl } from "../api/warehouseMapsApi";
 import { getWarehouseName } from "../scannedMapSelectors";
 import type { WarehouseScannedMapResponse } from "../types/missions";
+import {
+  WarehouseStatusBadge,
+  type WarehouseUiStatus,
+} from "./WarehouseStatusBadge";
 
 type LayerState = {
   mesh: boolean;
@@ -50,6 +53,10 @@ function statusColor(
   if (status === "failed") return "error";
   if (status === "processing" || status === "queued") return "warning";
   return "default";
+}
+
+function assetStatus(available: boolean): WarehouseUiStatus {
+  return available ? "ready" : "waiting";
 }
 
 export function WarehouseScanViewer({
@@ -178,12 +185,14 @@ export function WarehouseScanViewer({
         justifyContent="space-between"
         flexWrap="wrap"
       >
-        <Typography variant="subtitle1">
-          <InfoLabel
-            label="Warehouse 3D Map"
-            info="Select a stored scan below to view mesh, point cloud, and path layers."
-          />
-        </Typography>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            Warehouse 3D Map
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Mesh, point cloud, scan path, and footprint layers
+          </Typography>
+        </Box>
         <Stack direction="row" spacing={0.75} alignItems="center">
           {status === "loading" && <CircularProgress size={16} />}
           {map && (
@@ -194,7 +203,11 @@ export function WarehouseScanViewer({
             />
           )}
           {typeof map?.progress === "number" && (
-            <Chip size="small" variant="outlined" label={`${map.progress}%`} />
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`Processing ${map.progress}%`}
+            />
           )}
         </Stack>
       </Stack>
@@ -214,7 +227,7 @@ export function WarehouseScanViewer({
         {(status === "empty" || (!tilesetAsset && !pointCloud)) && (
           <ViewerOverlay
             title="No 3D tiles yet"
-            body="Select a ready scan with map assets."
+            body="Run a warehouse scan to generate mesh and point cloud assets."
           />
         )}
         {status === "loading" && (
@@ -233,35 +246,45 @@ export function WarehouseScanViewer({
 
       {map?.error && <Alert severity="error">{map.error}</Alert>}
 
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(2, minmax(0, 1fr))",
+            sm: "repeat(4, minmax(0, 1fr))",
+          },
+          gap: 1,
+        }}
+      >
+        <AssetIndicator
+          label="Mesh"
+          status={assetStatus(Boolean(tilesetAsset))}
+        />
+        <AssetIndicator
+          label="Point cloud"
+          status={assetStatus(Boolean(pointCloud))}
+        />
+        <AssetIndicator
+          label="Scan path"
+          status={assetStatus(Boolean(scanPath))}
+        />
+        <AssetIndicator
+          label="Footprint"
+          status={assetStatus(Boolean(footprint))}
+        />
+      </Box>
+
       <Stack direction="row" spacing={1} flexWrap="wrap">
-        <Tooltip title="Estimated scanned surface coverage">
-          <Chip
-            size="small"
-            color={coverage != null ? "success" : "default"}
-            label={`coverage ${coverage?.toFixed(0) ?? "--"}%`}
-          />
-        </Tooltip>
-        <Tooltip title="Estimated mapping drift">
-          <Chip
-            size="small"
-            color={(drift ?? 0) > 0.5 ? "warning" : "success"}
-            label={`drift ${drift?.toFixed(2) ?? "--"}m`}
-          />
-        </Tooltip>
-        <Tooltip title="Mesh asset availability">
-          <Chip
-            size="small"
-            color={tilesetAsset ? "success" : "warning"}
-            label={tilesetAsset ? "mesh" : "missing mesh"}
-          />
-        </Tooltip>
-        <Tooltip title="Point-cloud asset availability">
-          <Chip
-            size="small"
-            color={pointCloud ? "success" : "warning"}
-            label={pointCloud ? "point cloud" : "missing point cloud"}
-          />
-        </Tooltip>
+        <Chip
+          size="small"
+          variant="outlined"
+          label={`Coverage ${coverage?.toFixed(0) ?? "--"}%`}
+        />
+        <Chip
+          size="small"
+          variant="outlined"
+          label={`Drift ${drift?.toFixed(2) ?? "--"}m`}
+        />
         {(["mesh", "pointCloud", "scanPath", "footprint"] as const).map(
           (key) => (
             <Tooltip
@@ -297,6 +320,29 @@ export function WarehouseScanViewer({
         </Typography>
       )}
     </Stack>
+  );
+}
+
+function AssetIndicator({
+  label,
+  status,
+}: {
+  label: string;
+  status: WarehouseUiStatus;
+}) {
+  return (
+    <Box sx={{ px: 1, py: 0.85, borderRadius: 2, bgcolor: "action.hover" }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block" }}
+      >
+        {label}
+      </Typography>
+      <WarehouseStatusBadge status={status}>
+        {status === "ready" ? "Available" : "Missing"}
+      </WarehouseStatusBadge>
+    </Box>
   );
 }
 

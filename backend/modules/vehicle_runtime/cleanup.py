@@ -44,6 +44,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, select
 
 from backend.core.database.session import Session
+from backend.core.logging.retention import cleanup_runtime_logs, runtime_log_retention_days
 from backend.modules.missions.command_repository import operator_command_repo
 from backend.modules.missions.repository import mission_runtime_repo
 from backend.modules.preflight.repository import preflight_run_repo
@@ -92,6 +93,11 @@ TELEMETRY_CLEANUP_BATCH: int = max(100, int(os.getenv("TELEMETRY_CLEANUP_BATCH",
 Batching prevents long-held locks on high-volume tables and keeps each
 DELETE transaction short enough to avoid WAL bloat.
 """
+
+RUNTIME_LOG_CLEANUP_INTERVAL_S: int = max(
+    3600, int(os.getenv("RUNTIME_LOG_CLEANUP_INTERVAL_S", "86400"))
+)
+"""How often runtime log retention cleanup runs (seconds, default 24 h)."""
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +243,30 @@ async def _telemetry_cleanup_loop(stop_event: asyncio.Event) -> None:
             pass
 
 
+async def _runtime_log_cleanup_loop(stop_event: asyncio.Event) -> None:
+    retention_days = runtime_log_retention_days()
+    logger.info(
+        "runtime_log_cleanup_loop started (interval=%ds, retention=%dd)",
+        RUNTIME_LOG_CLEANUP_INTERVAL_S,
+        retention_days,
+    )
+    while not stop_event.is_set():
+        try:
+            deleted = await asyncio.to_thread(
+                cleanup_runtime_logs,
+                retention_days=retention_days,
+            )
+            if deleted:
+                logger.info("runtime_log_cleanup: deleted %d expired log file(s)", deleted)
+        except Exception:
+            logger.exception("runtime_log_cleanup: error during sweep")
+
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=RUNTIME_LOG_CLEANUP_INTERVAL_S)
+        except TimeoutError:
+            pass
+
+
 # ---------------------------------------------------------------------------
 # Lifecycle helpers — called from api_main.py lifespan
 # ---------------------------------------------------------------------------
@@ -246,7 +276,7 @@ _tasks: list[asyncio.Task] = []
 
 
 def start_cleanup_jobs() -> None:
-    """Spawn the three cleanup loops as background asyncio Tasks."""
+    """Spawn cleanup loops as background asyncio Tasks."""
     global _stop_event, _tasks
     if _tasks:
         return  # Already started.
@@ -255,6 +285,7 @@ def start_cleanup_jobs() -> None:
         asyncio.create_task(_preflight_cleanup_loop(_stop_event), name="preflight_cleanup"),
         asyncio.create_task(_mission_cleanup_loop(_stop_event), name="mission_cleanup"),
         asyncio.create_task(_telemetry_cleanup_loop(_stop_event), name="telemetry_cleanup"),
+        asyncio.create_task(_runtime_log_cleanup_loop(_stop_event), name="runtime_log_cleanup"),
     ]
     logger.info("Cleanup jobs started (%d tasks)", len(_tasks))
 

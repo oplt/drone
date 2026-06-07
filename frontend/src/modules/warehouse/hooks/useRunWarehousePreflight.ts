@@ -1,27 +1,18 @@
-import { useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { connectDroneTelemetry } from "../../mission-runtime/api/telemetryConnectApi";
 import {
   fetchWarehousePreflight,
   type WarehouseGoPreflight,
+  type WarehousePreflightRefresh,
 } from "../api/warehousePreflightApi";
+import { preflightRunPollIntervalMs } from "./preflightPolling";
+import { useStartWarehousePreflightRefresh } from "./useStartWarehousePreflightRefresh";
+import { useWarehousePreflightRun } from "./useWarehousePreflightRun";
 
-const POLL_MS = 1000;
-const POLL_MS_MID = 600;
-const POLL_MS_FAST = 350;
 const DEFAULT_TIMEOUT_MS = 120000;
-const DEEP_REFRESH_MS = 30000;
-const TRANSIENT_FAILURE_KEYS = new Set(["stability", "telemetry_stream"]);
+const TRANSIENT_FAILURE_KEYS = new Set(["stability", "telemetry_stream", "bridge"]);
 const TRANSIENT_STATUSES = new Set(["WAITING", "UNKNOWN"]);
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function hasProbeInProgress(preflight: WarehouseGoPreflight): boolean {
-  return preflight.blocking_reasons.some((reason) =>
-    reason.toLowerCase().includes("probe in progress"),
-  );
-}
 
 /** Backend ready_to_fly must match panel topic categories (no PASS with RGB/depth/IMU FAIL). */
 export function warehousePreflightPassed(
@@ -41,8 +32,27 @@ export function warehousePreflightPassed(
   return true;
 }
 
-function isTerminalPreflightFailure(preflight: WarehouseGoPreflight): boolean {
-  if (warehousePreflightPassed(preflight) || hasProbeInProgress(preflight)) return false;
+function hasProbeInProgress(preflight: WarehouseGoPreflight): boolean {
+  return preflight.blocking_reasons.some((reason) =>
+    reason.toLowerCase().includes("probe in progress"),
+  );
+}
+
+function refreshInProgress(preflight: WarehouseGoPreflight): boolean {
+  return Boolean(
+    preflight.diagnostics?.cache?.refresh_in_progress ||
+      preflight.diagnostics?.timings?.refresh_in_progress ||
+      preflight.diagnostics?.bridge?.health_probe_in_progress ||
+      hasProbeInProgress(preflight),
+  );
+}
+
+function isTerminalPreflightFailure(
+  preflight: WarehouseGoPreflight,
+  run?: WarehousePreflightRefresh | null,
+): boolean {
+  if (warehousePreflightPassed(preflight) || refreshInProgress(preflight)) return false;
+  if (run && run.status !== "complete" && run.status !== "failed") return false;
 
   return Object.entries(preflight.categories ?? {}).some(([key, status]) => {
     if (TRANSIENT_FAILURE_KEYS.has(key)) return false;
@@ -51,40 +61,9 @@ function isTerminalPreflightFailure(preflight: WarehouseGoPreflight): boolean {
   });
 }
 
-/** Exported for unit tests (adaptive poll cadence). */
-export function warehousePreflightPollIntervalMs(
-  preflight: WarehouseGoPreflight | null,
-): number {
-  return pollIntervalMs(preflight);
-}
-
-function pollIntervalMs(preflight: WarehouseGoPreflight | null): number {
-  if (!preflight) return POLL_MS;
-
-  const remaining =
-    preflight.diagnostics?.stability?.remaining_ms ??
-    Math.max(
-      0,
-      (preflight.perception_required_stable_ms ?? 0) -
-        (preflight.perception_stable_for_ms ?? 0),
-    );
-
-  if (remaining <= 2500) return POLL_MS_FAST;
-  if (remaining <= 5000) return POLL_MS_MID;
-
-  const required = preflight.perception_required_stable_ms ?? 0;
-  const stable = preflight.perception_stable_for_ms ?? 0;
-  if (required > 0 && stable >= required * 0.5) return POLL_MS_MID;
-
-  if (
-    preflight.categories?.bridge === "WAITING" ||
-    preflight.categories?.stability === "WAITING" ||
-    preflight.warehouse_bridge_state === "starting"
-  ) {
-    return POLL_MS;
-  }
-
-  return POLL_MS;
+/** Exported for unit tests (run polling cadence). */
+export function warehousePreflightPollIntervalMs(elapsedMs: number): number | false {
+  return preflightRunPollIntervalMs(elapsedMs);
 }
 
 function blockedMessage(
@@ -135,94 +114,193 @@ function timeoutMessage(
     : "Preflight checks did not become ready before the timeout.";
 }
 
+function isRunTerminal(run: WarehousePreflightRefresh | null | undefined): boolean {
+  return run?.status === "complete" || run?.status === "failed";
+}
+
 export function useRunWarehousePreflight(token: string | null) {
+  const queryClient = useQueryClient();
   const [running, setRunning] = useState(false);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [result, setResult] = useState<WarehouseGoPreflight | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef(false);
+  const activeRunRef = useRef<Promise<WarehouseGoPreflight | null> | null>(null);
+  const deadlineRef = useRef<number | null>(null);
+  const connectWarningRef = useRef<string | null>(null);
+  const resolveRunRef = useRef<((value: WarehouseGoPreflight | null) => void) | null>(
+    null,
+  );
+  const handledRunIdRef = useRef<string | null>(null);
+
+  const startRefresh = useStartWarehousePreflightRefresh(token);
+  const runQuery = useWarehousePreflightRun(token, activeRunId, {
+    enabled: running && Boolean(activeRunId),
+  });
+
+  const finishRun = useCallback(
+    (snapshot: WarehouseGoPreflight | null, runError: string | null = null) => {
+      setRunning(false);
+      setActiveRunId(null);
+      deadlineRef.current = null;
+      setError(runError);
+      resolveRunRef.current?.(snapshot);
+      resolveRunRef.current = null;
+      activeRunRef.current = null;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!running || !runQuery.data) return;
+
+    const run = runQuery.data;
+    if (run.status === "running") {
+      if (run.snapshot) setResult(run.snapshot);
+      return;
+    }
+    if (handledRunIdRef.current === run.run_id) return;
+    handledRunIdRef.current = run.run_id;
+
+    void (async () => {
+      let snapshot = run.snapshot ?? null;
+      if (!snapshot && token) {
+        snapshot = await fetchWarehousePreflight(token, {
+          missionLoaded: run.mission_loaded,
+        }).catch(() => null);
+      }
+      if (snapshot) {
+        setResult(snapshot);
+        void queryClient.invalidateQueries({
+          queryKey: ["warehouse-preflight", token],
+        });
+      }
+
+      if (run.status === "failed") {
+        finishRun(
+          snapshot,
+          run.error ??
+            (snapshot
+              ? blockedMessage(snapshot, connectWarningRef.current)
+              : "Preflight refresh failed."),
+        );
+        return;
+      }
+
+      if (snapshot && warehousePreflightPassed(snapshot)) {
+        finishRun(snapshot, null);
+        return;
+      }
+
+      if (snapshot && isTerminalPreflightFailure(snapshot, run)) {
+        finishRun(snapshot, blockedMessage(snapshot, connectWarningRef.current));
+        return;
+      }
+
+      finishRun(snapshot, null);
+    })();
+  }, [finishRun, queryClient, runQuery.data, running, token]);
+
+  useEffect(() => {
+    if (!running || !deadlineRef.current) return;
+
+    const remaining = Math.max(0, deadlineRef.current - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      if (!running) return;
+      abortRef.current = true;
+      setError(timeoutMessage(result, connectWarningRef.current));
+      finishRun(result);
+    }, remaining);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [finishRun, result, running, activeRunId]);
 
   const reset = useCallback(() => {
     abortRef.current = true;
-    setRunning(false);
+    finishRun(null);
     setResult(null);
     setError(null);
-  }, []);
+  }, [finishRun]);
 
   const runChecks = useCallback(
     async (options?: { missionLoaded?: boolean; timeoutMs?: number }) => {
+      if (activeRunRef.current) {
+        return activeRunRef.current;
+      }
+      if (startRefresh.isPending) {
+        return null;
+      }
       if (!token) {
         setError("Authentication required to run preflight checks.");
         return null;
       }
 
       abortRef.current = false;
+      handledRunIdRef.current = null;
       setRunning(true);
       setError(null);
+      connectWarningRef.current = null;
+      deadlineRef.current = Date.now() + (options?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
-      const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-      const deadline = Date.now() + timeoutMs;
-      let latest: WarehouseGoPreflight | null = null;
-      let connectWarning: string | null = null;
-
-      const connectPromise = connectDroneTelemetry(token).catch((err) => {
-        connectWarning =
+      void connectDroneTelemetry(token, "warehouse_scan", "indoor_local").catch((err) => {
+        connectWarningRef.current =
           err instanceof Error
             ? `Drone telemetry connect failed: ${err.message}`
             : "Drone telemetry connect failed.";
       });
 
-      try {
-        let nextDeepRefreshAt = Date.now();
-        let pollIndex = 0;
-
-        while (!abortRef.current && Date.now() < deadline) {
-          const now = Date.now();
-          const useDeep = pollIndex === 0 || now >= nextDeepRefreshAt;
-          if (useDeep) nextDeepRefreshAt = now + DEEP_REFRESH_MS;
-
-          const fetchSnapshot = () =>
-            fetchWarehousePreflight(token, {
-              missionLoaded: options?.missionLoaded,
-              deep: useDeep,
-              // Only the first poll forces a ROS deep probe; periodic deep refresh must
-              // not reset the 5s perception stability window every 30s.
-              force: pollIndex === 0,
-            });
-
-          const snapshot =
-            pollIndex === 0
-              ? await Promise.all([connectPromise, fetchSnapshot()]).then(
-                  ([, value]) => value,
-                )
-              : await fetchSnapshot();
-          pollIndex += 1;
-
-          latest = snapshot;
-          setResult(snapshot);
-          if (warehousePreflightPassed(snapshot)) {
-            setRunning(false);
-            return snapshot;
+      const runPromise = (async () => {
+        try {
+          const run = await startRefresh.mutateAsync({
+            missionLoaded: options?.missionLoaded,
+            deep: true,
+            force: false,
+          });
+          if (!run.run_id || abortRef.current) {
+            finishRun(null, "Preflight refresh did not return a run id.");
+            return null;
           }
-          if (isTerminalPreflightFailure(snapshot)) {
-            setError(blockedMessage(snapshot, connectWarning));
-            return snapshot;
-          }
-          await sleep(pollIntervalMs(snapshot));
-        }
-        if (abortRef.current) {
+
+          setActiveRunId(run.run_id);
+
+          return await new Promise<WarehouseGoPreflight | null>((resolve) => {
+            resolveRunRef.current = resolve;
+            if (isRunTerminal(run)) {
+              void (async () => {
+                handledRunIdRef.current = run.run_id;
+                let snapshot = run.snapshot ?? null;
+                if (!snapshot) {
+                  snapshot = await fetchWarehousePreflight(token, {
+                    missionLoaded: options?.missionLoaded,
+                  }).catch(() => null);
+                }
+                if (snapshot) setResult(snapshot);
+                const terminalError =
+                  run.status === "failed"
+                    ? run.error ??
+                      (snapshot
+                        ? blockedMessage(snapshot, connectWarningRef.current)
+                        : "Preflight refresh failed.")
+                    : snapshot && isTerminalPreflightFailure(snapshot, run)
+                      ? blockedMessage(snapshot, connectWarningRef.current)
+                      : null;
+                finishRun(snapshot, terminalError);
+                resolve(snapshot);
+              })();
+            }
+          });
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Preflight refresh failed.";
+          finishRun(null, message);
           return null;
         }
-        setError(timeoutMessage(latest, connectWarning));
-        return latest;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Preflight checks failed.";
-        setError(message);
-        return null;
-      } finally {
-        setRunning(false);
-      }
+      })();
+
+      activeRunRef.current = runPromise;
+      return runPromise;
     },
-    [token],
+    [finishRun, startRefresh, token],
   );
 
   return {
@@ -232,5 +310,6 @@ export function useRunWarehousePreflight(token: string | null) {
     runChecks,
     reset,
     passed: warehousePreflightPassed(result),
+    activeRunId,
   };
 }

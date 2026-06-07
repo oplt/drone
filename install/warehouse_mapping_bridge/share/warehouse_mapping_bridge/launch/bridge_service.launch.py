@@ -1,1 +1,0 @@
-/home/polat/Desktop/Projects/drone_app/build/warehouse_mapping_bridge/launch/bridge_service.launch.py

@@ -103,3 +103,75 @@ export type WarehouseSensorRigHealth = {
   blockers: string[];
   warnings?: string[];
 };
+
+export type SensorTopicFrames = {
+  odom: string;
+  base_link: string;
+  camera: string;
+};
+
+export type SensorTopicProfile = {
+  id: string;
+  name: string;
+  profile: string;
+  source_topics: Record<string, string>;
+  contract_topics: Record<string, string>;
+  frames: SensorTopicFrames;
+  use_sim_time: boolean;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SensorTopicProfilePayload = {
+  name: string;
+  profile: string;
+  source_topics: Record<string, string>;
+  contract_topics: Record<string, string>;
+  frames: SensorTopicFrames;
+  use_sim_time: boolean;
+};
+
+export type SensorTopicValidationRequest = {
+  profile?: string | null;
+  source_topics?: Record<string, string>;
+  check_hz?: boolean;
+  keys?: string[] | null;
+};
+
+export type SensorTopicTopicValidation = {
+  key: string;
+  topic: string;
+  expected_type?: string | null;
+  actual_type?: string | null;
+  publisher_count?: number;
+  hz?: number | null;
+  status:
+    | "OK"
+    | "MISSING"
+    | "TYPE_MISMATCH"
+    | "NO_PUBLISHERS"
+    | "NOT_PUBLISHING"
+    | "UNKNOWN";
+  detail?: string | null;
+};
+
+export type SensorTopicValidationResult = {
+  profile: string;
+  ros_topics: string[];
+  discovered_topics: string[];
+  topics: SensorTopicTopicValidation[];
+};
+
+export type SensorTopicDiscoveryRequest = {
+  profile?: string | null;
+};
+
+export type SensorTopicDiscoveryResult = {
+  profile: string;
+  transport: string;
+  source_topics: Record<string, string>;
+  discovered_topics: string[];
+  discovery_hint?: string | null;
+  used_profile_defaults?: boolean;
+};

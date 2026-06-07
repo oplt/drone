@@ -1,19 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { emitAppLog, type AppLogEvent } from "../../../shared/logging";
 
 type TelemetryWebSocketOptions = {
   enabled?: boolean;
-  onTelemetry?: (data: any) => void;
-  onMessage?: (message: any) => void;
+  onTelemetry?: (data: TelemetrySnapshot) => void;
+  onMessage?: (message: TelemetrySocketPayload) => void;
 };
+
+type TelemetryObject = Record<string, unknown>;
+type TelemetrySnapshot = TelemetryObject & {
+  battery?: TelemetryObject;
+  gps?: TelemetryObject;
+  link?: TelemetryObject;
+  position?: TelemetryObject;
+  status?: TelemetryObject;
+  wind?: TelemetryObject;
+};
+type TelemetrySocketPayload = TelemetrySnapshot | string | null;
 
 type Subscriber = {
   onState: (state: SharedTelemetryState) => void;
-  onTelemetry?: (data: any) => void;
-  onMessage?: (message: any) => void;
+  onTelemetry?: (data: TelemetrySnapshot) => void;
+  onMessage?: (message: TelemetrySocketPayload) => void;
 };
 
 type SharedTelemetryState = {
-  telemetry: any | null;
+  telemetry: TelemetrySnapshot | null;
   isConnected: boolean;
   error: string | null;
   reconnectAttempt: number;
@@ -62,17 +74,37 @@ function wsUrl(): string {
   return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${prefix}/ws/telemetry`;
 }
 
-async function parseMessage(data: any): Promise<any> {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+async function parseMessage(data: unknown): Promise<TelemetrySocketPayload> {
   try {
-    if (typeof data === "string") return JSON.parse(data);
-    if (data instanceof Blob) return JSON.parse(await data.text());
-    if (data instanceof ArrayBuffer) {
-      return JSON.parse(new TextDecoder("utf-8").decode(data));
-    }
+    const parsed =
+      typeof data === "string"
+        ? JSON.parse(data)
+        : data instanceof Blob
+          ? JSON.parse(await data.text())
+          : data instanceof ArrayBuffer
+            ? JSON.parse(new TextDecoder("utf-8").decode(data))
+            : null;
+    if (typeof parsed === "string" || isRecord(parsed)) return parsed;
     return null;
   } catch {
-    return data;
+    if (typeof data === "string") return data;
+    return null;
   }
+}
+
+function telemetryFromMessage(msg: TelemetrySocketPayload): TelemetrySnapshot | null {
+  if (!isRecord(msg)) return null;
+  if (msg.type === "telemetry") {
+    return isRecord(msg.data) ? (msg.data as TelemetrySnapshot) : null;
+  }
+  if (msg.type) {
+    return null;
+  }
+  return msg as TelemetrySnapshot;
 }
 
 function clearTimers() {
@@ -105,6 +137,11 @@ function connectShared() {
     state.error = null;
     state.reconnectAttempt = 0;
     attempt = 0;
+    emitAppLog({
+      level: "info",
+      source: "websocket",
+      message: "Telemetry websocket connected",
+    });
     notify();
     if (pingTimer) window.clearInterval(pingTimer);
     pingTimer = window.setInterval(() => {
@@ -116,9 +153,14 @@ function connectShared() {
 
   socket.onmessage = async (event) => {
     const msg = await parseMessage(event.data);
-    if (msg === "pong" || msg?.type === "pong") return;
+    if (msg === "pong" || (isRecord(msg) && msg.type === "pong")) return;
+    if (isRecord(msg) && msg.type === "app_log" && msg.data) {
+      emitAppLog(msg.data as AppLogEvent, { mirrorToConsole: false });
+      subscribers.forEach((subscriber) => subscriber.onMessage?.(msg));
+      return;
+    }
     subscribers.forEach((subscriber) => subscriber.onMessage?.(msg));
-    const telemetry = msg?.type === "telemetry" ? msg.data : msg;
+    const telemetry = telemetryFromMessage(msg);
     if (telemetry) {
       state.telemetry = telemetry;
       subscribers.forEach((subscriber) => subscriber.onTelemetry?.(telemetry));
@@ -128,6 +170,12 @@ function connectShared() {
 
   socket.onerror = () => {
     state.error = "WebSocket connection error";
+    emitAppLog({
+      level: "error",
+      source: "websocket",
+      message: "Telemetry websocket connection error",
+      details: { attempt: currentAttempt },
+    });
     notify();
   };
 
@@ -142,6 +190,12 @@ function connectShared() {
     const nextAttempt = currentAttempt + 1;
     if (nextAttempt > 10) {
       state.error = "Max reconnection attempts reached";
+      emitAppLog({
+        level: "critical",
+        source: "websocket",
+        message: "Telemetry websocket could not reconnect",
+        details: { close_code: event.code, close_reason: event.reason },
+      });
       notify();
       return;
     }
@@ -197,9 +251,11 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
     onMessage: options.onMessage,
   });
 
-  subscriberRef.current.onState = setSnapshot;
-  subscriberRef.current.onTelemetry = options.onTelemetry;
-  subscriberRef.current.onMessage = options.onMessage;
+  useEffect(() => {
+    subscriberRef.current.onState = setSnapshot;
+    subscriberRef.current.onTelemetry = options.onTelemetry;
+    subscriberRef.current.onMessage = options.onMessage;
+  }, [options.onMessage, options.onTelemetry]);
 
   useEffect(() => {
     const subscriber = subscriberRef.current;

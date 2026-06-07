@@ -1,8 +1,16 @@
-import { Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Chip,
+  CircularProgress,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { useDetectionFps } from "../hooks/useDetectionFps";
 import { useLiveObjectDetection } from "../hooks/useLiveObjectDetection";
 import { LiveDetectionOverlay } from "./LiveDetectionOverlay";
+import { MissionVideoEmptyState } from "./MissionVideoEmptyState";
 import { TelemetryHud } from "./TelemetryHud";
 
 type MissionVideoPanelProps = {
@@ -43,6 +51,13 @@ export function MissionVideoPanel({
   onRetry,
 }: MissionVideoPanelProps) {
   const shouldRenderStream = droneConnected && streamKey > 0 && !videoError;
+  const streamStatus = startingVideo
+    ? "Starting"
+    : videoError
+      ? "Error"
+      : shouldRenderStream
+        ? "Ready"
+        : "Waiting";
   const objectDetection = useLiveObjectDetection();
   const detectionFps = useDetectionFps(
     objectDetection.status?.frames_processed,
@@ -54,7 +69,7 @@ export function MissionVideoPanel({
       variant="outlined"
       sx={{
         p: 2,
-        borderRadius: 2,
+        borderRadius: 3,
         borderColor: "divider",
       }}
     >
@@ -66,25 +81,24 @@ export function MissionVideoPanel({
       >
         <Typography variant="subtitle1">{title}</Typography>
         <Stack direction="row" alignItems="center" spacing={1}>
+          <Chip
+            size="small"
+            label={streamStatus}
+            color={
+              videoError ? "error" : shouldRenderStream ? "success" : "warning"
+            }
+            variant={shouldRenderStream || videoError ? "filled" : "outlined"}
+          />
           <ActionIconButton
             variant={objectDetection.enabled ? "visibility" : "visibility-off"}
-            title={objectDetection.enabled ? "Detection On" : "Enable Detection"}
+            title={
+              objectDetection.enabled ? "Detection On" : "Enable Detection"
+            }
             color={objectDetection.enabled ? "success" : "primary"}
             disabled={!droneConnected || objectDetection.toggling}
             onClick={objectDetection.toggle}
           />
           {startingVideo && <CircularProgress size={16} />}
-          <Typography variant="caption" color="text.secondary">
-            {startingVideo
-              ? "Starting video…"
-              : videoError
-              ? "Error"
-              : shouldRenderStream
-              ? "Live"
-              : droneConnected
-              ? "Ready"
-              : "Disconnected"}
-          </Typography>
         </Stack>
       </Stack>
 
@@ -93,7 +107,7 @@ export function MissionVideoPanel({
           width: "100%",
           height: 240,
           bgcolor: "#000",
-          borderRadius: 1,
+          borderRadius: 2,
           overflow: "hidden",
           display: "flex",
           alignItems: "center",
@@ -102,7 +116,10 @@ export function MissionVideoPanel({
         }}
       >
         {!droneConnected ? (
-          <Typography sx={{ color: "white" }}>{disconnectedMessage}</Typography>
+          <MissionVideoEmptyState
+            title={disconnectedMessage}
+            description="Start flight or connect camera stream to preview live feed."
+          />
         ) : videoError ? (
           <Box
             sx={{
@@ -118,8 +135,11 @@ export function MissionVideoPanel({
               textAlign: "center",
             }}
           >
-            <Typography variant="h6" sx={{ color: "warning.main", mb: 1 }}>
-              ⚠️ Video Stream Unavailable
+            <Typography
+              variant="subtitle1"
+              sx={{ color: "warning.main", mb: 1, fontWeight: 700 }}
+            >
+              Video stream unavailable
             </Typography>
             <Typography variant="body2" sx={{ color: "grey.400", mb: 2 }}>
               {videoError}
@@ -150,10 +170,13 @@ export function MissionVideoPanel({
               telemetry={telemetry}
               cameraTitle={title}
               missionLabel={missionLabel}
-              recordingStatus={recordingStatus ?? (shouldRenderStream ? "Live" : null)}
+              recordingStatus={
+                recordingStatus ?? (shouldRenderStream ? "Live" : null)
+              }
               detection={{
                 enabled: objectDetection.enabled,
-                modelName: objectDetection.status?.config?.detector_model_path ?? null,
+                modelName:
+                  objectDetection.status?.config?.detector_model_path ?? null,
                 fps: detectionFps,
                 framesProcessed: objectDetection.status?.frames_processed,
                 lastError: objectDetection.error,
@@ -164,9 +187,10 @@ export function MissionVideoPanel({
             ) : null}
           </>
         ) : (
-          <Typography sx={{ color: "white" }}>
-            Waiting for mission video stream…
-          </Typography>
+          <MissionVideoEmptyState
+            title="Waiting for mission video stream"
+            description="Start flight or connect camera stream to preview live feed."
+          />
         )}
 
         {startingVideo && (
@@ -185,7 +209,11 @@ export function MissionVideoPanel({
         )}
       </Box>
       {objectDetection.error ? (
-        <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
+        <Typography
+          variant="caption"
+          color="error"
+          sx={{ mt: 1, display: "block" }}
+        >
           Object detection: {objectDetection.error}
         </Typography>
       ) : null}

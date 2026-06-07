@@ -7,7 +7,7 @@ from .schemas import CheckResult
 
 
 class WarehouseRosBasePreflightChecks(BasePreflightChecks):
-    """ROS/Gazebo warehouse preflight — no MAVLink telemetry gates."""
+    """ROS/sim warehouse preflight — no MAVLink telemetry gates."""
 
     async def check_warehouse_local_position(self) -> list[CheckResult]:
         local_ok = self._value("local_position_ok")

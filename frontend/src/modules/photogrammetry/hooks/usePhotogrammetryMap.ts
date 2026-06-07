@@ -363,7 +363,10 @@ export function usePhotogrammetryMap({
     focusRingOnMap(selectedField.ring);
   }, [focusRingOnMap, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
 
-  const mapCenter = useMemo(() => userCenter || center, [userCenter, center]);
+  const mapCenter = useMemo(
+    () => droneCenter || userCenter || center,
+    [droneCenter, userCenter, center]
+  );
 
   const mapOptions = useMemo(
     () => ({

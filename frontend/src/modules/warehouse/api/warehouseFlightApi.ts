@@ -17,7 +17,7 @@ export type WarehouseFlightReadiness = {
   ready_to_takeoff: boolean;
   ready_for_autonomy: boolean;
   overall_status: string;
-  current_state: string;
+  current_state?: string;
   subsystems: Record<string, WarehouseFlightSubsystem>;
   blocking_reasons: string[];
   updated_at: string;

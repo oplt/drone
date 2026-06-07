@@ -6,50 +6,143 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from backend.core.logging import emit_app_log
 from backend.entrypoints.cli.run_mission import _build_orchestrator
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import require_admin, require_user
+from backend.modules.missions.flight_profile import (
+    FlightEnvironment,
+    flight_profile_for_environment,
+    flight_profile_for_mission_type,
+)
 from backend.modules.missions.repository import mission_runtime_repo
+from backend.modules.missions.schemas.mission_types import MissionType
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 runtime_router = APIRouter(prefix="/runtime", tags=["runtime"])
 _connect_lock = asyncio.Lock()
+_manual_control_tasks: set[asyncio.Task] = set()
+
+
+def _track_background_task(task: asyncio.Task) -> None:
+    _manual_control_tasks.add(task)
+    task.add_done_callback(_manual_control_tasks.discard)
+
+
+def _expected_drone_connect_failure(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return (
+        "gps home is required" in text
+        or "home fallback is disabled" in text
+        or "heartbeat" in text
+        or "timed out" in text
+        or "timeout" in text
+    )
+
+
+class TelemetryConnectIn(BaseModel):
+    mission_type: MissionType | None = None
+    flight_environment: FlightEnvironment | None = None
 
 
 @router.post("/connect")
-async def connect_drone_and_telemetry(user=Depends(require_user)):
+async def connect_drone_and_telemetry(
+    payload: TelemetryConnectIn | None = None,
+    user=Depends(require_user),
+):
     """Build orchestrator (connects drone) and start telemetry in one call."""
+    profile = (
+        flight_profile_for_environment(payload.flight_environment)
+        if payload and payload.flight_environment is not None
+        else flight_profile_for_mission_type(payload.mission_type if payload else None)
+    )
     async with _connect_lock:
         try:
             orch = await _build_orchestrator()
         except Exception as e:
-            logger.error("Failed to connect drone: %s", e)
-            raise HTTPException(status_code=500, detail=f"Drone connection failed: {e!s}")
+            logger.error(
+                "Drone orchestrator build failed during telemetry connect",
+                extra={"source": "telemetry", "operation": "connect"},
+                exc_info=True,
+            )
+            await emit_app_log(
+                level="critical",
+                source="drone",
+                message="Drone connection could not be prepared",
+                details={"operation": "telemetry_connect", "error": str(e)},
+            )
+            raise HTTPException(status_code=500, detail=f"Drone connection failed: {e!s}") from e
 
         drone = getattr(orch, "drone", None)
         if drone and not getattr(drone, "vehicle", None):
             try:
-                await asyncio.to_thread(drone.connect)
-                logger.info("DroneKit vehicle connected via /telemetry/connect")
-            except Exception as e:
-                logger.error("DroneKit vehicle connect failed: %s", e)
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Drone vehicle connection failed: {e!s}",
+                await asyncio.to_thread(
+                    drone.connect,
+                    home_fallback_allowed=profile.allows_home_fallback,
                 )
+                logger.info(
+                    "DroneKit vehicle connected via /telemetry/connect",
+                    extra={
+                        "source": "drone",
+                        "operation": "connect",
+                        "flight_environment": profile.environment.value,
+                    },
+                )
+                await emit_app_log(
+                    level="info",
+                    source="drone",
+                    message="Drone connected",
+                    details={"operation": "telemetry_connect"},
+                )
+            except asyncio.CancelledError:
+                logger.info("DroneKit vehicle connect cancelled during shutdown")
+                raise
+            except Exception as e:
+                expected = _expected_drone_connect_failure(e)
+                log_fn = logger.warning if expected else logger.critical
+                log_fn(
+                    "DroneKit vehicle connect failed: %s",
+                    e,
+                    extra={"source": "mavlink", "operation": "connect"},
+                    exc_info=not expected,
+                )
+                await emit_app_log(
+                    level="warn" if expected else "critical",
+                    source="mavlink",
+                    message="Drone vehicle connection failed",
+                    details={"operation": "telemetry_connect", "error": str(e)},
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Drone vehicle connection failed: {e!s}",
+                ) from e
 
         if not telemetry_manager.runtime_snapshot()["running"]:
             try:
                 await orch.start_live_telemetry()
+            except asyncio.CancelledError:
+                logger.info("Telemetry start cancelled during shutdown")
+                raise
             except Exception as e:
-                logger.error("Failed to start telemetry: %s", e)
-                raise HTTPException(status_code=500, detail=f"Telemetry start failed: {e!s}")
+                logger.error(
+                    "Failed to start telemetry",
+                    extra={"source": "telemetry", "operation": "start"},
+                    exc_info=True,
+                )
+                await emit_app_log(
+                    level="error",
+                    source="telemetry",
+                    message="Telemetry stream failed to start",
+                    details={"operation": "telemetry_connect", "error": str(e)},
+                )
+                raise HTTPException(status_code=500, detail=f"Telemetry start failed: {e!s}") from e
 
         return {
             "status": "connected",
             "drone": drone is not None and getattr(drone, "vehicle", None) is not None,
             "telemetry_running": telemetry_manager.runtime_snapshot()["running"],
+            "flight_environment": profile.environment.value,
         }
 
 
@@ -68,14 +161,34 @@ async def start_telemetry_stream(user=Depends(require_admin)):
     try:
         orch = await _build_orchestrator()
         await orch.start_live_telemetry()
+        logger.info(
+            "Telemetry stream started",
+            extra={"source": "telemetry", "operation": "start"},
+        )
+        await emit_app_log(
+            level="info",
+            source="telemetry",
+            message="Telemetry stream started",
+            details={"connections": telemetry_manager.client_count()},
+        )
         return {
             "status": "started",
             "message": "Telemetry stream started successfully",
             "connections": telemetry_manager.client_count(),
         }
     except Exception as e:
-        logger.error(f"Failed to start telemetry stream: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to start telemetry: {e!s}")
+        logger.error(
+            "Failed to start telemetry stream",
+            extra={"source": "telemetry", "operation": "start"},
+            exc_info=True,
+        )
+        await emit_app_log(
+            level="error",
+            source="telemetry",
+            message="Telemetry stream failed to start",
+            details={"error": str(e)},
+        )
+        raise HTTPException(status_code=500, detail=f"Failed to start telemetry: {e!s}") from e
 
 
 @router.post("/stop")
@@ -93,14 +206,34 @@ async def stop_telemetry_stream(user=Depends(require_admin)):
     try:
         orch = await _build_orchestrator()
         await orch.stop_live_telemetry()
+        logger.info(
+            "Telemetry stream stopped",
+            extra={"source": "telemetry", "operation": "stop"},
+        )
+        await emit_app_log(
+            level="info",
+            source="telemetry",
+            message="Telemetry stream stopped",
+            details={"connections": telemetry_manager.client_count()},
+        )
         return {
             "status": "stopped",
             "message": "Telemetry stream stopped successfully",
             "connections": telemetry_manager.client_count(),
         }
     except Exception as e:
-        logger.error(f"Failed to stop telemetry stream: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to stop telemetry: {e!s}")
+        logger.error(
+            "Failed to stop telemetry stream",
+            extra={"source": "telemetry", "operation": "stop"},
+            exc_info=True,
+        )
+        await emit_app_log(
+            level="error",
+            source="telemetry",
+            message="Telemetry stream failed to stop",
+            details={"error": str(e)},
+        )
+        raise HTTPException(status_code=500, detail=f"Failed to stop telemetry: {e!s}") from e
 
 
 @router.get("/status")
@@ -125,17 +258,8 @@ async def get_runtime_metrics(user=Depends(require_user)):
 @runtime_router.get("/status")
 async def get_runtime_status(user=Depends(require_user)):
     telemetry = telemetry_manager.runtime_snapshot()
-    try:
-        from backend.modules.warehouse.service.bridge_stack_lifecycle import (
-            warehouse_bridge_stack_status,
-        )
-
-        bridge = (await warehouse_bridge_stack_status()).to_dict()
-    except Exception as exc:
-        bridge = {"state": "failed", "last_error": str(exc)}
     return {
         "telemetry": telemetry,
-        "warehouse_bridge": bridge,
         "timestamp": time.time(),
     }
 
@@ -344,9 +468,20 @@ async def send_manual_control(
                 await asyncio.to_thread(drone.arm_and_takeoff, 2.0)
                 logger.info("Manual takeoff complete")
             except Exception:
-                logger.exception("Manual takeoff failed")
+                logger.critical(
+                    "Manual takeoff failed",
+                    extra={"source": "drone", "operation": "manual_takeoff"},
+                    exc_info=True,
+                )
+                await emit_app_log(
+                    level="critical",
+                    source="drone",
+                    message="Manual takeoff failed",
+                    details={"command": cmd, "flight_id": payload.flight_id},
+                    flight_id=payload.flight_id,
+                )
 
-        asyncio.create_task(_bg_takeoff())
+        _track_background_task(asyncio.create_task(_bg_takeoff()))
         return {"status": "ok", "command": cmd, "detail": "takeoff initiated"}
 
     if cmd == "land":
@@ -354,8 +489,27 @@ async def send_manual_control(
             return {"status": "ignored", "command": cmd, "phase": phase}
         try:
             await asyncio.to_thread(drone.land)
+            await emit_app_log(
+                level="info",
+                source="drone",
+                message="Manual landing command completed",
+                details={"command": cmd, "flight_id": payload.flight_id},
+                flight_id=payload.flight_id,
+            )
             return {"status": "ok", "command": cmd}
         except Exception as exc:
+            logger.critical(
+                "Manual land failed",
+                extra={"source": "drone", "operation": "manual_land"},
+                exc_info=True,
+            )
+            await emit_app_log(
+                level="critical",
+                source="drone",
+                message="Manual landing failed",
+                details={"command": cmd, "flight_id": payload.flight_id, "error": str(exc)},
+                flight_id=payload.flight_id,
+            )
             raise HTTPException(status_code=500, detail=f"Land failed: {exc}") from exc
 
     if phase == "stop":
@@ -368,7 +522,8 @@ async def send_manual_control(
         await asyncio.to_thread(drone.set_mode, "GUIDED")
         await asyncio.to_thread(drone.send_velocity, vx, vy, vz, yaw_rate)
         logger.info(
-            "Manual control velocity sent command=%s phase=%s vx=%.2f vy=%.2f vz=%.2f yaw_rate=%.2f",
+            "Manual control velocity sent command=%s phase=%s "
+            "vx=%.2f vy=%.2f vz=%.2f yaw_rate=%.2f",
             cmd,
             phase,
             vx,
@@ -381,7 +536,7 @@ async def send_manual_control(
         raise HTTPException(
             status_code=501,
             detail="Active drone adapter does not support velocity commands",
-        )
+        ) from None
     except (RuntimeError, AttributeError, OSError) as exc:
         raise HTTPException(
             status_code=503, detail=f"Drone link temporarily unavailable: {exc}"

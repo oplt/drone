@@ -5,15 +5,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import desc, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import require_user
-from backend.modules.missions.flight_models import Flight
-from backend.modules.patrol.models import PatrolDetection
+from backend.modules.patrol.repository import PatrolDetectionRepository
 
 router = APIRouter(prefix="/api/live-object-detection", tags=["live-object-detection"])
+repository = PatrolDetectionRepository()
 
 
 class LiveDetectionOut(BaseModel):
@@ -32,20 +30,10 @@ class LiveDetectionOut(BaseModel):
 @router.get("/detections", response_model=list[LiveDetectionOut])
 async def list_live_detections(
     limit: int = Query(default=200, ge=1, le=1000),
-    user=Depends(require_user),
-    db: AsyncSession = Depends(get_db),
+    user: Any = Depends(require_user),
+    db: Any = Depends(get_db),
 ) -> list[LiveDetectionOut]:
-    filters = [PatrolDetection.source == "live_object_detection"]
-    if user.org_id is not None:
-        filters.append(Flight.org_id == user.org_id)
-    stmt = (
-        select(PatrolDetection)
-        .join(Flight, Flight.id == PatrolDetection.flight_id)
-        .where(*filters)
-        .order_by(desc(PatrolDetection.created_at), desc(PatrolDetection.id))
-        .limit(limit)
-    )
-    rows = (await db.scalars(stmt)).all()
+    rows = await repository.list_live_object_detections(db, org_id=user.org_id, limit=limit)
     return [
         LiveDetectionOut(
             id=row.id,

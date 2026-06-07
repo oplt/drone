@@ -356,12 +356,31 @@ pnpm-debug.log*
 Thumbs.db
 
 .venv/
+backend/.venv/
 
 /commands.txt
 
 /backend/certs
 /backend/storage
 /backend/video/recordings
+backend/storage/
+backend/storage/logs/
+backend/storage/redis/
+backend/storage/video_analysis/uploads/
+backend/storage/video_records/
+backend/storage/drone_video/
+backend/video/
+backend/video/recordings/
+storage/logs/
+storage/redis/
+storage/video_analysis/uploads/
+storage/video_records/
+storage/drone_video/
+video/recordings/
+storage/ml_models/**/*.pt
+backend/storage/ml_models/**/*.pt
+*.onnx
+*.engine
 
 
 TODO.txt
@@ -388,7 +407,12 @@ storage/
 warehouse_ros2_ws/build/
 warehouse_ros2_ws/install/
 warehouse_ros2_ws/log/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+install/
+build/
+log/
 
 log
-
 

@@ -19,7 +19,7 @@ export type WarehouseGoPreflight = {
   stability_window_ms?: number;
   required_stability_window_ms?: number;
   bridge_ok: boolean;
-  gazebo_ok: boolean | null;
+  source_transport_ok: boolean | null;
   sensors_ok: boolean;
   odom_ok: boolean;
   localization_ok: boolean;
@@ -41,6 +41,7 @@ export type WarehouseGoPreflight = {
       process_state?: string | null;
       api_reachable?: boolean;
       health_sample_age_ms?: number | null;
+      health_sample_max_age_ms?: number;
       health_probe_in_progress?: boolean;
       deep_ready?: boolean;
       status?: string;
@@ -71,6 +72,25 @@ export type WarehouseGoPreflight = {
       tracking_ok?: boolean | null;
       odometry_topic?: string;
     };
+    freshness?: {
+      health_sample_age_ms?: number | null;
+      health_sample_max_age_ms?: number;
+      stale_warn_threshold_ms?: number;
+      diagnostics_age_ms?: number | null;
+      diagnostics_stale?: boolean;
+    };
+    cache?: {
+      from_cache?: boolean;
+      age_ms?: number | null;
+      refresh_in_progress?: boolean;
+      refresh_run_id?: string | null;
+      run_id?: string | null;
+    };
+    timings?: {
+      refresh_in_progress?: boolean;
+      cache_age_ms?: number | null;
+      from_cache?: boolean;
+    };
   };
   recommended_action?: string | null;
   blocking_reasons: string[];
@@ -79,10 +99,24 @@ export type WarehouseGoPreflight = {
   note: string;
 };
 
-export async function fetchWarehousePreflight(
-  token: string,
-  options?: { missionLoaded?: boolean; deep?: boolean; force?: boolean },
-): Promise<WarehouseGoPreflight> {
+export type WarehousePreflightRefresh = {
+  run_id: string;
+  status: "running" | "complete" | "failed" | string;
+  deep: boolean;
+  force: boolean;
+  mission_loaded: boolean;
+  started_at: string;
+  finished_at?: string | null;
+  error?: string | null;
+  snapshot?: WarehouseGoPreflight | null;
+};
+
+function queryString(options?: {
+  missionLoaded?: boolean;
+  deep?: boolean;
+  force?: boolean;
+  freshVehicleProbe?: boolean;
+}) {
   const params = new URLSearchParams();
   if (options?.missionLoaded) {
     params.set("mission_loaded", "true");
@@ -93,8 +127,23 @@ export async function fetchWarehousePreflight(
   if (options?.force) {
     params.set("force", "true");
   }
+  if (options?.freshVehicleProbe) {
+    params.set("fresh_vehicle_probe", "true");
+  }
   const query = params.toString();
-  const path = query ? `/warehouse/preflight?${query}` : "/warehouse/preflight";
+  return query ? `?${query}` : "";
+}
+
+export async function fetchWarehousePreflight(
+  token: string,
+  options?: {
+    missionLoaded?: boolean;
+    deep?: boolean;
+    force?: boolean;
+    freshVehicleProbe?: boolean;
+  },
+): Promise<WarehouseGoPreflight> {
+  const path = `/warehouse/preflight${queryString(options)}`;
   try {
     return await httpRequest<WarehouseGoPreflight>(path, { token });
   } catch (error) {
@@ -112,4 +161,29 @@ export async function fetchWarehousePreflight(
     }
     throw error;
   }
+}
+
+export async function refreshWarehousePreflight(
+  token: string,
+  options?: {
+    missionLoaded?: boolean;
+    deep?: boolean;
+    force?: boolean;
+    freshVehicleProbe?: boolean;
+  },
+): Promise<WarehousePreflightRefresh> {
+  return httpRequest<WarehousePreflightRefresh>(
+    `/warehouse/preflight/refresh${queryString(options)}`,
+    { method: "POST", token },
+  );
+}
+
+export async function fetchWarehousePreflightRun(
+  token: string,
+  runId: string,
+): Promise<WarehousePreflightRefresh> {
+  return httpRequest<WarehousePreflightRefresh>(
+    `/warehouse/preflight/runs/${encodeURIComponent(runId)}`,
+    { token },
+  );
 }

@@ -23,6 +23,14 @@ from .context import PreflightContext
 from .schemas import CheckResult, CheckStatus
 
 
+def _warehouse_sim_mode() -> bool:
+    enabled_values = {"1", "true", "yes", "on"}
+    for name in ("SIM_MODE", "INDOOR_NAV", "WAREHOUSE_SIM_MODE", "WAREHOUSE_GAZEBO_SIM"):
+        if os.getenv(name, "").strip().lower() in enabled_values:
+            return True
+    return False
+
+
 class MissionPreflightBase:
     """Base class for mission-specific preflight checks."""
 
@@ -1174,32 +1182,15 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
         return prefix
 
     def _warehouse_sensor_readiness(self):
-        from backend.modules.warehouse.ports import WarehousePerceptionStatus
-        from backend.modules.warehouse.service.takeoff_readiness import (
-            readiness_from_perception_status,
-            takeoff_requires_nvblox,
-        )
-
         status_dict = self._perception_status()
         if not status_dict:
             return None
-        components = status_dict.get("components")
-        if not isinstance(components, dict):
-            components = {}
-        perception = WarehousePerceptionStatus(
-            configured=bool(status_dict.get("configured", True)),
-            reachable=bool(status_dict.get("reachable", False)),
-            ready=bool(status_dict.get("ready", False)),
-            status=str(status_dict.get("status") or "unknown"),
-            profile=status_dict.get("profile"),
-            bridge_url=status_dict.get("bridge_url"),
-            components=components,
-            detail=status_dict.get("detail"),
-        )
-        return readiness_from_perception_status(
-            perception,
-            require_nvblox=takeoff_requires_nvblox(),
-        )
+
+        class _Readiness:
+            ready = bool(status_dict.get("ready"))
+            detail = status_dict.get("detail") if isinstance(status_dict.get("detail"), str) else None
+
+        return _Readiness()
 
     def check_ros_bridge(self) -> CheckResult:
         status = self._perception_status()
@@ -1342,12 +1333,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 message="RGB camera live; stereo sync not reported (RGBD mode)",
             )
 
-        sim_mode = os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
+        sim_mode = _warehouse_sim_mode()
         if sim_mode:
             return CheckResult(
                 name="Warehouse Stereo Sync",
@@ -1410,7 +1396,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.FAIL,
                 message=(
                     f"Local odometry state unreadable; verify publishing on {topic} "
-                    "(ros2 topic echo --once)"
+                    "(single-message sensor sample)"
                 ),
             )
         for key in ("visual_slam_odom", "local_odometry"):
@@ -1442,12 +1428,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 message="Nvblox mapping outputs are publishing and fresh",
             )
         components = self._perception_components()
-        sim_mode = os.getenv("WAREHOUSE_GAZEBO_SIM", "").strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
+        sim_mode = _warehouse_sim_mode()
         listed = components.get("listed_topics")
         has_nvblox_node = isinstance(listed, list) and any(
             str(topic).startswith("/nvblox_node/") for topic in listed
@@ -1473,7 +1454,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 status=CheckStatus.WARN,
                 message=(
                     "Nvblox is not running yet (starts when the warehouse flight begins); "
-                    "Gazebo sensor topics are sufficient for preflight"
+                    "Source transport sensor topics are sufficient for preflight"
                 ),
             )
         missing = components.get("missing_nvblox_topics")
@@ -1539,7 +1520,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
             return CheckResult(
                 name="Warehouse Battery Margin",
                 status=CheckStatus.SKIP,
-                message="Battery margin check disabled for ROS/Gazebo warehouse preflight",
+                message="Battery margin check disabled for ROS/sim warehouse preflight",
             )
         battery_pct = getattr(self.v, "battery_percent", None)
         if battery_pct is None:

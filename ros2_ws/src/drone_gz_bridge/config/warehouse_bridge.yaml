@@ -1,0 +1,235 @@
+# warehouse_bridge.yaml
+#
+# Gazebo Sim -> ROS 2 Jazzy bridge config for iris_warehouse drone mapping.
+#
+# Main purpose:
+#   - Bridge Gazebo warehouse sensor topics into ROS 2
+#   - Use LiDAR / RGB-D / stereo / IMU / odometry for 3D mapping
+#   - Optional ROS -> Gazebo gimbal command topics
+#
+# Direction meanings:
+#   GZ_TO_ROS = Gazebo publishes, ROS receives
+#   ROS_TO_GZ = ROS publishes command, Gazebo receives
+#
+# After launching this bridge, verify with:
+#   ros2 topic list
+#   ros2 topic hz /warehouse/mid360/points
+#   ros2 topic hz /warehouse/front/rgbd/points
+#   ros2 topic echo /warehouse/imu --once
+
+
+# ============================================================
+# Simulation clock
+# ============================================================
+
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+  qos_profile: CLOCK
+
+
+# ============================================================
+# Main drone odometry / pose
+# ============================================================
+
+- ros_topic_name: "/warehouse/drone/odometry"
+  gz_topic_name: "/warehouse/drone/odometry"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Main 2D LiDAR / scan topics
+# ============================================================
+
+- ros_topic_name: "/scan"
+  gz_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/mid360/scan"
+  gz_topic_name: "/warehouse/mid360/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Main 3D point cloud topics
+# These are the most important topics for 3D warehouse mapping.
+# ============================================================
+
+- ros_topic_name: "/scan/points"
+  gz_topic_name: "/scan/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/mid360/points"
+  gz_topic_name: "/warehouse/mid360/scan/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Front RGB-D camera
+# ============================================================
+
+- ros_topic_name: "/warehouse/front/rgbd/camera_info"
+  gz_topic_name: "/warehouse/front/rgbd/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/front/rgbd/image"
+  gz_topic_name: "/warehouse/front/rgbd/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/front/rgbd/depth_image"
+  gz_topic_name: "/warehouse/front/rgbd/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/front/rgbd/points"
+  gz_topic_name: "/warehouse/front/rgbd/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Stereo camera - left
+# ============================================================
+
+- ros_topic_name: "/warehouse/stereo/left/camera_info"
+  gz_topic_name: "/warehouse/stereo/left/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/stereo/left/image"
+  gz_topic_name: "/warehouse/stereo/left/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Stereo camera - right
+# ============================================================
+
+- ros_topic_name: "/warehouse/stereo/right/camera_info"
+  gz_topic_name: "/warehouse/stereo/right/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/warehouse/stereo/right/image"
+  gz_topic_name: "/warehouse/stereo/right/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Gimbal camera from world/model path
+# This is the camera mounted on:
+#   /world/iris_warehouse/model/iris_rplidar_rgbd/model/gimbal/link/pitch_link/sensor/camera
+# ============================================================
+
+- ros_topic_name: "/gimbal/camera/camera_info"
+  gz_topic_name: "/world/iris_warehouse/model/iris_rplidar_rgbd/model/gimbal/link/pitch_link/sensor/camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/gimbal/camera/image"
+  gz_topic_name: "/world/iris_warehouse/model/iris_rplidar_rgbd/model/gimbal/link/pitch_link/sensor/camera/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# IMU
+# ============================================================
+
+- ros_topic_name: "/warehouse/imu"
+  gz_topic_name: "/world/iris_warehouse/model/iris_rplidar_rgbd/model/iris_with_standoffs/link/imu_link/sensor/imu_sensor/imu"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Optional: joint states
+# Useful if you later use robot_state_publisher / TF.
+# If this bridge fails, comment this block out.
+# ============================================================
+
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/world/iris_warehouse/model/iris_rplidar_rgbd/joint_state"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+
+# ============================================================
+# Optional: gimbal control
+# ROS publishes commands, Gazebo receives commands.
+#
+# You may need std_msgs in your ROS package dependencies:
+#   sudo apt install ros-jazzy-std-msgs
+#
+# Example:
+#   ros2 topic pub /gimbal/cmd_pitch std_msgs/msg/Float64 "{data: -0.5}" --once
+# ============================================================
+
+- ros_topic_name: "/gimbal/cmd_pitch"
+  gz_topic_name: "/gimbal/cmd_pitch"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/gimbal/cmd_roll"
+  gz_topic_name: "/gimbal/cmd_roll"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/gimbal/cmd_yaw"
+  gz_topic_name: "/gimbal/cmd_yaw"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/gimbal/cmd_zoom"
+  gz_topic_name: "/model/gimbal/sensor/camera/zoom/cmd_zoom"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ

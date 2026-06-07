@@ -1,8 +1,6 @@
 {
   "backend/core/events/envelope.py|UP042": 1,
   "backend/entrypoints/cli/run_mission.py|ERA001": 4,
-  "backend/entrypoints/ros2/capture_sync_node.py|E501": 1,
-  "backend/entrypoints/ros2/processing_trigger_node.py|E501": 1,
   "backend/infrastructure/ai/llm_client.py|ERA001": 15,
   "backend/infrastructure/ai/llm_client.py|SIM117": 1,
   "backend/infrastructure/camera/runtime.py|B904": 1,
