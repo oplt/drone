@@ -50,7 +50,7 @@ export function WarehouseScanResultsSelector({
             ? selectedMap.status === "failed" && selectedMap.error
               ? selectedMap.error
               : `${getWarehouseName(selectedMap)} (#${getWarehouseMapId(selectedMap)})`
-            : "Select a scan result to show it in the 3D map."
+            : "Select a scan result to view its indoor 3D map."
         }
         sx={{ flex: 1, minWidth: { xs: "100%", sm: 220 } }}
       >

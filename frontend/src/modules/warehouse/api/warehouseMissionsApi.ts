@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import type { WarehouseLiveMapSnapshot } from "./warehouseLiveMapApi";
 import type {
   WarehouseExplorationProfile,
   WarehouseExplorationStartRequest,
@@ -162,6 +163,16 @@ export async function fetchWarehouseScannedMapQuality(
 ): Promise<WarehouseScannedMapQualityResponse> {
   return httpRequest<WarehouseScannedMapQualityResponse>(
     `/warehouse/scanned-maps/${jobId}/quality`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export async function fetchWarehouseScannedMapLiveSnapshot(
+  jobId: number,
+  token?: string | null,
+): Promise<WarehouseLiveMapSnapshot> {
+  return httpRequest<WarehouseLiveMapSnapshot>(
+    `/warehouse/scanned-maps/${jobId}/live-map-snapshot`,
     { token, skipUnauthorizedRedirect: true },
   );
 }

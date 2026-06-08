@@ -37,17 +37,6 @@ export async function deleteWarehouseMap(
   });
 }
 
-export async function fetchSignedTilesetUrl(
-  assetId: number,
-  token?: string | null,
-): Promise<string | null> {
-  const data = await httpRequest<{ url?: string }>(
-    `/mapping/assets/${assetId}/signed-url?ttl_seconds=3600&path=tileset.json`,
-    { token, skipUnauthorizedRedirect: true },
-  );
-  return typeof data?.url === "string" && data.url.trim() ? data.url : null;
-}
-
 export async function listWarehouseDocks(
   warehouseMapId: number,
   token?: string | null,

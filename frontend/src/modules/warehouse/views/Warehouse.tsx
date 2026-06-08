@@ -83,7 +83,6 @@ import { WarehouseDrawerSection } from "../components/WarehouseDrawerSection";
 import { WarehouseDockPanel } from "../components/WarehouseDockPanel";
 import { WarehouseExplorationPanel } from "../components/WarehouseExplorationPanel";
 import { WarehouseManualMappingPanel } from "../components/WarehouseManualMappingPanel";
-import { WarehouseScanViewer } from "../components/WarehouseScanViewer";
 import { WarehouseLiveVoxelMapViewer } from "../components/WarehouseLiveVoxelMapViewer";
 import { WarehouseFlightReadinessPanel } from "../components/WarehouseFlightReadinessPanel";
 import { WarehouseFlightReadinessRibbon } from "../components/WarehouseFlightReadinessRibbon";
@@ -99,6 +98,7 @@ import {
   type WarehouseDeleteTarget,
 } from "../components/WarehouseDeleteConfirmationDialog";
 import { useWarehouseLiveVoxelMap } from "../hooks/useWarehouseLiveVoxelMap";
+import { useWarehouseScannedMapReplay } from "../hooks/useWarehouseScannedMapReplay";
 import { useWarehouseFlightReadiness } from "../hooks/useWarehouseFlightReadiness";
 
 type CreateMapForm = {
@@ -864,6 +864,12 @@ export default function WarehousePage() {
     [scannedMaps, viewerMapJobId],
   );
 
+  const scannedMapReplay = useWarehouseScannedMapReplay(viewerScannedMap, authToken, {
+    enabled: !activeFlightId,
+  });
+  const displayedVoxelMap = activeFlightId ? liveVoxelMap : scannedMapReplay.state;
+  const showVoxelMapViewer = Boolean(activeFlightId || viewerScannedMap);
+
   const loadScannedMaps = useCallback(
     async (options?: { selectJobId?: number; showInViewer?: boolean }) => {
       const token = getToken();
@@ -1611,10 +1617,24 @@ export default function WarehousePage() {
       },
       {
         label: "Map",
-        value: viewerScannedMap?.status === "ready" ? "Ready" : "Missing",
-        status: (viewerScannedMap?.status === "ready"
-          ? "ready"
-          : "waiting") as WarehouseUiStatus,
+        value: activeFlightId
+          ? liveVoxelMap.chunks.length > 0
+            ? "Live"
+            : "Streaming"
+          : scannedMapReplay.hasReplay
+            ? "Replay"
+            : viewerScannedMap
+              ? "Empty"
+              : "None",
+        status: (activeFlightId
+          ? liveVoxelMap.chunks.length > 0
+            ? "ready"
+            : "running"
+          : scannedMapReplay.hasReplay
+            ? "ready"
+            : viewerScannedMap
+              ? "waiting"
+              : "unknown") as WarehouseUiStatus,
       },
       {
         label: "Preflight",
@@ -1632,9 +1652,12 @@ export default function WarehousePage() {
       },
     ],
     [
+      activeFlightId,
       droneConnected,
+      liveVoxelMap.chunks.length,
       missionState,
-      viewerScannedMap?.status,
+      scannedMapReplay.hasReplay,
+      viewerScannedMap,
       warehousePreflightPassed,
       wsConnected,
     ],
@@ -1740,32 +1763,6 @@ export default function WarehousePage() {
             ref={viewerSectionRef}
             id="warehouse-3d-map-viewer"
           >
-            <WarehouseDashboardCard
-              title="Warehouse Map"
-              subtitle="Stored scan mesh, point cloud, path, and footprint assets"
-            >
-              <WarehouseScanViewer
-                apiBase={apiBase}
-                getToken={getToken}
-                map={viewerScannedMap}
-              />
-            </WarehouseDashboardCard>
-
-            {activeFlightId ? (
-              <WarehouseDashboardCard
-                title="Live Voxel Map"
-                subtitle="Realtime nvblox stream, pose, chunks, and mapping health"
-              >
-                <WarehouseLiveVoxelMapViewer
-                  state={liveVoxelMap}
-                  mappingStatus={missionStatus?.warehouse_mapping ?? null}
-                  mappingStackStatus={mappingStackStatus}
-                  hidden={
-                    warehouseSetupDrawer.open || warehouseMissionDrawer.open
-                  }
-                />
-              </WarehouseDashboardCard>
-            ) : null}
             <Paper
               variant="outlined"
               sx={{
@@ -1804,6 +1801,32 @@ export default function WarehousePage() {
                 />
               </Stack>
             </Paper>
+
+            {showVoxelMapViewer ? (
+              <WarehouseDashboardCard
+                title="Warehouse 3D Map"
+                subtitle={
+                  activeFlightId
+                    ? "Live indoor point cloud from nvblox and lidar"
+                    : "Stored point-cloud replay for the selected scan"
+                }
+              >
+                <WarehouseLiveVoxelMapViewer
+                  state={displayedVoxelMap}
+                  mappingStatus={
+                    activeFlightId
+                      ? (missionStatus?.warehouse_mapping ?? null)
+                      : null
+                  }
+                  mappingStackStatus={
+                    activeFlightId ? mappingStackStatus : null
+                  }
+                  hidden={
+                    warehouseSetupDrawer.open || warehouseMissionDrawer.open
+                  }
+                />
+              </WarehouseDashboardCard>
+            ) : null}
           </Stack>
         </Stack>
       </Paper>

@@ -54,6 +54,10 @@ from backend.modules.warehouse.service.live_map_storage import (
     LiveMapStorageError,
     warehouse_live_map_chunk_storage,
 )
+from backend.modules.warehouse.service.live_map_replay import (
+    build_disk_live_map_snapshot,
+    resolve_client_flight_id_for_scan_job,
+)
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveMapSnapshot,
     normalize_live_map_payload,
@@ -1608,6 +1612,33 @@ async def list_scanned_maps(
         )
         for job, warehouse_map, model in rows
     ]
+
+
+@router.get(
+    "/scanned-maps/{job_id}/live-map-snapshot",
+    response_model=WarehouseLiveMapSnapshot,
+)
+async def get_scanned_map_live_map_snapshot(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseLiveMapSnapshot:
+    client_flight_id = await resolve_client_flight_id_for_scan_job(
+        db,
+        job_id=job_id,
+        owner_id=int(org_user.user.id),
+        org_id=org_user.user.org_id,
+        allow_org_access=can_access_org_scope(org_user.user),
+    )
+    if not client_flight_id:
+        raise HTTPException(
+            status_code=404,
+            detail="No live-map flight id found for this scan result.",
+        )
+    in_memory = await warehouse_live_map_stream.snapshot(client_flight_id)
+    if in_memory.updates:
+        return in_memory
+    return build_disk_live_map_snapshot(client_flight_id)
 
 
 @router.get("/scanned-maps/{job_id}/quality", response_model=WarehouseScannedMapQualityOut)

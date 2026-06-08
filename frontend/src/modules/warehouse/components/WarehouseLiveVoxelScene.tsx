@@ -47,37 +47,107 @@ function GroundGrid({ visible }: { visible: boolean }) {
   );
 }
 
-function decodeXyz32(buffer: ArrayBuffer): THREE.BufferGeometry {
-  const source = new Float32Array(buffer);
-  const usableLength = Math.floor(source.length / 3) * 3;
-  const positions =
-      usableLength === source.length ? source : source.slice(0, usableLength);
+function colorizeByHeight(
+    z: number,
+    minZ: number,
+    maxZ: number,
+): [number, number, number] {
+    const span = Math.max(0.001, maxZ - minZ);
+    const t = THREE.MathUtils.clamp((z - minZ) / span, 0, 1);
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.computeBoundingSphere();
-  return geometry;
+    const color = new THREE.Color();
+    color.setHSL(0.67 - t * 0.67, 1.0, 0.58);
+
+    return [color.r, color.g, color.b];
+}
+
+function colorizeByRange(
+    x: number,
+    y: number,
+    z: number,
+): [number, number, number] {
+    const distance = Math.sqrt(x * x + y * y + z * z);
+    const t = THREE.MathUtils.clamp(distance / 18.0, 0, 1);
+
+    const color = new THREE.Color();
+    color.setHSL(0.7 - t * 0.7, 1.0, 0.58);
+
+    return [color.r, color.g, color.b];
+}
+
+function decodeXyz32(buffer: ArrayBuffer): THREE.BufferGeometry {
+    const source = new Float32Array(buffer);
+    const usableLength = Math.floor(source.length / 3) * 3;
+    const pointCount = usableLength / 3;
+
+    const positions = new Float32Array(pointCount * 3);
+    const colors = new Float32Array(pointCount * 3);
+
+    let minZ = Number.POSITIVE_INFINITY;
+    let maxZ = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index < pointCount; index += 1) {
+        const z = source[index * 3 + 2];
+        if (Number.isFinite(z)) {
+            minZ = Math.min(minZ, z);
+            maxZ = Math.max(maxZ, z);
+        }
+    }
+
+    if (!Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
+        minZ = 0;
+        maxZ = 1;
+    }
+
+    for (let index = 0; index < pointCount; index += 1) {
+        const x = source[index * 3];
+        const y = source[index * 3 + 1];
+        const z = source[index * 3 + 2];
+
+        positions[index * 3] = x;
+        positions[index * 3 + 1] = y;
+        positions[index * 3 + 2] = z;
+
+        // Use height coloring. Change to colorizeByRange(x, y, z) if you prefer distance coloring.
+        const [r, g, b] = colorizeByHeight(z, minZ, maxZ);
+
+        colors[index * 3] = r;
+        colors[index * 3 + 1] = g;
+        colors[index * 3 + 2] = b;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geometry.computeBoundingSphere();
+
+    return geometry;
 }
 
 function PointCloudChunk({ chunk }: { chunk: CachedLiveMapChunk }) {
-  const geometry = useMemo(() => {
-    if (!chunk.arrayBuffer) return null;
-    return decodeXyz32(chunk.arrayBuffer);
-  }, [chunk.arrayBuffer]);
+    const geometry = useMemo(() => {
+        if (!chunk.arrayBuffer) return null;
+        return decodeXyz32(chunk.arrayBuffer);
+    }, [chunk.arrayBuffer]);
 
-  useEffect(() => {
-    return () => {
-      geometry?.dispose();
-    };
-  }, [geometry]);
+    useEffect(() => {
+        return () => {
+            geometry?.dispose();
+        };
+    }, [geometry]);
 
-  if (!geometry) return null;
+    if (!geometry) return null;
 
-  return (
-      <points geometry={geometry} frustumCulled={false}>
-        <pointsMaterial size={0.035} sizeAttenuation />
-      </points>
-  );
+    return (
+        <points geometry={geometry} frustumCulled={false}>
+            <pointsMaterial
+                size={0.035}
+                sizeAttenuation
+                vertexColors
+                toneMapped={false}
+            />
+        </points>
+    );
 }
 
 function MeshChunk({ chunk }: { chunk: CachedLiveMapChunk }) {
@@ -116,39 +186,70 @@ function BoundsChunk({ chunk }: { chunk: CachedLiveMapChunk }) {
 }
 
 function PreviewChunk({
-                        renderChunk,
+                          renderChunk,
                       }: {
-  renderChunk: ReturnType<typeof toRenderChunks>[number];
+    renderChunk: ReturnType<typeof toRenderChunks>[number];
 }) {
-  const geometry = useMemo(() => {
-    if (!renderChunk.previewPoints.length) return null;
+    const geometry = useMemo(() => {
+        if (!renderChunk.previewPoints.length) return null;
 
-    const positions = new Float32Array(renderChunk.previewPoints.length * 3);
-    renderChunk.previewPoints.forEach((point, index) => {
-      positions[index * 3] = point[0];
-      positions[index * 3 + 1] = point[1];
-      positions[index * 3 + 2] = point[2];
-    });
+        const pointCount = renderChunk.previewPoints.length;
+        const positions = new Float32Array(pointCount * 3);
+        const colors = new Float32Array(pointCount * 3);
 
-    const next = new THREE.BufferGeometry();
-    next.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    next.computeBoundingSphere();
-    return next;
-  }, [renderChunk.previewPoints]);
+        let minZ = Number.POSITIVE_INFINITY;
+        let maxZ = Number.NEGATIVE_INFINITY;
 
-  useEffect(() => {
-    return () => {
-      geometry?.dispose();
-    };
-  }, [geometry]);
+        renderChunk.previewPoints.forEach((point) => {
+            minZ = Math.min(minZ, point[2]);
+            maxZ = Math.max(maxZ, point[2]);
+        });
 
-  if (!geometry) return null;
+        if (!Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
+            minZ = 0;
+            maxZ = 1;
+        }
 
-  return (
-      <points geometry={geometry} frustumCulled={false}>
-        <pointsMaterial size={0.05} sizeAttenuation />
-      </points>
-  );
+        renderChunk.previewPoints.forEach((point, index) => {
+            const [x, y, z] = point;
+
+            positions[index * 3] = x;
+            positions[index * 3 + 1] = y;
+            positions[index * 3 + 2] = z;
+
+            const [r, g, b] = colorizeByHeight(z, minZ, maxZ);
+
+            colors[index * 3] = r;
+            colors[index * 3 + 1] = g;
+            colors[index * 3 + 2] = b;
+        });
+
+        const next = new THREE.BufferGeometry();
+        next.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        next.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        next.computeBoundingSphere();
+
+        return next;
+    }, [renderChunk.previewPoints]);
+
+    useEffect(() => {
+        return () => {
+            geometry?.dispose();
+        };
+    }, [geometry]);
+
+    if (!geometry) return null;
+
+    return (
+        <points geometry={geometry} frustumCulled={false}>
+            <pointsMaterial
+                size={0.05}
+                sizeAttenuation
+                vertexColors
+                toneMapped={false}
+            />
+        </points>
+    );
 }
 
 function ScanPath({ state }: { state: WarehouseLiveVoxelMapState }) {
