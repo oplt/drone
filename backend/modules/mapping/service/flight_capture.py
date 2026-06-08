@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import shlex
 import shutil
@@ -12,6 +11,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from backend.core.config.runtime import settings
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
 _UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
@@ -46,22 +47,14 @@ class FlightCaptureSessionService:
     """
 
     def __init__(self) -> None:
-        self.sync_root = Path(
-            os.getenv("PHOTOGRAMMETRY_DRONE_SYNC_DIR", "backend/storage/drone_sync")
-        ).resolve()
-        staging_raw = os.getenv("PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR", "").strip()
+        self.sync_root = Path(settings.PHOTOGRAMMETRY_DRONE_SYNC_DIR).resolve()
+        staging_raw = settings.PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR.strip()
         self.capture_staging_dir = Path(staging_raw).resolve() if staging_raw else None
-        self.default_wait_timeout_s = float(
-            os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_TIMEOUT_S", "120")
-        )
-        self.default_poll_interval_s = float(os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_POLL_S", "2"))
-        self.default_min_images = max(
-            0, int(os.getenv("PHOTOGRAMMETRY_FLIGHT_SYNC_MIN_IMAGES", "1"))
-        )
-        self.capture_sync_cmd_template = os.getenv("PHOTOGRAMMETRY_CAPTURE_SYNC_CMD", "").strip()
-        self.capture_sync_timeout_s = float(
-            os.getenv("PHOTOGRAMMETRY_CAPTURE_SYNC_TIMEOUT_S", "180")
-        )
+        self.default_wait_timeout_s = settings.photogrammetry_flight_sync_timeout_s
+        self.default_poll_interval_s = settings.photogrammetry_flight_sync_poll_s
+        self.default_min_images = max(0, settings.photogrammetry_flight_sync_min_images)
+        self.capture_sync_cmd_template = settings.photogrammetry_capture_sync_cmd.strip()
+        self.capture_sync_timeout_s = settings.photogrammetry_capture_sync_timeout_s
         self.sync_root.mkdir(parents=True, exist_ok=True)
         if self.capture_staging_dir:
             self.capture_staging_dir.mkdir(parents=True, exist_ok=True)

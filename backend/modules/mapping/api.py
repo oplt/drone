@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import shutil
 import tempfile
 from datetime import UTC, datetime
@@ -196,29 +195,24 @@ async def _latest_photogrammetry_source_dir(db: AsyncSession) -> str | None:
 
 
 def _mapping_inputs_root() -> Path:
-    return Path(
-        os.getenv("PHOTOGRAMMETRY_INPUTS_DIR", "backend/storage/mapping_jobs_inputs")
-    ).resolve()
+    return Path(settings.PHOTOGRAMMETRY_INPUTS_DIR).resolve()
 
 
 def _mapping_allowed_extensions() -> set[str]:
     allowed_exts = {
         ext.strip().lower()
-        for ext in os.getenv(
-            "PHOTOGRAMMETRY_ALLOWED_IMAGE_EXTENSIONS",
-            ".jpg,.jpeg,.png,.tif,.tiff,.webp",
-        ).split(",")
+        for ext in settings.photogrammetry_allowed_image_extensions.split(",")
         if ext.strip()
     }
     return allowed_exts or {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
 
 
 def _mapping_max_upload_files() -> int:
-    return int(os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILES", "5000"))
+    return settings.photogrammetry_max_upload_files
 
 
 def _mapping_max_upload_file_bytes() -> int:
-    return int(os.getenv("PHOTOGRAMMETRY_MAX_UPLOAD_FILE_BYTES", str(1024 * 1024 * 1024)))
+    return settings.photogrammetry_max_upload_file_bytes
 
 
 def _parse_form_object(raw: str | None, *, field_name: str) -> dict[str, Any]:

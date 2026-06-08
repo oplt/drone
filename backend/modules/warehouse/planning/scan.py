@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from backend.core.config.runtime import settings
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.missions.schemas.mission_types import SIM_WAREHOUSE_LOCAL_ORIGIN
@@ -1101,19 +1102,10 @@ class WarehouseScanMission:
             mapping_stack_not_running_result,
             prepare_warehouse_scan_ros,
         )
-        def _float_env(name: str, default: float) -> float:
-            raw = os.getenv(name)
-            if raw is None or raw.strip() == "":
-                return default
-            try:
-                return float(raw)
-            except ValueError:
-                return default
-
         stack_status, flight_readiness, takeoff_ready = await prepare_warehouse_scan_ros(
             require_nvblox=False,
-            sensor_timeout_s=_float_env("WAREHOUSE_TAKEOFF_READINESS_WAIT_S", 10.0),
-            nvblox_timeout_s=_float_env("WAREHOUSE_FLIGHT_MAPPING_WAIT_S", 30.0),
+            sensor_timeout_s=settings.warehouse_takeoff_readiness_wait_s,
+            nvblox_timeout_s=settings.warehouse_flight_mapping_wait_s,
         )
         if not stack_status.running:
             return mapping_stack_not_running_result(), takeoff_ready

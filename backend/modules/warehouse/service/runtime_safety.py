@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,7 +50,7 @@ class WarehouseRuntimeSafetyTracker:
         self._last_deep_probe_s = 0.0
 
     def should_run_deep_health_probe(self) -> bool:
-        interval = float(os.getenv("WAREHOUSE_DEEP_HEALTH_PROBE_INTERVAL_S", "5"))
+        interval = settings.warehouse_deep_health_probe_interval_s
         return time.monotonic() - self._last_deep_probe_s >= max(0.5, interval)
 
     def mark_deep_probe_ran(self) -> None:

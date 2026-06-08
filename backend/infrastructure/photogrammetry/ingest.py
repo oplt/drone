@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from backend.core.config.runtime import env_truthy, settings
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
 logger = logging.getLogger(__name__)
@@ -21,15 +22,9 @@ class DroneSyncIngestService:
     """
 
     def __init__(self) -> None:
-        self.inputs_root = Path(
-            os.getenv("PHOTOGRAMMETRY_INPUTS_DIR", "backend/storage/mapping_jobs_inputs")
-        ).resolve()
-        self.sync_root = Path(
-            os.getenv("PHOTOGRAMMETRY_DRONE_SYNC_DIR", "backend/storage/drone_sync")
-        ).resolve()
-        self.allow_absolute_source = os.getenv(
-            "PHOTOGRAMMETRY_DRONE_SYNC_ALLOW_ABSOLUTE_SOURCE", "0"
-        ).lower() in {"1", "true", "yes"}
+        self.inputs_root = Path(settings.PHOTOGRAMMETRY_INPUTS_DIR).resolve()
+        self.sync_root = Path(settings.PHOTOGRAMMETRY_DRONE_SYNC_DIR).resolve()
+        self.allow_absolute_source = env_truthy(settings.photogrammetry_drone_sync_allow_absolute_source)
         self.inputs_root.mkdir(parents=True, exist_ok=True)
 
     def collect_images_for_job(

@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +15,7 @@ from fastapi import UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config.runtime import settings
 from backend.modules.irrigation.domain.analytics import analyze_irrigation
 from backend.modules.irrigation.domain.compositor import build_field_composite
 from backend.modules.irrigation.models import (
@@ -44,14 +44,10 @@ def _utc_now() -> datetime:
 
 class IrrigationProcessingService:
     def __init__(self) -> None:
-        self.storage_root = Path(
-            os.getenv("IRRIGATION_STORAGE_DIR", "backend/storage/irrigation")
-        ).resolve()
-        self.capture_interval_s = max(
-            0.25, float(os.getenv("IRRIGATION_CAPTURE_INTERVAL_S", "1.5"))
-        )
-        self.fov_h_deg = float(os.getenv("IRRIGATION_CAMERA_FOV_H_DEG", "78"))
-        self.fov_v_deg = float(os.getenv("IRRIGATION_CAMERA_FOV_V_DEG", "62"))
+        self.storage_root = Path(settings.irrigation_storage_dir).resolve()
+        self.capture_interval_s = max(0.25, settings.irrigation_capture_interval_s)
+        self.fov_h_deg = settings.irrigation_camera_fov_h_deg
+        self.fov_v_deg = settings.irrigation_camera_fov_v_deg
         self._mission_locks: dict[str, asyncio.Lock] = {}
         self.storage_root.mkdir(parents=True, exist_ok=True)
 

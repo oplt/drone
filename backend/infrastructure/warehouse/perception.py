@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -64,9 +63,7 @@ def _merge_capture_disk(components: dict[str, Any], capture_root: Path) -> dict[
 class WarehousePerceptionHttpPort:
     def __init__(self) -> None:
         self.bridge_url = str(getattr(settings, "WAREHOUSE_ROS_BRIDGE_URL", "") or "").strip()
-        self.capture_root = Path(
-            os.getenv("WAREHOUSE_ROS_CAPTURE_ROOT", "backend/storage/warehouse_ros/captures")
-        ).resolve()
+        self.capture_root = Path(settings.WAREHOUSE_ROS_CAPTURE_ROOT).resolve()
         self.capture_root.mkdir(parents=True, exist_ok=True)
 
     async def status(self, *, deep: bool = False, force: bool = False) -> WarehousePerceptionStatus:
@@ -108,8 +105,8 @@ class WarehousePerceptionHttpPort:
             reachable=reachable,
             ready=ready,
             status="ready" if ready else ("configured" if reachable else "unavailable"),
-            profile=os.getenv("WAREHOUSE_ROS_PROFILE"),
-            bridge_flow=os.getenv("WAREHOUSE_BRIDGE_FLOW"),
+            profile=settings.warehouse_ros_profile or None,
+            bridge_flow=settings.WAREHOUSE_BRIDGE_FLOW,
             bridge_url=self.bridge_url or None,
             capture_root=str(self.capture_root),
             detail=detail,

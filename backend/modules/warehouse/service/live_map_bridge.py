@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import math
-import os
 import re
 import struct
 import subprocess
@@ -14,6 +13,7 @@ from typing import Any
 
 import yaml
 
+from backend.core.config.runtime import env_truthy, settings
 from backend.infrastructure.warehouse.bridge_config import (
     bridge_config_path,
     list_ros2_topics,
@@ -47,7 +47,7 @@ _bridge_stop: asyncio.Event | None = None
 
 
 def _ros2_workspace() -> Path:
-    raw = os.getenv("WAREHOUSE_ROS2_WS", "ros2_ws").strip() or "ros2_ws"
+    raw = settings.warehouse_ros2_ws.strip() or "ros2_ws"
     return Path(raw).expanduser().resolve()
 
 
@@ -69,10 +69,14 @@ def _esdf_topic() -> str:
     from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
     flow = resolve_warehouse_bridge_flow()
-    return os.getenv(
-        "WAREHOUSE_ESDF_TOPIC",
-        "/nvblox_node/static_esdf_pointcloud" if flow.gazebo_sim else "/warehouse/contract/map/esdf",
-    ).strip()
+    configured = settings.warehouse_esdf_topic.strip()
+    if configured:
+        return configured
+    return (
+        "/nvblox_node/static_esdf_pointcloud"
+        if flow.gazebo_sim
+        else "/warehouse/contract/map/esdf"
+    )
 
 
 def _quat_to_yaw_deg(x: float, y: float, z: float, w: float) -> float:
@@ -376,7 +380,7 @@ def _read_nvblox_chunk(
     if payload is None:
         return None
 
-    max_points = int(os.getenv("WAREHOUSE_LIVE_MAP_MAX_PREVIEW_POINTS", "1500"))
+    max_points = settings.warehouse_live_map_max_preview_points
     return _pointcloud2_to_chunk(
         payload,
         flight_id=flight_id,
@@ -389,8 +393,8 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
     ws = _ros2_workspace()
     odom_topic = _odometry_topic()
     esdf_topic = _esdf_topic()
-    poll_s = float(os.getenv("WAREHOUSE_LIVE_MAP_POLL_S", "0.5"))
-    pointcloud_every_n = max(1, int(os.getenv("WAREHOUSE_LIVE_MAP_POINTCLOUD_EVERY_N", "2")))
+    poll_s = settings.warehouse_live_map_poll_s
+    pointcloud_every_n = max(1, settings.warehouse_live_map_pointcloud_every_n)
 
     sequence = 0
     chunk_failures = 0
@@ -488,12 +492,7 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
 
 async def start_warehouse_live_map_bridge(flight_id: str) -> None:
     """Stream warehouse odometry + Nvblox ESDF pointcloud metadata into live voxel map."""
-    if os.getenv("WAREHOUSE_LIVE_MAP_PUBLISH", "1").strip().lower() in {
-        "0",
-        "false",
-        "no",
-        "off",
-    }:
+    if not env_truthy(settings.warehouse_live_map_publish):
         return
 
     global _bridge_task, _bridge_flight_id, _bridge_stop

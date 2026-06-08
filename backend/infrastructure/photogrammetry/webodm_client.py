@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import mimetypes
-import os
 import zipfile
 from collections.abc import Awaitable, Callable, Iterable
 from contextlib import ExitStack
@@ -17,6 +16,8 @@ from typing import (
 )
 
 import httpx
+
+from backend.core.config.runtime import env_truthy, settings
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -37,46 +38,21 @@ class WebODMClient:
     """
 
     def __init__(self) -> None:
-        self.base_url = os.getenv("WEBODM_BASE_URL", "http://localhost:8001").rstrip("/")
-        self.api_token = os.getenv("WEBODM_API_TOKEN", "")
-        self.project_id = int(os.getenv("WEBODM_PROJECT_ID", "1"))
-        self.mock_mode = os.getenv("WEBODM_MOCK_MODE", "0").lower() in {
-            "1",
-            "true",
-            "yes",
-        }
-        self.mock_outputs_dir = Path(
-            os.getenv("WEBODM_MOCK_OUTPUTS_DIR", "backend/mock/webodm_outputs")
-        ).resolve()
+        self.base_url = settings.WEBODM_BASE_URL.rstrip("/")
+        self.api_token = settings.WEBODM_API_TOKEN
+        self.project_id = settings.WEBODM_PROJECT_ID
+        self.mock_mode = env_truthy(settings.WEBODM_MOCK_MODE)
+        self.mock_outputs_dir = Path(settings.webodm_mock_outputs_dir).resolve()
 
-        self.inputs_root = Path(
-            os.getenv("PHOTOGRAMMETRY_INPUTS_DIR", "backend/storage/mapping_jobs_inputs")
-        ).resolve()
+        self.inputs_root = Path(settings.PHOTOGRAMMETRY_INPUTS_DIR).resolve()
         self.downloads_root = _ensure_dir(
-            Path(
-                os.getenv(
-                    "PHOTOGRAMMETRY_WEBODM_DOWNLOADS_DIR",
-                    "backend/storage/webodm_downloads",
-                )
-            ).resolve()
+            Path(settings.photogrammetry_webodm_downloads_dir).resolve()
         )
-        self.http_timeout_s = float(os.getenv("WEBODM_HTTP_TIMEOUT_S", "120"))
-        self.http_retry_attempts = self._parse_positive_int_env(
-            "WEBODM_HTTP_RETRY_ATTEMPTS",
-            default=5,
-        )
-        self.http_retry_min_delay_s = self._parse_positive_float_env(
-            "WEBODM_HTTP_RETRY_MIN_DELAY_S",
-            default=4.0,
-        )
-        self.http_retry_max_delay_s = self._parse_positive_float_env(
-            "WEBODM_HTTP_RETRY_MAX_DELAY_S",
-            default=60.0,
-        )
-        self.http_retry_backoff_factor = self._parse_positive_float_env(
-            "WEBODM_HTTP_RETRY_BACKOFF_FACTOR",
-            default=2.0,
-        )
+        self.http_timeout_s = settings.webodm_http_timeout_s
+        self.http_retry_attempts = settings.webodm_http_retry_attempts
+        self.http_retry_min_delay_s = settings.webodm_http_retry_min_delay_s
+        self.http_retry_max_delay_s = settings.webodm_http_retry_max_delay_s
+        self.http_retry_backoff_factor = settings.webodm_http_retry_backoff_factor
         if self.http_retry_max_delay_s < self.http_retry_min_delay_s:
             logger.warning(
                 "WEBODM_HTTP_RETRY_MAX_DELAY_S (%s) is lower than WEBODM_HTTP_RETRY_MIN_DELAY_S (%s); "
@@ -85,15 +61,9 @@ class WebODMClient:
                 self.http_retry_min_delay_s,
             )
             self.http_retry_max_delay_s = self.http_retry_min_delay_s
-        self.upload_batch_size = self._parse_positive_int_env(
-            "WEBODM_UPLOAD_BATCH_SIZE",
-            default=256,
-        )
-        self.download_all_endpoint_template = os.getenv(
-            "WEBODM_DOWNLOAD_ALL_ENDPOINT_TEMPLATE",
-            "/api/projects/{project_id}/tasks/{task_id}/download/all.zip",
-        )
-        configured_backend = os.getenv("PHOTOGRAMMETRY_PROCESSOR_BACKEND", "auto").strip().lower()
+        self.upload_batch_size = settings.webodm_upload_batch_size
+        self.download_all_endpoint_template = settings.webodm_download_all_endpoint_template
+        configured_backend = settings.photogrammetry_processor_backend.strip().lower()
         if configured_backend not in {"auto", "webodm", "nodeodm"}:
             logger.warning(
                 "Invalid PHOTOGRAMMETRY_PROCESSOR_BACKEND=%r; expected auto|webodm|nodeodm. "
@@ -199,32 +169,6 @@ class WebODMClient:
         if not resolved:
             raise RuntimeError("WebODM task requires at least one input image.")
         return resolved
-
-    @staticmethod
-    def _parse_positive_int_env(name: str, *, default: int) -> int:
-        raw = os.getenv(name, str(default)).strip()
-        try:
-            value = int(raw)
-        except ValueError:
-            logger.warning("Invalid %s=%r; using default %s", name, raw, default)
-            return default
-        if value <= 0:
-            logger.warning("%s must be > 0; using default %s", name, default)
-            return default
-        return value
-
-    @staticmethod
-    def _parse_positive_float_env(name: str, *, default: float) -> float:
-        raw = os.getenv(name, str(default)).strip()
-        try:
-            value = float(raw)
-        except ValueError:
-            logger.warning("Invalid %s=%r; using default %s", name, raw, default)
-            return default
-        if value <= 0:
-            logger.warning("%s must be > 0; using default %s", name, default)
-            return default
-        return value
 
     @staticmethod
     def _is_retryable_http_exception(exc: Exception) -> bool:

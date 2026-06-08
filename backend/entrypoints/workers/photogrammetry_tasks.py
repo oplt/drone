@@ -3,23 +3,18 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import logging
-import os
 import threading
 from collections.abc import Coroutine
 from typing import Any
 
-from backend.core.config.runtime import setup_logging
+from backend.core.config.runtime import env_truthy, settings, setup_logging
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.infrastructure.mapping import build_mapping_job
 
 logger = logging.getLogger(__name__)
 setup_logging()
-PHOTOGRAMMETRY_QUEUE = os.getenv("CELERY_PHOTOGRAMMETRY_QUEUE", "photogrammetry")
-ENABLE_NATIVE_ASYNC_TASK = os.getenv("CELERY_ENABLE_NATIVE_ASYNC_TASK", "0").lower() in {
-    "1",
-    "true",
-    "yes",
-}
+PHOTOGRAMMETRY_QUEUE = settings.CELERY_PHOTOGRAMMETRY_QUEUE
+ENABLE_NATIVE_ASYNC_TASK = env_truthy(settings.celery_enable_native_async_task)
 if ENABLE_NATIVE_ASYNC_TASK and importlib.util.find_spec("celery_aio_pool") is None:
     logger.warning(
         "CELERY_ENABLE_NATIVE_ASYNC_TASK=1 requested, but celery_aio_pool is not installed. "

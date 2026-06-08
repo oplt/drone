@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from backend.core.config.runtime import settings
+from backend.core.config.runtime import env_truthy, settings
 from backend.modules.missions.schemas.mission_types import MissionType
 
 
@@ -55,15 +54,13 @@ def mission_type_value(mission_type: Any) -> str:
 
 
 def explicit_sim_home_fallback_enabled() -> bool:
-    enabled_values = {"1", "true", "yes", "on"}
-    warehouse_bridge_flow = (
-        str(getattr(settings, "WAREHOUSE_BRIDGE_FLOW", "") or "").strip().lower()
-    )
+    warehouse_bridge_flow = settings.WAREHOUSE_BRIDGE_FLOW.strip().lower()
     if warehouse_bridge_flow == "gazebo":
         return True
-    for name in ("SIM_MODE", "INDOOR_NAV", "WAREHOUSE_GAZEBO_SIM"):
-        if os.getenv(name, "").strip().lower() in enabled_values:
-            return True
+    if env_truthy(settings.sim_mode) or env_truthy(settings.indoor_nav):
+        return True
+    if env_truthy(settings.warehouse_gazebo_sim):
+        return True
     return False
 
 

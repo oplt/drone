@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import shlex
 import signal
 from asyncio.subprocess import PIPE
@@ -256,7 +255,7 @@ async def _maybe_start_mapping_stack_cmd() -> None:
                 f"Failed to start Nvblox mapping stack: {exc}"
             ) from exc
 
-    boot_grace_s = float(os.getenv("WAREHOUSE_NVBLOX_BOOT_GRACE_S", "2.0"))
+    boot_grace_s = settings.warehouse_nvblox_boot_grace_s
     await asyncio.sleep(max(0.0, boot_grace_s))
 
     if (
@@ -434,7 +433,7 @@ async def shutdown_warehouse_mapping_stack() -> None:
     await stop_warehouse_live_map_bridge()
     await _stop_mapping_stack_process()
 
-    shutdown_cmd = os.getenv("WAREHOUSE_SHUTDOWN_MAPPING_STACK_CMD", "").strip()
+    shutdown_cmd = settings.warehouse_shutdown_mapping_stack_cmd.strip()
     if shutdown_cmd:
         await asyncio.to_thread(
             __import__("subprocess").run,

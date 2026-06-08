@@ -38,11 +38,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 
+from backend.core.config.runtime import settings
 from backend.core.database.session import Session
 from backend.core.logging.retention import cleanup_runtime_logs, runtime_log_retention_days
 from backend.modules.missions.command_repository import operator_command_repo
@@ -56,47 +56,41 @@ logger = logging.getLogger(__name__)
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
-PREFLIGHT_CLEANUP_INTERVAL_S: int = max(60, int(os.getenv("PREFLIGHT_CLEANUP_INTERVAL_S", "300")))
+PREFLIGHT_CLEANUP_INTERVAL_S: int = max(60, settings.preflight_cleanup_interval_s)
 """How often to sweep for expired preflight runs (seconds, default 5 min)."""
 
-MISSION_CLEANUP_INTERVAL_S: int = max(300, int(os.getenv("MISSION_CLEANUP_INTERVAL_S", "3600")))
+MISSION_CLEANUP_INTERVAL_S: int = max(300, settings.mission_cleanup_interval_s)
 """How often to sweep for old terminal mission runtimes (seconds, default 1 h)."""
 
-MISSION_RUNTIME_RETENTION_DAYS: int = max(1, int(os.getenv("MISSION_RUNTIME_RETENTION_DAYS", "30")))
+MISSION_RUNTIME_RETENTION_DAYS: int = max(1, settings.mission_runtime_retention_days)
 """Terminal mission runtimes older than this many days are deleted (default 30)."""
 
 # -- Telemetry retention -------------------------------------------------------
 
-TELEMETRY_CLEANUP_INTERVAL_S: int = max(
-    3600, int(os.getenv("TELEMETRY_CLEANUP_INTERVAL_S", "21600"))
-)
+TELEMETRY_CLEANUP_INTERVAL_S: int = max(3600, settings.telemetry_cleanup_interval_s)
 """How often the telemetry retention sweep runs (seconds, default 6 h)."""
 
-TELEMETRY_RAW_RETENTION_DAYS: int = max(1, int(os.getenv("TELEMETRY_RAW_RETENTION_DAYS", "90")))
+TELEMETRY_RAW_RETENTION_DAYS: int = max(1, settings.telemetry_raw_retention_days)
 """Raw ``telemetry`` rows older than this many days are deleted (default 90 d)."""
 
-TELEMETRY_SUMMARY_RETENTION_DAYS: int = max(
-    1, int(os.getenv("TELEMETRY_SUMMARY_RETENTION_DAYS", "365"))
-)
+TELEMETRY_SUMMARY_RETENTION_DAYS: int = max(1, settings.telemetry_summary_retention_days)
 """``telemetry_summary`` rows older than this many days are deleted (default 365 d)."""
 
-MAVLINK_RETENTION_DAYS: int = max(1, int(os.getenv("MAVLINK_RETENTION_DAYS", "14")))
+MAVLINK_RETENTION_DAYS: int = max(1, settings.mavlink_retention_days)
 """Raw ``mavlink_event`` rows older than this many days are deleted (default 14 d).
 
 MAVLink rows carry large JSON payloads and are the most storage-expensive.
 14 days is enough for post-flight debugging while keeping disk predictable.
 """
 
-TELEMETRY_CLEANUP_BATCH: int = max(100, int(os.getenv("TELEMETRY_CLEANUP_BATCH", "10000")))
+TELEMETRY_CLEANUP_BATCH: int = max(100, settings.telemetry_cleanup_batch)
 """Maximum rows deleted per table per sweep (default 10 000).
 
 Batching prevents long-held locks on high-volume tables and keeps each
 DELETE transaction short enough to avoid WAL bloat.
 """
 
-RUNTIME_LOG_CLEANUP_INTERVAL_S: int = max(
-    3600, int(os.getenv("RUNTIME_LOG_CLEANUP_INTERVAL_S", "86400"))
-)
+RUNTIME_LOG_CLEANUP_INTERVAL_S: int = max(3600, settings.runtime_log_cleanup_interval_s)
 """How often runtime log retention cleanup runs (seconds, default 24 h)."""
 
 

@@ -5,7 +5,6 @@ import hashlib
 import json
 import logging
 import math
-import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -15,6 +14,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field, model_validator
 
+from backend.core.config.runtime import env_truthy, settings
 from backend.core.events import (
     FlightEventEnvelopeV1,
     FlightEventPayloadV1,
@@ -82,14 +82,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-_BOOL_TRUE_TOKENS = {"1", "true", "yes", "on"}
-PREFLIGHT_RUN_TTL_SECONDS = max(60, int(os.getenv("PREFLIGHT_RUN_TTL_SECONDS", "900")))
-REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION = (
-    os.getenv("REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION", "0").strip().lower() in _BOOL_TRUE_TOKENS
-)
-ALLOW_WARN_PREFLIGHT_START = (
-    os.getenv("ALLOW_WARN_PREFLIGHT_START", "1").strip().lower() in _BOOL_TRUE_TOKENS
-)
+PREFLIGHT_RUN_TTL_SECONDS = max(60, settings.preflight_run_ttl_seconds)
+REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION = env_truthy(settings.require_preflight_run_before_mission)
+ALLOW_WARN_PREFLIGHT_START = env_truthy(settings.allow_warn_preflight_start)
 
 
 async def _run_preflight_report(
@@ -633,8 +628,8 @@ async def get_orchestrator() -> Any:
 
 # Legacy TTL / history constants kept so any external env vars still parse cleanly.
 # They are no longer used for in-memory eviction — the DB is authoritative.
-MISSION_RUNTIME_TTL_SECONDS = max(600, int(os.getenv("MISSION_RUNTIME_TTL_SECONDS", "86400")))
-MISSION_RUNTIME_MAX_HISTORY = max(20, int(os.getenv("MISSION_RUNTIME_MAX_HISTORY", "200")))
+MISSION_RUNTIME_TTL_SECONDS = max(600, settings.mission_runtime_ttl_seconds)
+MISSION_RUNTIME_MAX_HISTORY = max(20, settings.mission_runtime_max_history)
 
 
 def _is_terminal_state(state: str) -> bool:

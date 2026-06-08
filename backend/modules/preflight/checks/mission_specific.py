@@ -1,5 +1,4 @@
 import math
-import os
 from collections.abc import Iterable, Sequence
 from math import atan, pi, radians, tan
 from typing import Any
@@ -16,6 +15,7 @@ from backend.modules.missions.schemas.mission_types import (
     WarehouseScanMission,
     Waypoint,
 )
+from backend.core.config.runtime import env_truthy, settings
 from backend.modules.preflight.range_estimator import SimpleWhPerKmModel
 from backend.modules.vehicle_runtime.types import Coordinate
 
@@ -24,10 +24,10 @@ from .schemas import CheckResult, CheckStatus
 
 
 def _warehouse_sim_mode() -> bool:
-    enabled_values = {"1", "true", "yes", "on"}
-    for name in ("SIM_MODE", "INDOOR_NAV", "WAREHOUSE_SIM_MODE", "WAREHOUSE_GAZEBO_SIM"):
-        if os.getenv(name, "").strip().lower() in enabled_values:
-            return True
+    if env_truthy(settings.sim_mode) or env_truthy(settings.indoor_nav):
+        return True
+    if env_truthy(settings.warehouse_sim_mode) or env_truthy(settings.warehouse_gazebo_sim):
+        return True
     return False
 
 
@@ -1442,12 +1442,7 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                     "flight can start mapping in parallel"
                 ),
             )
-        strict_nvblox = os.getenv("WAREHOUSE_PREFLIGHT_WAIT_NVBLOX", "0").strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
+        strict_nvblox = env_truthy(settings.warehouse_preflight_wait_nvblox)
         if sim_mode and not has_nvblox_node and not strict_nvblox:
             return CheckResult(
                 name="Warehouse Nvblox",

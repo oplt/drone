@@ -2,18 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import threading
 from collections.abc import Coroutine
 from typing import Any
 
-from backend.core.config.runtime import setup_logging
+from backend.core.config.runtime import settings, setup_logging
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.modules.video_analysis.service.pipeline import run_video_analysis_job
 
 logger = logging.getLogger(__name__)
 setup_logging()
-VIDEO_ANALYSIS_QUEUE = os.getenv("CELERY_VIDEO_ANALYSIS_QUEUE", "video-analysis")
+VIDEO_ANALYSIS_QUEUE = settings.celery_video_analysis_queue
 _loop_lock = threading.Lock()
 _thread_local_state = threading.local()
 

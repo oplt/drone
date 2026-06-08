@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 
 from sqlalchemy import select
+
+from backend.core.config.runtime import settings
 
 from backend.core.database.session import Session
 from backend.modules.irrigation.models import CaptureRecord, ProcessedFieldLayer
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class IrrigationMonitor:
     def __init__(self) -> None:
-        self.poll_interval_s = max(2.0, float(os.getenv("IRRIGATION_MONITOR_POLL_S", "10")))
+        self.poll_interval_s = max(2.0, settings.irrigation_monitor_poll_s)
         self._task: asyncio.Task | None = None
         self._running = False
 

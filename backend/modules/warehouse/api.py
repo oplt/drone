@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -786,7 +785,8 @@ def _project_root() -> Path:
 
 
 def _ros2_workspace() -> Path:
-    return Path(os.getenv("WAREHOUSE_ROS2_WS", str(_project_root() / "ros2_ws"))).resolve()
+    raw = settings.warehouse_ros2_ws.strip()
+    return Path(raw or str(_project_root() / "ros2_ws")).resolve()
 
 
 async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
@@ -834,7 +834,7 @@ async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
         except Exception as exc:
             return False, f"Failed starting ROS 2 bridge: {exc}"
 
-    grace_s = float(os.getenv("WAREHOUSE_BRIDGE_STARTUP_GRACE_S", "3.0"))
+    grace_s = settings.warehouse_bridge_startup_grace_s
     await asyncio.sleep(max(0.2, min(grace_s, 5.0)))
     probe_ok, probe_detail = await asyncio.to_thread(quick_ros_bridge_check, ws)
     if probe_ok is True:
@@ -1934,9 +1934,7 @@ async def exploration_start(
 
 
 def _live_map_ingest_authorized(ingest_key: str | None) -> bool:
-    expected = os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "").strip()
-    if not expected:
-        expected = "dev-live-map-ingest"
+    expected = settings.warehouse_live_map_ingest_token.strip() or "dev-live-map-ingest"
     return bool(ingest_key and ingest_key == expected)
 
 

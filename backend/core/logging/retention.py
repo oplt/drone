@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -15,7 +14,9 @@ MIN_RUNTIME_LOG_RETENTION_DAYS = 1
 
 
 def runtime_log_retention_days() -> int:
-    raw = os.getenv("DRONE_RUNTIME_LOG_RETENTION_DAYS", str(DEFAULT_RUNTIME_LOG_RETENTION_DAYS))
+    from backend.core.config.runtime import settings
+
+    raw = str(settings.drone_runtime_log_retention_days)
     try:
         return max(MIN_RUNTIME_LOG_RETENTION_DAYS, int(raw))
     except ValueError:

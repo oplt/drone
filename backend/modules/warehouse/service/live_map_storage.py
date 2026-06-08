@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from fastapi import UploadFile
+
+from backend.core.config.runtime import settings
 
 _SAFE_ID = re.compile(r"[^a-zA-Z0-9_.-]+")
 _EXTENSIONS = {
@@ -42,9 +43,7 @@ def _clean_id(value: str) -> str:
 
 
 def _root() -> Path:
-    return Path(
-        os.getenv("WAREHOUSE_LIVE_MAP_CHUNK_DIR", "backend/storage/warehouse-live-map")
-    ).resolve()
+    return Path(settings.warehouse_live_map_chunk_dir).resolve()
 
 
 class WarehouseLiveMapChunkStorage:

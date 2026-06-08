@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import time
 from pathlib import Path
 from urllib.parse import quote
+
+from backend.core.config.runtime import settings
 
 
 class AssetGatewayService:
@@ -20,7 +21,7 @@ class AssetGatewayService:
     """
 
     def __init__(self) -> None:
-        secret = os.getenv("PHOTOGRAMMETRY_ASSET_SIGNING_SECRET", "").strip()
+        secret = settings.PHOTOGRAMMETRY_ASSET_SIGNING_SECRET.strip()
         if not secret:
             raise RuntimeError(
                 "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET is not set. "
@@ -28,12 +29,8 @@ class AssetGatewayService:
                 'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         self._secret = secret.encode("utf-8")
-        self.storage_dir = Path(
-            os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")
-        ).resolve()
-        self.public_base = os.getenv("PHOTOGRAMMETRY_STORAGE_BASE_URL", "/mapping-assets").rstrip(
-            "/"
-        )
+        self.storage_dir = Path(settings.PHOTOGRAMMETRY_STORAGE_DIR).resolve()
+        self.public_base = settings.PHOTOGRAMMETRY_STORAGE_BASE_URL.rstrip("/")
 
     def _payload(self, *, asset_id: int, user_id: int, exp: int, path: str) -> bytes:
         return f"{asset_id}:{user_id}:{exp}:{path}".encode()

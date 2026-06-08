@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
+
+from backend.core.config.runtime import env_truthy, settings
 
 
 @dataclass(frozen=True)
@@ -12,11 +13,11 @@ class WarehouseBridgeFlow:
 
 
 def resolve_warehouse_bridge_flow() -> WarehouseBridgeFlow:
-    name = os.getenv("WAREHOUSE_BRIDGE_FLOW", "disabled").strip().lower() or "disabled"
-    profile = os.getenv("WAREHOUSE_ROS_PROFILE", name).strip() or name
-    gazebo = name in {"gazebo", "gz", "simulation", "sim"} or os.getenv(
-        "WAREHOUSE_GAZEBO_SIM", ""
-    ).strip().lower() in {"1", "true", "yes", "on"}
+    name = settings.WAREHOUSE_BRIDGE_FLOW.strip().lower() or "disabled"
+    profile = (settings.warehouse_ros_profile or name).strip() or name
+    gazebo = name in {"gazebo", "gz", "simulation", "sim"} or env_truthy(
+        settings.warehouse_gazebo_sim
+    )
     return WarehouseBridgeFlow(name=name, ros_profile=profile, gazebo_sim=gazebo)
 
 

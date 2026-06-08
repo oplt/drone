@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
+
+from backend.core.config.runtime import env_truthy, settings
 
 
 def _which(cmd: str) -> str | None:
@@ -250,13 +251,9 @@ def convert_mesh_to_3dtiles(
     gltf_or_glb = Path(convert_mesh_to_gltf(mesh_path)).resolve()
     target_dir = Path(out_dir or gltf_or_glb.parent / f"{gltf_or_glb.stem}.3dtiles").resolve()
 
-    cmd_template = os.getenv("PHOTOGRAMMETRY_3DTILES_CMD", "").strip()
+    cmd_template = settings.PHOTOGRAMMETRY_3DTILES_CMD.strip()
     if not cmd_template:
-        allow_minimal = os.getenv("PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET", "0").lower() in {
-            "1",
-            "true",
-            "yes",
-        }
+        allow_minimal = env_truthy(settings.PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET)
         if allow_minimal:
             return _write_single_tile_tileset(
                 gltf_or_glb,

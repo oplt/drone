@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -18,10 +17,8 @@ class StorageService:
     """
 
     def __init__(self) -> None:
-        self.storage_dir = Path(
-            os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")
-        ).resolve()
-        self.base_url = os.getenv("PHOTOGRAMMETRY_STORAGE_BASE_URL", "/mapping-assets").rstrip("/")
+        self.storage_dir = Path(settings.PHOTOGRAMMETRY_STORAGE_DIR).resolve()
+        self.base_url = settings.PHOTOGRAMMETRY_STORAGE_BASE_URL.rstrip("/")
         self._backend = settings.storage_backend.strip().lower()
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 

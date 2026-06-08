@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-import os
-
 from celery import Celery
 
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
-CELERY_DEFAULT_QUEUE = os.getenv("CELERY_DEFAULT_QUEUE", "default")
-CELERY_PHOTOGRAMMETRY_QUEUE = os.getenv("CELERY_PHOTOGRAMMETRY_QUEUE", "photogrammetry")
-CELERY_WAREHOUSE_MAPPING_QUEUE = os.getenv("CELERY_WAREHOUSE_MAPPING_QUEUE", "warehouse-mapping")
-CELERY_VIDEO_ANALYSIS_QUEUE = os.getenv("CELERY_VIDEO_ANALYSIS_QUEUE", "video-analysis")
-CELERY_WORKER_MAX_TASKS_PER_CHILD = int(os.getenv("CELERY_WORKER_MAX_TASKS_PER_CHILD", "5"))
-CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS = int(
-    os.getenv("CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS", str(6 * 60 * 60))
-)
-CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = int(
-    os.getenv("CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS", str(5 * 60 * 60 + 30 * 60))
-)
+from backend.core.config.runtime import settings
+
+CELERY_BROKER_URL = settings.celery_broker_url
+CELERY_RESULT_BACKEND = settings.celery_result_backend
+CELERY_DEFAULT_QUEUE = settings.celery_default_queue
+CELERY_PHOTOGRAMMETRY_QUEUE = settings.CELERY_PHOTOGRAMMETRY_QUEUE
+CELERY_WAREHOUSE_MAPPING_QUEUE = settings.celery_warehouse_mapping_queue
+CELERY_VIDEO_ANALYSIS_QUEUE = settings.celery_video_analysis_queue
+CELERY_WORKER_MAX_TASKS_PER_CHILD = settings.celery_worker_max_tasks_per_child
+CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_time_limit_seconds
+CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_soft_time_limit_seconds
 
 celery_app = Celery(
     "drone_backend",

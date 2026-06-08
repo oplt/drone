@@ -1,5 +1,4 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -174,13 +173,10 @@ app.include_router(deliverables_share_router)
 app.include_router(video_analysis_router)
 app.include_router(warehouse_router)
 
-mapping_assets_dir = Path(
-    os.getenv("PHOTOGRAMMETRY_STORAGE_DIR", "backend/storage/mapping")
-).resolve()
+mapping_assets_dir = Path(settings.PHOTOGRAMMETRY_STORAGE_DIR).resolve()
 mapping_assets_dir.mkdir(parents=True, exist_ok=True)
 serve_public_mapping_assets = (
-    os.getenv("PHOTOGRAMMETRY_PUBLIC_STATIC_ASSETS", "1").lower() in {"1", "true", "yes"}
-    and settings.storage_backend != "s3"
+    settings.photogrammetry_public_static_assets and settings.storage_backend != "s3"
 )
 if serve_public_mapping_assets:
     app.mount(
@@ -191,9 +187,7 @@ if serve_public_mapping_assets:
 else:
     logger.info("Public mapping asset mount disabled; use signed mapping asset gateway routes")
 
-irrigation_assets_dir = Path(
-    os.getenv("IRRIGATION_STORAGE_DIR", "backend/storage/irrigation")
-).resolve()
+irrigation_assets_dir = Path(settings.irrigation_storage_dir).resolve()
 irrigation_assets_dir.mkdir(parents=True, exist_ok=True)
 app.mount(
     "/irrigation-assets",

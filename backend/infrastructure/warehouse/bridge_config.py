@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from backend.core.config.runtime import settings
+
 GZ_TO_ROS = "GZ_TO_ROS"
 ROS_TO_GZ = "ROS_TO_GZ"
 
@@ -81,7 +83,7 @@ def ros_command_env() -> dict[str, str]:
 
 
 def ros_domain_id() -> str:
-    return os.getenv("ROS_DOMAIN_ID", "0")
+    return settings.ros_domain_id
 
 
 def preflight_core_ros_topics(ros2_ws: Path) -> set[str]:
@@ -106,15 +108,9 @@ def list_ros2_topics_with_retry(
 ) -> set[str]:
     """List ROS topics; retry until required topics appear or attempts exhaust."""
     if attempts is None:
-        try:
-            attempts = max(1, int(os.getenv("WAREHOUSE_BRIDGE_TOPIC_PROBE_ATTEMPTS", "6")))
-        except ValueError:
-            attempts = 6
+        attempts = max(1, settings.warehouse_bridge_topic_probe_attempts)
     if pause_s is None:
-        try:
-            pause_s = float(os.getenv("WAREHOUSE_BRIDGE_TOPIC_PROBE_PAUSE_S", "2.0"))
-        except ValueError:
-            pause_s = 2.0
+        pause_s = settings.warehouse_bridge_topic_probe_pause_s
 
     ws = ros2_ws.resolve()
     last: set[str] = set()

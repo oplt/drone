@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
@@ -12,7 +11,9 @@ _SOURCE_SEGMENT_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 def runtime_log_root() -> Path:
     """Canonical root for runtime logs produced by the application."""
-    raw = os.getenv("DRONE_RUNTIME_LOG_ROOT", "").strip()
+    from backend.core.config.runtime import settings
+
+    raw = settings.drone_runtime_log_root.strip()
     if raw:
         path = Path(raw).expanduser()
         if not path.is_absolute():

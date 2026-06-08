@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-import os
+
+from backend.core.config.runtime import settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class MappingJobQueue:
     """
 
     def __init__(self) -> None:
-        self.backend = os.getenv("MAPPING_JOB_QUEUE_BACKEND", "celery").strip().lower()
+        self.backend = settings.MAPPING_JOB_QUEUE_BACKEND.strip().lower()
 
     def enqueue(self, *, job_id: int) -> str:
         if self.backend != "celery":

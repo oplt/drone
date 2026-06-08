@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
+
+from backend.core.config.runtime import settings
 from typing import Any
 
 from backend.modules.mapping.service.flight_capture import (
@@ -21,18 +22,14 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
 
     def __init__(self) -> None:
         super().__init__()
-        self.sync_root = Path(
-            os.getenv("WAREHOUSE_DRONE_SYNC_DIR", "backend/storage/warehouse_captures")
-        ).resolve()
-        staging_raw = os.getenv("WAREHOUSE_DRONE_CAPTURE_STAGING_DIR", "").strip()
+        self.sync_root = Path(settings.warehouse_drone_sync_dir).resolve()
+        staging_raw = settings.warehouse_drone_capture_staging_dir.strip()
         self.capture_staging_dir = Path(staging_raw).resolve() if staging_raw else None
-        self.default_wait_timeout_s = float(os.getenv("WAREHOUSE_CAPTURE_SYNC_TIMEOUT_S", "120"))
-        self.default_poll_interval_s = float(os.getenv("WAREHOUSE_CAPTURE_SYNC_POLL_S", "2"))
-        self.default_min_images = max(0, int(os.getenv("WAREHOUSE_CAPTURE_SYNC_MIN_FILES", "1")))
-        self.capture_sync_cmd_template = os.getenv("WAREHOUSE_CAPTURE_SYNC_CMD", "").strip()
-        self.capture_sync_timeout_s = float(
-            os.getenv("WAREHOUSE_CAPTURE_SYNC_CMD_TIMEOUT_S", "180")
-        )
+        self.default_wait_timeout_s = settings.warehouse_capture_sync_timeout_s
+        self.default_poll_interval_s = settings.warehouse_capture_sync_poll_s
+        self.default_min_images = max(0, settings.warehouse_capture_sync_min_files)
+        self.capture_sync_cmd_template = settings.warehouse_capture_sync_cmd.strip()
+        self.capture_sync_timeout_s = settings.warehouse_capture_sync_cmd_timeout_s
         self.sync_root.mkdir(parents=True, exist_ok=True)
         if self.capture_staging_dir:
             self.capture_staging_dir.mkdir(parents=True, exist_ok=True)

@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 import logging
 import threading
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from backend.core.logging.paths import runtime_log_dir
-
 BASE_DIR = Path(__file__).resolve().parents[2]
+
+_TRUTHY_TOKENS = {"1", "true", "yes", "on"}
+
+
+def env_truthy(value: str | bool | int | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in _TRUTHY_TOKENS
 
 
 class DailyDateFileHandler(logging.Handler):
@@ -130,6 +138,8 @@ def setup_logging(
     log_format: str = "json",
 ) -> None:
     """Centralized logging configuration with environment variable support"""
+    from backend.core.logging.paths import runtime_log_dir
+
     level = log_level if isinstance(log_level, int) else getattr(logging, log_level, logging.INFO)
     log_dir = (log_file.parent if log_file else runtime_log_dir("backend")).resolve()
 
@@ -402,6 +412,129 @@ class RuntimeSettings(BaseSettings):
 
     # Analytics cache
     analytics_cache_ttl_sec: int = 60
+
+    # App flags
+    debug_routes_enabled: bool = False
+    db_auto_create: bool = False
+
+    # Runtime logging
+    drone_runtime_log_root: str = ""
+    drone_runtime_log_retention_days: int = 14
+    runtime_log_cleanup_interval_s: int = 86400
+
+    # Celery worker
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = ""
+    celery_default_queue: str = "default"
+    celery_warehouse_mapping_queue: str = "warehouse-mapping"
+    celery_video_analysis_queue: str = "video-analysis"
+    celery_worker_max_tasks_per_child: int = 5
+    celery_photogrammetry_time_limit_seconds: int = 6 * 60 * 60
+    celery_photogrammetry_soft_time_limit_seconds: int = 5 * 60 * 60 + 30 * 60
+    celery_enable_native_async_task: bool = False
+
+    # Photogrammetry runtime (additional)
+    photogrammetry_public_static_assets: bool = True
+    photogrammetry_drone_sync_allow_absolute_source: bool = False
+    photogrammetry_flight_sync_timeout_s: float = 120.0
+    photogrammetry_flight_sync_poll_s: float = 2.0
+    photogrammetry_flight_sync_min_images: int = 1
+    photogrammetry_capture_sync_cmd: str = ""
+    photogrammetry_capture_sync_timeout_s: float = 180.0
+    photogrammetry_max_upload_files: int = 5000
+    photogrammetry_max_upload_file_bytes: int = 1024 * 1024 * 1024
+    photogrammetry_allowed_image_extensions: str = ".jpg,.jpeg,.png,.tif,.tiff,.webp"
+    photogrammetry_processor_backend: str = "auto"
+    photogrammetry_webodm_downloads_dir: str = "backend/storage/webodm_downloads"
+
+    # WebODM client (additional)
+    webodm_mock_outputs_dir: str = "backend/mock/webodm_outputs"
+    webodm_http_timeout_s: float = 120.0
+    webodm_http_retry_attempts: int = 5
+    webodm_http_retry_min_delay_s: float = 4.0
+    webodm_http_retry_max_delay_s: float = 60.0
+    webodm_http_retry_backoff_factor: float = 2.0
+    webodm_upload_batch_size: int = 256
+    webodm_download_all_endpoint_template: str = (
+        "/api/projects/{project_id}/tasks/{task_id}/download/all.zip"
+    )
+    webodm_poll_interval_s: float = 5.0
+    webodm_poll_max_interval_s: float = 30.0
+
+    # ROS
+    ros_domain_id: str = "0"
+
+    # Warehouse runtime (additional)
+    warehouse_ros2_ws: str = "ros2_ws"
+    warehouse_bridge_startup_grace_s: float = 3.0
+    warehouse_live_map_ingest_token: str = "dev-live-map-ingest"
+    warehouse_deep_health_probe_interval_s: float = 5.0
+    warehouse_drone_sync_dir: str = "backend/storage/warehouse_captures"
+    warehouse_drone_capture_staging_dir: str = ""
+    warehouse_capture_sync_timeout_s: float = 120.0
+    warehouse_capture_sync_poll_s: float = 2.0
+    warehouse_capture_sync_min_files: int = 1
+    warehouse_capture_sync_cmd: str = ""
+    warehouse_capture_sync_cmd_timeout_s: float = 180.0
+    warehouse_live_map_max_preview_points: int = 1500
+    warehouse_live_map_poll_s: float = 0.5
+    warehouse_live_map_pointcloud_every_n: int = 2
+    warehouse_live_map_publish: bool = True
+    warehouse_live_map_chunk_dir: str = "backend/storage/warehouse-live-map"
+    warehouse_drone_video_source: str = ""
+    warehouse_drone_video_use_gazebo: bool = False
+    warehouse_video_recording_enabled: bool = True
+    warehouse_disable_video: bool = False
+    warehouse_bridge_topic_probe_attempts: int = 6
+    warehouse_bridge_topic_probe_pause_s: float = 2.0
+    warehouse_nvblox_boot_grace_s: float = 2.0
+    warehouse_shutdown_mapping_stack_cmd: str = ""
+    warehouse_sim_mode: bool = False
+    warehouse_gazebo_sim: bool = False
+    warehouse_ros_profile: str = ""
+    warehouse_esdf_topic: str = ""
+    warehouse_max_indoor_altitude_m: float = 6.0
+    warehouse_takeoff_readiness_wait_s: float = 10.0
+    warehouse_flight_mapping_wait_s: float = 45.0
+    warehouse_preflight_wait_nvblox: bool = False
+
+    # Simulation / indoor navigation flags
+    sim_mode: bool = False
+    indoor_nav: bool = False
+
+    # Irrigation
+    irrigation_storage_dir: str = "backend/storage/irrigation"
+    irrigation_capture_interval_s: float = 1.5
+    irrigation_camera_fov_h_deg: float = 78.0
+    irrigation_camera_fov_v_deg: float = 62.0
+    irrigation_monitor_poll_s: float = 10.0
+
+    # Video analysis
+    video_analysis_upload_dir: str = "backend/storage/video_analysis/uploads"
+    video_analysis_max_upload_bytes: int = 1024 * 1024 * 1024
+
+    # Mission / preflight TTL
+    preflight_run_ttl_seconds: int = 900
+    require_preflight_run_before_mission: bool = False
+    allow_warn_preflight_start: bool = True
+    mission_runtime_ttl_seconds: int = 86400
+    mission_runtime_max_history: int = 200
+
+    # Background cleanup
+    preflight_cleanup_interval_s: int = 300
+    mission_cleanup_interval_s: int = 3600
+    mission_runtime_retention_days: int = 30
+    telemetry_cleanup_interval_s: int = 21600
+    telemetry_raw_retention_days: int = 90
+    telemetry_summary_retention_days: int = 365
+    mavlink_retention_days: int = 14
+    telemetry_cleanup_batch: int = 10000
+
+    @model_validator(mode="after")
+    def _default_celery_result_backend(self) -> RuntimeSettings:
+        if not self.celery_result_backend:
+            self.celery_result_backend = self.celery_broker_url
+        return self
 
 
 settings = RuntimeSettings()

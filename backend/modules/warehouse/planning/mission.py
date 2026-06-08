@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from backend.core.config.runtime import settings
 from backend.modules.warehouse.planning.local_planner import (
     WarehouseDockConfig,
     WarehouseLaneStrategy,
@@ -45,10 +45,7 @@ class WarehouseMissionDefaults(BaseModel):
 
     @model_validator(mode="after")
     def _cruise_within_indoor_limit(self) -> WarehouseMissionDefaults:
-        try:
-            max_indoor = float(os.getenv("WAREHOUSE_MAX_INDOOR_ALTITUDE_M", "6"))
-        except ValueError:
-            max_indoor = 6.0
+        max_indoor = settings.warehouse_max_indoor_altitude_m
         max_planned = self.max_planned_altitude_m()
         if max_planned > max_indoor:
             raise ValueError(

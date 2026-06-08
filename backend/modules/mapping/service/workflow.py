@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import shutil
 import tempfile
 from collections.abc import Callable
@@ -12,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import select, text
 
+from backend.core.config.runtime import settings
 from backend.core.database.session import Session
 from backend.infrastructure.photogrammetry.mesh_conversion import convert_outputs
 from backend.modules.integrations.webhooks.service import WebhookDispatchService
@@ -142,19 +142,8 @@ class PhotogrammetryService:
                     "Photogrammetry job %s WebODM task created: task_id=%s", job_id, task_id
                 )
 
-            try:
-                poll_s = float(os.getenv("WEBODM_POLL_INTERVAL_S", "5"))
-            except ValueError:
-                logger.warning("Invalid WEBODM_POLL_INTERVAL_S value; falling back to 5 seconds.")
-                poll_s = 5.0
-
-            try:
-                max_poll_s = float(os.getenv("WEBODM_POLL_MAX_INTERVAL_S", "30"))
-            except ValueError:
-                logger.warning(
-                    "Invalid WEBODM_POLL_MAX_INTERVAL_S value; falling back to 30 seconds."
-                )
-                max_poll_s = 30.0
+            poll_s = settings.webodm_poll_interval_s
+            max_poll_s = settings.webodm_poll_max_interval_s
 
             if poll_s <= 0:
                 logger.warning("WEBODM_POLL_INTERVAL_S must be > 0; falling back to 5 seconds.")

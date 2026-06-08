@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
@@ -8,6 +7,7 @@ from uuid import uuid4
 import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config.runtime import settings
 from backend.modules.fields.service import field_service
 from backend.modules.identity.models import User
 from backend.modules.missions.repository import mission_runtime_repo
@@ -16,8 +16,8 @@ from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.schemas import CUSTOM_MODEL_PREFIX, AnalyzeVideoRequest
 from backend.modules.video_analysis.service.queue import VideoAnalysisQueue, VideoAnalysisQueueError
 
-UPLOAD_ROOT = Path(os.getenv("VIDEO_ANALYSIS_UPLOAD_DIR", "backend/storage/video_analysis/uploads"))
-MAX_UPLOAD_BYTES = int(os.getenv("VIDEO_ANALYSIS_MAX_UPLOAD_BYTES", str(1024 * 1024 * 1024)))
+UPLOAD_ROOT = Path(settings.video_analysis_upload_dir)
+MAX_UPLOAD_BYTES = settings.video_analysis_max_upload_bytes
 VIDEO_SUFFIXES = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 
 
