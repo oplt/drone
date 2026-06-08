@@ -6,6 +6,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { useDetectionFps } from "../hooks/useDetectionFps";
 import { useLiveObjectDetection } from "../hooks/useLiveObjectDetection";
@@ -30,6 +31,8 @@ type MissionVideoPanelProps = {
   onVideoError: () => void;
   onVideoLoad: () => void;
   onRetry: () => void;
+  frameHeight?: number;
+  frameSx?: SxProps<Theme>;
 };
 
 export function MissionVideoPanel({
@@ -49,6 +52,8 @@ export function MissionVideoPanel({
   onVideoError,
   onVideoLoad,
   onRetry,
+  frameHeight = 240,
+  frameSx,
 }: MissionVideoPanelProps) {
   const shouldRenderStream = droneConnected && streamKey > 0 && !videoError;
   const streamStatus = startingVideo
@@ -71,6 +76,9 @@ export function MissionVideoPanel({
         p: 2,
         borderRadius: 3,
         borderColor: "divider",
+        width: "100%",
+        alignSelf: "stretch",
+        flexShrink: 0,
       }}
     >
       <Stack
@@ -103,17 +111,24 @@ export function MissionVideoPanel({
       </Stack>
 
       <Box
-        sx={{
-          width: "100%",
-          height: 240,
-          bgcolor: "#000",
-          borderRadius: 2,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-        }}
+        className="mission-video-frame"
+        sx={[
+          {
+            width: "100%",
+            minHeight: frameHeight,
+            height: frameHeight,
+            flexShrink: 0,
+            bgcolor: "#000",
+            borderRadius: 2,
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            boxSizing: "border-box",
+          },
+          ...(frameSx ? (Array.isArray(frameSx) ? frameSx : [frameSx]) : []),
+        ]}
       >
         {!droneConnected ? (
           <MissionVideoEmptyState

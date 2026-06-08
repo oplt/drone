@@ -4,8 +4,12 @@ import {
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
 
-const MAX_CACHED_BYTES = 48 * 1024 * 1024;
-const MAX_CACHED_CHUNKS = 48;
+const LIVE_MAX_CACHED_BYTES = 48 * 1024 * 1024;
+const LIVE_MAX_CACHED_CHUNKS = 48;
+const REPLAY_MAX_CACHED_BYTES = 256 * 1024 * 1024;
+const REPLAY_MAX_CACHED_CHUNKS = 512;
+
+export type LiveMapChunkCacheMode = "live" | "replay";
 
 export type CachedLiveMapChunkKind =
     | "mesh"
@@ -54,24 +58,49 @@ function shouldCreateObjectUrl(kind: CachedLiveMapChunkKind): boolean {
   return kind === "mesh";
 }
 
+function selectDownloadableChunks(
+    chunks: WarehouseLiveVoxelChunk[],
+    mode: LiveMapChunkCacheMode,
+): WarehouseLiveVoxelChunk[] {
+  const sorted = [...chunks]
+      .filter(
+          (chunk) =>
+              Boolean(chunk.url) &&
+              (chunk.byte_size ?? 0) > 0,
+      )
+      .sort((left, right) => (left.sequence ?? 0) - (right.sequence ?? 0));
+
+  if (mode === "live") {
+    return sorted
+        .filter((chunk) => (chunk.byte_size ?? 0) <= LIVE_MAX_CACHED_BYTES)
+        .slice(-LIVE_MAX_CACHED_CHUNKS);
+  }
+
+  let totalBytes = 0;
+  const selected: WarehouseLiveVoxelChunk[] = [];
+  for (const chunk of sorted) {
+    const bytes = chunk.byte_size ?? 0;
+    if (bytes > LIVE_MAX_CACHED_BYTES) continue;
+    if (selected.length >= REPLAY_MAX_CACHED_CHUNKS) break;
+    if (totalBytes + bytes > REPLAY_MAX_CACHED_BYTES) break;
+    selected.push(chunk);
+    totalBytes += bytes;
+  }
+  return selected;
+}
+
 export function useLiveMapChunkCache(
     chunks: WarehouseLiveVoxelChunk[],
     token?: string | null,
+    options: { mode?: LiveMapChunkCacheMode } = {},
 ): CachedLiveMapChunk[] {
+  const mode = options.mode ?? "live";
   const [entries, setEntries] = useState(new Map<string, CachedLiveMapChunk>());
   const entriesRef = useRef(entries);
 
   const candidates = useMemo(
-      () =>
-          chunks
-              .filter(
-                  (chunk) =>
-                      Boolean(chunk.url) &&
-                      (chunk.byte_size ?? 0) > 0 &&
-                      (chunk.byte_size ?? 0) <= MAX_CACHED_BYTES,
-              )
-              .slice(-MAX_CACHED_CHUNKS),
-      [chunks],
+      () => selectDownloadableChunks(chunks, mode),
+      [chunks, mode],
   );
 
   useEffect(() => {

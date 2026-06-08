@@ -23,11 +23,13 @@ export function WarehouseLiveVoxelMapViewer({
   hidden = false,
   mappingStatus = null,
   mappingStackStatus = null,
+  cacheMode,
 }: {
   state: WarehouseLiveVoxelMapState;
   hidden?: boolean;
   mappingStatus?: WarehouseMappingRuntimeStatus | null;
   mappingStackStatus?: WarehouseMappingStackStatus | null;
+  cacheMode?: "live" | "replay";
 }) {
   const [layers, setLayers] = useState<LiveVoxelLayers>({
     mesh: true,
@@ -36,7 +38,11 @@ export function WarehouseLiveVoxelMapViewer({
     footprint: true,
     drone: true,
   });
-  const cachedChunks = useLiveMapChunkCache(state.chunks, state.token);
+  const resolvedCacheMode =
+    cacheMode ?? (state.connectionState === "finalized" ? "replay" : "live");
+  const cachedChunks = useLiveMapChunkCache(state.chunks, state.token, {
+    mode: resolvedCacheMode,
+  });
   const cachedBytes = useMemo(
     () => cachedChunks.reduce((sum, entry) => sum + entry.bytes, 0),
     [cachedChunks],

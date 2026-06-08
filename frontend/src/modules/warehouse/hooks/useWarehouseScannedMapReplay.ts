@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchWarehouseScannedMapLiveSnapshot } from "../api/warehouseMissionsApi";
-import {
-  applyWarehouseLiveMapMessage,
-  type WarehouseLiveVoxelMapState,
-} from "./useWarehouseLiveVoxelMap";
+import { mergeReplaySnapshot } from "../utils/mergeReplaySnapshot";
+import type { WarehouseLiveVoxelMapState } from "./useWarehouseLiveVoxelMap";
 import type { WarehouseScannedMapResponse } from "../types/missions";
 
 const EMPTY_REPLAY_STATE: WarehouseLiveVoxelMapState = {
@@ -56,22 +54,16 @@ export function useWarehouseScannedMapReplay(
     void fetchWarehouseScannedMapLiveSnapshot(map.job_id, token)
       .then((snapshot) => {
         if (cancelled) return;
-        const merged = applyWarehouseLiveMapMessage(
-          {
-            chunksById: new Map(),
-            scanPath: [],
-          },
-          snapshot,
-        );
-        const latestUpdate = snapshot.updates.at(-1) ?? null;
-        const hasChunks = merged.chunksById.size > 0;
+        const merged = mergeReplaySnapshot(snapshot);
+        const latestUpdate = merged.latestUpdate;
+        const hasChunks = merged.chunks.length > 0;
         setState({
           connectionState: hasChunks
             ? snapshot.status === "empty"
               ? "empty"
               : "finalized"
             : "empty",
-          chunks: Array.from(merged.chunksById.values()),
+          chunks: merged.chunks,
           latestUpdate,
           health: latestUpdate?.health ?? EMPTY_REPLAY_STATE.health,
           scanPath: merged.scanPath,

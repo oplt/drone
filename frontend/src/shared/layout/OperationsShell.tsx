@@ -41,7 +41,8 @@ export default function OperationsShell({
           <Stack
             spacing={2}
             sx={{
-              alignItems: "center",
+              alignItems: "stretch",
+              width: "100%",
               px: { xs: 2, md: 3 },
               pb: 5,
               pt: { xs: 9, md: 2.5 },

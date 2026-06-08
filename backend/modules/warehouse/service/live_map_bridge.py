@@ -20,6 +20,9 @@ from backend.infrastructure.warehouse.bridge_config import (
     load_bridge_config,
     ros_command_env,
 )
+from backend.modules.warehouse.service.live_map_storage import (
+    warehouse_live_map_chunk_storage,
+)
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveHealthFlags,
     WarehouseLivePose,
@@ -418,6 +421,25 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
             if chunk is not None:
                 changed_chunks.append(chunk)
                 chunk_failures = 0
+                try:
+                    preview_points = chunk.get("preview_points_m")
+                    if isinstance(preview_points, list) and preview_points:
+                        await asyncio.to_thread(
+                            warehouse_live_map_chunk_storage.save_preview_chunk,
+                            flight_id=flight_id,
+                            chunk_id=str(chunk["id"]),
+                            preview_points_m=preview_points,
+                            point_count=chunk.get("point_count"),
+                            bbox_local_m=chunk.get("bbox_local_m"),
+                            sequence=int(chunk.get("sequence") or sequence),
+                        )
+                except Exception:
+                    logger.warning(
+                        "Failed to persist nvblox preview chunk flight_id=%s chunk_id=%s",
+                        flight_id,
+                        chunk.get("id"),
+                        exc_info=True,
+                    )
             else:
                 chunk_failures += 1
                 if chunk_failures == 1 or chunk_failures % 20 == 0:

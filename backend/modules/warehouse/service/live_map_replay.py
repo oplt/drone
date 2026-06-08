@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,17 +19,43 @@ from backend.modules.warehouse.service.live_map_stream import (
 )
 
 _CHUNK_ID_RE = re.compile(r"^(.+)-[0-9a-f]{16}\.[a-z0-9]+$", re.IGNORECASE)
+_PREVIEW_CHUNK_ID_RE = re.compile(r"^(.+)-[0-9a-f]{16}\.preview\.json$", re.IGNORECASE)
 
 
 def _chunk_id_from_filename(path: Path) -> str:
+    preview_match = _PREVIEW_CHUNK_ID_RE.match(path.name)
+    if preview_match:
+        return preview_match.group(1)
     match = _CHUNK_ID_RE.match(path.name)
     if match:
         return match.group(1)
     return path.stem.split("-", 1)[0]
 
 
+def _load_preview_chunk(path: Path, *, sequence: int) -> WarehouseLiveVoxelChunk | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    preview_points = payload.get("preview_points_m")
+    if not isinstance(preview_points, list) or not preview_points:
+        return None
+    chunk_id = _chunk_id_from_filename(path)
+    bbox = payload.get("bbox_local_m")
+    return WarehouseLiveVoxelChunk(
+        id=chunk_id,
+        kind="point_cloud",
+        sequence=int(payload.get("sequence", sequence)),
+        point_count=payload.get("point_count"),
+        byte_size=path.stat().st_size,
+        bbox_local_m=bbox if isinstance(bbox, list) and len(bbox) == 6 else None,
+        preview_points_m=preview_points,
+    )
+
+
 def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnapshot:
-    root = (warehouse_live_map_chunk_storage.root / client_flight_id).resolve()
+    safe_flight = client_flight_id.strip()
+    root = (warehouse_live_map_chunk_storage.root / safe_flight).resolve()
     if not root.exists() or not root.is_dir():
         return WarehouseLiveMapSnapshot(
             flight_id=client_flight_id,
@@ -38,9 +65,17 @@ def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnaps
         )
 
     changed_chunks: list[WarehouseLiveVoxelChunk] = []
-    for sequence, path in enumerate(sorted(root.iterdir())):
+    latest_mtime = 0.0
+    for sequence, path in enumerate(sorted(root.iterdir(), key=lambda item: item.name)):
         if not path.is_file():
             continue
+        latest_mtime = max(latest_mtime, path.stat().st_mtime)
+        if path.suffix.lower() == ".json" and path.name.endswith(".preview.json"):
+            preview_chunk = _load_preview_chunk(path, sequence=sequence)
+            if preview_chunk is not None:
+                changed_chunks.append(preview_chunk)
+            continue
+
         chunk_id = _chunk_id_from_filename(path)
         stored = warehouse_live_map_chunk_storage.resolve(
             flight_id=client_flight_id,
@@ -69,10 +104,8 @@ def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnaps
             updates=[],
         )
 
-    timestamp = datetime.fromtimestamp(
-        max(path.stat().st_mtime for path in root.iterdir() if path.is_file()),
-        tz=UTC,
-    )
+    changed_chunks.sort(key=lambda chunk: chunk.sequence)
+    timestamp = datetime.fromtimestamp(latest_mtime, tz=UTC)
     update = WarehouseLiveMapUpdate(
         flight_id=client_flight_id,
         timestamp=timestamp,

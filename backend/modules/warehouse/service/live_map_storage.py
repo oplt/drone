@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from fastapi import UploadFile
 
@@ -94,6 +96,41 @@ class WarehouseLiveMapChunkStorage:
             content_type=content_type,
             byte_size=total,
             checksum_sha256=checksum,
+        )
+
+    def save_preview_chunk(
+        self,
+        *,
+        flight_id: str,
+        chunk_id: str,
+        preview_points_m: list[list[float]],
+        point_count: int | None = None,
+        bbox_local_m: list[float] | None = None,
+        sequence: int = 0,
+    ) -> StoredLiveMapChunk:
+        safe_flight = _clean_id(flight_id)
+        safe_chunk = _clean_id(chunk_id)
+        payload: dict[str, Any] = {
+            "preview_points_m": preview_points_m,
+            "point_count": point_count,
+            "bbox_local_m": bbox_local_m,
+            "sequence": sequence,
+        }
+        encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        if not encoded:
+            raise LiveMapStorageError("Live-map preview chunk is empty.")
+        digest = hashlib.sha256(encoded).hexdigest()
+        target_dir = self.root / safe_flight
+        target_dir.mkdir(parents=True, exist_ok=True)
+        final_path = target_dir / f"{safe_chunk}-{digest[:16]}.preview.json"
+        final_path.write_bytes(encoded)
+        return StoredLiveMapChunk(
+            chunk_id=safe_chunk,
+            path=final_path,
+            url=f"/warehouse/live-map/{safe_flight}/chunks/{safe_chunk}/download",
+            content_type="application/json",
+            byte_size=len(encoded),
+            checksum_sha256=digest,
         )
 
     def resolve(self, *, flight_id: str, chunk_id: str) -> StoredLiveMapChunk | None:

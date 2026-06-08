@@ -514,6 +514,20 @@ class WarehouseScanMission:
                 )
                 mapping_saved = True
                 await self._add_event_safe(orch, "warehouse_scan_mapping_saved", mapping_result)
+                client_flight_id = (
+                    getattr(orch, "current_client_flight_id", None)
+                    or getattr(orch, "_flight_id", None)
+                )
+                if client_flight_id:
+                    from backend.modules.warehouse.service.live_map_stream import (
+                        warehouse_live_map_stream,
+                    )
+
+                    job_id = mapping_result.get("job_id")
+                    await warehouse_live_map_stream.finalize(
+                        str(client_flight_id),
+                        int(job_id) if job_id is not None else None,
+                    )
 
             except Exception as exc:
                 mapping_error = exc

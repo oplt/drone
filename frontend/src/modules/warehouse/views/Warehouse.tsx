@@ -1733,11 +1733,13 @@ export default function WarehousePage() {
           </Alert>
         )}
 
-        <Stack sx={{ minWidth: 0 }} spacing={2}>
+        <Stack sx={{ minWidth: 0, width: "100%" }} spacing={2}>
           <MissionVideoPanel
             title="Warehouse Camera"
             imgAlt="Warehouse camera stream"
             disconnectedMessage="Waiting for mission video stream"
+            frameHeight={600}
+            frameSx={{ minHeight: 600, height: 600 }}
             apiBase={apiBase}
             streamKey={streamKey}
             videoToken={videoToken}
