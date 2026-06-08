@@ -289,10 +289,13 @@ const getWarehouseStartMessage = (error: unknown): string => {
     | WarehouseStartErrorBody
     | undefined;
   const detail = body?.detail ?? body?.error?.details;
-  if (detail) {
+  if (typeof detail === "string" && detail.trim()) {
+    return detail.trim();
+  }
+  if (detail && typeof detail === "object") {
     const parts = [
       (typeof detail.user_message === "string" && detail.user_message) ||
-        detail.message ||
+        (typeof detail.message === "string" && detail.message) ||
         "",
     ].filter(Boolean);
     const readinessRecord = detail.readiness;
@@ -326,6 +329,12 @@ const getWarehouseStartMessage = (error: unknown): string => {
     const actions = detail.suggested_actions ?? [];
     if (actions.length > 0) {
       parts.push(actions[0]);
+    }
+    const blockingReasons = Array.isArray(detail.blocking_reasons)
+      ? (detail.blocking_reasons as string[])
+      : [];
+    if (blockingReasons.length > 0) {
+      parts.push(`Blocked: ${blockingReasons.join("; ")}`);
     }
     const readinessPayload =
       getWarehouseStartReadiness(error) ??

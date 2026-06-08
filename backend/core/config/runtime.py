@@ -349,6 +349,25 @@ class RuntimeSettings(BaseSettings):
     WAREHOUSE_ODOMETRY_STATE_PATH: str = ""
     WAREHOUSE_CAPTURE_ARTIFACT_WAIT_S: float = 45.0
     WAREHOUSE_SCAN_POSTPROCESS_CMD: str = ""
+    ROS_DISTRO: str = "jazzy"
+    WAREHOUSE_ROS_SETUP_FILE: str = "/opt/ros/jazzy/setup.bash"
+    WAREHOUSE_ROS_WORKSPACE_SETUP_FILE: str = (
+        "/home/polat/Desktop/Projects/drone_app/ros2_ws/install/setup.bash"
+    )
+    WAREHOUSE_NVBLOX_LAUNCH_PACKAGE: str = "drone_gz_bridge"
+    WAREHOUSE_NVBLOX_LAUNCH_FILE: str = "warehouse_nvblox.launch.py"
+    WAREHOUSE_NVBLOX_LAUNCH_ARGS: str = (
+        "use_sim_time:=true "
+        "run_rviz:=false "
+        "start_odom_to_tf:=false "
+        "start_odom_to_pose:=false "
+        "use_tf_transforms:=true "
+        "use_topic_transforms:=false "
+        "input_qos:=SENSOR_DATA "
+        "global_frame:=odom "
+        "pose_frame:=iris_with_standoffs/base_link "
+        "use_lidar:=true"
+    )
 
     # Observability
     log_format: str = "json"  # "json" | "text"

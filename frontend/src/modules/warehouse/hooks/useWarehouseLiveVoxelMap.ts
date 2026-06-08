@@ -123,7 +123,7 @@ export function useWarehouseLiveVoxelMap(
   const reconnectTimerRef = useRef<number | null>(null);
   const staleTimerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
-  const queuedMessageRef = useRef<WarehouseLiveMapMessage | null>(null);
+  const queuedMessageRef = useRef<WarehouseLiveMapMessage[]>([]);
 
   useEffect(() => {
     stateRef.current = { chunksById, scanPath };
@@ -173,50 +173,72 @@ export function useWarehouseLiveVoxelMap(
     };
 
     const applyMessage = (message: WarehouseLiveMapMessage) => {
-      queuedMessageRef.current = message;
+      queuedMessageRef.current.push(message);
+
       if (rafRef.current != null) return;
+
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
-        const queued = queuedMessageRef.current;
-        queuedMessageRef.current = null;
-        if (!queued) return;
 
-        if (isWarehouseLiveMapSnapshot(queued)) {
-          const merged = applyWarehouseLiveMapMessage(stateRef.current, queued);
-          stateRef.current = merged;
-          setChunksById(merged.chunksById);
-          setScanPath(merged.scanPath);
-          const newest = queued.updates.at(-1) ?? null;
-          setLatestUpdate(newest);
-          setHealth(newest?.health ?? EMPTY_HEALTH);
-          setLastUpdateAt(queued.last_update_at ?? newest?.timestamp ?? null);
-          setConnectionState(
-            queued.status === "empty" ? "connecting" : queued.status,
-          );
-          return;
+        const queuedMessages = queuedMessageRef.current;
+        queuedMessageRef.current = [];
+
+        if (queuedMessages.length === 0) return;
+
+        let merged = stateRef.current;
+        let newestUpdate: WarehouseLiveMapUpdate | null = null;
+        let newestSnapshotStatus: ConnectionState | null = null;
+        let newestLastUpdateAt: string | null = null;
+        let finalizedId: number | null = null;
+
+        for (const queued of queuedMessages) {
+          if (isWarehouseLiveMapSnapshot(queued)) {
+            merged = applyWarehouseLiveMapMessage(merged, queued);
+            newestUpdate = queued.updates.at(-1) ?? newestUpdate;
+            newestSnapshotStatus =
+                queued.status === "empty" ? "connecting" : queued.status;
+            newestLastUpdateAt =
+                queued.last_update_at ?? newestUpdate?.timestamp ?? newestLastUpdateAt;
+            continue;
+          }
+
+          if (isWarehouseLiveMapUpdate(queued)) {
+            merged = applyWarehouseLiveMapMessage(merged, queued);
+            newestUpdate = queued;
+            newestLastUpdateAt = queued.timestamp ?? newestLastUpdateAt;
+            newestSnapshotStatus = "live";
+            continue;
+          }
+
+          if (queued.type === "live_map_finalized") {
+            finalizedId = queued.finalized_scan_job_id;
+            newestLastUpdateAt = queued.last_update_at ?? newestLastUpdateAt;
+            newestSnapshotStatus = "finalized";
+          }
         }
 
-        if (isWarehouseLiveMapUpdate(queued)) {
-          const merged = applyWarehouseLiveMapMessage(stateRef.current, queued);
-          stateRef.current = merged;
-          setChunksById(merged.chunksById);
-          setScanPath(merged.scanPath);
-          setLatestUpdate(queued);
-          setHealth(queued.health);
-          setLastUpdateAt(queued.timestamp);
-          setFinalizedScanJobId(queued.finalized_scan_job_id ?? null);
-          setConnectionState(
-            queued.finalized_scan_job_id ? "finalized" : "live",
-          );
-          scheduleStaleCheck();
-          return;
+        stateRef.current = merged;
+        setChunksById(merged.chunksById);
+        setScanPath(merged.scanPath);
+
+        if (newestUpdate) {
+          setLatestUpdate(newestUpdate);
+          setHealth(newestUpdate.health ?? EMPTY_HEALTH);
         }
 
-        if (queued.type === "live_map_finalized") {
-          setFinalizedScanJobId(queued.finalized_scan_job_id);
-          setLastUpdateAt(queued.last_update_at ?? null);
-          setConnectionState("finalized");
+        if (newestLastUpdateAt) {
+          setLastUpdateAt(newestLastUpdateAt);
         }
+
+        if (finalizedId != null) {
+          setFinalizedScanJobId(finalizedId);
+        }
+
+        if (newestSnapshotStatus) {
+          setConnectionState(newestSnapshotStatus);
+        }
+
+        scheduleStaleCheck();
       });
     };
 

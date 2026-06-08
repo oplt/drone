@@ -69,7 +69,13 @@ export function WarehouseLiveVoxelMapViewer({
           position: "relative",
         }}
       >
-        {!hidden && <WarehouseLiveVoxelScene state={state} layers={layers} />}
+          {!hidden && (
+              <WarehouseLiveVoxelScene
+                  state={state}
+                  layers={layers}
+                  cachedChunks={cachedChunks}
+              />
+          )}
         {["empty", "connecting", "reconnecting", "stale", "failed"].includes(
           state.connectionState,
         ) && <WarehouseLiveVoxelOverlay state={state} />}

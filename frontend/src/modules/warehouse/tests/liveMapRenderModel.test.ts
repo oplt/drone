@@ -17,5 +17,24 @@ describe("live map render model", () => {
     expect(chunks[0].center).toEqual([1, 3, 5]);
     expect(chunks[0].size).toEqual([2, 4, 6]);
     expect(chunks[0].hasGeometry).toBe(true);
+  it("uses preview points when provided", () => {
+    const chunks = toRenderChunks([
+      {
+        id: "c2",
+        kind: "point_cloud",
+        sequence: 1,
+        preview_points_m: [
+          [1, 2, 0.1],
+          [1.2, 2.1, 0.2],
+        ],
+        point_count: 2,
+      },
+    ]);
+
+    expect(chunks[0].previewPoints).toEqual([
+      [1, 2, 0.1],
+      [1.2, 2.1, 0.2],
+    ]);
+    expect(chunks[0].hasGeometry).toBe(true);
   });
 });

@@ -128,47 +128,63 @@ class RuntimeRecoveryServiceMixin:
             "altitude_agl": alt,
         }
 
-        vehicle_state = await asyncio.to_thread(self.drone.get_telemetry)
-        orchestrator = PreflightOrchestrator(config=kwargs.pop("preflight_config", {}))
-        config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
-        runtime_preflight = {
-            "ENFORCE_PREFLIGHT_RANGE": settings.enforce_preflight_range,
-            "HDOP_MAX": settings.HDOP_MAX,
-            "SAT_MIN": settings.SAT_MIN,
-            "HOME_MAX_DIST": settings.HOME_MAX_DIST,
-            "GPS_FIX_TYPE_MIN": settings.GPS_FIX_TYPE_MIN,
-            "EKF_THRESHOLD": settings.EKF_THRESHOLD,
-            "COMPASS_HEALTH_REQUIRED": settings.COMPASS_HEALTH_REQUIRED,
-            "BATTERY_MIN_V": settings.BATTERY_MIN_V,
-            "BATTERY_MIN_PERCENT": settings.BATTERY_MIN_PERCENT,
-            # Legacy aliases still used by some checks.
-            "BATTERY_RESERVE_PCT": settings.BATTERY_MIN_PERCENT,
-            "HEARTBEAT_MAX_AGE": settings.HEARTBEAT_MAX_AGE,
-            "MSG_RATE_MIN_HZ": settings.MSG_RATE_MIN_HZ,
-            "RTL_MIN_ALT": settings.RTL_MIN_ALT,
-            "MIN_CLEARANCE": settings.MIN_CLEARANCE,
-            "MIN_CLEARANCE_M": settings.MIN_CLEARANCE,
-            "AGL_MIN": settings.AGL_MIN,
-            "AGL_MAX": settings.AGL_MAX,
-            "MAX_RANGE_M": settings.MAX_RANGE_M,
-            "MAX_WAYPOINTS": settings.MAX_WAYPOINTS,
-            "NFZ_BUFFER_M": settings.NFZ_BUFFER_M,
-            "A_LAT_MAX": settings.A_LAT_MAX,
-            "BANK_MAX_DEG": settings.BANK_MAX_DEG,
-            "TURN_PENALTY_S": settings.TURN_PENALTY_S,
-            "WP_RADIUS_M": settings.WP_RADIUS_M,
-        }
-        for key, value in runtime_preflight.items():
-            config_overrides.setdefault(key, value)
-
-        report = await orchestrator.run(
-            vehicle_state,
-            mission_data,
-            flight_id=str(self._flight_id),
-            allowed_modes=["STANDBY", "GUIDED", "AUTO", "LOITER"],
-            config_overrides=config_overrides,
-            **kwargs,
+        from backend.modules.warehouse.service.warehouse_preflight import (
+            run_warehouse_ros_preflight_report,
+            uses_warehouse_ros_preflight,
         )
+
+        mission_type = str(mission_data.get("type") or "").lower()
+        if uses_warehouse_ros_preflight(mission_type):
+            report = await run_warehouse_ros_preflight_report(
+                mission_data,
+                cruise_alt=alt,
+                flight_id=str(self._flight_id) if self._flight_id is not None else None,
+                preflight_config=kwargs.pop("preflight_config", {}),
+                mission_speed=kwargs.pop("mission_speed", settings.cruise_speed_mps),
+                **kwargs,
+            )
+        else:
+            vehicle_state = await asyncio.to_thread(self.drone.get_telemetry)
+            orchestrator = PreflightOrchestrator(config=kwargs.pop("preflight_config", {}))
+            config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
+            runtime_preflight = {
+                "ENFORCE_PREFLIGHT_RANGE": settings.enforce_preflight_range,
+                "HDOP_MAX": settings.HDOP_MAX,
+                "SAT_MIN": settings.SAT_MIN,
+                "HOME_MAX_DIST": settings.HOME_MAX_DIST,
+                "GPS_FIX_TYPE_MIN": settings.GPS_FIX_TYPE_MIN,
+                "EKF_THRESHOLD": settings.EKF_THRESHOLD,
+                "COMPASS_HEALTH_REQUIRED": settings.COMPASS_HEALTH_REQUIRED,
+                "BATTERY_MIN_V": settings.BATTERY_MIN_V,
+                "BATTERY_MIN_PERCENT": settings.BATTERY_MIN_PERCENT,
+                # Legacy aliases still used by some checks.
+                "BATTERY_RESERVE_PCT": settings.BATTERY_MIN_PERCENT,
+                "HEARTBEAT_MAX_AGE": settings.HEARTBEAT_MAX_AGE,
+                "MSG_RATE_MIN_HZ": settings.MSG_RATE_MIN_HZ,
+                "RTL_MIN_ALT": settings.RTL_MIN_ALT,
+                "MIN_CLEARANCE": settings.MIN_CLEARANCE,
+                "MIN_CLEARANCE_M": settings.MIN_CLEARANCE,
+                "AGL_MIN": settings.AGL_MIN,
+                "AGL_MAX": settings.AGL_MAX,
+                "MAX_RANGE_M": settings.MAX_RANGE_M,
+                "MAX_WAYPOINTS": settings.MAX_WAYPOINTS,
+                "NFZ_BUFFER_M": settings.NFZ_BUFFER_M,
+                "A_LAT_MAX": settings.A_LAT_MAX,
+                "BANK_MAX_DEG": settings.BANK_MAX_DEG,
+                "TURN_PENALTY_S": settings.TURN_PENALTY_S,
+                "WP_RADIUS_M": settings.WP_RADIUS_M,
+            }
+            for key, value in runtime_preflight.items():
+                config_overrides.setdefault(key, value)
+
+            report = await orchestrator.run(
+                vehicle_state,
+                mission_data,
+                flight_id=str(self._flight_id),
+                allowed_modes=["STANDBY", "GUIDED", "AUTO", "LOITER"],
+                config_overrides=config_overrides,
+                **kwargs,
+            )
 
         # --- log every individual result ---
         logger.info(

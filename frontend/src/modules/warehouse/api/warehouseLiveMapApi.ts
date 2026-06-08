@@ -24,6 +24,7 @@ export type WarehouseLiveVoxelChunk = {
   byte_size?: number | null;
   checksum_sha256?: string | null;
   bbox_local_m?: number[] | null;
+  preview_points_m?: number[][] | null;
   sequence: number;
 };
 

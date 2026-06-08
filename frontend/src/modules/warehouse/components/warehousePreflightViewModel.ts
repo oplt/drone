@@ -63,6 +63,7 @@ function detailFor(
 ): string | undefined {
   if (!preflight) return undefined;
   const topic = preflight.diagnostics?.topics?.by_category?.[key];
+  if (topic?.detail) return topic.detail;
   if (topic?.topic) return topic.topic;
   if (key === "bridge" && preflight.warehouse_bridge_state) {
     return `Bridge ${preflight.warehouse_bridge_state}`;

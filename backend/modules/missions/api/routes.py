@@ -607,15 +607,23 @@ class _MissionRuntimeRecord:
 
 _orch_lock = asyncio.Lock()
 _orch: Any = None
+_recovery_done = False
 
 
 async def get_orchestrator() -> Any:
-    global _orch
+    global _orch, _recovery_done
     if _orch is not None:
         return _orch
     async with _orch_lock:
         if _orch is None:  # double-checked
             _orch = await _build_orchestrator()
+            if not _recovery_done:
+                from backend.modules.missions.service.recovery_service import (
+                    recover_interrupted_missions,
+                )
+
+                await recover_interrupted_missions(_orch)
+                _recovery_done = True
     return _orch
 
 

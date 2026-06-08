@@ -1,6 +1,11 @@
-import { useEffect, useRef } from "react";
+import { Suspense, useMemo, useEffect } from "react";
 import Box from "@mui/material/Box";
+import * as THREE from "three";
+import { Canvas, useLoader, useThree } from "@react-three/fiber";
+import { OrbitControls, Line } from "@react-three/drei";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
+import type { CachedLiveMapChunk } from "../hooks/useLiveMapChunkCache";
 import { poseToVec3, toRenderChunks } from "../utils/liveMapRenderModel";
 
 export type LiveVoxelLayers = {
@@ -11,132 +16,266 @@ export type LiveVoxelLayers = {
   drone: boolean;
 };
 
-const COLORS = {
-  mesh: "rgba(45, 161, 255, 0.72)",
-  point_cloud: "rgba(92, 214, 148, 0.82)",
-  occupancy: "rgba(255, 185, 80, 0.72)",
-  esdf: "rgba(174, 116, 255, 0.58)",
-  costmap: "rgba(255, 102, 102, 0.58)",
-};
+function CameraControls() {
+  const { camera } = useThree();
 
-function project(
-  point: [number, number, number],
-  width: number,
-  height: number,
-): [number, number] {
-  const scale = Math.min(width, height) / 18;
-  return [
-    width / 2 + (point[0] - point[1]) * scale,
-    height * 0.58 + (point[0] + point[1]) * scale * 0.42 - point[2] * scale,
-  ];
+  useEffect(() => {
+    // ROS/local warehouse convention: Z is up.
+    camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 1.5);
+  }, [camera]);
+
+  return (
+      <OrbitControls
+          makeDefault
+          target={[0, 0, 1.5]}
+          enableDamping
+          dampingFactor={0.08}
+      />
+  );
 }
 
-function drawScene(
-  canvas: HTMLCanvasElement,
-  state: WarehouseLiveVoxelMapState,
-  layers: LiveVoxelLayers,
-) {
-  const ctx = canvas.getContext("2d", { alpha: false });
-  if (!ctx) return;
-  const width = canvas.clientWidth || 1;
-  const height = canvas.clientHeight || 1;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.floor(width * dpr);
-  canvas.height = Math.floor(height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = "#071113";
-  ctx.fillRect(0, 0, width, height);
+function GroundGrid({ visible }: { visible: boolean }) {
+  if (!visible) return null;
 
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  for (let i = -12; i <= 12; i += 1) {
-    const a = project([i, -12, 0], width, height);
-    const b = project([i, 12, 0], width, height);
-    const c = project([-12, i, 0], width, height);
-    const d = project([12, i, 0], width, height);
-    ctx.beginPath();
-    ctx.moveTo(a[0], a[1]);
-    ctx.lineTo(b[0], b[1]);
-    ctx.moveTo(c[0], c[1]);
-    ctx.lineTo(d[0], d[1]);
-    ctx.stroke();
-  }
+  return (
+      <gridHelper
+          args={[24, 24]}
+          rotation={[Math.PI / 2, 0, 0]}
+          position={[0, 0, 0]}
+      />
+  );
+}
 
-  if (layers.footprint) {
-    ctx.strokeStyle = "rgba(255,255,255,0.38)";
-    ctx.strokeRect(28, 24, width - 56, height - 48);
-  }
+function decodeXyz32(buffer: ArrayBuffer): THREE.BufferGeometry {
+  const source = new Float32Array(buffer);
+  const usableLength = Math.floor(source.length / 3) * 3;
+  const positions =
+      usableLength === source.length ? source : source.slice(0, usableLength);
 
-  for (const chunk of toRenderChunks(state.chunks)) {
-    if (chunk.kind === "point_cloud" && !layers.pointCloud) continue;
-    if (chunk.kind !== "point_cloud" && !layers.mesh) continue;
-    const [x, y] = project(chunk.center, width, height);
-    if (x < -80 || x > width + 80 || y < -80 || y > height + 80) continue;
-    const px = Math.max(3, Math.min(28, (chunk.size[0] + chunk.size[1]) * 8));
-    ctx.fillStyle = COLORS[chunk.kind];
-    ctx.globalAlpha = chunk.hasGeometry ? 1 : 0.46;
-    ctx.fillRect(x - px / 2, y - px / 2, px, px);
-    ctx.globalAlpha = 1;
-  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
 
-  if (layers.scanPath && state.scanPath.length > 0) {
-    ctx.strokeStyle = "#ffb020";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    state.scanPath.forEach((pose, index) => {
-      const [x, y] = project([pose.x_m, pose.y_m, pose.z_m], width, height);
-      if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+function PointCloudChunk({ chunk }: { chunk: CachedLiveMapChunk }) {
+  const geometry = useMemo(() => {
+    if (!chunk.arrayBuffer) return null;
+    return decodeXyz32(chunk.arrayBuffer);
+  }, [chunk.arrayBuffer]);
+
+  useEffect(() => {
+    return () => {
+      geometry?.dispose();
+    };
+  }, [geometry]);
+
+  if (!geometry) return null;
+
+  return (
+      <points geometry={geometry} frustumCulled={false}>
+        <pointsMaterial size={0.035} sizeAttenuation />
+      </points>
+  );
+}
+
+function MeshChunk({ chunk }: { chunk: CachedLiveMapChunk }) {
+  if (!chunk.objectUrl) return null;
+  return <LoadedMesh objectUrl={chunk.objectUrl} />;
+}
+
+function LoadedMesh({ objectUrl }: { objectUrl: string }) {
+  const gltf = useLoader(GLTFLoader, objectUrl);
+
+  return <primitive object={gltf.scene} />;
+}
+
+function BoundsChunk({ chunk }: { chunk: CachedLiveMapChunk }) {
+  const bbox = chunk.bbox_local_m;
+  if (!bbox) return null;
+
+  const [minX, minY, minZ, maxX, maxY, maxZ] = bbox;
+  const center: [number, number, number] = [
+    (minX + maxX) / 2,
+    (minY + maxY) / 2,
+    (minZ + maxZ) / 2,
+  ];
+  const size: [number, number, number] = [
+    Math.max(0.01, maxX - minX),
+    Math.max(0.01, maxY - minY),
+    Math.max(0.01, maxZ - minZ),
+  ];
+
+  return (
+      <mesh position={center}>
+        <boxGeometry args={size} />
+        <meshBasicMaterial wireframe transparent opacity={0.28} />
+      </mesh>
+  );
+}
+
+function PreviewChunk({
+                        renderChunk,
+                      }: {
+  renderChunk: ReturnType<typeof toRenderChunks>[number];
+}) {
+  const geometry = useMemo(() => {
+    if (!renderChunk.previewPoints.length) return null;
+
+    const positions = new Float32Array(renderChunk.previewPoints.length * 3);
+    renderChunk.previewPoints.forEach((point, index) => {
+      positions[index * 3] = point[0];
+      positions[index * 3 + 1] = point[1];
+      positions[index * 3 + 2] = point[2];
     });
-    ctx.stroke();
-  }
 
-  if (layers.drone) {
-    const [x, y] = project(
-      poseToVec3(state.latestUpdate?.pose ?? null),
-      width,
-      height,
-    );
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI * 2);
-    ctx.fill();
-  }
+    const next = new THREE.BufferGeometry();
+    next.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    next.computeBoundingSphere();
+    return next;
+  }, [renderChunk.previewPoints]);
+
+  useEffect(() => {
+    return () => {
+      geometry?.dispose();
+    };
+  }, [geometry]);
+
+  if (!geometry) return null;
+
+  return (
+      <points geometry={geometry} frustumCulled={false}>
+        <pointsMaterial size={0.05} sizeAttenuation />
+      </points>
+  );
+}
+
+function ScanPath({ state }: { state: WarehouseLiveVoxelMapState }) {
+  const points = useMemo(
+      () =>
+          state.scanPath.map(
+              (pose) => new THREE.Vector3(pose.x_m, pose.y_m, pose.z_m),
+          ),
+      [state.scanPath],
+  );
+
+  if (points.length < 2) return null;
+
+  return <Line points={points} lineWidth={2} />;
+}
+
+function DroneMarker({ state }: { state: WarehouseLiveVoxelMapState }) {
+  const [x, y, z] = poseToVec3(state.latestUpdate?.pose ?? null);
+
+  return (
+      <group position={[x, y, z]}>
+        <mesh>
+          <sphereGeometry args={[0.16, 16, 16]} />
+          <meshStandardMaterial />
+        </mesh>
+        <axesHelper args={[0.7]} />
+      </group>
+  );
+}
+
+function LiveMapContent({
+                          state,
+                          layers,
+                          cachedChunks,
+                        }: {
+  state: WarehouseLiveVoxelMapState;
+  layers: LiveVoxelLayers;
+  cachedChunks: CachedLiveMapChunk[];
+}) {
+  const cachedById = useMemo(() => {
+    return new Map(cachedChunks.map((chunk) => [chunk.id, chunk]));
+  }, [cachedChunks]);
+
+  const renderChunks = useMemo(() => toRenderChunks(state.chunks), [state.chunks]);
+
+  return (
+      <>
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[4, -6, 8]} intensity={0.8} />
+
+        <GroundGrid visible={layers.footprint} />
+
+        {layers.scanPath && <ScanPath state={state} />}
+        {layers.drone && <DroneMarker state={state} />}
+
+        {renderChunks.map((renderChunk) => {
+          const cached = cachedById.get(renderChunk.id);
+
+          if (cached?.kind === "point_cloud" && layers.pointCloud) {
+            return <PointCloudChunk key={cached.id} chunk={cached} />;
+          }
+
+          if (cached?.kind === "mesh" && layers.mesh) {
+            return (
+                <Suspense key={cached.id} fallback={null}>
+                  <MeshChunk chunk={cached} />
+                </Suspense>
+            );
+          }
+
+          if (
+              cached &&
+              cached.kind !== "point_cloud" &&
+              cached.kind !== "mesh" &&
+              layers.mesh
+          ) {
+            return <BoundsChunk key={cached.id} chunk={cached} />;
+          }
+
+          // Fallback: render WebSocket preview points while binary chunk is loading.
+          if (
+              renderChunk.previewPoints.length > 0 &&
+              ((renderChunk.kind === "point_cloud" && layers.pointCloud) ||
+                  (renderChunk.kind !== "point_cloud" && layers.mesh))
+          ) {
+            return <PreviewChunk key={renderChunk.id} renderChunk={renderChunk} />;
+          }
+
+          return null;
+        })}
+
+        <CameraControls />
+      </>
+  );
 }
 
 export function WarehouseLiveVoxelScene({
-  state,
-  layers,
-}: {
+                                          state,
+                                          layers,
+                                          cachedChunks,
+                                        }: {
   state: WarehouseLiveVoxelMapState;
   layers: LiveVoxelLayers;
+  cachedChunks: CachedLiveMapChunk[];
 }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    let frame = window.requestAnimationFrame(() => {
-      if (canvasRef.current) drawScene(canvasRef.current, state, layers);
-    });
-    const resize = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        if (canvasRef.current) drawScene(canvasRef.current, state, layers);
-      });
-    };
-    window.addEventListener("resize", resize);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", resize);
-    };
-  }, [layers, state]);
-
   return (
-    <Box sx={{ height: 420, bgcolor: "#071113", position: "relative" }}>
-      <canvas
-        ref={canvasRef}
-        data-testid="warehouse-live-voxel-map"
-        style={{ width: "100%", height: "100%", display: "block" }}
-      />
-    </Box>
+      <Box sx={{ height: 520, bgcolor: "#071113", position: "relative" }}>
+        <Canvas
+            data-testid="warehouse-live-voxel-map"
+            camera={{
+              position: [8, -12, 7],
+              fov: 50,
+              near: 0.05,
+              far: 500,
+            }}
+            gl={{
+              antialias: true,
+              powerPreference: "high-performance",
+            }}
+        >
+          <color attach="background" args={["#071113"]} />
+          <LiveMapContent
+              state={state}
+              layers={layers}
+              cachedChunks={cachedChunks}
+          />
+        </Canvas>
+      </Box>
   );
 }

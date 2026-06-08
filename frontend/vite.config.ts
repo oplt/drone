@@ -67,6 +67,7 @@ export default defineConfig({
       "/warehouse": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        ws: true,
       },
       "/video": {
         target: "http://localhost:8000",

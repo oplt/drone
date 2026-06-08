@@ -240,6 +240,11 @@ class WarehouseLocalOrigin(BaseModel):
         return self
 
 
+# Indoor/sim warehouse scans use a pure local metric frame (no GPS tie-in).
+# Dock pose is configured separately via warehouse map dock stations.
+SIM_WAREHOUSE_LOCAL_ORIGIN = WarehouseLocalOrigin(alt_m=0.0)
+
+
 class WarehouseCorridor(BaseModel):
     corridor_id: str = Field(..., min_length=1, max_length=128)
     start: WarehouseLocalPoint

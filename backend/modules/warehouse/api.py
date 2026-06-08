@@ -12,7 +12,20 @@ from typing import Any, Literal
 from uuid import uuid4
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+from starlette.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,10 +39,33 @@ from backend.modules.identity.dependencies import (
     require_org_user,
     require_org_write,
 )
-from backend.modules.missions.api.routes import MissionCreateIn, create_mission
+from backend.modules.missions.api.routes import (
+    MissionCreateIn,
+    MissionCreateOut,
+    _build_mission,
+    create_mission,
+)
+from backend.modules.preflight.checks.schemas import CheckStatus
 from backend.modules.missions.flight_profile import FlightEnvironment
 from backend.modules.missions.schemas.mission_types import MissionType
 from backend.modules.organizations.service import can_access_org_scope, get_default_project
+from backend.modules.telemetry.websocket_api import _authorize_websocket
+from backend.modules.warehouse.service.live_map_storage import (
+    LiveMapStorageError,
+    warehouse_live_map_chunk_storage,
+)
+from backend.modules.warehouse.service.live_map_stream import (
+    WarehouseLiveMapSnapshot,
+    normalize_live_map_payload,
+    warehouse_live_map_stream,
+)
+from backend.modules.warehouse.service.warehouse_preflight import (
+    apply_ros_preflight_gate,
+    default_warehouse_scan_preflight_mission_data,
+    run_warehouse_ros_preflight_report,
+    warehouse_preflight_can_start,
+    warehouse_preflight_failed_checks,
+)
 from backend.modules.warehouse.models import (
     WarehouseAsset,
     WarehouseDockStation,
@@ -55,21 +91,12 @@ _MISSION_DEFAULTS_KEY = "mission_defaults"
 _EXPLORATION_PROFILE_KEY = "exploration_profile"
 
 
-def _ros_command_env() -> dict[str, str]:
-    env = dict(os.environ)
-    env["ROS_DOMAIN_ID"] = os.getenv("ROS_DOMAIN_ID", "0")
-    env.setdefault("ROS_LOG_DIR", "/tmp/warehouse_ros_logs")
-    venv_bin = None
-    if env.get("VIRTUAL_ENV"):
-        venv_bin = str(Path(env["VIRTUAL_ENV"]) / "bin")
-    env.pop("VIRTUAL_ENV", None)
-    env.pop("PYTHONHOME", None)
-    env.pop("PYTHONPATH", None)
-    if venv_bin:
-        env["PATH"] = ":".join(
-            part for part in env.get("PATH", "").split(":") if part != venv_bin
-        )
-    return env
+from backend.infrastructure.warehouse.bridge_config import (
+    missing_critical_topic_blockers,
+    probe_bridge_topics,
+    quick_ros_bridge_check,
+    ros_command_env,
+)
 
 
 class WarehouseLocalPose(BaseModel):
@@ -297,6 +324,19 @@ class WarehouseMissionStartIn(BaseModel):
     dock_id: int | None = Field(default=None, ge=1)
 
 
+class WarehouseMissionLaunchPreflightOut(BaseModel):
+    preflight_run_id: str = ""
+    overall_status: str = "PASS"
+    can_start_mission: bool = True
+
+
+class WarehouseMissionLaunchOut(BaseModel):
+    warehouse_map_id: int
+    warehouse_name: str
+    preflight: WarehouseMissionLaunchPreflightOut
+    mission: MissionCreateOut
+
+
 class WarehouseExplorationStartIn(BaseModel):
     warehouse_map_id: int = Field(..., ge=1)
     mission_name: str = "Warehouse Exploration"
@@ -418,12 +458,20 @@ class WarehouseFlightCommandOut(BaseModel):
     message: str
 
 
-class WarehouseLiveMapSnapshotOut(BaseModel):
-    type: Literal["live_map_snapshot"] = "live_map_snapshot"
+class WarehouseLiveMapPublishOut(BaseModel):
+    accepted: bool
     flight_id: str
-    status: Literal["empty", "live", "stale", "finalized"] = "empty"
-    last_update_at: str | None = None
-    updates: list[dict[str, Any]] = Field(default_factory=list)
+    changed_chunk_count: int
+    removed_chunk_count: int
+
+
+class WarehouseLiveMapChunkUploadOut(BaseModel):
+    accepted: bool
+    flight_id: str
+    chunk_id: str
+    url: str
+    byte_size: int
+    checksum_sha256: str
 
 
 def _map_out(row: WarehouseMap) -> WarehouseMapOut:
@@ -562,9 +610,9 @@ async def _dock_config_for_mission(
     }
 
 
-async def _start_warehouse_scan_mission(
-    *,
+async def _build_warehouse_scan_mission_payload(
     db: AsyncSession,
+    *,
     user: Any,
     warehouse_map_id: int,
     mission_name: str,
@@ -573,7 +621,7 @@ async def _start_warehouse_scan_mission(
     reference_mapping_job_id: int | None,
     cruise_alt: float | None = None,
     work_speed_mps: float | None = None,
-) -> dict[str, Any]:
+) -> tuple[WarehouseMap, MissionCreateIn, float]:
     warehouse_map = await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=user)
     settings_doc = await _read_warehouse_settings(db)
     defaults = WarehouseMissionDefaultsOut.model_validate(
@@ -607,6 +655,32 @@ async def _start_warehouse_scan_mission(
         flight_environment=FlightEnvironment.INDOOR_LOCAL,
         warehouse_scan=scan_payload,
     )
+    return warehouse_map, mission_payload, base_height_m
+
+
+async def _start_warehouse_scan_mission(
+    *,
+    db: AsyncSession,
+    user: Any,
+    warehouse_map_id: int,
+    mission_name: str,
+    sensor_rig_id: int | None,
+    dock_id: int | None,
+    reference_mapping_job_id: int | None,
+    cruise_alt: float | None = None,
+    work_speed_mps: float | None = None,
+) -> dict[str, Any]:
+    _warehouse_map, mission_payload, _base_height_m = await _build_warehouse_scan_mission_payload(
+        db,
+        user=user,
+        warehouse_map_id=warehouse_map_id,
+        mission_name=mission_name,
+        sensor_rig_id=sensor_rig_id,
+        dock_id=dock_id,
+        reference_mapping_job_id=reference_mapping_job_id,
+        cruise_alt=cruise_alt,
+        work_speed_mps=work_speed_mps,
+    )
     result = await create_mission(mission_payload, user=user)
     return result.model_dump(mode="json")
 
@@ -636,7 +710,7 @@ def _status(ok: bool | None, *, required: bool = True) -> str:
         return "OK"
     if ok is False:
         return "FAIL" if required else "WARN"
-    return "UNKNOWN"
+    return "UNKNOWN" if required else "DEFERRED"
 
 
 def _read_odometry_overlay() -> tuple[dict[str, Any], str | None]:
@@ -711,166 +785,10 @@ def _ros2_workspace() -> Path:
     return Path(os.getenv("WAREHOUSE_ROS2_WS", str(_project_root() / "ros2_ws"))).resolve()
 
 
-def _run_ros2_topic_list(ws: Path) -> tuple[bool | None, str]:
-    setup = ws / "install" / "setup.bash"
-    if not setup.exists():
-        return False, f"ROS 2 workspace is not built: {setup}"
-    cmd = (
-        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-        f"source {setup} && "
-        "ros2 topic list --no-daemon"
-    )
-    try:
-        result = subprocess.run(
-            ["bash", "-lc", cmd],
-            cwd=str(ws),
-            capture_output=True,
-            timeout=3,
-            check=False,
-            env=_ros_command_env(),
-        )
-    except FileNotFoundError:
-        return False, "bash is not available; cannot probe ROS 2."
-    except subprocess.TimeoutExpired:
-        return None, "ROS 2 topic probe timed out."
-    if result.returncode != 0:
-        stderr = result.stderr.decode(errors="replace").strip()
-        return False, stderr or "ros2 topic list failed."
-    topics = result.stdout.decode(errors="replace").splitlines()
-    has_warehouse = any(topic.startswith("/warehouse/") for topic in topics)
-    if has_warehouse:
-        topic_count = sum(t.startswith("/warehouse/") for t in topics)
-        return True, f"ROS graph has {topic_count} warehouse topics."
-    return None, "ROS graph reachable, but no /warehouse topics are publishing yet."
-
-
-def _bridge_topic_mappings(ws: Path) -> dict[str, str]:
-    config = ws / "src/drone_gz_bridge/config/warehouse_bridge.yaml"
-    if not config.exists():
-        return {}
-    mappings: dict[str, str] = {}
-    current_ros: str | None = None
-    for line in config.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped.startswith("- ros_topic_name:"):
-            current_ros = stripped.split(":", 1)[1].strip().strip('"')
-        elif current_ros and stripped.startswith("gz_topic_name:"):
-            mappings[current_ros] = stripped.split(":", 1)[1].strip().strip('"')
-            current_ros = None
-    return mappings
-
-
-def _ros2_topic_list(ws: Path) -> set[str]:
-    ok, detail = _run_ros2_topic_list(ws)
-    if ok is False:
-        raise RuntimeError(detail)
-    setup = ws / "install" / "setup.bash"
-    cmd = (
-        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-        f"source {setup} && "
-        "ros2 topic list --no-daemon"
-    )
-    result = subprocess.run(
-        ["bash", "-lc", cmd],
-        cwd=str(ws),
-        capture_output=True,
-        timeout=3,
-        check=False,
-        env=_ros_command_env(),
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.decode(errors="replace").strip())
-    return {
-        line.strip()
-        for line in result.stdout.decode(errors="replace").splitlines()
-        if line.strip()
-    }
-
-
-def _ros2_topic_has_sample(ws: Path, topic: str) -> bool:
-    setup = ws / "install" / "setup.bash"
-    cmd = (
-        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-        f"source {setup} && "
-        f"ros2 topic echo --no-daemon --once --timeout 3 {topic}"
-    )
-    result = subprocess.run(
-        ["bash", "-lc", cmd],
-        cwd=str(ws),
-        capture_output=True,
-        timeout=4,
-        check=False,
-        env=_ros_command_env(),
-    )
-    return result.returncode == 0 and bool(result.stdout.strip())
-
-
-def _gz_topic_list(ws: Path) -> tuple[set[str], str | None]:
-    result = subprocess.run(
-        ["bash", "-lc", "gz topic -l"],
-        cwd=str(ws),
-        capture_output=True,
-        timeout=3,
-        check=False,
-        env=_ros_command_env(),
-    )
-    if result.returncode != 0:
-        detail = result.stderr.decode(errors="replace").strip()
-        return set(), detail or "gz topic -l failed."
-    topics = {
-        line.strip()
-        for line in result.stdout.decode(errors="replace").splitlines()
-        if line.strip()
-    }
-    return topics, None
-
-
-def _probe_warehouse_bridge_topics(ws: Path) -> dict[str, Any]:
-    mappings = _bridge_topic_mappings(ws)
-    ros_topics = _ros2_topic_list(ws)
-    gz_topics, gz_error = _gz_topic_list(ws)
-    expected = {
-        "odometry_topic": "/warehouse/drone/odometry",
-        "rgb_topic": "/warehouse/front/rgbd/image",
-        "depth_topic": "/warehouse/front/rgbd/depth_image",
-        "imu_topic": "/warehouse/imu",
-        "lidar_topic": "/warehouse/mid360/points",
-    }
-    odom_topic = expected["odometry_topic"]
-    odom_listed = odom_topic in ros_topics
-    odom_sample = odom_listed and _ros2_topic_has_sample(ws, odom_topic)
-    rgbd_imu_ok = all(
-        expected[key] in ros_topics for key in ("rgb_topic", "depth_topic", "imu_topic")
-    )
-    lidar_ok = expected["lidar_topic"] in ros_topics or "/scan/points" in ros_topics
-    return {
-        **expected,
-        "ros_topic_count": len(ros_topics),
-        "configured_ros_topics": sorted(mappings),
-        "missing_configured_ros_topics": sorted(set(mappings) - ros_topics),
-        "configured_gz_topics": sorted(set(mappings.values())),
-        "missing_configured_gz_topics": (
-            sorted(set(mappings.values()) - gz_topics) if gz_error is None else []
-        ),
-        "gz_probe_error": gz_error,
-        "local_position_ok": odom_sample,
-        "odometry_healthy": odom_sample,
-        "tf_ok": "/tf" in ros_topics or odom_sample,
-        "slam_ready": odom_sample,
-        "slam_tracking_ok": odom_sample,
-        "source_transport_ok": bool(ros_topics.intersection(mappings)),
-        "rgb_depth_imu_ok": rgbd_imu_ok,
-        "lidar_ok": lidar_ok,
-        "sensors_ok": rgbd_imu_ok and lidar_ok,
-        "perception_stable_for_ms": 8_000 if odom_sample else 0,
-        "perception_required_stable_ms": 8_000,
-    }
-
-
 async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
     global _BRIDGE_PROCESS
     ws = _ros2_workspace()
-    probe_ok, probe_detail = await asyncio.to_thread(_run_ros2_topic_list, ws)
+    probe_ok, probe_detail = await asyncio.to_thread(quick_ros_bridge_check, ws)
     if probe_ok is True:
         return True, probe_detail
     if not start:
@@ -879,7 +797,7 @@ async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
     async with _BRIDGE_LOCK:
         if _BRIDGE_PROCESS is not None and _BRIDGE_PROCESS.poll() is None:
             await asyncio.sleep(0.5)
-            probe_ok, probe_detail = await asyncio.to_thread(_run_ros2_topic_list, ws)
+            probe_ok, probe_detail = await asyncio.to_thread(quick_ros_bridge_check, ws)
             if probe_ok is True:
                 return True, probe_detail
             return None, f"Bridge process running; waiting for topics. {probe_detail}"
@@ -888,7 +806,7 @@ async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
         if not setup.exists():
             return False, f"ROS 2 workspace is not built: {setup}"
 
-        log_dir = Path("storage/warehouse_ros/logs").resolve()
+        log_dir = Path("backend/storage/warehouse_ros/logs").resolve()
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / "warehouse_bridge.log"
         cmd = (
@@ -896,7 +814,7 @@ async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
             f"source {setup} && "
             "ros2 launch drone_gz_bridge warehouse_bridge.launch.py"
         )
-        env = _ros_command_env()
+        env = ros_command_env()
         try:
             log_file = log_path.open("ab")
             _BRIDGE_PROCESS = subprocess.Popen(
@@ -914,7 +832,7 @@ async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
 
     grace_s = float(os.getenv("WAREHOUSE_BRIDGE_STARTUP_GRACE_S", "3.0"))
     await asyncio.sleep(max(0.2, min(grace_s, 5.0)))
-    probe_ok, probe_detail = await asyncio.to_thread(_run_ros2_topic_list, ws)
+    probe_ok, probe_detail = await asyncio.to_thread(quick_ros_bridge_check, ws)
     if probe_ok is True:
         return True, f"Started ROS 2 bridge. {probe_detail}"
     if _BRIDGE_PROCESS is not None and _BRIDGE_PROCESS.poll() is not None:
@@ -939,7 +857,8 @@ async def _build_preflight_snapshot(
         or bridge_flow not in {"", "disabled", "off", "none"}
     )
     auto_start_bridge = bridge_flow not in {"", "disabled", "off", "none"}
-    should_start_bridge = force or deep or auto_start_bridge
+    should_start_bridge = True
+    _ = auto_start_bridge
     ros_ok, ros_detail = await _ensure_ros_bridge_running(start=should_start_bridge)
     http_ok: bool | None = None
     http_detail: str | None = None
@@ -965,29 +884,33 @@ async def _build_preflight_snapshot(
 
     overlay, overlay_error = _read_odometry_overlay()
     topic_probe_error: str | None = None
-    if deep or force or overlay_error:
+    ros_setup = ws / "install" / "setup.bash"
+    if ros_setup.exists():
         try:
-            topic_overlay = await asyncio.to_thread(_probe_warehouse_bridge_topics, ws)
+            topic_overlay = await asyncio.to_thread(probe_bridge_topics, ws)
             overlay = {**overlay, **topic_overlay}
-            if topic_overlay.get("local_position_ok") is True:
+            if topic_overlay.get("preflight_core_ready") is True:
                 overlay_error = None
         except Exception as exc:
             topic_probe_error = f"ROS topic compatibility probe failed: {exc}"
-    local_position_ok = _bool_from(overlay, "local_position_ok")
-    slam_ready = _bool_from(overlay, "slam_ready")
-    slam_tracking_ok = _bool_from(overlay, "slam_tracking_ok")
-    tf_ok = _bool_from(overlay, "tf_ok", "tf_tree_ok")
+    probe_flags = overlay.get("components") if isinstance(overlay.get("components"), dict) else overlay
+    local_position_ok = probe_flags.get("local_position_ok") is True
+    slam_ready = probe_flags.get("slam_ready") is True
+    slam_tracking_ok = probe_flags.get("slam_tracking_ok") is True
+    tf_ok = probe_flags.get("tf_ok") is True
     nvblox_ok = _bool_from(overlay, "nvblox_ok", "nvblox_healthy", "nvblox_ready")
-    sensors_ok = _bool_from(overlay, "sensors_ok", "core_sensors_ok")
-    rgb_depth_imu_ok = _bool_from(overlay, "rgb_depth_imu_ok", "rgbd_imu_ok")
-    lidar_ok = _bool_from(overlay, "lidar_ok", "lidar_healthy")
-    source_transport_ok = _bool_from(overlay, "source_transport_ok")
+    sensors_ok = probe_flags.get("sensors_ok") is True
+    rgb_depth_imu_ok = probe_flags.get("rgb_depth_imu_ok") is True
+    lidar_ok = probe_flags.get("lidar_ok") is True
+    source_transport_ok = probe_flags.get("source_transport_ok") is True
     stable_ms = int(_float_from(overlay, "perception_stable_for_ms", "stable_for_ms") or 0)
     required_stable_ms = int(
         _float_from(overlay, "perception_required_stable_ms", "required_stable_ms") or 8_000
     )
-    stability_ok = stable_ms >= required_stable_ms and (
-        slam_tracking_ok is not False and local_position_ok is not False
+    stability_ok = (
+        stable_ms >= required_stable_ms
+        and local_position_ok is True
+        and (slam_tracking_ok is True or slam_ready is True)
     )
 
     map_count = len(
@@ -1053,18 +976,44 @@ async def _build_preflight_snapshot(
         blockers.append("Drone link is not connected.")
     if not telemetry_running or not telemetry_fresh:
         blockers.append("Telemetry stream is not live.")
-    if local_position_ok is not True:
-        blockers.append("Local odometry is not available.")
+    blockers.extend(missing_critical_topic_blockers(overlay))
+    if local_position_ok is not True and not any(
+        "odometry topic" in blocker.lower() for blocker in blockers
+    ):
+        blockers.append("Local odometry is not available per warehouse_bridge.yaml.")
     if tf_ok is not True:
         blockers.append("TF tree is missing or stale.")
     if stability_ok is not True:
         blockers.append("Perception stability window has not passed.")
-    if overlay_error:
+    if overlay_error and overlay_error != "WAREHOUSE_ODOMETRY_STATE_PATH is not configured.":
         blockers.append(overlay_error)
     if topic_probe_error:
         blockers.append(topic_probe_error)
 
-    ready_to_fly = not blockers and all(categories[key] == "OK" for key in required_keys)
+    ros_report = await run_warehouse_ros_preflight_report(
+        default_warehouse_scan_preflight_mission_data(),
+        cruise_alt=2.0,
+    )
+    ros_can_start, blockers, ros_failed_checks = apply_ros_preflight_gate(
+        categories,
+        blockers,
+        report=ros_report,
+    )
+    if categories["odometry"] != "OK":
+        local_position_ok = False
+    if categories["localization"] == "FAIL":
+        slam_ready = False
+        slam_tracking_ok = False
+    if categories["bridge"] == "FAIL":
+        bridge_ok = False
+    if categories["tf"] == "FAIL":
+        tf_ok = False
+
+    ready_to_fly = (
+        ros_can_start
+        and not blockers
+        and all(categories[key] == "OK" for key in required_keys)
+    )
     checks = [{"id": key, "status": value} for key, value in categories.items()]
     topic_diag = {
         "bridge": _topic_diag(
@@ -1074,7 +1023,7 @@ async def _build_preflight_snapshot(
         ),
         "source_transport": _topic_diag(status=categories["source_transport"]),
         "rgb_depth_imu": _topic_diag(
-            topic=str(overlay.get("rgb_depth_imu_topic") or ""),
+            topic=str(overlay.get("rgb_topic") or ""),
             status=categories["rgb_depth_imu"],
         ),
         "lidar": _topic_diag(
@@ -1082,13 +1031,21 @@ async def _build_preflight_snapshot(
             status=categories["lidar"],
         ),
         "odometry": _topic_diag(
-            topic=str(overlay.get("odometry_topic") or "/warehouse/drone/odometry"),
+            topic=str(overlay.get("odometry_topic") or ""),
             status=categories["odometry"],
         ),
         "tf": _topic_diag(status=categories["tf"], detail=None if tf_ok else "TF missing"),
         "nvblox": _topic_diag(
             topic=str(overlay.get("nvblox_topic") or "/nvblox_node/static_esdf_pointcloud"),
             status=categories["nvblox"],
+            detail=(
+                None
+                if nvblox_ok is True
+                else (
+                    "Nvblox is optional for basic readiness, but required before "
+                    "autonomous warehouse mapping flight."
+                )
+            ),
         ),
     }
     return WarehousePreflightOut(
@@ -1134,10 +1091,17 @@ async def _build_preflight_snapshot(
                 "api_reachable": bridge_ok,
                 "status": categories["bridge"],
                 "message": bridge_detail,
-                "ros_domain_id": _ros_command_env().get("ROS_DOMAIN_ID"),
+                "ros_domain_id": ros_command_env().get("ROS_DOMAIN_ID"),
                 "health_probe_in_progress": False,
             },
-            "topics": {"by_category": topic_diag},
+            "topics": {
+                "by_category": topic_diag,
+                "deferred_missing": (
+                    []
+                    if nvblox_ok is not None
+                    else [str(overlay.get("nvblox_topic") or "/nvblox_node/static_esdf_pointcloud")]
+                ),
+            },
             "bridge_topic_compatibility": {
                 "configured_ros_topics": overlay.get("configured_ros_topics") or [],
                 "missing_configured_ros_topics": overlay.get("missing_configured_ros_topics")
@@ -1166,6 +1130,19 @@ async def _build_preflight_snapshot(
                 "sensor_rigs": len(rigs),
                 "valid_sensor_rigs": valid_rig_count,
                 "mission_loaded": mission_loaded,
+            },
+            "ros_preflight": {
+                "overall_status": str(ros_report.overall_status),
+                "can_start": ros_can_start,
+                "failed_checks": ros_failed_checks,
+                "base_checks": [
+                    {"name": r.name, "status": str(r.status), "message": r.message}
+                    for r in ros_report.base_checks
+                ],
+                "mission_checks": [
+                    {"name": r.name, "status": str(r.status), "message": r.message}
+                    for r in ros_report.mission_checks
+                ],
             },
         },
         recommended_action=(
@@ -1801,7 +1778,17 @@ async def get_preflight_run(
 async def mapping_stack_status(
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseMappingStackStatusOut:
-    return WarehouseMappingStackStatusOut(running=False)
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        get_mapping_stack_status,
+    )
+
+    status = await get_mapping_stack_status()
+    return WarehouseMappingStackStatusOut(
+        running=status.running,
+        nvblox_running=status.nvblox_running,
+        phase=status.phase,
+        last_error=status.last_error,
+    )
 
 
 @router.post("/mapping-stack/start", response_model=WarehouseMappingStackStatusOut)
@@ -1842,12 +1829,45 @@ async def manual_mapping_stop(
     return WarehouseCommandOut(accepted=True, status="stopped")
 
 
-@router.post("/missions/start", response_model=WarehouseCommandOut)
+@router.post("/missions/start", response_model=WarehouseMissionLaunchOut)
 async def mission_start(
     payload: WarehouseMissionStartIn,
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_mission_exec),
-) -> WarehouseCommandOut:
+) -> WarehouseMissionLaunchOut:
+    warehouse_map, mission_payload, base_height_m = await _build_warehouse_scan_mission_payload(
+        db,
+        user=org_user.user,
+        warehouse_map_id=payload.warehouse_map_id,
+        mission_name=payload.mission_name,
+        sensor_rig_id=payload.sensor_rig_id,
+        dock_id=payload.dock_id,
+        reference_mapping_job_id=payload.reference_mapping_job_id,
+    )
+    mission, _ = _build_mission(mission_payload, owner_id=int(org_user.user.id))
+    preflight_report = await run_warehouse_ros_preflight_report(
+        mission.get_preflight_mission_data(),
+        cruise_alt=base_height_m,
+    )
+    preflight_status = str(preflight_report.overall_status)
+    if not warehouse_preflight_can_start(preflight_report):
+        failed_checks = warehouse_preflight_failed_checks(preflight_report)
+        raise HTTPException(
+            status_code=412,
+            detail={
+                "message": (
+                    "Warehouse ROS preflight failed before mission start."
+                    + (f" Failed checks: {', '.join(failed_checks)}" if failed_checks else "")
+                ),
+                "overall_status": preflight_status,
+                "blocking_reasons": failed_checks,
+                "preflight": {
+                    "preflight_run_id": "",
+                    "overall_status": preflight_status,
+                    "can_start_mission": False,
+                },
+            },
+        )
     launch = await _start_warehouse_scan_mission(
         db=db,
         user=org_user.user,
@@ -1857,11 +1877,15 @@ async def mission_start(
         dock_id=payload.dock_id,
         reference_mapping_job_id=payload.reference_mapping_job_id,
     )
-    return WarehouseCommandOut(
-        accepted=True,
-        status="queued",
-        detail="Warehouse scan mission queued.",
-        data=launch,
+    return WarehouseMissionLaunchOut(
+        warehouse_map_id=int(warehouse_map.id),
+        warehouse_name=warehouse_map.name,
+        preflight=WarehouseMissionLaunchPreflightOut(
+            preflight_run_id=str(launch.get("preflight_run_id") or ""),
+            overall_status=preflight_status,
+            can_start_mission=preflight_report.overall_status != CheckStatus.FAIL,
+        ),
+        mission=MissionCreateOut.model_validate(launch),
     )
 
 
@@ -1878,12 +1902,103 @@ async def exploration_start(
     )
 
 
-@router.get("/live-map/{flight_id}/snapshot", response_model=WarehouseLiveMapSnapshotOut)
+def _live_map_ingest_authorized(ingest_key: str | None) -> bool:
+    expected = os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "").strip()
+    if not expected:
+        expected = "dev-live-map-ingest"
+    return bool(ingest_key and ingest_key == expected)
+
+
+@router.get("/live-map/{flight_id}/snapshot", response_model=WarehouseLiveMapSnapshot)
 async def live_map_snapshot(
     flight_id: str,
     _org_user: OrgUser = Depends(require_org_user),
-) -> WarehouseLiveMapSnapshotOut:
-    return WarehouseLiveMapSnapshotOut(flight_id=flight_id)
+) -> WarehouseLiveMapSnapshot:
+    return await warehouse_live_map_stream.snapshot(flight_id)
+
+
+@router.post("/live-map/{flight_id}/updates", response_model=WarehouseLiveMapPublishOut)
+async def publish_live_map_update(
+    flight_id: str,
+    payload: dict[str, Any],
+    x_warehouse_live_map_ingest_key: str | None = Header(
+        None, alias="X-Warehouse-Live-Map-Ingest-Key"
+    ),
+) -> WarehouseLiveMapPublishOut:
+    if not _live_map_ingest_authorized(x_warehouse_live_map_ingest_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid X-Warehouse-Live-Map-Ingest-Key",
+        )
+    update = normalize_live_map_payload({**payload, "flight_id": flight_id})
+    await warehouse_live_map_stream.publish(update)
+    return WarehouseLiveMapPublishOut(
+        accepted=True,
+        flight_id=update.flight_id,
+        changed_chunk_count=len(update.changed_chunks),
+        removed_chunk_count=len(update.removed_chunk_ids),
+    )
+
+
+@router.post(
+    "/live-map/{flight_id}/chunks/{chunk_id}",
+    response_model=WarehouseLiveMapChunkUploadOut,
+)
+async def upload_live_map_chunk(
+    flight_id: str,
+    chunk_id: str,
+    kind: Literal["mesh", "point_cloud", "occupancy", "esdf", "costmap"] = Query("mesh"),
+    sequence: int = Query(0, ge=0),
+    bbox_local_m: list[float] | None = Query(default=None),
+    point_count: int | None = Query(default=None, ge=0),
+    file: UploadFile = File(...),
+    _org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseLiveMapChunkUploadOut:
+    if bbox_local_m is not None and len(bbox_local_m) != 6:
+        raise HTTPException(status_code=422, detail="bbox_local_m must contain six values")
+    try:
+        stored = await warehouse_live_map_chunk_storage.save_upload(
+            flight_id=flight_id,
+            chunk_id=chunk_id,
+            kind=kind,
+            upload=file,
+        )
+    except LiveMapStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    update = normalize_live_map_payload(
+        {
+            "flight_id": flight_id,
+            "changed_chunks": [
+                {
+                    "id": stored.chunk_id,
+                    "kind": kind,
+                    "url": stored.url,
+                    "content_type": stored.content_type,
+                    "sequence": sequence,
+                    "point_count": point_count,
+                    "byte_size": stored.byte_size,
+                    "checksum_sha256": stored.checksum_sha256,
+                    "bbox_local_m": bbox_local_m,
+                }
+            ],
+            "health": {
+                "missing_mesh": kind != "mesh",
+                "missing_point_cloud": kind != "point_cloud",
+                "nvblox_ready": True,
+                "mapping_recording": True,
+                "stack_running": True,
+            },
+        }
+    )
+    await warehouse_live_map_stream.publish(update)
+    return WarehouseLiveMapChunkUploadOut(
+        accepted=True,
+        flight_id=flight_id,
+        chunk_id=stored.chunk_id,
+        url=stored.url,
+        byte_size=stored.byte_size,
+        checksum_sha256=stored.checksum_sha256,
+    )
 
 
 @router.get("/live-map/{flight_id}/chunks/{chunk_id}/download")
@@ -1891,11 +2006,41 @@ async def live_map_chunk_download(
     flight_id: str,
     chunk_id: str,
     _org_user: OrgUser = Depends(require_org_user),
-) -> Response:
-    raise HTTPException(
-        status_code=404,
-        detail=f"Live map chunk {chunk_id!r} for flight {flight_id!r} was not found.",
+):
+    stored = warehouse_live_map_chunk_storage.resolve(flight_id=flight_id, chunk_id=chunk_id)
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Live map chunk {chunk_id!r} for flight {flight_id!r} was not found.",
+        )
+    return FileResponse(
+        str(stored.path),
+        media_type=stored.content_type,
+        headers={
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "ETag": f'"{stored.checksum_sha256}"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )
+
+
+@router.websocket("/live-map/{flight_id}/stream")
+async def websocket_live_map_stream(websocket: WebSocket, flight_id: str):
+    is_authorized, user_id_or_error = await _authorize_websocket(websocket)
+    if not is_authorized:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=user_id_or_error)
+        return
+
+    await warehouse_live_map_stream.connect(flight_id, websocket)
+    try:
+        while True:
+            message = await websocket.receive_text()
+            if message == "ping" or '"type":"ping"' in message:
+                await websocket.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await warehouse_live_map_stream.disconnect(flight_id, websocket)
 
 
 @router.get("/flight/readiness", response_model=WarehouseFlightReadinessOut)

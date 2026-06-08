@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+import asyncio
+from collections import deque
+from datetime import UTC, datetime
+from typing import Any, Literal
+
+from fastapi import WebSocket
+from pydantic import BaseModel, Field
+
+
+class WarehouseLivePose(BaseModel):
+    x_m: float = 0.0
+    y_m: float = 0.0
+    z_m: float = 0.0
+    yaw_deg: float | None = None
+    frame_id: str = "map"
+
+
+class WarehouseLiveVoxelChunk(BaseModel):
+    id: str = Field(..., min_length=1, max_length=160)
+    kind: Literal["mesh", "point_cloud", "occupancy", "esdf", "costmap"] = "mesh"
+    url: str | None = None
+    content_type: str | None = Field(default=None, max_length=120)
+    asset_id: int | None = None
+    block_ids: list[str] = Field(default_factory=list)
+    point_count: int | None = Field(default=None, ge=0)
+    byte_size: int | None = Field(default=None, ge=0)
+    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    bbox_local_m: list[float] | None = Field(default=None, min_length=6, max_length=6)
+    preview_points_m: list[list[float]] | None = Field(default=None, max_length=2000)
+    sequence: int = Field(default=0, ge=0)
+
+
+class WarehouseLiveHealthFlags(BaseModel):
+    coverage_percent: float | None = Field(default=None, ge=0, le=100)
+    drift_estimate_m: float | None = Field(default=None, ge=0)
+    stale_costmap: bool = False
+    missing_mesh: bool = False
+    missing_point_cloud: bool = False
+    nvblox_ready: bool = False
+    mapping_recording: bool = False
+    stack_running: bool = False
+
+
+class WarehouseLiveMapUpdate(BaseModel):
+    type: Literal["live_map_update"] = "live_map_update"
+    flight_id: str = Field(..., min_length=1, max_length=128)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    frame_id: str = Field(default="map", min_length=1, max_length=128)
+    pose: WarehouseLivePose = Field(default_factory=WarehouseLivePose)
+    changed_chunks: list[WarehouseLiveVoxelChunk] = Field(default_factory=list)
+    removed_chunk_ids: list[str] = Field(default_factory=list)
+    scan_path_sample: list[WarehouseLivePose] = Field(default_factory=list)
+    health: WarehouseLiveHealthFlags = Field(default_factory=WarehouseLiveHealthFlags)
+    finalized_scan_job_id: int | None = None
+
+
+class WarehouseLiveMapSnapshot(BaseModel):
+    type: Literal["live_map_snapshot"] = "live_map_snapshot"
+    flight_id: str
+    status: Literal["empty", "live", "stale", "finalized"] = "empty"
+    last_update_at: datetime | None = None
+    updates: list[WarehouseLiveMapUpdate] = Field(default_factory=list)
+
+
+class WarehouseLiveMapStream:
+    def __init__(self, *, max_updates_per_flight: int = 180) -> None:
+        self._updates: dict[str, deque[WarehouseLiveMapUpdate]] = {}
+        self._clients: dict[str, set[WebSocket]] = {}
+        self._finalized_jobs: dict[str, int] = {}
+        self._max_updates_per_flight = max_updates_per_flight
+        self._lock = asyncio.Lock()
+
+    async def publish(self, update: WarehouseLiveMapUpdate) -> WarehouseLiveMapUpdate:
+        async with self._lock:
+            flight_updates = self._updates.setdefault(
+                update.flight_id,
+                deque(maxlen=self._max_updates_per_flight),
+            )
+            flight_updates.append(update)
+            if update.finalized_scan_job_id is not None:
+                self._finalized_jobs[update.flight_id] = int(update.finalized_scan_job_id)
+            clients = list(self._clients.get(update.flight_id, set()))
+
+        payload = update.model_dump(mode="json")
+        stale_clients: list[WebSocket] = []
+        for client in clients:
+            try:
+                await client.send_json(payload)
+            except Exception:
+                stale_clients.append(client)
+        if stale_clients:
+            async with self._lock:
+                active = self._clients.get(update.flight_id)
+                if active is not None:
+                    active.difference_update(stale_clients)
+        return update
+
+    async def snapshot(self, flight_id: str) -> WarehouseLiveMapSnapshot:
+        async with self._lock:
+            updates = list(self._updates.get(flight_id, ()))
+            finalized_job_id = self._finalized_jobs.get(flight_id)
+        last_update = updates[-1].timestamp if updates else None
+        status: Literal["empty", "live", "stale", "finalized"] = "empty"
+        if finalized_job_id is not None:
+            status = "finalized"
+        elif last_update is not None:
+            age_s = (datetime.now(UTC) - last_update).total_seconds()
+            status = "stale" if age_s > 10 else "live"
+        return WarehouseLiveMapSnapshot(
+            flight_id=flight_id,
+            status=status,
+            last_update_at=last_update,
+            updates=updates,
+        )
+
+    async def connect(self, flight_id: str, websocket: WebSocket) -> None:
+        await websocket.accept()
+        async with self._lock:
+            self._clients.setdefault(flight_id, set()).add(websocket)
+        snapshot = await self.snapshot(flight_id)
+        await websocket.send_json(snapshot.model_dump(mode="json"))
+
+    async def disconnect(self, flight_id: str, websocket: WebSocket) -> None:
+        async with self._lock:
+            clients = self._clients.get(flight_id)
+            if clients is None:
+                return
+            clients.discard(websocket)
+            if not clients:
+                self._clients.pop(flight_id, None)
+
+    async def finalize(self, flight_id: str, job_id: int | None) -> None:
+        if job_id is None:
+            return
+        async with self._lock:
+            self._finalized_jobs[flight_id] = int(job_id)
+        snapshot = await self.snapshot(flight_id)
+        for client in list(self._clients.get(flight_id, set())):
+            try:
+                await client.send_json(
+                    {
+                        "type": "live_map_finalized",
+                        "flight_id": flight_id,
+                        "finalized_scan_job_id": int(job_id),
+                        "last_update_at": snapshot.last_update_at.isoformat()
+                        if snapshot.last_update_at
+                        else None,
+                    }
+                )
+            except Exception:
+                await self.disconnect(flight_id, client)
+
+    async def clear(self) -> None:
+        async with self._lock:
+            self._updates.clear()
+            self._clients.clear()
+            self._finalized_jobs.clear()
+
+
+warehouse_live_map_stream = WarehouseLiveMapStream()
+
+
+def normalize_live_map_payload(payload: dict[str, Any]) -> WarehouseLiveMapUpdate:
+    return WarehouseLiveMapUpdate.model_validate(payload)

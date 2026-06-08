@@ -93,8 +93,7 @@ export function WarehouseFlightReadinessPanel({
   }
   if (!readiness && !preflight) return null;
 
-  const canStart =
-    preflight?.ready_to_fly === true || readiness?.ready_to_takeoff === true;
+  const canStart = preflight?.ready_to_fly === true;
   const blockingReasons =
     (preflight?.blocking_reasons?.length ? preflight.blocking_reasons : null) ??
     readiness?.blocking_reasons ??

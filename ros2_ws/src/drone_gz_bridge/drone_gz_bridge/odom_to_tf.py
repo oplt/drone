@@ -14,6 +14,11 @@ class OdomToTf(Node):
         self.declare_parameter("odom_topic", "/warehouse/drone/odometry")
 
         self.odom_topic = self.get_parameter("odom_topic").value
+        use_sim_time = (
+            bool(self.get_parameter("use_sim_time").value)
+            if self.has_parameter("use_sim_time")
+            else False
+        )
         self.tf_broadcaster = TransformBroadcaster(self)
 
         qos = QoSProfile(
@@ -30,7 +35,8 @@ class OdomToTf(Node):
         )
 
         self.get_logger().info(
-            f"Publishing TF from odometry topic: {self.odom_topic}"
+            f"Publishing TF from odometry topic: {self.odom_topic} "
+            f"(use_sim_time={use_sim_time})"
         )
 
     def odom_callback(self, msg: Odometry):

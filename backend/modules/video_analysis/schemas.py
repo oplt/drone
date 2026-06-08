@@ -13,7 +13,7 @@ BUILTIN_MODEL_NAMES = frozenset(
         "yolo26s-seg.pt",
     }
 )
-CUSTOM_MODEL_PREFIX = "storage/ml_models/"
+CUSTOM_MODEL_PREFIX = "backend/storage/ml_models/"
 
 
 class VideoAssetOut(BaseModel):

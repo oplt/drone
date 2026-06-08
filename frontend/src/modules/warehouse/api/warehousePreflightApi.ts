@@ -55,6 +55,7 @@ export type WarehouseGoPreflight = {
         string,
         {
           topic?: string;
+          detail?: string;
           status?: string;
           verify_cmd?: string;
           alternatives?: string[];

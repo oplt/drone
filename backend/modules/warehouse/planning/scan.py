@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.missions.flight_models import FlightStatus
+from backend.modules.missions.schemas.mission_types import SIM_WAREHOUSE_LOCAL_ORIGIN
 from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate
 from backend.modules.warehouse.exceptions import WarehouseMissionFailure
 from backend.modules.warehouse.planning.local_planner import (
@@ -163,7 +164,7 @@ class WarehouseScanMission:
             "polygon": [],
             "speed": float(self.work_speed_mps or 0.8),
             "altitude_agl": float(self.base_height_m),
-            "local_origin": {"alt_m": 0.0},
+            "local_origin": SIM_WAREHOUSE_LOCAL_ORIGIN.model_dump(mode="python"),
             "sensor_rig_id": self.sensor_rig_id,
             "dock_marker_id": self.dock_config.marker_id if self.dock_config else None,
             "dock_precision_required": (
@@ -273,7 +274,7 @@ class WarehouseScanMission:
             )
         flight_id = self._flight_token(orch)
         os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
-        self._restart_live_map_publisher(flight_id)
+        await self._restart_live_map_publisher(flight_id)
         await self._plan_scan(orch)
 
         self._last_speed_mps = None
@@ -895,91 +896,40 @@ class WarehouseScanMission:
 
     def _flight_token(self, orch: Orchestrator) -> str:
         return _safe_token(
-            getattr(orch, "_flight_id", None)
-            or getattr(orch, "current_client_flight_id", None)
+            getattr(orch, "current_client_flight_id", None)
+            or getattr(orch, "_flight_id", None)
             or "unknown"
         )
 
-    def _restart_live_map_publisher(self, flight_id: str) -> None:
-        """Bind live-map HTTP ingest to this flight (nvblox may already be running)."""
-        if os.getenv("WAREHOUSE_LIVE_MAP_PUBLISH", "1").strip().lower() in {
-            "0",
-            "false",
-            "no",
-            "off",
-        }:
-            return
-        os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
-        try:
-            subprocess.run(
-                ["pkill", "-f", "[w]arehouse_live_map_publisher"],
-                check=False,
-                timeout=3.0,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-        repo_root = Path(__file__).resolve().parents[4]
-        from backend.modules.warehouse.service.bridge_flow import (
-            flow_env_overrides,
-            resolve_warehouse_bridge_flow,
+    async def _restart_live_map_publisher(self, flight_id: str) -> None:
+        """Stream odometry + raw Mid360 point cloud into the live voxel map websocket."""
+        from backend.modules.warehouse.service.live_map_bridge import (
+            start_warehouse_live_map_bridge,
+        )
+        from backend.modules.warehouse.service.raw_pointcloud_live_map_bridge import (
+            start_raw_pointcloud_live_map_bridge,
         )
 
-        flow = resolve_warehouse_bridge_flow()
-        esdf_topic = os.getenv(
-            "WAREHOUSE_ESDF_TOPIC",
-            "/nvblox_node/static_esdf_pointcloud"
-            if flow.gazebo_sim
-            else "/warehouse/contract/map/esdf",
-        )
-        ros_setup = (
-            f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
-            f"source {repo_root / 'warehouse_ros2_ws/install/setup.bash'} && "
-            f"export ROS_DOMAIN_ID=${{ROS_DOMAIN_ID:-42}} && "
-            f"export WAREHOUSE_ESDF_TOPIC={esdf_topic} && "
-            f"export WAREHOUSE_ACTIVE_FLIGHT_ID={flight_id} && "
-            "ros2 run warehouse_mapping_bridge warehouse_live_map_publisher"
-        )
-        env = os.environ.copy()
-        env.update(flow_env_overrides(flow))
-        env.setdefault("ROS_DOMAIN_ID", "42")
-        env.setdefault("WAREHOUSE_ACTIVE_FLIGHT_ID", str(flight_id))
-        env.setdefault("WAREHOUSE_ESDF_TOPIC", esdf_topic)
-        backend_url = os.getenv("WAREHOUSE_BACKEND_URL", "").strip()
-        if not backend_url:
-            try:
-                from backend.core.config.runtime import settings
-
-                backend_url = str(
-                    getattr(settings, "WAREHOUSE_BACKEND_URL", "")
-                    or getattr(settings, "BACKEND_URL", "")
-                    or "http://127.0.0.1:8000"
-                ).strip()
-            except Exception:
-                backend_url = "http://127.0.0.1:8000"
-        env.setdefault("WAREHOUSE_BACKEND_URL", backend_url)
-        env.setdefault(
-            "WAREHOUSE_LIVE_MAP_INGEST_TOKEN",
-            os.getenv("WAREHOUSE_LIVE_MAP_INGEST_TOKEN", "dev-live-map-ingest"),
-        )
         try:
-            subprocess.Popen(
-                ["bash", "-lc", ros_setup],
-                cwd=str(repo_root),
-                env=env,
-                stdout=subprocess.DEVNULL,
-                stderr=open(
-                    repo_root / "backend/storage/warehouse_ros/logs/live_map_publisher.log",
-                    "a",
-                    encoding="utf-8",
-                ),
-                start_new_session=True,
+            await start_warehouse_live_map_bridge(flight_id)
+            logger.info("Started warehouse live map bridge for flight_id=%s", flight_id)
+        except Exception as exc:
+            logger.warning("Could not start warehouse live map bridge: %s", exc)
+
+        try:
+            await start_raw_pointcloud_live_map_bridge(
+                flight_id,
+                topic="/warehouse/mid360/points",
+                global_frame="odom",
+                max_points=30_000,
+                min_publish_interval_s=0.75,
             )
             logger.info(
-                "Restarted warehouse_live_map_publisher for flight_id=%s",
+                "Started warehouse raw point-cloud live map bridge for flight_id=%s",
                 flight_id,
             )
-        except OSError as exc:
-            logger.warning("Could not start warehouse_live_map_publisher: %s", exc)
+        except Exception as exc:
+            logger.warning("Could not start raw point-cloud live map bridge: %s", exc)
 
     def _latest_odometry_drift(self, orch: Orchestrator) -> float | None:
         snapshot = getattr(orch, "_last_telemetry_snapshot", None)
@@ -1147,7 +1097,7 @@ class WarehouseScanMission:
                 return default
 
         stack_status, flight_readiness, takeoff_ready = await prepare_warehouse_scan_ros(
-            require_nvblox=True,
+            require_nvblox=False,
             sensor_timeout_s=_float_env("WAREHOUSE_TAKEOFF_READINESS_WAIT_S", 10.0),
             nvblox_timeout_s=_float_env("WAREHOUSE_FLIGHT_MAPPING_WAIT_S", 30.0),
         )

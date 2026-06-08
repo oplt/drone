@@ -11,6 +11,7 @@ export type LiveMapRenderChunk = {
   size: [number, number, number];
   pointCount: number;
   hasGeometry: boolean;
+  previewPoints: [number, number, number][];
 };
 
 function centerFromBbox(bbox: number[]): [number, number, number] {
@@ -29,6 +30,24 @@ function sizeFromBbox(bbox: number[]): [number, number, number] {
   ];
 }
 
+function normalizePreviewPoints(
+  raw: WarehouseLiveVoxelChunk["preview_points_m"],
+): [number, number, number][] {
+  if (!Array.isArray(raw)) return [];
+  const points: [number, number, number][] = [];
+  for (const entry of raw) {
+    if (!Array.isArray(entry) || entry.length < 3) continue;
+    const x = Number(entry[0]);
+    const y = Number(entry[1]);
+    const z = Number(entry[2]);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+      continue;
+    }
+    points.push([x, y, z]);
+  }
+  return points;
+}
+
 export function toRenderChunks(
   chunks: WarehouseLiveVoxelChunk[],
 ): LiveMapRenderChunk[] {
@@ -37,6 +56,7 @@ export function toRenderChunks(
       Array.isArray(chunk.bbox_local_m) && chunk.bbox_local_m.length === 6
         ? chunk.bbox_local_m
         : null;
+    const previewPoints = normalizePreviewPoints(chunk.preview_points_m);
     const ring = 1 + Math.floor(index / 20);
     const angle = index * 0.91;
     const fallbackCenter: [number, number, number] = [
@@ -44,14 +64,37 @@ export function toRenderChunks(
       Math.sin(angle) * ring,
       chunk.kind === "point_cloud" ? 0.35 : 0.6,
     ];
+    const centerFromPreview = previewPoints.length
+      ? previewPoints.reduce<[number, number, number]>(
+          (acc, point) => [
+            acc[0] + point[0],
+            acc[1] + point[1],
+            acc[2] + point[2],
+          ],
+          [0, 0, 0],
+        )
+      : null;
+    const center: [number, number, number] = bbox
+      ? centerFromBbox(bbox)
+      : centerFromPreview
+        ? [
+            centerFromPreview[0] / previewPoints.length,
+            centerFromPreview[1] / previewPoints.length,
+            centerFromPreview[2] / previewPoints.length,
+          ]
+        : fallbackCenter;
     return {
       id: chunk.id,
       kind: chunk.kind,
       sequence: chunk.sequence ?? index,
-      center: bbox ? centerFromBbox(bbox) : fallbackCenter,
+      center,
       size: bbox ? sizeFromBbox(bbox) : [0.28, 0.28, 0.28],
-      pointCount: chunk.point_count ?? 0,
-      hasGeometry: Boolean(chunk.url) || (chunk.point_count ?? 0) > 0,
+      pointCount: chunk.point_count ?? previewPoints.length,
+      hasGeometry:
+        Boolean(chunk.url) ||
+        (chunk.point_count ?? 0) > 0 ||
+        previewPoints.length > 0,
+      previewPoints,
     };
   });
 }
