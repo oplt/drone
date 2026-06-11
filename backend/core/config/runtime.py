@@ -481,6 +481,17 @@ class RuntimeSettings(BaseSettings):
     warehouse_live_map_pointcloud_every_n: int = 2
     warehouse_live_map_publish: bool = True
     warehouse_live_map_chunk_dir: str = "backend/storage/warehouse-live-map"
+    warehouse_include_raw_lidar_preview: bool = False
+    warehouse_persist_raw_lidar_layer: bool = False
+    warehouse_preferred_map_layer: str = "rgbd_colored"
+    warehouse_live_map_preferred_layer: str = "rgbd_colored"
+    warehouse_live_map_raw_lidar_enabled: bool = False
+    warehouse_live_map_raw_lidar_max_hz: float = 0.5
+    warehouse_live_map_raw_lidar_voxel_size: float = 0.15
+    warehouse_live_map_raw_lidar_max_points: int = 8000
+    warehouse_live_map_frontend_max_concurrent_chunk_downloads: int = 4
+    warehouse_live_map_frontend_max_points_per_layer: int = 800_000
+    warehouse_require_rgb_for_save: bool = True
     warehouse_drone_video_source: str = ""
     warehouse_drone_video_use_gazebo: bool = False
     warehouse_video_recording_enabled: bool = True
@@ -496,6 +507,10 @@ class RuntimeSettings(BaseSettings):
     warehouse_max_indoor_altitude_m: float = 6.0
     warehouse_takeoff_readiness_wait_s: float = 10.0
     warehouse_flight_mapping_wait_s: float = 45.0
+    warehouse_mapping_warmup_rgbd_timeout_s: float = 45.0
+    warehouse_preflight_tf_wait_s: float = 8.0
+    warehouse_nvblox_tf_restart_jump_threshold: int = 5
+    warehouse_nvblox_tf_restart_cooldown_s: float = 60.0
     warehouse_preflight_wait_nvblox: bool = False
 
     # Simulation / indoor navigation flags

@@ -5,7 +5,8 @@ import logging
 import math
 import os
 import re
-import subprocess
+import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -31,9 +32,9 @@ from backend.modules.warehouse.ports import (
     WarehousePerceptionCommandResult,
     WarehousePerceptionPort,
 )
+from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
-from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
 from backend.modules.warehouse.service.video import (
     warehouse_video_recording_enabled,
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
+_warned_missing_startup_timing = False
 
 
 def _safe_token(raw: object) -> str:
@@ -57,6 +59,45 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
     from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
 
     return build_warehouse_perception_port()
+
+
+def _begin_mapping_startup_timing(*, mission_start_monotonic: float) -> None:
+    global _warned_missing_startup_timing
+    try:
+        from backend.modules.warehouse.service.mapping_startup_timing import (
+            begin_mapping_startup_timing,
+        )
+
+        begin_mapping_startup_timing(mission_start_monotonic=mission_start_monotonic)
+    except ModuleNotFoundError as exc:
+        if not _warned_missing_startup_timing:
+            logger.warning("Optional mapping startup timing unavailable: %s", exc)
+            _warned_missing_startup_timing = True
+
+
+def _note_mapping_startup(mark: str) -> None:
+    global _warned_missing_startup_timing
+    try:
+        from backend.modules.warehouse.service.mapping_startup_timing import (
+            note_mapping_startup,
+        )
+
+        note_mapping_startup(mark)
+    except ModuleNotFoundError as exc:
+        if not _warned_missing_startup_timing:
+            logger.warning("Optional mapping startup timing unavailable: %s", exc)
+            _warned_missing_startup_timing = True
+
+
+def _active_mapping_startup_timing():
+    try:
+        from backend.modules.warehouse.service.mapping_startup_timing import (
+            active_mapping_startup_timing,
+        )
+
+        return active_mapping_startup_timing()
+    except ModuleNotFoundError:
+        return None
 
 
 @dataclass(frozen=True)
@@ -143,6 +184,12 @@ class WarehouseScanMission:
     )
     _runtime_safety: WarehouseRuntimeSafetyTracker = field(
         default_factory=WarehouseRuntimeSafetyTracker,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _mapping_warmup_task: asyncio.Task | None = field(
+        default=None,
         init=False,
         repr=False,
         compare=False,
@@ -275,7 +322,6 @@ class WarehouseScanMission:
             )
         flight_id = self._flight_token(orch)
         os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
-        await self._restart_live_map_publisher(flight_id)
         await self._plan_scan(orch)
 
         self._last_speed_mps = None
@@ -308,9 +354,12 @@ class WarehouseScanMission:
         execution_frame: WarehouseExecutionFrame | None = None
 
         try:
-            perception_start, takeoff_ready = await self._start_perception_mapping(
+            startup_t0 = time.monotonic()
+            _begin_mapping_startup_timing(mission_start_monotonic=startup_t0)
+            perception_start, takeoff_ready, startup_timing = await self._start_perception_mapping(
                 orch,
                 session_dir=session.session_dir,
+                startup_t0=startup_t0,
             )
             perception_started = bool(perception_start.accepted)
             if not takeoff_ready.ready:
@@ -321,6 +370,7 @@ class WarehouseScanMission:
                     message=takeoff_ready.detail or "Warehouse sensors not ready for takeoff",
                     details=takeoff_ready.to_dict(),
                 )
+            _note_mapping_startup("preflight_pass_monotonic")
             await self._add_event_safe(
                 orch,
                 "warehouse_scan_takeoff_readiness",
@@ -334,6 +384,12 @@ class WarehouseScanMission:
                     "warehouse_scan_nvblox_warming",
                     {"detail": perception_start.data.get("nvblox_warning")},
                 )
+
+            await self._add_event_safe(
+                orch,
+                "warehouse_scan_startup_timing",
+                startup_timing,
+            )
 
             await asyncio.to_thread(orch.drone.arm_and_takeoff, float(self.base_height_m))
             airborne = True
@@ -395,6 +451,16 @@ class WarehouseScanMission:
             )
 
             if perception_started:
+                from backend.modules.warehouse.service.colored_pointcloud_live_map_bridge import (
+                    drain_colored_pointcloud_live_map_bridge,
+                )
+
+                drained = await drain_colored_pointcloud_live_map_bridge(timeout_s=5.0)
+                await self._add_event_safe(
+                    orch,
+                    "warehouse_scan_live_map_drain",
+                    {"drained": drained},
+                )
                 stop_result = await self._stop_perception_mapping(orch)
                 from backend.modules.warehouse.service.capture_finalize import (
                     resolve_capture_session_dir,
@@ -502,6 +568,45 @@ class WarehouseScanMission:
                         "Warehouse scan owner_id is required to persist captured warehouse maps."
                     )
 
+                client_flight_id = self._flight_token(orch)
+                sync_result["client_flight_id"] = client_flight_id
+
+                from backend.modules.warehouse.service.live_map_manifest import (
+                    build_manifest_from_flight_dir,
+                    finalize_manifest_integrity,
+                    save_flight_manifest,
+                    validate_save_quality,
+                )
+
+                pre_shutdown_diagnostics = await self._collect_mission_diagnostics(
+                    orch,
+                    phase="pre_finalize",
+                )
+                manifest = build_manifest_from_flight_dir(
+                    client_flight_id,
+                    missing_topics=list(
+                        pre_shutdown_diagnostics.get("missing_required_topics", [])
+                    )
+                    + list(pre_shutdown_diagnostics.get("missing_nvblox_topics", [])),
+                    localization_ok=bool(pre_shutdown_diagnostics.get("can_localize")),
+                    diagnostics_phase="pre_finalize",
+                )
+                manifest = finalize_manifest_integrity(manifest)
+                save_flight_manifest(manifest)
+                save_ok, save_detail = validate_save_quality(manifest)
+                sync_result["live_map_manifest"] = manifest.as_dict()
+                sync_result["live_map_quality"] = {
+                    "ok": save_ok,
+                    "detail": save_detail,
+                    "map_quality": manifest.map_quality,
+                }
+                if not save_ok:
+                    raise RuntimeError(save_detail)
+
+                db_flight_id = getattr(orch, "_flight_id", None)
+                if db_flight_id is not None:
+                    sync_result["flight_id"] = db_flight_id
+
                 mapping_result = await mapping_service.persist_capture(
                     owner_id=int(self.owner_id),
                     org_id=None,
@@ -515,10 +620,6 @@ class WarehouseScanMission:
                 )
                 mapping_saved = True
                 await self._add_event_safe(orch, "warehouse_scan_mapping_saved", mapping_result)
-                client_flight_id = (
-                    getattr(orch, "current_client_flight_id", None)
-                    or getattr(orch, "_flight_id", None)
-                )
                 if client_flight_id:
                     from backend.modules.warehouse.service.live_map_stream import (
                         warehouse_live_map_stream,
@@ -597,12 +698,35 @@ class WarehouseScanMission:
             shutdown_warehouse_mapping_stack,
         )
 
-        await shutdown_warehouse_mapping_stack()
+        await self._log_mission_diagnostic_summary(
+            orch,
+            mission_error=mission_error,
+            mapping_saved=mapping_saved,
+            phase="pre_cleanup",
+        )
+
+        await self._mark_mission_runtime_terminal_safe(
+            orch,
+            mission_error=mission_error,
+            mapping_error=mapping_error,
+            mapping_saved=mapping_saved,
+        )
+
+        try:
+            await shutdown_warehouse_mapping_stack()
+        except Exception as exc:
+            await self._add_event_safe(
+                orch,
+                "warehouse_scan_cleanup_failed",
+                {"error": str(exc)},
+            )
+            logger.warning("Warehouse mapping cleanup failed", exc_info=True)
 
         await self._log_mission_diagnostic_summary(
             orch,
             mission_error=mission_error,
             mapping_saved=mapping_saved,
+            phase="post_cleanup",
         )
 
         if mission_error is not None:
@@ -614,7 +738,8 @@ class WarehouseScanMission:
                 stage="capture",
                 message=(
                     "Flight completed, but warehouse mapping failed because no ROS mapping "
-                    "artifacts were produced. Check RGB/depth/odometry/nvblox topics before rerunning."
+                    "artifacts were produced. Check RGB/depth/odometry/nvblox topics "
+                    "before rerunning."
                 ),
                 details={
                     "mapping_error": str(mapping_error)[:500],
@@ -917,9 +1042,13 @@ class WarehouseScanMission:
         )
 
     async def _restart_live_map_publisher(self, flight_id: str) -> None:
-        """Stream odometry + raw Mid360 point cloud into the live voxel map websocket."""
+        """Stream odometry + RGB-D/nvblox colored layers; raw Mid360 is optional."""
         from backend.modules.warehouse.service.live_map_bridge import (
             start_warehouse_live_map_bridge,
+        )
+        from backend.modules.warehouse.service.live_map_config import (
+            persist_raw_lidar_layer,
+            raw_lidar_enabled,
         )
         from backend.modules.warehouse.service.raw_pointcloud_live_map_bridge import (
             start_raw_pointcloud_live_map_bridge,
@@ -931,20 +1060,78 @@ class WarehouseScanMission:
         except Exception as exc:
             logger.warning("Could not start warehouse live map bridge: %s", exc)
 
+        from backend.modules.warehouse.service.colored_pointcloud_live_map_bridge import (
+            start_colored_pointcloud_live_map_bridge,
+        )
+        from backend.modules.warehouse.service.map_source_config import (
+            WAREHOUSE_LIVE_MAP_SOURCES,
+        )
+
         try:
-            await start_raw_pointcloud_live_map_bridge(
-                flight_id,
-                topic="/warehouse/mid360/points",
-                global_frame="odom",
-                max_points=30_000,
-                min_publish_interval_s=0.75,
-            )
+            await start_colored_pointcloud_live_map_bridge(flight_id)
             logger.info(
-                "Started warehouse raw point-cloud live map bridge for flight_id=%s",
+                "Started colored point-cloud live map bridge for flight_id=%s",
                 flight_id,
             )
         except Exception as exc:
+            logger.warning("Could not start colored point-cloud live map bridge: %s", exc)
+
+        if not raw_lidar_enabled() and not persist_raw_lidar_layer():
+            logger.info(
+                "Skipping raw Mid360 live-map bridge for flight_id=%s "
+                "(preview and persist disabled)",
+                flight_id,
+            )
+            return
+
+        mid360 = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"]
+        try:
+            await start_raw_pointcloud_live_map_bridge(
+                flight_id,
+                topic=mid360.topic,
+                global_frame=mid360.global_frame,
+                max_points=mid360.max_points,
+                min_publish_interval_s=mid360.min_publish_interval_s,
+                persist_to_disk=persist_raw_lidar_layer(),
+            )
+            logger.info(
+                "Started warehouse raw point-cloud live map bridge for flight_id=%s persist=%s",
+                flight_id,
+                persist_raw_lidar_layer(),
+            )
+        except Exception as exc:
             logger.warning("Could not start raw point-cloud live map bridge: %s", exc)
+
+    async def _collect_mission_diagnostics(
+        self,
+        orch: Orchestrator,
+        *,
+        phase: str,
+    ) -> dict[str, object]:
+        from backend.modules.warehouse.service.readiness_result import (
+            readiness_from_perception_status_strict,
+        )
+        from backend.modules.warehouse.service.warehouse_preflight import (
+            fetch_warehouse_perception_status,
+        )
+
+        del orch
+        try:
+            status = await fetch_warehouse_perception_status(deep=True, force=True)
+            readiness = readiness_from_perception_status_strict(status)
+        except Exception as exc:
+            logger.warning("Mission diagnostic health probe failed (%s): %s", phase, exc)
+            return {"phase": phase, "probe_failed": True}
+
+        return {
+            "phase": phase,
+            "bridge_alive": readiness.bridge_alive,
+            "ros_graph_ready": readiness.ros_graph_ready,
+            "can_localize": readiness.can_localize,
+            "missing_required_topics": list(readiness.missing_required_topics),
+            "missing_nvblox_topics": list(readiness.missing_nvblox_topics),
+            "unhealthy_topics": list(readiness.unhealthy_topics),
+        }
 
     def _latest_odometry_drift(self, orch: Orchestrator) -> float | None:
         snapshot = getattr(orch, "_last_telemetry_snapshot", None)
@@ -962,27 +1149,20 @@ class WarehouseScanMission:
         *,
         mission_error: Exception | None,
         mapping_saved: bool,
+        phase: str = "pre_cleanup",
     ) -> None:
-        from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
         from backend.modules.warehouse.exceptions import WarehouseMissionFailure
-        from backend.modules.warehouse.service.readiness_result import (
-            readiness_from_perception_status_strict,
-        )
 
         failure_code = None
         if isinstance(mission_error, WarehouseMissionFailure):
             failure_code = mission_error.reason
 
-        try:
-            status = await build_warehouse_perception_port().status(deep=True, force=True)
-            readiness = readiness_from_perception_status_strict(status)
-        except Exception as exc:
-            logger.warning("Mission diagnostic health probe failed: %s", exc)
-            readiness = None
+        diagnostics = await self._collect_mission_diagnostics(orch, phase=phase)
 
         summary: dict[str, object] = {
             "flight_id": getattr(orch, "_flight_id", None),
             "mission_type": self.mission_kind,
+            "diagnostics_phase": phase,
             "result": (
                 "failed"
                 if mission_error
@@ -990,19 +1170,38 @@ class WarehouseScanMission:
             ),
             "failure_code": failure_code,
             "mapping_saved": mapping_saved,
-            "cleanup_completed": True,
+            "cleanup_completed": phase == "post_cleanup",
         }
-        if readiness is not None:
+        client_flight_id = self._flight_token(orch)
+        from backend.modules.warehouse.service.live_map_manifest import (
+            load_flight_manifest,
+        )
+
+        manifest = load_flight_manifest(client_flight_id)
+        if manifest is not None:
+            summary["live_map_manifest"] = manifest.as_dict()
+            summary["quality_evidence"] = manifest.quality_evidence
+            summary["localization_quality"] = manifest.localization_quality
+            summary["map_quality"] = manifest.map_quality
+        if diagnostics.get("probe_failed"):
+            summary["probe_failed"] = True
+        else:
             summary.update(
                 {
-                    "bridge_alive": readiness.bridge_alive,
-                    "ros_graph_ready": readiness.ros_graph_ready,
-                    "can_localize": readiness.can_localize,
-                    "missing_required_topics": list(readiness.missing_required_topics),
-                    "missing_nvblox_topics": list(readiness.missing_nvblox_topics),
-                    "unhealthy_topics": list(readiness.unhealthy_topics),
+                    "bridge_alive": diagnostics.get("bridge_alive"),
+                    "ros_graph_ready": diagnostics.get("ros_graph_ready"),
+                    "can_localize": diagnostics.get("can_localize"),
+                    "missing_required_topics": diagnostics.get("missing_required_topics"),
+                    "missing_nvblox_topics": diagnostics.get("missing_nvblox_topics"),
+                    "unhealthy_topics": diagnostics.get("unhealthy_topics"),
                 }
             )
+            if manifest is None and phase == "post_cleanup":
+                summary["quality_evidence"] = False
+            elif manifest is not None and manifest.quality_evidence:
+                summary["quality_evidence"] = True
+                if not diagnostics.get("can_localize"):
+                    summary["localization_quality"] = "degraded"
 
         logger.info("Warehouse mission diagnostic summary %s", summary)
         await self._add_event_safe(orch, "warehouse_mission_diagnostic", summary)
@@ -1092,23 +1291,129 @@ class WarehouseScanMission:
             ],
         }
 
+    async def _warm_mapping_stack_background(
+        self,
+        orch: Orchestrator,
+        *,
+        flight_id: str,
+        session_dir: Path,
+        startup_t0: float,
+    ) -> None:
+        from backend.modules.warehouse.service.live_map_readiness import (
+            probe_mapping_tf_degraded,
+            wait_for_rgbd_mapping_topics,
+        )
+        warmup_timeout = settings.warehouse_mapping_warmup_rgbd_timeout_s
+        t_wait = time.monotonic()
+        try:
+            tf_status = await probe_mapping_tf_degraded()
+            if tf_status.get("degraded"):
+                logger.warning(
+                    "Mapping TF degraded before bridge attach flight_id=%s detail=%s",
+                    flight_id,
+                    tf_status.get("detail"),
+                )
+
+            await self._restart_live_map_publisher(flight_id)
+            _note_mapping_startup("bridges_started_monotonic")
+
+            rgbd_readiness = await wait_for_rgbd_mapping_topics(timeout_s=warmup_timeout)
+            _note_mapping_startup("rgbd_ready_monotonic")
+            await self._add_event_safe(
+                orch,
+                "warehouse_scan_mapping_warming",
+                {
+                    "phase": "rgbd_wait_complete",
+                    "mapping_readiness": rgbd_readiness.to_dict(),
+                    "tf_status": tf_status,
+                    "warming_ms": int((time.monotonic() - t_wait) * 1000),
+                },
+            )
+
+            port = build_warehouse_perception_port()
+            bridge_flow = resolve_warehouse_bridge_flow()
+            request = WarehouseMappingStartRequest(
+                flight_id=flight_id,
+                warehouse_map_id=self.warehouse_map_id,
+                sensor_rig_id=self.sensor_rig_id,
+                profile=bridge_flow.ros_profile,
+                bridge_flow=bridge_flow.name,
+                metadata=self._perception_metadata(orch, session_dir=session_dir),
+            )
+            result = await port.start_mapping(request)
+            _note_mapping_startup("mapping_started_monotonic")
+
+            extra_data: dict[str, object] = dict(result.data or {})
+            extra_data["mapping_status"] = (
+                "ready" if rgbd_readiness.ready and result.accepted else "degraded"
+            )
+            extra_data["rgbd_ready"] = rgbd_readiness.ready
+            timing = _active_mapping_startup_timing()
+            startup_timing: dict[str, object] = {
+                "background_warmup_ms": int((time.monotonic() - startup_t0) * 1000),
+                "mapping_readiness": rgbd_readiness.to_dict(),
+            }
+            if timing is not None:
+                startup_timing.update(timing.as_dict())
+            if rgbd_readiness.timing_ms:
+                startup_timing.update(rgbd_readiness.timing_ms)
+
+            await self._add_event_safe(
+                orch,
+                "warehouse_scan_perception_mapping_started",
+                {
+                    "accepted": result.accepted,
+                    "status": result.status,
+                    "detail": result.detail,
+                    "data": extra_data,
+                    "startup_timing_ms": startup_timing,
+                },
+            )
+            if not result.accepted:
+                logger.warning(
+                    "Background mapping attach not accepted flight_id=%s status=%s",
+                    flight_id,
+                    result.status,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.exception(
+                "Background mapping warmup failed flight_id=%s after %.1fs",
+                flight_id,
+                time.monotonic() - t_wait,
+            )
+            await self._add_event_safe(
+                orch,
+                "warehouse_scan_mapping_warmup_failed",
+                {"flight_id": flight_id, "detail": str(exc)},
+            )
+
     async def _start_perception_mapping(
         self,
         orch: Orchestrator,
         *,
         session_dir: Path,
-    ) -> tuple[WarehousePerceptionCommandResult, object]:
+        startup_t0: float | None = None,
+    ) -> tuple[WarehousePerceptionCommandResult, object, dict[str, object]]:
         from backend.modules.warehouse.service.mapping_stack_lifecycle import (
-            mapping_stack_not_running_result,
             prepare_warehouse_scan_ros,
         )
-        stack_status, flight_readiness, takeoff_ready = await prepare_warehouse_scan_ros(
-            require_nvblox=False,
-            sensor_timeout_s=settings.warehouse_takeoff_readiness_wait_s,
-            nvblox_timeout_s=settings.warehouse_flight_mapping_wait_s,
+
+        t0 = startup_t0 if startup_t0 is not None else time.monotonic()
+        stack_status, flight_readiness, takeoff_ready, rgbd_readiness = (
+            await prepare_warehouse_scan_ros(
+                require_nvblox=False,
+                sensor_timeout_s=30.0,
+                nvblox_timeout_s=0,
+                wait_for_rgbd=True,
+            )
         )
+        t_prepared = time.monotonic()
         if not stack_status.running:
-            return mapping_stack_not_running_result(), takeoff_ready
+            logger.warning(
+                "Mapping stack not fully running before takeoff; warming in background"
+            )
         if not flight_readiness.bridge_reachable:
             raise WarehouseMissionFailure(
                 reason="warehouse_bridge_unreachable",
@@ -1128,58 +1433,77 @@ class WarehouseScanMission:
                 details=takeoff_ready.to_dict(),
             )
         if not flight_readiness.core_ready:
-            raise WarehouseMissionFailure(
-                reason="warehouse_sensors_not_ready",
-                action="abort",
-                stage="flight",
-                message=flight_readiness.detail
-                or "Warehouse bridge not ready after starting nvblox",
-                details=flight_readiness.to_dict(),
+            logger.warning(
+                "Warehouse mapping sensors not fully ready before takeoff; "
+                "continuing with background warmup detail=%s",
+                flight_readiness.detail,
             )
-        port = build_warehouse_perception_port()
+
         flight_id = self._flight_token(orch)
         os.environ["WAREHOUSE_ACTIVE_FLIGHT_ID"] = str(flight_id)
-        bridge_flow = resolve_warehouse_bridge_flow()
-        request = WarehouseMappingStartRequest(
-            flight_id=flight_id,
-            warehouse_map_id=self.warehouse_map_id,
-            sensor_rig_id=self.sensor_rig_id,
-            profile=bridge_flow.ros_profile,
-            bridge_flow=bridge_flow.name,
-            metadata=self._perception_metadata(orch, session_dir=session_dir),
+        await self._add_event_safe(
+            orch,
+            "warehouse_scan_mapping_warming",
+            {
+                "phase": "deferred_until_after_takeoff",
+                "mapping_status": "warming_up",
+                "mapping_readiness": rgbd_readiness.to_dict(),
+            },
         )
-        result = await port.start_mapping(request)
-        extra_data: dict[str, object] = dict(result.data or {})
-        extra_data["stack_pid"] = stack_status.pid
-        extra_data["nvblox_ready"] = flight_readiness.nvblox_ready
+
+        warmup_task = asyncio.create_task(
+            self._warm_mapping_stack_background(
+                orch,
+                flight_id=flight_id,
+                session_dir=session_dir,
+                startup_t0=t0,
+            ),
+            name=f"warehouse-mapping-warmup-{flight_id}",
+        )
+        self._mapping_warmup_task = warmup_task
+        warmup_task.add_done_callback(
+            lambda _task: setattr(self, "_mapping_warmup_task", None)
+        )
+
+        extra_data: dict[str, object] = {
+            "stack_pid": stack_status.pid,
+            "nvblox_ready": flight_readiness.nvblox_ready,
+            "rgbd_ready": rgbd_readiness.ready,
+            "mapping_status": "warming_up",
+        }
         if not flight_readiness.nvblox_ready:
             extra_data["nvblox_warning"] = (
                 "Nvblox still warming; map outputs may appear during the scan"
             )
-        await self._add_event_safe(
-            orch,
-            "warehouse_scan_perception_mapping_started",
-            {
-                "accepted": result.accepted,
-                "status": result.status,
-                "detail": result.detail,
-                "data": extra_data,
-            },
-        )
-        if not result.accepted:
-            raise RuntimeError(f"Warehouse perception mapping was not accepted: {result.status}")
+
+        timing = _active_mapping_startup_timing()
+        startup_timing: dict[str, object] = {
+            "prepare_ros_ms": int((t_prepared - t0) * 1000),
+            "deferred_rgbd_warmup": True,
+            "mapping_readiness": rgbd_readiness.to_dict(),
+        }
+        if timing is not None:
+            startup_timing.update(timing.as_dict())
+
         merged = WarehousePerceptionCommandResult(
-            accepted=result.accepted,
-            status=result.status,
-            detail=result.detail,
+            accepted=True,
+            status="warming_up",
+            detail="Mapping stack warming in background; takeoff proceeding",
             data=extra_data,
         )
-        return merged, takeoff_ready
+        return merged, takeoff_ready, startup_timing
 
     async def _stop_perception_mapping(
         self,
         orch: Orchestrator,
     ) -> WarehousePerceptionCommandResult:
+        warmup_task = self._mapping_warmup_task
+        if warmup_task is not None and not warmup_task.done():
+            warmup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await warmup_task
+        self._mapping_warmup_task = None
+
         port = build_warehouse_perception_port()
         try:
             result = await port.stop_mapping(flight_id=self._flight_token(orch))
@@ -1374,6 +1698,57 @@ class WarehouseScanMission:
     # ------------------------------------------------------------------
     # Flight DB helpers
     # ------------------------------------------------------------------
+
+    async def _mark_mission_runtime_terminal_safe(
+        self,
+        orch: Orchestrator,
+        *,
+        mission_error: Exception | None,
+        mapping_error: Exception | None,
+        mapping_saved: bool,
+    ) -> None:
+        """Persist mission-runtime terminal state before best-effort cleanup."""
+        client_flight_id = getattr(orch, "current_client_flight_id", None)
+        if not client_flight_id:
+            return
+
+        from backend.modules.missions.application import mission_application
+        from backend.modules.warehouse.exceptions import WarehouseMissionFailure
+
+        if mission_error is None and mapping_error is None:
+            return
+
+        if (
+            mission_error is None
+            and isinstance(mapping_error, WarehouseMissionFailure)
+            and mapping_error.stage == "capture"
+            and mapping_error.action == "complete"
+        ):
+            state = "completed"
+            error = str(mapping_error.message or mapping_error)[:500]
+        elif mission_error is not None:
+            state = "failed"
+            error = str(mission_error)[:500]
+        else:
+            state = "failed"
+            error = str(mapping_error)[:500] if mapping_error is not None else None
+
+        try:
+            db_row = await mission_application.get_by_client_id(str(client_flight_id))
+            if db_row is not None and db_row.state in {"aborted", "completed", "failed"}:
+                return
+            await mission_application.set_state(
+                str(client_flight_id),
+                state=state,
+                error=error,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to mark mission runtime %s before cleanup (mapping_saved=%s)",
+                client_flight_id,
+                mapping_saved,
+                exc_info=True,
+            )
 
     async def _finish_flight_safe(
         self,

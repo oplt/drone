@@ -18,20 +18,27 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Request,
     Response,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
     status,
 )
-from starlette.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import FileResponse
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import get_db
 from backend.entrypoints.cli.run_mission import _build_orchestrator
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
+from backend.infrastructure.warehouse.bridge_config import (
+    missing_critical_topic_blockers,
+    probe_bridge_topics,
+    quick_ros_bridge_check,
+    ros_command_env,
+)
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -44,18 +51,28 @@ from backend.modules.missions.api.routes import (
     _build_mission,
     create_mission,
 )
-from backend.modules.preflight.checks.schemas import CheckStatus
 from backend.modules.missions.flight_profile import FlightEnvironment
 from backend.modules.missions.schemas.mission_types import MissionType
 from backend.modules.organizations.service import can_access_org_scope, get_default_project
+from backend.modules.preflight.checks.schemas import CheckStatus
 from backend.modules.telemetry.websocket_api import _authorize_websocket
-from backend.modules.warehouse.service.live_map_storage import (
-    LiveMapStorageError,
-    warehouse_live_map_chunk_storage,
+from backend.modules.warehouse.models import (
+    WarehouseAsset,
+    WarehouseDockStation,
+    WarehouseMap,
+    WarehouseMappingJob,
+    WarehouseModel,
+    WarehouseSensorRig,
 )
+from backend.modules.warehouse.repository import WarehouseMappingRepository
+from backend.modules.warehouse.repository.settings import WarehouseSettingsRepository
 from backend.modules.warehouse.service.live_map_replay import (
     build_disk_live_map_snapshot,
     resolve_client_flight_id_for_scan_job,
+)
+from backend.modules.warehouse.service.live_map_storage import (
+    LiveMapStorageError,
+    warehouse_live_map_chunk_storage,
 )
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveMapSnapshot,
@@ -69,16 +86,6 @@ from backend.modules.warehouse.service.warehouse_preflight import (
     warehouse_preflight_can_start,
     warehouse_preflight_failed_checks,
 )
-from backend.modules.warehouse.models import (
-    WarehouseAsset,
-    WarehouseDockStation,
-    WarehouseMap,
-    WarehouseMappingJob,
-    WarehouseModel,
-    WarehouseSensorRig,
-)
-from backend.modules.warehouse.repository import WarehouseMappingRepository
-from backend.modules.warehouse.repository.settings import WarehouseSettingsRepository
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
 logger = logging.getLogger(__name__)
@@ -92,14 +99,6 @@ _PREFLIGHT_DRONE_LOCK = asyncio.Lock()
 _SETTINGS_SECTION = "warehouse"
 _MISSION_DEFAULTS_KEY = "mission_defaults"
 _EXPLORATION_PROFILE_KEY = "exploration_profile"
-
-
-from backend.infrastructure.warehouse.bridge_config import (
-    missing_critical_topic_blockers,
-    probe_bridge_topics,
-    quick_ros_bridge_check,
-    ros_command_env,
-)
 
 
 class WarehouseLocalPose(BaseModel):
@@ -307,6 +306,7 @@ class WarehouseMappingStackStatusOut(BaseModel):
     started_at: str | None = None
     last_exit_code: int | None = None
     last_error: str | None = None
+    warning: str | None = None
     nvblox_running: bool = False
     phase: str = "stopped"
 
@@ -897,7 +897,11 @@ async def _build_preflight_snapshot(
                 overlay_error = None
         except Exception as exc:
             topic_probe_error = f"ROS topic compatibility probe failed: {exc}"
-    probe_flags = overlay.get("components") if isinstance(overlay.get("components"), dict) else overlay
+    probe_flags = (
+        overlay.get("components")
+        if isinstance(overlay.get("components"), dict)
+        else overlay
+    )
     local_position_ok = probe_flags.get("local_position_ok") is True
     slam_ready = probe_flags.get("slam_ready") is True
     slam_tracking_ok = probe_flags.get("slam_tracking_ok") is True
@@ -1620,6 +1624,8 @@ async def list_scanned_maps(
 )
 async def get_scanned_map_live_map_snapshot(
     job_id: int,
+    mode: Literal["full", "preview"] = "full",
+    source: str | None = None,
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseLiveMapSnapshot:
@@ -1635,10 +1641,41 @@ async def get_scanned_map_live_map_snapshot(
             status_code=404,
             detail="No live-map flight id found for this scan result.",
         )
-    in_memory = await warehouse_live_map_stream.snapshot(client_flight_id)
-    if in_memory.updates:
-        return in_memory
-    return build_disk_live_map_snapshot(client_flight_id)
+
+    source_filter = (
+        {item.strip() for item in source.split(",") if item.strip()}
+        if source
+        else None
+    )
+    disk_snapshot = build_disk_live_map_snapshot(
+        client_flight_id,
+        mode=mode,
+        sources=source_filter,
+    )
+    chunk_counts: dict[str, int] = {}
+    point_counts: dict[str, int] = {}
+    if disk_snapshot.updates:
+        for chunk in disk_snapshot.updates[0].changed_chunks:
+            layer = str(chunk.layer or chunk.source or "unknown")
+            chunk_counts[layer] = chunk_counts.get(layer, 0) + 1
+            if chunk.point_count:
+                point_counts[layer] = point_counts.get(layer, 0) + int(
+                    chunk.point_count
+                )
+    if disk_snapshot.manifest is not None:
+        point_counts = dict(disk_snapshot.manifest.point_counts or point_counts)
+        chunk_counts = dict(disk_snapshot.manifest.chunk_counts or chunk_counts)
+
+    logger.info(
+        "scanned_map_replay_snapshot scanned_map_id=%s flight_id=%s source=disk_manifest "
+        "chunk_counts=%s point_counts=%s status=%s",
+        job_id,
+        client_flight_id,
+        chunk_counts,
+        point_counts,
+        disk_snapshot.status,
+    )
+    return disk_snapshot
 
 
 @router.get("/scanned-maps/{job_id}/quality", response_model=WarehouseScannedMapQualityOut)
@@ -1764,6 +1801,22 @@ async def refresh_preflight(
         force=effective_force,
         mission_loaded=mission_loaded,
     )
+    if drone_connected and snapshot.ready_to_fly and snapshot.nvblox_ok is not True:
+        try:
+            from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+                start_warehouse_mapping_stack,
+            )
+
+            await start_warehouse_mapping_stack()
+            snapshot = await _build_preflight_snapshot(
+                db,
+                user=org_user.user,
+                deep=effective_deep,
+                force=effective_force,
+                mission_loaded=mission_loaded,
+            )
+        except Exception as exc:
+            logger.warning("Warehouse preflight could not start nvblox: %s", exc, exc_info=True)
     if not drone_connected and drone_connect_error:
         blockers = list(snapshot.blockers)
         if drone_connect_error not in blockers:
@@ -1814,11 +1867,21 @@ async def mapping_stack_status(
     )
 
     status = await get_mapping_stack_status()
+    log_parser = status.nvblox_health.get("log_parser")
+    warning = (
+        log_parser.get("warning")
+        if isinstance(log_parser, dict)
+        else None
+    )
     return WarehouseMappingStackStatusOut(
         running=status.running,
+        pid=status.pid,
+        started_at=status.started_at,
+        last_exit_code=status.last_exit_code,
         nvblox_running=status.nvblox_running,
         phase=status.phase,
         last_error=status.last_error,
+        warning=str(warning) if warning else None,
     )
 
 
@@ -1826,10 +1889,26 @@ async def mapping_stack_status(
 async def mapping_stack_start(
     _org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseMappingStackStatusOut:
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        start_warehouse_mapping_stack,
+    )
+
+    status = await start_warehouse_mapping_stack()
+    log_parser = status.nvblox_health.get("log_parser")
+    warning = (
+        log_parser.get("warning")
+        if isinstance(log_parser, dict)
+        else None
+    )
     return WarehouseMappingStackStatusOut(
-        running=False,
-        last_error="Warehouse mapping stack launcher is not configured in this backend.",
-        phase="stopped",
+        running=status.running,
+        pid=status.pid,
+        started_at=status.started_at,
+        last_exit_code=status.last_exit_code,
+        nvblox_running=status.nvblox_running,
+        phase=status.phase,
+        last_error=status.last_error,
+        warning=str(warning) if warning else None,
     )
 
 
@@ -1837,7 +1916,22 @@ async def mapping_stack_start(
 async def mapping_stack_stop(
     _org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseMappingStackStatusOut:
-    return WarehouseMappingStackStatusOut(running=False)
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        get_mapping_stack_status,
+        shutdown_warehouse_mapping_stack,
+    )
+
+    await shutdown_warehouse_mapping_stack()
+    status = await get_mapping_stack_status()
+    return WarehouseMappingStackStatusOut(
+        running=status.running,
+        pid=status.pid,
+        started_at=status.started_at,
+        last_exit_code=status.last_exit_code,
+        nvblox_running=status.nvblox_running,
+        phase=status.phase,
+        last_error=status.last_error,
+    )
 
 
 @router.post("/manual-mapping/start", response_model=WarehouseCommandOut)
@@ -1938,6 +2032,27 @@ def _live_map_ingest_authorized(ingest_key: str | None) -> bool:
     return bool(ingest_key and ingest_key == expected)
 
 
+@router.get("/live-map/config")
+async def live_map_config(
+    _org_user: OrgUser = Depends(require_org_user),
+) -> dict[str, Any]:
+    from backend.modules.warehouse.service.live_map_config import live_map_public_config
+
+    return live_map_public_config()
+
+
+@router.get("/live-map/diagnostics")
+async def live_map_diagnostics(
+    _org_user: OrgUser = Depends(require_org_user),
+) -> dict[str, Any]:
+    from backend.modules.warehouse.service.live_map_diagnostics import (
+        run_live_map_diagnostics,
+    )
+
+    report = await run_live_map_diagnostics()
+    return report.as_dict()
+
+
 @router.get("/live-map/{flight_id}/snapshot", response_model=WarehouseLiveMapSnapshot)
 async def live_map_snapshot(
     flight_id: str,
@@ -2034,20 +2149,41 @@ async def upload_live_map_chunk(
 async def live_map_chunk_download(
     flight_id: str,
     chunk_id: str,
+    request: Request,
     _org_user: OrgUser = Depends(require_org_user),
 ):
     stored = warehouse_live_map_chunk_storage.resolve(flight_id=flight_id, chunk_id=chunk_id)
     if stored is None:
+        logger.warning(
+            "live_map_chunk_download flight_id=%s chunk_id=%s exists=false status_code=404",
+            flight_id,
+            chunk_id,
+        )
         raise HTTPException(
             status_code=404,
             detail=f"Live map chunk {chunk_id!r} for flight {flight_id!r} was not found.",
+        )
+    logger.info(
+        "live_map_chunk_download flight_id=%s chunk_id=%s exists=true size=%s status_code=200",
+        flight_id,
+        chunk_id,
+        stored.byte_size,
+    )
+    etag = f'"{stored.checksum_sha256}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(
+            status_code=status.HTTP_304_NOT_MODIFIED,
+            headers={
+                "Cache-Control": "private, max-age=31536000, immutable",
+                "ETag": etag,
+            },
         )
     return FileResponse(
         str(stored.path),
         media_type=stored.content_type,
         headers={
             "Cache-Control": "private, max-age=31536000, immutable",
-            "ETag": f'"{stored.checksum_sha256}"',
+            "ETag": etag,
             "X-Content-Type-Options": "nosniff",
         },
     )

@@ -2,9 +2,11 @@ import type {
   WarehouseLivePose,
   WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
+import { chunkStateKey } from "./liveMapChunkRetention";
 
 export type LiveMapRenderChunk = {
   id: string;
+  stateKey: string;
   kind: WarehouseLiveVoxelChunk["kind"];
   sequence: number;
   center: [number, number, number];
@@ -51,7 +53,7 @@ function normalizePreviewPoints(
 export function toRenderChunks(
   chunks: WarehouseLiveVoxelChunk[],
 ): LiveMapRenderChunk[] {
-  return chunks.slice(-180).map((chunk, index) => {
+  return chunks.map((chunk, index) => {
     const bbox =
       Array.isArray(chunk.bbox_local_m) && chunk.bbox_local_m.length === 6
         ? chunk.bbox_local_m
@@ -85,6 +87,7 @@ export function toRenderChunks(
         : fallbackCenter;
     return {
       id: chunk.id,
+      stateKey: chunkStateKey(chunk),
       kind: chunk.kind,
       sequence: chunk.sequence ?? index,
       center,

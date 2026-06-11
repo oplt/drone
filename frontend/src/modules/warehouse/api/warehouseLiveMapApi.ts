@@ -26,7 +26,47 @@ export type WarehouseLiveVoxelChunk = {
   bbox_local_m?: number[] | null;
   preview_points_m?: number[][] | null;
   sequence: number;
+  source?:
+    | "mid360_raw"
+    | "rgbd_colored"
+    | "nvblox_color"
+    | "nvblox_esdf"
+    | "nvblox_tsdf"
+    | "nvblox_mesh"
+    | "odom"
+    | null;
+  layer?:
+    | "mid360_lidar"
+    | "rgbd_colored"
+    | "nvblox_color"
+    | "nvblox_esdf"
+    | "nvblox_tsdf"
+    | "nvblox_mesh"
+    | null;
+  has_rgb?: boolean | null;
+  encoding?: string | null;
+  layer_type?: string | null;
+  frame_id?: string | null;
+  stamp?: string | null;
+  priority?: number | null;
 };
+
+export type WarehouseLiveMapManifestSummary = {
+  map_quality?: string;
+  rgbd_colored_available?: boolean;
+  nvblox_available?: boolean;
+  raw_lidar_only?: boolean;
+  chunk_counts?: Record<string, number>;
+  point_counts?: Record<string, number>;
+  missing_topics?: string[];
+};
+
+export type NvbloxLiveStatus =
+  | "off"
+  | "warming"
+  | "live"
+  | "degraded"
+  | "error";
 
 export type WarehouseLiveHealthFlags = {
   coverage_percent?: number | null;
@@ -35,6 +75,9 @@ export type WarehouseLiveHealthFlags = {
   missing_mesh: boolean;
   missing_point_cloud: boolean;
   nvblox_ready: boolean;
+  nvblox_status?: NvbloxLiveStatus | null;
+  rgbd_live?: boolean | null;
+  lidar_live?: boolean | null;
   mapping_recording: boolean;
   stack_running: boolean;
 };
@@ -58,6 +101,7 @@ export type WarehouseLiveMapSnapshot = {
   status: "empty" | "live" | "stale" | "finalized";
   last_update_at?: string | null;
   updates: WarehouseLiveMapUpdate[];
+  manifest?: WarehouseLiveMapManifestSummary | null;
 };
 
 export type WarehouseLiveMapFinalized = {
@@ -161,6 +205,38 @@ export function disconnectWarehouseLiveMap(socket: WebSocket | null): void {
   }
 }
 
+export async function fetchWarehouseLiveMapConfig(
+  token?: string | null,
+): Promise<{ live_map: LiveMapRuntimeConfig }> {
+  return httpRequest<{ live_map: LiveMapRuntimeConfig }>(
+    "/warehouse/live-map/config",
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export type LiveMapRuntimeConfig = {
+  raw_lidar: {
+    enabled: boolean;
+    max_hz: number;
+    voxel_size: number;
+    max_points: number;
+  };
+  frontend: {
+    max_concurrent_chunk_downloads: number;
+    max_points_per_layer: number;
+  };
+  preferred_layer: "rgbd_colored" | "nvblox_color" | "mid360_raw";
+};
+
+export async function fetchWarehouseLiveMapDiagnostics(
+  token?: string | null,
+): Promise<Record<string, unknown>> {
+  return httpRequest<Record<string, unknown>>("/warehouse/live-map/diagnostics", {
+    token,
+    skipUnauthorizedRedirect: true,
+  });
+}
+
 export async function fetchWarehouseLiveMapSnapshot(
   flightId: string,
   token?: string | null,
@@ -171,23 +247,85 @@ export async function fetchWarehouseLiveMapSnapshot(
   );
 }
 
+const chunkBinaryCache = new Map<string, ArrayBuffer>();
+const chunkEtagByKey = new Map<string, string>();
+
+export function getLiveMapChunkBinaryCache(
+  cacheKey: string,
+): ArrayBuffer | undefined {
+  return chunkBinaryCache.get(cacheKey);
+}
+
+export function clearLiveMapChunkFetchCache(flightId?: string | null): void {
+  if (!flightId) {
+    chunkBinaryCache.clear();
+    chunkEtagByKey.clear();
+    return;
+  }
+  const prefix = `${flightId}:`;
+  for (const key of chunkBinaryCache.keys()) {
+    if (!key.startsWith(prefix)) continue;
+    chunkBinaryCache.delete(key);
+    chunkEtagByKey.delete(key);
+  }
+}
+
 export async function fetchWarehouseLiveChunk(
   url: string,
   token?: string | null,
   signal?: AbortSignal,
+  cacheKey?: string,
+  useConditional = true,
 ): Promise<ArrayBuffer> {
   const headers = new Headers();
   const authToken = token?.trim();
   if (shouldAttachBearerToken(authToken)) {
     headers.set("Authorization", `Bearer ${authToken}`);
   }
+
+  const cachedBody =
+    cacheKey && useConditional ? chunkBinaryCache.get(cacheKey) : undefined;
+  const etag =
+    cacheKey && cachedBody && useConditional
+      ? chunkEtagByKey.get(cacheKey)
+      : undefined;
+  if (etag) {
+    headers.set("If-None-Match", etag);
+  }
+
   const response = await fetch(resolveApiUrl(url), {
     credentials: "include",
     headers,
     signal,
+    cache: "no-store",
   });
+
+  if (response.status === 304) {
+    if (cachedBody) {
+      return cachedBody;
+    }
+    if (cacheKey && useConditional) {
+      return fetchWarehouseLiveChunk(url, token, signal, cacheKey, false);
+    }
+    throw new Error("Live chunk fetch returned 304 without a cached body");
+  }
+
   if (!response.ok) {
     throw new Error(`Live chunk fetch failed: ${response.status}`);
   }
-  return response.arrayBuffer();
+
+  const body = await response.arrayBuffer();
+  if (body.byteLength === 0) {
+    throw new Error("Live chunk fetch returned an empty body");
+  }
+
+  if (cacheKey) {
+    chunkBinaryCache.set(cacheKey, body);
+    const responseEtag = response.headers?.get?.("ETag") ?? null;
+    if (responseEtag) {
+      chunkEtagByKey.set(cacheKey, responseEtag);
+    }
+  }
+
+  return body;
 }

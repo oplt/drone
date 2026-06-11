@@ -3,7 +3,6 @@ import {
   Button,
   LinearProgress,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import type { WarehouseGoPreflight } from "../api/warehousePreflightApi";
@@ -144,11 +143,7 @@ export function WarehousePreflightChecksPanel({
               ? "Run preflight checks"
               : "Run preflight checks"}
         </Button>
-        <Tooltip title="Start simulation, warehouse_source_transport_bridge, warehouse_bridge on port 8088, warehouse_sim_tf, and warehouse_odometry_export.">
-          <Button variant="outlined" size="small">
-            Startup steps
-          </Button>
-        </Tooltip>
+
         {flightAvailable && onOpenFlight ? (
           <Button variant="text" size="small" onClick={onOpenFlight}>
             View diagnostics

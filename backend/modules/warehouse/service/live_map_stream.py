@@ -17,6 +17,28 @@ class WarehouseLivePose(BaseModel):
     frame_id: str = "map"
 
 
+LiveMapLayer = Literal[
+    "mid360_lidar",
+    "rgbd_colored",
+    "nvblox_color",
+    "nvblox_esdf",
+    "nvblox_tsdf",
+    "nvblox_mesh",
+]
+
+LiveMapSource = Literal[
+    "mid360_raw",
+    "rgbd_colored",
+    "nvblox_color",
+    "nvblox_esdf",
+    "nvblox_tsdf",
+    "nvblox_mesh",
+    "odom",
+]
+
+NvbloxLiveStatus = Literal["off", "warming", "live", "degraded", "error"]
+
+
 class WarehouseLiveVoxelChunk(BaseModel):
     id: str = Field(..., min_length=1, max_length=160)
     kind: Literal["mesh", "point_cloud", "occupancy", "esdf", "costmap"] = "mesh"
@@ -30,6 +52,14 @@ class WarehouseLiveVoxelChunk(BaseModel):
     bbox_local_m: list[float] | None = Field(default=None, min_length=6, max_length=6)
     preview_points_m: list[list[float]] | None = Field(default=None, max_length=2000)
     sequence: int = Field(default=0, ge=0)
+    source: LiveMapSource | None = None
+    layer: LiveMapLayer | None = None
+    layer_type: LiveMapLayer | None = None
+    has_rgb: bool | None = None
+    encoding: str | None = Field(default=None, max_length=64)
+    frame_id: str | None = Field(default=None, max_length=128)
+    stamp: str | None = Field(default=None, max_length=64)
+    priority: int | None = Field(default=None, ge=0, le=100)
 
 
 class WarehouseLiveHealthFlags(BaseModel):
@@ -39,6 +69,9 @@ class WarehouseLiveHealthFlags(BaseModel):
     missing_mesh: bool = False
     missing_point_cloud: bool = False
     nvblox_ready: bool = False
+    nvblox_status: NvbloxLiveStatus | None = None
+    rgbd_live: bool | None = None
+    lidar_live: bool | None = None
     mapping_recording: bool = False
     stack_running: bool = False
 
@@ -56,21 +89,43 @@ class WarehouseLiveMapUpdate(BaseModel):
     finalized_scan_job_id: int | None = None
 
 
+class WarehouseLiveMapManifestSummary(BaseModel):
+    map_quality: str = "unknown"
+    rgbd_colored_available: bool = False
+    nvblox_available: bool = False
+    raw_lidar_only: bool = False
+    chunk_counts: dict[str, int] = Field(default_factory=dict)
+    point_counts: dict[str, int] = Field(default_factory=dict)
+    missing_topics: list[str] = Field(default_factory=list)
+
+
 class WarehouseLiveMapSnapshot(BaseModel):
     type: Literal["live_map_snapshot"] = "live_map_snapshot"
     flight_id: str
     status: Literal["empty", "live", "stale", "finalized"] = "empty"
     last_update_at: datetime | None = None
     updates: list[WarehouseLiveMapUpdate] = Field(default_factory=list)
+    manifest: WarehouseLiveMapManifestSummary | None = None
 
 
 class WarehouseLiveMapStream:
-    def __init__(self, *, max_updates_per_flight: int = 180) -> None:
+    def __init__(self, *, max_updates_per_flight: int = 1000) -> None:
         self._updates: dict[str, deque[WarehouseLiveMapUpdate]] = {}
         self._clients: dict[str, set[WebSocket]] = {}
         self._finalized_jobs: dict[str, int] = {}
         self._max_updates_per_flight = max_updates_per_flight
         self._lock = asyncio.Lock()
+
+    async def _send_update(
+        self,
+        client: WebSocket,
+        payload: dict[str, Any],
+    ) -> WebSocket | None:
+        try:
+            await asyncio.wait_for(client.send_json(payload), timeout=1.0)
+            return None
+        except Exception:
+            return client
 
     async def publish(self, update: WarehouseLiveMapUpdate) -> WarehouseLiveMapUpdate:
         async with self._lock:
@@ -84,12 +139,13 @@ class WarehouseLiveMapStream:
             clients = list(self._clients.get(update.flight_id, set()))
 
         payload = update.model_dump(mode="json")
-        stale_clients: list[WebSocket] = []
-        for client in clients:
-            try:
-                await client.send_json(payload)
-            except Exception:
-                stale_clients.append(client)
+        stale_clients = [
+            stale
+            for stale in await asyncio.gather(
+                *(self._send_update(client, payload) for client in clients)
+            )
+            if stale is not None
+        ]
         if stale_clients:
             async with self._lock:
                 active = self._clients.get(update.flight_id)

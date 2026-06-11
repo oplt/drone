@@ -170,11 +170,19 @@ export async function fetchWarehouseScannedMapQuality(
 export async function fetchWarehouseScannedMapLiveSnapshot(
   jobId: number,
   token?: string | null,
+  options: { mode?: "full" | "preview"; source?: string } = {},
 ): Promise<WarehouseLiveMapSnapshot> {
-  return httpRequest<WarehouseLiveMapSnapshot>(
-    `/warehouse/scanned-maps/${jobId}/live-map-snapshot`,
-    { token, skipUnauthorizedRedirect: true },
-  );
+  const params = new URLSearchParams();
+  if (options.mode) params.set("mode", options.mode);
+  if (options.source) params.set("source", options.source);
+  const query = params.toString();
+  const path = `/warehouse/scanned-maps/${jobId}/live-map-snapshot${
+    query ? `?${query}` : ""
+  }`;
+  return httpRequest<WarehouseLiveMapSnapshot>(path, {
+    token,
+    skipUnauthorizedRedirect: true,
+  });
 }
 
 export async function compareWarehouseScannedMaps(

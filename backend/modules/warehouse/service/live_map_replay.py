@@ -4,6 +4,7 @@ import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,23 +14,108 @@ from backend.modules.warehouse.repository import WarehouseMappingRepository
 from backend.modules.warehouse.service.live_map_storage import warehouse_live_map_chunk_storage
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveHealthFlags,
+    WarehouseLiveMapManifestSummary,
     WarehouseLiveMapSnapshot,
     WarehouseLiveMapUpdate,
     WarehouseLiveVoxelChunk,
 )
+from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
 
 _CHUNK_ID_RE = re.compile(r"^(.+)-[0-9a-f]{16}\.[a-z0-9]+$", re.IGNORECASE)
 _PREVIEW_CHUNK_ID_RE = re.compile(r"^(.+)-[0-9a-f]{16}\.preview\.json$", re.IGNORECASE)
+_META_CHUNK_ID_RE = re.compile(r"^(.+)\.meta\.json$", re.IGNORECASE)
 
 
 def _chunk_id_from_filename(path: Path) -> str:
     preview_match = _PREVIEW_CHUNK_ID_RE.match(path.name)
     if preview_match:
         return preview_match.group(1)
+    meta_match = _META_CHUNK_ID_RE.match(path.name)
+    if meta_match:
+        return meta_match.group(1).rsplit("-", 1)[0]
     match = _CHUNK_ID_RE.match(path.name)
     if match:
         return match.group(1)
     return path.stem.split("-", 1)[0]
+
+
+def _infer_chunk_metadata(chunk_id: str, path: Path) -> dict[str, Any]:
+    """Infer replay metadata from chunk id prefix and on-disk file extension."""
+    suffix = path.suffix.lower()
+    lower_id = chunk_id.lower()
+
+    source: str | None = None
+    layer: str | None = None
+    kind: str = "point_cloud"
+    encoding: str | None = None
+    has_rgb = False
+
+    if lower_id.startswith("rgbd_"):
+        source = "rgbd_colored"
+        layer = "rgbd_colored"
+    elif lower_id.startswith("mid360_"):
+        source = "mid360_raw"
+        layer = "mid360_lidar"
+    elif lower_id.startswith("nvblox_color_"):
+        source = "nvblox_color"
+        layer = "nvblox_color"
+    elif lower_id.startswith("nvblox_esdf_"):
+        source = "nvblox_esdf"
+        layer = "nvblox_esdf"
+        kind = "esdf"
+    elif lower_id.startswith("nvblox_tsdf_"):
+        source = "nvblox_tsdf"
+        layer = "nvblox_tsdf"
+    elif lower_id.startswith("nvblox_mesh_"):
+        source = "nvblox_mesh"
+        layer = "nvblox_mesh"
+        kind = "mesh"
+
+    if suffix == ".xyzrgb32":
+        kind = "point_cloud"
+        encoding = "xyzrgb32_v1"
+        has_rgb = True
+    elif suffix == ".xyz32":
+        kind = "point_cloud"
+        encoding = "xyz32_v1"
+        has_rgb = False
+    elif suffix == ".glb":
+        kind = "mesh"
+        encoding = None
+    elif suffix == ".vox":
+        kind = "esdf" if lower_id.startswith("nvblox_esdf_") else "occupancy"
+    elif suffix == ".grid":
+        kind = "costmap"
+
+    metadata: dict[str, Any] = {
+        "kind": kind,
+        "source": source,
+        "layer": layer,
+        "encoding": encoding,
+        "has_rgb": has_rgb,
+    }
+
+    sequence_match = re.search(r"_(\d+)$", chunk_id)
+    if sequence_match:
+        metadata["sequence"] = int(sequence_match.group(1))
+
+    return metadata
+
+
+def _merge_chunk_metadata(
+    *,
+    chunk_id: str,
+    stored_path: Path,
+    sidecar: dict[str, Any] | None,
+) -> dict[str, Any]:
+    inferred = _infer_chunk_metadata(chunk_id, stored_path)
+    if not sidecar:
+        return inferred
+    merged = dict(inferred)
+    for key, value in sidecar.items():
+        if value is not None:
+            merged[key] = value
+    return merged
 
 
 def _load_preview_chunk(path: Path, *, sequence: int) -> WarehouseLiveVoxelChunk | None:
@@ -42,18 +128,61 @@ def _load_preview_chunk(path: Path, *, sequence: int) -> WarehouseLiveVoxelChunk
         return None
     chunk_id = _chunk_id_from_filename(path)
     bbox = payload.get("bbox_local_m")
+    metadata = _infer_chunk_metadata(chunk_id, path)
     return WarehouseLiveVoxelChunk(
         id=chunk_id,
         kind="point_cloud",
-        sequence=int(payload.get("sequence", sequence)),
+        sequence=int(payload.get("sequence", metadata.get("sequence", sequence))),
         point_count=payload.get("point_count"),
         byte_size=path.stat().st_size,
         bbox_local_m=bbox if isinstance(bbox, list) and len(bbox) == 6 else None,
         preview_points_m=preview_points,
+        source=metadata.get("source"),
+        layer=metadata.get("layer"),
+        has_rgb=metadata.get("has_rgb"),
+        encoding=metadata.get("encoding"),
     )
 
 
-def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnapshot:
+def _chunk_from_metadata(
+    *,
+    stored_path: Path,
+    stored,
+    metadata: dict[str, Any],
+    fallback_sequence: int,
+) -> WarehouseLiveVoxelChunk:
+    raw_kind = str(metadata.get("kind") or "point_cloud")
+    allowed = {"mesh", "point_cloud", "occupancy", "esdf", "costmap"}
+    kind = raw_kind if raw_kind in allowed else "point_cloud"
+    return WarehouseLiveVoxelChunk(
+        id=stored.chunk_id,
+        kind=kind,  # type: ignore[arg-type]
+        url=stored.url,
+        content_type=str(metadata.get("content_type") or stored.content_type),
+        byte_size=stored.byte_size,
+        checksum_sha256=stored.checksum_sha256,
+        sequence=int(metadata.get("sequence", fallback_sequence)),
+        point_count=metadata.get("point_count"),
+        bbox_local_m=metadata.get("bbox_local_m")
+        if isinstance(metadata.get("bbox_local_m"), list)
+        else None,
+        source=metadata.get("source"),
+        layer=metadata.get("layer"),
+        layer_type=metadata.get("layer_type") or metadata.get("layer"),
+        has_rgb=metadata.get("has_rgb"),
+        encoding=metadata.get("encoding"),
+        frame_id=metadata.get("frame_id"),
+        stamp=metadata.get("stamp"),
+        priority=metadata.get("priority"),
+    )
+
+
+def build_disk_live_map_snapshot(
+    client_flight_id: str,
+    *,
+    mode: str = "full",
+    sources: set[str] | None = None,
+) -> WarehouseLiveMapSnapshot:
     safe_flight = client_flight_id.strip()
     root = (warehouse_live_map_chunk_storage.root / safe_flight).resolve()
     if not root.exists() or not root.is_dir():
@@ -66,35 +195,66 @@ def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnaps
 
     changed_chunks: list[WarehouseLiveVoxelChunk] = []
     latest_mtime = 0.0
+    seen_chunk_ids: set[str] = set()
+
     for sequence, path in enumerate(sorted(root.iterdir(), key=lambda item: item.name)):
         if not path.is_file():
             continue
+
+        name = path.name.lower()
+        if name.endswith(".meta.json") or name.endswith(".uploading"):
+            continue
+
         latest_mtime = max(latest_mtime, path.stat().st_mtime)
+
         if path.suffix.lower() == ".json" and path.name.endswith(".preview.json"):
             preview_chunk = _load_preview_chunk(path, sequence=sequence)
-            if preview_chunk is not None:
+            if preview_chunk is not None and preview_chunk.id not in seen_chunk_ids:
                 changed_chunks.append(preview_chunk)
+                seen_chunk_ids.add(preview_chunk.id)
             continue
 
         chunk_id = _chunk_id_from_filename(path)
+        if chunk_id in seen_chunk_ids:
+            continue
+
         stored = warehouse_live_map_chunk_storage.resolve(
             flight_id=client_flight_id,
             chunk_id=chunk_id,
         )
         if stored is None:
             continue
-        kind = "point_cloud" if path.suffix.lower() == ".xyz32" else "mesh"
-        changed_chunks.append(
-            WarehouseLiveVoxelChunk(
-                id=stored.chunk_id,
-                kind=kind,
-                url=stored.url,
-                content_type=stored.content_type,
-                byte_size=stored.byte_size,
-                checksum_sha256=stored.checksum_sha256,
-                sequence=sequence,
-            )
+
+        sidecar = warehouse_live_map_chunk_storage.load_chunk_metadata(
+            flight_id=client_flight_id,
+            chunk_id=chunk_id,
         )
+        metadata = _merge_chunk_metadata(
+            chunk_id=chunk_id,
+            stored_path=path,
+            sidecar=sidecar,
+        )
+
+        chunk = _chunk_from_metadata(
+            stored_path=path,
+            stored=stored,
+            metadata=metadata,
+            fallback_sequence=sequence,
+        )
+        chunk_source = str(chunk.source or metadata.get("source") or "unknown")
+        if sources is not None and chunk_source not in sources:
+            continue
+        changed_chunks.append(chunk)
+        seen_chunk_ids.add(chunk_id)
+
+    if mode == "preview" and changed_chunks:
+        preview_by_source: dict[str, WarehouseLiveVoxelChunk] = {}
+        for chunk in changed_chunks:
+            source_key = str(chunk.source or "unknown")
+            existing = preview_by_source.get(source_key)
+            if existing is None or (chunk.sequence or 0) >= (existing.sequence or 0):
+                preview_by_source[source_key] = chunk
+        changed_chunks = list(preview_by_source.values())
 
     if not changed_chunks:
         return WarehouseLiveMapSnapshot(
@@ -104,8 +264,27 @@ def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnaps
             updates=[],
         )
 
-    changed_chunks.sort(key=lambda chunk: chunk.sequence)
+    changed_chunks.sort(
+        key=lambda chunk: (
+            chunk.priority if chunk.priority is not None else 50,
+            chunk.layer or "",
+            chunk.sequence,
+            chunk.id,
+        )
+    )
     timestamp = datetime.fromtimestamp(latest_mtime, tz=UTC)
+    manifest_model = load_flight_manifest(safe_flight)
+    manifest_summary = None
+    if manifest_model is not None:
+        manifest_summary = WarehouseLiveMapManifestSummary(
+            map_quality=manifest_model.map_quality,
+            rgbd_colored_available=manifest_model.rgbd_colored_available,
+            nvblox_available=manifest_model.nvblox_available,
+            raw_lidar_only=manifest_model.raw_lidar_only,
+            chunk_counts=dict(manifest_model.chunk_counts),
+            point_counts=dict(manifest_model.point_counts),
+            missing_topics=list(manifest_model.missing_topics),
+        )
     update = WarehouseLiveMapUpdate(
         flight_id=client_flight_id,
         timestamp=timestamp,
@@ -113,7 +292,6 @@ def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnaps
         health=WarehouseLiveHealthFlags(
             missing_mesh=True,
             missing_point_cloud=False,
-            nvblox_ready=True,
             mapping_recording=False,
             stack_running=False,
         ),
@@ -123,6 +301,7 @@ def build_disk_live_map_snapshot(client_flight_id: str) -> WarehouseLiveMapSnaps
         status="finalized",
         last_update_at=timestamp,
         updates=[update],
+        manifest=manifest_summary,
     )
 
 
@@ -146,9 +325,24 @@ async def resolve_client_flight_id_for_scan_job(
     for job, _warehouse_map, model in rows:
         if int(job.id) != int(job_id):
             continue
+
+        params = job.params if isinstance(job.params, dict) else {}
+        capture = params.get("capture_result") if isinstance(params.get("capture_result"), dict) else {}
+        client_flight_id = capture.get("client_flight_id")
+        if client_flight_id:
+            token = str(client_flight_id).strip()
+            if token:
+                return token
+
         assets = await repo.list_assets_for_models(db, model_ids=[int(model.id)])
         for asset in assets:
             capture = (asset.meta_data or {}).get("capture_result") or {}
+            client_flight_id = capture.get("client_flight_id")
+            if client_flight_id:
+                token = str(client_flight_id).strip()
+                if token:
+                    return token
+
             raw_flight_id = capture.get("flight_id")
             if raw_flight_id is None:
                 continue

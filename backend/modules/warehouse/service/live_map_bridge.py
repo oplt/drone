@@ -20,9 +20,8 @@ from backend.infrastructure.warehouse.bridge_config import (
     load_bridge_config,
     ros_command_env,
 )
-from backend.modules.warehouse.service.live_map_storage import (
-    warehouse_live_map_chunk_storage,
-)
+from backend.modules.warehouse.service.map_source_config import WAREHOUSE_LIVE_MAP_SOURCES
+from backend.modules.warehouse.service.nvblox_status import nvblox_status_tracker
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveHealthFlags,
     WarehouseLivePose,
@@ -52,6 +51,7 @@ def _ros2_workspace() -> Path:
 
 
 def _odometry_topic() -> str:
+    configured = WAREHOUSE_LIVE_MAP_SOURCES["odom"].topic
     ws = _ros2_workspace()
     try:
         mappings = load_bridge_config(ws)
@@ -62,7 +62,7 @@ def _odometry_topic() -> str:
                     return topic
     except Exception:
         pass
-    return "/warehouse/drone/odometry"
+    return configured
 
 
 def _esdf_topic() -> str:
@@ -142,10 +142,16 @@ def _read_odometry_pose(*, topic: str, ws: Path) -> WarehouseLivePose | None:
 
 
 def _nvblox_ready(*, ws: Path, esdf_topic: str) -> bool:
+    status = nvblox_status_tracker.status()
+    if status in {"live", "degraded", "warming"}:
+        return status == "live"
+
     try:
         topics = list_ros2_topics(ws)
     except RuntimeError:
         return False
+
+    nvblox_status_tracker.note_topic_list(topics)
 
     if esdf_topic in topics:
         return True
@@ -394,10 +400,6 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
     odom_topic = _odometry_topic()
     esdf_topic = _esdf_topic()
     poll_s = settings.warehouse_live_map_poll_s
-    pointcloud_every_n = max(1, settings.warehouse_live_map_pointcloud_every_n)
-
-    sequence = 0
-    chunk_failures = 0
 
     logger.info(
         "Warehouse live map bridge started flight_id=%s odom=%s esdf=%s config=%s",
@@ -408,76 +410,41 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
     )
 
     while not stop.is_set():
-        sequence += 1
-
         pose = await asyncio.to_thread(_read_odometry_pose, topic=odom_topic, ws=ws)
         nvblox_ok = await asyncio.to_thread(_nvblox_ready, ws=ws, esdf_topic=esdf_topic)
+        nvblox_status = nvblox_status_tracker.status()
 
-        changed_chunks: list[dict[str, Any]] = []
-        if nvblox_ok and sequence % pointcloud_every_n == 0:
-            chunk = await asyncio.to_thread(
-                _read_nvblox_chunk,
-                flight_id=flight_id,
-                topic=esdf_topic,
-                ws=ws,
-                sequence=sequence,
-            )
-            if chunk is not None:
-                changed_chunks.append(chunk)
-                chunk_failures = 0
-                try:
-                    preview_points = chunk.get("preview_points_m")
-                    if isinstance(preview_points, list) and preview_points:
-                        await asyncio.to_thread(
-                            warehouse_live_map_chunk_storage.save_preview_chunk,
-                            flight_id=flight_id,
-                            chunk_id=str(chunk["id"]),
-                            preview_points_m=preview_points,
-                            point_count=chunk.get("point_count"),
-                            bbox_local_m=chunk.get("bbox_local_m"),
-                            sequence=int(chunk.get("sequence") or sequence),
-                        )
-                except Exception:
-                    logger.warning(
-                        "Failed to persist nvblox preview chunk flight_id=%s chunk_id=%s",
-                        flight_id,
-                        chunk.get("id"),
-                        exc_info=True,
-                    )
-            else:
-                chunk_failures += 1
-                if chunk_failures == 1 or chunk_failures % 20 == 0:
-                    logger.warning(
-                        "Warehouse live map ESDF chunk read failed flight_id=%s topic=%s "
-                        "(nvblox_ok=%s failures=%s)",
-                        flight_id,
-                        esdf_topic,
-                        nvblox_ok,
-                        chunk_failures,
-                    )
+        try:
+            topics = list_ros2_topics(ws)
+        except RuntimeError:
+            topics = set()
+        else:
+            topics = set(topics)
 
-        if pose is not None or changed_chunks:
+        rgbd_topic = WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"].topic
+        lidar_topic = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].topic
+
+        if pose is not None:
             health = WarehouseLiveHealthFlags(
-                nvblox_ready=nvblox_ok,
+                nvblox_ready=nvblox_ok or nvblox_status == "live",
+                nvblox_status=nvblox_status,
+                rgbd_live=rgbd_topic in topics,
+                lidar_live=lidar_topic in topics,
                 mapping_recording=True,
                 stack_running=True,
-                missing_mesh=False,
-                missing_point_cloud=not bool(changed_chunks),
+                missing_mesh=nvblox_status not in {"live", "degraded", "warming"},
+                missing_point_cloud=False,
             )
 
+            pose_payload = pose.model_dump(mode="python")
             payload: dict[str, Any] = {
                 "flight_id": flight_id,
                 "timestamp": datetime.now(UTC),
                 "health": health.model_dump(mode="python"),
-                "changed_chunks": changed_chunks,
+                "pose": pose_payload,
+                "scan_path_sample": [pose_payload],
+                "changed_chunks": [],
             }
-
-            if pose is not None:
-                pose_payload = pose.model_dump(mode="python")
-                payload["pose"] = pose_payload
-                payload["scan_path_sample"] = [pose_payload]
-            else:
-                payload["scan_path_sample"] = []
 
             update = normalize_live_map_payload(payload)
             await warehouse_live_map_stream.publish(update)
@@ -533,6 +500,15 @@ async def stop_warehouse_live_map_bridge() -> None:
         await stop_raw_pointcloud_live_map_bridge()
     except Exception:
         logger.exception("Failed to stop raw point-cloud live map bridge")
+
+    try:
+        from backend.modules.warehouse.service.colored_pointcloud_live_map_bridge import (
+            stop_colored_pointcloud_live_map_bridge,
+        )
+
+        await stop_colored_pointcloud_live_map_bridge()
+    except Exception:
+        logger.exception("Failed to stop colored point-cloud live map bridge")
 
 
 def live_map_bridge_status() -> dict[str, Any]:

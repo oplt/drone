@@ -1,10 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clearLiveMapChunkFetchCache,
+  fetchWarehouseLiveChunk,
+  getLiveMapChunkBinaryCache,
   isWarehouseLiveMapSnapshot,
   isWarehouseLiveMapUpdate,
   type WarehouseLiveMapSnapshot,
 } from "../api/warehouseLiveMapApi";
-import { applyWarehouseLiveMapMessage } from "../hooks/useWarehouseLiveVoxelMap";
+import {
+  applyWarehouseLiveMapMessage,
+  mergeUpdate,
+} from "../hooks/useWarehouseLiveVoxelMap";
 
 describe("warehouse live map API", () => {
   it("parses live update DTOs", () => {
@@ -83,5 +89,158 @@ describe("warehouse live map API", () => {
 
     expect(Array.from(result.chunksById.keys())).toEqual(["b"]);
     expect(result.scanPath).toHaveLength(1);
+  });
+
+  it("mergeUpdate keeps canonical chunks instead of replacing them", () => {
+    const base = { chunksById: new Map(), scanPath: [] as const };
+    const first = mergeUpdate(base, {
+      type: "live_map_update",
+      flight_id: "flight-1",
+      timestamp: "2026-06-01T12:00:00Z",
+      frame_id: "odom",
+      pose: { x_m: 0, y_m: 0, z_m: 0, frame_id: "odom" },
+      changed_chunks: Array.from({ length: 3 }, (_, index) => ({
+        id: `rgbd_${String(index + 1).padStart(6, "0")}`,
+        kind: "point_cloud" as const,
+        sequence: index + 1,
+      })),
+      removed_chunk_ids: [],
+      scan_path_sample: [],
+      health: {
+        stale_costmap: false,
+        missing_mesh: true,
+        missing_point_cloud: false,
+        nvblox_ready: true,
+        mapping_recording: true,
+        stack_running: true,
+      },
+    });
+
+    const second = mergeUpdate(first, {
+      type: "live_map_update",
+      flight_id: "flight-1",
+      timestamp: "2026-06-01T12:00:01Z",
+      frame_id: "odom",
+      pose: { x_m: 1, y_m: 0, z_m: 0, frame_id: "odom" },
+      changed_chunks: [
+        { id: "rgbd_000004", kind: "point_cloud", sequence: 4 },
+      ],
+      removed_chunk_ids: [],
+      scan_path_sample: [],
+      health: {
+        stale_costmap: false,
+        missing_mesh: true,
+        missing_point_cloud: false,
+        nvblox_ready: true,
+        mapping_recording: true,
+        stack_running: true,
+      },
+    });
+
+    expect(first.chunksById.size).toBe(3);
+    expect(second.chunksById.size).toBe(4);
+    expect(second.chunksById.has("rgbd_000001")).toBe(true);
+  });
+});
+
+afterEach(() => {
+  clearLiveMapChunkFetchCache();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe("fetchWarehouseLiveChunk", () => {
+  it("stores and returns binary bodies for 200 responses", async () => {
+    const body = new Uint8Array([9, 8, 7]).buffer;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(body, {
+          status: 200,
+          headers: { ETag: '"etag-200"' },
+        }),
+      ),
+    );
+
+    const loaded = await fetchWarehouseLiveChunk(
+      "/warehouse/live-map/flight/chunks/rgbd_000001/download",
+      null,
+      undefined,
+      "flight:rgbd_000001",
+    );
+
+    expect(loaded.byteLength).toBe(3);
+    expect(getLiveMapChunkBinaryCache("flight:rgbd_000001")).toBe(loaded);
+  });
+
+  it("returns cached binary on 304 without reading an empty body", async () => {
+    const body = new Uint8Array([1, 2, 3]).buffer;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(body, {
+          status: 200,
+          headers: { ETag: '"etag-abc"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"etag-abc"' },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cacheKey = "flight:rgbd_000001";
+    const first = await fetchWarehouseLiveChunk(
+      "/warehouse/live-map/flight/chunks/rgbd_000001/download",
+      null,
+      undefined,
+      cacheKey,
+    );
+    const second = await fetchWarehouseLiveChunk(
+      "/warehouse/live-map/flight/chunks/rgbd_000001/download",
+      null,
+      undefined,
+      cacheKey,
+    );
+
+    expect(first.byteLength).toBe(3);
+    expect(second).toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]?.headers?.get("If-None-Match")).toBe(
+      '"etag-abc"',
+    );
+  });
+
+  it("retries without conditional headers when 304 has no cached binary", async () => {
+    const body = new Uint8Array([4, 5, 6]).buffer;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"etag-miss"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(body, {
+          status: 200,
+          headers: { ETag: '"etag-miss"' },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const loaded = await fetchWarehouseLiveChunk(
+      "/warehouse/live-map/flight/chunks/rgbd_000002/download",
+      null,
+      undefined,
+      "flight:rgbd_000002",
+    );
+
+    expect(loaded.byteLength).toBe(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1]?.headers?.get("If-None-Match")).toBeNull();
+    expect(fetchMock.mock.calls[1][1]?.headers?.get("If-None-Match")).toBeNull();
   });
 });

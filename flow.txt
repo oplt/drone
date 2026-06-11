@@ -1,0 +1,257 @@
+Warehouse Start Flight + Live Mapping Flow
+==========================================
+
+This document traces function names and file paths for:
+  A) Start Flight button on the Warehouse page
+  B) Live mapping, WebSocket data flow, chunking, and map record persistence
+
+
+================================================================================
+A. START FLIGHT (Warehouse page)
+================================================================================
+
+FRONTEND — button click → HTTP
+------------------------------
+
+  Step  Function                    File
+  ----  --------                    ----
+  1     handleStartWarehouseScan    frontend/src/modules/warehouse/views/Warehouse.tsx
+  2     startWarehouseScan          frontend/src/modules/warehouse/api/warehouseMissionsApi.ts
+  3     setPendingFlightId          frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts
+                                    (via useMissionWebsocketRuntime in Warehouse.tsx)
+
+After launch, Warehouse.tsx also wires:
+  - useMissionWebsocketRuntime  → mission status / telemetry WebSocket
+  - useAutoStartVideo           → useMissionVideo (camera stream)
+  - useWarehouseLiveVoxelMap    → live 3D map WebSocket (once activeFlightId is set)
+
+
+BACKEND — mission create + async execution
+------------------------------------------
+
+  Step  Function                            File
+  ----  --------                            ----
+  4     mission_start                       backend/modules/warehouse/api.py
+        (route: POST /warehouse/missions/start)
+  5     _build_warehouse_scan_mission_payload   backend/modules/warehouse/api.py
+  6     run_warehouse_ros_preflight_report      backend/modules/warehouse/service/warehouse_preflight.py
+  7     warehouse_preflight_can_start           backend/modules/warehouse/service/warehouse_preflight.py
+  8     _start_warehouse_scan_mission           backend/modules/warehouse/api.py
+  9     create_mission                          backend/modules/missions/api/routes.py
+        (route: POST /missions)
+  10    _build_mission                          backend/modules/missions/api/routes.py
+        → build_warehouse_scan_mission          backend/modules/warehouse/planning/mission.py
+  11    asyncio.create_task(execute_mission)   backend/modules/missions/api/routes.py
+
+
+ORCHESTRATOR + WAREHOUSE SCAN RUNTIME
+-------------------------------------
+
+  Step  Function                    File
+  ----  --------                    ----
+  12    execute_mission             backend/modules/missions/api/routes.py
+  13    mission.execute(orch, alt)  WarehouseScanMission.execute
+                                    backend/modules/warehouse/planning/scan.py
+  14    orch.run_mission(...)       RuntimeExecutionServiceMixin.run_mission
+                                    backend/modules/vehicle_runtime/execution_service.py
+  15    fly_scan                    backend/modules/warehouse/planning/scan.py
+
+
+INSIDE fly_scan (main sub-flow)
+-------------------------------
+
+  Phase              Function                              File
+  -----              --------                              ----
+  Plan               _plan_scan, _build_plan               backend/modules/warehouse/planning/scan.py
+  Capture session    WarehouseCaptureSessionService.start_session
+                                                           backend/modules/warehouse/service/capture.py
+  ROS / nvblox       _start_perception_mapping             scan.py
+  warm-up            prepare_warehouse_scan_ros            backend/modules/warehouse/service/mapping_stack_lifecycle.py
+                     _maybe_start_mapping_stack_cmd        mapping_stack_lifecycle.py
+                     wait_for_rgbd_mapping_topics          backend/modules/warehouse/service/live_map_readiness.py
+  Live map bridges   _restart_live_map_publisher           scan.py
+                     start_warehouse_live_map_bridge         backend/modules/warehouse/service/live_map_bridge.py
+                     start_colored_pointcloud_live_map_bridge
+                                                           backend/modules/warehouse/service/colored_pointcloud_live_map_bridge.py
+                     start_raw_pointcloud_live_map_bridge  backend/modules/warehouse/service/raw_pointcloud_live_map_bridge.py
+                     (only if raw lidar preview/persist enabled)
+  Perception record  build_warehouse_perception_port       scan.py
+                     port.start_mapping                    → backend/infrastructure/warehouse/perception/
+  Takeoff + legs     arm_and_takeoff, _fly_leg,            scan.py + orchestrator drone
+                     _resolve_execution_frame
+  Video              _start_video_recording                scan.py
+                     → shared_video_runtime                backend/infrastructure/camera/runtime.py
+
+
+SHUTDOWN / PERSIST (end of flight)
+----------------------------------
+
+  Phase              Function                              File
+  -----              --------                              ----
+  Stop mapping       _stop_perception_mapping              scan.py
+  Artifacts          wait_for_mapping_artifacts            backend/modules/warehouse/service/capture_finalize.py
+                     resolve_capture_session_dir
+  Capture sync       capture_session_service.finalize_session
+                                                           backend/modules/warehouse/service/capture.py
+  Quality gate       build_manifest_from_flight_dir        backend/modules/warehouse/service/live_map_manifest.py
+                     validate_save_quality
+  DB persist         WarehouseScanMappingService.persist_capture
+                                                           backend/modules/warehouse/service/mapping.py
+  WS finalize        warehouse_live_map_stream.finalize    backend/modules/warehouse/service/live_map_stream.py
+
+
+START FLIGHT FLOW (ASCII)
+-------------------------
+
+  handleStartWarehouseScan
+    → startWarehouseScan
+      → mission_start
+        → _build_warehouse_scan_mission_payload
+        → run_warehouse_ros_preflight_report
+        → _start_warehouse_scan_mission
+          → create_mission
+            → execute_mission (async task)
+              → WarehouseScanMission.execute
+                → run_mission
+                  → fly_scan
+                    → prepare_warehouse_scan_ros
+                    → _restart_live_map_publisher
+                    → port.start_mapping
+                    → arm_and_takeoff + _fly_leg
+                    → persist_capture + live_map_stream.finalize
+
+
+================================================================================
+B. LIVE MAPPING + MAP RECORD + WEBSOCKET + CHUNKING
+================================================================================
+
+Two parallel paths:
+  1. Live visualization — ROS → bridge → chunk files → WS metadata → frontend download → render
+  2. Post-flight record  — ROS rosbag/artifacts → capture session → DB job (persist_capture)
+
+
+BACKEND — ROS → chunk → WebSocket
+---------------------------------
+
+  Role                         Function                              File
+  ----                         --------                              ----
+  Resolve PointCloud2 topics     resolve_colored_bridge_sources        backend/modules/warehouse/service/live_map_readiness.py
+                               probe_live_map_topic_types
+  Start colored bridge           start_colored_pointcloud_live_map_bridge
+                                                                     backend/modules/warehouse/service/colored_pointcloud_live_map_bridge.py
+  ROS callback per cloud         _ColoredPointCloudLiveMapNode._on_pointcloud
+                                                                     colored_pointcloud_live_map_bridge.py
+  Parse PointCloud2              parse_pointcloud2_msg                 backend/modules/warehouse/service/pointcloud2_parser.py
+                               encode_xyzrgb32 / encode_xyz32
+  Chunk + publish                _store_and_publish_colored_chunk      colored_pointcloud_live_map_bridge.py
+  Write chunk binary             warehouse_live_map_chunk_storage.save_upload
+                                                                     backend/modules/warehouse/service/live_map_storage.py
+  Write sidecar metadata         save_chunk_metadata                   live_map_storage.py
+  Build WS payload               normalize_live_map_payload            backend/modules/warehouse/service/live_map_stream.py
+  Fan-out to clients             WarehouseLiveMapStream.publish        live_map_stream.py
+
+
+Secondary bridge (odom + nvblox health metadata):
+
+  start_warehouse_live_map_bridge   backend/modules/warehouse/service/live_map_bridge.py
+  _publish_loop                     live_map_bridge.py
+
+
+Optional raw Mid360 (off by default):
+
+  start_raw_pointcloud_live_map_bridge    backend/modules/warehouse/service/raw_pointcloud_live_map_bridge.py
+  _store_and_publish_pointcloud_chunk     raw_pointcloud_live_map_bridge.py
+
+
+HTTP ingest (external ROS node alternative):
+
+  upload_live_map_chunk     POST .../live-map/{flight_id}/chunks/{chunk_id}   backend/modules/warehouse/api.py
+  publish_live_map_update   POST .../live-map/{flight_id}/updates             api.py
+
+
+BACKEND — WebSocket server
+--------------------------
+
+  Function                              File
+  --------                              ----
+  websocket_live_map_stream             backend/modules/warehouse/api.py
+    (route: WS /warehouse/live-map/{flight_id}/stream)
+  WarehouseLiveMapStream.connect        backend/modules/warehouse/service/live_map_stream.py
+  WarehouseLiveMapStream.publish        live_map_stream.py
+  WarehouseLiveMapStream.snapshot       live_map_stream.py
+  WarehouseLiveMapStream.finalize         live_map_stream.py
+
+
+Chunk binary download (separate from WS — WS carries metadata + URL only):
+
+  live_map_chunk_download               GET .../chunks/{chunk_id}/download   backend/modules/warehouse/api.py
+  warehouse_live_map_chunk_storage.resolve   backend/modules/warehouse/service/live_map_storage.py
+
+
+FRONTEND — WebSocket → chunk download → render
+----------------------------------------------
+
+  Step              Function                              File
+  ----              --------                              ----
+  Hook entry        useWarehouseLiveVoxelMap              frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts
+  Open WS           connectWarehouseLiveMap               frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts
+  WS URL builder    resolveWarehouseLiveMapWebSocketUrl   warehouseLiveMapApi.ts
+  Merge updates     applyWarehouseLiveMapMessage          useWarehouseLiveVoxelMap.ts
+                    mergeUpdate
+  Fallback poll     fetchWarehouseLiveMapSnapshot         warehouseLiveMapApi.ts
+  Viewer wiring     WarehouseLiveVoxelMapViewer           frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx
+  Chunk download    useLiveMapChunkCache                  frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts
+  HTTP chunk fetch  fetchWarehouseLiveChunk               warehouseLiveMapApi.ts
+  Layer filter      filterChunksForDownload               frontend/src/modules/warehouse/config/liveMapConfig.ts
+                    selectDownloadableChunksPerLayer      frontend/src/modules/warehouse/utils/liveMapChunkRetention.ts
+  Decode + scene    WarehouseLiveVoxelScene               frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx
+
+
+LIVE MAP DATA FLOW (ASCII)
+--------------------------
+
+  ROS PointCloud2 topics
+    → colored_pointcloud_live_map_bridge._on_pointcloud(msg)
+      → live_map_storage.save_upload(chunk bytes)
+      → live_map_stream.publish(live_map_update + chunk metadata)
+        → api.py websocket_live_map_stream → send_json to WS clients
+          → useWarehouseLiveVoxelMap (onMessage)
+            → useLiveMapChunkCache sees new chunk.url in changed_chunks
+              → fetchWarehouseLiveChunk GET /live-map/{flight}/chunks/{id}/download
+                → WarehouseLiveVoxelScene renders CachedLiveMapChunk
+
+
+MAP RECORD (persisted scan job — not live WS)
+---------------------------------------------
+
+  Step              Function                              File
+  ----              --------                              ----
+  Start rosbag      port.start_mapping                    scan.py → perception port
+  Stop + export     _stop_perception_mapping              scan.py
+                    wait_for_mapping_artifacts            backend/modules/warehouse/service/capture_finalize.py
+  Stage files       capture_session_service.finalize_session
+                                                           backend/modules/warehouse/service/capture.py
+  Quality manifest  build_manifest_from_flight_dir        backend/modules/warehouse/service/live_map_manifest.py
+                    save_flight_manifest
+  DB job + assets   WarehouseScanMappingService.persist_capture
+                                                           backend/modules/warehouse/service/mapping.py
+  Notify UI done    warehouse_live_map_stream.finalize    backend/modules/warehouse/service/live_map_stream.py
+  Replay later      build_disk_live_map_snapshot          backend/modules/warehouse/service/live_map_replay.py
+                    get_scanned_map_live_map_snapshot     backend/modules/warehouse/api.py
+
+
+================================================================================
+QUICK "WHERE DO I LOOK?" INDEX
+================================================================================
+
+  Concern                    Start here
+  -------                    ----------
+  Button → API               Warehouse.tsx → warehouseMissionsApi.ts → api.py::mission_start
+  Mission execution          routes.py::execute_mission → scan.py::fly_scan
+  When bridges start         scan.py::_restart_live_map_publisher
+  RGB-D / nvblox readiness   live_map_readiness.py::wait_for_rgbd_mapping_topics
+  Chunk creation             colored_pointcloud_live_map_bridge.py::_store_and_publish_colored_chunk
+  WS hub                     live_map_stream.py::publish + api.py::websocket_live_map_stream
+  Frontend WS consumer       useWarehouseLiveVoxelMap.ts
+  Chunk HTTP download        useLiveMapChunkCache.ts → fetchWarehouseLiveChunk
+  Final map DB save          mapping.py::persist_capture

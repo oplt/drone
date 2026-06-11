@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from backend.modules.warehouse.service.map_source_config import ODOM_PREFLIGHT_TOPICS
+
 
 @dataclass(frozen=True)
 class WarehouseReadinessResult:
@@ -36,18 +38,43 @@ class WarehouseReadinessResult:
 
 def readiness_from_perception_status_strict(status: Any) -> WarehouseReadinessResult:
     components = status.components if isinstance(getattr(status, "components", None), dict) else {}
-    bridge_alive = bool(getattr(status, "reachable", False))
+    listed_topics = components.get("listed_topics")
+    listed = {str(topic) for topic in listed_topics} if isinstance(listed_topics, list) else set()
+    odom_topic = str(
+        components.get("odometry_topic")
+        or next(iter(ODOM_PREFLIGHT_TOPICS), "/warehouse/drone/odometry")
+    )
+    bridge_alive = bool(
+        getattr(status, "reachable", False)
+        or components.get("ros_graph_healthy")
+        or components.get("preflight_core_ready")
+        or listed
+    )
+    ros_graph_ready = bool(
+        components.get("ros_graph_healthy")
+        or components.get("ros_graph")
+        or components.get("ros2_graph")
+        or listed
+        or bridge_alive
+    )
     can_localize = bool(
         components.get("local_position_ok")
         or components.get("slam_ready")
         or components.get("slam_tracking_ok")
         or components.get("odometry_healthy")
         or components.get("preflight_core_ready")
+        or odom_topic in listed
     )
     nvblox_ready = bool(
         components.get("nvblox_ok")
         or components.get("nvblox_ready")
         or components.get("nvblox_healthy")
+        or any(
+            topic == "/nvblox_node/static_esdf_pointcloud"
+            or topic.startswith("nvblox_esdf_")
+            or topic.startswith("/nvblox_esdf_")
+            for topic in listed
+        )
     )
     core_ready = bool(
         components.get("preflight_core_ready")
@@ -55,15 +82,15 @@ def readiness_from_perception_status_strict(status: Any) -> WarehouseReadinessRe
     )
     return WarehouseReadinessResult(
         bridge_alive=bridge_alive,
-        ros_graph_ready=bridge_alive,
+        ros_graph_ready=ros_graph_ready,
         can_localize=can_localize,
         nvblox_ready=nvblox_ready,
         core_ready=core_ready,
         bridge_reachable=bridge_alive,
         ready=core_ready and nvblox_ready,
         detail=getattr(status, "detail", None),
-        missing_required_topics=[] if can_localize else ["local_odometry"],
-        missing_nvblox_topics=[] if nvblox_ready else ["nvblox_esdf"],
+        missing_required_topics=[] if can_localize else [odom_topic],
+        missing_nvblox_topics=[] if nvblox_ready else ["/nvblox_node/static_esdf_pointcloud"],
     )
 
 
@@ -81,4 +108,3 @@ def readiness_for_takeoff(status: Any) -> WarehouseReadinessResult:
             "detail": detail,
         }
     )
-

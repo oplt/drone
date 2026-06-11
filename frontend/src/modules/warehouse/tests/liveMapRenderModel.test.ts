@@ -17,6 +17,8 @@ describe("live map render model", () => {
     expect(chunks[0].center).toEqual([1, 3, 5]);
     expect(chunks[0].size).toEqual([2, 4, 6]);
     expect(chunks[0].hasGeometry).toBe(true);
+  });
+
   it("uses preview points when provided", () => {
     const chunks = toRenderChunks([
       {
@@ -36,5 +38,20 @@ describe("live map render model", () => {
       [1.2, 2.1, 0.2],
     ]);
     expect(chunks[0].hasGeometry).toBe(true);
+  });
+
+  it("does not drop older scan chunks before rendering", () => {
+    const chunks = toRenderChunks(
+      Array.from({ length: 250 }, (_, index) => ({
+        id: `rgbd_${String(index + 1).padStart(6, "0")}`,
+        kind: "point_cloud" as const,
+        sequence: index + 1,
+        point_count: 1,
+        preview_points_m: [[index, 0, 0]],
+      })),
+    );
+
+    expect(chunks).toHaveLength(250);
+    expect(chunks[0].id).toBe("rgbd_000001");
   });
 });

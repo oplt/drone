@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchWarehouseScannedMapLiveSnapshot } from "../api/warehouseMissionsApi";
+import { clearLiveMapChunkFetchCache } from "../api/warehouseLiveMapApi";
 import { mergeReplaySnapshot } from "../utils/mergeReplaySnapshot";
+import { liveMapDebugLog } from "../utils/liveMapDebug";
 import type { WarehouseLiveVoxelMapState } from "./useWarehouseLiveVoxelMap";
 import type { WarehouseScannedMapResponse } from "../types/missions";
 
@@ -22,6 +24,7 @@ const EMPTY_REPLAY_STATE: WarehouseLiveVoxelMapState = {
   error: null,
   finalizedScanJobId: null,
   lastUpdateAt: null,
+  manifest: null,
   token: null,
 };
 
@@ -32,31 +35,54 @@ export function useWarehouseScannedMapReplay(
 ) {
   const [state, setState] = useState<WarehouseLiveVoxelMapState>(EMPTY_REPLAY_STATE);
   const [loading, setLoading] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const loadGenerationRef = useRef(0);
+  const replayFlightIdRef = useRef<string | null>(null);
 
-  const shouldReplay = Boolean(map && (options.enabled ?? true));
+  const mapJobId = map?.job_id ?? null;
+  const shouldReplay = Boolean(mapJobId != null && (options.enabled ?? true));
+
+  const reloadFromDiskManifest = useCallback(() => {
+    if (replayFlightIdRef.current) {
+      clearLiveMapChunkFetchCache(replayFlightIdRef.current);
+    }
+    setReloadToken((current) => current + 1);
+  }, []);
 
   useEffect(() => {
-    if (!shouldReplay || !map) {
+    if (!shouldReplay || mapJobId == null) {
       setState(EMPTY_REPLAY_STATE);
       setLoading(false);
       return;
     }
 
+    const generation = ++loadGenerationRef.current;
     let cancelled = false;
     setLoading(true);
     setState({
       ...EMPTY_REPLAY_STATE,
       connectionState: "connecting",
-      finalizedScanJobId: map.job_id,
+      finalizedScanJobId: mapJobId,
       token: token ?? null,
     });
 
-    void fetchWarehouseScannedMapLiveSnapshot(map.job_id, token)
+    void fetchWarehouseScannedMapLiveSnapshot(mapJobId, token, { mode: "full" })
       .then((snapshot) => {
-        if (cancelled) return;
+        if (cancelled || generation !== loadGenerationRef.current) return;
+        replayFlightIdRef.current = snapshot.flight_id;
         const merged = mergeReplaySnapshot(snapshot);
         const latestUpdate = merged.latestUpdate;
         const hasChunks = merged.chunks.length > 0;
+        liveMapDebugLog("replay_snapshot_received", {
+          scanned_map_id: mapJobId,
+          flight_id: snapshot.flight_id,
+          manifest_source: "disk_manifest",
+          chunk_count: merged.chunks.length,
+          point_count: merged.chunks.reduce(
+            (sum, chunk) => sum + (chunk.point_count ?? 0),
+            0,
+          ),
+        });
         setState({
           connectionState: hasChunks
             ? snapshot.status === "empty"
@@ -70,13 +96,14 @@ export function useWarehouseScannedMapReplay(
           error: hasChunks
             ? null
             : "No stored live-map point cloud for this scan result.",
-          finalizedScanJobId: map.job_id,
+          finalizedScanJobId: mapJobId,
           lastUpdateAt: snapshot.last_update_at ?? latestUpdate?.timestamp ?? null,
+          manifest: snapshot.manifest ?? null,
           token: token ?? null,
         });
       })
       .catch((error: unknown) => {
-        if (cancelled) return;
+        if (cancelled || generation !== loadGenerationRef.current) return;
         setState({
           ...EMPTY_REPLAY_STATE,
           connectionState: "failed",
@@ -84,7 +111,7 @@ export function useWarehouseScannedMapReplay(
             error instanceof Error
               ? error.message
               : "Could not load stored live-map replay.",
-          finalizedScanJobId: map.job_id,
+          finalizedScanJobId: mapJobId,
           token: token ?? null,
         });
       })
@@ -95,12 +122,21 @@ export function useWarehouseScannedMapReplay(
     return () => {
       cancelled = true;
     };
-  }, [map, shouldReplay, token]);
+  }, [mapJobId, reloadToken, shouldReplay, token]);
 
   const hasReplay = useMemo(
     () => shouldReplay && state.chunks.length > 0,
     [shouldReplay, state.chunks.length],
   );
 
-  return { state, loading, hasReplay, shouldReplay };
+  return {
+    state,
+    loading,
+    hasReplay,
+    shouldReplay,
+    reloadFromDiskManifest,
+    scannedMapId: mapJobId,
+    replayFlightId:
+      replayFlightIdRef.current ?? state.latestUpdate?.flight_id ?? null,
+  };
 }

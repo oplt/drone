@@ -23,7 +23,27 @@ from backend.infrastructure.camera.stream_client import DroneVideoStream, opencv
 logger = logging.getLogger(__name__)
 
 PI_PORT = 5000
+
+
+def _is_benign_shutdown_exit_code(code: int | None) -> bool:
+    if code is None:
+        return False
+    return code in (0, -2, -15, 130, 143)
+
+
+def _is_benign_shutdown_error(exc: BaseException) -> bool:
+    if isinstance(exc, asyncio.CancelledError):
+        return True
+    message = str(exc).lower()
+    if "externalshutdownexception" in message:
+        return True
+    for code in (-15, 143, 130, -2):
+        if f"code {code}" in message:
+            return True
+    return False
 _GAZEBO_ENABLE_COOLDOWN_S = 10.0
+_UNAVAILABLE_BACKOFF_BASE_S = 5.0
+_UNAVAILABLE_BACKOFF_MAX_S = 60.0
 _last_gazebo_enable_attempt = 0.0
 _gazebo_no_topic_warning_logged = False
 
@@ -71,7 +91,7 @@ def _discover_gazebo_enable_topics() -> list[str]:
     return topics
 
 
-def _ensure_gazebo_streaming_enabled() -> None:
+def _ensure_gazebo_streaming_enabled(runtime: SharedVideoRuntime | None = None) -> None:
     global _gazebo_no_topic_warning_logged, _last_gazebo_enable_attempt
 
     now = time.monotonic()
@@ -80,12 +100,16 @@ def _ensure_gazebo_streaming_enabled() -> None:
     _last_gazebo_enable_attempt = now
 
     topics = _discover_gazebo_enable_topics()
+    if runtime is not None:
+        runtime._gazebo_enable_topics = list(topics)
+
     if not topics:
         if not _gazebo_no_topic_warning_logged:
             logger.warning("No Gazebo /enable_streaming topic discovered.")
             _gazebo_no_topic_warning_logged = True
         return
 
+    enabled_any = False
     for topic in topics:
         try:
             subprocess.run(
@@ -96,8 +120,12 @@ def _ensure_gazebo_streaming_enabled() -> None:
                 check=True,
             )
             logger.info("Enabled Gazebo camera stream topic: %s", topic)
+            enabled_any = True
         except Exception as exc:
             logger.warning("Failed to enable Gazebo topic %s: %s", topic, exc)
+
+    if runtime is not None and enabled_any:
+        runtime._gazebo_streaming_enabled = True
 
 
 def _gazebo_gst_mjpeg_command(udp_port: int) -> list[str]:
@@ -189,6 +217,11 @@ class SharedVideoRuntime:
         self._fallback_video_writer: cv2.VideoWriter | None = None
         self._fallback_recording_filename: str | None = None
         self._fallback_recording_path: str | None = None
+        self._unavailable_until = 0.0
+        self._consecutive_failures = 0
+        self._last_failure_log_at = 0.0
+        self._gazebo_enable_topics: list[str] = []
+        self._gazebo_streaming_enabled = False
 
     def source_url(self) -> str:
         if settings.drone_video_use_gazebo:
@@ -199,7 +232,7 @@ class SharedVideoRuntime:
 
         source = self.source_url()
         if settings.drone_video_use_gazebo:
-            _ensure_gazebo_streaming_enabled()
+            _ensure_gazebo_streaming_enabled(self)
             return {
                 "status": "starting",
                 "source": source,
@@ -263,15 +296,56 @@ class SharedVideoRuntime:
 
         if self._frame_seq == 0:
             detail = self._last_error or "Timed out waiting for first video frame."
-            async with self._condition:
-                self._last_error = detail
-                self._condition.notify_all()
             raise RuntimeError(detail)
+
+    async def _mark_unavailable(self, detail: str) -> None:
+        now = time.monotonic()
+        self._consecutive_failures += 1
+        backoff_s = min(
+            _UNAVAILABLE_BACKOFF_MAX_S,
+            _UNAVAILABLE_BACKOFF_BASE_S * (2 ** (self._consecutive_failures - 1)),
+        )
+        self._unavailable_until = now + backoff_s
+        self._last_error = detail
+        if now - self._last_failure_log_at >= backoff_s:
+            logger.warning(
+                "Video stream unavailable source=%s error=%s retry_after_ms=%d failures=%d",
+                self._source_url or self.source_url(),
+                detail,
+                int(backoff_s * 1000),
+                self._consecutive_failures,
+            )
+            self._last_failure_log_at = now
+
+        async with self._lock:
+            task = self._worker_task
+            video = self._video
+            self._worker_task = None
+            self._video = None
+            self._latest_frame = None
+            self._frame_seq = 0
+
+        if task is not None and not task.done():
+            if task is asyncio.current_task():
+                async with self._lock:
+                    self._worker_task = None
+            else:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+        if video is not None:
+            video.close()
+
+        async with self._condition:
+            self._condition.notify_all()
 
     async def _publish_jpeg_frame(self, encoded_frame: bytes) -> None:
         async with self._condition:
             self._latest_frame = encoded_frame
             self._frame_seq += 1
+            self._consecutive_failures = 0
+            self._unavailable_until = 0.0
+            self._last_error = None
             self._condition.notify_all()
         await self._write_fallback_recording_frame(encoded_frame)
 
@@ -363,6 +437,12 @@ class SharedVideoRuntime:
                     chunk = await asyncio.wait_for(proc.stdout.read(64 * 1024), timeout=1.0)
                 except TimeoutError:
                     if proc.returncode is not None:
+                        if _is_benign_shutdown_exit_code(proc.returncode):
+                            logger.info(
+                                "gst-launch fallback stopped during shutdown (code %s)",
+                                proc.returncode,
+                            )
+                            return
                         raise RuntimeError(
                             f"gst-launch fallback exited with code {proc.returncode}"
                         )
@@ -370,6 +450,12 @@ class SharedVideoRuntime:
 
                 if not chunk:
                     if proc.returncode is not None:
+                        if _is_benign_shutdown_exit_code(proc.returncode):
+                            logger.info(
+                                "gst-launch fallback stopped during shutdown (code %s)",
+                                proc.returncode,
+                            )
+                            return
                         raise RuntimeError(
                             f"gst-launch fallback exited with code {proc.returncode}"
                         )
@@ -437,8 +523,17 @@ class SharedVideoRuntime:
         )
         return future.result(timeout=max(0.5, float(timeout)) + 1.0)
 
+    def _retry_after_ms(self) -> int:
+        remaining = self._unavailable_until - time.monotonic()
+        return max(0, int(remaining * 1000))
+
     async def ensure_running(self) -> dict[str, Any]:
         self._loop = asyncio.get_running_loop()
+        retry_after_ms = self._retry_after_ms()
+        if retry_after_ms > 0:
+            detail = self._last_error or "Video stream is in backoff after a recent failure."
+            raise RuntimeError(f"{detail} (retry after {retry_after_ms}ms)")
+
         already_running = False
         async with self._lock:
             task = self._worker_task
@@ -446,8 +541,11 @@ class SharedVideoRuntime:
                 already_running = True
 
         if already_running:
-            status = await self.status()
-            if not status.get("healthy") and status.get("error") and status.get("frame_count") == 0:
+            status = await self.readiness_status()
+            if (
+                not status.get("first_frame_available")
+                and status.get("error")
+            ):
                 raise RuntimeError(str(status["error"]))
             return status
 
@@ -463,8 +561,13 @@ class SharedVideoRuntime:
                 self._source_url = source
                 self._worker_task = asyncio.create_task(self._worker_loop(source))
 
-        await self._wait_for_first_frame()
-        return await self.status()
+        try:
+            await self._wait_for_first_frame()
+        except RuntimeError as exc:
+            await self._mark_unavailable(str(exc))
+            raise
+
+        return await self.readiness_status()
 
     async def _worker_loop(self, source: str) -> None:
         video: DroneVideoStream | None = None
@@ -501,6 +604,9 @@ class SharedVideoRuntime:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
+            if _is_benign_shutdown_error(exc):
+                logger.info("Shared video runtime stopped during shutdown: %s", exc)
+                return
             if (
                 self._frame_seq == 0
                 and settings.drone_video_use_gazebo
@@ -518,17 +624,12 @@ class SharedVideoRuntime:
                     exc = fallback_exc
 
             if self._frame_seq == 0:
-                logger.warning(
-                    "Video stream unavailable source=%s: %s",
-                    source,
-                    exc,
-                    exc_info=True,
-                )
+                await self._mark_unavailable(str(exc))
             else:
                 logger.exception("Shared video runtime failed source=%s", source)
-            async with self._condition:
-                self._last_error = str(exc)
-                self._condition.notify_all()
+                async with self._condition:
+                    self._last_error = str(exc)
+                    self._condition.notify_all()
         finally:
             if video is not None:
                 video.close()
@@ -567,6 +668,33 @@ class SharedVideoRuntime:
             "recording_path": recording_path or fallback_recording_path,
             "source": source,
             "error": self._last_error,
+        }
+
+    async def readiness_status(self) -> dict[str, Any]:
+        base = await self.status()
+        retry_after_ms = self._retry_after_ms()
+        first_frame_available = int(base.get("frame_count") or 0) > 0
+        if first_frame_available and base.get("healthy"):
+            stream_state = "ready"
+        elif retry_after_ms > 0:
+            stream_state = "unavailable"
+        elif base.get("started"):
+            stream_state = "warming"
+        else:
+            stream_state = "idle"
+
+        return {
+            **base,
+            "state": stream_state,
+            "first_frame_available": first_frame_available,
+            "camera_stream_topic_found": bool(self._gazebo_enable_topics),
+            "gazebo_streaming_enabled": self._gazebo_streaming_enabled,
+            "udp_first_frame_received": bool(
+                first_frame_available and settings.drone_video_use_gazebo
+            ),
+            "last_error": self._last_error,
+            "retry_after_ms": retry_after_ms,
+            "failure_count": self._consecutive_failures,
         }
 
     async def start_recording(self, *, recording_path: str | None = None) -> dict[str, Any]:

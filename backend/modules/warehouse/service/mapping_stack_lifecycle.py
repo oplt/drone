@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shlex
 import signal
+import time
 from asyncio.subprocess import PIPE
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from backend.core.config.runtime import settings
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
+from backend.core.config.runtime import settings
 from backend.modules.warehouse.ports import WarehousePerceptionCommandResult
 from backend.modules.warehouse.service.readiness_result import (
     WarehouseReadinessResult,
@@ -16,6 +19,8 @@ from backend.modules.warehouse.service.readiness_result import (
     readiness_from_perception_status_strict,
 )
 
+if TYPE_CHECKING:
+    from backend.modules.warehouse.service.live_map_readiness import MappingReadinessResult
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +34,8 @@ class WarehouseMappingStackStatus:
     last_error: str | None = None
     nvblox_running: bool = False
     phase: str = "stopped"
+    tf_degraded: bool = False
+    nvblox_health: dict[str, object] = field(default_factory=dict)
 
 
 _mapping_stack_process: asyncio.subprocess.Process | None = None
@@ -36,6 +43,138 @@ _mapping_stack_started_at: str | None = None
 _mapping_stack_last_exit_code: int | None = None
 _mapping_stack_last_error: str | None = None
 _mapping_stack_lock = asyncio.Lock()
+_last_nvblox_restart_at: float = 0.0
+_restart_in_progress = False
+_warned_missing_startup_timing = False
+
+
+class _OptionalProbeResult:
+    def __init__(self, *, ok: bool = True, detail: str = "optional helper unavailable") -> None:
+        self.ok = ok
+        self.detail = detail
+
+    def to_dict(self) -> dict[str, object]:
+        return {"ok": self.ok, "detail": self.detail}
+
+
+class _FallbackNvbloxLogParser:
+    tf_jump_back_count = 0
+    tf_old_data_count = 0
+
+    def ingest(self, line: str) -> tuple[int, bool]:
+        lowered = line.lower()
+        if "error" in lowered or "exception" in lowered:
+            return logging.ERROR, True
+        if "warn" in lowered or "tf_old_data" in lowered or "jump back" in lowered:
+            if "tf_old_data" in lowered:
+                self.tf_old_data_count += 1
+            if "jump back" in lowered:
+                self.tf_jump_back_count += 1
+            return logging.WARNING, True
+        if (
+            "started up nvblox node" in lowered
+            or "resizing gpu hash capacity" in lowered
+            or "exited" in lowered
+        ):
+            return logging.INFO, True
+        return logging.DEBUG, False
+
+    def should_restart_for_tf_instability(
+        self,
+        *,
+        jump_threshold: int,
+        cooldown_s: float,
+        last_restart_at: float,
+    ) -> bool:
+        if self.tf_jump_back_count < max(1, int(jump_threshold)):
+            return False
+        return time.monotonic() - last_restart_at >= max(0.0, float(cooldown_s))
+
+    def note_restart(self) -> None:
+        self.tf_jump_back_count = 0
+        self.tf_old_data_count = 0
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "available": False,
+            "warning": "nvblox_log_parser module unavailable; using inline fallback parser",
+            "tf_jump_back_count": self.tf_jump_back_count,
+            "tf_old_data_count": self.tf_old_data_count,
+        }
+
+
+_fallback_nvblox_log_parser: _FallbackNvbloxLogParser | None = None
+
+
+def _get_nvblox_log_parser():
+    global _fallback_nvblox_log_parser
+    try:
+        from backend.modules.warehouse.service.nvblox_log_parser import nvblox_log_parser
+
+        return nvblox_log_parser
+    except ModuleNotFoundError as exc:
+        if _fallback_nvblox_log_parser is None:
+            logger.warning("Optional nvblox log parser unavailable: %s", exc)
+            _fallback_nvblox_log_parser = _FallbackNvbloxLogParser()
+        return _fallback_nvblox_log_parser
+
+
+def _note_mapping_startup(mark: str) -> None:
+    global _warned_missing_startup_timing
+    try:
+        from backend.modules.warehouse.service.mapping_startup_timing import (
+            note_mapping_startup,
+        )
+
+        note_mapping_startup(mark)
+    except ModuleNotFoundError as exc:
+        if not _warned_missing_startup_timing:
+            logger.warning("Optional mapping startup timing unavailable: %s", exc)
+            _warned_missing_startup_timing = True
+
+
+async def _kill_stale_nvblox_processes() -> None:
+    try:
+        from backend.modules.warehouse.service.sim_time_tf_readiness import (
+            kill_stale_nvblox_processes,
+        )
+
+        await kill_stale_nvblox_processes()
+    except ModuleNotFoundError as exc:
+        logger.warning("Optional TF readiness cleanup unavailable: %s", exc)
+
+
+async def _probe_clock_monotonic() -> _OptionalProbeResult:
+    try:
+        from backend.modules.warehouse.service.sim_time_tf_readiness import (
+            probe_clock_monotonic,
+        )
+
+        return await probe_clock_monotonic()
+    except ModuleNotFoundError:
+        return _OptionalProbeResult()
+
+
+async def _probe_tf_broadcasters() -> _OptionalProbeResult:
+    try:
+        from backend.modules.warehouse.service.sim_time_tf_readiness import (
+            probe_tf_broadcasters,
+        )
+
+        return await probe_tf_broadcasters()
+    except ModuleNotFoundError:
+        return _OptionalProbeResult()
+
+
+async def _wait_for_tf_stable(*, timeout_s: float) -> _OptionalProbeResult:
+    try:
+        from backend.modules.warehouse.service.sim_time_tf_readiness import (
+            wait_for_tf_stable,
+        )
+
+        return await wait_for_tf_stable(timeout_s=timeout_s)
+    except ModuleNotFoundError:
+        return _OptionalProbeResult()
 
 
 def mapping_stack_not_running_result() -> WarehousePerceptionCommandResult:
@@ -93,7 +232,8 @@ def _build_nvblox_launch_command() -> list[str]:
                 "input_qos:=SENSOR_DATA "
                 "global_frame:=odom "
                 "pose_frame:=iris_with_standoffs/base_link "
-                "use_lidar:=true"
+                "use_lidar:=false "
+                "use_rgbd:=true"
             )
     ).strip()
 
@@ -127,6 +267,30 @@ def _build_nvblox_launch_command() -> list[str]:
 
     return ["bash", "-lc", " && ".join(script_parts)]
 
+def _log_nvblox_line(prefix: str, line: str) -> None:
+    nvblox_log_parser = _get_nvblox_log_parser()
+    level, emit = nvblox_log_parser.ingest(line)
+    if not emit:
+        if nvblox_log_parser.should_restart_for_tf_instability(
+            jump_threshold=settings.warehouse_nvblox_tf_restart_jump_threshold,
+            cooldown_s=settings.warehouse_nvblox_tf_restart_cooldown_s,
+            last_restart_at=_last_nvblox_restart_at,
+        ):
+            restart_task = asyncio.create_task(_restart_mapping_stack_for_tf())
+            restart_task.add_done_callback(
+                lambda task: task.exception() if not task.cancelled() else None
+            )
+        return
+
+    text = line.rstrip()
+    if level >= logging.ERROR:
+        logger.error("[%s] %s", prefix, text)
+    elif level >= logging.WARNING:
+        logger.warning("[%s] %s", prefix, text)
+    else:
+        logger.info("[%s] %s", prefix, text)
+
+
 async def _log_process_stream(
         stream: asyncio.StreamReader | None,
         *,
@@ -140,11 +304,42 @@ async def _log_process_stream(
         if not line:
             break
 
-        logger.info(
-            "[%s] %s",
-            prefix,
-            line.decode(errors="replace").rstrip(),
+        _log_nvblox_line(prefix, line.decode(errors="replace"))
+
+
+async def _restart_mapping_stack_for_tf() -> None:
+    global _last_nvblox_restart_at
+    global _restart_in_progress
+
+    if _restart_in_progress:
+        return
+
+    nvblox_log_parser = _get_nvblox_log_parser()
+    _restart_in_progress = True
+    try:
+        logger.warning(
+            "Restarting nvblox mapping stack due to TF/sim-time instability "
+            "(jump_back=%d tf_old_data=%d)",
+            nvblox_log_parser.tf_jump_back_count,
+            nvblox_log_parser.tf_old_data_count,
         )
+        await _stop_mapping_stack_process()
+        await asyncio.sleep(1.0)
+        await _kill_stale_nvblox_processes()
+        clock = await _probe_clock_monotonic()
+        if not clock.ok:
+            logger.warning("Clock still not monotonic before nvblox restart: %s", clock.to_dict())
+        tf = await _wait_for_tf_stable(timeout_s=settings.warehouse_preflight_tf_wait_s)
+        if not tf.ok:
+            logger.warning("TF still unstable before nvblox restart: %s", tf.to_dict())
+
+        nvblox_log_parser.note_restart()
+        _last_nvblox_restart_at = time.monotonic()
+        await _maybe_start_mapping_stack_cmd(skip_stale_kill=True)
+    except Exception:
+        logger.exception("Failed to restart nvblox after TF instability")
+    finally:
+        _restart_in_progress = False
 
 
 async def _watch_mapping_stack_process(
@@ -158,18 +353,23 @@ async def _watch_mapping_stack_process(
     if _mapping_stack_process is process:
         _mapping_stack_last_exit_code = exit_code
 
-        if exit_code != 0 and not _mapping_stack_last_error:
-            _mapping_stack_last_error = (
-                f"Nvblox mapping stack exited with code {exit_code}."
+        if exit_code in (0, -signal.SIGTERM, signal.SIGTERM, 143):
+            logger.info(
+                "Nvblox mapping stack process exited normally with code %s.",
+                exit_code,
+            )
+        else:
+            if not _mapping_stack_last_error:
+                _mapping_stack_last_error = (
+                    f"Nvblox mapping stack exited with code {exit_code}."
+                )
+            logger.warning(
+                "Nvblox mapping stack process exited with code %s.",
+                exit_code,
             )
 
-        logger.warning(
-            "Nvblox mapping stack process exited with code %s.",
-            exit_code,
-        )
 
-
-async def _maybe_start_mapping_stack_cmd() -> None:
+async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> None:
     """
     Start the Nvblox mapping stack through ROS 2 launch.
 
@@ -185,6 +385,27 @@ async def _maybe_start_mapping_stack_cmd() -> None:
     global _mapping_stack_started_at
     global _mapping_stack_last_exit_code
     global _mapping_stack_last_error
+
+    if not skip_stale_kill:
+        await _kill_stale_nvblox_processes()
+        clock = await _probe_clock_monotonic()
+        if not clock.ok:
+            logger.warning(
+                "Simulation /clock is not monotonic before nvblox start: %s",
+                clock.to_dict(),
+            )
+        broadcasters = await _probe_tf_broadcasters()
+        if not broadcasters.ok:
+            logger.error(
+                "TF broadcaster check failed before nvblox start: %s",
+                broadcasters.to_dict(),
+            )
+        tf = await _wait_for_tf_stable(timeout_s=settings.warehouse_preflight_tf_wait_s)
+        if not tf.ok:
+            logger.warning(
+                "TF not stable before nvblox start (continuing degraded): %s",
+                tf.to_dict(),
+            )
 
     async with _mapping_stack_lock:
         if _is_mapping_stack_process_running():
@@ -226,25 +447,38 @@ async def _maybe_start_mapping_stack_cmd() -> None:
             )
 
             _mapping_stack_process = process
-            _mapping_stack_started_at = datetime.now(timezone.utc).isoformat()
+            _mapping_stack_started_at = datetime.now(UTC).isoformat()
             _mapping_stack_last_exit_code = None
             _mapping_stack_last_error = None
 
-            asyncio.create_task(
+            from backend.modules.warehouse.service.nvblox_status import (
+                nvblox_status_tracker,
+            )
+
+            nvblox_log_parser = _get_nvblox_log_parser()
+            nvblox_log_parser.note_restart()
+            nvblox_status_tracker.reset_tf_counters()
+            _note_mapping_startup("nvblox_start_monotonic")
+
+            stdout_task = asyncio.create_task(
                 _log_process_stream(
                     process.stdout,
                     prefix="nvblox:stdout",
                 )
             )
 
-            asyncio.create_task(
+            stderr_task = asyncio.create_task(
                 _log_process_stream(
                     process.stderr,
                     prefix="nvblox:stderr",
                 )
             )
 
-            asyncio.create_task(_watch_mapping_stack_process(process))
+            watch_task = asyncio.create_task(_watch_mapping_stack_process(process))
+            for task in (stdout_task, stderr_task, watch_task):
+                task.add_done_callback(
+                    lambda done: done.exception() if not done.cancelled() else None
+                )
 
         except Exception as exc:
             _mapping_stack_process = None
@@ -270,6 +504,28 @@ async def _maybe_start_mapping_stack_cmd() -> None:
 
 
 async def get_mapping_stack_status() -> WarehouseMappingStackStatus:
+    try:
+        return await _get_mapping_stack_status_impl()
+    except Exception as exc:
+        logger.warning(
+            "Mapping stack status probe failed; returning degraded status: %s",
+            exc,
+            exc_info=True,
+        )
+        nvblox_log_parser = _get_nvblox_log_parser()
+        return WarehouseMappingStackStatus(
+            running=_is_mapping_stack_process_running(),
+            pid=_mapping_stack_pid(),
+            started_at=_mapping_stack_started_at,
+            last_exit_code=_mapping_stack_last_exit_code,
+            last_error=str(exc),
+            nvblox_running=False,
+            phase="degraded",
+            nvblox_health={"log_parser": nvblox_log_parser.as_dict()},
+        )
+
+
+async def _get_mapping_stack_status_impl() -> WarehouseMappingStackStatus:
     from backend.modules.warehouse.service.live_map_bridge import (
         live_map_bridge_status,
     )
@@ -283,6 +539,13 @@ async def get_mapping_stack_status() -> WarehouseMappingStackStatus:
 
     process_running = _is_mapping_stack_process_running()
 
+    from backend.modules.warehouse.service.nvblox_status import nvblox_status_tracker
+
+    nvblox_log_parser = _get_nvblox_log_parser()
+    nvblox_status_tracker.note_process_running(process_running)
+    if _mapping_stack_last_error and not process_running:
+        nvblox_status_tracker.note_error(_mapping_stack_last_error)
+
     running = bool(
         process_running
         or status.reachable
@@ -291,7 +554,15 @@ async def get_mapping_stack_status() -> WarehouseMappingStackStatus:
         or flight_readiness.core_ready
     )
 
-    if flight_readiness.nvblox_ready:
+    tf_degraded = nvblox_status_tracker.tf_degraded()
+    nvblox_health: dict[str, object] = {
+        **nvblox_status_tracker.as_dict(),
+        "log_parser": nvblox_log_parser.as_dict(),
+    }
+
+    if tf_degraded and process_running:
+        phase = "degraded"
+    elif flight_readiness.nvblox_ready and not tf_degraded:
         phase = "ready"
     elif running:
         phase = "starting"
@@ -299,10 +570,18 @@ async def get_mapping_stack_status() -> WarehouseMappingStackStatus:
         phase = "stopped"
 
     last_error = None
-    if not running:
+    if tf_degraded:
+        last_error = (
+            f"nvblox TF degraded "
+            f"(TF_OLD_DATA={nvblox_status_tracker.tf_old_data_count}, "
+            f"jump_back={nvblox_status_tracker.tf_jump_back_count})"
+        )
+    elif not running:
         last_error = status.detail or _mapping_stack_last_error
     elif _mapping_stack_last_error and not flight_readiness.nvblox_ready:
         last_error = _mapping_stack_last_error
+
+    nvblox_running = bool(flight_readiness.nvblox_ready and not tf_degraded)
 
     return WarehouseMappingStackStatus(
         running=running,
@@ -310,9 +589,20 @@ async def get_mapping_stack_status() -> WarehouseMappingStackStatus:
         started_at=_mapping_stack_started_at,
         last_exit_code=_mapping_stack_last_exit_code,
         last_error=last_error,
-        nvblox_running=flight_readiness.nvblox_ready,
+        nvblox_running=nvblox_running,
         phase=phase,
+        tf_degraded=tf_degraded,
+        nvblox_health=nvblox_health,
     )
+
+
+async def start_warehouse_mapping_stack() -> WarehouseMappingStackStatus:
+    """Start nvblox using the same launcher path used by warehouse scans."""
+    try:
+        await _maybe_start_mapping_stack_cmd()
+    except Exception as exc:
+        logger.warning("Nvblox mapping stack start failed: %s", exc, exc_info=True)
+    return await get_mapping_stack_status()
 
 
 async def prepare_warehouse_scan_ros(
@@ -320,24 +610,69 @@ async def prepare_warehouse_scan_ros(
         require_nvblox: bool,
         sensor_timeout_s: float,
         nvblox_timeout_s: float,
+        wait_for_rgbd: bool = True,
 ) -> tuple[
     WarehouseMappingStackStatus,
     WarehouseReadinessResult,
     WarehouseReadinessResult,
+    MappingReadinessResult,
 ]:
-    del sensor_timeout_s
-
+    from backend.modules.warehouse.service.live_map_readiness import (
+        MappingReadinessResult,
+        wait_for_rgbd_mapping_topics,
+    )
     from backend.modules.warehouse.service.warehouse_preflight import (
         fetch_warehouse_perception_status,
     )
 
     await _maybe_start_mapping_stack_cmd()
 
-    deadline = asyncio.get_running_loop().time() + max(0.0, nvblox_timeout_s)
-
     status = await fetch_warehouse_perception_status(deep=True, force=True)
     takeoff_ready = readiness_for_takeoff(status)
     flight_readiness = readiness_from_perception_status_strict(status)
+
+    if wait_for_rgbd and sensor_timeout_s > 0:
+        rgbd_readiness = await wait_for_rgbd_mapping_topics(timeout_s=sensor_timeout_s)
+        if not rgbd_readiness.ready:
+            logger.warning(
+                "RGB-D mapping topics not fully ready after %.1fs; missing=%s warnings=%s",
+                sensor_timeout_s,
+                rgbd_readiness.missing_topics,
+                rgbd_readiness.warnings,
+            )
+        else:
+            flags = rgbd_readiness.readiness_flags()
+            if flags["rgbd_colored_pointcloud_ready"]:
+                logger.info(
+                    "RGB-D PointCloud2 stream ready for warehouse scan "
+                    "(topic=%r nvblox_pointclouds=%s)",
+                    rgbd_readiness.rgbd_pointcloud_topic,
+                    rgbd_readiness.nvblox_pointcloud_topics,
+                )
+            elif flags["rgbd_input_ready"]:
+                logger.info(
+                    "RGB-D camera inputs ready for nvblox integration "
+                    "(inputs_ready=%s nvblox_pointclouds=%s)",
+                    rgbd_readiness.rgbd_input_topics_ready,
+                    rgbd_readiness.nvblox_pointcloud_topics,
+                )
+            else:
+                logger.info(
+                    "RGB-D mapping readiness satisfied with partial inputs (%s)",
+                    rgbd_readiness.to_dict(),
+                )
+    else:
+        rgbd_readiness = MappingReadinessResult(
+            ready=False,
+            warnings=["RGB-D warmup deferred until after takeoff"],
+        )
+        logger.info(
+            "Skipping RGB-D readiness wait before takeoff (wait_for_rgbd=%s timeout=%.1fs)",
+            wait_for_rgbd,
+            sensor_timeout_s,
+        )
+
+    deadline = asyncio.get_running_loop().time() + max(0.0, nvblox_timeout_s)
 
     while require_nvblox and not flight_readiness.nvblox_ready:
         if asyncio.get_running_loop().time() >= deadline:
@@ -385,44 +720,108 @@ async def prepare_warehouse_scan_ros(
         phase=phase,
     )
 
-    return stack_status, flight_readiness, takeoff_ready
+    return stack_status, flight_readiness, takeoff_ready, rgbd_readiness
 
 
-async def _stop_mapping_stack_process() -> None:
+async def _stop_mapping_stack_process(*, strict: bool = False) -> bool:
+    """
+    Stop the Nvblox mapping stack process.
+
+    Returns:
+        True  -> process was stopped or already gone
+        False -> cleanup had a non-fatal problem
+
+    strict=True can be used in tests/admin commands if you want cleanup errors
+    to fail loudly. Mission shutdown should normally use strict=False.
+    """
     global _mapping_stack_process
-    global _mapping_stack_last_exit_code
 
     process = _mapping_stack_process
-
     if process is None:
-        return
+        return True
 
-    if process.returncode is not None:
-        _mapping_stack_last_exit_code = process.returncode
-        return
-
-    logger.info("Stopping Nvblox mapping stack process pid=%s.", process.pid)
+    pid = getattr(process, "pid", None)
 
     try:
-        os.killpg(process.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return
+        if process.returncode is not None:
+            logger.info("Nvblox mapping stack already stopped pid=%s", pid)
+            _mapping_stack_process = None
+            return True
 
-    try:
-        await asyncio.wait_for(process.wait(), timeout=10.0)
-    except asyncio.TimeoutError:
-        logger.warning(
-            "Nvblox mapping stack did not stop after SIGTERM; sending SIGKILL."
-        )
+        logger.info("Stopping Nvblox mapping stack process pid=%s", pid)
 
+        # Try graceful process-group termination first.
         try:
-            os.killpg(process.pid, signal.SIGKILL)
+            os.killpg(pid, signal.SIGTERM)
         except ProcessLookupError:
-            pass
+            logger.info("Nvblox process group already gone pid=%s", pid)
+            _mapping_stack_process = None
+            return True
+        except Exception:
+            logger.warning(
+                "Failed to send SIGTERM to Nvblox process group pid=%s",
+                pid,
+                exc_info=True,
+            )
+            if strict:
+                raise
+            return False
 
-        await process.wait()
+        # Wait for graceful shutdown.
+        try:
+            await asyncio.wait_for(process.wait(), timeout=8.0)
+            logger.info("Nvblox mapping stack stopped pid=%s", pid)
+            return True
 
-    _mapping_stack_last_exit_code = process.returncode
+        except TimeoutError:
+            logger.warning(
+                "Nvblox mapping stack did not stop after SIGTERM; sending SIGKILL pid=%s",
+                pid,
+            )
+
+            try:
+                os.killpg(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                logger.info("Nvblox process group already gone before SIGKILL pid=%s", pid)
+                return True
+            except Exception:
+                logger.warning(
+                    "Failed to send SIGKILL to Nvblox process group pid=%s",
+                    pid,
+                    exc_info=True,
+                )
+                if strict:
+                    raise
+                return False
+
+            try:
+                await asyncio.wait_for(process.wait(), timeout=3.0)
+                logger.info("Nvblox mapping stack killed pid=%s", pid)
+                return True
+            except Exception:
+                logger.warning(
+                    "Failed while waiting for killed Nvblox process pid=%s",
+                    pid,
+                    exc_info=True,
+                )
+                if strict:
+                    raise
+                return False
+
+    except Exception:
+        logger.warning(
+            "Non-fatal error while stopping Nvblox mapping stack pid=%s",
+            pid,
+            exc_info=True,
+        )
+        if strict:
+            raise
+        return False
+
+    finally:
+        # Always clear the stored handle so stale process objects do not poison
+        # the next warehouse scan.
+        _mapping_stack_process = None
 
 
 async def shutdown_warehouse_mapping_stack() -> None:
@@ -430,15 +829,22 @@ async def shutdown_warehouse_mapping_stack() -> None:
         stop_warehouse_live_map_bridge,
     )
 
-    await stop_warehouse_live_map_bridge()
+    try:
+        await stop_warehouse_live_map_bridge()
+    except Exception:
+        logger.warning("Non-fatal error while stopping warehouse live-map bridge", exc_info=True)
     await _stop_mapping_stack_process()
+    await _kill_stale_nvblox_processes()
 
     shutdown_cmd = settings.warehouse_shutdown_mapping_stack_cmd.strip()
     if shutdown_cmd:
-        await asyncio.to_thread(
-            __import__("subprocess").run,
-            shutdown_cmd,
-            shell=True,
-            check=False,
-            timeout=10,
-        )
+        try:
+            await asyncio.to_thread(
+                __import__("subprocess").run,
+                shutdown_cmd,
+                shell=True,
+                check=False,
+                timeout=10,
+            )
+        except Exception:
+            logger.warning("Non-fatal error while running mapping shutdown command", exc_info=True)

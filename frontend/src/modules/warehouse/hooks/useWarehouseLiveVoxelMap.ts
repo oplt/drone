@@ -6,10 +6,12 @@ import {
   isWarehouseLiveMapSnapshot,
   isWarehouseLiveMapUpdate,
   type WarehouseLiveHealthFlags,
+  type WarehouseLiveMapManifestSummary,
   type WarehouseLiveMapMessage,
   type WarehouseLiveMapUpdate,
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
+import { chunkStateKey } from "../utils/liveMapChunkRetention";
 
 type ConnectionState =
   | "empty"
@@ -22,7 +24,6 @@ type ConnectionState =
 
 const STALE_AFTER_MS = 10_000;
 const RECONNECT_AFTER_MS = 1_500;
-const MAX_CHUNKS = 160;
 const MAX_PATH_POINTS = 600;
 
 const EMPTY_HEALTH: WarehouseLiveHealthFlags = {
@@ -45,10 +46,18 @@ export type WarehouseLiveVoxelMapState = {
   error: string | null;
   finalizedScanJobId: number | null;
   lastUpdateAt: string | null;
+  manifest: WarehouseLiveMapManifestSummary | null;
   token?: string | null;
 };
 
-function mergeUpdate(
+export type WarehouseLiveVoxelMapControls = {
+  clearMap: () => void;
+  streamPaused: boolean;
+  setStreamPaused: (paused: boolean) => void;
+  toggleStreamPaused: () => void;
+};
+
+export function mergeUpdate(
   current: {
     chunksById: Map<string, WarehouseLiveVoxelChunk>;
     scanPath: WarehouseLiveMapUpdate["scan_path_sample"];
@@ -58,18 +67,29 @@ function mergeUpdate(
   const chunksById = new Map(current.chunksById);
   for (const id of update.removed_chunk_ids) {
     chunksById.delete(id);
+    for (const key of [...chunksById.keys()]) {
+      if (key === id || key.endsWith(`:${id}`)) {
+        chunksById.delete(key);
+      }
+    }
   }
   for (const chunk of update.changed_chunks) {
-    chunksById.set(chunk.id, chunk);
+    const key = chunkStateKey(chunk);
+    const existing = chunksById.get(key);
+    if (
+      existing &&
+      existing.url === chunk.url &&
+      existing.byte_size === chunk.byte_size &&
+      existing.checksum_sha256 === chunk.checksum_sha256
+    ) {
+      continue;
+    }
+    chunksById.set(key, chunk);
   }
-  const chunks = Array.from(chunksById.values())
-    .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
-    .slice(-MAX_CHUNKS);
-  const nextChunksById = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const scanPath = [...current.scanPath, ...update.scan_path_sample].slice(
     -MAX_PATH_POINTS,
   );
-  return { chunksById: nextChunksById, scanPath };
+  return { chunksById, scanPath };
 }
 
 export function applyWarehouseLiveMapMessage(
@@ -80,10 +100,7 @@ export function applyWarehouseLiveMapMessage(
   message: WarehouseLiveMapMessage,
 ) {
   if (isWarehouseLiveMapSnapshot(message)) {
-    return message.updates.reduce(mergeUpdate, {
-      chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
-      scanPath: [],
-    });
+    return message.updates.reduce(mergeUpdate, current);
   }
   if (isWarehouseLiveMapUpdate(message)) {
     return mergeUpdate(current, message);
@@ -97,8 +114,10 @@ export function useWarehouseLiveVoxelMap(
     enabled?: boolean;
     token?: string | null;
   } = {},
-): WarehouseLiveVoxelMapState {
+): WarehouseLiveVoxelMapState & WarehouseLiveVoxelMapControls {
   const enabled = options.enabled ?? true;
+  const [streamPaused, setStreamPaused] = useState(false);
+  const streamPausedRef = useRef(streamPaused);
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("empty");
   const [chunksById, setChunksById] = useState(
@@ -115,7 +134,11 @@ export function useWarehouseLiveVoxelMap(
     null,
   );
   const [lastUpdateAt, setLastUpdateAt] = useState<string | null>(null);
+  const [manifest, setManifest] = useState<WarehouseLiveMapManifestSummary | null>(
+    null,
+  );
   const socketRef = useRef<WebSocket | null>(null);
+  const wsConnectedRef = useRef(false);
   const stateRef = useRef({
     chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
     scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
@@ -126,26 +149,39 @@ export function useWarehouseLiveVoxelMap(
   const queuedMessageRef = useRef<WarehouseLiveMapMessage[]>([]);
 
   useEffect(() => {
+    streamPausedRef.current = streamPaused;
+  }, [streamPaused]);
+
+  useEffect(() => {
     stateRef.current = { chunksById, scanPath };
   }, [chunksById, scanPath]);
 
   useEffect(() => {
-    if (!flightId || typeof window === "undefined") {
-      setConnectionState("empty");
-      setChunksById(new Map());
-      setScanPath([]);
-      setLatestUpdate(null);
-      setHealth(EMPTY_HEALTH);
-      setError(null);
-      setFinalizedScanJobId(null);
-      setLastUpdateAt(null);
+    if (typeof window === "undefined") {
       return;
+    }
+    if (!flightId) {
+      const resetTimer = window.setTimeout(() => {
+        setConnectionState("empty");
+        setChunksById(new Map());
+        setScanPath([]);
+        setLatestUpdate(null);
+        setHealth(EMPTY_HEALTH);
+        setError(null);
+        setFinalizedScanJobId(null);
+        setLastUpdateAt(null);
+        setManifest(null);
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
     }
     if (!enabled) {
       disconnectWarehouseLiveMap(socketRef.current);
       socketRef.current = null;
-      setConnectionState((current) => (current === "live" ? "stale" : current));
-      return;
+      wsConnectedRef.current = false;
+      const staleTimer = window.setTimeout(() => {
+        setConnectionState((current) => (current === "live" ? "stale" : current));
+      }, 0);
+      return () => window.clearTimeout(staleTimer);
     }
 
     let cancelled = false;
@@ -169,10 +205,16 @@ export function useWarehouseLiveVoxelMap(
         setConnectionState((current) =>
           current === "live" ? "stale" : current,
         );
+        if (!wsConnectedRef.current && !cancelled) {
+          pollSnapshot();
+        }
       }, STALE_AFTER_MS);
     };
 
     const applyMessage = (message: WarehouseLiveMapMessage) => {
+      if (streamPausedRef.current && message.type !== "live_map_finalized") {
+        return;
+      }
       queuedMessageRef.current.push(message);
 
       if (rafRef.current != null) return;
@@ -190,20 +232,26 @@ export function useWarehouseLiveVoxelMap(
         let newestSnapshotStatus: ConnectionState | null = null;
         let newestLastUpdateAt: string | null = null;
         let finalizedId: number | null = null;
+        let newestManifest: WarehouseLiveMapManifestSummary | null = null;
 
         for (const queued of queuedMessages) {
           if (isWarehouseLiveMapSnapshot(queued)) {
             merged = applyWarehouseLiveMapMessage(merged, queued);
             newestUpdate = queued.updates.at(-1) ?? newestUpdate;
             newestSnapshotStatus =
-                queued.status === "empty" ? "connecting" : queued.status;
+              queued.status === "empty" ? "connecting" : queued.status;
             newestLastUpdateAt =
-                queued.last_update_at ?? newestUpdate?.timestamp ?? newestLastUpdateAt;
+              queued.last_update_at ??
+              newestUpdate?.timestamp ??
+              newestLastUpdateAt;
+            if (queued.manifest) {
+              newestManifest = queued.manifest;
+            }
             continue;
           }
 
           if (isWarehouseLiveMapUpdate(queued)) {
-            merged = applyWarehouseLiveMapMessage(merged, queued);
+            merged = mergeUpdate(merged, queued);
             newestUpdate = queued;
             newestLastUpdateAt = queued.timestamp ?? newestLastUpdateAt;
             newestSnapshotStatus = "live";
@@ -238,8 +286,25 @@ export function useWarehouseLiveVoxelMap(
           setConnectionState(newestSnapshotStatus);
         }
 
+        if (newestManifest) {
+          setManifest(newestManifest);
+        }
+
         scheduleStaleCheck();
       });
+    };
+
+    const pollSnapshot = () => {
+      if (wsConnectedRef.current) {
+        return;
+      }
+      void fetchWarehouseLiveMapSnapshot(flightId, options.token)
+        .then((snapshot) => {
+          if (!cancelled) applyMessage(snapshot);
+        })
+        .catch(() => {
+          /* websocket remains primary transport */
+        });
     };
 
     const openSocket = () => {
@@ -250,6 +315,7 @@ export function useWarehouseLiveVoxelMap(
         {
           onOpen: () => {
             reconnectAttempt = 0;
+            wsConnectedRef.current = true;
             setError(null);
             setConnectionState("live");
             scheduleStaleCheck();
@@ -261,12 +327,14 @@ export function useWarehouseLiveVoxelMap(
           onError: () => {
             setError("Live voxel stream error.");
           },
-            onClose: () => {
+          onClose: () => {
+            wsConnectedRef.current = false;
             if (cancelled) return;
             reconnectAttempt += 1;
             setConnectionState((current) =>
               current === "finalized" ? current : "reconnecting",
             );
+            pollSnapshot();
             reconnectTimerRef.current = window.setTimeout(
               openSocket,
               RECONNECT_AFTER_MS,
@@ -277,30 +345,12 @@ export function useWarehouseLiveVoxelMap(
       );
     };
 
-    const pollSnapshot = () => {
-      void fetchWarehouseLiveMapSnapshot(flightId, options.token)
-        .then((snapshot) => {
-          if (!cancelled) applyMessage(snapshot);
-        })
-        .catch(() => {
-          /* keep websocket path; snapshot is a bootstrap fallback */
-        });
-    };
-
-    void fetchWarehouseLiveMapSnapshot(flightId, options.token)
-      .then((snapshot) => {
-        if (!cancelled) applyMessage(snapshot);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Live voxel snapshot could not be loaded.");
-      });
-
+    pollSnapshot();
     openSocket();
-    const snapshotPoll = window.setInterval(pollSnapshot, 3000);
 
     return () => {
-      window.clearInterval(snapshotPoll);
       cancelled = true;
+      wsConnectedRef.current = false;
       clearTimers();
       disconnectWarehouseLiveMap(socketRef.current);
       socketRef.current = null;
@@ -308,6 +358,22 @@ export function useWarehouseLiveVoxelMap(
   }, [enabled, flightId, options.token]);
 
   const chunks = useMemo(() => Array.from(chunksById.values()), [chunksById]);
+
+  const clearMap = () => {
+    const empty = {
+      chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
+      scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
+    };
+    stateRef.current = empty;
+    setChunksById(empty.chunksById);
+    setScanPath(empty.scanPath);
+    setLatestUpdate(null);
+    setManifest(null);
+  };
+
+  const toggleStreamPaused = () => {
+    setStreamPaused((current) => !current);
+  };
 
   return {
     connectionState,
@@ -318,6 +384,11 @@ export function useWarehouseLiveVoxelMap(
     error,
     finalizedScanJobId,
     lastUpdateAt,
+    manifest,
     token: options.token,
+    clearMap,
+    streamPaused,
+    setStreamPaused,
+    toggleStreamPaused,
   };
 }

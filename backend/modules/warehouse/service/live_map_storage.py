@@ -15,6 +15,7 @@ _SAFE_ID = re.compile(r"[^a-zA-Z0-9_.-]+")
 _EXTENSIONS = {
     "mesh": ".glb",
     "point_cloud": ".xyz32",
+    "point_cloud_rgb": ".xyzrgb32",
     "occupancy": ".vox",
     "esdf": ".vox",
     "costmap": ".grid",
@@ -87,6 +88,16 @@ class WarehouseLiveMapChunkStorage:
 
         checksum = digest.hexdigest()
         final_path = target_dir / f"{safe_chunk}-{checksum[:16]}{ext}"
+        if final_path.exists():
+            temp_path.unlink(missing_ok=True)
+            return StoredLiveMapChunk(
+                chunk_id=safe_chunk,
+                path=final_path,
+                url=f"/warehouse/live-map/{safe_flight}/chunks/{safe_chunk}/download",
+                content_type=content_type,
+                byte_size=final_path.stat().st_size,
+                checksum_sha256=checksum,
+            )
         temp_path.replace(final_path)
         return StoredLiveMapChunk(
             chunk_id=safe_chunk,
@@ -96,6 +107,62 @@ class WarehouseLiveMapChunkStorage:
             byte_size=total,
             checksum_sha256=checksum,
         )
+
+    def save_chunk_metadata(
+        self,
+        *,
+        flight_id: str,
+        chunk_id: str,
+        metadata: dict[str, Any],
+        checksum_sha256: str | None = None,
+    ) -> Path:
+        safe_flight = _clean_id(flight_id)
+        safe_chunk = _clean_id(chunk_id)
+        target_dir = self.root / safe_flight
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        digest = (checksum_sha256 or "").strip()[:16]
+        suffix = f"-{digest}" if digest else ""
+        final_path = target_dir / f"{safe_chunk}{suffix}.meta.json"
+        payload = {
+            "chunk_id": safe_chunk,
+            **metadata,
+        }
+        encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+        if final_path.exists():
+            try:
+                if final_path.read_text(encoding="utf-8") == encoded:
+                    return final_path
+            except OSError:
+                pass
+        final_path.write_text(encoded, encoding="utf-8")
+        return final_path
+
+    def load_chunk_metadata(
+        self,
+        *,
+        flight_id: str,
+        chunk_id: str,
+    ) -> dict[str, Any] | None:
+        safe_flight = _clean_id(flight_id)
+        safe_chunk = _clean_id(chunk_id)
+        root = (self.root / safe_flight).resolve()
+        if not root.exists():
+            return None
+
+        matches = sorted(
+            root.glob(f"{safe_chunk}*.meta.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for path in matches:
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict):
+                return payload
+        return None
 
     def save_preview_chunk(
         self,
@@ -139,7 +206,13 @@ class WarehouseLiveMapChunkStorage:
         if not root.exists():
             return None
         matches = sorted(
-            root.glob(f"{safe_chunk}-*"),
+            (
+                path
+                for path in root.glob(f"{safe_chunk}-*")
+                if path.is_file()
+                and not path.name.endswith(".meta.json")
+                and not path.name.endswith(".preview.json")
+            ),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )

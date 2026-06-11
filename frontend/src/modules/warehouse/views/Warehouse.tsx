@@ -192,7 +192,9 @@ type WarehouseMissionStatus = {
   warehouse_mapping?: WarehouseMappingRuntimeStatus | null;
 };
 
-const VIDEO_RETRY_DELAY_MS = 5000;
+const VIDEO_RETRY_BASE_MS = 5000;
+const VIDEO_RETRY_MAX_MS = 60000;
+const VIDEO_MAX_RETRIES = 8;
 const SCANNED_MAP_REFRESH_MS = 30000;
 
 const COMPACT_FIELD_SX = {
@@ -788,7 +790,9 @@ export default function WarehousePage() {
     refetch: refetchWarehouseFlightReadiness,
   } = useWarehouseFlightReadiness(authToken, {
     missionLoaded: missionLoadedForReadiness,
-    enabled: Boolean(authToken),
+    enabled:
+      Boolean(authToken) &&
+      (warehouseMissionDrawer.open || preflightRunning),
     preflightRunning,
   });
   const [flightCommandBusy, setFlightCommandBusy] = useState(false);
@@ -816,9 +820,17 @@ export default function WarehousePage() {
     resetKey: activeFlightId ?? "none",
   });
 
+  const viewerScannedMap = useMemo(
+    () => selectScannedMap(scannedMaps, viewerMapJobId),
+    [scannedMaps, viewerMapJobId],
+  );
+
+  const viewingScanReplay = Boolean(viewerScannedMap) && !activeFlightId;
+
   const liveVoxelMap = useWarehouseLiveVoxelMap(activeFlightId, {
     enabled: Boolean(
       activeFlightId &&
+      !viewingScanReplay &&
       !warehouseSetupDrawer.open &&
       !warehouseMissionDrawer.open,
     ),
@@ -859,15 +871,14 @@ export default function WarehousePage() {
     [scannedMaps, selectedMapJobId],
   );
 
-  const viewerScannedMap = useMemo(
-    () => selectScannedMap(scannedMaps, viewerMapJobId),
-    [scannedMaps, viewerMapJobId],
-  );
-
   const scannedMapReplay = useWarehouseScannedMapReplay(viewerScannedMap, authToken, {
-    enabled: !activeFlightId,
+    enabled: viewingScanReplay,
   });
-  const displayedVoxelMap = activeFlightId ? liveVoxelMap : scannedMapReplay.state;
+  const displayedVoxelMap = viewingScanReplay
+    ? scannedMapReplay.state
+    : activeFlightId
+      ? liveVoxelMap
+      : scannedMapReplay.state;
   const showVoxelMapViewer = Boolean(activeFlightId || viewerScannedMap);
 
   const loadScannedMaps = useCallback(
@@ -897,7 +908,7 @@ export default function WarehousePage() {
             ) {
               return current;
             }
-            return records[0]?.job_id ?? null;
+            return null;
           });
         }
         return records;
@@ -1347,6 +1358,7 @@ export default function WarehousePage() {
         const newest = scoped[0];
         if (newest) {
           setSelectedMapJobId(newest.job_id);
+          setViewerMapJobId(newest.job_id);
         }
       });
     }
@@ -1370,21 +1382,32 @@ export default function WarehousePage() {
   const handleVideoError = useCallback(() => {
     setVideoErrorMessage("Failed to load video stream");
     setVideoErrorStreamKey(streamKey || null);
-    setVideoRetryCount((prev) => prev + 1);
+    setVideoRetryCount((prev) => {
+      const next = prev + 1;
+      if (next >= VIDEO_MAX_RETRIES) {
+        return next;
+      }
 
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-    }
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
 
-    retryTimerRef.current = window.setTimeout(() => {
-      setManualStreamKey({
-        flightId: activeFlightId ?? null,
-        key: Date.now(),
-      });
-      setVideoErrorMessage(null);
-      setVideoErrorStreamKey(null);
-      retryTimerRef.current = null;
-    }, VIDEO_RETRY_DELAY_MS);
+      const delayMs = Math.min(
+        VIDEO_RETRY_MAX_MS,
+        VIDEO_RETRY_BASE_MS * 2 ** Math.max(0, next - 1),
+      );
+      retryTimerRef.current = window.setTimeout(() => {
+        setManualStreamKey({
+          flightId: activeFlightId ?? null,
+          key: Date.now(),
+        });
+        setVideoErrorMessage(null);
+        setVideoErrorStreamKey(null);
+        retryTimerRef.current = null;
+      }, delayMs);
+
+      return next;
+    });
   }, [activeFlightId, streamKey]);
 
   const handleVideoLoad = useCallback(() => {
@@ -1617,24 +1640,24 @@ export default function WarehousePage() {
       },
       {
         label: "Map",
-        value: activeFlightId
-          ? liveVoxelMap.chunks.length > 0
-            ? "Live"
-            : "Streaming"
-          : scannedMapReplay.hasReplay
+        value: viewingScanReplay
+          ? scannedMapReplay.hasReplay
             ? "Replay"
-            : viewerScannedMap
-              ? "Empty"
-              : "None",
-        status: (activeFlightId
-          ? liveVoxelMap.chunks.length > 0
+            : "Empty"
+          : activeFlightId
+            ? liveVoxelMap.chunks.length > 0
+              ? "Live"
+              : "Streaming"
+            : "None",
+        status: (viewingScanReplay
+          ? scannedMapReplay.hasReplay
             ? "ready"
-            : "running"
-          : scannedMapReplay.hasReplay
-            ? "ready"
-            : viewerScannedMap
-              ? "waiting"
-              : "unknown") as WarehouseUiStatus,
+            : "waiting"
+          : activeFlightId
+            ? liveVoxelMap.chunks.length > 0
+              ? "ready"
+              : "running"
+            : "unknown") as WarehouseUiStatus,
       },
       {
         label: "Preflight",
@@ -1657,7 +1680,7 @@ export default function WarehousePage() {
       liveVoxelMap.chunks.length,
       missionState,
       scannedMapReplay.hasReplay,
-      viewerScannedMap,
+      viewingScanReplay,
       warehousePreflightPassed,
       wsConnected,
     ],
@@ -1808,23 +1831,53 @@ export default function WarehousePage() {
               <WarehouseDashboardCard
                 title="Warehouse 3D Map"
                 subtitle={
-                  activeFlightId
-                    ? "Live indoor point cloud from nvblox and lidar"
-                    : "Stored point-cloud replay for the selected scan"
+                  viewingScanReplay
+                    ? "Stored point-cloud replay for the selected scan"
+                    : "Live indoor point cloud from nvblox and lidar"
                 }
               >
                 <WarehouseLiveVoxelMapViewer
+                  flightId={
+                    viewingScanReplay
+                      ? (scannedMapReplay.replayFlightId ??
+                        displayedVoxelMap.latestUpdate?.flight_id ??
+                        null)
+                      : (activeFlightId ??
+                        displayedVoxelMap.latestUpdate?.flight_id ??
+                        null)
+                  }
                   state={displayedVoxelMap}
+                  cacheMode={viewingScanReplay ? "replay" : undefined}
+                  mapMode={viewingScanReplay ? "replay" : "live"}
+                  scannedMapId={
+                    viewingScanReplay ? scannedMapReplay.scannedMapId : null
+                  }
+                  onReloadReplay={
+                    viewingScanReplay
+                      ? scannedMapReplay.reloadFromDiskManifest
+                      : undefined
+                  }
                   mappingStatus={
-                    activeFlightId
-                      ? (missionStatus?.warehouse_mapping ?? null)
-                      : null
+                    viewingScanReplay
+                      ? null
+                      : (missionStatus?.warehouse_mapping ?? null)
                   }
                   mappingStackStatus={
-                    activeFlightId ? mappingStackStatus : null
+                    viewingScanReplay ? null : mappingStackStatus
                   }
                   hidden={
                     warehouseSetupDrawer.open || warehouseMissionDrawer.open
+                  }
+                  onClearMap={
+                    viewingScanReplay ? undefined : liveVoxelMap.clearMap
+                  }
+                  onToggleStream={
+                    viewingScanReplay
+                      ? undefined
+                      : liveVoxelMap.toggleStreamPaused
+                  }
+                  streamPaused={
+                    viewingScanReplay ? false : liveVoxelMap.streamPaused
                   }
                 />
               </WarehouseDashboardCard>

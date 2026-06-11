@@ -20,16 +20,87 @@ class _FakeVideoRuntime:
             "error": "Timed out waiting for first video frame.",
         }
 
+    async def readiness_status(self) -> dict:
+        return {
+            **await self.status(),
+            "state": "unavailable",
+            "first_frame_available": False,
+            "retry_after_ms": 5000,
+            "failure_count": 1,
+        }
+
 
 @pytest.mark.asyncio
 async def test_mjpeg_proxy_returns_503_when_camera_unavailable(monkeypatch) -> None:
-    monkeypatch.setattr(media_api, "shared_video_runtime", _FakeVideoRuntime())
+    fake = _FakeVideoRuntime()
+    monkeypatch.setattr(media_api, "shared_video_runtime", fake)
 
     with pytest.raises(HTTPException) as exc_info:
         await media_api.mjpeg_proxy(SimpleNamespace(), user=object())
 
     assert exc_info.value.status_code == 503
     assert exc_info.value.detail["message"] == "Camera unavailable"
+
+
+@pytest.mark.asyncio
+async def test_mjpeg_proxy_honors_backoff_without_starting_worker(monkeypatch) -> None:
+    class _BackoffRuntime(_FakeVideoRuntime):
+        ensure_calls = 0
+
+        async def readiness_status(self) -> dict:
+            return {
+                **await self.status(),
+                "state": "unavailable",
+                "retry_after_ms": 15000,
+                "last_error": "Video stream in backoff",
+            }
+
+        async def ensure_running(self) -> dict:
+            self.ensure_calls += 1
+            return await super().ensure_running()
+
+    fake = _BackoffRuntime()
+    monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await media_api.mjpeg_proxy(SimpleNamespace(), user=object())
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail["retry_after_ms"] == 15000
+    assert fake.ensure_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_start_video_stream_honors_backoff_without_restarting(monkeypatch) -> None:
+    class _BackoffRuntime(_FakeVideoRuntime):
+        ensure_calls = 0
+        source_calls = 0
+
+        async def readiness_status(self) -> dict:
+            return {
+                **await self.status(),
+                "state": "unavailable",
+                "retry_after_ms": 15000,
+                "last_error": "Video stream in backoff",
+            }
+
+        async def ensure_source_available(self) -> dict:
+            self.source_calls += 1
+            return {"status": "starting", "source": "udp://127.0.0.1:5600"}
+
+        async def ensure_running(self) -> dict:
+            self.ensure_calls += 1
+            return await super().ensure_running()
+
+    fake = _BackoffRuntime()
+    monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+
+    result = await media_api.start_video_stream(user=object())
+
+    assert result["status"] == "unavailable"
+    assert result["retry_after_ms"] == 15000
+    assert fake.source_calls == 0
+    assert fake.ensure_calls == 0
 
 
 def _fake_vehicle() -> SimpleNamespace:
@@ -59,4 +130,3 @@ def test_real_flight_blocks_local_frame_home_fallback(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="GPS home is required"):
         drone.connect(home_fallback_allowed=False)
-

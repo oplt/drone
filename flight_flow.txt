@@ -1,0 +1,228 @@
+Here is a traced map of both flows, organized by layer with **function → file** pairs.
+
+---
+
+## A. Start Flight (Warehouse page)
+
+### Frontend — button click → HTTP
+
+| Step | Function | File |
+|------|----------|------|
+| 1 | `handleStartWarehouseScan` | `frontend/src/modules/warehouse/views/Warehouse.tsx` |
+| 2 | `startWarehouseScan` | `frontend/src/modules/warehouse/api/warehouseMissionsApi.ts` |
+| 3 | `setPendingFlightId` (sets `activeFlightId` for WS/map) | via `useMissionWebsocketRuntime` → `useMissionRuntime` → `frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts` |
+
+After launch, the page also wires:
+- `useMissionWebsocketRuntime` — mission status / telemetry WS
+- `useAutoStartVideo` → `useMissionVideo` — camera stream
+- `useWarehouseLiveVoxelMap` — live 3D map WS (once `activeFlightId` is set)
+
+---
+
+### Backend — mission create + async execution
+
+| Step | Function | File |
+|------|----------|------|
+| 4 | `mission_start` (route `POST /warehouse/missions/start`) | `backend/modules/warehouse/api.py` |
+| 5 | `_build_warehouse_scan_mission_payload` | `backend/modules/warehouse/api.py` |
+| 6 | `run_warehouse_ros_preflight_report` | `backend/modules/warehouse/service/warehouse_preflight.py` |
+| 7 | `warehouse_preflight_can_start` | `backend/modules/warehouse/service/warehouse_preflight.py` |
+| 8 | `_start_warehouse_scan_mission` | `backend/modules/warehouse/api.py` |
+| 9 | `create_mission` (route `POST /missions`) | `backend/modules/missions/api/routes.py` |
+| 10 | `_build_mission` → `build_warehouse_scan_mission` | `routes.py` → `backend/modules/warehouse/planning/mission.py` |
+| 11 | `asyncio.create_task(execute_mission(...))` | `backend/modules/missions/api/routes.py` |
+
+---
+
+### Orchestrator + warehouse scan runtime
+
+| Step | Function | File |
+|------|----------|------|
+| 12 | `execute_mission` | `backend/modules/missions/api/routes.py` |
+| 13 | `mission.execute(orch, alt=...)` | `WarehouseScanMission.execute` in `backend/modules/warehouse/planning/scan.py` |
+| 14 | `orch.run_mission(..., flight_fn=lambda: self.fly_scan(orch))` | `RuntimeExecutionServiceMixin.run_mission` in `backend/modules/vehicle_runtime/execution_service.py` |
+| 15 | `fly_scan` | `backend/modules/warehouse/planning/scan.py` |
+
+Inside `fly_scan` (main sub-flow):
+
+| Phase | Function | File |
+|-------|----------|------|
+| Plan | `_plan_scan`, `_build_plan` | `scan.py` |
+| Capture session | `WarehouseCaptureSessionService.start_session` | `backend/modules/warehouse/service/capture.py` |
+| ROS / nvblox warm-up | `_start_perception_mapping` | `scan.py` |
+| ↳ | `prepare_warehouse_scan_ros` | `backend/modules/warehouse/service/mapping_stack_lifecycle.py` |
+| ↳ | `_maybe_start_mapping_stack_cmd` | `mapping_stack_lifecycle.py` |
+| ↳ | `wait_for_rgbd_mapping_topics` | `backend/modules/warehouse/service/live_map_readiness.py` |
+| Live map bridges | `_restart_live_map_publisher` | `scan.py` |
+| ↳ | `start_warehouse_live_map_bridge` | `backend/modules/warehouse/service/live_map_bridge.py` |
+| ↳ | `start_colored_pointcloud_live_map_bridge` | `backend/modules/warehouse/service/colored_pointcloud_live_map_bridge.py` |
+| ↳ | `start_raw_pointcloud_live_map_bridge` (only if raw lidar enabled) | `backend/modules/warehouse/service/raw_pointcloud_live_map_bridge.py` |
+| Perception record | `build_warehouse_perception_port` → `port.start_mapping` | `scan.py` → `backend/infrastructure/warehouse/perception/` |
+| Takeoff + legs | `arm_and_takeoff`, `_fly_leg`, `_resolve_execution_frame` | `scan.py` + drone via orchestrator |
+| Video | `_start_video_recording` | `scan.py` → `shared_video_runtime` in `backend/infrastructure/camera/runtime.py` |
+
+Shutdown / persist (end of flight):
+
+| Phase | Function | File |
+|-------|----------|------|
+| Stop mapping | `_stop_perception_mapping` | `scan.py` |
+| Artifacts | `wait_for_mapping_artifacts`, `resolve_capture_session_dir` | `backend/modules/warehouse/service/capture_finalize.py` |
+| Capture sync | `capture_session_service.finalize_session` | `backend/modules/warehouse/service/capture.py` |
+| Quality gate | `build_manifest_from_flight_dir`, `validate_save_quality` | `backend/modules/warehouse/service/live_map_manifest.py` |
+| DB persist | `WarehouseScanMappingService.persist_capture` | `backend/modules/warehouse/service/mapping.py` |
+| WS finalize | `warehouse_live_map_stream.finalize` | `backend/modules/warehouse/service/live_map_stream.py` |
+
+```mermaid
+flowchart TD
+  A[handleStartWarehouseScan] --> B[startWarehouseScan]
+  B --> C[mission_start]
+  C --> D[_build_warehouse_scan_mission_payload]
+  C --> E[run_warehouse_ros_preflight_report]
+  C --> F[_start_warehouse_scan_mission]
+  F --> G[create_mission]
+  G --> H[execute_mission async]
+  H --> I[WarehouseScanMission.execute]
+  I --> J[run_mission]
+  J --> K[fly_scan]
+  K --> L[prepare_warehouse_scan_ros]
+  K --> M[_restart_live_map_publisher]
+  K --> N[port.start_mapping]
+  K --> O[arm_and_takeoff + _fly_leg]
+  K --> P[persist_capture + live_map_stream.finalize]
+```
+
+---
+
+## B. Live mapping + map record + WebSocket + chunking
+
+There are **two parallel paths**:
+1. **Live visualization** — ROS → bridge → chunk files → WS metadata → frontend download → Three.js render
+2. **Post-flight record** — ROS rosbag/artifacts → capture session → DB job (`persist_capture`)
+
+---
+
+### Backend — ROS → chunk → WebSocket
+
+| Role | Function | File |
+|------|----------|------|
+| Resolve which PointCloud2 topics to subscribe | `resolve_colored_bridge_sources`, `probe_live_map_topic_types` | `backend/modules/warehouse/service/live_map_readiness.py` |
+| Start colored bridge | `start_colored_pointcloud_live_map_bridge` | `backend/modules/warehouse/service/colored_pointcloud_live_map_bridge.py` |
+| ROS callback on each cloud | `_ColoredPointCloudLiveMapNode._on_pointcloud` | `colored_pointcloud_live_map_bridge.py` |
+| Parse PointCloud2 | `parse_pointcloud2_msg`, `encode_xyzrgb32` / `encode_xyz32` | `backend/modules/warehouse/service/pointcloud2_parser.py` |
+| **Chunk + publish** | `_store_and_publish_colored_chunk` | `colored_pointcloud_live_map_bridge.py` |
+| Write chunk binary to disk | `warehouse_live_map_chunk_storage.save_upload` | `backend/modules/warehouse/service/live_map_storage.py` |
+| Write sidecar metadata | `save_chunk_metadata` | `live_map_storage.py` |
+| Build WS update payload | `normalize_live_map_payload` | `backend/modules/warehouse/service/live_map_stream.py` |
+| Fan-out to clients | `WarehouseLiveMapStream.publish` | `live_map_stream.py` |
+
+Secondary bridge (odom + nvblox health metadata, not full colored clouds):
+
+| Function | File |
+|----------|------|
+| `start_warehouse_live_map_bridge` | `live_map_bridge.py` |
+| `_publish_loop` | `live_map_bridge.py` |
+
+Optional raw Mid360 (off by default):
+
+| Function | File |
+|----------|------|
+| `start_raw_pointcloud_live_map_bridge` | `raw_pointcloud_live_map_bridge.py` |
+| `_store_and_publish_pointcloud_chunk` | `raw_pointcloud_live_map_bridge.py` |
+
+HTTP ingest (alternative to in-process bridge, e.g. external ROS node):
+
+| Route handler | File |
+|---------------|------|
+| `upload_live_map_chunk` (`POST .../chunks/{chunk_id}`) | `backend/modules/warehouse/api.py` |
+| `publish_live_map_update` (`POST .../updates`) | `api.py` |
+
+---
+
+### Backend — WebSocket server
+
+| Function | File |
+|----------|------|
+| `websocket_live_map_stream` (route `WS /warehouse/live-map/{flight_id}/stream`) | `backend/modules/warehouse/api.py` |
+| `WarehouseLiveMapStream.connect` | `live_map_stream.py` |
+| `WarehouseLiveMapStream.publish` | `live_map_stream.py` |
+| `WarehouseLiveMapStream.snapshot` | `live_map_stream.py` |
+| `WarehouseLiveMapStream.finalize` | `live_map_stream.py` |
+
+Chunk binary download (separate from WS — WS only carries metadata + URL):
+
+| Function | File |
+|----------|------|
+| `live_map_chunk_download` (`GET .../chunks/{chunk_id}/download`) | `backend/modules/warehouse/api.py` |
+| `warehouse_live_map_chunk_storage.resolve` | `live_map_storage.py` |
+
+---
+
+### Frontend — WebSocket → chunk download → render
+
+| Step | Function | File |
+|------|----------|------|
+| Hook entry | `useWarehouseLiveVoxelMap` | `frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts` |
+| Open WS | `connectWarehouseLiveMap` | `frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts` |
+| WS URL builder | `resolveWarehouseLiveMapWebSocketUrl` | `warehouseLiveMapApi.ts` |
+| Merge updates | `applyWarehouseLiveMapMessage`, `mergeUpdate` | `useWarehouseLiveVoxelMap.ts` |
+| Fallback poll | `fetchWarehouseLiveMapSnapshot` | `warehouseLiveMapApi.ts` |
+| Viewer wiring | `WarehouseLiveVoxelMapViewer` | `frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx` |
+| Chunk download cache | `useLiveMapChunkCache` | `frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts` |
+| HTTP chunk fetch | `fetchWarehouseLiveChunk` | `warehouseLiveMapApi.ts` |
+| Layer filter / retention | `filterChunksForDownload`, `selectDownloadableChunksPerLayer` | `frontend/src/modules/warehouse/config/liveMapConfig.ts`, `utils/liveMapChunkRetention.ts` |
+| Decode + scene | `WarehouseLiveVoxelScene` | `frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx` |
+
+```mermaid
+sequenceDiagram
+  participant ROS as ROS PointCloud2 topics
+  participant Bridge as colored_pointcloud_live_map_bridge
+  participant Storage as live_map_storage
+  participant Stream as live_map_stream
+  participant API as api.py WS route
+  participant FE as useWarehouseLiveVoxelMap
+  participant Cache as useLiveMapChunkCache
+  participant Scene as WarehouseLiveVoxelScene
+
+  ROS->>Bridge: _on_pointcloud(msg)
+  Bridge->>Storage: save_upload(chunk bytes)
+  Bridge->>Stream: publish(live_map_update + chunk metadata)
+  Stream->>API: send_json to WS clients
+  API->>FE: WebSocket message
+  FE->>Cache: new chunk.url in changed_chunks
+  Cache->>API: GET /live-map/{flight}/chunks/{id}/download
+  Cache->>Scene: CachedLiveMapChunk arrayBuffer
+```
+
+---
+
+### Map record (persisted scan job, not live WS)
+
+Live chunks on disk under the flight ID are **separate** from the final scanned-map job. Recording flow:
+
+| Step | Function | File |
+|------|----------|------|
+| Start rosbag / perception session | `port.start_mapping` | perception port via `scan.py` |
+| Stop + export wait | `_stop_perception_mapping`, `wait_for_mapping_artifacts` | `scan.py`, `capture_finalize.py` |
+| Stage files | `capture_session_service.finalize_session` | `capture.py` |
+| Save quality manifest | `build_manifest_from_flight_dir`, `save_flight_manifest` | `live_map_manifest.py` |
+| Create DB job + assets | `WarehouseScanMappingService.persist_capture` | `mapping.py` |
+| Notify frontend scan done | `warehouse_live_map_stream.finalize` | `live_map_stream.py` |
+| Replay saved map later | `build_disk_live_map_snapshot`, `get_scanned_map_live_map_snapshot` | `live_map_replay.py`, `api.py` |
+
+---
+
+## Quick “where do I look?” index
+
+| Concern | Start here |
+|---------|------------|
+| Button → API | `Warehouse.tsx` → `warehouseMissionsApi.ts` → `api.py::mission_start` |
+| Mission execution | `routes.py::execute_mission` → `scan.py::fly_scan` |
+| When bridges start | `scan.py::_restart_live_map_publisher` |
+| RGB-D / nvblox readiness | `live_map_readiness.py::wait_for_rgbd_mapping_topics` |
+| Chunk creation | `colored_pointcloud_live_map_bridge.py::_store_and_publish_colored_chunk` |
+| WS hub | `live_map_stream.py::publish` + `api.py::websocket_live_map_stream` |
+| Frontend WS consumer | `useWarehouseLiveVoxelMap.ts` |
+| Chunk HTTP download | `useLiveMapChunkCache.ts` → `fetchWarehouseLiveChunk` |
+| Final map DB save | `mapping.py::persist_capture` |
+
+If you want, I can turn this into a single annotated sequence diagram with exact log event names (`warehouse_scan_mapping_warming`, `warehouse_scan_startup_timing`, etc.) matched to each step.

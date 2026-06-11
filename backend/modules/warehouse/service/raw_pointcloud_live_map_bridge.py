@@ -13,10 +13,24 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_POINTCLOUD_TOPIC = "/warehouse/mid360/points"
-DEFAULT_GLOBAL_FRAME = "odom"
-DEFAULT_MAX_POINTS = 30_000
-DEFAULT_MIN_PUBLISH_INTERVAL_S = 0.75
+from backend.modules.warehouse.service.live_map_config import (
+    persist_raw_lidar_layer,
+    raw_lidar_max_points,
+    raw_lidar_min_publish_interval_s,
+    raw_lidar_voxel_size_m,
+    render_priority_for_source,
+)
+from backend.modules.warehouse.service.map_source_config import (
+    WAREHOUSE_LIVE_MAP_SOURCES,
+    chunk_id_for_source,
+)
+
+DEFAULT_POINTCLOUD_TOPIC = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].topic
+DEFAULT_GLOBAL_FRAME = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].global_frame
+DEFAULT_MAX_POINTS = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].max_points
+DEFAULT_MIN_PUBLISH_INTERVAL_S = WAREHOUSE_LIVE_MAP_SOURCES[
+    "mid360_raw"
+].min_publish_interval_s
 
 
 class _MemoryUpload:
@@ -29,6 +43,15 @@ class _MemoryUpload:
 
     async def read(self, size: int = -1) -> bytes:
         return self._buffer.read(size)
+
+
+def _voxel_downsample(xyz: np.ndarray, voxel_size: float) -> np.ndarray:
+    if xyz.shape[0] <= 0 or voxel_size <= 0:
+        return xyz
+
+    voxels = np.floor(xyz / voxel_size).astype(np.int64)
+    _, unique_indices = np.unique(voxels, axis=0, return_index=True)
+    return np.ascontiguousarray(xyz[np.sort(unique_indices)], dtype=np.float32)
 
 
 def _rotation_matrix_from_quaternion_xyzw(
@@ -64,6 +87,18 @@ def _rotation_matrix_from_quaternion_xyzw(
         ],
         dtype=np.float32,
     )
+
+
+def _stamp_from_msg(msg: Any) -> str | None:
+    header = getattr(msg, "header", None)
+    stamp = getattr(header, "stamp", None) if header is not None else None
+    if stamp is None:
+        return None
+    sec = getattr(stamp, "sec", None)
+    nanosec = getattr(stamp, "nanosec", None)
+    if sec is None or nanosec is None:
+        return None
+    return f"{int(sec)}.{int(nanosec):09d}"
 
 
 def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
@@ -120,6 +155,8 @@ async def _store_and_publish_pointcloud_chunk(
     flight_id: str,
     sequence: int,
     xyz: np.ndarray,
+    persist_to_disk: bool,
+    stamp: str | None = None,
 ) -> None:
     from backend.modules.warehouse.service.live_map_storage import (
         warehouse_live_map_chunk_storage,
@@ -133,36 +170,80 @@ async def _store_and_publish_pointcloud_chunk(
         return
 
     payload = np.ascontiguousarray(xyz, dtype=np.float32).reshape((-1, 3)).tobytes()
-    chunk_id = f"mid360_{sequence:06d}"
+    mid360_source = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"]
+    chunk_id = chunk_id_for_source(mid360_source, sequence)
     bbox = _bbox_from_xyz(xyz)
+    priority = render_priority_for_source(mid360_source.source_id)
+    preview_stride = max(1, xyz.shape[0] // 500)
+    preview_points = [
+        [round(float(x), 3), round(float(y), 3), round(float(z), 3)]
+        for x, y, z in xyz[::preview_stride][:500]
+    ]
 
-    stored = await warehouse_live_map_chunk_storage.save_upload(
-        flight_id=flight_id,
-        chunk_id=chunk_id,
-        kind="point_cloud",
-        upload=_MemoryUpload(payload),
-        max_bytes=32 * 1024 * 1024,
-    )
+    stored = None
+    if persist_to_disk:
+        stored = await warehouse_live_map_chunk_storage.save_upload(
+            flight_id=flight_id,
+            chunk_id=chunk_id,
+            kind="point_cloud",
+            upload=_MemoryUpload(payload),
+            max_bytes=32 * 1024 * 1024,
+        )
+
+        await asyncio.to_thread(
+            warehouse_live_map_chunk_storage.save_chunk_metadata,
+            flight_id=flight_id,
+            chunk_id=stored.chunk_id,
+            checksum_sha256=stored.checksum_sha256,
+            metadata={
+                "source": mid360_source.source_id,
+                "layer": mid360_source.layer,
+                "layer_type": mid360_source.layer,
+                "kind": "point_cloud",
+                "encoding": "xyz32_v1",
+                "has_rgb": False,
+                "sequence": sequence,
+                "point_count": int(xyz.shape[0]),
+                "bbox_local_m": bbox,
+                "frame_id": mid360_source.global_frame,
+                "content_type": stored.content_type,
+                "priority": priority,
+                "stamp": stamp,
+            },
+        )
+
+    chunk_payload: dict[str, object] = {
+                    "id": stored.chunk_id if stored is not None else chunk_id,
+                    "kind": "point_cloud",
+                    "sequence": sequence,
+                    "point_count": int(xyz.shape[0]),
+                    "bbox_local_m": bbox,
+                    "preview_points_m": preview_points,
+                    "source": mid360_source.source_id,
+                    "layer": mid360_source.layer,
+                    "layer_type": mid360_source.layer,
+                    "has_rgb": False,
+                    "encoding": "xyz32_v1",
+                    "frame_id": mid360_source.global_frame,
+                    "stamp": stamp,
+                    "priority": priority,
+                }
+    if stored is not None:
+        chunk_payload.update(
+            {
+                "url": stored.url,
+                "content_type": stored.content_type,
+                "byte_size": stored.byte_size,
+                "checksum_sha256": stored.checksum_sha256,
+            }
+        )
 
     update = normalize_live_map_payload(
         {
             "flight_id": flight_id,
-            "changed_chunks": [
-                {
-                    "id": stored.chunk_id,
-                    "kind": "point_cloud",
-                    "url": stored.url,
-                    "content_type": stored.content_type,
-                    "sequence": sequence,
-                    "point_count": int(xyz.shape[0]),
-                    "byte_size": stored.byte_size,
-                    "checksum_sha256": stored.checksum_sha256,
-                    "bbox_local_m": bbox,
-                }
-            ],
+            "changed_chunks": [chunk_payload],
             "health": {
                 "missing_point_cloud": False,
-                "nvblox_ready": True,
                 "mapping_recording": True,
                 "stack_running": True,
             },
@@ -172,11 +253,11 @@ async def _store_and_publish_pointcloud_chunk(
     await warehouse_live_map_stream.publish(update)
 
     logger.info(
-        "Published raw point-cloud live-map chunk flight_id=%s chunk_id=%s points=%s bytes=%s",
+        "Published raw point-cloud live-map chunk flight_id=%s chunk_id=%s points=%s persisted=%s",
         flight_id,
-        stored.chunk_id,
+        stored.chunk_id if stored is not None else chunk_id,
         int(xyz.shape[0]),
-        stored.byte_size,
+        persist_to_disk,
     )
 
 
@@ -190,6 +271,8 @@ class _RawPointCloudLiveMapNode:
         global_frame: str,
         max_points: int,
         min_publish_interval_s: float,
+        persist_to_disk: bool,
+        voxel_size_m: float,
     ) -> None:
         import rclpy
         from rclpy.node import Node
@@ -209,6 +292,8 @@ class _RawPointCloudLiveMapNode:
         self.min_publish_interval_s = max(0.1, float(min_publish_interval_s))
         self.sequence = 0
         self.last_publish_monotonic = 0.0
+        self.persist_to_disk = persist_to_disk
+        self.voxel_size_m = max(0.0, float(voxel_size_m))
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
@@ -306,6 +391,13 @@ class _RawPointCloudLiveMapNode:
             stride = max(1, math.ceil(xyz.shape[0] / self.max_points))
             xyz = xyz[::stride]
 
+        if self.voxel_size_m > 0:
+            xyz = _voxel_downsample(xyz, self.voxel_size_m)
+
+        if xyz.shape[0] > self.max_points:
+            stride = max(1, math.ceil(xyz.shape[0] / self.max_points))
+            xyz = xyz[::stride]
+
         return np.ascontiguousarray(xyz, dtype=np.float32)
 
     def _on_pointcloud(self, msg: Any) -> None:
@@ -331,6 +423,8 @@ class _RawPointCloudLiveMapNode:
                     flight_id=self.flight_id,
                     sequence=sequence,
                     xyz=xyz,
+                    persist_to_disk=self.persist_to_disk,
+                    stamp=_stamp_from_msg(msg),
                 ),
                 self.event_loop,
             )
@@ -345,11 +439,23 @@ async def start_raw_pointcloud_live_map_bridge(
     global_frame: str = DEFAULT_GLOBAL_FRAME,
     max_points: int = DEFAULT_MAX_POINTS,
     min_publish_interval_s: float = DEFAULT_MIN_PUBLISH_INTERVAL_S,
+    persist_to_disk: bool | None = None,
 ) -> None:
     global _runtime
 
     async with _runtime_lock:
         await stop_raw_pointcloud_live_map_bridge()
+
+        resolved_persist = (
+            persist_raw_lidar_layer() if persist_to_disk is None else persist_to_disk
+        )
+        resolved_max_points = max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
+        resolved_interval = (
+            min_publish_interval_s
+            if min_publish_interval_s != DEFAULT_MIN_PUBLISH_INTERVAL_S
+            else raw_lidar_min_publish_interval_s()
+        )
+        resolved_voxel = raw_lidar_voxel_size_m()
 
         import rclpy
         from rclpy.executors import SingleThreadedExecutor
@@ -364,8 +470,10 @@ async def start_raw_pointcloud_live_map_bridge(
             event_loop=loop,
             topic=topic,
             global_frame=global_frame,
-            max_points=max_points,
-            min_publish_interval_s=min_publish_interval_s,
+            max_points=resolved_max_points,
+            min_publish_interval_s=resolved_interval,
+            persist_to_disk=resolved_persist,
+            voxel_size_m=resolved_voxel,
         )
 
         executor = SingleThreadedExecutor()
@@ -385,9 +493,14 @@ async def start_raw_pointcloud_live_map_bridge(
         )
 
         logger.info(
-            "Started raw point-cloud live-map bridge flight_id=%s topic=%s",
+            "Started raw point-cloud live-map bridge flight_id=%s topic=%s "
+            "max_hz=%.2f voxel_size=%.3f max_points=%s persist=%s",
             flight_id,
             topic,
+            1.0 / resolved_interval,
+            resolved_voxel,
+            resolved_max_points,
+            resolved_persist,
         )
 
 

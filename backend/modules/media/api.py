@@ -16,6 +16,23 @@ router = APIRouter(prefix="/video", tags=["video"])
 
 @router.post("/start")
 async def start_video_stream(user=Depends(require_user)):
+    current = await shared_video_runtime.readiness_status()
+    retry_after_ms = int(current.get("retry_after_ms") or 0)
+    if retry_after_ms > 0:
+        return {
+            "status": "unavailable",
+            "source": current.get("source"),
+            "proxy": "/video/mjpeg",
+            "message": current.get("last_error") or current.get("error"),
+            "retry_after_ms": retry_after_ms,
+        }
+    if current.get("state") == "warming":
+        return {
+            "status": "starting",
+            "source": current.get("source"),
+            "proxy": "/video/mjpeg",
+            "message": "Video stream is starting.",
+        }
     availability = await shared_video_runtime.ensure_source_available()
     if availability.get("status") == "skipped":
         return {
@@ -47,27 +64,44 @@ async def start_video_stream(user=Depends(require_user)):
     }
 
 
+@router.get("/status")
+async def video_status(user=Depends(require_user_header_or_query)):
+    return await shared_video_runtime.readiness_status()
+
+
 @router.get("/mjpeg")
 async def mjpeg_proxy(
     request: Request,
     user=Depends(require_user_header_or_query),
 ) -> StreamingResponse:
+    readiness = await shared_video_runtime.readiness_status()
+    retry_after_ms = int(readiness.get("retry_after_ms") or 0)
+    if retry_after_ms > 0:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Camera unavailable",
+                "reason": readiness.get("last_error") or "Video stream in backoff",
+                "source": readiness.get("source"),
+                "retry_after_ms": retry_after_ms,
+            },
+            headers={"Retry-After": str(max(1, retry_after_ms // 1000))},
+        )
+
     try:
         await shared_video_runtime.ensure_running()
     except RuntimeError as exc:
-        status = await shared_video_runtime.status()
-        logger.warning(
-            "Video stream unavailable source=%s error=%s",
-            status.get("source"),
-            exc,
-        )
+        readiness = await shared_video_runtime.readiness_status()
+        retry_after_ms = int(readiness.get("retry_after_ms") or 0)
         raise HTTPException(
             status_code=503,
             detail={
                 "message": "Camera unavailable",
                 "reason": str(exc),
-                "source": status.get("source"),
+                "source": readiness.get("source"),
+                "retry_after_ms": retry_after_ms,
             },
+            headers={"Retry-After": str(max(1, retry_after_ms // 1000))},
         ) from exc
 
     headers = {
