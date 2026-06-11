@@ -20,6 +20,7 @@ export function FieldBorderPanel({
   onSaveOrUpdate,
   onClearBorder,
   onNewField,
+  labels,
 }: {
   fieldName: string;
   selectedFieldId: number | null;
@@ -31,13 +32,24 @@ export function FieldBorderPanel({
   onSaveOrUpdate: () => void | Promise<void>;
   onClearBorder: () => void;
   onNewField: () => void;
+  labels?: {
+    panelTitle?: string;
+    panelInfo?: string;
+    nameLabel?: string;
+    saveTitle?: string;
+    updateTitle?: string;
+    newTitle?: string;
+  };
 }) {
   return (
     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, flex: 1, minWidth: 0 }}>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         <InfoLabel
-          label="Field Border"
-          info="Draw a polygon on the map. We store coordinates as [lon, lat] (GeoJSON order)."
+          label={labels?.panelTitle ?? "Field Border"}
+          info={
+            labels?.panelInfo ??
+            "Draw a polygon on the map. We store coordinates as [lon, lat] (GeoJSON order)."
+          }
         />
       </Typography>
 
@@ -50,7 +62,7 @@ export function FieldBorderPanel({
         <TextField
           variant="filled"
           size="small"
-          label="Field name"
+          label={labels?.nameLabel ?? "Field name"}
           value={fieldName}
           onChange={(e) => onFieldNameChange(e.target.value)}
           sx={{ minWidth: 220 }}
@@ -58,7 +70,11 @@ export function FieldBorderPanel({
 
         <ActionIconButton
           variant={selectedFieldId ? "upgrade" : "add"}
-          title={selectedFieldId ? "Update field border" : "Save field border"}
+          title={
+            selectedFieldId
+              ? (labels?.updateTitle ?? "Update field border")
+              : (labels?.saveTitle ?? "Save field border")
+          }
           color="primary"
           loading={savingField}
           disabled={savingField || !fieldBorder || fieldBorder.length < 3}
@@ -71,7 +87,7 @@ export function FieldBorderPanel({
           onClick={onClearBorder}
         />
 
-        <ActionIconButton variant="add" title="New field" onClick={onNewField} />
+        <ActionIconButton variant="add" title={labels?.newTitle ?? "New field"} onClick={onNewField} />
 
         {fieldBorder && (
           <>

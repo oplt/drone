@@ -45,9 +45,9 @@ export function PrivatePatrolMapColumn({
   return (
     <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
       <MissionVideoPanel
-        title="Patrol Camera"
-        imgAlt="Private patrol camera stream"
-        disconnectedMessage="Connect the drone to view the patrol stream."
+        title="Survey Camera"
+        imgAlt="Property patrol survey camera stream"
+        disconnectedMessage="Connect the drone to view the property patrol stream."
         apiBase={apiBase}
         streamKey={map.streamKey}
         videoToken={map.videoToken}
@@ -56,6 +56,8 @@ export function PrivatePatrolMapColumn({
         videoRetryCount={map.videoRetryCount}
         droneConnected={vm.droneConnected}
         telemetry={vm.telemetry}
+        missionLabel={vm.missionStatus?.mission_name ?? "Property Patrol Mission"}
+        recordingStatus={vm.mission.gridParams.record_video_stream ? "Recording during flight" : "Live"}
         onVideoError={map.handleVideoError}
         onVideoLoad={map.handleVideoLoad}
         onRetry={map.handleVideoRetry}
@@ -149,6 +151,9 @@ export function PrivatePatrolMapColumn({
           alignSelf: { xs: "stretch", lg: "flex-start" },
         }}
       >
+        <Box sx={{ mb: 1, fontSize: 12, color: "text.secondary" }}>
+          Maps
+        </Box>
         <CesiumViewControls
           useCesium={map.useCesium}
           onUseCesiumChange={(next) =>

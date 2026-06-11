@@ -301,7 +301,10 @@ class RuntimeExecutionServiceMixin:
                     asyncio.create_task(self.video_health_monitor_task()),
                     asyncio.create_task(self.emergency_monitor_task()),
                 ]
-                if self.video is not None and getattr(self.video, "enable_recording", False):
+                if self.video is not None and (
+                    getattr(self.video, "enable_recording", False)
+                    or bool(getattr(mission, "record_video_stream", False))
+                ):
                     tasks.append(asyncio.create_task(self.video_frame_pump_task()))
                 if flight_fn is not None:
                     flight_awaitable = flight_fn() if callable(flight_fn) else flight_fn

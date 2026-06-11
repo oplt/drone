@@ -1,6 +1,7 @@
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   FormControlLabel,
@@ -33,12 +34,16 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
     gridPreviewTooDense,
     gridPreviewError,
     previewLoading,
+    scheduledStartAt,
+    repeatStartAt,
+    repeatWaitingForCompletion,
+    cancelScheduledStart,
   } = mission;
 
   return (
     <Box sx={{ mt: 3 }}>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        Private Patrol Parameters
+        {isGridSurveillance ? "Grid Survey Parameters" : "Property Patrol Mission Parameters"}
       </Typography>
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
         <Box
@@ -111,6 +116,56 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
             }}
             inputProps={{ min: 0.5, max: 20, step: 0.1 }}
           />
+          {!isEventTriggeredPatrol && (
+            <>
+              <TextField
+                variant="filled"
+                label={
+                  <InfoLabel
+                    label="Start after (minutes)"
+                    info="0 starts immediately. Any positive value schedules dispatch after this many minutes while this page remains open."
+                  />
+                }
+                InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                type="number"
+                size="small"
+                fullWidth
+                value={gridParams.start_after_minutes}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!Number.isFinite(value)) return;
+                  setGridParams((p) => ({
+                    ...p,
+                    start_after_minutes: Math.min(1440, Math.max(0, Math.round(value))),
+                  }));
+                }}
+                inputProps={{ min: 0, max: 1440, step: 1 }}
+              />
+              <TextField
+                variant="filled"
+                label={
+                  <InfoLabel
+                    label="Repeat interval (minutes)"
+                    info="0 disables repeat. Any positive value schedules the next dispatch after each successful start while this page remains open."
+                  />
+                }
+                InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                type="number"
+                size="small"
+                fullWidth
+                value={gridParams.repeat_interval_minutes}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!Number.isFinite(value)) return;
+                  setGridParams((p) => ({
+                    ...p,
+                    repeat_interval_minutes: Math.min(1440, Math.max(0, Math.round(value))),
+                  }));
+                }}
+                inputProps={{ min: 0, max: 1440, step: 1 }}
+              />
+            </>
+          )}
           {gridParams.task_type === "perimeter_patrol" && (
             <>
               <TextField
@@ -141,7 +196,7 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
                 label={
                   <InfoLabel
                     label="Perimeter offset (m)"
-                    info="Typical private patrol offset is 10–30m from the property boundary."
+                    info="Typical property patrol offset is 10-30m from the property boundary."
                   />
                 }
                 InputLabelProps={INFO_INPUT_LABEL_PROPS}
@@ -181,7 +236,7 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
                 label={
                   <InfoLabel
                     label="Camera angle (° down)"
-                    info="Typical private patrol camera tilt is 30–45° downward."
+                    info="Typical property patrol camera tilt is 30-45 degrees downward."
                   />
                 }
                 InputLabelProps={INFO_INPUT_LABEL_PROPS}
@@ -332,6 +387,97 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
             <>
               <TextField
                 variant="filled"
+                select
+                label={
+                  <InfoLabel
+                    label="Pattern mode"
+                    info="Boustrophedon is a lawnmower sweep. Crosshatch adds a second pass."
+                  />
+                }
+                InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                size="small"
+                fullWidth
+                value={gridParams.grid_pattern_mode}
+                onChange={(e) =>
+                  setGridParams((p) => ({
+                    ...p,
+                    grid_pattern_mode: e.target.value as PatrolGridParams["grid_pattern_mode"],
+                  }))
+                }
+              >
+                <MenuItem value="boustrophedon">Boustrophedon (single pass)</MenuItem>
+                <MenuItem value="crosshatch">Crosshatch (two passes)</MenuItem>
+              </TextField>
+              {gridParams.grid_pattern_mode === "crosshatch" && (
+                <TextField
+                  variant="filled"
+                  label={
+                    <InfoLabel
+                      label="Crosshatch angle offset"
+                      info="90 degrees gives an orthogonal second pass."
+                    />
+                  }
+                  InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridParams.grid_crosshatch_angle_offset_deg}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (!Number.isFinite(value)) return;
+                    setGridParams((p) => ({
+                      ...p,
+                      grid_crosshatch_angle_offset_deg: Math.min(179, Math.max(1, value)),
+                    }));
+                  }}
+                  inputProps={{ min: 1, max: 179, step: 1 }}
+                />
+              )}
+              <TextField
+                variant="filled"
+                select
+                label={
+                  <InfoLabel
+                    label="Lane strategy"
+                    info="Serpentine is efficient. One-way keeps each lane in the same direction."
+                  />
+                }
+                InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                size="small"
+                fullWidth
+                value={gridParams.grid_lane_strategy}
+                onChange={(e) =>
+                  setGridParams((p) => ({
+                    ...p,
+                    grid_lane_strategy: e.target.value as PatrolGridParams["grid_lane_strategy"],
+                  }))
+                }
+              >
+                <MenuItem value="serpentine">Serpentine</MenuItem>
+                <MenuItem value="one_way">One-way lanes</MenuItem>
+              </TextField>
+              <TextField
+                variant="filled"
+                select
+                label="Start corner"
+                size="small"
+                fullWidth
+                value={gridParams.grid_start_corner}
+                onChange={(e) =>
+                  setGridParams((p) => ({
+                    ...p,
+                    grid_start_corner: e.target.value as PatrolGridParams["grid_start_corner"],
+                  }))
+                }
+              >
+                <MenuItem value="auto">Auto</MenuItem>
+                <MenuItem value="sw">South-West</MenuItem>
+                <MenuItem value="se">South-East</MenuItem>
+                <MenuItem value="nw">North-West</MenuItem>
+                <MenuItem value="ne">North-East</MenuItem>
+              </TextField>
+              <TextField
+                variant="filled"
                 label={
                   <InfoLabel
                     label="Grid spacing (m)"
@@ -352,6 +498,46 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
                   }));
                 }}
                 inputProps={{ min: 2, max: 300, step: 1 }}
+              />
+              <TextField
+                variant="filled"
+                label={
+                  <InfoLabel
+                    label="Row stride"
+                    info="1 flies every line. 2 flies every second line."
+                  />
+                }
+                InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                type="number"
+                size="small"
+                fullWidth
+                value={gridParams.grid_row_stride}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!Number.isFinite(value)) return;
+                  setGridParams((p) => ({
+                    ...p,
+                    grid_row_stride: Math.min(20, Math.max(1, Math.round(value))),
+                  }));
+                }}
+                inputProps={{ min: 1, max: 20, step: 1 }}
+              />
+              <TextField
+                variant="filled"
+                label="Row phase offset (m)"
+                type="number"
+                size="small"
+                fullWidth
+                value={gridParams.grid_row_phase_m}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!Number.isFinite(value)) return;
+                  setGridParams((p) => ({
+                    ...p,
+                    grid_row_phase_m: Math.max(0, value),
+                  }));
+                }}
+                inputProps={{ min: 0, max: 500, step: 0.5 }}
               />
               <TextField
                 variant="filled"
@@ -542,6 +728,32 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
               })}
             </Stack>
           </Box>
+          <Box sx={{ gridColumn: "1 / -1" }}>
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              Video
+            </Typography>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1}
+              sx={{ mt: 0.5, flexWrap: "wrap", rowGap: 1 }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={gridParams.record_video_stream}
+                    onChange={(e) =>
+                      setGridParams((p) => ({
+                        ...p,
+                        record_video_stream: e.target.checked,
+                      }))
+                    }
+                  />
+                }
+                label={<Typography variant="caption">Record video stream during flight</Typography>}
+              />
+            </Stack>
+          </Box>
           {isGridSurveillance && (alt < 20 || alt > 35) && (
             <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
               Grid surveillance typically runs at 20-35m altitude for stable wide-area monitoring.
@@ -668,6 +880,32 @@ export function PrivatePatrolParamsSection({ mission }: { mission: MissionVm }) 
             >
               <CircularProgress size={20} />
             </Box>
+          )}
+          {(scheduledStartAt != null || repeatWaitingForCompletion || repeatStartAt != null) && (
+            <Alert
+              severity="info"
+              sx={{ py: 0.5, gridColumn: "1 / -1" }}
+              action={
+                <Button color="inherit" size="small" onClick={cancelScheduledStart}>
+                  Cancel
+                </Button>
+              }
+            >
+              {scheduledStartAt != null ? (
+                <>
+                  Mission scheduled for {new Date(scheduledStartAt).toLocaleTimeString()}.
+                  {gridParams.repeat_interval_minutes > 0
+                    ? ` Repeats every ${gridParams.repeat_interval_minutes} minute(s).`
+                    : ""}
+                </>
+              ) : repeatWaitingForCompletion ? (
+                <>
+                  Repeat armed. Interval starts after mission completes and drone lands.
+                </>
+              ) : (
+                <>Next repeat scheduled for {new Date(repeatStartAt!).toLocaleTimeString()}.</>
+              )}
+            </Alert>
           )}
         </Box>
       </Paper>

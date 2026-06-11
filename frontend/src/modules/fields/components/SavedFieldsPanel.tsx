@@ -23,6 +23,7 @@ export function SavedFieldsPanel({
   onRefresh,
   onFocusSelected,
   onDeleteSelected,
+  labels,
 }: {
   fields: SavedFieldOption[];
   selectedFieldId: number | null;
@@ -33,13 +34,21 @@ export function SavedFieldsPanel({
   onRefresh: () => void;
   onFocusSelected: () => void;
   onDeleteSelected: () => void;
+  labels?: {
+    panelTitle?: string;
+    panelInfo?: string;
+    selectLabel?: string;
+    refreshTitle?: string;
+    focusTitle?: string;
+    deleteTitle?: string;
+  };
 }) {
   return (
     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         <InfoLabel
-          label="Saved Fields"
-          info="Select a saved field to load and focus it on the map."
+          label={labels?.panelTitle ?? "Saved Fields"}
+          info={labels?.panelInfo ?? "Select a saved field to load and focus it on the map."}
         />
       </Typography>
       <Stack
@@ -52,7 +61,7 @@ export function SavedFieldsPanel({
           select
           size="small"
           fullWidth
-          label="Saved fields (database)"
+          label={labels?.selectLabel ?? "Saved fields (database)"}
           value={selectedFieldId == null ? "" : String(selectedFieldId)}
           onChange={(e) => {
             const raw = e.target.value;
@@ -76,19 +85,19 @@ export function SavedFieldsPanel({
         <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
           <ActionIconButton
             variant="refresh"
-            title="Refresh saved fields"
+            title={labels?.refreshTitle ?? "Refresh saved fields"}
             loading={loadingFields}
             onClick={onRefresh}
           />
           <ActionIconButton
             variant="focus"
-            title="Focus selected field"
+            title={labels?.focusTitle ?? "Focus selected field"}
             disabled={!selectedField}
             onClick={onFocusSelected}
           />
           <ActionIconButton
             variant="delete"
-            title="Delete selected field"
+            title={labels?.deleteTitle ?? "Delete selected field"}
             color="error"
             loading={deletingField}
             disabled={!selectedField}

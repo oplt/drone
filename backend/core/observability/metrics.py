@@ -53,3 +53,43 @@ warehouse_preflight_cache_serves_total = Counter(
     "Total warehouse preflight snapshots served from cache",
     ["state"],
 )
+
+patrol_missions_started_total = Counter(
+    "patrol_missions_started_total",
+    "Total Property Patrol Mission runs started",
+)
+
+patrol_missions_completed_total = Counter(
+    "patrol_missions_completed_total",
+    "Total Property Patrol Mission runs completed",
+)
+
+patrol_missions_failed_total = Counter(
+    "patrol_missions_failed_total",
+    "Total Property Patrol Mission runs failed",
+)
+
+patrol_sensor_events_received_total = Counter(
+    "patrol_sensor_events_received_total",
+    "Total Property Patrol sensor events received",
+)
+
+patrol_sensor_events_rejected_total = Counter(
+    "patrol_sensor_events_rejected_total",
+    "Total Property Patrol sensor events rejected",
+)
+
+patrol_incidents_created_total = Counter(
+    "patrol_incidents_created_total",
+    "Total Property Patrol incidents created",
+)
+
+patrol_dispatch_latency_seconds = Histogram(
+    "patrol_dispatch_latency_seconds",
+    "Property Patrol dispatch latency in seconds",
+)
+
+patrol_preflight_failures_total = Counter(
+    "patrol_preflight_failures_total",
+    "Total Property Patrol preflight failures",
+)

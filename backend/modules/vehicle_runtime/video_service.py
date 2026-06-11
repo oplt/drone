@@ -127,7 +127,7 @@ class RuntimeVideoServiceMixin:
     async def _start_mission_recording(self, mission: Any) -> bool:
         if (
             settings.drone_video_use_gazebo
-            and settings.drone_video_save_stream
+            and (settings.drone_video_save_stream or bool(getattr(mission, "record_video_stream", False)))
             and getattr(mission, "mission_type", None) != "warehouse_scan"
         ):
             if self._shared_video is None:
@@ -154,15 +154,26 @@ class RuntimeVideoServiceMixin:
             except Exception as exc:
                 logger.error("Failed to start shared video recording: %s", exc)
                 return False
-        if self.video and getattr(self.video, "enable_recording", False):
+        if self.video and (
+            getattr(self.video, "enable_recording", False)
+            or bool(getattr(mission, "record_video_stream", False))
+        ):
             try:
                 await asyncio.to_thread(self.video.start_recording)
+                return True
             except Exception as exc:
                 logger.error("Failed to start video recording: %s", exc)
         return False
 
     async def _stop_mission_recording(self, active: bool) -> None:
-        if not active or self._shared_video is None:
+        if not active:
+            return
+        if self._shared_video is None:
+            if self.video is not None:
+                try:
+                    await asyncio.to_thread(self.video.stop_recording)
+                except Exception as exc:
+                    logger.warning("Failed to stop video recording: %s", exc)
             return
         try:
             status = await self._shared_video.stop_recording()

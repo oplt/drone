@@ -164,6 +164,8 @@ class PrivatePatrolMissionParams(BaseModel):
     direction: Literal["clockwise", "counterclockwise"] = "clockwise"
     patrol_loops: int = Field(default=1, ge=1, le=200)
     speed_mps: float = Field(default=6.0, ge=0.5, le=20.0)
+    start_after_minutes: int = Field(default=0, ge=0, le=1440)
+    repeat_interval_minutes: int = Field(default=0, ge=0, le=1440)
     camera_angle_deg: float = Field(default=35.0, ge=0.0, le=90.0)
     camera_overlap_pct: float = Field(default=50.0, ge=0.0, le=95.0)
     max_segment_length_m: float = Field(default=20.0, gt=1.0, le=300.0)
@@ -174,6 +176,12 @@ class PrivatePatrolMissionParams(BaseModel):
     grid_spacing_m: float = Field(default=40.0, gt=1.0, le=300.0)
     grid_angle_deg: float = Field(default=0.0, ge=0.0, lt=180.0)
     safety_inset_m: float = Field(default=2.0, ge=0.0, le=100.0)
+    grid_pattern_mode: Literal["boustrophedon", "crosshatch"] = "boustrophedon"
+    grid_crosshatch_angle_offset_deg: float = Field(default=90.0, gt=0.0, lt=180.0)
+    grid_lane_strategy: Literal["serpentine", "one_way"] = "serpentine"
+    grid_start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto"
+    grid_row_stride: int = Field(default=1, ge=1, le=20)
+    grid_row_phase_m: float = Field(default=0.0, ge=0.0, le=500.0)
     trigger_type: PatrolTriggerType = "fence_alarm"
     trigger_event_location_lonlat: list[float] | None = Field(
         default=None,
@@ -186,6 +194,7 @@ class PrivatePatrolMissionParams(BaseModel):
     verification_radius_m: float = Field(default=18.0, ge=0.0, le=150.0)
     track_target: bool = True
     auto_stream_video: bool = True
+    record_video_stream: bool = True
     ai_tasks: list[PatrolTaskType] = Field(default_factory=lambda: list(PATROL_AI_TASKS))
 
     @model_validator(mode="after")
@@ -1019,6 +1028,7 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
                 verification_radius_m=float(patrol.verification_radius_m),
                 track_target=bool(patrol.track_target),
                 auto_stream_video=bool(patrol.auto_stream_video),
+                record_video_stream=bool(patrol.record_video_stream),
                 target_label=patrol.target_label,
                 ai_tasks=ai_tasks,
             )
@@ -1033,6 +1043,13 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
                 grid_spacing_m=float(patrol.grid_spacing_m),
                 grid_angle_deg=float(patrol.grid_angle_deg),
                 safety_inset_m=float(patrol.safety_inset_m),
+                pattern_mode=patrol.grid_pattern_mode,
+                crosshatch_angle_offset_deg=float(patrol.grid_crosshatch_angle_offset_deg),
+                lane_strategy=patrol.grid_lane_strategy,
+                start_corner=patrol.grid_start_corner,
+                row_stride=int(patrol.grid_row_stride),
+                row_phase_m=float(patrol.grid_row_phase_m),
+                record_video_stream=bool(patrol.record_video_stream),
                 ai_tasks=ai_tasks,
             )
             return mission, len(mission.get_waypoints())
@@ -1047,6 +1064,7 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
                 camera_scan_yaw_deg=float(patrol.camera_scan_yaw_deg),
                 zoom_capture=bool(patrol.zoom_capture),
                 return_to_start=bool(patrol.return_to_start),
+                record_video_stream=bool(patrol.record_video_stream),
                 ai_tasks=ai_tasks,
             )
             return mission, len(mission.get_waypoints())
@@ -1063,6 +1081,7 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
             camera_angle_deg=float(patrol.camera_angle_deg),
             camera_overlap_pct=float(patrol.camera_overlap_pct),
             max_segment_length_m=float(patrol.max_segment_length_m),
+            record_video_stream=bool(patrol.record_video_stream),
             ai_tasks=ai_tasks,
         )
         return mission, len(mission.get_waypoints())
@@ -2167,6 +2186,8 @@ class PrivatePatrolPreviewIn(BaseModel):
     direction: Literal["clockwise", "counterclockwise"] = "clockwise"
     patrol_loops: int = Field(default=1, ge=1, le=200)
     speed_mps: float = Field(default=6.0, ge=0.5, le=20.0)
+    start_after_minutes: int = Field(default=0, ge=0, le=1440)
+    repeat_interval_minutes: int = Field(default=0, ge=0, le=1440)
     camera_angle_deg: float = Field(default=35.0, ge=0.0, le=90.0)
     camera_overlap_pct: float = Field(default=50.0, ge=0.0, le=95.0)
     max_segment_length_m: float = Field(default=20.0, gt=1.0, le=300.0)
@@ -2177,6 +2198,12 @@ class PrivatePatrolPreviewIn(BaseModel):
     grid_spacing_m: float = Field(default=40.0, gt=1.0, le=300.0)
     grid_angle_deg: float = Field(default=0.0, ge=0.0, lt=180.0)
     safety_inset_m: float = Field(default=2.0, ge=0.0, le=100.0)
+    grid_pattern_mode: Literal["boustrophedon", "crosshatch"] = "boustrophedon"
+    grid_crosshatch_angle_offset_deg: float = Field(default=90.0, gt=0.0, lt=180.0)
+    grid_lane_strategy: Literal["serpentine", "one_way"] = "serpentine"
+    grid_start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto"
+    grid_row_stride: int = Field(default=1, ge=1, le=20)
+    grid_row_phase_m: float = Field(default=0.0, ge=0.0, le=500.0)
     trigger_type: PatrolTriggerType = "fence_alarm"
     trigger_event_location_lonlat: list[float] | None = Field(
         default=None, min_length=2, max_length=2
@@ -2186,6 +2213,7 @@ class PrivatePatrolPreviewIn(BaseModel):
     verification_radius_m: float = Field(default=18.0, ge=0.0, le=150.0)
     track_target: bool = True
     auto_stream_video: bool = True
+    record_video_stream: bool = True
     ai_tasks: list[PatrolTaskType] = Field(default_factory=lambda: list(PATROL_AI_TASKS))
 
     @model_validator(mode="after")
@@ -2268,6 +2296,12 @@ async def preview_private_patrol(
                 grid_spacing_m=float(payload.grid_spacing_m),
                 grid_angle_deg=float(payload.grid_angle_deg),
                 safety_inset_m=float(payload.safety_inset_m),
+                pattern_mode=payload.grid_pattern_mode,
+                crosshatch_angle_offset_deg=float(payload.grid_crosshatch_angle_offset_deg),
+                lane_strategy=payload.grid_lane_strategy,
+                start_corner=payload.grid_start_corner,
+                row_stride=int(payload.grid_row_stride),
+                row_phase_m=float(payload.grid_row_phase_m),
             )
             waypoints = plan.waypoints
         elif payload.task_type == "waypoint_patrol":
@@ -2373,6 +2407,7 @@ async def preview_private_patrol(
             camera={
                 "mode": "wide_coverage",
                 "grid_spacing_m": float(payload.grid_spacing_m),
+                "record_video_stream": bool(payload.record_video_stream),
             },
             ai_tasks=[str(task) for task in ai_tasks],
         )

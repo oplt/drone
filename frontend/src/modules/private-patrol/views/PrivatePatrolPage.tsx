@@ -1,4 +1,4 @@
-import { Divider, Stack, Typography } from "@mui/material";
+import { Divider, Stack } from "@mui/material";
 import { TerraDrawController } from "../../maps";
 import {
   GoogleMapEngineAlerts,
@@ -7,10 +7,9 @@ import {
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import { FieldDeleteDialog } from "../../field-survey/components/FieldDeleteDialog";
 import { PrivatePatrolMapColumn } from "../components/PrivatePatrolMapColumn";
-import { PrivatePatrolParamsSection } from "../components/PrivatePatrolParamsSection";
 import {
-  PrivatePatrolFieldsBlock,
   PrivatePatrolMissionControls,
+  PrivatePatrolSetupDrawer,
 } from "../components/PrivatePatrolPlanningSection";
 import { PrivatePatrolStatusSections } from "../components/PrivatePatrolStatusSections";
 import { PrivatePatrolUiNotice } from "../components/PrivatePatrolUiNotice";
@@ -23,8 +22,8 @@ export default function PrivatePatrolPage() {
 
   return (
     <MissionWorkflowShell
-      title="Private Patrol"
-      subtitle="Persistent surveillance missions for private property security with perimeter patrol, key-point verification, grid area coverage, and event-triggered response workflows."
+      title="Property Patrol Mission"
+      subtitle="Persistent surveillance missions for property security with perimeter patrol, key-point verification, grid area coverage, and event-triggered response workflows."
       droneConnected={vm.droneConnected}
       wsConnected={vm.wsConnected}
       errors={vm.errors}
@@ -52,34 +51,6 @@ export default function PrivatePatrolPage() {
           <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
             <Stack sx={{ flex: 1 }} spacing={2}>
               <PrivatePatrolMapColumn vm={vm} onSelectField={vm.selectField} />
-              <PrivatePatrolFieldsBlock
-                fields={vm.fields}
-                selectedFieldId={vm.selectedFieldId}
-                selectedField={vm.selectedField}
-                loadingFields={vm.loadingFields}
-                deletingField={vm.deletingField}
-                onSelectField={vm.handleSavedFieldSelect}
-                onRefreshFields={vm.refreshFields}
-                onFocusSelected={() =>
-                  vm.selectedField &&
-                  borderEditor.focusRingOnMap(vm.selectedField.ring)
-                }
-                onDeleteSelected={vm.requestDeleteSelectedField}
-                fieldName={vm.fieldName}
-                fieldBorder={vm.fieldBorder}
-                metrics={vm.metrics}
-                savingField={vm.savingField}
-                onFieldNameChange={vm.setFieldName}
-                onSaveOrUpdate={
-                  vm.selectedFieldId ? vm.updateFieldBorder : vm.saveFieldBorder
-                }
-                onClearBorder={borderEditor.clearFieldBorder}
-                onNewField={vm.handleNewField}
-              />
-              <PrivatePatrolParamsSection mission={mission} />
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {mission.mapHint}
-              </Typography>
             </Stack>
 
             <PrivatePatrolMissionControls
@@ -93,6 +64,31 @@ export default function PrivatePatrolPage() {
               onSendMission={() => void mission.sendMission()}
             />
           </Stack>
+
+          <PrivatePatrolSetupDrawer
+            fields={vm.fields}
+            selectedFieldId={vm.selectedFieldId}
+            selectedField={vm.selectedField}
+            loadingFields={vm.loadingFields}
+            deletingField={vm.deletingField}
+            onSelectField={vm.handleSavedFieldSelect}
+            onRefreshFields={vm.refreshFields}
+            onFocusSelected={() =>
+              vm.selectedField && borderEditor.focusRingOnMap(vm.selectedField.ring)
+            }
+            onDeleteSelected={vm.requestDeleteSelectedField}
+            fieldName={vm.fieldName}
+            fieldBorder={vm.fieldBorder}
+            metrics={vm.metrics}
+            savingField={vm.savingField}
+            onFieldNameChange={vm.setFieldName}
+            onSaveOrUpdate={
+              vm.selectedFieldId ? vm.updateFieldBorder : vm.saveFieldBorder
+            }
+            onClearBorder={borderEditor.clearFieldBorder}
+            onNewField={vm.handleNewField}
+            mission={mission}
+          />
 
           <Divider sx={{ mb: 2 }} />
 

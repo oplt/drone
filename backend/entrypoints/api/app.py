@@ -36,6 +36,7 @@ from backend.modules.missions.api.routes import router as missions_router
 from backend.modules.patrol.api import router as patrol_debug_router
 from backend.modules.patrol.live_detection_api import router as live_detection_router
 from backend.modules.patrol.vision_api import router as ml_router
+from backend.modules.property_patrol.api import router as property_patrol_router
 from backend.modules.settings.api import router as settings_router
 from backend.modules.settings.repository import SettingsRepository
 from backend.modules.settings.service import get_runtime_settings
@@ -163,6 +164,7 @@ app.include_router(alerts_router)
 app.include_router(ml_router)
 app.include_router(patrol_debug_router)
 app.include_router(live_detection_router)
+app.include_router(property_patrol_router)
 app.include_router(templates_router, prefix="/tasks")
 app.include_router(apikeys_router, prefix="/tasks")
 app.include_router(webhooks_router, prefix="/tasks")

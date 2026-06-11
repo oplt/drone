@@ -53,7 +53,7 @@ const mainListItems: MenuItem[] = [
     path: '/dashboard/controlled',
     children: [
       { text: 'Field', icon: <LocalFloristRoundedIcon />, path: '/dashboard/field' },
-      { text: 'Private Patrol', icon: <VisibilityRoundedIcon />, path: '/dashboard/privatepatrol' },
+      { text: 'Property Patrol Mission', icon: <VisibilityRoundedIcon />, path: '/dashboard/property-patrol' },
       { text: 'Warehouse', icon: <WarehouseRoundedIcon />, path: '/dashboard/warehouse' },
       { text: 'PhotoGrammetry', icon: <PhotoCameraRoundedIcon />, path: '/dashboard/photogrammetry' },
       { text: 'Animal Farm', icon: <EmojiNatureRoundedIcon />, path: '/dashboard/animalfarm' },

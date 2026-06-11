@@ -1,4 +1,4 @@
-import type { PreflightRunResponse } from "../mission-runtime";
+import type { MissionLifecycleSlice, PreflightRunResponse } from "../mission-runtime";
 import type { Waypoint } from "../mission-workflow";
 
 export type PrivatePatrolTaskType =
@@ -47,6 +47,8 @@ export type PatrolGridParams = {
   direction: "clockwise" | "counterclockwise";
   patrol_loops: number;
   speed_mps: number;
+  start_after_minutes: number;
+  repeat_interval_minutes: number;
   camera_angle_deg: number;
   camera_overlap_pct: number;
   max_segment_length_m: number;
@@ -56,12 +58,19 @@ export type PatrolGridParams = {
   return_to_start: boolean;
   grid_spacing_m: number;
   grid_angle_deg: number;
+  grid_pattern_mode: "boustrophedon" | "crosshatch";
+  grid_crosshatch_angle_offset_deg: number;
+  grid_lane_strategy: "serpentine" | "one_way";
+  grid_start_corner: "auto" | "nw" | "ne" | "sw" | "se";
+  grid_row_stride: number;
+  grid_row_phase_m: number;
   safety_inset_m: number;
   trigger_type: PatrolTriggerType;
   verification_loiter_s: number;
   verification_radius_m: number;
   track_target: boolean;
   auto_stream_video: boolean;
+  record_video_stream: boolean;
   target_label: string;
   ai_tasks: PatrolAiTask[];
 };
@@ -69,6 +78,7 @@ export type PatrolGridParams = {
 export interface PrivatePatrolMissionStatus {
   flight_id?: string;
   mission_name?: string;
+  mission_lifecycle?: MissionLifecycleSlice | null;
   telemetry?: {
     running: boolean;
     active_connections?: number;
@@ -102,6 +112,8 @@ export const DEFAULT_PATROL_GRID_PARAMS: PatrolGridParams = {
   direction: "clockwise",
   patrol_loops: 1,
   speed_mps: 6,
+  start_after_minutes: 0,
+  repeat_interval_minutes: 0,
   camera_angle_deg: 35,
   camera_overlap_pct: 50,
   max_segment_length_m: 20,
@@ -111,12 +123,19 @@ export const DEFAULT_PATROL_GRID_PARAMS: PatrolGridParams = {
   return_to_start: true,
   grid_spacing_m: 40,
   grid_angle_deg: 0,
+  grid_pattern_mode: "boustrophedon",
+  grid_crosshatch_angle_offset_deg: 90,
+  grid_lane_strategy: "serpentine",
+  grid_start_corner: "auto",
+  grid_row_stride: 1,
+  grid_row_phase_m: 0,
   safety_inset_m: 2,
   trigger_type: "fence_alarm",
   verification_loiter_s: 45,
   verification_radius_m: 18,
   track_target: true,
   auto_stream_video: true,
+  record_video_stream: true,
   target_label: "",
   ai_tasks: [
     "intruder_detection",

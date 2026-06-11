@@ -35,6 +35,9 @@ const AnimalFarmPage = lazyWithStaleChunkReload(() => import("../../modules/anim
 const PrivatePatrolPage = lazyWithStaleChunkReload(
   () => import("../../modules/private-patrol"),
 );
+const PropertyPatrolPage = lazyWithStaleChunkReload(
+  () => import("../../modules/property-patrol"),
+);
 const MissionTimeline = lazyWithStaleChunkReload(() => import("../../modules/mission-history"));
 const AdminPage = lazyWithStaleChunkReload(() => import("../../modules/admin"));
 const TemplatesPage = lazyWithStaleChunkReload(() => import("../../modules/templates"));
@@ -87,6 +90,7 @@ export function AppRouter() {
           <Route path="photogrammetry" element={renderLazyRoute(<PhotoGrammetryPage />)} />
           <Route path="animalfarm" element={renderLazyRoute(<AnimalFarmPage />)} />
           <Route path="privatepatrol" element={renderLazyRoute(<PrivatePatrolPage />)} />
+          <Route path="property-patrol" element={renderLazyRoute(<PropertyPatrolPage />)} />
           <Route path="field" element={renderLazyRoute(<FieldPage />)} />
           <Route path="warehouse" element={renderLazyRoute(<WarehousePage />)} />
           <Route path="admin" element={renderLazyRoute(<AdminPage />)} />

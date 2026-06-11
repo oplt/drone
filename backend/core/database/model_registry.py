@@ -22,6 +22,7 @@ _MODEL_MODULES = (
     "backend.modules.missions.runtime_models",
     "backend.modules.organizations.models",
     "backend.modules.patrol.models",
+    "backend.modules.property_patrol.models",
     "backend.modules.preflight.models",
     "backend.modules.settings.models",
     "backend.modules.telemetry.models",

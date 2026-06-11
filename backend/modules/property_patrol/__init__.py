@@ -1,0 +1,2 @@
+"""Property Patrol Mission domain."""
+

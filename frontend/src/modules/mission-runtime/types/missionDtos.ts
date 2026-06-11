@@ -1,7 +1,13 @@
 export type MissionLifecycleState =
+  | "planned"
+  | "preflight"
   | "queued"
+  | "arming"
+  | "airborne"
   | "running"
   | "paused"
+  | "resumed"
+  | "aborting"
   | "aborted"
   | "completed"
   | "failed";

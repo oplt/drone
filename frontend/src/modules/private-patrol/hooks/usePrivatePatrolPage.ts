@@ -24,7 +24,7 @@ import { usePrivatePatrolMap } from "./usePrivatePatrolMap";
 import { usePrivatePatrolMission } from "./usePrivatePatrolMission";
 
 export function usePrivatePatrolPage() {
-  const [fieldName, setFieldName] = useState("Field A");
+  const [fieldName, setFieldName] = useState("Main Property");
   const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
   const [pendingDeleteField, setPendingDeleteField] =
@@ -176,6 +176,8 @@ export function usePrivatePatrolPage() {
     clearErrors,
     setPendingFlightId,
     showUiNotice,
+    missionStatus,
+    activeFlightId,
   });
 
   const map = usePrivatePatrolMap({
@@ -253,7 +255,7 @@ export function usePrivatePatrolPage() {
 
   const handleNewField = useCallback(() => {
     setSelectedFieldId(null);
-    setFieldName("Field A");
+    setFieldName("Main Property");
     borderEditor.clearFieldBorder();
   }, [borderEditor]);
 
@@ -280,7 +282,7 @@ export function usePrivatePatrolPage() {
     try {
       await deleteFieldRecord(pendingDeleteField.id);
       borderEditor.clearFieldBorder();
-      setFieldName("Field A");
+      setFieldName("Main Property");
       setPendingDeleteField(null);
       showUiNotice(`Deleted field "${pendingDeleteField.name}"`);
     } catch (e: unknown) {

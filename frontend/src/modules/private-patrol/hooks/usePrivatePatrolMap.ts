@@ -90,7 +90,7 @@ export function usePrivatePatrolMap({
   const [center, setCenter] = useState(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [mapZoom, setMapZoom] = useState(12);
-  const [streamKey, setStreamKey] = useState(Date.now());
+  const [streamKey, setStreamKey] = useState(() => Date.now());
   const [mapReady, setMapReady] = useState(false);
   const mapEngine = controlledMapEngine;
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
@@ -117,6 +117,7 @@ export function usePrivatePatrolMap({
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (autoStreamKey) setStreamKey(autoStreamKey);
   }, [autoStreamKey]);
 
@@ -130,12 +131,14 @@ export function usePrivatePatrolMap({
   useEffect(() => {
     if (!fieldTilesetUrl) return;
     handleMapEngineChange("cesium");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCesiumViewMode("top");
   }, [fieldTilesetUrl, handleMapEngineChange]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
       console.warn("Geolocation is not supported by this browser.");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingLocation(false);
       return;
     }
