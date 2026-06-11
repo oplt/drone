@@ -183,6 +183,7 @@ export function usePrivatePatrolPage() {
   const map = usePrivatePatrolMap({
     apiBase: API_BASE_CLEAN,
     wsConnected,
+    droneConnected,
     telemetry,
     activeFlightId,
     fieldBorder,

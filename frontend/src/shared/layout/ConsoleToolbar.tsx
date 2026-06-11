@@ -21,12 +21,13 @@ export default function ConsoleToolbar({ leading, trailing }: ConsoleToolbarProp
         width: "100%",
         maxWidth: { sm: "100%", md: "1700px" },
         p: 1.5,
-        borderRadius: 999,
-        backgroundColor: "rgba(255,255,255,0.76)",
-        backdropFilter: "blur(16px)",
+        borderRadius: 1,
+        border: "none",
+        boxShadow: "none",
+        backgroundColor: "rgba(255, 255, 255, 0.75)",
+        backdropFilter: "blur(12px)",
         '[data-mui-color-scheme="dark"] &': {
-          backgroundColor: "rgba(14,18,22,0.76)",
-          borderColor: "rgba(122, 160, 145, 0.18)",
+          backgroundColor: "rgba(23, 26, 32, 0.75)",
         },
       }}
     >

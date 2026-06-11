@@ -51,6 +51,7 @@ export function FieldSurveyMapColumn({
         title="Survey Camera"
         imgAlt="Survey camera stream"
         disconnectedMessage="Connect the drone to view the survey stream."
+        frameHeight={360}
         apiBase={apiBase}
         streamKey={map.streamKey}
         videoToken={map.videoToken}

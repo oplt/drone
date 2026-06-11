@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.infrastructure.camera.runtime import (
+    drone_video_link_connected,
     shared_video_runtime,
 )
 from backend.modules.identity.dependencies import require_user, require_user_header_or_query
@@ -13,9 +15,29 @@ from backend.modules.identity.dependencies import require_user, require_user_hea
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/video", tags=["video"])
 
+_DRONE_WAIT_RETRY_MS = 5000
+
+
+def _drone_wait_detail() -> dict[str, Any]:
+    return {
+        "message": "Camera unavailable",
+        "reason": "Drone is not connected",
+        "source": shared_video_runtime.source_url(),
+        "retry_after_ms": _DRONE_WAIT_RETRY_MS,
+    }
+
 
 @router.post("/start")
 async def start_video_stream(user=Depends(require_user)):
+    if not drone_video_link_connected():
+        return {
+            "status": "waiting_for_drone",
+            "source": shared_video_runtime.source_url(),
+            "proxy": "/video/mjpeg",
+            "message": "Drone is not connected.",
+            "retry_after_ms": _DRONE_WAIT_RETRY_MS,
+        }
+
     current = await shared_video_runtime.readiness_status()
     retry_after_ms = int(current.get("retry_after_ms") or 0)
     if retry_after_ms > 0:
@@ -74,6 +96,13 @@ async def mjpeg_proxy(
     request: Request,
     user=Depends(require_user_header_or_query),
 ) -> StreamingResponse:
+    if not drone_video_link_connected():
+        raise HTTPException(
+            status_code=503,
+            detail=_drone_wait_detail(),
+            headers={"Retry-After": str(_DRONE_WAIT_RETRY_MS // 1000)},
+        )
+
     readiness = await shared_video_runtime.readiness_status()
     retry_after_ms = int(readiness.get("retry_after_ms") or 0)
     if retry_after_ms > 0:

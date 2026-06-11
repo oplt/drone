@@ -54,25 +54,22 @@ export default function AppNavbar({ user, onLogout }: AppNavbarProps) {
             gap: 1.5,
             px: 2,
             py: 1,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.default',
+            bgcolor: 'background.paper',
+            backdropFilter: 'blur(8px)',
           }}
         >
           <Typography
             sx={{
-              fontFamily: '"Space Mono", monospace',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              letterSpacing: '0.12em',
               color: 'text.primary',
               mr: 'auto',
             }}
           >
-            DRONE OPS
+            drone ops
           </Typography>
-          <Chip size="small" label="LIVE" color="success" />
+          <Chip size="small" label="Live" color="primary" />
           <MenuButton aria-label="Open menu" onClick={toggleDrawer(true)}>
             <MenuRoundedIcon />
           </MenuButton>

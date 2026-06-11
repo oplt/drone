@@ -48,6 +48,7 @@ export function PrivatePatrolMapColumn({
         title="Survey Camera"
         imgAlt="Property patrol survey camera stream"
         disconnectedMessage="Connect the drone to view the property patrol stream."
+        frameHeight={360}
         apiBase={apiBase}
         streamKey={map.streamKey}
         videoToken={map.videoToken}

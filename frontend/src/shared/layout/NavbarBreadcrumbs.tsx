@@ -74,7 +74,7 @@ export default function NavbarBreadcrumbs() {
         Operations Hub
       </Link>
 
-      <Typography variant="body1" sx={{ color: "text.primary", fontWeight: 600 }}>
+      <Typography variant="body1" sx={{ color: "text.primary", fontWeight: 500 }}>
         {currentLabel}
       </Typography>
     </StyledBreadcrumbs>

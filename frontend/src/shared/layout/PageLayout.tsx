@@ -55,20 +55,11 @@ export default function PageLayout({
             >
               <Stack spacing={1.5} sx={{ maxWidth: 760 }}>
                 {eyebrow ? (
-                  <Typography
-                    sx={{
-                      fontFamily: '"Space Mono", monospace',
-                      fontSize: "0.6875rem",
-                      fontWeight: 400,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: "text.secondary",
-                    }}
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     {eyebrow}
                   </Typography>
                 ) : null}
-                <Typography variant="h3" sx={{ color: "text.primary" }}>
+                <Typography variant="h3" sx={{ color: "text.primary", fontWeight: 500 }}>
                   {title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -100,31 +91,20 @@ export default function PageLayout({
                               sx={{
                                 p: 2,
                                 height: "100%",
-                                borderRadius: 2,
-                                border: "1px solid",
-                                borderColor: "divider",
-                                backgroundColor: "background.paper",
+                                borderRadius: 3,
+                                border: "none",
+                                backgroundColor: "grey.50",
                               }}
                             >
                               <Stack spacing={0.5}>
-                                <Typography
-                                  sx={{
-                                    fontFamily: '"Space Mono", monospace',
-                                    fontSize: "0.6875rem",
-                                    fontWeight: 400,
-                                    letterSpacing: "0.08em",
-                                    textTransform: "uppercase",
-                                    color: "text.secondary",
-                                  }}
-                                >
+                                <Typography variant="caption" color="text.secondary">
                                   {metric.label}
                                 </Typography>
                                 <Typography
+                                  variant="h4"
                                   sx={{
-                                    fontFamily: '"Space Mono", monospace',
-                                    fontSize: "1.5rem",
-                                    fontWeight: 400,
-                                    lineHeight: 1.1,
+                                    fontWeight: 500,
+                                    lineHeight: 1.18,
                                     color: "text.primary",
                                   }}
                                 >
@@ -176,8 +156,7 @@ export function PageSection({
         {
           p: { xs: 2.5, md: 3 },
           borderRadius: 3,
-          border: "1px solid",
-          borderColor: "divider",
+          border: "none",
           backgroundColor: "background.paper",
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),

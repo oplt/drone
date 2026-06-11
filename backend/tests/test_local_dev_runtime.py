@@ -31,9 +31,57 @@ class _FakeVideoRuntime:
 
 
 @pytest.mark.asyncio
+async def test_mjpeg_proxy_waits_for_drone_link(monkeypatch) -> None:
+    class _Runtime(_FakeVideoRuntime):
+        ensure_calls = 0
+
+        async def ensure_running(self) -> dict:
+            self.ensure_calls += 1
+            return await super().ensure_running()
+
+    fake = _Runtime()
+    monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+    monkeypatch.setattr(media_api, "drone_video_link_connected", lambda: False)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await media_api.mjpeg_proxy(SimpleNamespace(), user=object())
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail["reason"] == "Drone is not connected"
+    assert fake.ensure_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_start_video_stream_waits_for_drone_link(monkeypatch) -> None:
+    class _Runtime(_FakeVideoRuntime):
+        ensure_calls = 0
+        source_calls = 0
+
+        async def ensure_source_available(self) -> dict:
+            self.source_calls += 1
+            return {"status": "starting", "source": "udp://127.0.0.1:5600"}
+
+        async def ensure_running(self) -> dict:
+            self.ensure_calls += 1
+            return await super().ensure_running()
+
+    fake = _Runtime()
+    monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+    monkeypatch.setattr(media_api, "drone_video_link_connected", lambda: False)
+
+    result = await media_api.start_video_stream(user=object())
+
+    assert result["status"] == "waiting_for_drone"
+    assert result["retry_after_ms"] == 5000
+    assert fake.source_calls == 0
+    assert fake.ensure_calls == 0
+
+
+@pytest.mark.asyncio
 async def test_mjpeg_proxy_returns_503_when_camera_unavailable(monkeypatch) -> None:
     fake = _FakeVideoRuntime()
     monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+    monkeypatch.setattr(media_api, "drone_video_link_connected", lambda: True)
 
     with pytest.raises(HTTPException) as exc_info:
         await media_api.mjpeg_proxy(SimpleNamespace(), user=object())
@@ -61,6 +109,7 @@ async def test_mjpeg_proxy_honors_backoff_without_starting_worker(monkeypatch) -
 
     fake = _BackoffRuntime()
     monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+    monkeypatch.setattr(media_api, "drone_video_link_connected", lambda: True)
 
     with pytest.raises(HTTPException) as exc_info:
         await media_api.mjpeg_proxy(SimpleNamespace(), user=object())
@@ -94,6 +143,7 @@ async def test_start_video_stream_honors_backoff_without_restarting(monkeypatch)
 
     fake = _BackoffRuntime()
     monkeypatch.setattr(media_api, "shared_video_runtime", fake)
+    monkeypatch.setattr(media_api, "drone_video_link_connected", lambda: True)
 
     result = await media_api.start_video_stream(user=object())
 

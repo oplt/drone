@@ -192,9 +192,6 @@ type WarehouseMissionStatus = {
   warehouse_mapping?: WarehouseMappingRuntimeStatus | null;
 };
 
-const VIDEO_RETRY_BASE_MS = 5000;
-const VIDEO_RETRY_MAX_MS = 60000;
-const VIDEO_MAX_RETRIES = 8;
 const SCANNED_MAP_REFRESH_MS = 30000;
 
 const COMPACT_FIELD_SX = {
@@ -1382,33 +1379,8 @@ export default function WarehousePage() {
   const handleVideoError = useCallback(() => {
     setVideoErrorMessage("Failed to load video stream");
     setVideoErrorStreamKey(streamKey || null);
-    setVideoRetryCount((prev) => {
-      const next = prev + 1;
-      if (next >= VIDEO_MAX_RETRIES) {
-        return next;
-      }
-
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-      }
-
-      const delayMs = Math.min(
-        VIDEO_RETRY_MAX_MS,
-        VIDEO_RETRY_BASE_MS * 2 ** Math.max(0, next - 1),
-      );
-      retryTimerRef.current = window.setTimeout(() => {
-        setManualStreamKey({
-          flightId: activeFlightId ?? null,
-          key: Date.now(),
-        });
-        setVideoErrorMessage(null);
-        setVideoErrorStreamKey(null);
-        retryTimerRef.current = null;
-      }, delayMs);
-
-      return next;
-    });
-  }, [activeFlightId, streamKey]);
+    setVideoRetryCount((prev) => prev + 1);
+  }, [streamKey]);
 
   const handleVideoLoad = useCallback(() => {
     if (retryTimerRef.current !== null) {

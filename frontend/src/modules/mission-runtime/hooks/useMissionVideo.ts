@@ -30,6 +30,8 @@ export function useMissionVideo({
 }) {
   const [starting, setStarting] = useState(false);
   const [streamKey, setStreamKey] = useState(0);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   const [videoStatus, setVideoStatus] = useState<VideoStreamStatus | null>(
     null,
   );
@@ -54,6 +56,9 @@ export function useMissionVideo({
       abortRef.current?.abort();
       abortRef.current = null;
       setStarting(false);
+      setStreamKey(0);
+      setVideoStatus(null);
+      attemptRef.current = 0;
       if (retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
@@ -127,10 +132,11 @@ export function useMissionVideo({
           }
         }
 
+        if (!enabledRef.current) return;
         attemptRef.current = 0;
         setStreamKey(Date.now());
       } catch (error) {
-        if (cancelled || controller.signal.aborted) return;
+        if (cancelled || controller.signal.aborted || !enabledRef.current) return;
         const detail =
           error instanceof ApiError
             ? error.message

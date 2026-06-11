@@ -1,6 +1,7 @@
 import { alpha } from '@mui/material/styles';
 import type { Components } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { tesla, teslaTransition } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const surfacesCustomizations: Components<Theme> = {
@@ -13,23 +14,22 @@ export const surfacesCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         padding: 4,
         overflow: 'clip',
-        backgroundColor: (theme.vars || theme).palette.background.default,
-        border: '1px solid',
-        borderColor: (theme.vars || theme).palette.divider,
+        backgroundColor: (theme.vars || theme).palette.background.paper,
+        border: 'none',
         boxShadow: 'none',
         ':before': {
           backgroundColor: 'transparent',
         },
         '&:not(:last-of-type)': {
-          borderBottom: 'none',
+          borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`,
         },
         '&:first-of-type': {
-          borderTopLeftRadius: (theme.vars || theme).shape.borderRadius,
-          borderTopRightRadius: (theme.vars || theme).shape.borderRadius,
+          borderTopLeftRadius: 4,
+          borderTopRightRadius: 4,
         },
         '&:last-of-type': {
-          borderBottomLeftRadius: (theme.vars || theme).shape.borderRadius,
-          borderBottomRightRadius: (theme.vars || theme).shape.borderRadius,
+          borderBottomLeftRadius: 4,
+          borderBottomRightRadius: 4,
         },
       }),
     },
@@ -38,9 +38,13 @@ export const surfacesCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         border: 'none',
-        borderRadius: (theme.vars || theme).shape.borderRadius,
-        '&:hover': { backgroundColor: alpha('#999999', 0.06) },
+        borderRadius: 4,
+        transition: teslaTransition,
+        '&:hover': { backgroundColor: alpha(tesla.carbonDark, 0.04) },
         '&:focus-visible': { backgroundColor: 'transparent' },
+        ...theme.applyStyles('dark', {
+          '&:hover': { backgroundColor: alpha(tesla.white, 0.04) },
+        }),
       }),
     },
   },
@@ -66,34 +70,21 @@ export const surfacesCustomizations: Components<Theme> = {
       root: ({ theme }) => {
         return {
           padding: 20,
-          gap: 20,
-          transition: 'border-color 150ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+          gap: 16,
+          transition: teslaTransition,
           backgroundColor: (theme.vars || theme).palette.background.paper,
-          borderRadius: 16,
-          border: '1px solid',
-          borderColor: (theme.vars || theme).palette.divider,
+          borderRadius: 12,
+          border: 'none',
           boxShadow: 'none',
-          '@media (hover: hover)': {
-            '&:hover': {
-              borderColor: '#333333',
-            },
-          },
-          ...theme.applyStyles('dark', {
-            '@media (hover: hover)': {
-              '&:hover': {
-                borderColor: '#333333',
-              },
-            },
-          }),
           variants: [
             {
               props: { variant: 'outlined' },
               style: {
-                border: '1px solid',
-                borderColor: (theme.vars || theme).palette.divider,
+                border: 'none',
+                backgroundColor: tesla.lightAsh,
                 boxShadow: 'none',
                 ...theme.applyStyles('dark', {
-                  borderColor: '#222222',
+                  backgroundColor: alpha(tesla.white, 0.04),
                 }),
               },
             },

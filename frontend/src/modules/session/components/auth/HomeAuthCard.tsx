@@ -75,7 +75,7 @@ function ToggleButton({
           aria-label={title}
           onClick={onClick}
           color={active ? 'primary' : 'default'}
-          sx={{ minHeight: 40, borderRadius: 999, width: '100%' }}
+          sx={{ minHeight: 40, borderRadius: 1, width: '100%' }}
         >
           {icon}
         </IconButton>
@@ -437,11 +437,12 @@ export default function HomeAuthCard({ initialMode = 'signIn' }: HomeAuthCardPro
         maxWidth: { xs: 'none', lg: 550 },
         ml: { lg: 'auto' },
         p: { xs: 2.25, sm: 3.75 },
-        borderRadius: 2,
+        borderRadius: 1,
+        border: 'none',
         overflow: 'hidden',
-        backgroundColor: alpha(theme.palette.background.paper, 0.9),
-        backdropFilter: 'blur(16px)',
-        boxShadow: `0 22px 70px ${alpha(theme.palette.common.black, 0.12)}`,
+        backgroundColor: theme.palette.background.paper,
+        backdropFilter: 'blur(12px)',
+        boxShadow: 'none',
       })}
     >
       <Stack spacing={4}>
@@ -465,8 +466,8 @@ export default function HomeAuthCard({ initialMode = 'signIn' }: HomeAuthCardPro
             display: 'grid',
             gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gap: 0.75,
-            borderRadius: 999,
-            backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.06),
+            borderRadius: 1,
+            backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.08 : 0.04),
           })}
         >
           <ToggleButton

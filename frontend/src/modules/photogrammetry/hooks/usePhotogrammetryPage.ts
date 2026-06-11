@@ -108,6 +108,7 @@ export function usePhotogrammetryPage() {
   const map = usePhotogrammetryMap({
     apiBase: API_BASE_CLEAN,
     wsConnected,
+    droneConnected,
     telemetry,
     activeFlightId,
     fieldBorder,

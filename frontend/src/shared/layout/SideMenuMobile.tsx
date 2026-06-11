@@ -38,9 +38,9 @@ export default function SideMenuMobile({ open, toggleDrawer, user, onLogout }: S
         zIndex: (theme) => theme.zIndex.drawer + 1,
         [`& .${drawerClasses.paper}`]: {
           backgroundImage: 'none',
-          backgroundColor: 'background.default',
-          borderLeft: '1px solid',
-          borderColor: 'divider',
+          backgroundColor: 'background.paper',
+          borderLeft: 'none',
+          boxShadow: 'none',
         },
       }}
     >
@@ -57,8 +57,7 @@ export default function SideMenuMobile({ open, toggleDrawer, user, onLogout }: S
               width: 32,
               height: 32,
               borderRadius: '50%',
-              border: '1px solid',
-              borderColor: 'divider',
+              bgcolor: 'action.selected',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -66,10 +65,9 @@ export default function SideMenuMobile({ open, toggleDrawer, user, onLogout }: S
           >
             <Typography
               sx={{
-                fontFamily: '"Space Mono", monospace',
                 fontSize: '0.6875rem',
-                fontWeight: 700,
-                color: 'text.primary',
+                fontWeight: 500,
+                color: 'primary.main',
               }}
             >
               {getInitials(user)}
@@ -80,16 +78,14 @@ export default function SideMenuMobile({ open, toggleDrawer, user, onLogout }: S
               {getDisplayName(user)}
             </Typography>
             <Typography
+              variant="caption"
               sx={{
-                fontFamily: '"Space Mono", monospace',
-                fontSize: '0.625rem',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
                 color: 'text.secondary',
+                textTransform: 'capitalize',
               }}
               noWrap
             >
-              {user?.role || 'OPERATOR'}
+              {user?.role || 'operator'}
             </Typography>
           </Stack>
           <ColorModeIconDropdown />

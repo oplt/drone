@@ -48,19 +48,19 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
         flexShrink: 0,
         whiteSpace: 'nowrap',
         transition: theme.transitions.create('width', {
-          duration: 200,
-          easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+          duration: 330,
+          easing: 'cubic-bezier(0.5, 0, 0, 0.75)',
         }),
         [`& .${drawerClasses.paper}`]: {
-          backgroundColor: 'background.default',
+          backgroundColor: 'background.paper',
           width: drawerWidth,
           overflowX: 'hidden',
           boxSizing: 'border-box',
-          borderRight: '1px solid',
-          borderColor: 'divider',
+          borderRight: 'none',
+          boxShadow: 'none',
           transition: theme.transitions.create('width', {
-            duration: 200,
-            easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+            duration: 330,
+            easing: 'cubic-bezier(0.5, 0, 0, 0.75)',
           }),
         },
       })}
@@ -81,8 +81,7 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
                   width: 36,
                   height: 36,
                   borderRadius: '50%',
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  bgcolor: 'action.selected',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -90,10 +89,9 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
               >
                 <Typography
                   sx={{
-                    fontFamily: '"Space Mono", monospace',
                     fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: 'text.primary',
+                    fontWeight: 500,
+                    color: 'primary.main',
                   }}
                 >
                   {getInitials(user)}
@@ -108,16 +106,14 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
                   {getDisplayName(user)}
                 </Typography>
                 <Typography
+                  variant="caption"
                   sx={{
-                    fontFamily: '"Space Mono", monospace',
-                    fontSize: '0.625rem',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
                     color: 'text.secondary',
+                    textTransform: 'capitalize',
                   }}
                   noWrap
                 >
-                  {user?.role || 'OPERATOR'}
+                  {user?.role || 'operator'}
                 </Typography>
               </Box>
             </Stack>
@@ -127,8 +123,7 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
                 width: 36,
                 height: 36,
                 borderRadius: '50%',
-                border: '1px solid',
-                borderColor: 'divider',
+                bgcolor: 'action.selected',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -136,10 +131,9 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
             >
               <Typography
                 sx={{
-                  fontFamily: '"Space Mono", monospace',
                   fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: 'text.primary',
+                  fontWeight: 500,
+                  color: 'primary.main',
                 }}
               >
                 {getInitials(user)}

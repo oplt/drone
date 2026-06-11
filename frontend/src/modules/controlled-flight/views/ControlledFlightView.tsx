@@ -100,7 +100,7 @@ export function ControlledFlightView() {
   const [, setTerraDrawReady] = useState(false);
   const [drawnPoints, setDrawnPoints] = useState<LatLng[]>([]);
   const [lastMissionId, setLastMissionId] = useState<string | null>(null);
-  const [streamKey, setStreamKey] = useState(() => Date.now());
+  const [manualStreamKey, setManualStreamKey] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
 
@@ -262,7 +262,7 @@ export function ControlledFlightView() {
 
   stopAllManualRef.current = stopAllManualCommands;
 
-  const droneReady = Boolean(droneManualConnected && (wsConnected || droneConnected) && droneCenter);
+  const droneReady = Boolean(droneManualConnected && droneConnected && droneCenter);
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase: API_BASE_CLEAN,
     getToken,
@@ -271,11 +271,15 @@ export function ControlledFlightView() {
     resetKey: activeFlightId ?? "none",
   });
 
-  const { isLoaded, loadError } = useContext(GoogleMapsContext);
-
   useEffect(() => {
-    if (autoStreamKey) setStreamKey(autoStreamKey);
-  }, [autoStreamKey]);
+    if (!droneConnected) {
+      setManualStreamKey(0);
+    }
+  }, [droneConnected]);
+
+  const streamKey = manualStreamKey || autoStreamKey;
+
+  const { isLoaded, loadError } = useContext(GoogleMapsContext);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -365,15 +369,16 @@ export function ControlledFlightView() {
   const handleVideoError = useCallback(() => {
     setVideoError("Failed to load video stream");
     setVideoRetryCount((prev) => prev + 1);
-    setTimeout(() => {
-      setStreamKey(Date.now());
-      setVideoError(null);
-    }, 5000);
   }, []);
 
   const handleVideoLoad = useCallback(() => {
     setVideoError(null);
     setVideoRetryCount(0);
+  }, []);
+
+  const handleVideoRetry = useCallback(() => {
+    setManualStreamKey(Date.now());
+    setVideoError(null);
   }, []);
 
   // ── Mission launch ──
@@ -530,10 +535,7 @@ export function ControlledFlightView() {
                       telemetry={telemetry}
                       onVideoError={handleVideoError}
                       onVideoLoad={handleVideoLoad}
-                      onRetry={() => {
-                        setStreamKey(Date.now());
-                        setVideoError(null);
-                      }}
+                      onRetry={handleVideoRetry}
                   />
                   <Box
                       sx={{

@@ -9,7 +9,7 @@ import { toggleButtonClasses } from '@mui/material/ToggleButton';
 import CheckBoxOutlineBlankRoundedIcon from '@mui/icons-material/CheckBoxOutlineBlankRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
-import { brand } from '../themePrimitives';
+import { brand, fontText, tesla, teslaTransition } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const inputsCustomizations: Components<Theme> = {
@@ -21,9 +21,9 @@ export const inputsCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         boxSizing: 'border-box',
-        transition: 'all 150ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+        transition: teslaTransition,
         '&:focus-visible': {
-          outline: `1px solid ${(theme.vars || theme).palette.text.primary}`,
+          outline: `2px solid ${(theme.vars || theme).palette.primary.main}`,
           outlineOffset: '2px',
         },
       }),
@@ -33,76 +33,70 @@ export const inputsCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         boxShadow: 'none',
-        borderRadius: 999,
-        textTransform: 'uppercase',
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        fontSize: '0.8125rem',
-        fontWeight: 400,
-        letterSpacing: '0.06em',
-        minHeight: 44,
+        borderRadius: 4,
+        textTransform: 'none',
+        fontFamily: fontText,
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        letterSpacing: 'normal',
+        minHeight: 40,
+        border: '3px solid transparent',
+        transition: teslaTransition,
         variants: [
           {
             props: { size: 'small' },
             style: {
-              height: '2.25rem',
-              padding: '8px 20px',
+              minHeight: 32,
+              padding: '4px 12px',
             },
           },
           {
             props: { size: 'medium' },
             style: {
-              height: '2.75rem',
-              padding: '8px 24px',
+              minHeight: 40,
+              padding: '4px 16px',
             },
           },
           {
             props: { size: 'large' },
             style: {
-              height: '3.25rem',
-              padding: '12px 24px',
+              minHeight: 48,
+              padding: '4px 24px',
             },
           },
           {
             props: { color: 'primary', variant: 'contained' },
             style: {
-              color: '#000000',
-              backgroundColor: '#FFFFFF',
-              border: 'none',
-              boxShadow: 'none',
+              color: tesla.white,
+              backgroundColor: brand[500],
+              boxShadow: 'rgba(0,0,0,0) 0px 0px 0px 2px inset',
               '&:hover': {
-                backgroundColor: '#E8E8E8',
+                backgroundColor: brand[600],
                 boxShadow: 'none',
               },
               '&:active': {
-                backgroundColor: '#CCCCCC',
+                backgroundColor: brand[700],
               },
-              ...theme.applyStyles('dark', {
-                color: '#000000',
-                backgroundColor: '#FFFFFF',
-                '&:hover': {
-                  backgroundColor: '#E8E8E8',
-                },
-                '&:active': {
-                  backgroundColor: '#CCCCCC',
-                },
-              }),
+              '&:focus-visible': {
+                boxShadow: `rgba(0,0,0,0) 0px 0px 0px 2px inset, 0 0 0 2px ${brand[500]}`,
+              },
             },
           },
           {
             props: { color: 'secondary', variant: 'contained' },
             style: {
-              color: '#FFFFFF',
-              backgroundColor: '#000000',
-              border: 'none',
+              color: tesla.graphite,
+              backgroundColor: tesla.white,
+              border: '3px solid transparent',
               boxShadow: 'none',
               '&:hover': {
-                backgroundColor: '#1A1A1A',
+                backgroundColor: tesla.lightAsh,
               },
               ...theme.applyStyles('dark', {
-                color: '#000000',
-                backgroundColor: '#E8E8E8',
+                color: tesla.carbonDark,
+                backgroundColor: tesla.white,
                 '&:hover': {
-                  backgroundColor: '#CCCCCC',
+                  backgroundColor: tesla.lightAsh,
                 },
               }),
             },
@@ -111,18 +105,19 @@ export const inputsCustomizations: Components<Theme> = {
             props: { variant: 'outlined' },
             style: {
               color: (theme.vars || theme).palette.text.primary,
-              border: `1px solid #333333`,
-              backgroundColor: 'transparent',
+              border: `1px solid ${tesla.paleSilver}`,
+              backgroundColor: tesla.white,
               boxShadow: 'none',
               '&:hover': {
-                backgroundColor: alpha('#999999', 0.08),
-                borderColor: (theme.vars || theme).palette.text.primary,
+                backgroundColor: tesla.lightAsh,
+                borderColor: tesla.paleSilver,
               },
               ...theme.applyStyles('dark', {
-                borderColor: '#333333',
+                color: tesla.white,
+                backgroundColor: 'transparent',
+                borderColor: alpha(tesla.white, 0.2),
                 '&:hover': {
-                  borderColor: '#E8E8E8',
-                  backgroundColor: alpha('#999999', 0.08),
+                  backgroundColor: alpha(tesla.white, 0.06),
                 },
               }),
             },
@@ -130,23 +125,26 @@ export const inputsCustomizations: Components<Theme> = {
           {
             props: { color: 'secondary', variant: 'outlined' },
             style: {
-              color: (theme.vars || theme).palette.text.secondary,
-              border: `1px solid #333333`,
-              backgroundColor: 'transparent',
+              color: tesla.pewter,
+              border: `1px solid ${tesla.paleSilver}`,
+              backgroundColor: tesla.white,
               boxShadow: 'none',
               '&:hover': {
-                borderColor: (theme.vars || theme).palette.text.primary,
-                color: (theme.vars || theme).palette.text.primary,
+                color: tesla.graphite,
+                backgroundColor: tesla.lightAsh,
               },
             },
           },
           {
             props: { variant: 'text' },
             style: {
-              color: (theme.vars || theme).palette.text.secondary,
+              color: tesla.pewter,
+              minHeight: 32,
+              padding: '4px 16px',
               '&:hover': {
-                backgroundColor: alpha('#999999', 0.08),
-                color: (theme.vars || theme).palette.text.primary,
+                backgroundColor: alpha(tesla.carbonDark, 0.04),
+                color: tesla.graphite,
+                textDecoration: 'underline',
               },
             },
           },
@@ -168,30 +166,27 @@ export const inputsCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         boxShadow: 'none',
-        borderRadius: (theme.vars || theme).shape.borderRadius,
+        borderRadius: 4,
         textTransform: 'none',
         color: (theme.vars || theme).palette.text.secondary,
-        border: '1px solid',
-        borderColor: '#333333',
+        border: 'none',
         backgroundColor: 'transparent',
+        transition: teslaTransition,
         '&:hover': {
-          backgroundColor: alpha('#999999', 0.08),
-          borderColor: (theme.vars || theme).palette.text.primary,
+          backgroundColor: alpha(tesla.carbonDark, 0.04),
           color: (theme.vars || theme).palette.text.primary,
         },
         ...theme.applyStyles('dark', {
-          borderColor: '#333333',
           '&:hover': {
-            borderColor: '#E8E8E8',
-            backgroundColor: alpha('#999999', 0.08),
+            backgroundColor: alpha(tesla.white, 0.06),
           },
         }),
         variants: [
           {
             props: { size: 'small' },
             style: {
-              width: '2.25rem',
-              height: '2.25rem',
+              width: '2rem',
+              height: '2rem',
               padding: '0.25rem',
               [`& .${svgIconClasses.root}`]: { fontSize: '1rem' },
             },
@@ -210,11 +205,11 @@ export const inputsCustomizations: Components<Theme> = {
   MuiToggleButtonGroup: {
     styleOverrides: {
       root: ({ theme }) => ({
-        borderRadius: 999,
+        borderRadius: 4,
         boxShadow: 'none',
-        border: `1px solid #333333`,
+        border: `1px solid ${tesla.cloudGray}`,
         ...theme.applyStyles('dark', {
-          border: `1px solid #333333`,
+          border: `1px solid ${alpha(tesla.white, 0.12)}`,
         }),
         [`& .${toggleButtonGroupClasses.selected}`]: {
           color: (theme.vars || theme).palette.text.primary,
@@ -225,17 +220,18 @@ export const inputsCustomizations: Components<Theme> = {
   MuiToggleButton: {
     styleOverrides: {
       root: ({ theme }) => ({
-        padding: '8px 16px',
-        textTransform: 'uppercase',
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        fontSize: '0.6875rem',
-        letterSpacing: '0.06em',
-        borderRadius: 999,
-        fontWeight: 400,
+        padding: '4px 16px',
+        textTransform: 'none',
+        fontFamily: fontText,
+        fontSize: '0.875rem',
+        letterSpacing: 'normal',
+        borderRadius: 4,
+        fontWeight: 500,
         color: (theme.vars || theme).palette.text.secondary,
+        transition: teslaTransition,
         [`&.${toggleButtonClasses.selected}`]: {
-          backgroundColor: (theme.vars || theme).palette.text.primary,
-          color: (theme.vars || theme).palette.background.default,
+          backgroundColor: alpha(brand[500], 0.1),
+          color: brand[500],
         },
       }),
     },
@@ -255,30 +251,27 @@ export const inputsCustomizations: Components<Theme> = {
         height: 16,
         width: 16,
         borderRadius: 4,
-        border: `1px solid #333333`,
+        border: `1px solid ${tesla.paleSilver}`,
         backgroundColor: 'transparent',
-        transition: 'border-color 150ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+        transition: teslaTransition,
         '&:hover': {
           borderColor: (theme.vars || theme).palette.text.primary,
         },
         '&.Mui-checked': {
-          color: '#000000',
-          backgroundColor: '#FFFFFF',
-          borderColor: '#FFFFFF',
+          color: tesla.white,
+          backgroundColor: brand[500],
+          borderColor: brand[500],
           boxShadow: 'none',
           '&:hover': {
-            backgroundColor: '#E8E8E8',
+            backgroundColor: brand[600],
           },
         },
         ...theme.applyStyles('dark', {
-          borderColor: '#333333',
-          '&:hover': {
-            borderColor: '#E8E8E8',
-          },
+          borderColor: alpha(tesla.white, 0.2),
           '&.Mui-checked': {
-            color: '#000000',
-            backgroundColor: '#FFFFFF',
-            borderColor: '#FFFFFF',
+            color: tesla.white,
+            backgroundColor: brand[500],
+            borderColor: brand[500],
           },
         }),
       }),
@@ -290,10 +283,11 @@ export const inputsCustomizations: Components<Theme> = {
         border: 'none',
       },
       input: {
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
+        fontFamily: fontText,
+        fontSize: '0.875rem',
         '&::placeholder': {
-          opacity: 0.5,
-          color: '#999999',
+          opacity: 1,
+          color: tesla.silverFog,
         },
         '&[type=number]': {
           MozAppearance: 'textfield',
@@ -314,24 +308,24 @@ export const inputsCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         padding: '8px 12px',
         color: (theme.vars || theme).palette.text.primary,
-        borderRadius: 8,
-        border: `1px solid #333333`,
+        borderRadius: 4,
+        border: `1px solid ${tesla.paleSilver}`,
         backgroundColor: 'transparent',
-        transition: 'border-color 150ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+        transition: teslaTransition,
         '&:hover': {
-          borderColor: (theme.vars || theme).palette.text.primary,
+          borderColor: tesla.silverFog,
         },
         [`&.${outlinedInputClasses.focused}`]: {
           outline: 'none',
-          borderColor: (theme.vars || theme).palette.text.primary,
+          borderColor: brand[500],
         },
         ...theme.applyStyles('dark', {
-          borderColor: '#333333',
+          borderColor: alpha(tesla.white, 0.2),
           '&:hover': {
-            borderColor: '#E8E8E8',
+            borderColor: alpha(tesla.white, 0.35),
           },
           [`&.${outlinedInputClasses.focused}`]: {
-            borderColor: '#E8E8E8',
+            borderColor: brand[500],
           },
         }),
         variants: [
@@ -360,11 +354,11 @@ export const inputsCustomizations: Components<Theme> = {
   MuiFormLabel: {
     styleOverrides: {
       root: ({ theme }) => ({
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        fontSize: '0.6875rem',
-        fontWeight: 400,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase' as const,
+        fontFamily: fontText,
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        letterSpacing: 'normal',
+        textTransform: 'none' as const,
         color: (theme.vars || theme).palette.text.secondary,
         marginBottom: 8,
       }),
@@ -374,41 +368,38 @@ export const inputsCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         overflow: 'hidden',
-        borderRadius: 8,
-        border: `1px solid #333333`,
+        borderRadius: 4,
+        border: `1px solid ${tesla.paleSilver}`,
         backgroundColor: 'transparent',
-        transition: 'border-color 150ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+        transition: teslaTransition,
         '&:before, &:after': {
           display: 'none',
         },
         '&:hover': {
-          backgroundColor: alpha('#999999', 0.04),
-          borderColor: (theme.vars || theme).palette.text.primary,
+          backgroundColor: alpha(tesla.carbonDark, 0.02),
+          borderColor: tesla.silverFog,
         },
         '&.Mui-focused': {
           backgroundColor: 'transparent',
-          borderColor: (theme.vars || theme).palette.text.primary,
+          borderColor: brand[500],
         },
         '&.Mui-error': {
           borderColor: brand[500],
         },
         ...theme.applyStyles('dark', {
-          borderColor: '#333333',
-          backgroundColor: 'transparent',
+          borderColor: alpha(tesla.white, 0.2),
           '&:hover': {
-            backgroundColor: alpha('#999999', 0.04),
-            borderColor: '#E8E8E8',
+            backgroundColor: alpha(tesla.white, 0.04),
           },
           '&.Mui-focused': {
-            backgroundColor: 'transparent',
-            borderColor: '#E8E8E8',
+            borderColor: brand[500],
           },
         }),
       }),
       input: {
         paddingTop: 24,
         paddingBottom: 14,
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
+        fontFamily: fontText,
       },
     },
   },
@@ -417,8 +408,8 @@ export const inputsCustomizations: Components<Theme> = {
       root: {
         marginLeft: 0,
         marginRight: 0,
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        fontSize: '0.6875rem',
+        fontFamily: fontText,
+        fontSize: '0.75rem',
       },
     },
   },

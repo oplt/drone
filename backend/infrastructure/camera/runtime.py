@@ -18,6 +18,7 @@ import paramiko
 from fastapi import Request
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.infrastructure.camera.stream_client import DroneVideoStream, opencv_has_gstreamer
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ def _is_benign_shutdown_error(exc: BaseException) -> bool:
 _GAZEBO_ENABLE_COOLDOWN_S = 10.0
 _UNAVAILABLE_BACKOFF_BASE_S = 5.0
 _UNAVAILABLE_BACKOFF_MAX_S = 60.0
+_DRONE_DISCONNECTED_RETRY_MS = 5000
 _last_gazebo_enable_attempt = 0.0
 _gazebo_no_topic_warning_logged = False
 
@@ -203,6 +205,10 @@ def _recording_filename(recording_format: str = "mp4") -> str:
     return f"drone_video_{time.strftime('%Y%m%d_%H%M%S')}.{recording_format}"
 
 
+def drone_video_link_connected() -> bool:
+    return bool(telemetry_manager.runtime_snapshot().get("source_connected"))
+
+
 class SharedVideoRuntime:
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
@@ -229,6 +235,13 @@ class SharedVideoRuntime:
         return f"http://{settings.raspberry_ip}:{PI_PORT}/video_feed"
 
     async def ensure_source_available(self) -> dict[str, Any]:
+        if not drone_video_link_connected():
+            return {
+                "status": "skipped",
+                "source": self.source_url(),
+                "proxy": "/video/mjpeg",
+                "message": "Drone is not connected.",
+            }
 
         source = self.source_url()
         if settings.drone_video_use_gazebo:
@@ -529,6 +542,9 @@ class SharedVideoRuntime:
 
     async def ensure_running(self) -> dict[str, Any]:
         self._loop = asyncio.get_running_loop()
+        if not drone_video_link_connected():
+            raise RuntimeError("Drone is not connected")
+
         retry_after_ms = self._retry_after_ms()
         if retry_after_ms > 0:
             detail = self._last_error or "Video stream is in backoff after a recent failure."
@@ -674,7 +690,11 @@ class SharedVideoRuntime:
         base = await self.status()
         retry_after_ms = self._retry_after_ms()
         first_frame_available = int(base.get("frame_count") or 0) > 0
-        if first_frame_available and base.get("healthy"):
+        drone_connected = drone_video_link_connected()
+        if not drone_connected and not first_frame_available:
+            stream_state = "waiting_for_drone"
+            retry_after_ms = max(retry_after_ms, _DRONE_DISCONNECTED_RETRY_MS)
+        elif first_frame_available and base.get("healthy"):
             stream_state = "ready"
         elif retry_after_ms > 0:
             stream_state = "unavailable"
@@ -687,6 +707,7 @@ class SharedVideoRuntime:
             **base,
             "state": stream_state,
             "first_frame_available": first_frame_available,
+            "drone_connected": drone_connected,
             "camera_stream_topic_found": bool(self._gazebo_enable_topics),
             "gazebo_streaming_enabled": self._gazebo_streaming_enabled,
             "udp_first_frame_received": bool(

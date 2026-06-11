@@ -35,17 +35,14 @@ export default function PageLoader({
         sx={{ width: "100%", maxWidth: 480, textAlign: "center", alignItems: "center" }}
       >
         <Typography
+          variant="caption"
           sx={{
-            fontFamily: '"Space Mono", monospace',
-            fontSize: "0.6875rem",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
             color: "text.secondary",
           }}
         >
-          [LOADING...]
+          Loading
         </Typography>
-        <Typography variant="h4" sx={{ color: "text.primary" }}>
+        <Typography variant="h3" sx={{ color: "text.primary", fontWeight: 500 }}>
           {title}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -65,8 +62,8 @@ export default function PageLoader({
               top: 0,
               height: "100%",
               width: "40%",
-              backgroundColor: "#D71921",
-              animation: "loadingBar 1.5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite",
+              backgroundColor: "primary.main",
+              animation: "loadingBar 1.5s cubic-bezier(0.5, 0, 0, 0.75) infinite",
               "@media (prefers-reduced-motion: reduce)": {
                 animation: "none",
                 left: "30%",

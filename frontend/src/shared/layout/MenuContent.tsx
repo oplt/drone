@@ -75,24 +75,24 @@ const tasksChildren = mainListItems.find((item) => item.text === 'Tasks')?.child
 
 const navItemSx = {
   '& .MuiListItemText-primary': {
-    fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
-    fontSize: '0.8125rem',
-    fontWeight: 400,
-    letterSpacing: '0.01em',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    letterSpacing: 'normal',
   },
 };
 
 const activeNavItemSx = {
   '&.Mui-selected': {
-    backgroundColor: 'transparent',
-    borderLeft: '2px solid #D71921',
+    backgroundColor: 'action.selected',
+    borderLeft: '2px solid',
+    borderLeftColor: 'primary.main',
     borderRadius: 0,
     '& .MuiListItemText-primary': {
-      color: 'text.primary',
+      color: 'primary.main',
       fontWeight: 500,
     },
     '& .MuiSvgIcon-root': {
-      color: 'text.primary',
+      color: 'primary.main',
     },
   },
 };

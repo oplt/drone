@@ -96,7 +96,7 @@ export type MissionStatusPayload = {
     abort?: boolean;
   } | null;
   orchestrator?: { drone_connected?: boolean };
-  telemetry?: { running?: boolean };
+  telemetry?: { running?: boolean; source_connected?: boolean };
 };
 
 export type RuntimeConnectionState = "connecting" | "online" | "degraded" | "offline";

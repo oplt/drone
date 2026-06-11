@@ -6,7 +6,7 @@ import { dataDisplayCustomizations } from './customizations/dataDisplay';
 import { feedbackCustomizations } from './customizations/feedback';
 import { navigationCustomizations } from './customizations/navigation';
 import { surfacesCustomizations } from './customizations/surfaces';
-import { colorSchemes, typography, shadows, shape } from './themePrimitives';
+import { colorSchemes, typography, shadows, shape, tesla } from './themePrimitives';
 
 interface AppThemeProps {
   children: React.ReactNode;
@@ -37,26 +37,26 @@ export default function AppTheme(props: AppThemeProps) {
                 },
                 body: {
                   minHeight: '100dvh',
-                  backgroundColor: '#F5F5F5',
+                  backgroundColor: tesla.white,
                   textRendering: 'optimizeLegibility',
                   WebkitFontSmoothing: 'antialiased',
                 },
                 '[data-mui-color-scheme="dark"] body': {
-                  backgroundColor: '#000000',
+                  backgroundColor: tesla.carbonDark,
                 },
                 '#root': {
                   minHeight: '100dvh',
                 },
                 '::selection': {
-                  backgroundColor: 'rgba(215, 25, 33, 0.15)',
+                  backgroundColor: 'rgba(62, 106, 225, 0.2)',
                 },
                 '*::-webkit-scrollbar': {
                   width: 6,
                   height: 6,
                 },
                 '*::-webkit-scrollbar-thumb': {
-                  backgroundColor: 'rgba(153, 153, 153, 0.4)',
-                  borderRadius: 3,
+                  backgroundColor: 'rgba(142, 142, 142, 0.5)',
+                  borderRadius: 4,
                 },
                 '*::-webkit-scrollbar-track': {
                   background: 'transparent',

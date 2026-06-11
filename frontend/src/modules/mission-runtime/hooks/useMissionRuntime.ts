@@ -80,7 +80,8 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
   }, [reconnectAttempt, telemetryError, wsConnected, wsEnabled]);
 
   const droneConnected = Boolean(
-    missionStatus?.orchestrator?.drone_connected || wsConnected,
+    missionStatus?.orchestrator?.drone_connected ||
+      missionStatus?.telemetry?.source_connected,
   );
 
   useEffect(

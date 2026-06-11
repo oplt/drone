@@ -22,6 +22,7 @@ import type { Waypoint } from "../../mission-workflow";
 export function useFieldSurveyMap({
   apiBase,
   wsConnected,
+  droneConnected,
   telemetry,
   activeFlightId,
   fieldBorder,
@@ -48,6 +49,7 @@ export function useFieldSurveyMap({
 }: {
   apiBase: string;
   wsConnected: boolean;
+  droneConnected: boolean;
   telemetry: unknown;
   activeFlightId: string | null;
   fieldBorder: LonLat[] | null;
@@ -82,7 +84,7 @@ export function useFieldSurveyMap({
   const [center, setCenter] = useState(defaultCenter);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [mapZoom, setMapZoom] = useState(12);
-  const [streamKey, setStreamKey] = useState(() => Date.now());
+  const [manualStreamKey, setManualStreamKey] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const mapEngine = controlledMapEngine;
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
@@ -99,7 +101,7 @@ export function useFieldSurveyMap({
   const { isLoaded, loadError } = useContext(GoogleMapsContext);
   const droneCenter = useDroneCenter(telemetry);
   const { heading, armed } = useMissionCommandMetrics(telemetry);
-  const droneReady = Boolean(wsConnected && droneCenter);
+  const droneReady = Boolean(droneConnected);
 
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase,
@@ -110,8 +112,12 @@ export function useFieldSurveyMap({
   });
 
   useEffect(() => {
-    if (autoStreamKey) setStreamKey(autoStreamKey);
-  }, [autoStreamKey]);
+    if (!droneConnected) {
+      setManualStreamKey(0);
+    }
+  }, [droneConnected]);
+
+  const streamKey = manualStreamKey || autoStreamKey;
 
   const handleMapEngineChange = useCallback(
     (next: MissionMapEngine) => {
@@ -267,11 +273,6 @@ export function useFieldSurveyMap({
   const handleVideoError = useCallback(() => {
     setVideoError("Failed to load video stream");
     setVideoRetryCount((prev) => prev + 1);
-
-    setTimeout(() => {
-      setStreamKey(Date.now());
-      setVideoError(null);
-    }, 5000);
   }, []);
 
   const handleVideoLoad = useCallback(() => {
@@ -280,7 +281,7 @@ export function useFieldSurveyMap({
   }, []);
 
   const handleVideoRetry = useCallback(() => {
-    setStreamKey(Date.now());
+    setManualStreamKey(Date.now());
     setVideoError(null);
   }, []);
 
@@ -424,7 +425,7 @@ export function useFieldSurveyMap({
     apiKey,
     mapId,
     streamKey,
-    setStreamKey,
+    setStreamKey: setManualStreamKey,
     videoToken,
     startingVideo,
     videoError,

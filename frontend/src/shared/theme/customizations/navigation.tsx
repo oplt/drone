@@ -10,21 +10,23 @@ import { menuItemClasses } from '@mui/material/MenuItem';
 import { selectClasses } from '@mui/material/Select';
 import { tabClasses } from '@mui/material/Tab';
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
+import { brand, fontText, tesla, teslaTransition } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const navigationCustomizations: Components<Theme> = {
   MuiMenuItem: {
     styleOverrides: {
-      root: ({ theme }) => ({
-        borderRadius: (theme.vars || theme).shape.borderRadius,
+      root: ({ theme: muiTheme }) => ({
+        borderRadius: (muiTheme.vars || muiTheme).shape.borderRadius,
         padding: '6px 8px',
-        fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
+        fontFamily: fontText,
+        transition: teslaTransition,
         [`&.${menuItemClasses.focusVisible}`]: {
           backgroundColor: 'transparent',
         },
         [`&.${menuItemClasses.selected}`]: {
           [`&.${menuItemClasses.focusVisible}`]: {
-            backgroundColor: alpha('#999999', 0.12),
+            backgroundColor: alpha(brand[500], 0.08),
           },
         },
       }),
@@ -40,15 +42,14 @@ export const navigationCustomizations: Components<Theme> = {
       },
       paper: ({ theme }) => ({
         marginTop: '4px',
-        borderRadius: 8,
-        border: '1px solid',
-        borderColor: '#333333',
+        borderRadius: 4,
+        border: 'none',
         backgroundImage: 'none',
         background: (theme.vars || theme).palette.background.paper,
         boxShadow: 'none',
         [`& .${buttonBaseClasses.root}`]: {
           '&.Mui-selected': {
-            backgroundColor: alpha('#999999', 0.12),
+            backgroundColor: alpha(brand[500], 0.08),
           },
         },
       }),
@@ -61,19 +62,19 @@ export const navigationCustomizations: Components<Theme> = {
       )),
     },
     styleOverrides: {
-      root: ({ theme }) => ({
-        borderRadius: 8,
-        border: '1px solid',
-        borderColor: '#333333',
+      root: () => ({
+        borderRadius: 4,
+        border: `1px solid ${tesla.paleSilver}`,
         backgroundColor: 'transparent',
         boxShadow: 'none',
+        transition: teslaTransition,
         '&:hover': {
-          borderColor: (theme.vars || theme).palette.text.primary,
+          borderColor: tesla.silverFog,
           boxShadow: 'none',
         },
         [`&.${selectClasses.focused}`]: {
           outlineOffset: 0,
-          borderColor: (theme.vars || theme).palette.text.primary,
+          borderColor: brand[500],
         },
         '&:before, &:after': {
           display: 'none',
@@ -91,27 +92,19 @@ export const navigationCustomizations: Components<Theme> = {
     },
     styleOverrides: {
       root: ({ theme }) => ({
-        color: (theme.vars || theme).palette.text.primary,
-        fontWeight: 500,
+        color: tesla.pewter,
+        fontWeight: 400,
+        fontSize: '0.875rem',
         position: 'relative',
         textDecoration: 'none',
         width: 'fit-content',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          width: '100%',
-          height: '1px',
-          bottom: 0,
-          left: 0,
-          backgroundColor: (theme.vars || theme).palette.text.secondary,
-          opacity: 0.4,
-          transition: 'width 200ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1)',
-        },
-        '&:hover::before': {
-          width: 0,
+        transition: teslaTransition,
+        '&:hover': {
+          color: tesla.graphite,
+          textDecoration: 'underline',
         },
         '&:focus-visible': {
-          outline: `1px solid ${(theme.vars || theme).palette.text.primary}`,
+          outline: `2px solid ${(theme.vars || theme).palette.primary.main}`,
           outlineOffset: '4px',
           borderRadius: '2px',
         },
@@ -121,18 +114,20 @@ export const navigationCustomizations: Components<Theme> = {
   MuiDrawer: {
     styleOverrides: {
       paper: ({ theme }) => ({
-        backgroundColor: (theme.vars || theme).palette.background.default,
-        borderRight: '1px solid',
-        borderColor: (theme.vars || theme).palette.divider,
+        backgroundColor: (theme.vars || theme).palette.background.paper,
+        borderRight: 'none',
+        boxShadow: 'none',
       }),
     },
   },
   MuiPaginationItem: {
     styleOverrides: {
-      root: ({ theme }) => ({
+      root: () => ({
+        borderRadius: 4,
+        transition: teslaTransition,
         '&.Mui-selected': {
-          color: (theme.vars || theme).palette.background.default,
-          backgroundColor: (theme.vars || theme).palette.text.primary,
+          color: tesla.white,
+          backgroundColor: brand[500],
         },
       }),
     },
@@ -141,7 +136,8 @@ export const navigationCustomizations: Components<Theme> = {
     styleOverrides: {
       root: { minHeight: 'fit-content' },
       indicator: {
-        backgroundColor: 'transparent',
+        backgroundColor: brand[500],
+        height: 2,
       },
     },
   },
@@ -150,26 +146,25 @@ export const navigationCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         padding: '12px 16px',
         marginBottom: '0px',
-        textTransform: 'uppercase',
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        fontSize: '0.6875rem',
-        letterSpacing: '0.06em',
+        textTransform: 'none',
+        fontFamily: fontText,
+        fontSize: '0.875rem',
+        letterSpacing: 'normal',
         minWidth: 'fit-content',
         minHeight: 'fit-content',
-        fontWeight: 400,
+        fontWeight: 500,
         color: (theme.vars || theme).palette.text.secondary,
-        borderRadius: 0,
+        borderRadius: 4,
         border: 'none',
         boxShadow: 'none',
+        transition: teslaTransition,
         ':hover': {
           color: (theme.vars || theme).palette.text.primary,
-          backgroundColor: 'transparent',
-          boxShadow: `${(theme.vars || theme).palette.text.secondary} 0px -2px 0px 0px inset`,
+          backgroundColor: alpha(tesla.carbonDark, 0.04),
         },
         [`&.${tabClasses.selected}`]: {
-          color: (theme.vars || theme).palette.text.primary,
-          fontWeight: 700,
-          boxShadow: `#D71921 0px -2px 0px 0px inset`,
+          color: brand[500],
+          fontWeight: 500,
         },
       }),
     },
@@ -180,7 +175,7 @@ export const navigationCustomizations: Components<Theme> = {
         borderTop: '1px solid',
         borderColor: (theme.vars || theme).palette.divider,
         flex: 1,
-        borderRadius: '99px',
+        borderRadius: 0,
       }),
     },
   },
@@ -188,8 +183,7 @@ export const navigationCustomizations: Components<Theme> = {
     styleOverrides: {
       root: () => ({
         color: 'transparent',
-        border: '1px solid',
-        borderColor: '#333333',
+        border: `1px solid ${tesla.paleSilver}`,
         width: 12,
         height: 12,
         borderRadius: '50%',
@@ -198,11 +192,11 @@ export const navigationCustomizations: Components<Theme> = {
         },
         '&.Mui-active': {
           border: 'none',
-          color: '#D71921',
+          color: brand[500],
         },
         '&.Mui-completed': {
           border: 'none',
-          color: '#4A9E5C',
+          color: brand[500],
         },
         variants: [
           {

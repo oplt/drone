@@ -1,6 +1,7 @@
 import { alpha } from '@mui/material/styles';
 import type { Components } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { fontText, tesla } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const feedbackCustomizations: Components<Theme> = {
@@ -12,22 +13,21 @@ export const feedbackCustomizations: Components<Theme> = {
           error: '#D71921',
           warning: '#D4A843',
           success: '#4A9E5C',
-          info: '#999999',
+          info: tesla.pewter,
         };
-        const accentColor = colorMap[severity] || '#999999';
+        const accentColor = colorMap[severity] || tesla.pewter;
 
         return {
-          borderRadius: 8,
+          borderRadius: 4,
           backgroundColor: alpha(accentColor, 0.08),
           color: (theme.vars || theme).palette.text.primary,
-          border: `1px solid ${alpha(accentColor, 0.2)}`,
-          fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
+          border: 'none',
+          fontFamily: fontText,
           '& .MuiAlert-icon': {
             color: accentColor,
           },
           ...theme.applyStyles('dark', {
             backgroundColor: alpha(accentColor, 0.12),
-            border: `1px solid ${alpha(accentColor, 0.25)}`,
           }),
         };
       },
@@ -37,12 +37,14 @@ export const feedbackCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         '& .MuiDialog-paper': {
-          borderRadius: 16,
-          border: '1px solid',
-          borderColor: '#333333',
+          borderRadius: 4,
+          border: 'none',
           backgroundImage: 'none',
           backgroundColor: (theme.vars || theme).palette.background.paper,
           boxShadow: 'none',
+        },
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(128, 128, 128, 0.65)',
         },
       }),
     },
@@ -52,12 +54,13 @@ export const feedbackCustomizations: Components<Theme> = {
       root: ({ theme }) => ({
         height: 4,
         borderRadius: 0,
-        backgroundColor: '#222222',
+        backgroundColor: tesla.cloudGray,
         ...theme.applyStyles('dark', {
-          backgroundColor: '#222222',
+          backgroundColor: alpha(tesla.white, 0.12),
         }),
         '& .MuiLinearProgress-bar': {
           borderRadius: 0,
+          backgroundColor: theme.palette.primary.main,
         },
       }),
     },
@@ -66,9 +69,9 @@ export const feedbackCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         borderRadius: 4,
-        backgroundColor: alpha('#999999', 0.08),
+        backgroundColor: alpha(tesla.carbonDark, 0.06),
         ...theme.applyStyles('dark', {
-          backgroundColor: alpha('#999999', 0.08),
+          backgroundColor: alpha(tesla.white, 0.08),
         }),
       }),
     },

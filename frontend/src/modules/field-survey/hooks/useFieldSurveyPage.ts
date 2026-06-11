@@ -116,6 +116,7 @@ export function useFieldSurveyPage() {
   const map = useFieldSurveyMap({
     apiBase: API_BASE_CLEAN,
     wsConnected,
+    droneConnected,
     telemetry,
     activeFlightId,
     fieldBorder,

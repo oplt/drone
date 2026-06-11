@@ -33,16 +33,15 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'space-between',
   flexShrink: 0,
-  minHeight: 74,
-  borderRadius: `calc(${theme.shape.borderRadius}px + 8px)`,
-  backdropFilter: 'blur(24px)',
-  border: '1px solid',
-  borderColor: (theme.vars || theme).palette.divider,
+  minHeight: 56,
+  borderRadius: theme.shape.borderRadius,
+  backdropFilter: 'blur(12px)',
+  border: 'none',
   backgroundColor: theme.vars
-    ? `rgba(${theme.vars.palette.background.paperChannel} / 0.68)`
-    : alpha(theme.palette.background.paper, 0.68),
-  boxShadow: (theme.vars || theme).shadows[1],
-  padding: '10px 14px',
+    ? `rgba(${theme.vars.palette.background.paperChannel} / 0.75)`
+    : alpha(theme.palette.background.paper, 0.75),
+  boxShadow: 'none',
+  padding: '8px 16px',
 }));
 
 export default function AppAppBar() {

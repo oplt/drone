@@ -7,6 +7,7 @@ import { typographyClasses } from '@mui/material/Typography';
 import { buttonBaseClasses } from '@mui/material/ButtonBase';
 import { chipClasses } from '@mui/material/Chip';
 import { iconButtonClasses } from '@mui/material/IconButton';
+import { brand, fontText, tesla } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
 export const dataDisplayCustomizations: Components<Theme> = {
@@ -34,20 +35,20 @@ export const dataDisplayCustomizations: Components<Theme> = {
         [`& .${buttonBaseClasses.root}`]: {
           display: 'flex',
           gap: 8,
-          padding: '2px 8px',
-          borderRadius: (theme.vars || theme).shape.borderRadius,
-          opacity: 0.7,
+          padding: '4px 16px',
+          borderRadius: 4,
+          minHeight: 32,
+          opacity: 1,
           '&.Mui-selected': {
-            opacity: 1,
-            backgroundColor: alpha('#999999', 0.12),
+            backgroundColor: alpha(brand[500], 0.08),
             [`& .${svgIconClasses.root}`]: {
-              color: (theme.vars || theme).palette.text.primary,
+              color: brand[500],
             },
             '&:focus-visible': {
-              backgroundColor: alpha('#999999', 0.12),
+              backgroundColor: alpha(brand[500], 0.08),
             },
             '&:hover': {
-              backgroundColor: alpha('#999999', 0.16),
+              backgroundColor: alpha(brand[500], 0.12),
             },
           },
           '&:focus-visible': {
@@ -61,14 +62,15 @@ export const dataDisplayCustomizations: Components<Theme> = {
     styleOverrides: {
       primary: ({ theme }) => ({
         fontSize: theme.typography.body2.fontSize,
-        fontWeight: 400,
+        fontWeight: 500,
         lineHeight: theme.typography.body2.lineHeight,
-        fontFamily: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
+        fontFamily: fontText,
       }),
       secondary: ({ theme }) => ({
         fontSize: theme.typography.caption.fontSize,
         lineHeight: theme.typography.caption.lineHeight,
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
+        fontFamily: fontText,
+        color: tesla.pewter,
       }),
     },
   },
@@ -76,13 +78,14 @@ export const dataDisplayCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         backgroundColor: 'transparent',
-        padding: '4px 8px',
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        fontSize: '0.6875rem',
-        fontWeight: 400,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase' as const,
+        padding: '4px 16px',
+        fontFamily: fontText,
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        letterSpacing: 'normal',
+        textTransform: 'none' as const,
         lineHeight: theme.typography.caption.lineHeight,
+        color: tesla.pewter,
       }),
     },
   },
@@ -99,34 +102,32 @@ export const dataDisplayCustomizations: Components<Theme> = {
     },
     styleOverrides: {
       root: ({ theme }) => ({
-        border: '1px solid',
+        border: 'none',
         borderRadius: 4,
-        fontFamily: '"Space Mono", "JetBrains Mono", monospace',
-        textTransform: 'uppercase' as const,
-        letterSpacing: '0.04em',
+        fontFamily: fontText,
+        textTransform: 'none' as const,
+        letterSpacing: 'normal',
         [`& .${chipClasses.label}`]: {
-          fontWeight: 400,
-          fontSize: '0.6875rem',
+          fontWeight: 500,
+          fontSize: '0.75rem',
         },
         variants: [
           {
             props: { color: 'default' },
             style: {
-              borderColor: '#333333',
-              backgroundColor: 'transparent',
+              backgroundColor: tesla.lightAsh,
               [`& .${chipClasses.label}`]: {
                 color: (theme.vars || theme).palette.text.secondary,
               },
               ...theme.applyStyles('dark', {
-                borderColor: '#333333',
+                backgroundColor: alpha(tesla.white, 0.08),
               }),
             },
           },
           {
             props: { color: 'success' },
             style: {
-              borderColor: alpha('#4A9E5C', 0.3),
-              backgroundColor: alpha('#4A9E5C', 0.08),
+              backgroundColor: alpha('#4A9E5C', 0.1),
               [`& .${chipClasses.label}`]: {
                 color: '#4A9E5C',
               },
@@ -135,8 +136,7 @@ export const dataDisplayCustomizations: Components<Theme> = {
           {
             props: { color: 'error' },
             style: {
-              borderColor: alpha('#D71921', 0.3),
-              backgroundColor: alpha('#D71921', 0.08),
+              backgroundColor: alpha('#D71921', 0.1),
               [`& .${chipClasses.label}`]: {
                 color: '#D71921',
               },
@@ -145,8 +145,7 @@ export const dataDisplayCustomizations: Components<Theme> = {
           {
             props: { color: 'warning' },
             style: {
-              borderColor: alpha('#D4A843', 0.3),
-              backgroundColor: alpha('#D4A843', 0.08),
+              backgroundColor: alpha('#D4A843', 0.1),
               [`& .${chipClasses.label}`]: {
                 color: '#D4A843',
               },
@@ -155,19 +154,18 @@ export const dataDisplayCustomizations: Components<Theme> = {
           {
             props: { color: 'primary' },
             style: {
-              borderColor: alpha('#D71921', 0.3),
-              backgroundColor: alpha('#D71921', 0.08),
+              backgroundColor: alpha(brand[500], 0.1),
               [`& .${chipClasses.label}`]: {
-                color: '#D71921',
+                color: brand[500],
               },
             },
           },
           {
             props: { size: 'small' },
             style: {
-              maxHeight: 22,
+              maxHeight: 24,
               [`& .${chipClasses.label}`]: {
-                fontSize: '0.625rem',
+                fontSize: '0.75rem',
               },
             },
           },

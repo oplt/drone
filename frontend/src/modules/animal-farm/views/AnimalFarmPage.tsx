@@ -114,7 +114,7 @@ export default function AnimalFarmPage() {
   const [preflightRun, setPreflightRun] =
     useState<PreflightRunResponse | null>(null);
 
-  const [streamKey, setStreamKey] = useState<number>(Date.now());
+  const [manualStreamKey, setManualStreamKey] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const videoToken = getToken();
   const waypointMarkersRef = useRef<any[]>([]);
@@ -223,7 +223,7 @@ export default function AnimalFarmPage() {
     setMapEngine(next);
     setUseCesium(next === "cesium");
   }, []);
-  const droneReady = Boolean(wsConnected && droneCenter);
+  const droneReady = Boolean(droneConnected);
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase: API_BASE_CLEAN,
     getToken,
@@ -233,6 +233,14 @@ export default function AnimalFarmPage() {
   });
   const { isLoaded, loadError } = useContext(GoogleMapsContext);
 
+  useEffect(() => {
+    if (!droneConnected) {
+      setManualStreamKey(0);
+    }
+  }, [droneConnected]);
+
+  const streamKey = manualStreamKey || autoStreamKey;
+
 const [herds, setHerds] = useState<Herd[]>([]);
 const [selectedHerdId, setSelectedHerdId] = useState<number | null>(null);
 
@@ -241,10 +249,6 @@ const [herdAlerts, setHerdAlerts] = useState<HerdAlert[]>([]);
 
 const [loadingHerdOps, setLoadingHerdOps] = useState(false);
 const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
-
-  useEffect(() => {
-    if (autoStreamKey) setStreamKey(autoStreamKey);
-  }, [autoStreamKey]);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -295,18 +299,17 @@ const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
     const handleVideoError = useCallback(() => {
       setVideoError("Failed to load video stream");
       setVideoRetryCount(prev => prev + 1);
-
-      // Auto-retry after 5 seconds
-      setTimeout(() => {
-        setStreamKey(Date.now()); // Force reload with new key
-        setVideoError(null);
-      }, 5000);
     }, []);
 
     // Add video load success handler
     const handleVideoLoad = useCallback(() => {
       setVideoError(null);
       setVideoRetryCount(0);
+    }, []);
+
+    const handleVideoRetry = useCallback(() => {
+      setManualStreamKey(Date.now());
+      setVideoError(null);
     }, []);
 
   // AdvancedMarkerElement for waypoint markers (avoids deprecated google.maps.Marker).
@@ -791,10 +794,7 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
                   telemetry={telemetry}
                   onVideoError={handleVideoError}
                   onVideoLoad={handleVideoLoad}
-                  onRetry={() => {
-                    setStreamKey(Date.now());
-                    setVideoError(null);
-                  }}
+                  onRetry={handleVideoRetry}
                 />
 
                 <Box
