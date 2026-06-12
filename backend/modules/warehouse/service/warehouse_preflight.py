@@ -195,7 +195,12 @@ def build_warehouse_vehicle_state_from_perception(
         or _bool_flag(components.get("visual_slam"))
         or _bool_flag(components.get("vslam"))
     )
-    raw_lidar_ok = _bool_flag(components.get("raw_lidar_healthy"))
+    raw_lidar_component = components.get("raw_lidar_healthy")
+    raw_lidar_ok = (
+        _bool_flag(raw_lidar_component)
+        if raw_lidar_component is not None
+        else None
+    )
     depth_ok = (
         components.get("depth")
         if isinstance(components.get("depth"), bool)

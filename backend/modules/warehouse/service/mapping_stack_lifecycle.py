@@ -367,6 +367,10 @@ async def _watch_mapping_stack_process(
                 "Nvblox mapping stack process exited with code %s.",
                 exit_code,
             )
+            cleanup_task = asyncio.create_task(_kill_stale_nvblox_processes())
+            cleanup_task.add_done_callback(
+                lambda done: done.exception() if not done.cancelled() else None
+            )
 
 
 async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> None:
@@ -385,6 +389,7 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
     global _mapping_stack_started_at
     global _mapping_stack_last_exit_code
     global _mapping_stack_last_error
+    global _last_nvblox_restart_at
 
     if not skip_stale_kill:
         await _kill_stale_nvblox_processes()
@@ -414,6 +419,7 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
         from backend.infrastructure.warehouse.bridge_config import (
             list_ros2_topics_with_retry,
             preflight_core_ros_topics,
+            ros_command_env,
         )
         from backend.modules.warehouse.service.live_map_bridge import _ros2_workspace
 
@@ -444,12 +450,14 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
                 stdout=PIPE,
                 stderr=PIPE,
                 start_new_session=True,
+                env=ros_command_env(),
             )
 
             _mapping_stack_process = process
             _mapping_stack_started_at = datetime.now(UTC).isoformat()
             _mapping_stack_last_exit_code = None
             _mapping_stack_last_error = None
+            _last_nvblox_restart_at = time.monotonic()
 
             from backend.modules.warehouse.service.nvblox_status import (
                 nvblox_status_tracker,

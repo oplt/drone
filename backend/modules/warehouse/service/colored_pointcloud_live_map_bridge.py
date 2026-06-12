@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 import logging
 import math
@@ -109,6 +110,9 @@ class _SourceRuntime:
     queued_msg: Any | None = None
     processing: bool = False
     dropped_frames: int = 0
+    last_backpressure_log_monotonic: float = 0.0
+    last_content_digest: str | None = None
+    duplicate_chunks_skipped: int = 0
 
 
 @dataclass
@@ -383,7 +387,8 @@ class _ColoredPointCloudLiveMapNode:
         runtime.last_publish_monotonic = now
         if runtime.processing and runtime.queued_msg is not None:
             runtime.dropped_frames += 1
-            if runtime.dropped_frames in {1, 10} or runtime.dropped_frames % 50 == 0:
+            if now - runtime.last_backpressure_log_monotonic >= 5.0:
+                runtime.last_backpressure_log_monotonic = now
                 self.node.get_logger().warning(
                     f"Colored point-cloud bridge falling behind source={source_id}; "
                     f"dropped_stale_frames={runtime.dropped_frames}"
@@ -452,6 +457,18 @@ class _ColoredPointCloudLiveMapNode:
         xyz = parsed.xyz
         transform = self._lookup_transform(msg, config.global_frame)
         xyz = self._transform_xyz(xyz, transform)
+
+        digest = hashlib.sha1()
+        digest.update(config.source_id.encode("utf-8"))
+        digest.update(str(parsed.has_rgb).encode("ascii"))
+        digest.update(np.ascontiguousarray(xyz).view(np.uint8))
+        if parsed.rgb is not None:
+            digest.update(np.ascontiguousarray(parsed.rgb).view(np.uint8))
+        content_digest = digest.hexdigest()
+        if runtime.last_content_digest == content_digest:
+            runtime.duplicate_chunks_skipped += 1
+            return None
+        runtime.last_content_digest = content_digest
 
         runtime.sequence += 1
         return {

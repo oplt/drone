@@ -67,6 +67,50 @@ def test_rgb_inputs_not_ready_when_camera_topics_missing() -> None:
     assert "/warehouse/front/rgbd/image" in missing
 
 
+def test_core_sensors_do_not_require_disabled_raw_lidar(monkeypatch) -> None:
+    from backend.infrastructure.warehouse import bridge_config
+
+    monkeypatch.setattr(
+        bridge_config.settings,
+        "warehouse_live_map_raw_lidar_enabled",
+        False,
+    )
+    monkeypatch.setattr(
+        bridge_config.settings,
+        "warehouse_include_raw_lidar_preview",
+        False,
+    )
+    monkeypatch.setattr(
+        bridge_config.settings,
+        "warehouse_persist_raw_lidar_layer",
+        False,
+    )
+
+    components = bridge_config.bridge_probe_to_components(
+        {
+            "listed_ros_topics": [
+                "/warehouse/drone/odometry",
+                "/warehouse/front/rgbd/image",
+                "/warehouse/front/rgbd/depth_image",
+                "/warehouse/imu",
+            ],
+            "odometry_topic": "/warehouse/drone/odometry",
+            "rgb_topic": "/warehouse/front/rgbd/image",
+            "depth_topic": "/warehouse/front/rgbd/depth_image",
+            "imu_topic": "/warehouse/imu",
+            "lidar_topic": "/warehouse/mid360/points",
+            "rgb_depth_imu_ok": True,
+            "lidar_ok": None,
+            "sensors_ok": True,
+            "tf_ok": True,
+            "slam_ready": True,
+        }
+    )
+
+    assert components["sensors_ok"] is True
+    assert components["raw_lidar_healthy"] is None
+
+
 def test_rgbd_visualization_probe_topics_prefers_warehouse_points() -> None:
     from backend.modules.warehouse.service.live_map_readiness import (
         _rgbd_visualization_probe_topics,
@@ -153,7 +197,7 @@ def test_readiness_ros_graph_ready_without_bridge_http() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mapping_stack_status_degrades_without_optional_parser(monkeypatch) -> None:
+async def test_mapping_stack_status_includes_log_parser_health(monkeypatch) -> None:
     from backend.modules.warehouse.service import (
         live_map_bridge,
         mapping_stack_lifecycle,
@@ -179,8 +223,7 @@ async def test_mapping_stack_status_degrades_without_optional_parser(monkeypatch
     status = await mapping_stack_lifecycle.get_mapping_stack_status()
 
     assert status.running is True
-    assert status.nvblox_health["log_parser"]["available"] is False
-    assert "warning" in status.nvblox_health["log_parser"]
+    assert status.nvblox_health["log_parser"]["available"] is True
 
 
 @pytest.mark.asyncio
@@ -345,4 +388,4 @@ async def test_mapping_stack_status_survives_probe_failure(monkeypatch) -> None:
 
     assert status.phase == "degraded"
     assert status.last_error == "perception probe unavailable"
-    assert status.nvblox_health["log_parser"]["available"] is False
+    assert status.nvblox_health["log_parser"]["available"] is True

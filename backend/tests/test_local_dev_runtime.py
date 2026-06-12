@@ -11,6 +11,9 @@ from backend.modules.media import api as media_api
 
 
 class _FakeVideoRuntime:
+    def source_url(self) -> str:
+        return "udp://127.0.0.1:5600"
+
     async def ensure_running(self) -> dict:
         raise RuntimeError("Timed out waiting for first video frame.")
 

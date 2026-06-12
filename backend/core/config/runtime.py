@@ -509,6 +509,8 @@ class RuntimeSettings(BaseSettings):
     warehouse_flight_mapping_wait_s: float = 45.0
     warehouse_mapping_warmup_rgbd_timeout_s: float = 45.0
     warehouse_preflight_tf_wait_s: float = 8.0
+    warehouse_live_map_clock_stability_s: float = 4.0
+    warehouse_mapping_stack_preflight_clock_s: float = 4.0
     warehouse_nvblox_tf_restart_jump_threshold: int = 5
     warehouse_nvblox_tf_restart_cooldown_s: float = 60.0
     warehouse_preflight_wait_nvblox: bool = False

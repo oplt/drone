@@ -907,10 +907,16 @@ async def _build_preflight_snapshot(
     slam_tracking_ok = probe_flags.get("slam_tracking_ok") is True
     tf_ok = probe_flags.get("tf_ok") is True
     nvblox_ok = _bool_from(overlay, "nvblox_ok", "nvblox_healthy", "nvblox_ready")
-    sensors_ok = probe_flags.get("sensors_ok") is True
-    rgb_depth_imu_ok = probe_flags.get("rgb_depth_imu_ok") is True
-    lidar_ok = probe_flags.get("lidar_ok") is True
-    source_transport_ok = probe_flags.get("source_transport_ok") is True
+    sensors_flag = probe_flags.get("sensors_ok")
+    sensors_ok = sensors_flag if isinstance(sensors_flag, bool) else None
+    rgb_depth_imu_flag = probe_flags.get("rgb_depth_imu_ok")
+    rgb_depth_imu_ok = rgb_depth_imu_flag if isinstance(rgb_depth_imu_flag, bool) else None
+    lidar_flag = probe_flags.get("lidar_ok")
+    lidar_ok = lidar_flag if isinstance(lidar_flag, bool) else None
+    source_transport_flag = probe_flags.get("source_transport_ok")
+    source_transport_ok = (
+        source_transport_flag if isinstance(source_transport_flag, bool) else None
+    )
     stable_ms = int(_float_from(overlay, "perception_stable_for_ms", "stable_for_ms") or 0)
     required_stable_ms = int(
         _float_from(overlay, "perception_required_stable_ms", "required_stable_ms") or 8_000
@@ -2163,14 +2169,14 @@ async def live_map_chunk_download(
             status_code=404,
             detail=f"Live map chunk {chunk_id!r} for flight {flight_id!r} was not found.",
         )
-    logger.info(
-        "live_map_chunk_download flight_id=%s chunk_id=%s exists=true size=%s status_code=200",
-        flight_id,
-        chunk_id,
-        stored.byte_size,
-    )
     etag = f'"{stored.checksum_sha256}"'
     if request.headers.get("if-none-match") == etag:
+        logger.debug(
+            "live_map_chunk_download flight_id=%s chunk_id=%s exists=true size=%s status_code=304",
+            flight_id,
+            chunk_id,
+            stored.byte_size,
+        )
         return Response(
             status_code=status.HTTP_304_NOT_MODIFIED,
             headers={
@@ -2178,6 +2184,12 @@ async def live_map_chunk_download(
                 "ETag": etag,
             },
         )
+    logger.info(
+        "live_map_chunk_download flight_id=%s chunk_id=%s exists=true size=%s status_code=200",
+        flight_id,
+        chunk_id,
+        stored.byte_size,
+    )
     return FileResponse(
         str(stored.path),
         media_type=stored.content_type,

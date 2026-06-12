@@ -1630,13 +1630,19 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
     def check_lidar_health(self) -> CheckResult:
         components = self._perception_components()
         raw_lidar_healthy = components.get("raw_lidar_healthy")
+        from backend.modules.warehouse.service.live_map_config import (
+            persist_raw_lidar_layer,
+            raw_lidar_enabled,
+        )
+
+        raw_lidar_required = raw_lidar_enabled() or persist_raw_lidar_layer()
         if raw_lidar_healthy is True:
             return CheckResult(
                 name="Warehouse LiDAR",
                 status=CheckStatus.PASS,
                 message="LiDAR point cloud topic is publishing",
             )
-        if raw_lidar_healthy is False:
+        if raw_lidar_healthy is False and raw_lidar_required:
             detail = self._topic_diagnostic_message("raw_lidar")
             return CheckResult(
                 name="Warehouse LiDAR",
@@ -1648,6 +1654,12 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
         obstacle_distance_m = getattr(self.v, "obstacle_distance_m", None)
         clearance_m = float(getattr(self.mission, "clearance_m", 0.6))
         if lidar_healthy is False:
+            if not raw_lidar_required:
+                return CheckResult(
+                    name="Warehouse LiDAR",
+                    status=CheckStatus.SKIP,
+                    message="Raw LiDAR live-map layer is disabled for this scan",
+                )
             return CheckResult(
                 name="Warehouse LiDAR",
                 status=CheckStatus.FAIL,
@@ -1672,6 +1684,12 @@ class WarehouseScanMissionPreflight(MissionPreflightBase):
                 name="Warehouse LiDAR",
                 status=CheckStatus.PASS,
                 message=message,
+            )
+        if not raw_lidar_required:
+            return CheckResult(
+                name="Warehouse LiDAR",
+                status=CheckStatus.SKIP,
+                message="Raw LiDAR live-map layer is disabled for this scan",
             )
         detail = self._topic_diagnostic_message("raw_lidar")
         return CheckResult(

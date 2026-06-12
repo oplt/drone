@@ -280,12 +280,12 @@ def _topic_info(topic: str, ws) -> str | None:
     return None
 
 
-def _topic_has_message(topic: str, ws, *, timeout_s: float = 1.5) -> bool:
-    """Fast check: at least one message on topic (no hz averaging)."""
+def _topic_has_message(topic: str, ws, *, timeout_s: float = 3.0) -> bool:
+    """Check that at least one message arrives on topic (no hz averaging)."""
     cmd = (
         f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
         f"source {ws / 'install/setup.bash'} && "
-        f"timeout {max(0.5, timeout_s)} ros2 topic echo {topic} --once"
+        f"timeout {max(2.5, timeout_s)} ros2 topic echo {topic} --once"
     )
     try:
         result = subprocess.run(
@@ -293,7 +293,7 @@ def _topic_has_message(topic: str, ws, *, timeout_s: float = 1.5) -> bool:
             cwd=str(ws),
             capture_output=True,
             text=True,
-            timeout=max(2.0, timeout_s + 1.0),
+            timeout=max(4.0, timeout_s + 1.0),
             check=False,
             env=ros_command_env(),
         )
@@ -425,7 +425,7 @@ async def wait_for_rgbd_mapping_topics(
                 _topic_has_message,
                 topic,
                 ws,
-                timeout_s=1.2,
+                timeout_s=3.0,
             )
             if has_message:
                 publishing.add(topic)
@@ -523,7 +523,8 @@ async def wait_for_rgbd_mapping_topics(
         topic_probes=last_probes,
         warnings=[
             *last_warnings,
-            "Timed out waiting for RGB-D PointCloud2 visualization stream",
+            "Timed out waiting for RGB-D PointCloud2 visualization stream "
+            f"(expected one of: {', '.join(_rgbd_visualization_probe_topics(topics))})",
         ],
         rgbd_pointcloud_topic=rgbd_candidates[0] if rgbd_candidates else None,
         rgbd_input_topics_ready=False,
@@ -541,27 +542,22 @@ async def probe_mapping_tf_degraded(
     child_frame: str = "iris_with_standoffs/base_link",
 ) -> dict[str, object]:
     """Best-effort TF probe for diagnostics; never gates takeoff."""
+    from backend.modules.warehouse.service.sim_time_tf_readiness import _sourced_ros_cmd
+
     env = ros_command_env()
     try:
         result = await asyncio.to_thread(
             subprocess.run,
-            [
-                "timeout",
-                "2.0",
-                "ros2",
-                "run",
-                "tf2_ros",
-                "tf2_echo",
-                parent_frame,
-                child_frame,
-            ],
+            _sourced_ros_cmd(
+                f"timeout 3.0 ros2 run tf2_ros tf2_echo {parent_frame} {child_frame}"
+            ),
             env=env,
             capture_output=True,
             text=True,
-            timeout=3.5,
+            timeout=5.5,
         )
         stdout = result.stdout or ""
-        ok = result.returncode == 0 and "At time" in stdout
+        ok = "At time" in stdout
         detail = None if ok else (result.stderr or stdout or "tf lookup failed")[:240]
         return {
             "tf_ok": ok,

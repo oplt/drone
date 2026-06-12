@@ -6,6 +6,7 @@ Preflight compares live ``ros2 topic list`` / ``gz topic -l`` output against tha
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import time
@@ -19,6 +20,14 @@ from backend.core.config.runtime import settings
 
 GZ_TO_ROS = "GZ_TO_ROS"
 ROS_TO_GZ = "ROS_TO_GZ"
+
+
+def _raw_lidar_required() -> bool:
+    return bool(
+        getattr(settings, "warehouse_live_map_raw_lidar_enabled", False)
+        or getattr(settings, "warehouse_include_raw_lidar_preview", False)
+        or getattr(settings, "warehouse_persist_raw_lidar_layer", False)
+    )
 
 
 @dataclass(frozen=True)
@@ -69,6 +78,10 @@ def ros_command_env() -> dict[str, str]:
     env = dict(os.environ)
     env["ROS_DOMAIN_ID"] = ros_domain_id()
     env.setdefault("ROS_LOG_DIR", "/tmp/warehouse_ros_logs")
+    # FastDDS shared-memory ports frequently remain locked after Gazebo/ROS
+    # restarts in local dev, producing RTPS_TRANSPORT_SHM errors. UDP keeps
+    # discovery/data flow reliable for this single-machine sim stack.
+    env.setdefault("FASTDDS_BUILTIN_TRANSPORTS", "UDPv4")
     venv_bin = None
     if env.get("VIRTUAL_ENV"):
         venv_bin = str(Path(env["VIRTUAL_ENV"]) / "bin")
@@ -157,6 +170,84 @@ def list_ros2_topics(ros2_ws: Path) -> set[str]:
     }
 
 
+_PUBLISHER_COUNT_SCRIPT = """
+import json, sys, time
+import rclpy
+from rclpy.node import Node
+
+rclpy.init()
+node = Node("warehouse_publisher_probe")
+topics = json.loads(sys.argv[1])
+deadline = time.monotonic() + 3.0
+counts = {}
+while True:
+    counts = {topic: len(node.get_publishers_info_by_topic(topic)) for topic in topics}
+    if all(count > 0 for count in counts.values()) or time.monotonic() >= deadline:
+        break
+    time.sleep(0.2)
+print(json.dumps(counts))
+node.destroy_node()
+rclpy.shutdown()
+"""
+
+
+def count_topic_publishers(
+    ros2_ws: Path,
+    topics: set[str],
+    *,
+    timeout_s: float = 8.0,
+) -> dict[str, int]:
+    """Return publisher counts for all topics with one ROS subprocess.
+
+    ``ros2 topic list`` can show topics created by subscribers, so preflight
+    must verify publishers. Doing one ``ros2 topic info`` per topic was slow
+    enough to make readiness time out; this rclpy probe performs one DDS
+    discovery pass and returns all counts.
+    """
+    if not topics:
+        return {}
+    ws = ros2_ws.resolve()
+    setup = ws / "install" / "setup.bash"
+    if not setup.exists():
+        return {}
+    cmd = (
+        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+        f"source {setup} && "
+        'python3 -c "$PROBE_SCRIPT" "$PROBE_TOPICS"'
+    )
+    env = ros_command_env()
+    env["PROBE_SCRIPT"] = _PUBLISHER_COUNT_SCRIPT
+    env["PROBE_TOPICS"] = json.dumps(sorted(topics))
+    try:
+        result = subprocess.run(
+            ["bash", "-lc", cmd],
+            cwd=str(ws),
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+            env=env,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    if result.returncode != 0:
+        return {}
+    for line in reversed(result.stdout.splitlines()):
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            return {}
+        return {
+            str(topic): int(count)
+            for topic, count in parsed.items()
+            if isinstance(count, int)
+        }
+    return {}
+
+
 def quick_ros_bridge_check(ros2_ws: Path) -> tuple[bool | None, str]:
     """Lightweight bridge-up check used before starting the bridge process."""
     ws = ros2_ws.resolve()
@@ -171,13 +262,16 @@ def quick_ros_bridge_check(ros2_ws: Path) -> tuple[bool | None, str]:
             pause_s=1.0,
             required_topics=core_required,
         )
+        publisher_counts = count_topic_publishers(ws, core_required | {"/clock"})
     except FileNotFoundError:
         return False, "bash is not available; cannot probe ROS 2."
     except subprocess.TimeoutExpired:
         return None, "ROS 2 topic probe timed out."
     except RuntimeError as exc:
         return False, str(exc)
-    if core_required.issubset(topics):
+    if core_required.issubset(topics) and all(
+        publisher_counts.get(topic, 0) > 0 for topic in core_required
+    ):
         return True, f"ROS bridge core topics are present ({len(core_required)} required)."
 
     missing_core = sorted(core_required - topics)
@@ -283,7 +377,9 @@ def bridge_probe_to_components(overlay: dict[str, Any]) -> dict[str, Any]:
     depth_ok = _ready("depth_healthy", depth_topic)
     imu_ok = _ready("imu_healthy", imu_topic)
     odom_ok = _ready("odometry_healthy", odom_topic) or bool(overlay.get("local_position_ok"))
-    lidar_ok = _ready("lidar_healthy", lidar_topic) or bool(overlay.get("lidar_ok"))
+    lidar_required = _raw_lidar_required()
+    lidar_ok_raw = _ready("lidar_healthy", lidar_topic) or bool(overlay.get("lidar_ok"))
+    lidar_ok = lidar_ok_raw if lidar_required or lidar_ok_raw else None
     stereo_left_ok = _ready("stereo_left_healthy", stereo_left)
     stereo_right_ok = _ready("stereo_right_healthy", stereo_right)
     tf_ok = bool(overlay.get("tf_ok"))
@@ -297,7 +393,7 @@ def bridge_probe_to_components(overlay: dict[str, Any]) -> dict[str, Any]:
     sensors_ok = (
         bool(overlay["sensors_ok"])
         if overlay.get("sensors_ok") is not None
-        else (rgb_depth_imu_ok and lidar_ok)
+        else rgb_depth_imu_ok
     )
     nvblox_ok = overlay.get("nvblox_ok")
 
@@ -319,6 +415,7 @@ def bridge_probe_to_components(overlay: dict[str, Any]) -> dict[str, Any]:
         "imu": imu_ok,
         "imu_topic": imu_ok,
         "raw_lidar_healthy": lidar_ok,
+        "lidar_ok": lidar_ok,
         "tf_tree": tf_ok,
         "tf": tf_ok,
         "visual_slam_healthy": slam_ok,
@@ -336,7 +433,7 @@ def bridge_probe_to_components(overlay: dict[str, Any]) -> dict[str, Any]:
             "rgb_image": _topic_diag(topic=rgb_topic, healthy=rgb_ok),
             "depth_image": _topic_diag(topic=depth_topic, healthy=depth_ok),
             "imu": _topic_diag(topic=imu_topic, healthy=imu_ok),
-            "raw_lidar": _topic_diag(topic=lidar_topic, healthy=lidar_ok),
+            "raw_lidar": _topic_diag(topic=lidar_topic, healthy=lidar_ok is True),
             "left_image": _topic_diag(topic=stereo_left, healthy=stereo_left_ok),
             "right_image": _topic_diag(topic=stereo_right, healthy=stereo_right_ok),
             "visual_slam_odom": _topic_diag(topic=odom_topic, healthy=odom_ok),
@@ -345,8 +442,16 @@ def bridge_probe_to_components(overlay: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _topics_present(entries: list[BridgeTopicMapping], live: set[str]) -> bool:
-    return bool(entries) and all(entry.ros_topic_name in live for entry in entries)
+def _topics_present(
+    entries: list[BridgeTopicMapping],
+    live: set[str],
+    publisher_counts: dict[str, int] | None = None,
+) -> bool:
+    if not entries or not all(entry.ros_topic_name in live for entry in entries):
+        return False
+    if not publisher_counts:
+        return True
+    return all(publisher_counts.get(entry.ros_topic_name, 0) > 0 for entry in entries)
 
 
 def probe_bridge_topics(ros2_ws: Path) -> dict[str, Any]:
@@ -356,6 +461,12 @@ def probe_bridge_topics(ros2_ws: Path) -> dict[str, Any]:
     bridged = gz_to_ros_mappings(mappings)
     core_required = preflight_core_ros_topics(ws)
     ros_topics = list_ros2_topics_with_retry(ws, required_topics=core_required)
+    publisher_probe_topics = (
+        core_required
+        | {"/clock", "/tf"}
+        | {entry.ros_topic_name for entry in _preflight_lidar(bridged)}
+    )
+    publisher_counts = count_topic_publishers(ws, publisher_probe_topics)
     gz_topics, gz_error = list_gz_topics()
 
     missing_ros = sorted(m.ros_topic_name for m in bridged if m.ros_topic_name not in ros_topics)
@@ -372,10 +483,10 @@ def probe_bridge_topics(ros2_ws: Path) -> dict[str, Any]:
     stereo_left_entry, stereo_right_entry = _preflight_stereo_images(bridged)
 
     odom_topic = odom_entries[0].ros_topic_name if odom_entries else None
-    odom_ready = _topics_present(odom_entries, ros_topics)
-    imu_ready = _topics_present(imu_entries, ros_topics)
-    rgbd_ready = _topics_present(rgbd_entries, ros_topics)
-    lidar_ready = _topics_present(lidar_entries, ros_topics)
+    odom_ready = _topics_present(odom_entries, ros_topics, publisher_counts)
+    imu_ready = _topics_present(imu_entries, ros_topics, publisher_counts)
+    rgbd_ready = _topics_present(rgbd_entries, ros_topics, publisher_counts)
+    lidar_ready = _topics_present(lidar_entries, ros_topics, publisher_counts)
     stereo_left_ready = (
         stereo_left_entry is not None and stereo_left_entry.ros_topic_name in ros_topics
     )
@@ -393,6 +504,8 @@ def probe_bridge_topics(ros2_ws: Path) -> dict[str, Any]:
     stereo_left_topic = stereo_left_entry.ros_topic_name if stereo_left_entry else None
     stereo_right_topic = stereo_right_entry.ros_topic_name if stereo_right_entry else None
     rgbd_imu_ok = rgbd_ready and imu_ready
+    lidar_required = _raw_lidar_required()
+    lidar_status = lidar_ready if lidar_required or lidar_ready else None
     ros_graph_ok = bool(ros_topics)
     preflight_core_ready = odom_ready and rgbd_imu_ok
 
@@ -419,7 +532,7 @@ def probe_bridge_topics(ros2_ws: Path) -> dict[str, Any]:
         "imu_healthy": imu_ready,
         "rgb_healthy": rgbd_ready,
         "depth_healthy": rgbd_ready,
-        "lidar_healthy": lidar_ready,
+        "lidar_healthy": lidar_status,
         "stereo_left_healthy": stereo_left_ready,
         "stereo_right_healthy": stereo_right_ready,
         "tf_ok": "/tf" in ros_topics or odom_ready,
@@ -427,12 +540,14 @@ def probe_bridge_topics(ros2_ws: Path) -> dict[str, Any]:
         "slam_tracking_ok": odom_ready,
         "source_transport_ok": bool(set(m.ros_topic_name for m in bridged) & ros_topics),
         "rgb_depth_imu_ok": rgbd_imu_ok,
-        "lidar_ok": lidar_ready,
-        "sensors_ok": rgbd_imu_ok and lidar_ready,
+        "lidar_ok": lidar_status,
+        "sensors_ok": rgbd_imu_ok,
         "preflight_core_ready": preflight_core_ready,
         "perception_stable_for_ms": 8_000 if preflight_core_ready else 0,
         "perception_required_stable_ms": 8_000,
         "ros_domain_id": ros_domain_id(),
+        "publisher_counts": publisher_counts,
+        "clock_publishing": publisher_counts.get("/clock", 0) > 0,
     }
     payload["components"] = bridge_probe_to_components(payload)
     return payload
@@ -452,7 +567,13 @@ def missing_critical_topic_blockers(overlay: dict[str, Any]) -> list[str]:
         return []
     missing = set(overlay.get("missing_configured_ros_topics") or [])
     if not missing:
-        return []
+        publisher_counts = overlay.get("publisher_counts") or {}
+        blockers = []
+        for key, label in CRITICAL_PROBE_TOPICS:
+            topic = overlay.get(key)
+            if topic and publisher_counts.get(topic, 0) <= 0:
+                blockers.append(f"{label} is present but has no publishers: {topic}")
+        return blockers
     domain = str(overlay.get("ros_domain_id") or ros_domain_id())
     suffix = (
         f"(see warehouse_bridge.yaml; ROS_DOMAIN_ID={domain}). "
