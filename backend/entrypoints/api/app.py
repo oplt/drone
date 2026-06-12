@@ -12,6 +12,7 @@ from backend.core.errors.handlers import RequestIDMiddleware, register_error_han
 from backend.core.observability.tracing import setup_tracing
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
+from backend.modules.ai.api import router as ai_router
 from backend.modules.alerts.api import router as alerts_router
 from backend.modules.alerts.evaluation_service import alert_engine
 from backend.modules.analytics.api import router as analytics_router
@@ -154,6 +155,7 @@ app.include_router(telemetry_control_router)
 app.include_router(runtime_router)
 app.include_router(video_router)
 app.include_router(settings_router)
+app.include_router(ai_router)
 app.include_router(analytics_router)
 app.include_router(geofence_router)
 app.include_router(animal_farm_router)

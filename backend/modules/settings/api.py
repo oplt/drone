@@ -7,6 +7,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
+from backend.modules.ai.schemas import LLMSettingsUpdate
+from backend.modules.ai.service import AISettingsService
 from backend.modules.settings.repository import SettingsRepository
 from backend.modules.settings.schemas import SettingsDoc
 from backend.modules.settings.service import get_runtime_settings
@@ -32,6 +34,11 @@ async def get_settings():
 
 @router.put("", response_model=SettingsDoc)
 async def put_settings(payload: SettingsDoc, request: Request):
+    try:
+        ai_payload = LLMSettingsUpdate.model_validate(payload.ai.model_dump())
+        AISettingsService(svc)._validate_settings(ai_payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     saved = await svc.put_settings_doc(payload.model_dump())
 
     # Refresh runtime settings for this process

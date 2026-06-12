@@ -10,7 +10,6 @@ import Typography from '@mui/material/Typography';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import MenuContent from './MenuContent';
-import ColorModeIconDropdown from "../theme/ColorModeIconDropdown";
 import type { ShellUser } from "./types";
 
 const expandedDrawerWidth = 260;
@@ -167,7 +166,6 @@ export default function SideMenu({ user, onLogout }: SideMenuProps) {
       >
         <MenuContent collapsed={collapsed} userRole={user?.role ?? undefined} />
         <Box sx={{ mt: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <ColorModeIconDropdown />
           <ActionIconButton
             variant="logout"
             title="Log out"

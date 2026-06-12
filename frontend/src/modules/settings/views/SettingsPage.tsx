@@ -10,9 +10,26 @@ import { getToken } from "../../../modules/session";
 import { fetchCurrentUser, updateCurrentUser } from "../../session/api/sessionApi";
 import {
   fetchAppSettings,
+  type LlmProfile,
+  type LlmProviderId,
+  type LlmProviderSettings,
   updateAppSettings,
   uploadAppSettingsFile,
 } from "../api/settingsApi";
+import {
+  DEFAULT_AI_PROVIDERS,
+  DEFAULT_LLM_PROFILES,
+  DEFAULT_TASK_DEFAULTS,
+  PROVIDER_IDS,
+} from "../aiSettingsDefaults";
+import { AiSettingsPanel } from "../components/AiSettingsPanel";
+import type {
+  AISettings,
+  SettingsDoc,
+  SettingsSection,
+  UserResponse,
+  UserUpdate,
+} from "../settingsTypes";
 
 import { ActionIconButton, ActionIconLabel } from "../../../shared/ui/ActionIconButton";
 import {
@@ -30,161 +47,6 @@ import {
   Typography,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
-
-
-type TelemetrySettings = {
-  mqtt_broker: string;
-  mqtt_port: number;
-  mqtt_user: string;
-  mqtt_pass?: string;
-  mqtt_use_tls: boolean;
-  mqtt_ca_certs: string;
-  opcua_endpoint: string;
-  opcua_security_policy: string;
-  opcua_cert_path: string;
-  opcua_key_path: string;
-  telem_log_interval_sec: number;
-  telemetry_topic: string;
-};
-
-type AISettings = {
-    llm_provider: string;
-    llm_api_base: string;
-    llm_model: string;
-    llm_api_key?: string;
-};
-
-type CredentialsSettings = {
-    google_maps_api_key: string;
-    drone_conn: string;
-    admin_emails: string;
-    admin_domains: string;
-};
-
-type HardwareSettings = {
-      battery_capacity_wh: number;
-      energy_reserve_frac: number;
-      cruise_speed_mps: number;
-      cruise_power_w: number;
-      heartbeat_timeout: number;
-      enforce_preflight_range: boolean;
-};
-
-type PreflightSettings = {
-  HDOP_MAX: number;
-  SAT_MIN: number;
-  HOME_MAX_DIST: number;
-  GPS_FIX_TYPE_MIN: number;
-  EKF_THRESHOLD: number;
-  COMPASS_HEALTH_REQUIRED: boolean;
-  BATTERY_MIN_V: number;
-  BATTERY_MIN_PERCENT: number;
-  HEARTBEAT_MAX_AGE: number;
-  MSG_RATE_MIN_HZ: number;
-  RTL_MIN_ALT: number;
-  MIN_CLEARANCE: number;
-  AGL_MIN: number;
-  AGL_MAX: number;
-  MAX_RANGE_M: number;
-  MAX_WAYPOINTS: number;
-  NFZ_BUFFER_M: number;
-  A_LAT_MAX: number;
-  BANK_MAX_DEG: number;
-  TURN_PENALTY_S: number;
-  WP_RADIUS_M: number;
-};
-
-type RaspberrySettings = {
-    raspberry_ip: string;
-    raspberry_user: string;
-    raspberry_host: string;
-    raspberry_password?: string;
-    ssh_key_path: string;
-    raspberry_streaming_script_path: string;
-};
-
-type CameraSettings=  {
-  drone_video_source: string;
-  drone_video_source_gazebo: string;
-  drone_video_use_gazebo: boolean;
-  drone_video_width: number;
-  drone_video_height: number;
-  drone_video_fps: number;
-  drone_video_timeout: number;
-  drone_video_save_path: string;
-  drone_video_fallback: string;
-  drone_video_enabled: boolean;
-  drone_video_save_stream: boolean;
-};
-
-type PhotogrammetrySettings = {
-  PHOTOGRAMMETRY_DRONE_SYNC_DIR: string;
-  PHOTOGRAMMETRY_DRONE_CAPTURE_STAGING_DIR: string;
-  PHOTOGRAMMETRY_INPUTS_DIR: string;
-  PHOTOGRAMMETRY_STORAGE_DIR: string;
-  PHOTOGRAMMETRY_STORAGE_BASE_URL: string;
-  PHOTOGRAMMETRY_3DTILES_CMD: string;
-  PHOTOGRAMMETRY_ALLOW_MINIMAL_TILESET: boolean;
-  WEBODM_BASE_URL: string;
-  WEBODM_API_TOKEN?: string;
-  WEBODM_PROJECT_ID: number;
-  WEBODM_MOCK_MODE: boolean;
-  MAPPING_JOB_QUEUE_BACKEND: string;
-  CELERY_PHOTOGRAMMETRY_QUEUE: string;
-  PHOTOGRAMMETRY_ASSET_SIGNING_SECRET?: string;
-};
-
-type AlertSettings = {
-  enabled: boolean;
-  check_interval_sec: number;
-  dedupe_window_sec: number;
-  operation_geofence_id?: number | null;
-  monitor_herd_ids: string;
-  herd_isolation_threshold_m: number;
-  low_battery_percent: number;
-  weak_link_percent: number;
-  high_wind_mps: number;
-  route_in_app: boolean;
-  route_email: boolean;
-  route_sms: boolean;
-  email_recipients: string;
-  sms_recipients: string;
-  smtp_host: string;
-  smtp_port: number;
-  smtp_user: string;
-  smtp_password?: string;
-  smtp_from: string;
-  smtp_use_tls: boolean;
-  twilio_account_sid: string;
-  twilio_auth_token?: string;
-  twilio_from_number: string;
-};
-
-type SettingsDoc = {
-  telemetry: TelemetrySettings;
-  ai: AISettings;
-  credentials: CredentialsSettings;
-  hardware: HardwareSettings;
-  preflight: PreflightSettings;
-  raspberry: RaspberrySettings;
-  camera: CameraSettings;
-  photogrammetry: PhotogrammetrySettings;
-  alerts: AlertSettings;
-  updated_at?: string;
-};
-
-type SettingsSection = Exclude<keyof SettingsDoc, "updated_at">;
-
-type UserResponse = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  created_at?: string;
-};
-
-type UserUpdate = {
-  full_name?: string;
-};
 
 const MASK = "********";
 
@@ -208,6 +70,13 @@ const DEFAULTS: SettingsDoc = {
     llm_api_base: "",
     llm_model: "",
     llm_api_key: "",
+    active_provider: "ollama",
+    system_prompt: "You support drone operations. Be precise and operationally safe.",
+    providers: DEFAULT_AI_PROVIDERS,
+    task_defaults: DEFAULT_TASK_DEFAULTS,
+    profiles: DEFAULT_LLM_PROFILES,
+    default_profile_id: "ollama",
+    task_overrides: {},
   },
   credentials: {
     google_maps_api_key: "",
@@ -315,7 +184,31 @@ const normalizeDoc = (raw: Partial<SettingsDoc>): SettingsDoc => ({
   ...DEFAULTS,
   ...raw,
   telemetry: { ...DEFAULTS.telemetry, ...(raw.telemetry ?? {}) },
-  ai: { ...DEFAULTS.ai, ...(raw.ai ?? {}) },
+  ai: {
+    ...DEFAULTS.ai,
+    ...(raw.ai ?? {}),
+    providers: {
+      ...Object.fromEntries(
+        PROVIDER_IDS.map((providerId) => [
+          providerId,
+          {
+            ...DEFAULT_AI_PROVIDERS[providerId],
+            ...((raw.ai as Partial<AISettings> | undefined)?.providers?.[providerId] ?? {}),
+          },
+        ]),
+      ) as Record<LlmProviderId, LlmProviderSettings>,
+    },
+    task_defaults: {
+      ...DEFAULT_TASK_DEFAULTS,
+      ...((raw.ai as Partial<AISettings> | undefined)?.task_defaults ?? {}),
+    },
+    profiles: (raw.ai as Partial<AISettings> | undefined)?.profiles?.length
+      ? ((raw.ai as Partial<AISettings>).profiles ?? [])
+      : DEFAULT_LLM_PROFILES,
+    default_profile_id:
+      (raw.ai as Partial<AISettings> | undefined)?.default_profile_id || "ollama",
+    task_overrides: (raw.ai as Partial<AISettings> | undefined)?.task_overrides ?? {},
+  },
   credentials: { ...DEFAULTS.credentials, ...(raw.credentials ?? {}) },
   hardware: { ...DEFAULTS.hardware, ...(raw.hardware ?? {}) },
   preflight: { ...DEFAULTS.preflight, ...(raw.preflight ?? {}) },
@@ -403,6 +296,25 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
   const validateSettings = (): string | null => {
     if (doc.preflight.BATTERY_MIN_PERCENT < 10 || doc.preflight.BATTERY_MIN_PERCENT > 50) return "Battery Min (%) must be 10-50%.";
     if (doc.preflight.BANK_MAX_DEG > 45) return "Bank angle exceeds 45° safe limit.";
+    for (const providerId of PROVIDER_IDS) {
+      const provider = doc.ai.providers[providerId];
+      if (!provider?.enabled) continue;
+      try {
+        const parsed = new URL(provider.api_base);
+        if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
+      } catch {
+        return `${providerId} API base must be a valid http(s) URL.`;
+      }
+    }
+    for (const profile of doc.ai.profiles) {
+      if (!profile.enabled) continue;
+      try {
+        const parsed = new URL(profile.api_base);
+        if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
+      } catch {
+        return `${profile.name || profile.provider} API base must be a valid http(s) URL.`;
+      }
+    }
     return null;
   };
 
@@ -441,9 +353,32 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
     profileMutation.mutate({ full_name: fullName.trim() });
   };
 
-  const update = (section: SettingsSection, field: string, value: string | number | boolean | null) => {
+  const update = (section: SettingsSection, field: string, value: unknown) => {
     setDoc(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
     if (err) setErr(null);
+  };
+
+  const persistAiProfiles = (profiles: LlmProfile[]) => {
+    const applyProfiles = (prev: SettingsDoc): SettingsDoc => {
+      const defaultProfile = profiles.find((profile) => profile.id === prev.ai.default_profile_id);
+      return {
+        ...prev,
+        ai: {
+          ...prev.ai,
+          profiles,
+          ...(defaultProfile
+            ? {
+                llm_provider: defaultProfile.provider,
+                llm_api_base: defaultProfile.api_base,
+                llm_model: defaultProfile.model,
+                active_provider: defaultProfile.provider,
+              }
+            : {}),
+        },
+      };
+    };
+    setDoc(applyProfiles);
+    setLastLoaded(applyProfiles);
   };
 
   const handleFileUpload = (section: SettingsSection, field: string) => async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -462,8 +397,8 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
         throw new Error("Upload succeeded but no path was returned.");
       }
       update(section, field, payload.path);
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Failed to upload file.");
     } finally {
       event.target.value = "";
     }
@@ -631,18 +566,11 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
 
             {/* AI TAB */}
             {tab === 2 && (
-              <Grid container spacing={4}>
-                <Grid size={{ xs: 12, md: 6 }} >
-                  <Typography variant="h6" gutterBottom>LLM Provider</Typography>
-                   <Stack spacing={3}>
-                    <TextField variant="filled" fullWidth label="Provider" value={doc.ai?.llm_provider} onChange={e => update("ai", "llm_provider", e.target.value)} />
-                    <TextField variant="filled" fullWidth label="Model" value={doc.ai?.llm_model} onChange={e => update("ai", "llm_model", e.target.value)} />
-                    <TextField variant="filled" fullWidth label="API Base" value={doc.ai?.llm_api_base} onChange={e => update("ai", "llm_api_base", e.target.value)} />
-                    <SecretField fullWidth label="API Key"placeholder={MASK} value={doc.ai?.llm_api_key} onChange={e => update("ai", "llm_api_key", e.target.value)} />
-                  </Stack>
-                </Grid>
-
-              </Grid>
+              <AiSettingsPanel
+                ai={doc.ai}
+                onAiFieldChange={(field, value) => update("ai", field, value)}
+                onProfilesPersisted={persistAiProfiles}
+              />
             )}
 
             {/* CREDENTIALS TAB */}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -23,6 +25,13 @@ class AISettings(BaseModel):
     llm_api_base: str = ""
     llm_model: str = ""
     llm_api_key: str | None = None  # SECRET (vault); masked in GET
+    active_provider: str = "ollama"
+    system_prompt: str = "You support drone operations. Be precise and operationally safe."
+    providers: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    task_defaults: dict[str, dict[str, str]] = Field(default_factory=dict)
+    profiles: list[dict[str, Any]] = Field(default_factory=list)
+    default_profile_id: str = ""
+    task_overrides: dict[str, str] = Field(default_factory=dict)
 
 
 class CredentialsSettings(BaseModel):

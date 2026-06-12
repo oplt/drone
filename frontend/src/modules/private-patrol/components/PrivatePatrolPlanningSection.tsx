@@ -1,12 +1,10 @@
 import {
-  Alert,
   Box,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
+import FlightTakeoffRoundedIcon from "@mui/icons-material/FlightTakeoffRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import {
   TaskPreflightCommandsDrawer,
   useTaskPreflightCommandsDrawer,
@@ -26,6 +24,7 @@ import {
 import type { PreflightRunResponse } from "../../mission-runtime";
 import type { PrivatePatrolMissionStatus } from "../types";
 import type { usePrivatePatrolMission } from "../hooks/usePrivatePatrolMission";
+import { PrivatePatrolFlightSection } from "./PrivatePatrolFlightSection";
 import { PrivatePatrolParamsSection } from "./PrivatePatrolParamsSection";
 
 type MissionVm = ReturnType<typeof usePrivatePatrolMission>;
@@ -184,7 +183,7 @@ export function PrivatePatrolSetupDrawer({
       tabLabel="SET UP"
       tabIcon={<TuneRoundedIcon fontSize="small" />}
       edgeTabIndex={0}
-      edgeTabCount={2}
+      edgeTabCount={3}
       paperSx={{ width: { xs: "min(100vw, 440px)", sm: 480, md: 540 } }}
     >
       <PrivatePatrolFieldsBlock
@@ -215,6 +214,42 @@ export function PrivatePatrolSetupDrawer({
   );
 }
 
+export function PrivatePatrolFlightDrawer({
+  mission,
+  onSendMission,
+  activeFlightId,
+  missionStatus,
+}: {
+  mission: MissionVm;
+  onSendMission: () => void;
+  activeFlightId: string | null;
+  missionStatus: PrivatePatrolMissionStatus | null;
+}) {
+  const flightDrawer = useTaskPreflightCommandsDrawer();
+
+  return (
+    <TaskPreflightCommandsDrawer
+      open={flightDrawer.open}
+      onOpenChange={flightDrawer.onOpenChange}
+      title="Flight"
+      subtitle="Mission name, cruise altitude, and patrol start"
+      tabLabel="FLIGHT"
+      tabIcon={<FlightTakeoffRoundedIcon fontSize="small" />}
+      edgeTabIndex={1}
+      edgeTabCount={3}
+      paperSx={{ width: { xs: "min(100vw, 420px)", sm: 440, md: 460 } }}
+    >
+      <PrivatePatrolFlightSection
+        embedded
+        mission={mission}
+        onSendMission={onSendMission}
+        activeFlightId={activeFlightId}
+        missionStatus={missionStatus}
+      />
+    </TaskPreflightCommandsDrawer>
+  );
+}
+
 export function PrivatePatrolMissionControls({
   apiBase,
   preflightRun,
@@ -222,8 +257,6 @@ export function PrivatePatrolMissionControls({
   droneConnected,
   missionStatus,
   activeFlightId,
-  mission,
-  onSendMission,
 }: {
   apiBase: string;
   preflightRun: PreflightRunResponse | null;
@@ -231,117 +264,16 @@ export function PrivatePatrolMissionControls({
   droneConnected: boolean;
   missionStatus: PrivatePatrolMissionStatus | null;
   activeFlightId: string | null;
-  mission: MissionVm;
-  onSendMission: () => void;
 }) {
   const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
 
-  const {
-    name,
-    setName,
-    altInput,
-    handleAltitudeInputChange,
-    normalizeAltitude,
-    sending,
-    previewLoading,
-    gridPreviewTooDense,
-    gridPreviewError,
-    hasRequiredTaskGeometry,
-    isWaypointPatrol,
-    isGridSurveillance,
-    isEventTriggeredPatrol,
-  } = mission;
-
   return (
-    <>
-      <Box
-        sx={{
-          width: { xs: "100%", md: 360 },
-        }}
-      >
-        <Stack spacing={2}>
-        <TextField
-          variant="filled"
-          label="Mission name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          size="small"
-          fullWidth
-          required
-          error={!name.trim()}
-          helperText={!name.trim() ? "Mission name is required" : " "}
-        />
-
-        <TextField
-          variant="filled"
-          label="Cruise altitude (m)"
-          type="text"
-          value={altInput}
-          onChange={(e) => handleAltitudeInputChange(e.target.value)}
-          onBlur={normalizeAltitude}
-          size="small"
-          fullWidth
-          inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
-          error={altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)}
-          helperText={
-            altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
-              ? "Must be between 1–500m"
-              : " "
-          }
-        />
-
-        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
-          <ActionIconButton
-            variant="play"
-            title={
-              sending
-                ? isWaypointPatrol
-                  ? "Starting Waypoint Patrol…"
-                  : isGridSurveillance
-                    ? "Starting Grid Surveillance…"
-                    : isEventTriggeredPatrol
-                      ? "Starting Event-Triggered Patrol…"
-                      : "Starting Perimeter Patrol…"
-                : isWaypointPatrol
-                  ? "Start Waypoint Patrol"
-                  : isGridSurveillance
-                    ? "Start Grid Surveillance"
-                    : isEventTriggeredPatrol
-                      ? "Start Event-Triggered Patrol"
-                      : "Start Perimeter Patrol"
-            }
-            color="success"
-            size="medium"
-            loading={sending}
-            disabled={
-              sending ||
-              previewLoading ||
-              (gridPreviewTooDense && !isWaypointPatrol) ||
-              !!gridPreviewError ||
-              !name.trim() ||
-              altInput === "" ||
-              Number(altInput) < 1 ||
-              Number(altInput) > 500 ||
-              !hasRequiredTaskGeometry
-            }
-            onClick={onSendMission}
-          />
-        </Stack>
-
-        {activeFlightId && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Active flight: {missionStatus?.mission_name || "Loading..."}
-          </Alert>
-        )}
-      </Stack>
-      </Box>
-
-      <TaskPreflightCommandsDrawer
-        open={preflightCommandsDrawer.open}
-        onOpenChange={preflightCommandsDrawer.onOpenChange}
-        edgeTabIndex={1}
-        edgeTabCount={2}
-      >
+    <TaskPreflightCommandsDrawer
+      open={preflightCommandsDrawer.open}
+      onOpenChange={preflightCommandsDrawer.onOpenChange}
+      edgeTabIndex={2}
+      edgeTabCount={3}
+    >
         <MissionPreflightPanel
           apiBase={apiBase}
           missionType="perimeter_patrol"
@@ -355,7 +287,6 @@ export function PrivatePatrolMissionControls({
           activeFlightId={activeFlightId}
           apiBase={apiBase}
         />
-      </TaskPreflightCommandsDrawer>
-    </>
+    </TaskPreflightCommandsDrawer>
   );
 }

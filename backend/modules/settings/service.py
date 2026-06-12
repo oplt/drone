@@ -36,6 +36,29 @@ def _flatten_for_env(doc: dict[str, Any]) -> dict[str, Any]:
     cam = doc.get("camera", {}) or {}
     photo = doc.get("photogrammetry", {}) or {}
     al = doc.get("alerts", {}) or {}
+    ai_providers = a.get("providers") if isinstance(a.get("providers"), dict) else {}
+    active_ai_provider = str(a.get("active_provider") or a.get("llm_provider") or "ollama")
+    active_ai = ai_providers.get(active_ai_provider, {}) if isinstance(ai_providers, dict) else {}
+    if not isinstance(active_ai, dict):
+        active_ai = {}
+    profiles = a.get("profiles") if isinstance(a.get("profiles"), list) else []
+    default_profile_id = str(a.get("default_profile_id") or "")
+    default_profile = next(
+        (
+            profile
+            for profile in profiles
+            if isinstance(profile, dict) and str(profile.get("id") or "") == default_profile_id
+        ),
+        None,
+    )
+    if isinstance(default_profile, dict):
+        active_ai_provider = str(default_profile.get("provider") or active_ai_provider)
+        active_ai = {
+            **active_ai,
+            "api_base": default_profile.get("api_base"),
+            "model": default_profile.get("model"),
+            "api_key": default_profile.get("api_key"),
+        }
 
     flat: dict[str, Any] = {
         # Telemetry
@@ -52,10 +75,10 @@ def _flatten_for_env(doc: dict[str, Any]) -> dict[str, Any]:
         "telem_log_interval_sec": t.get("telem_log_interval_sec"),
         "telemetry_topic": t.get("telemetry_topic"),
         # AI
-        "llm_provider": a.get("llm_provider"),
-        "llm_api_base": a.get("llm_api_base"),
-        "llm_model": a.get("llm_model"),
-        "llm_api_key": a.get("llm_api_key"),
+        "llm_provider": a.get("llm_provider") or active_ai_provider,
+        "llm_api_base": a.get("llm_api_base") or active_ai.get("api_base"),
+        "llm_model": a.get("llm_model") or active_ai.get("model"),
+        "llm_api_key": a.get("llm_api_key") or active_ai.get("api_key"),
         # Credentials
         "google_maps_api_key": c.get("google_maps_api_key"),
         "drone_conn": c.get("drone_conn"),
@@ -159,7 +182,8 @@ def _flatten_for_env(doc: dict[str, Any]) -> dict[str, Any]:
 async def get_runtime_settings(repo: SettingsRepository) -> EnvSettings:
     """
     Loads effective settings from DB (including decrypted secrets),
-    flattens to EnvSettings, merges with env defaults, and updates backend.core.config.runtime.settings in-place.
+    flattens to EnvSettings, merges with env defaults, and updates
+    backend.core.config.runtime.settings in-place.
     """
     effective_doc = await repo.get_effective_settings_doc()
     camera_doc = effective_doc.setdefault("camera", {})

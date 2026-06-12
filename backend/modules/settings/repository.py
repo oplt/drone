@@ -19,15 +19,27 @@ MASK = "********"
 # Vault keys (names stored in VaultSecret.name)
 V_TELEM_MQTT_PASS = "telemetry.mqtt_pass"
 V_AI_LLM_KEY = "ai.llm_api_key"
+V_AI_OPENAI_KEY = "ai.providers.openai.api_key"
+V_AI_OPENAI_COMPAT_KEY = "ai.providers.openai_compatible.api_key"
+V_AI_ANTHROPIC_KEY = "ai.providers.anthropic.api_key"
+V_AI_CUSTOM_HTTP_KEY = "ai.providers.custom_http.api_key"
+V_AI_HUGGINGFACE_KEY = "ai.providers.huggingface.api_key"
 V_PI_PASS = "raspberry.raspberry_password"
 V_PHOTO_WEBODM_API_TOKEN = "photogrammetry.WEBODM_API_TOKEN"
 V_PHOTO_ASSET_SIGNING_SECRET = "photogrammetry.PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"
 V_ALERT_SMTP_PASSWORD = "alerts.smtp_password"
 V_ALERT_TWILIO_AUTH_TOKEN = "alerts.twilio_auth_token"
+V_AI_PROFILE_PREFIX = "ai.profiles."
+V_AI_PROFILE_SUFFIX = ".api_key"
 
 SECRET_PATHS = {
     V_TELEM_MQTT_PASS: ("telemetry", "mqtt_pass"),
     V_AI_LLM_KEY: ("ai", "llm_api_key"),
+    V_AI_OPENAI_KEY: ("ai", "providers", "openai", "api_key"),
+    V_AI_OPENAI_COMPAT_KEY: ("ai", "providers", "openai_compatible", "api_key"),
+    V_AI_ANTHROPIC_KEY: ("ai", "providers", "anthropic", "api_key"),
+    V_AI_CUSTOM_HTTP_KEY: ("ai", "providers", "custom_http", "api_key"),
+    V_AI_HUGGINGFACE_KEY: ("ai", "providers", "huggingface", "api_key"),
     V_PI_PASS: ("raspberry", "raspberry_password"),
     V_PHOTO_WEBODM_API_TOKEN: ("photogrammetry", "WEBODM_API_TOKEN"),
     V_PHOTO_ASSET_SIGNING_SECRET: (
@@ -54,18 +66,47 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return out
 
 
-def _set_path(d: dict[str, Any], path: tuple[str, str], value: Any) -> None:
-    a, b = path
-    d.setdefault(a, {})
-    if isinstance(d[a], dict):
-        d[a][b] = value
+def _set_path(d: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
+    cursor = d
+    for segment in path[:-1]:
+        child = cursor.setdefault(segment, {})
+        if not isinstance(child, dict):
+            child = {}
+            cursor[segment] = child
+        cursor = child
+    cursor[path[-1]] = value
 
 
-def _pop_path(d: dict[str, Any], path: tuple[str, str]) -> Any | None:
-    a, b = path
-    if not isinstance(d.get(a), dict):
+def _pop_path(d: dict[str, Any], path: tuple[str, ...]) -> Any | None:
+    cursor = d
+    for segment in path[:-1]:
+        child = cursor.get(segment)
+        if not isinstance(child, dict):
+            return None
+        cursor = child
+    return cursor.pop(path[-1], None)
+
+
+def _profile_secret_name(profile_id: str) -> str:
+    return f"{V_AI_PROFILE_PREFIX}{profile_id}{V_AI_PROFILE_SUFFIX}"
+
+
+def _profile_id_from_secret_name(secret_name: str) -> str | None:
+    if not secret_name.startswith(V_AI_PROFILE_PREFIX) or not secret_name.endswith(
+        V_AI_PROFILE_SUFFIX
+    ):
         return None
-    return d[a].pop(b, None)
+    return secret_name[len(V_AI_PROFILE_PREFIX) : -len(V_AI_PROFILE_SUFFIX)]
+
+
+def _ai_profiles(data: dict[str, Any]) -> list[dict[str, Any]]:
+    ai = data.get("ai")
+    if not isinstance(ai, dict):
+        return []
+    profiles = ai.get("profiles")
+    if not isinstance(profiles, list):
+        return []
+    return [profile for profile in profiles if isinstance(profile, dict)]
 
 
 class SettingsRepository:
@@ -116,6 +157,15 @@ class SettingsRepository:
         for secret_name, path in SECRET_PATHS.items():
             if secret_name in sec_names:
                 _set_path(data, path, MASK)
+        profile_secret_ids = {
+            profile_id
+            for secret_name in sec_names
+            if (profile_id := _profile_id_from_secret_name(secret_name))
+        }
+        for profile in _ai_profiles(data):
+            if str(profile.get("id") or "") in profile_secret_ids:
+                profile["api_key"] = MASK
+                profile["has_api_key"] = True
 
         if updated_at:
             data["updated_at"] = updated_at
@@ -154,13 +204,43 @@ class SettingsRepository:
         )
 
         # --- extract + store secrets (then remove from JSON) ---
-        mqtt_pass = _pop_path(data, SECRET_PATHS[V_TELEM_MQTT_PASS])
-        llm_key = _pop_path(data, SECRET_PATHS[V_AI_LLM_KEY])
-        pi_pass = _pop_path(data, SECRET_PATHS[V_PI_PASS])
-        webodm_api_token = _pop_path(data, SECRET_PATHS[V_PHOTO_WEBODM_API_TOKEN])
-        asset_signing_secret = _pop_path(data, SECRET_PATHS[V_PHOTO_ASSET_SIGNING_SECRET])
-        smtp_password = _pop_path(data, SECRET_PATHS[V_ALERT_SMTP_PASSWORD])
-        twilio_auth_token = _pop_path(data, SECRET_PATHS[V_ALERT_TWILIO_AUTH_TOKEN])
+        secret_values = {
+            secret_name: _pop_path(data, path) for secret_name, path in SECRET_PATHS.items()
+        }
+        for secret_name, provider_id in (
+            (V_AI_OPENAI_KEY, "openai"),
+            (V_AI_OPENAI_COMPAT_KEY, "openai_compatible"),
+            (V_AI_ANTHROPIC_KEY, "anthropic"),
+            (V_AI_CUSTOM_HTTP_KEY, "custom_http"),
+            (V_AI_HUGGINGFACE_KEY, "huggingface"),
+        ):
+            raw_secret = secret_values.get(secret_name)
+            provider_data = (
+                data.get("ai", {}).get("providers", {}).get(provider_id)
+                if isinstance(data.get("ai"), dict)
+                else None
+            )
+            if isinstance(provider_data, dict) and raw_secret is not None and raw_secret != MASK:
+                provider_data["has_api_key"] = bool(str(raw_secret).strip())
+        profile_secret_values: dict[str, Any] = {}
+        current_profile_secret_names: set[str] = set()
+        for profile in _ai_profiles(data):
+            profile_id = str(profile.get("id") or "").strip()
+            if not profile_id:
+                continue
+            raw_secret = profile.pop("api_key", None)
+            if raw_secret is not None and raw_secret != MASK:
+                profile["has_api_key"] = bool(str(raw_secret).strip())
+            secret_name = _profile_secret_name(profile_id)
+            current_profile_secret_names.add(secret_name)
+            profile_secret_values[secret_name] = raw_secret
+        mqtt_pass = secret_values.get(V_TELEM_MQTT_PASS)
+        llm_key = secret_values.pop(V_AI_LLM_KEY, None)
+        pi_pass = secret_values.get(V_PI_PASS)
+        webodm_api_token = secret_values.get(V_PHOTO_WEBODM_API_TOKEN)
+        asset_signing_secret = secret_values.get(V_PHOTO_ASSET_SIGNING_SECRET)
+        smtp_password = secret_values.get(V_ALERT_SMTP_PASSWORD)
+        twilio_auth_token = secret_values.get(V_ALERT_TWILIO_AUTH_TOKEN)
 
         async with self._session_factory() as db:
 
@@ -186,6 +266,21 @@ class SettingsRepository:
 
             await upsert_secret(V_TELEM_MQTT_PASS, mqtt_pass)
             await upsert_secret(V_AI_LLM_KEY, llm_key)
+            for secret_name in (
+                V_AI_OPENAI_KEY,
+                V_AI_OPENAI_COMPAT_KEY,
+                V_AI_ANTHROPIC_KEY,
+                V_AI_CUSTOM_HTTP_KEY,
+            ):
+                await upsert_secret(secret_name, secret_values.get(secret_name))
+            for secret_name, value in profile_secret_values.items():
+                await upsert_secret(secret_name, value)
+            existing_profile_secrets = await db.execute(
+                select(VaultSecret.name).where(VaultSecret.name.like(f"{V_AI_PROFILE_PREFIX}%"))
+            )
+            for (secret_name,) in existing_profile_secrets.all():
+                if secret_name not in current_profile_secret_names:
+                    await db.execute(delete(VaultSecret).where(VaultSecret.name == secret_name))
             await upsert_secret(V_PI_PASS, pi_pass)
             await upsert_secret(V_PHOTO_WEBODM_API_TOKEN, webodm_api_token)
             await upsert_secret(V_PHOTO_ASSET_SIGNING_SECRET, asset_signing_secret)
@@ -243,6 +338,11 @@ class SettingsRepository:
 
         for secret_name, path in SECRET_PATHS.items():
             _set_path(data, path, dec(secret_name))
+        for profile in _ai_profiles(data):
+            profile_id = str(profile.get("id") or "").strip()
+            if profile_id:
+                profile["api_key"] = dec(_profile_secret_name(profile_id))
+                profile["has_api_key"] = bool(profile["api_key"])
 
         if updated_at:
             data["updated_at"] = updated_at

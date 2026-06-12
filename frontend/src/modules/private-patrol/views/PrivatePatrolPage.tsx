@@ -8,6 +8,7 @@ import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import { FieldDeleteDialog } from "../../field-survey/components/FieldDeleteDialog";
 import { PrivatePatrolMapColumn } from "../components/PrivatePatrolMapColumn";
 import {
+  PrivatePatrolFlightDrawer,
   PrivatePatrolMissionControls,
   PrivatePatrolSetupDrawer,
 } from "../components/PrivatePatrolPlanningSection";
@@ -48,22 +49,18 @@ export default function PrivatePatrolPage() {
             onSnapshotChange={borderEditor.syncFieldBorderFromSnapshot}
             onError={vm.addError}
           />
-          <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
-            <Stack sx={{ flex: 1 }} spacing={2}>
-              <PrivatePatrolMapColumn vm={vm} onSelectField={vm.selectField} />
-            </Stack>
-
-            <PrivatePatrolMissionControls
-              apiBase={vm.apiBase}
-              preflightRun={mission.preflightRun}
-              telemetry={telemetry}
-              droneConnected={vm.droneConnected}
-              missionStatus={vm.missionStatus}
-              activeFlightId={vm.activeFlightId}
-              mission={mission}
-              onSendMission={() => void mission.sendMission()}
-            />
+          <Stack spacing={2} sx={{ mb: 3 }}>
+            <PrivatePatrolMapColumn vm={vm} onSelectField={vm.selectField} />
           </Stack>
+
+          <PrivatePatrolMissionControls
+            apiBase={vm.apiBase}
+            preflightRun={mission.preflightRun}
+            telemetry={telemetry}
+            droneConnected={vm.droneConnected}
+            missionStatus={vm.missionStatus}
+            activeFlightId={vm.activeFlightId}
+          />
 
           <PrivatePatrolSetupDrawer
             fields={vm.fields}
@@ -88,6 +85,13 @@ export default function PrivatePatrolPage() {
             onClearBorder={borderEditor.clearFieldBorder}
             onNewField={vm.handleNewField}
             mission={mission}
+          />
+
+          <PrivatePatrolFlightDrawer
+            mission={mission}
+            onSendMission={() => void mission.sendMission()}
+            activeFlightId={vm.activeFlightId}
+            missionStatus={vm.missionStatus}
           />
 
           <Divider sx={{ mb: 2 }} />

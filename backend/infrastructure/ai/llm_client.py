@@ -65,6 +65,12 @@ class LLMAnalyzer:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
     async def detect_objects(self, frame) -> list[Detection]:
+        if self.provider == "ollama":
+            from backend.infrastructure.ai.ollama_server import default_ollama_api_base, shared_ollama_server
+
+            api_base = default_ollama_api_base(self.api_base)
+            shared_ollama_server.ensure_running(api_base)
+
         img_b64 = encode_jpeg(frame)
         system_prompt = (
             "You are a precise vision detector for urban cleanliness. "
