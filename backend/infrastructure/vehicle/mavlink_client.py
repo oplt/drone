@@ -16,6 +16,9 @@ from dronekit import LocationGlobalRelative, VehicleMode, connect
 from pymavlink import mavutil
 
 from backend.core.config.runtime import settings
+from backend.observability.instruments import observed_span, structured_error
+from backend.observability.metrics import add as metric_add
+from backend.observability.metrics import record as metric_record
 from backend.modules.missions.flight_profile import explicit_sim_home_fallback_enabled
 from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate, Telemetry
 from backend.modules.vehicle_runtime.vehicle_port import DroneClient, MissionAbortRequested
@@ -65,6 +68,12 @@ logger = logging.getLogger(__name__)
 
 def _sim_or_indoor_home_fallback_allowed() -> bool:
     return explicit_sim_home_fallback_enabled()
+
+
+def _mavlink_command_name(command: int) -> str:
+    enum = getattr(getattr(mavutil, "mavlink", None), "enums", {}).get("MAV_CMD", {})
+    entry = enum.get(int(command)) if isinstance(enum, dict) else None
+    return str(getattr(entry, "name", None) or command)
 
 
 class MavlinkDrone(DroneClient):
@@ -370,107 +379,182 @@ class MavlinkDrone(DroneClient):
         if not self.vehicle:
             raise RuntimeError("Vehicle not connected")
 
+        started = time.monotonic()
         target_alt_m = float(alt)
-        baseline_local_down = getattr(
-            getattr(getattr(self.vehicle, "location", None), "local_frame", None),
-            "down",
-            None,
-        )
-        baseline_global_alt = getattr(
-            getattr(getattr(self.vehicle, "location", None), "global_frame", None),
-            "alt",
-            None,
-        )
+        with observed_span(
+            "mavlink.takeoff",
+            drone_id="mavlink",
+            mavlink_command="takeoff",
+            **{
+                "mavlink.command.params": f"target_alt_m={target_alt_m:.2f}",
+                "mavlink.ack.result": "unknown",
+                "mavlink.retry_count": 0,
+                "mavlink.timeout_ms": max(45.0, target_alt_m * 15.0) * 1000.0,
+            },
+        ):
+            try:
+                baseline_local_down = getattr(
+                    getattr(getattr(self.vehicle, "location", None), "local_frame", None),
+                    "down",
+                    None,
+                )
+                baseline_global_alt = getattr(
+                    getattr(getattr(self.vehicle, "location", None), "global_frame", None),
+                    "alt",
+                    None,
+                )
 
-        while not self.vehicle.is_armable:
-            time.sleep(1)
+                while not self.vehicle.is_armable:
+                    time.sleep(1)
 
-        self.vehicle.mode = VehicleMode("GUIDED")
-        self.vehicle.armed = True
+                self.vehicle.mode = VehicleMode("GUIDED")
+                self.vehicle.armed = True
 
-        while not self.vehicle.armed:
-            time.sleep(1)
+                while not self.vehicle.armed:
+                    time.sleep(1)
 
-        self.vehicle.simple_takeoff(target_alt_m)
+                self.vehicle.simple_takeoff(target_alt_m)
 
-        source_name = "unavailable"
-        started_at = time.monotonic()
-        timeout_s = max(45.0, target_alt_m * 15.0)
-        last_candidates: dict[str, float] = {}
-        next_progress_log_at = started_at + 5.0
-
-        # More tolerant for indoor missions:
-        # for 4.0m this becomes 3.68m, which would have passed your logged case.
-        required_alt_m = max(target_alt_m * 0.92, target_alt_m - 0.35)
-
-        # Require a few consecutive confirmations to avoid one-sample spikes.
-        stable_hits = 0
-        stable_hits_required = 3
-
-        while True:
-            if self._mission_abort_requested.is_set():
-                raise MissionAbortRequested("Operator abort requested during takeoff")
-
-            current_alt, source_name, last_candidates = self._current_takeoff_height_m(
-                baseline_local_down=baseline_local_down,
-                baseline_global_alt=baseline_global_alt,
-            )
-
-            if current_alt is not None and current_alt >= required_alt_m:
-                stable_hits += 1
-                if stable_hits >= stable_hits_required:
-                    logger.info(
-                        "Takeoff reached %.2fm using %s altitude feedback "
-                        "(target=%.2fm, required=%.2fm)",
-                        current_alt,
-                        source_name,
-                        target_alt_m,
-                        required_alt_m,
-                    )
-                    break
-            else:
+                source_name = "unavailable"
+                started_at = time.monotonic()
+                timeout_s = max(45.0, target_alt_m * 15.0)
+                last_candidates: dict[str, float] = {}
+                next_progress_log_at = started_at + 5.0
+                required_alt_m = max(target_alt_m * 0.92, target_alt_m - 0.35)
                 stable_hits = 0
+                stable_hits_required = 3
 
-            now = time.monotonic()
-            if now >= next_progress_log_at:
-                logger.info(
-                    "Takeoff progress %.2fm / %.2fm via %s | required=%.2fm | candidates=%s",
-                    float(current_alt or 0.0),
-                    target_alt_m,
-                    source_name,
-                    required_alt_m,
-                    {key: round(value, 2) for key, value in last_candidates.items()},
+                while True:
+                    if self._mission_abort_requested.is_set():
+                        raise MissionAbortRequested("Operator abort requested during takeoff")
+
+                    current_alt, source_name, last_candidates = self._current_takeoff_height_m(
+                        baseline_local_down=baseline_local_down,
+                        baseline_global_alt=baseline_global_alt,
+                    )
+
+                    if current_alt is not None and current_alt >= required_alt_m:
+                        stable_hits += 1
+                        if stable_hits >= stable_hits_required:
+                            logger.info(
+                                "Takeoff reached %.2fm using %s altitude feedback "
+                                "(target=%.2fm, required=%.2fm)",
+                                current_alt,
+                                source_name,
+                                target_alt_m,
+                                required_alt_m,
+                            )
+                            break
+                    else:
+                        stable_hits = 0
+
+                    now = time.monotonic()
+                    if now >= next_progress_log_at:
+                        logger.info(
+                            "Takeoff progress %.2fm / %.2fm via %s | "
+                            "required=%.2fm | candidates=%s",
+                            float(current_alt or 0.0),
+                            target_alt_m,
+                            source_name,
+                            required_alt_m,
+                            {key: round(value, 2) for key, value in last_candidates.items()},
+                        )
+                        next_progress_log_at = now + 5.0
+
+                    if now - started_at > timeout_s:
+                        mode_name = (
+                            getattr(getattr(self.vehicle, "mode", None), "name", None) or "UNKNOWN"
+                        )
+                        candidates_text = ", ".join(
+                            f"{key}: {value:.2f}" for key, value in last_candidates.items()
+                        )
+                        metric_add("mavlink_timeouts", attrs={"command": "takeoff"})
+                        raise TimeoutError(
+                            "Timed out waiting for takeoff completion "
+                            f"(target={target_alt_m:.2f}m, required={required_alt_m:.2f}m, "
+                            f"source={source_name}, best={float(current_alt or 0.0):.2f}m, "
+                            f"mode={mode_name}, candidates={{{candidates_text}}})"
+                        )
+
+                    self._mission_control_changed.wait(timeout=0.2)
+                    self._mission_control_changed.clear()
+                metric_record(
+                    "mavlink_latency",
+                    (time.monotonic() - started) * 1000.0,
+                    {"command": "takeoff", "result": "success"},
                 )
-                next_progress_log_at = now + 5.0
-
-            if now - started_at > timeout_s:
-                mode_name = getattr(getattr(self.vehicle, "mode", None), "name", None) or "UNKNOWN"
-                raise TimeoutError(
-                    "Timed out waiting for takeoff completion "
-                    f"(target={target_alt_m:.2f}m, required={required_alt_m:.2f}m, "
-                    f"source={source_name}, best={float(current_alt or 0.0):.2f}m, "
-                    f"mode={mode_name}, "
-                    f"candidates={{{', '.join(f'{key}: {value:.2f}' for key, value in last_candidates.items())}}})"
+            except Exception as exc:
+                metric_add("mavlink_failures", attrs={"command": "takeoff"})
+                structured_error(
+                    logger,
+                    "mavlink_command_failed",
+                    exc,
+                    mavlink_command="takeoff",
+                    latency_ms=(time.monotonic() - started) * 1000.0,
                 )
-
-            self._mission_control_changed.wait(timeout=0.2)
-            self._mission_control_changed.clear()
+                raise
 
     def goto(self, coord: Coordinate) -> None:
         # Send heartbeat before major operations
         # self.send_heartbeat()
-
-        target = LocationGlobalRelative(coord.lat, coord.lon, coord.alt)
-        groundspeed = self._groundspeed_override_mps
-        if groundspeed and groundspeed > 0:
-            self.vehicle.simple_goto(target, groundspeed=float(groundspeed))
-        else:
-            self.vehicle.simple_goto(target)
+        started = time.monotonic()
+        with observed_span(
+            "mavlink.goto_waypoint",
+            drone_id="mavlink",
+            mavlink_command="goto_waypoint",
+            **{
+                "mavlink.command.params": (
+                    f"lat={coord.lat:.7f},lon={coord.lon:.7f},alt={coord.alt:.2f}"
+                ),
+                "mavlink.ack.result": "unknown",
+                "mavlink.retry_count": 0,
+            },
+        ):
+            try:
+                target = LocationGlobalRelative(coord.lat, coord.lon, coord.alt)
+                groundspeed = self._groundspeed_override_mps
+                if groundspeed and groundspeed > 0:
+                    self.vehicle.simple_goto(target, groundspeed=float(groundspeed))
+                else:
+                    self.vehicle.simple_goto(target)
+                metric_record(
+                    "mavlink_latency",
+                    (time.monotonic() - started) * 1000.0,
+                    {"command": "goto_waypoint", "result": "success"},
+                )
+            except Exception as exc:
+                metric_add("mavlink_failures", attrs={"command": "goto_waypoint"})
+                structured_error(
+                    logger,
+                    "mavlink_command_failed",
+                    exc,
+                    mavlink_command="goto_waypoint",
+                    latency_ms=(time.monotonic() - started) * 1000.0,
+                )
+                raise
 
     def set_mode(self, mode: str) -> None:
         if not self.vehicle:
             raise RuntimeError("Vehicle not connected")
-        self.vehicle.mode = VehicleMode(mode)
+        started = time.monotonic()
+        with observed_span("mavlink.set_mode", drone_id="mavlink", mavlink_command="set_mode"):
+            try:
+                self.vehicle.mode = VehicleMode(mode)
+                metric_record(
+                    "mavlink_latency",
+                    (time.monotonic() - started) * 1000.0,
+                    {"command": "set_mode", "result": "success"},
+                )
+            except Exception as exc:
+                metric_add("mavlink_failures", attrs={"command": "set_mode"})
+                structured_error(
+                    logger,
+                    "mavlink_command_failed",
+                    exc,
+                    mavlink_command="set_mode",
+                    latency_ms=(time.monotonic() - started) * 1000.0,
+                )
+                raise
 
     def _set_mode_best_effort(self, *modes: str) -> bool:
         if not self.vehicle:
@@ -639,24 +723,54 @@ class MavlinkDrone(DroneClient):
     ) -> None:
         if not self.vehicle:
             raise RuntimeError("Vehicle not connected")
-        master = getattr(self.vehicle, "_master", None)
-        target_system = int(getattr(master, "target_system", 1) or 1)
-        target_component = int(getattr(master, "target_component", 1) or 1)
-        msg = self.vehicle.message_factory.command_long_encode(
-            target_system,
-            target_component,
-            int(command),
-            0,  # confirmation
-            float(p1),
-            float(p2),
-            float(p3),
-            float(p4),
-            float(p5),
-            float(p6),
-            float(p7),
-        )
-        self.vehicle.send_mavlink(msg)
-        self.vehicle.flush()
+        command_name = _mavlink_command_name(command)
+        started = time.monotonic()
+        with observed_span(
+            "mavlink.command_long",
+            drone_id="mavlink",
+            mavlink_command=command_name,
+            **{
+                "mavlink.command.params": (
+                    f"p1={p1},p2={p2},p3={p3},p4={p4},p5={p5},p6={p6},p7={p7}"
+                ),
+                "mavlink.ack.result": "not_waited",
+                "mavlink.retry_count": 0,
+            },
+        ):
+            try:
+                master = getattr(self.vehicle, "_master", None)
+                target_system = int(getattr(master, "target_system", 1) or 1)
+                target_component = int(getattr(master, "target_component", 1) or 1)
+                msg = self.vehicle.message_factory.command_long_encode(
+                    target_system,
+                    target_component,
+                    int(command),
+                    0,  # confirmation
+                    float(p1),
+                    float(p2),
+                    float(p3),
+                    float(p4),
+                    float(p5),
+                    float(p6),
+                    float(p7),
+                )
+                self.vehicle.send_mavlink(msg)
+                self.vehicle.flush()
+                metric_record(
+                    "mavlink_latency",
+                    (time.monotonic() - started) * 1000.0,
+                    {"command": command_name, "result": "sent"},
+                )
+            except Exception as exc:
+                metric_add("mavlink_failures", attrs={"command": command_name})
+                structured_error(
+                    logger,
+                    "mavlink_command_failed",
+                    exc,
+                    mavlink_command=command_name,
+                    latency_ms=(time.monotonic() - started) * 1000.0,
+                )
+                raise
 
     def start_image_capture(
         self,
@@ -932,41 +1046,63 @@ class MavlinkDrone(DroneClient):
         """Send NED velocity setpoint via SET_POSITION_TARGET_LOCAL_NED."""
         if not self.vehicle:
             raise RuntimeError("Vehicle not connected")
+        started = time.monotonic()
+        with observed_span(
+            "mavlink.set_velocity",
+            drone_id="mavlink",
+            mavlink_command="set_velocity",
+            **{"mavlink.ack.result": "not_waited", "mavlink.retry_count": 0},
+        ):
+            try:
+                master = getattr(self.vehicle, "_master", None)
+                target_system = int(getattr(master, "target_system", 1) or 1)
+                target_component = int(getattr(master, "target_component", 1) or 1)
 
-        master = getattr(self.vehicle, "_master", None)
-        target_system = int(getattr(master, "target_system", 1) or 1)
-        target_component = int(getattr(master, "target_component", 1) or 1)
+                type_mask = (
+                    mavutil.mavlink.POSITION_TARGET_TYPEMASK_X_IGNORE
+                    | mavutil.mavlink.POSITION_TARGET_TYPEMASK_Y_IGNORE
+                    | mavutil.mavlink.POSITION_TARGET_TYPEMASK_Z_IGNORE
+                    | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AX_IGNORE
+                    | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AY_IGNORE
+                    | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AZ_IGNORE
+                    | mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
+                )
 
-        type_mask = (
-            mavutil.mavlink.POSITION_TARGET_TYPEMASK_X_IGNORE
-            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_Y_IGNORE
-            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_Z_IGNORE
-            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AX_IGNORE
-            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AY_IGNORE
-            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_AZ_IGNORE
-            | mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
-        )
-
-        msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
-            0,
-            target_system,
-            target_component,
-            mavutil.mavlink.MAV_FRAME_LOCAL_NED,
-            int(type_mask),
-            0.0,
-            0.0,
-            0.0,
-            float(vx),
-            float(vy),
-            float(vz),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            math.radians(float(yaw_rate_dps)),
-        )
-        self.vehicle.send_mavlink(msg)
-        self.vehicle.flush()
+                msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
+                    0,
+                    target_system,
+                    target_component,
+                    mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+                    int(type_mask),
+                    0.0,
+                    0.0,
+                    0.0,
+                    float(vx),
+                    float(vy),
+                    float(vz),
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    math.radians(float(yaw_rate_dps)),
+                )
+                self.vehicle.send_mavlink(msg)
+                self.vehicle.flush()
+                metric_record(
+                    "mavlink_latency",
+                    (time.monotonic() - started) * 1000.0,
+                    {"command": "set_velocity", "result": "sent"},
+                )
+            except Exception as exc:
+                metric_add("mavlink_failures", attrs={"command": "set_velocity"})
+                structured_error(
+                    logger,
+                    "mavlink_command_failed",
+                    exc,
+                    mavlink_command="set_velocity",
+                    latency_ms=(time.monotonic() - started) * 1000.0,
+                )
+                raise
 
     def _local_distance_to_target(self, coord: LocalCoordinate) -> float:
         if not self.vehicle:

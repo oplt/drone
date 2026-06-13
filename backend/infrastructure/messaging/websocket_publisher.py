@@ -10,6 +10,8 @@ import orjson
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
+from backend.observability.instruments import observed_span
+from backend.observability.metrics import add as metric_add
 from backend.core.events import (
     MissionLifecycleEnvelopeV1,
     TelemetryEnvelopeV1,
@@ -196,24 +198,38 @@ class TelemetryWebSocketManager:
         }
 
     async def ingest_telemetry_envelope(self, envelope: TelemetryEnvelopeV1) -> None:
-        self.last_telemetry_envelope = envelope
-        self.last_telemetry_payload = envelope.payload
-        self.last_telemetry = envelope.payload.to_legacy_snapshot(
-            timestamp_s=envelope.emitted_at.timestamp(),
-        )
-        payload = orjson.dumps(envelope.to_legacy_websocket_message())
-        if self._redis is not None:
-            with suppress(Exception):
-                await self._redis.set(REDIS_LAST_TELEMETRY_KEY, payload, ex=300)
-        await self.broadcast_bytes(payload)
+        with observed_span(
+            "api.websocket.publish",
+            mission_id=getattr(getattr(envelope, "mission", None), "mission_id", None),
+            flight_id=getattr(envelope, "mission_runtime_id", None),
+            **{"websocket.message_type": "telemetry"},
+        ):
+            self.last_telemetry_envelope = envelope
+            self.last_telemetry_payload = envelope.payload
+            self.last_telemetry = envelope.payload.to_legacy_snapshot(
+                timestamp_s=envelope.emitted_at.timestamp(),
+            )
+            payload = orjson.dumps(envelope.to_legacy_websocket_message())
+            if self._redis is not None:
+                with suppress(Exception):
+                    await self._redis.set(REDIS_LAST_TELEMETRY_KEY, payload, ex=300)
+            await self.broadcast_bytes(payload)
+            metric_add("api_websocket_messages", attrs={"message_type": "telemetry"})
 
     async def ingest_mission_lifecycle_envelope(self, envelope: MissionLifecycleEnvelopeV1) -> None:
-        self.last_mission_lifecycle_envelope = envelope
-        payload = orjson.dumps({"type": envelope.kind, "data": envelope.model_dump_jsonable()})
-        if self._redis is not None:
-            with suppress(Exception):
-                await self._redis.set(REDIS_LAST_LIFECYCLE_KEY, payload, ex=300)
-        await self.broadcast_bytes(payload)
+        with observed_span(
+            "api.websocket.publish",
+            mission_id=getattr(getattr(envelope, "mission", None), "mission_id", None),
+            flight_id=getattr(envelope, "mission_runtime_id", None),
+            **{"websocket.message_type": str(envelope.kind)},
+        ):
+            self.last_mission_lifecycle_envelope = envelope
+            payload = orjson.dumps({"type": envelope.kind, "data": envelope.model_dump_jsonable()})
+            if self._redis is not None:
+                with suppress(Exception):
+                    await self._redis.set(REDIS_LAST_LIFECYCLE_KEY, payload, ex=300)
+            await self.broadcast_bytes(payload)
+            metric_add("api_websocket_messages", attrs={"message_type": str(envelope.kind)})
 
     # websocket.py (update the connect method)
     async def connect(self, websocket: WebSocket):
@@ -256,6 +272,7 @@ class TelemetryWebSocketManager:
                         if websocket in self._clients:
                             del self._clients[websocket]
                         self.active_connections.discard(websocket)
+                    metric_add("api_websocket_disconnects", attrs={"channel": "telemetry"})
 
             # Create writer task
             task = asyncio.create_task(writer())
@@ -291,6 +308,7 @@ class TelemetryWebSocketManager:
             if self.last_telemetry["timestamp"] > 0:
                 payload = orjson.dumps({"type": "telemetry", "data": self.last_telemetry})
                 await q.put(payload)
+                metric_add("api_websocket_messages", attrs={"message_type": "initial_telemetry"})
 
             # Return the writer task so the route can monitor it
             return task

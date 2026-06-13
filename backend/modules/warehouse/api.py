@@ -86,6 +86,9 @@ from backend.modules.warehouse.service.warehouse_preflight import (
     warehouse_preflight_can_start,
     warehouse_preflight_failed_checks,
 )
+from backend.observability.instruments import observed_span
+from backend.observability.metrics import add as metric_add
+from backend.observability.metrics import record as metric_record
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
 logger = logging.getLogger(__name__)
@@ -2064,7 +2067,11 @@ async def live_map_snapshot(
     flight_id: str,
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseLiveMapSnapshot:
-    return await warehouse_live_map_stream.snapshot(flight_id)
+    started = time.monotonic()
+    with observed_span("mapping.replay", flight_id=flight_id, map_id=flight_id):
+        snapshot = await warehouse_live_map_stream.snapshot(flight_id)
+    metric_record("mapping_replay_latency", (time.monotonic() - started) * 1000.0)
+    return snapshot
 
 
 @router.post("/live-map/{flight_id}/updates", response_model=WarehouseLiveMapPublishOut)
@@ -2080,8 +2087,10 @@ async def publish_live_map_update(
             status_code=401,
             detail="Missing or invalid X-Warehouse-Live-Map-Ingest-Key",
         )
-    update = normalize_live_map_payload({**payload, "flight_id": flight_id})
-    await warehouse_live_map_stream.publish(update)
+    with observed_span("mapping.live_update.publish", flight_id=flight_id, map_id=flight_id):
+        update = normalize_live_map_payload({**payload, "flight_id": flight_id})
+        await warehouse_live_map_stream.publish(update)
+    metric_add("api_websocket_messages", attrs={"channel": "warehouse_live_map"})
     return WarehouseLiveMapPublishOut(
         accepted=True,
         flight_id=update.flight_id,
@@ -2107,13 +2116,28 @@ async def upload_live_map_chunk(
     if bbox_local_m is not None and len(bbox_local_m) != 6:
         raise HTTPException(status_code=422, detail="bbox_local_m must contain six values")
     try:
-        stored = await warehouse_live_map_chunk_storage.save_upload(
+        started = time.monotonic()
+        with observed_span(
+            "mapping.save_chunk",
             flight_id=flight_id,
+            map_id=flight_id,
             chunk_id=chunk_id,
-            kind=kind,
-            upload=file,
+            **{"mapping.layer": kind, "pointcloud.point_count": point_count},
+        ):
+            stored = await warehouse_live_map_chunk_storage.save_upload(
+                flight_id=flight_id,
+                chunk_id=chunk_id,
+                kind=kind,
+                upload=file,
+            )
+        metric_add("mapping_chunks_saved", attrs={"source": "api_upload", "layer": kind})
+        metric_record(
+            "mapping_chunk_save_latency",
+            (time.monotonic() - started) * 1000.0,
+            {"source": "api_upload", "layer": kind},
         )
     except LiveMapStorageError as exc:
+        metric_add("mapping_chunk_save_failures", attrs={"source": "api_upload", "layer": kind})
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     update = normalize_live_map_payload(
         {
@@ -2141,6 +2165,7 @@ async def upload_live_map_chunk(
         }
     )
     await warehouse_live_map_stream.publish(update)
+    metric_add("api_websocket_messages", attrs={"channel": "warehouse_live_map"})
     return WarehouseLiveMapChunkUploadOut(
         accepted=True,
         flight_id=flight_id,
@@ -2158,7 +2183,13 @@ async def live_map_chunk_download(
     request: Request,
     _org_user: OrgUser = Depends(require_org_user),
 ):
-    stored = warehouse_live_map_chunk_storage.resolve(flight_id=flight_id, chunk_id=chunk_id)
+    with observed_span(
+        "mapping.load_chunk",
+        flight_id=flight_id,
+        map_id=flight_id,
+        chunk_id=chunk_id,
+    ):
+        stored = warehouse_live_map_chunk_storage.resolve(flight_id=flight_id, chunk_id=chunk_id)
     if stored is None:
         logger.warning(
             "live_map_chunk_download flight_id=%s chunk_id=%s exists=false status_code=404",
@@ -2208,7 +2239,8 @@ async def websocket_live_map_stream(websocket: WebSocket, flight_id: str):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=user_id_or_error)
         return
 
-    await warehouse_live_map_stream.connect(flight_id, websocket)
+    with observed_span("api.websocket.connect", flight_id=flight_id):
+        await warehouse_live_map_stream.connect(flight_id, websocket)
     try:
         while True:
             message = await websocket.receive_text()

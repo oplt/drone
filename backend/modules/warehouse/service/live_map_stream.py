@@ -8,6 +8,9 @@ from typing import Any, Literal
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
+from backend.observability.instruments import observed_span
+from backend.observability.metrics import add as metric_add
+
 
 class WarehouseLivePose(BaseModel):
     x_m: float = 0.0
@@ -122,9 +125,19 @@ class WarehouseLiveMapStream:
         payload: dict[str, Any],
     ) -> WebSocket | None:
         try:
-            await asyncio.wait_for(client.send_json(payload), timeout=1.0)
+            with observed_span(
+                "api.websocket.publish",
+                flight_id=payload.get("flight_id"),
+                **{"websocket.message_type": str(payload.get("type") or "live_map_update")},
+            ):
+                await asyncio.wait_for(client.send_json(payload), timeout=1.0)
+            metric_add(
+                "api_websocket_messages",
+                attrs={"channel": "warehouse_live_map", "message_type": str(payload.get("type"))},
+            )
             return None
         except Exception:
+            metric_add("api_websocket_disconnects", attrs={"channel": "warehouse_live_map"})
             return client
 
     async def publish(self, update: WarehouseLiveMapUpdate) -> WarehouseLiveMapUpdate:
@@ -176,7 +189,16 @@ class WarehouseLiveMapStream:
         async with self._lock:
             self._clients.setdefault(flight_id, set()).add(websocket)
         snapshot = await self.snapshot(flight_id)
-        await websocket.send_json(snapshot.model_dump(mode="json"))
+        with observed_span(
+            "api.websocket.publish",
+            flight_id=flight_id,
+            **{"websocket.message_type": "live_map_snapshot"},
+        ):
+            await websocket.send_json(snapshot.model_dump(mode="json"))
+        metric_add(
+            "api_websocket_messages",
+            attrs={"channel": "warehouse_live_map", "message_type": "live_map_snapshot"},
+        )
 
     async def disconnect(self, flight_id: str, websocket: WebSocket) -> None:
         async with self._lock:
@@ -186,6 +208,7 @@ class WarehouseLiveMapStream:
             clients.discard(websocket)
             if not clients:
                 self._clients.pop(flight_id, None)
+        metric_add("api_websocket_disconnects", attrs={"channel": "warehouse_live_map"})
 
     async def finalize(self, flight_id: str, job_id: int | None) -> None:
         if job_id is None:

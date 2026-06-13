@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import time
 from pathlib import Path
 
 import cv2
@@ -13,6 +14,9 @@ from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.service.detector import YoloFrameDetector
 from backend.modules.video_analysis.service.frame_extractor import iter_frames, read_video_metadata
 from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
+from backend.observability.instruments import observed_span, structured_error
+from backend.observability.metrics import add as metric_add
+from backend.observability.metrics import record as metric_record
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +43,13 @@ class OfflineVideoAnalysisPipeline:
 
         try:
             video_path = Path(video.storage_path)
-            metadata = read_video_metadata(video_path)
+            with observed_span(
+                "video.metadata",
+                mission_id=video.mission_id,
+                camera_name="offline_video",
+                **{"model.name": job.model_name},
+            ):
+                metadata = read_video_metadata(video_path)
             logger.info(
                 "Processing video analysis job_id=%s video_id=%s "
                 "duration_seconds=%.2f stride_seconds=%.2f model=%s",
@@ -74,18 +84,57 @@ class OfflineVideoAnalysisPipeline:
             for processed, frame in enumerate(
                 iter_frames(video_path, every_seconds=job.frame_stride_seconds), start=1
             ):
-                frame_detections = detector.predict(frame.image_bgr)
+                metric_add("video_frames_received", attrs={"source": "offline_video"})
+                inference_started = time.monotonic()
+                with observed_span(
+                    "video.inference",
+                    mission_id=video.mission_id,
+                    frame_id=frame.frame_index,
+                    camera_name="offline_video",
+                    **{
+                        "model.name": job.model_name,
+                        "video.width": metadata.width,
+                        "video.height": metadata.height,
+                        "video.fps": metadata.fps,
+                    },
+                ) as span:
+                    frame_detections = detector.predict(frame.image_bgr)
+                    inference_latency_ms = (time.monotonic() - inference_started) * 1000.0
+                    if span is not None:
+                        span.set_attribute("detection.count", len(frame_detections))
+                        span.set_attribute("inference.latency_ms", inference_latency_ms)
+                    metric_record(
+                        "video_inference_latency",
+                        inference_latency_ms,
+                        {"model": job.model_name},
+                    )
+                    metric_record(
+                        "video_detection_count",
+                        len(frame_detections),
+                        {"model": job.model_name},
+                    )
+                metric_add("video_frames_processed", attrs={"source": "offline_video"})
                 geo = telemetry.match(frame.timestamp_seconds)
 
                 for idx, det in enumerate(frame_detections):
                     detection_count += 1
-                    evidence_path = self._save_crop(
-                        job_id=job.id,
-                        frame_index=frame.frame_index,
-                        detection_index=idx,
-                        image_bgr=frame.image_bgr,
-                        xyxy=(det.x1, det.y1, det.x2, det.y2),
-                    )
+                    with observed_span(
+                        "video.detection_storage",
+                        mission_id=video.mission_id,
+                        frame_id=frame.frame_index,
+                        camera_name="offline_video",
+                        **{
+                            "model.name": job.model_name,
+                            "detection.count": len(frame_detections),
+                        },
+                    ):
+                        evidence_path = self._save_crop(
+                            job_id=job.id,
+                            frame_index=frame.frame_index,
+                            detection_index=idx,
+                            image_bgr=frame.image_bgr,
+                            xyxy=(det.x1, det.y1, det.x2, det.y2),
+                        )
 
                     pending_detections.append(
                         VideoDetection(
@@ -129,7 +178,12 @@ class OfflineVideoAnalysisPipeline:
             )
 
         except Exception as exc:
-            logger.exception("Video analysis failed job_id=%s", job.id)
+            structured_error(
+                logger,
+                "video_analysis_failed",
+                exc,
+                mission_id=video.mission_id,
+            )
             await self.db.rollback()
             error_message = (
                 str(exc)

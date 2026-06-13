@@ -9,6 +9,8 @@ from jose import JWTError, jwt
 from backend.core.database.session import Session
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import get_user_from_token
+from backend.observability.instruments import observed_span
+from backend.observability.metrics import add as metric_add
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +78,8 @@ async def websocket_telemetry(websocket: WebSocket):
         return
 
     try:
-        writer_task = await telemetry_manager.connect(websocket)
+        with observed_span("api.websocket.connect", **{"websocket.channel": "telemetry"}):
+            writer_task = await telemetry_manager.connect(websocket)
 
         while True:
             try:
@@ -85,12 +88,14 @@ async def websocket_telemetry(websocket: WebSocket):
                 if message == "ping" or (isinstance(message, str) and '"type":"ping"' in message):
                     try:
                         await websocket.send_text("pong")
+                        metric_add("api_websocket_messages", attrs={"message_type": "pong"})
                     except Exception:
                         break
 
             except TimeoutError:
                 try:
                     await websocket.send_json({"type": "keepalive", "timestamp": time.time()})
+                    metric_add("api_websocket_messages", attrs={"message_type": "keepalive"})
                 except Exception:
                     break
 
@@ -109,5 +114,6 @@ async def websocket_telemetry(websocket: WebSocket):
             if writer_task and not writer_task.done():
                 writer_task.cancel()
             telemetry_manager.disconnect(websocket)
+            metric_add("api_websocket_disconnects", attrs={"channel": "telemetry"})
         except Exception as e:
             logger.error(f"Cleanup error: {e}")

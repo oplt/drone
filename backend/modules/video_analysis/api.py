@@ -17,6 +17,7 @@ from backend.modules.video_analysis.schemas import (
     VideoAssetOut,
     VideoDetectionOut,
 )
+from backend.observability.instruments import observed_span
 
 router = APIRouter(prefix="/video-analysis", tags=["video-analysis"])
 application = VideoAnalysisApplication()
@@ -31,13 +32,14 @@ async def upload_video(
     org_user: OrgUser = Depends(require_org_user),
 ) -> VideoAssetOut:
     try:
-        return await application.upload_video(
-            db,
-            file=file,
-            mission_id=mission_id,
-            field_id=field_id,
-            user=org_user.user,
-        )
+        with observed_span("video.upload", mission_id=mission_id, camera_name="upload"):
+            return await application.upload_video(
+                db,
+                file=file,
+                mission_id=mission_id,
+                field_id=field_id,
+                user=org_user.user,
+            )
     except VideoAnalysisUploadError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except VideoAnalysisNotFound as exc:
@@ -52,9 +54,14 @@ async def analyze_video(
     org_user: OrgUser = Depends(require_org_user),
 ) -> VideoAnalysisJobOut:
     try:
-        return await application.start_analysis(
-            db, video_id=video_id, request=request, user=org_user.user
-        )
+        with observed_span(
+            "video.analysis.start",
+            camera_name="offline_video",
+            **{"model.name": request.model_name},
+        ):
+            return await application.start_analysis(
+                db, video_id=video_id, request=request, user=org_user.user
+            )
     except VideoAnalysisNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except VideoAnalysisModelUnavailable as exc:

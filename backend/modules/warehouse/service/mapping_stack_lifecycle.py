@@ -18,6 +18,7 @@ from backend.modules.warehouse.service.readiness_result import (
     readiness_for_takeoff,
     readiness_from_perception_status_strict,
 )
+from backend.observability.instruments import observed_span, structured_error
 
 if TYPE_CHECKING:
     from backend.modules.warehouse.service.live_map_readiness import MappingReadinessResult
@@ -606,11 +607,21 @@ async def _get_mapping_stack_status_impl() -> WarehouseMappingStackStatus:
 
 async def start_warehouse_mapping_stack() -> WarehouseMappingStackStatus:
     """Start nvblox using the same launcher path used by warehouse scans."""
-    try:
-        await _maybe_start_mapping_stack_cmd()
-    except Exception as exc:
-        logger.warning("Nvblox mapping stack start failed: %s", exc, exc_info=True)
-    return await get_mapping_stack_status()
+    with observed_span(
+        "mapping.stack.start",
+        ros_topic="/warehouse/front/rgbd/points",
+        **{"mapping.layer": "nvblox"},
+    ):
+        try:
+            await _maybe_start_mapping_stack_cmd()
+        except Exception as exc:
+            structured_error(
+                logger,
+                "mapping_stack_start_failed",
+                exc,
+                ros_topic="/warehouse/front/rgbd/points",
+            )
+        return await get_mapping_stack_status()
 
 
 async def prepare_warehouse_scan_ros(
@@ -837,12 +848,22 @@ async def shutdown_warehouse_mapping_stack() -> None:
         stop_warehouse_live_map_bridge,
     )
 
-    try:
-        await stop_warehouse_live_map_bridge()
-    except Exception:
-        logger.warning("Non-fatal error while stopping warehouse live-map bridge", exc_info=True)
-    await _stop_mapping_stack_process()
-    await _kill_stale_nvblox_processes()
+    with observed_span(
+        "mapping.stack.stop",
+        ros_topic="/warehouse/front/rgbd/points",
+        **{"mapping.layer": "nvblox"},
+    ):
+        try:
+            await stop_warehouse_live_map_bridge()
+        except Exception as exc:
+            structured_error(
+                logger,
+                "live_map_bridge_stop_failed",
+                exc,
+                ros_topic="/warehouse/front/rgbd/points",
+            )
+        await _stop_mapping_stack_process()
+        await _kill_stale_nvblox_processes()
 
     shutdown_cmd = settings.warehouse_shutdown_mapping_stack_cmd.strip()
     if shutdown_cmd:

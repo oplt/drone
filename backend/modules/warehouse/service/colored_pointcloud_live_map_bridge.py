@@ -23,6 +23,9 @@ from backend.modules.warehouse.service.pointcloud2_parser import (
     encode_xyzrgb32,
     parse_pointcloud2_msg,
 )
+from backend.observability.instruments import observed_span, structured_error
+from backend.observability.metrics import add as metric_add
+from backend.observability.metrics import record as metric_record
 
 logger = logging.getLogger(__name__)
 
@@ -164,25 +167,64 @@ async def _store_and_publish_colored_chunk(
 
     chunk_id = chunk_id_for_source(source, sequence)
     bbox = _bbox_from_xyz(xyz)
+    started = time.monotonic()
 
-    if source.colored and rgb is not None:
-        payload = encode_xyzrgb32(xyz, rgb)
-        encoding = "xyzrgb32_v1"
-        content_type = "application/vnd.live-map.xyzrgb32"
-        storage_kind = "point_cloud_rgb"
-    else:
-        payload = encode_xyz32(xyz)
-        encoding = "xyz32_v1"
-        content_type = "application/vnd.live-map.xyz32"
-        storage_kind = "point_cloud"
-
-    stored = await warehouse_live_map_chunk_storage.save_upload(
+    with observed_span(
+        "mapping.save_chunk",
         flight_id=flight_id,
+        map_id=flight_id,
         chunk_id=chunk_id,
-        kind=storage_kind,
-        upload=_MemoryUpload(payload, content_type=content_type),
-        max_bytes=48 * 1024 * 1024,
-    )
+        frame_id=frame_id,
+        ros_topic=source.topic,
+        **{
+            "pointcloud.point_count": int(xyz.shape[0]),
+            "mapping.layer": source.layer,
+        },
+    ):
+        try:
+            if source.colored and rgb is not None:
+                payload = encode_xyzrgb32(xyz, rgb)
+                encoding = "xyzrgb32_v1"
+                content_type = "application/vnd.live-map.xyzrgb32"
+                storage_kind = "point_cloud_rgb"
+            else:
+                payload = encode_xyz32(xyz)
+                encoding = "xyz32_v1"
+                content_type = "application/vnd.live-map.xyz32"
+                storage_kind = "point_cloud"
+
+            stored = await warehouse_live_map_chunk_storage.save_upload(
+                flight_id=flight_id,
+                chunk_id=chunk_id,
+                kind=storage_kind,
+                upload=_MemoryUpload(payload, content_type=content_type),
+                max_bytes=48 * 1024 * 1024,
+            )
+            metric_add(
+                "mapping_chunks_saved",
+                attrs={"source": source.source_id, "layer": source.layer},
+            )
+            metric_record(
+                "mapping_chunk_save_latency",
+                (time.monotonic() - started) * 1000.0,
+                {"source": source.source_id, "layer": source.layer, "result": "success"},
+            )
+        except Exception as exc:
+            metric_add(
+                "mapping_chunk_save_failures",
+                attrs={"source": source.source_id, "layer": source.layer},
+            )
+            structured_error(
+                logger,
+                "mapping_chunk_save_failed",
+                exc,
+                flight_id=flight_id,
+                map_id=flight_id,
+                chunk_id=chunk_id,
+                ros_topic=source.topic,
+                latency_ms=(time.monotonic() - started) * 1000.0,
+            )
+            raise
 
     priority = render_priority_for_source(source.source_id)
     sidecar_metadata = {
@@ -261,6 +303,10 @@ async def _store_and_publish_colored_chunk(
     )
 
     await warehouse_live_map_stream.publish(update)
+    metric_add(
+        "api_websocket_messages",
+        attrs={"channel": "warehouse_live_map", "message_type": "live_map_update"},
+    )
 
     if source.source_id == "rgbd_colored" and sequence == 1:
         _note_mapping_startup("first_rgbd_chunk_monotonic")
@@ -324,7 +370,31 @@ class _ColoredPointCloudLiveMapNode:
 
     def _make_callback(self, source_id: str):
         def _callback(msg: Any) -> None:
-            self._on_pointcloud(source_id, msg)
+            topic = self.source_runtimes[source_id].config.topic
+            started = time.monotonic()
+            with observed_span(
+                "ros.callback",
+                flight_id=self.flight_id,
+                ros_topic=topic,
+                ros_message_type=type(msg).__name__,
+                frame_id=getattr(getattr(msg, "header", None), "frame_id", None),
+            ):
+                self._on_pointcloud(source_id, msg)
+            metric_add("ros_messages", attrs={"topic": topic, "message_type": type(msg).__name__})
+            metric_record(
+                "ros_callback_latency",
+                (time.monotonic() - started) * 1000.0,
+                {"topic": topic, "message_type": type(msg).__name__},
+            )
+            point_step = getattr(msg, "point_step", None)
+            width = getattr(msg, "width", None)
+            height = getattr(msg, "height", 1)
+            if point_step is not None and width is not None:
+                metric_record(
+                    "ros_message_size",
+                    float(point_step) * float(width) * float(height or 1),
+                    {"topic": topic, "message_type": type(msg).__name__},
+                )
 
         return _callback
 
@@ -445,19 +515,36 @@ class _ColoredPointCloudLiveMapNode:
             return None
 
         config = runtime.config
-        parsed = parse_pointcloud2_msg(
-            msg,
-            max_points=config.max_points,
-            fallback_color_mode="height" if config.colored else "distance",
-        )
+        started = time.monotonic()
+        with observed_span(
+            "mapping.pointcloud.prepare",
+            flight_id=self.flight_id,
+            ros_topic=config.topic,
+            ros_message_type=type(msg).__name__,
+            frame_id=getattr(getattr(msg, "header", None), "frame_id", None),
+            **{"mapping.layer": config.layer},
+        ):
+            parsed = parse_pointcloud2_msg(
+                msg,
+                max_points=config.max_points,
+                fallback_color_mode="height" if config.colored else "distance",
+            )
         if parsed is None or parsed.point_count <= 0:
             return None
 
         nvblox_status_tracker.note_message(config.topic)
+        metric_add("mapping_pointclouds", attrs={"source": config.source_id, "layer": config.layer})
+        if config.source_id == "rgbd_colored":
+            metric_add("mapping_frames", attrs={"source": config.source_id})
 
         xyz = parsed.xyz
         transform = self._lookup_transform(msg, config.global_frame)
         xyz = self._transform_xyz(xyz, transform)
+        metric_record(
+            "ros_callback_latency",
+            (time.monotonic() - started) * 1000.0,
+            {"topic": config.topic, "stage": "prepare"},
+        )
 
         digest = hashlib.sha1()
         digest.update(config.source_id.encode("utf-8"))
@@ -472,6 +559,10 @@ class _ColoredPointCloudLiveMapNode:
         runtime.last_content_digest = content_digest
 
         runtime.sequence += 1
+        metric_add(
+            "mapping_chunks_generated",
+            attrs={"source": config.source_id, "layer": config.layer},
+        )
         return {
             "flight_id": self.flight_id,
             "source": config,

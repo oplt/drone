@@ -1,5 +1,6 @@
 .PHONY: start local-dev docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
 .PHONY: kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-dev reset-frontend-cache
+.PHONY: start-maple stop-maple observability-status start-observability-stack stop-observability-stack local-dev-no-observability
 
 
 PYTHON ?= python3
@@ -66,5 +67,5 @@ install-hooks:
 
 commit-ready: fix check
 
-kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-dev reset-frontend-cache:
+kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-dev reset-frontend-cache start-maple stop-maple observability-status start-observability-stack stop-observability-stack local-dev-no-observability:
 	$(MAKE) -f Makefile.local $@

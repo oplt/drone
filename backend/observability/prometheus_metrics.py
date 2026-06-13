@@ -2,6 +2,77 @@
 
 from prometheus_client import Counter, Gauge, Histogram
 
+http_requests_total = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status_code"],
+)
+
+http_request_duration_seconds = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency in seconds",
+    ["method", "path"],
+)
+
+http_exceptions_total = Counter(
+    "http_exceptions_total",
+    "Total unhandled HTTP exceptions",
+    ["method", "path", "exception_type"],
+)
+
+active_drone_connections = Gauge(
+    "drone_active_connections",
+    "Number of active drone connections",
+)
+
+mission_command_count = Counter(
+    "drone_mission_commands_total",
+    "Total mission commands issued",
+    ["command_type"],
+)
+
+failed_mission_command_count = Counter(
+    "drone_mission_command_failures_total",
+    "Total failed mission commands",
+    ["command_type"],
+)
+
+telemetry_messages_received = Counter(
+    "drone_telemetry_messages_received_total",
+    "Total telemetry messages received",
+    ["source"],
+)
+
+telemetry_lag_seconds = Gauge(
+    "drone_telemetry_lag_seconds",
+    "Latest telemetry lag/freshness in seconds",
+    ["source"],
+)
+
+video_analysis_jobs_total = Counter(
+    "drone_video_analysis_jobs_total",
+    "Total video analysis jobs",
+    ["status"],
+)
+
+video_analysis_job_failures = Counter(
+    "drone_video_analysis_job_failures_total",
+    "Total failed video analysis jobs",
+    ["reason"],
+)
+
+celery_task_duration_seconds = Histogram(
+    "drone_celery_task_duration_seconds",
+    "Celery task duration in seconds",
+    ["task_name", "status"],
+)
+
+redis_queue_depth = Gauge(
+    "drone_redis_queue_depth",
+    "Redis queue depth",
+    ["queue_name"],
+)
+
 telemetry_envelopes_total = Counter(
     "telemetry_envelopes_total",
     "Total telemetry envelopes processed by the orchestrator",
@@ -93,3 +164,10 @@ patrol_preflight_failures_total = Counter(
     "patrol_preflight_failures_total",
     "Total Property Patrol preflight failures",
 )
+
+
+# TODO: Wire active_drone_connections from vehicle_runtime connection lifecycle.
+# TODO: Wire mission command counters from missions command dispatch path.
+# TODO: Wire telemetry lag from telemetry ingest timestamps.
+# TODO: Wire Celery task duration via task_prerun/task_postrun signals.
+# TODO: Wire Redis queue depth only where queue names and Redis client are explicit.

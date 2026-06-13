@@ -9,7 +9,6 @@ from fastapi.staticfiles import StaticFiles
 from backend.core.config.runtime import settings, setup_logging
 from backend.core.database.session import close_db, init_db
 from backend.core.errors.handlers import RequestIDMiddleware, register_error_handlers
-from backend.core.observability.tracing import setup_tracing
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
 from backend.modules.ai.api import router as ai_router
@@ -51,6 +50,8 @@ from backend.modules.telemetry.websocket_api import router as websockets_router
 from backend.modules.vehicle_runtime.cleanup import start_cleanup_jobs, stop_cleanup_jobs
 from backend.modules.video_analysis.api import router as video_analysis_router
 from backend.modules.warehouse.api import router as warehouse_router
+from backend.observability.metrics import setup_metrics
+from backend.observability.tracing import setup_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -102,20 +103,8 @@ register_error_handlers(app)
 async def healthz():
     return {"status": "ok"}
 
-# Prometheus metrics instrumentation
-try:
-    from prometheus_fastapi_instrumentator import Instrumentator
-
-    Instrumentator(
-        should_group_status_codes=True,
-        should_ignore_untemplated=True,
-        should_respect_env_var=True,
-        excluded_handlers=["/health", "/metrics"],
-    ).instrument(app).expose(app, include_in_schema=False)
-except ImportError:
-    logger.warning("prometheus-fastapi-instrumentator not installed; /metrics endpoint disabled")
-
-# OpenTelemetry tracing
+# Observability
+setup_metrics(app)
 setup_tracing(app)
 
 # Request ID middleware

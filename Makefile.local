@@ -10,6 +10,39 @@ RUN_MIGRATIONS ?= 1
 SIM_MODE ?= 1
 HONCHO ?= $(if $(wildcard $(CURDIR)/.venv/bin/honcho),$(CURDIR)/.venv/bin/honcho,honcho)
 BACKEND_ENV ?= $(CURDIR)/backend/.env
+MAPLE_ENABLED ?= 0
+MAPLE_ENDPOINT ?= http://127.0.0.1:4400
+MAPLE_BIN ?= $(if $(wildcard $(HOME)/.maple/bin/maple),$(HOME)/.maple/bin/maple,$(shell command -v maple 2>/dev/null))
+MAPLE_HOME ?= $(CURDIR)/backend/storage/maple-home
+MAPLE_START_ARGS ?= --offline -d --port 4400
+MAPLE_START_TIMEOUT_S ?= 20
+
+# Local observability stack managed by systemd.
+# Grafana UI:        http://127.0.0.1:3000
+# Prometheus UI/API: http://127.0.0.1:9090
+# Tempo API:         http://127.0.0.1:3200
+# Tempo OTLP HTTP:   http://127.0.0.1:4318
+OBSERVABILITY_STACK_ENABLED ?= 1
+OBSERVABILITY_REQUIRED ?= 0
+SYSTEMCTL ?= systemctl
+SUDO ?= sudo
+GRAFANA_SERVICE ?= grafana-server
+PROMETHEUS_SERVICE ?= prometheus
+TEMPO_SERVICE ?= tempo
+GRAFANA_HEALTH_URL ?= http://127.0.0.1:3000/api/health
+PROMETHEUS_HEALTH_URL ?= http://127.0.0.1:9090/-/ready
+TEMPO_HEALTH_URL ?= http://127.0.0.1:3200/ready
+OBSERVABILITY_START_TIMEOUT_S ?= 20
+OBSERVABILITY_ENABLED ?= true
+OTEL_EXPORTER_OTLP_ENDPOINT ?= http://127.0.0.1:4318
+OTEL_SERVICE_NAME ?= drone-api
+OTEL_TRACES_EXPORTER ?= otlp
+OTEL_METRICS_EXPORTER ?= none
+PROMETHEUS_METRICS_ENABLED ?= true
+PROMETHEUS_METRICS_PATH ?= /metrics
+APP_ENV ?= local
+DRONE_AUTOPILOT ?= ardupilot
+DRONE_SIMULATOR ?= gazebo
 # Do not load backend/.env into every Honcho process by default.
 # The backend should load its own settings; loading backend/.env globally can break local auth cookies.
 HONCHO_ENV_ARGS ?=
@@ -27,18 +60,35 @@ export RUN_MIGRATIONS
 export SIM_MODE
 export PYTHONNOUSERSITE
 export PYTHONDONTWRITEBYTECODE
+export MAPLE_ENABLED
+export MAPLE_ENDPOINT
+export MAPLE_HOME
+export MAPLE_LOCAL_URL=$(MAPLE_ENDPOINT)
+export OBSERVABILITY_STACK_ENABLED
+export OBSERVABILITY_REQUIRED
+export OBSERVABILITY_ENABLED
+export OTEL_EXPORTER_OTLP_ENDPOINT
+export OTEL_SERVICE_NAME
+export OTEL_TRACES_EXPORTER
+export OTEL_METRICS_EXPORTER
+export PROMETHEUS_METRICS_ENABLED
+export PROMETHEUS_METRICS_PATH
+export APP_ENV
+export DRONE_AUTOPILOT
+export DRONE_SIMULATOR
 
 DEV_PROCS := redis backend frontend
 ifeq ($(OPEN_BROWSER),1)
 DEV_PROCS += browser
 endif
 
-.PHONY: local-dev local-dev-with-backend-env check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev
+.PHONY: local-dev local-dev-with-backend-env local-dev-no-observability observability-status start-observability-stack stop-observability-stack check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev start-maple stop-maple
 
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
 	@$(HONCHO) --help >/dev/null 2>&1 || { echo "honcho executable is not usable: $(HONCHO). Reinstall with: $(PYTHON) -m pip install --force-reinstall honcho"; exit 1; }
 	@$(APP_PYTHON) -c 'import uvicorn, fastapi, alembic, celery' >/dev/null 2>&1 || { echo "Backend Python deps missing for $(APP_PYTHON). Install backend requirements."; exit 1; }
+	@$(APP_PYTHON) -c 'import opentelemetry.exporter.otlp.proto.http.trace_exporter, opentelemetry.instrumentation.fastapi, opentelemetry.instrumentation.requests, prometheus_client' >/dev/null 2>&1 || { echo "Observability deps missing for $(APP_PYTHON). Run: $(APP_PYTHON) -m pip install -r requirements.txt -r backend/requirements.txt"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed."; exit 1; }
 	@command -v redis-server >/dev/null 2>&1 || { echo "redis-server is required."; exit 1; }
 
@@ -79,8 +129,122 @@ reset-frontend-cache:
 
 reset-dev: kill-dev kill-workers reset-frontend-cache
 
-local-dev: check-local-tools kill-dev
+start-maple:
+	@if [ "$(MAPLE_ENABLED)" != "1" ]; then \
+		echo "[maple] disabled. Set MAPLE_ENABLED=1 to enable."; \
+	elif [ ! -x "$(MAPLE_BIN)" ]; then \
+		echo "[maple] maple CLI not found at $(MAPLE_BIN)."; \
+		echo "[maple] Install with: curl -fsSL https://maple.dev/cli/install | sh"; \
+		echo "[maple] Or set MAPLE_BIN=/path/to/maple."; \
+		exit 1; \
+	elif curl -fsS "$(MAPLE_ENDPOINT)/health" >/dev/null 2>&1; then \
+		echo "[maple] already running at $(MAPLE_ENDPOINT)"; \
+	else \
+		echo "[maple] starting Maple local observability at $(MAPLE_ENDPOINT)"; \
+		mkdir -p "$(MAPLE_HOME)/.maple"; \
+		"$(MAPLE_BIN)" stop >/dev/null 2>&1 || true; \
+		HOME="$(MAPLE_HOME)" "$(MAPLE_BIN)" stop >/dev/null 2>&1 || true; \
+		HOME="$(MAPLE_HOME)" "$(MAPLE_BIN)" start $(MAPLE_START_ARGS); \
+		deadline=$$(( $$(date +%s) + $(MAPLE_START_TIMEOUT_S) )); \
+		until curl -fsS "$(MAPLE_ENDPOINT)/health" >/dev/null 2>&1; do \
+			if [ "$$(date +%s)" -ge "$$deadline" ]; then \
+				echo "[maple] failed to become healthy at $(MAPLE_ENDPOINT)/health"; \
+				echo "[maple] check logs: $(MAPLE_HOME)/.maple/maple.log"; \
+				exit 1; \
+			fi; \
+			sleep 1; \
+		done; \
+		echo "[maple] ready at $(MAPLE_ENDPOINT)"; \
+	fi
+
+stop-maple:
+	@if [ -x "$(MAPLE_BIN)" ]; then \
+		echo "[maple] stopping Maple"; \
+		HOME="$(MAPLE_HOME)" "$(MAPLE_BIN)" stop >/dev/null 2>&1 || true; \
+	else \
+		echo "[maple] maple CLI not found"; \
+	fi
+
+
+start-observability-stack:
+	@if [ "$(OBSERVABILITY_STACK_ENABLED)" != "1" ]; then \
+		echo "[observability] stack startup disabled. Set OBSERVABILITY_STACK_ENABLED=1 to enable."; \
+		exit 0; \
+	fi
+	@if [ "$(MAPLE_ENABLED)" = "1" ] && [ "$(MAPLE_ENDPOINT)" = "$(OTEL_EXPORTER_OTLP_ENDPOINT)" ]; then \
+    	echo "[observability] Maple and Tempo would conflict on $(OTEL_EXPORTER_OTLP_ENDPOINT); skipping Grafana/Prometheus/Tempo startup."; \
+    	exit 0; \
+    fi
+	@if ! command -v $(SYSTEMCTL) >/dev/null 2>&1; then \
+		echo "[observability] systemctl not found; cannot start Grafana/Prometheus/Tempo automatically."; \
+		if [ "$(OBSERVABILITY_REQUIRED)" = "1" ]; then exit 1; else exit 0; fi; \
+	fi
+	@echo "[observability] starting Grafana, Prometheus, and Tempo via systemd"
+	@failed=0; \
+	for svc in "$(GRAFANA_SERVICE)" "$(PROMETHEUS_SERVICE)" "$(TEMPO_SERVICE)"; do \
+		if $(SUDO) $(SYSTEMCTL) start "$$svc" >/dev/null 2>&1; then \
+			echo "[observability] started $$svc"; \
+		else \
+			echo "[observability] failed to start $$svc"; \
+			failed=1; \
+		fi; \
+	done; \
+	if [ "$$failed" = "1" ] && [ "$(OBSERVABILITY_REQUIRED)" = "1" ]; then \
+		echo "[observability] one or more services failed to start"; \
+		exit 1; \
+	fi
+	@deadline=$$(( $$(date +%s) + $(OBSERVABILITY_START_TIMEOUT_S) )); \
+	rc=0; \
+	for item in \
+		"Grafana $(GRAFANA_HEALTH_URL)" \
+		"Prometheus $(PROMETHEUS_HEALTH_URL)" \
+		"Tempo $(TEMPO_HEALTH_URL)"; do \
+		name="$${item%% *}"; \
+		url="$${item#* }"; \
+		while ! curl -fsS "$$url" >/dev/null 2>&1; do \
+			if [ "$$(date +%s)" -ge "$$deadline" ]; then \
+				echo "[observability] $$name not healthy at $$url"; \
+				rc=1; \
+				break; \
+			fi; \
+			sleep 1; \
+		done; \
+		if curl -fsS "$$url" >/dev/null 2>&1; then \
+			echo "[observability] $$name ready at $$url"; \
+		fi; \
+	done; \
+	if [ "$$rc" = "1" ] && [ "$(OBSERVABILITY_REQUIRED)" = "1" ]; then \
+		echo "[observability] required observability stack is not healthy"; \
+		exit 1; \
+	fi; \
+	if [ "$$rc" = "1" ]; then \
+		echo "[observability] continuing because OBSERVABILITY_REQUIRED=0"; \
+	fi
+
+stop-observability-stack:
+	@echo "[observability] stopping Tempo, Prometheus, and Grafana via systemd"
+	@$(SUDO) $(SYSTEMCTL) stop "$(TEMPO_SERVICE)" "$(PROMETHEUS_SERVICE)" "$(GRAFANA_SERVICE)" >/dev/null 2>&1 || true
+
+local-dev: check-local-tools kill-dev start-observability-stack start-maple
 	$(HONCHO) $(HONCHO_ENV_ARGS) -f Procfile.dev start $(DEV_PROCS)
 
-local-dev-with-backend-env: check-local-tools kill-dev
+local-dev-with-backend-env: check-local-tools kill-dev start-observability-stack start-maple
 	$(HONCHO) -e $(BACKEND_ENV) -f Procfile.dev start $(DEV_PROCS)
+
+local-dev-no-observability:
+	$(MAKE) -f Makefile.local OBSERVABILITY_ENABLED=false OBSERVABILITY_STACK_ENABLED=0 MAPLE_ENABLED=0 local-dev
+
+
+observability-status:
+	@for item in \
+		"Grafana http://127.0.0.1:3000" \
+		"Tempo http://127.0.0.1:3200/ready" \
+		"Prometheus http://127.0.0.1:9090/-/ready" \
+		"AppMetrics http://127.0.0.1:$(APP_PORT)$(PROMETHEUS_METRICS_PATH)"; do \
+		name="$${item%% *}"; url="$${item#* }"; \
+		if curl -fsS "$$url" >/dev/null 2>&1; then \
+			echo "$$name OK $$url"; \
+		else \
+			echo "$$name DOWN $$url"; \
+		fi; \
+	done

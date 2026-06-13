@@ -124,12 +124,18 @@ def _make_formatter(log_format: str) -> logging.Formatter:
             from pythonjsonlogger import jsonlogger
 
             return jsonlogger.JsonFormatter(
-                "%(asctime)s %(levelname)s %(name)s %(message)s",
+                (
+                    "%(asctime)s %(levelname)s %(name)s %(message)s "
+                    "%(service_name)s %(environment)s %(otel_trace_id)s %(otel_span_id)s"
+                ),
                 rename_fields={"asctime": "ts", "levelname": "level", "name": "logger"},
             )
         except ImportError:
             pass
-    return logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    return logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(name)s | %(service_name)s | "
+        "%(environment)s | trace=%(otel_trace_id)s span=%(otel_span_id)s | %(message)s"
+    )
 
 
 def setup_logging(
@@ -145,7 +151,6 @@ def setup_logging(
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-
     formatter = _make_formatter(log_format)
 
     has_daily_file_handler = False
@@ -175,6 +180,13 @@ def setup_logging(
         stream_handler.setLevel(level)
         stream_handler.setFormatter(formatter)
         root_logger.addHandler(stream_handler)
+
+    try:
+        from backend.observability.logging import install_trace_context_filter
+
+        install_trace_context_filter()
+    except Exception:
+        pass
 
     autopilot_logger = logging.getLogger("autopilot")
     if not any(isinstance(item, RepeatedAutopilotLogFilter) for item in autopilot_logger.filters):
@@ -381,8 +393,17 @@ class RuntimeSettings(BaseSettings):
 
     # Observability
     log_format: str = "json"  # "json" | "text"
-    otel_enabled: bool = False
+    otel_enabled: bool = True
     otel_endpoint: str = ""
+    otel_exporter_otlp_endpoint: str = "http://127.0.0.1:4318"
+    otel_exporter_otlp_traces_endpoint: str = ""
+    otel_exporter_otlp_metrics_endpoint: str = ""
+    otel_exporter_otlp_logs_endpoint: str = ""
+    otel_exporter_otlp_headers: str = ""
+    otel_metric_export_interval_ms: int = 30000
+    otel_resource_attributes: str = "service.namespace=drone,service.version=local"
+    otel_service_name: str = "drone-api"
+    app_env: str = "local"
 
     # Shadow-mode: run old direct-DB-write path alongside new queued path so
     # both can be compared before fully removing the legacy write. Set to False

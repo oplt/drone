@@ -11,19 +11,22 @@ from typing import Any
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
-
 from backend.modules.warehouse.service.live_map_config import (
-    should_persist_raw_lidar_chunks,
     raw_lidar_max_points,
     raw_lidar_min_publish_interval_s,
     raw_lidar_voxel_size_m,
     render_priority_for_source,
+    should_persist_raw_lidar_chunks,
 )
 from backend.modules.warehouse.service.map_source_config import (
     WAREHOUSE_LIVE_MAP_SOURCES,
     chunk_id_for_source,
 )
+from backend.observability.instruments import observed_span, structured_error
+from backend.observability.metrics import add as metric_add
+from backend.observability.metrics import record as metric_record
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_POINTCLOUD_TOPIC = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].topic
 DEFAULT_GLOBAL_FRAME = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].global_frame
@@ -172,6 +175,7 @@ async def _store_and_publish_pointcloud_chunk(
     payload = np.ascontiguousarray(xyz, dtype=np.float32).reshape((-1, 3)).tobytes()
     mid360_source = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"]
     chunk_id = chunk_id_for_source(mid360_source, sequence)
+    started = time.monotonic()
     bbox = _bbox_from_xyz(xyz)
     priority = render_priority_for_source(mid360_source.source_id)
     preview_stride = max(1, xyz.shape[0] // 500)
@@ -182,13 +186,55 @@ async def _store_and_publish_pointcloud_chunk(
 
     stored = None
     if persist_to_disk:
-        stored = await warehouse_live_map_chunk_storage.save_upload(
+        with observed_span(
+            "mapping.save_chunk",
             flight_id=flight_id,
+            map_id=flight_id,
             chunk_id=chunk_id,
-            kind="point_cloud",
-            upload=_MemoryUpload(payload),
-            max_bytes=32 * 1024 * 1024,
-        )
+            frame_id=mid360_source.global_frame,
+            ros_topic=mid360_source.topic,
+            **{
+                "pointcloud.point_count": int(xyz.shape[0]),
+                "mapping.layer": mid360_source.layer,
+            },
+        ):
+            try:
+                stored = await warehouse_live_map_chunk_storage.save_upload(
+                    flight_id=flight_id,
+                    chunk_id=chunk_id,
+                    kind="point_cloud",
+                    upload=_MemoryUpload(payload),
+                    max_bytes=32 * 1024 * 1024,
+                )
+                metric_add(
+                    "mapping_chunks_saved",
+                    attrs={"source": mid360_source.source_id, "layer": mid360_source.layer},
+                )
+                metric_record(
+                    "mapping_chunk_save_latency",
+                    (time.monotonic() - started) * 1000.0,
+                    {
+                        "source": mid360_source.source_id,
+                        "layer": mid360_source.layer,
+                        "result": "success",
+                    },
+                )
+            except Exception as exc:
+                metric_add(
+                    "mapping_chunk_save_failures",
+                    attrs={"source": mid360_source.source_id, "layer": mid360_source.layer},
+                )
+                structured_error(
+                    logger,
+                    "mapping_chunk_save_failed",
+                    exc,
+                    flight_id=flight_id,
+                    map_id=flight_id,
+                    chunk_id=chunk_id,
+                    ros_topic=mid360_source.topic,
+                    latency_ms=(time.monotonic() - started) * 1000.0,
+                )
+                raise
 
         await asyncio.to_thread(
             warehouse_live_map_chunk_storage.save_chunk_metadata,
@@ -251,6 +297,10 @@ async def _store_and_publish_pointcloud_chunk(
     )
 
     await warehouse_live_map_stream.publish(update)
+    metric_add(
+        "api_websocket_messages",
+        attrs={"channel": "warehouse_live_map", "message_type": "live_map_update"},
+    )
 
     logger.info(
         "Published raw point-cloud live-map chunk flight_id=%s chunk_id=%s points=%s persisted=%s",
@@ -274,11 +324,10 @@ class _RawPointCloudLiveMapNode:
         persist_to_disk: bool,
         voxel_size_m: float,
     ) -> None:
-        import rclpy
+        import tf2_ros
         from rclpy.node import Node
         from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
         from sensor_msgs.msg import PointCloud2
-        import tf2_ros
 
         class NodeImpl(Node):
             pass
@@ -408,15 +457,49 @@ class _RawPointCloudLiveMapNode:
         self.last_publish_monotonic = now
 
         try:
-            xyz = self._decode_pointcloud(msg)
-            if xyz.shape[0] <= 0:
-                return
+            started = time.monotonic()
+            with observed_span(
+                "ros.callback",
+                flight_id=self.flight_id,
+                ros_topic=self.topic,
+                ros_message_type=type(msg).__name__,
+                frame_id=getattr(getattr(msg, "header", None), "frame_id", None),
+            ):
+                xyz = self._decode_pointcloud(msg)
+                if xyz.shape[0] <= 0:
+                    return
 
-            transform = self._lookup_transform(msg)
-            xyz = self._transform_xyz(xyz, transform)
+                transform = self._lookup_transform(msg)
+                xyz = self._transform_xyz(xyz, transform)
 
-            self.sequence += 1
-            sequence = self.sequence
+                self.sequence += 1
+                sequence = self.sequence
+            metric_add(
+                "ros_messages",
+                attrs={"topic": self.topic, "message_type": type(msg).__name__},
+            )
+            metric_add(
+                "mapping_pointclouds",
+                attrs={"source": "mid360_raw", "layer": "mid360_lidar"},
+            )
+            metric_add(
+                "mapping_chunks_generated",
+                attrs={"source": "mid360_raw", "layer": "mid360_lidar"},
+            )
+            metric_record(
+                "ros_callback_latency",
+                (time.monotonic() - started) * 1000.0,
+                {"topic": self.topic, "message_type": type(msg).__name__},
+            )
+            point_step = getattr(msg, "point_step", None)
+            width = getattr(msg, "width", None)
+            height = getattr(msg, "height", 1)
+            if point_step is not None and width is not None:
+                metric_record(
+                    "ros_message_size",
+                    float(point_step) * float(width) * float(height or 1),
+                    {"topic": self.topic, "message_type": type(msg).__name__},
+                )
 
             asyncio.run_coroutine_threadsafe(
                 _store_and_publish_pointcloud_chunk(
@@ -451,7 +534,9 @@ async def start_raw_pointcloud_live_map_bridge(
             if persist_to_disk is None
             else persist_to_disk
         )
-        resolved_max_points = max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
+        resolved_max_points = (
+            max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
+        )
         resolved_interval = (
             min_publish_interval_s
             if min_publish_interval_s != DEFAULT_MIN_PUBLISH_INTERVAL_S
