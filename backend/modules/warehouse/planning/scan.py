@@ -1049,6 +1049,7 @@ class WarehouseScanMission:
         from backend.modules.warehouse.service.live_map_config import (
             persist_raw_lidar_layer,
             raw_lidar_enabled,
+            should_persist_raw_lidar_chunks,
         )
         from backend.modules.warehouse.service.raw_pointcloud_live_map_bridge import (
             start_raw_pointcloud_live_map_bridge,
@@ -1076,6 +1077,19 @@ class WarehouseScanMission:
         except Exception as exc:
             logger.warning("Could not start colored point-cloud live map bridge: %s", exc)
 
+        from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
+            start_nvblox_layers_live_map_bridge,
+        )
+
+        try:
+            await start_nvblox_layers_live_map_bridge(flight_id)
+            logger.info(
+                "Started nvblox layers live-map bridge for flight_id=%s",
+                flight_id,
+            )
+        except Exception as exc:
+            logger.warning("Could not start nvblox layers live-map bridge: %s", exc)
+
         if not raw_lidar_enabled() and not persist_raw_lidar_layer():
             logger.info(
                 "Skipping raw Mid360 live-map bridge for flight_id=%s "
@@ -1092,12 +1106,12 @@ class WarehouseScanMission:
                 global_frame=mid360.global_frame,
                 max_points=mid360.max_points,
                 min_publish_interval_s=mid360.min_publish_interval_s,
-                persist_to_disk=persist_raw_lidar_layer(),
+                persist_to_disk=should_persist_raw_lidar_chunks(),
             )
             logger.info(
                 "Started warehouse raw point-cloud live map bridge for flight_id=%s persist=%s",
                 flight_id,
-                persist_raw_lidar_layer(),
+                should_persist_raw_lidar_chunks(),
             )
         except Exception as exc:
             logger.warning("Could not start raw point-cloud live map bridge: %s", exc)

@@ -29,7 +29,7 @@ export const LIVE_MAP_LAYER_LABELS: Record<LiveMapLayerKey, string> = {
 export const DEFAULT_LAYER_VISIBILITY: Record<LiveMapLayerKey, boolean> = {
   rgbdColored: true,
   mid360LiDAR: false,
-  nvbloxColor: true,
+  nvbloxColor: false,
   nvbloxEsdf: false,
   nvbloxTsdf: false,
   nvbloxMesh: false,
@@ -60,12 +60,20 @@ const LAYER_COLORS: Record<LiveMapLayerKey, [number, number, number]> = {
 };
 
 export function inferLayerKey(chunk: WarehouseLiveVoxelChunk): LiveMapLayerKey {
-  if (chunk.layer === "rgbd_colored") return "rgbdColored";
-  if (chunk.layer === "mid360_lidar") return "mid360LiDAR";
-  if (chunk.layer === "nvblox_color") return "nvbloxColor";
-  if (chunk.layer === "nvblox_esdf") return "nvbloxEsdf";
-  if (chunk.layer === "nvblox_tsdf") return "nvbloxTsdf";
-  if (chunk.layer === "nvblox_mesh") return "nvbloxMesh";
+  const layer = chunk.layer ?? chunk.layer_type ?? null;
+  if (layer === "rgbd_colored") return "rgbdColored";
+  if (layer === "mid360_lidar") return "mid360LiDAR";
+  if (layer === "nvblox_color") return "nvbloxColor";
+  if (layer === "nvblox_esdf") return "nvbloxEsdf";
+  if (layer === "nvblox_tsdf") return "nvbloxTsdf";
+  if (layer === "nvblox_mesh") return "nvbloxMesh";
+
+  if (chunk.source === "rgbd_colored") return "rgbdColored";
+  if (chunk.source === "mid360_raw") return "mid360LiDAR";
+  if (chunk.source === "nvblox_color") return "nvbloxColor";
+  if (chunk.source === "nvblox_esdf") return "nvbloxEsdf";
+  if (chunk.source === "nvblox_tsdf") return "nvbloxTsdf";
+  if (chunk.source === "nvblox_mesh") return "nvbloxMesh";
 
   const id = chunk.id.toLowerCase();
   if (id.startsWith("rgbd_")) return "rgbdColored";
@@ -133,20 +141,114 @@ export type { WarehouseLiveMapManifestSummary };
 
 export function defaultLayerVisibilityForChunks(
   chunks: WarehouseLiveVoxelChunk[],
+  manifest?: WarehouseLiveMapManifestSummary | null,
 ): Record<LiveMapLayerKey, boolean> {
-  const next = { ...DEFAULT_LAYER_VISIBILITY };
-  if (isRawLidarOnlyMap(chunks)) {
-    next.rgbdColored = false;
-    next.nvbloxColor = false;
+  const available = chunksAvailableByLayer(chunks, manifest);
+  const next: Record<LiveMapLayerKey, boolean> = {
+    rgbdColored: false,
+    mid360LiDAR: false,
+    nvbloxColor: false,
+    nvbloxEsdf: false,
+    nvbloxTsdf: false,
+    nvbloxMesh: false,
+    dronePath: true,
+    grid: true,
+  };
+
+  if (isRawLidarOnlyMap(chunks, manifest)) {
     next.mid360LiDAR = true;
     return next;
   }
-  if (hasColoredMapLayers(chunks)) {
-    next.rgbdColored = true;
-    next.nvbloxColor = true;
+
+  const layerKeys: LiveMapLayerKey[] = [
+    "rgbdColored",
+    "mid360LiDAR",
+    "nvbloxColor",
+    "nvbloxEsdf",
+    "nvbloxTsdf",
+    "nvbloxMesh",
+  ];
+  for (const key of layerKeys) {
+    if (available[key] > 0) {
+      next[key] = true;
+    }
+  }
+
+  if ((available.rgbdColored > 0 || available.nvbloxColor > 0) && available.mid360LiDAR > 0) {
     next.mid360LiDAR = false;
   }
+
   return next;
+}
+
+const MANIFEST_SOURCE_TO_LAYER_KEY: Record<string, LiveMapLayerKey> = {
+  rgbd_colored: "rgbdColored",
+  mid360_raw: "mid360LiDAR",
+  mid360_lidar: "mid360LiDAR",
+  nvblox_color: "nvbloxColor",
+  nvblox_esdf: "nvbloxEsdf",
+  nvblox_tsdf: "nvbloxTsdf",
+  nvblox_mesh: "nvbloxMesh",
+};
+
+export const LAYER_CAPTURE_UNAVAILABLE: Partial<Record<LiveMapLayerKey, string>> = {};
+
+export function countChunksByLayerKey(
+  chunks: WarehouseLiveVoxelChunk[],
+): Record<LiveMapLayerKey, number> {
+  const counts: Record<LiveMapLayerKey, number> = {
+    rgbdColored: 0,
+    mid360LiDAR: 0,
+    nvbloxColor: 0,
+    nvbloxEsdf: 0,
+    nvbloxTsdf: 0,
+    nvbloxMesh: 0,
+    dronePath: 0,
+    grid: 0,
+  };
+
+  for (const chunk of chunks) {
+    const hasStoredPayload =
+      Boolean(chunk.url) ||
+      (chunk.point_count ?? 0) > 0 ||
+      Boolean(chunk.source) ||
+      Boolean(chunk.layer);
+    if (!hasStoredPayload) continue;
+    counts[inferLayerKey(chunk)] += 1;
+  }
+
+  return counts;
+}
+
+export function chunksAvailableByLayer(
+  chunks: WarehouseLiveVoxelChunk[],
+  manifest?: WarehouseLiveMapManifestSummary | null,
+): Record<LiveMapLayerKey, number> {
+  const counts = countChunksByLayerKey(chunks);
+
+  const manifestCounts = manifest?.chunk_counts;
+  if (manifestCounts) {
+    for (const [source, rawCount] of Object.entries(manifestCounts)) {
+      const layerKey = MANIFEST_SOURCE_TO_LAYER_KEY[source];
+      const count = Number(rawCount);
+      if (layerKey && Number.isFinite(count) && count > 0) {
+        counts[layerKey] = Math.max(counts[layerKey], count);
+      }
+    }
+  }
+
+  return counts;
+}
+
+export function layerHasStoredChunks(
+  layerKey: LiveMapLayerKey,
+  chunks: WarehouseLiveVoxelChunk[],
+  manifest?: WarehouseLiveMapManifestSummary | null,
+): boolean {
+  if (layerKey === "dronePath" || layerKey === "grid") {
+    return true;
+  }
+  return chunksAvailableByLayer(chunks, manifest)[layerKey] > 0;
 }
 
 export const WAREHOUSE_MAP_SOURCE_TOPICS = {

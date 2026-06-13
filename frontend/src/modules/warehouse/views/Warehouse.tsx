@@ -823,6 +823,10 @@ export default function WarehousePage() {
   );
 
   const viewingScanReplay = Boolean(viewerScannedMap) && !activeFlightId;
+  const missionState = missionStatus?.mission_lifecycle?.state ?? "idle";
+  const liveVoxelMapSessionActive = Boolean(
+    activeFlightId && warehousePreflightPassed,
+  );
 
   const liveVoxelMap = useWarehouseLiveVoxelMap(activeFlightId, {
     enabled: Boolean(
@@ -873,10 +877,11 @@ export default function WarehousePage() {
   });
   const displayedVoxelMap = viewingScanReplay
     ? scannedMapReplay.state
-    : activeFlightId
+    : liveVoxelMapSessionActive
       ? liveVoxelMap
       : scannedMapReplay.state;
-  const showVoxelMapViewer = Boolean(activeFlightId || viewerScannedMap);
+  const showVoxelMapViewer =
+    Boolean(viewerScannedMap) || liveVoxelMapSessionActive;
 
   const loadScannedMaps = useCallback(
     async (options?: { selectJobId?: number; showInViewer?: boolean }) => {
@@ -1103,11 +1108,6 @@ export default function WarehousePage() {
       setSelectedMapJobId((current) => (current === jobId ? null : current));
       setViewerMapJobId((current) => (current === jobId ? null : current));
       const records = await loadScannedMaps();
-      const next = records.find((record) => record.job_id !== jobId) ?? null;
-      if (next) {
-        setSelectedMapJobId(next.job_id);
-        setViewerMapJobId(next.job_id);
-      }
       setScanLaunchMessage(`Deleted scan result "${label}".`);
     } catch (error) {
       addError(`Could not delete scan result: ${toMessage(error)}`);
@@ -1344,26 +1344,12 @@ export default function WarehousePage() {
       (previous === "running" || previous === "paused") &&
       (state === "completed" || state === "failed" || state === "aborted")
     ) {
-      void loadScannedMaps().then((records) => {
-        const scoped =
-          selectedWarehouseMapId != null
-            ? records.filter(
-                (record) =>
-                  getWarehouseMapId(record) === selectedWarehouseMapId,
-              )
-            : records;
-        const newest = scoped[0];
-        if (newest) {
-          setSelectedMapJobId(newest.job_id);
-          setViewerMapJobId(newest.job_id);
-        }
-      });
+      void loadScannedMaps();
     }
     previousMissionStateRef.current = state;
   }, [
     loadScannedMaps,
     missionStatus?.mission_lifecycle?.state,
-    selectedWarehouseMapId,
   ]);
 
   const streamKey =
@@ -1560,7 +1546,6 @@ export default function WarehousePage() {
     missionStatus?.mission_lifecycle?.mission_name ??
     missionStatus?.mission_name ??
     "No active warehouse mission";
-  const missionState = missionStatus?.mission_lifecycle?.state ?? "idle";
   const startScanDisabled =
     startingScan ||
     !selectedWarehouseMapId ||

@@ -36,6 +36,7 @@ export function chunkCacheKey(
 
 export function getChunkRetentionLayer(chunk: WarehouseLiveVoxelChunk): string {
   if (chunk.layer) return chunk.layer;
+  if (chunk.layer_type) return chunk.layer_type;
   if (chunk.source) return chunk.source;
 
   const id = chunk.id.toLowerCase();

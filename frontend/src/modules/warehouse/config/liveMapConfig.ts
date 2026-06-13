@@ -1,7 +1,6 @@
 import type { LiveMapLayerKey } from "../utils/liveMapLayerUtils";
 import type { LiveVoxelLayers } from "../components/WarehouseLiveVoxelScene";
 import type { WarehouseLiveVoxelChunk } from "../api/warehouseLiveMapApi";
-import { getChunkRetentionLayer } from "../utils/liveMapChunkRetention";
 import { inferLayerKey } from "../utils/liveMapLayerUtils";
 
 export type LiveMapPreferredLayer =
@@ -66,33 +65,11 @@ export function isChunkLayerVisible(
 export function filterChunksForDownload(
   chunks: WarehouseLiveVoxelChunk[],
   visibleLayers: LiveVoxelLayers,
-  preferredLayer?: LiveMapPreferredLayer,
+  _preferredLayer?: LiveMapPreferredLayer,
 ): WarehouseLiveVoxelChunk[] {
-  const visible = chunks.filter(
+  return chunks.filter(
     (chunk) => Boolean(chunk.url) && isChunkLayerVisible(chunk, visibleLayers),
   );
-
-  if (!preferredLayer) {
-    return visible;
-  }
-
-  const preferred = visible.filter(
-    (chunk) => getChunkRetentionLayer(chunk) === preferredLayer,
-  );
-  if (preferred.length > 0) {
-    return preferred;
-  }
-
-  const coloredFallback = visible.filter((chunk) => {
-    const layer = getChunkRetentionLayer(chunk);
-    return (
-      layer === "rgbd_colored" ||
-      layer === "nvblox_color" ||
-      layer === "nvblox_esdf" ||
-      layer === "nvblox_tsdf"
-    );
-  });
-  return coloredFallback.length > 0 ? coloredFallback : visible;
 }
 
 export function mergeLiveMapConfig(

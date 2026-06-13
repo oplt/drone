@@ -40,6 +40,41 @@ def test_classify_esdf_pointcloud_as_bridgeable() -> None:
     assert probe.bridge_kind == "pointcloud2"
 
 
+def test_resolve_colored_bridge_adds_nvblox_color_from_back_projection() -> None:
+    from backend.modules.warehouse.service.live_map_readiness import (
+        resolve_colored_bridge_sources,
+    )
+    topics = {
+        "/warehouse/front/rgbd/points",
+        "/nvblox_node/static_esdf_pointcloud",
+        "/nvblox_node/back_projected_depth/iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera",
+    }
+    topic_types = {
+        "/warehouse/front/rgbd/points": "sensor_msgs/msg/PointCloud2",
+        "/nvblox_node/static_esdf_pointcloud": "sensor_msgs/msg/PointCloud2",
+        "/nvblox_node/back_projected_depth/iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera": "sensor_msgs/msg/PointCloud2",
+    }
+
+    def _fake_probe(*, topics: set[str], quiet: bool = False):
+        del quiet
+        return {}, topic_types
+
+    import backend.modules.warehouse.service.live_map_readiness as readiness
+
+    original = readiness.probe_live_map_topic_types
+    readiness.probe_live_map_topic_types = _fake_probe
+    try:
+        sources = resolve_colored_bridge_sources(topics=topics)
+    finally:
+        readiness.probe_live_map_topic_types = original
+
+    assert "rgbd_colored" in sources
+    assert "nvblox_esdf" in sources
+    assert "nvblox_color" in sources
+    assert sources["nvblox_color"].topic.startswith("/nvblox_node/back_projected_depth/")
+    assert sources["rgbd_colored"].topic == "/warehouse/front/rgbd/points"
+
+
 def test_discover_rgbd_prefers_warehouse_points_topic() -> None:
     topics = {
         "/nvblox_node/back_projected_depth/camera",

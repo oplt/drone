@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -14,12 +14,13 @@ import {
   Typography,
 } from "@mui/material";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
-import { useLiveMapChunkCache } from "../hooks/useLiveMapChunkCache";
+import { useLiveMapChunkCache, chunkCacheKey } from "../hooks/useLiveMapChunkCache";
 import {
   fetchWarehouseLiveMapConfig,
 } from "../api/warehouseLiveMapApi";
 import {
   DEFAULT_LIVE_MAP_CONFIG,
+  isChunkLayerVisible,
   mergeLiveMapConfig,
 } from "../config/liveMapConfig";
 import {
@@ -39,11 +40,14 @@ import {
 } from "./WarehouseMappingHealthPanel";
 import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
 import {
+  chunksAvailableByLayer,
   countPointsByLayer,
   DEFAULT_LAYER_POINT_BUDGET,
   DEFAULT_LAYER_VISIBILITY,
   defaultLayerVisibilityForChunks,
   isRawLidarOnlyMap,
+  layerHasStoredChunks,
+  LAYER_CAPTURE_UNAVAILABLE,
   LIVE_MAP_LAYER_LABELS,
   type LiveMapColorMode,
   type LiveMapLayerKey,
@@ -92,6 +96,7 @@ export function WarehouseLiveVoxelMapViewer({
     DEFAULT_LAYER_POINT_BUDGET,
   );
   const [liveMapConfig, setLiveMapConfig] = useState(DEFAULT_LIVE_MAP_CONFIG);
+  const layerDefaultsFlightRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!state.token) return;
@@ -110,16 +115,26 @@ export function WarehouseLiveVoxelMapViewer({
       nvbloxEsdf: Math.floor(liveMapConfig.frontend.max_points_per_layer * 0.5),
       nvbloxTsdf: Math.floor(liveMapConfig.frontend.max_points_per_layer * 0.5),
       mid360LiDAR: Math.floor(liveMapConfig.frontend.max_points_per_layer * 0.35),
+      nvbloxMesh: 1,
     }));
   }, [liveMapConfig.frontend.max_points_per_layer]);
 
+  const resolvedFlightId =
+    flightId ?? state.latestUpdate?.flight_id ?? null;
+
   useEffect(() => {
+    const flightKey =
+      resolvedFlightId ??
+      (scannedMapId != null ? `scan:${scannedMapId}` : null);
+    if (!flightKey) {
+      layerDefaultsFlightRef.current = null;
+      return;
+    }
     if (state.chunks.length === 0) return;
-    setLayers((current) => ({
-      ...current,
-      ...defaultLayerVisibilityForChunks(state.chunks),
-    }));
-  }, [state.connectionState, state.chunks.length]);
+    if (layerDefaultsFlightRef.current === flightKey) return;
+    layerDefaultsFlightRef.current = flightKey;
+    setLayers(defaultLayerVisibilityForChunks(state.chunks, state.manifest));
+  }, [resolvedFlightId, scannedMapId, state.chunks.length, state.connectionState, state.manifest]);
 
   const rawLidarOnly = useMemo(
     () => isRawLidarOnlyMap(state.chunks, state.manifest),
@@ -128,8 +143,6 @@ export function WarehouseLiveVoxelMapViewer({
 
   const resolvedCacheMode =
     cacheMode ?? (state.connectionState === "finalized" ? "replay" : "live");
-  const resolvedFlightId =
-    flightId ?? state.latestUpdate?.flight_id ?? null;
   const { cachedChunks, downloadedChunkIds, inFlightChunkIds } =
     useLiveMapChunkCache(resolvedFlightId, state.chunks, state.token, {
       mode: resolvedCacheMode,
@@ -143,6 +156,10 @@ export function WarehouseLiveVoxelMapViewer({
   const pointsByLayer = useMemo(
     () => countPointsByLayer(state.chunks),
     [state.chunks],
+  );
+  const chunksByLayer = useMemo(
+    () => chunksAvailableByLayer(state.chunks, state.manifest),
+    [state.chunks, state.manifest],
   );
   const manifestChunkTotal = useMemo(() => {
     const counts = state.manifest?.chunk_counts;
@@ -161,12 +178,27 @@ export function WarehouseLiveVoxelMapViewer({
   }, [state.chunks, state.manifest?.point_counts]);
   const visiblePointTotal = useMemo(
     () =>
-      cachedChunks.reduce(
-        (sum, chunk) => sum + (chunk.point_count ?? 0),
-        0,
-      ),
+      cachedChunks.reduce((sum, chunk) => sum + (chunk.point_count ?? 0), 0),
     [cachedChunks],
   );
+  const visiblePendingChunkCount = useMemo(() => {
+    if (!resolvedFlightId) return 0;
+    let pending = 0;
+    for (const chunk of state.chunks) {
+      if (!chunk.url || !isChunkLayerVisible(chunk, layers)) continue;
+      const key = chunkCacheKey(resolvedFlightId, chunk);
+      if (!downloadedChunkIds.has(key) && !inFlightChunkIds.has(key)) {
+        pending += 1;
+      }
+    }
+    return pending;
+  }, [
+    downloadedChunkIds,
+    inFlightChunkIds,
+    layers,
+    resolvedFlightId,
+    state.chunks,
+  ]);
 
   const renderOptions: LiveVoxelRenderOptions = useMemo(
     () => ({
@@ -221,12 +253,17 @@ export function WarehouseLiveVoxelMapViewer({
       <Typography variant="caption" color="text.secondary">
         Downloads: {downloadedChunkIds.size} complete, {inFlightChunkIds.size} in
         flight
+        {visiblePendingChunkCount > 0
+          ? ` · ${visiblePendingChunkCount} visible chunk(s) queued`
+          : ""}
       </Typography>
+
+
 
       <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
         {onReloadReplay && (
           <Button size="small" variant="outlined" onClick={onReloadReplay}>
-            Reload full map from disk manifest
+            Refresh map from disk
           </Button>
         )}
         {onToggleStream && (
@@ -304,19 +341,43 @@ export function WarehouseLiveVoxelMapViewer({
             "dronePath",
             "grid",
           ] as LiveMapLayerKey[]
-        ).map((key) => (
-          <FormControlLabel
-            key={key}
-            control={
-              <Checkbox
-                size="small"
-                checked={layers[key]}
-                onChange={() => updateLayer(key)}
-              />
-            }
-            label={LIVE_MAP_LAYER_LABELS[key]}
-          />
-        ))}
+        ).map((key) => {
+          const hasData = layerHasStoredChunks(
+            key,
+            state.chunks,
+            state.manifest,
+          );
+          const captureUnavailable = LAYER_CAPTURE_UNAVAILABLE[key];
+          const disabled =
+            key !== "dronePath" && key !== "grid" && !hasData;
+          const helper = !hasData
+            ? captureUnavailable ??
+              (key === "mid360LiDAR"
+                ? "No Mid360 chunks in this saved scan. Re-run the flight after the latest backend update, or enable WAREHOUSE_LIVE_MAP_RAW_LIDAR_ENABLED before scanning."
+                : "No stored chunks for this layer in the selected scan.")
+            : null;
+          const label = `${LIVE_MAP_LAYER_LABELS[key]}${
+            hasData && key !== "dronePath" && key !== "grid"
+              ? ` (${chunksByLayer[key]})`
+              : ""
+          }`;
+
+          return (
+            <FormControlLabel
+              key={key}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={layers[key]}
+                  disabled={disabled}
+                  onChange={() => updateLayer(key)}
+                />
+              }
+              label={label}
+              title={helper ?? undefined}
+            />
+          );
+        })}
       </Stack>
 
       <Stack spacing={0.75}>
@@ -334,7 +395,7 @@ export function WarehouseLiveVoxelMapViewer({
               min={10_000}
               max={250_000}
               step={10_000}
-              value={layerPointBudget[key]}
+              value={Math.min(layerPointBudget[key], 250_000)}
               onChange={(_event, value) => updateBudget(key, Number(value))}
             />
             <Typography variant="caption" sx={{ minWidth: 72 }}>

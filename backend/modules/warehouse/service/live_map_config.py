@@ -32,6 +32,11 @@ def persist_raw_lidar_layer() -> bool:
     return bool(getattr(settings, "warehouse_persist_raw_lidar_layer", False))
 
 
+def should_persist_raw_lidar_chunks() -> bool:
+    """Persist Mid360 chunks when live streaming is on or persistence is forced."""
+    return raw_lidar_enabled() or persist_raw_lidar_layer()
+
+
 def raw_lidar_max_hz() -> float:
     return max(0.1, float(getattr(settings, "warehouse_live_map_raw_lidar_max_hz", 0.5)))
 

@@ -195,14 +195,9 @@ export function useLiveMapChunkCache(
 
   const candidates = useMemo(() => {
     const withUrls = chunks.filter((chunk) => Boolean(chunk.url));
-    const layerFiltered =
-      mode === "replay" || !visibleLayers
-        ? withUrls
-        : filterChunksForDownload(
-            withUrls,
-            visibleLayers,
-            config.preferred_layer,
-          );
+    const layerFiltered = visibleLayers
+      ? filterChunksForDownload(withUrls, visibleLayers, config.preferred_layer)
+      : withUrls;
     return selectDownloadableChunks(layerFiltered, mode);
   }, [chunks, config.preferred_layer, mode, visibleLayers]);
 
@@ -431,6 +426,7 @@ export function useLiveMapChunkCache(
     flightId,
     pendingSignature,
     token,
+    visibleLayers,
   ]);
 
   const cachedChunks = useMemo(() => {

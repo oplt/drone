@@ -241,17 +241,21 @@ function layerVisible(
   return layers[layer] ?? false;
 }
 
-/** Distribute layer point budget evenly across all chunks — never drop whole chunks. */
+/** Distribute layer point budget evenly across visible layer chunks. */
 function distributeLayerPointBudgets(
   chunks: ReturnType<typeof toRenderChunks>,
   metadataByKey: Map<string, { layer: LiveMapLayerKey }>,
   budget: Record<LiveMapLayerKey, number>,
+  visibleLayers?: LiveVoxelLayers,
 ): Map<string, number> {
   const byLayer = new Map<LiveMapLayerKey, string[]>();
 
   for (const renderChunk of chunks) {
     const meta = metadataByKey.get(renderChunk.stateKey);
     const layer = meta?.layer ?? "mid360LiDAR";
+    if (visibleLayers && !layerVisible(layer, visibleLayers)) {
+      continue;
+    }
     byLayer.set(layer, [...(byLayer.get(layer) ?? []), renderChunk.stateKey]);
   }
 
@@ -283,10 +287,14 @@ function LiveMapContent({
 }) {
   const cachedByStateKey = useMemo(() => {
     return new Map(
-      cachedChunks.map((chunk) => {
-        const source = chunk.source ?? chunk.layer ?? "unknown";
-        return [`${source}:${chunk.id}`, chunk] as const;
-      }),
+      cachedChunks.map((chunk) => [
+        chunkStateKey({
+          id: chunk.id,
+          source: chunk.source,
+          layer: chunk.layer,
+        }),
+        chunk,
+      ]),
     );
   }, [cachedChunks]);
 
@@ -296,26 +304,34 @@ function LiveMapContent({
       all,
       metadataById,
       renderOptions.layerPointBudget,
+      layers,
     );
 
     return all
       .map((renderChunk) => {
         const meta = metadataById.get(renderChunk.stateKey);
         const layer = meta?.layer ?? "mid360LiDAR";
+        if (!layerVisible(layer, layers)) {
+          return null;
+        }
+        const cached = cachedByStateKey.get(renderChunk.stateKey);
+        if (layer === "nvbloxMesh") {
+          return { renderChunk, layer, cached, maxPoints: 1, meta };
+        }
         const layerBudget = renderOptions.layerPointBudget[layer] ?? 0;
         if (layerBudget <= 0) {
           return null;
         }
-        const cached = cachedByStateKey.get(renderChunk.stateKey);
         const maxPoints = maxPointsByKey.get(renderChunk.stateKey) ?? 0;
         return { renderChunk, layer, cached, maxPoints, meta };
       })
       .filter(
         (item): item is NonNullable<typeof item> =>
-          item !== null && item.maxPoints > 0,
+          item !== null && (item.layer === "nvbloxMesh" || item.maxPoints > 0),
       );
   }, [
     cachedByStateKey,
+    layers,
     metadataById,
     renderOptions.layerPointBudget,
     state.chunks,
@@ -355,7 +371,10 @@ function LiveMapContent({
 
           if (
               cached &&
-              (cached.kind === "point_cloud" || cached.kind === "esdf" || cached.kind === "costmap")
+              (cached.kind === "point_cloud" ||
+                cached.kind === "esdf" ||
+                cached.kind === "costmap" ||
+                cached.kind === "occupancy")
           ) {
             return (
                 <PointCloudChunk

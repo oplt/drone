@@ -20,6 +20,8 @@ import {
   defaultLayerVisibilityForChunks,
   hasColoredMapLayers,
   inferLayerKey,
+  chunksAvailableByLayer,
+  layerHasStoredChunks,
 } from "../utils/liveMapLayerUtils";
 
 describe("chunkCacheKey", () => {
@@ -436,6 +438,44 @@ describe("filterChunksForDownload", () => {
 
     expect(filtered.map((chunk) => chunk.id)).toEqual(["rgbd_000001"]);
   });
+
+  it("downloads every visible layer instead of only the preferred layer", () => {
+    const chunks: WarehouseLiveVoxelChunk[] = [
+      {
+        id: "rgbd_000001",
+        kind: "point_cloud",
+        sequence: 1,
+        source: "rgbd_colored",
+        layer: "rgbd_colored",
+        url: "/warehouse/live-map/flight/chunks/rgbd_000001/download",
+        byte_size: 1000,
+      },
+      {
+        id: "nvblox_esdf_00000001",
+        kind: "esdf",
+        sequence: 1,
+        source: "nvblox_esdf",
+        layer: "nvblox_esdf",
+        url: "/warehouse/live-map/flight/chunks/nvblox_esdf_00000001/download",
+        byte_size: 2000,
+      },
+    ];
+
+    const filtered = filterChunksForDownload(
+      chunks,
+      {
+        ...DEFAULT_LAYER_VISIBILITY,
+        rgbdColored: true,
+        nvbloxEsdf: true,
+      },
+      "rgbd_colored",
+    );
+
+    expect(filtered.map((chunk) => chunk.id).sort()).toEqual([
+      "nvblox_esdf_00000001",
+      "rgbd_000001",
+    ]);
+  });
 });
 
 describe("defaultLayerVisibilityForChunks", () => {
@@ -480,5 +520,32 @@ describe("defaultLayerVisibilityForChunks", () => {
     expect(visibility.mid360LiDAR).toBe(true);
     expect(visibility.rgbdColored).toBe(false);
     expect(visibility.nvbloxColor).toBe(false);
+  });
+
+  it("enables nvblox esdf when manifest reports chunks", () => {
+    const visibility = defaultLayerVisibilityForChunks([], {
+      chunk_counts: { nvblox_esdf: 12 },
+    });
+    expect(visibility.nvbloxEsdf).toBe(true);
+    expect(visibility.rgbdColored).toBe(false);
+  });
+
+  it("marks layers with manifest chunk counts as available", () => {
+    const availability = chunksAvailableByLayer([], {
+      map_quality: "colored_nvblox",
+      chunk_counts: {
+        rgbd_colored: 90,
+        nvblox_esdf: 22,
+      },
+      point_counts: {},
+    });
+
+    expect(availability.rgbdColored).toBe(90);
+    expect(availability.nvbloxEsdf).toBe(22);
+    expect(
+      layerHasStoredChunks("nvbloxEsdf", [], {
+        chunk_counts: { nvblox_esdf: 22 },
+      }),
+    ).toBe(true);
   });
 });

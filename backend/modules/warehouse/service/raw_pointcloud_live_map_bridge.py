@@ -14,7 +14,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 from backend.modules.warehouse.service.live_map_config import (
-    persist_raw_lidar_layer,
+    should_persist_raw_lidar_chunks,
     raw_lidar_max_points,
     raw_lidar_min_publish_interval_s,
     raw_lidar_voxel_size_m,
@@ -447,7 +447,9 @@ async def start_raw_pointcloud_live_map_bridge(
         await stop_raw_pointcloud_live_map_bridge()
 
         resolved_persist = (
-            persist_raw_lidar_layer() if persist_to_disk is None else persist_to_disk
+            should_persist_raw_lidar_chunks()
+            if persist_to_disk is None
+            else persist_to_disk
         )
         resolved_max_points = max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
         resolved_interval = (

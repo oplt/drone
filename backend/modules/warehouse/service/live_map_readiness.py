@@ -606,17 +606,25 @@ def resolve_colored_bridge_sources(
         )
 
     nvblox_pc_topics = discover_nvblox_pointcloud_topics(topics, topic_types=topic_types)
+    back_projected_topic: str | None = None
     for topic in nvblox_pc_topics:
         if topic.endswith("static_esdf_pointcloud"):
             sources["nvblox_esdf"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_esdf"]
-        elif (
-            topic.startswith("/nvblox_node/back_projected_depth/")
-            and "rgbd_colored" not in sources
-        ):
-            base = WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"]
+        elif topic.startswith("/nvblox_node/back_projected_depth/"):
+            back_projected_topic = topic
+
+    if back_projected_topic:
+        base = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_color"]
+        sources["nvblox_color"] = replace(
+            base,
+            topic=back_projected_topic,
+            source_id="nvblox_color",
+            layer="nvblox_color",
+        )
+        if "rgbd_colored" not in sources:
             sources["rgbd_colored"] = replace(
-                base,
-                topic=topic,
+                WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"],
+                topic=back_projected_topic,
                 source_id="rgbd_colored",
                 layer="rgbd_colored",
             )

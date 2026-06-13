@@ -485,7 +485,7 @@ class RuntimeSettings(BaseSettings):
     warehouse_persist_raw_lidar_layer: bool = False
     warehouse_preferred_map_layer: str = "rgbd_colored"
     warehouse_live_map_preferred_layer: str = "rgbd_colored"
-    warehouse_live_map_raw_lidar_enabled: bool = False
+    warehouse_live_map_raw_lidar_enabled: bool = True
     warehouse_live_map_raw_lidar_max_hz: float = 0.5
     warehouse_live_map_raw_lidar_voxel_size: float = 0.15
     warehouse_live_map_raw_lidar_max_points: int = 8000

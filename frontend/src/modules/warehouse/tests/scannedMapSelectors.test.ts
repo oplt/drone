@@ -37,12 +37,13 @@ describe("warehouse scanned map selectors", () => {
     expect(getWarehouseName(map)).toBe("Aisle Block");
   });
 
-  it("selects requested scanned map or falls back to latest", () => {
+  it("selects requested scanned map without implicit fallback", () => {
     const first = makeScannedMap({ job_id: 11 });
     const second = makeScannedMap({ job_id: 12 });
 
     expect(selectScannedMap([first, second], 12)).toBe(second);
-    expect(selectScannedMap([first, second], 99)).toBe(first);
+    expect(selectScannedMap([first, second], 99)).toBeNull();
+    expect(selectScannedMap([first, second], null)).toBeNull();
     expect(selectScannedMap([], 99)).toBeNull();
   });
 });

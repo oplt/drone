@@ -510,6 +510,15 @@ async def stop_warehouse_live_map_bridge() -> None:
     except Exception:
         logger.exception("Failed to stop colored point-cloud live map bridge")
 
+    try:
+        from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
+            stop_nvblox_layers_live_map_bridge,
+        )
+
+        await stop_nvblox_layers_live_map_bridge()
+    except Exception:
+        logger.exception("Failed to stop nvblox layers live map bridge")
+
 
 def live_map_bridge_status() -> dict[str, Any]:
     running = _bridge_task is not None and not _bridge_task.done()

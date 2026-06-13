@@ -54,8 +54,11 @@ export function WarehouseScanResultsSelector({
         }
         sx={{ flex: 1, minWidth: { xs: "100%", sm: 220 } }}
       >
+        <MenuItem value="">
+          <em>Select map</em>
+        </MenuItem>
         {maps.length === 0 && (
-          <MenuItem value="" disabled>
+          <MenuItem value="__empty__" disabled>
             No scanned maps available
           </MenuItem>
         )}

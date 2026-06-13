@@ -12,9 +12,6 @@ export function selectScannedMap(
   maps: WarehouseScannedMapResponse[],
   selectedJobId: number | null,
 ): WarehouseScannedMapResponse | null {
-  return (
-    maps.find((map) => map.job_id === selectedJobId) ??
-    maps[0] ??
-    null
-  );
+  if (selectedJobId == null) return null;
+  return maps.find((map) => map.job_id === selectedJobId) ?? null;
 }
