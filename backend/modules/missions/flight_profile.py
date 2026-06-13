@@ -27,6 +27,7 @@ class FlightProfile:
 
 INDOOR_MISSION_TYPES = {
     MissionType.WAREHOUSE_SCAN.value,
+    MissionType.WAREHOUSE_INSPECTION.value,
     MissionType.INDOOR_EXPLORATION.value,
 }
 

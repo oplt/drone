@@ -131,7 +131,7 @@ const DEFAULTS: SettingsDoc = {
     drone_video_height: 480,
     drone_video_fps: 30,
     drone_video_timeout: 10,
-    drone_video_save_path: "./backend/video/recordings/",
+    drone_video_save_path: "./backend/storage/video/recordings/",
     drone_video_fallback: "",
     drone_video_enabled: true,
     drone_video_save_stream: false,

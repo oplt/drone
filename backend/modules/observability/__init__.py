@@ -1,0 +1,1 @@
+"""Observability hub API module."""

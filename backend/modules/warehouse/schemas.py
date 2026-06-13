@@ -1,0 +1,212 @@
+from __future__ import annotations
+
+import math
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+WAREHOUSE_MAP_FRAME_ID = "warehouse_map"
+
+
+def _finite(value: float, field_name: str) -> float:
+    value = float(value)
+    if not math.isfinite(value):
+        raise ValueError(f"{field_name} must be a finite number")
+    return value
+
+
+class WarehouseLocalPoint(BaseModel):
+    frame_id: str = Field(default=WAREHOUSE_MAP_FRAME_ID, min_length=1, max_length=64)
+    x_m: float
+    y_m: float
+    z_m: float
+
+    @field_validator("x_m", "y_m", "z_m")
+    @classmethod
+    def _finite_coordinate(cls, value: float, info) -> float:
+        return _finite(value, str(info.field_name))
+
+
+class WarehouseLocalPose(WarehouseLocalPoint):
+    yaw_deg: float | None = Field(default=None, ge=-180.0, le=180.0)
+
+    @field_validator("yaw_deg")
+    @classmethod
+    def _finite_yaw(cls, value: float | None) -> float | None:
+        if value is None:
+            return None
+        return _finite(value, "yaw_deg")
+
+
+class WarehouseShelfNormal(BaseModel):
+    frame_id: str = Field(default=WAREHOUSE_MAP_FRAME_ID, min_length=1, max_length=64)
+    x: float
+    y: float
+    z: float = 0.0
+
+    @field_validator("x", "y", "z")
+    @classmethod
+    def _finite_coordinate(cls, value: float, info) -> float:
+        return _finite(value, str(info.field_name))
+
+    @model_validator(mode="after")
+    def _non_zero(self) -> WarehouseShelfNormal:
+        if math.sqrt(self.x**2 + self.y**2 + self.z**2) <= 1e-9:
+            raise ValueError("shelf normal vector must be non-zero")
+        return self
+
+
+class WarehouseScanTargetBase(BaseModel):
+    reference_model_id: int | None = Field(default=None, ge=1)
+    dock_station_id: int | None = Field(default=None, ge=1)
+    aisle_code: str = Field(..., min_length=1, max_length=64)
+    rack_code: str | None = Field(default=None, max_length=64)
+    shelf_level: int | None = Field(default=None, ge=0)
+    bin_code: str | None = Field(default=None, max_length=64)
+    sku: str | None = Field(default=None, max_length=128)
+    barcode: str | None = Field(default=None, max_length=128)
+    product_name: str | None = Field(default=None, max_length=255)
+    target_point_local_json: WarehouseLocalPoint
+    scan_pose_local_json: WarehouseLocalPose
+    shelf_normal_local_json: WarehouseShelfNormal | None = None
+    standoff_m: float = Field(default=1.2, gt=0.0, le=20.0)
+    hover_time_s: float = Field(default=3.0, ge=0.0, le=300.0)
+    scan_timeout_s: float = Field(default=8.0, gt=0.0, le=300.0)
+    priority: int = Field(default=100, ge=0)
+    active: bool = True
+
+    @field_validator("standoff_m", "hover_time_s", "scan_timeout_s")
+    @classmethod
+    def _finite_times(cls, value: float, info) -> float:
+        return _finite(value, str(info.field_name))
+
+    @model_validator(mode="after")
+    def _matching_frames(self) -> WarehouseScanTargetBase:
+        if self.target_point_local_json.frame_id != self.scan_pose_local_json.frame_id:
+            raise ValueError("target point and scan pose frame_id must match")
+        if (
+            self.shelf_normal_local_json is not None
+            and self.shelf_normal_local_json.frame_id != self.target_point_local_json.frame_id
+        ):
+            raise ValueError("shelf normal frame_id must match target point frame_id")
+        return self
+
+
+class WarehouseScanTargetCreate(WarehouseScanTargetBase):
+    pass
+
+
+class WarehouseScanTargetUpdate(BaseModel):
+    reference_model_id: int | None = Field(default=None, ge=1)
+    dock_station_id: int | None = Field(default=None, ge=1)
+    aisle_code: str | None = Field(default=None, min_length=1, max_length=64)
+    rack_code: str | None = Field(default=None, max_length=64)
+    shelf_level: int | None = Field(default=None, ge=0)
+    bin_code: str | None = Field(default=None, max_length=64)
+    sku: str | None = Field(default=None, max_length=128)
+    barcode: str | None = Field(default=None, max_length=128)
+    product_name: str | None = Field(default=None, max_length=255)
+    target_point_local_json: WarehouseLocalPoint | None = None
+    scan_pose_local_json: WarehouseLocalPose | None = None
+    shelf_normal_local_json: WarehouseShelfNormal | None = None
+    standoff_m: float | None = Field(default=None, gt=0.0, le=20.0)
+    hover_time_s: float | None = Field(default=None, ge=0.0, le=300.0)
+    scan_timeout_s: float | None = Field(default=None, gt=0.0, le=300.0)
+    priority: int | None = Field(default=None, ge=0)
+    active: bool | None = None
+
+    @field_validator("standoff_m", "hover_time_s", "scan_timeout_s")
+    @classmethod
+    def _finite_times(cls, value: float | None, info) -> float | None:
+        if value is None:
+            return None
+        return _finite(value, str(info.field_name))
+
+
+class WarehouseScanTargetRead(WarehouseScanTargetBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    warehouse_map_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class WarehouseScanTargetImport(BaseModel):
+    targets: list[WarehouseScanTargetCreate] = Field(..., min_length=1, max_length=1000)
+
+
+WarehouseInspectionScanMode = Literal["barcode", "product_photo", "visual_check", "mixed"]
+WarehouseInspectionMissionStatus = Literal["planned", "running", "completed", "failed", "aborted"]
+WarehouseInspectionResultStatus = Literal["success", "failed", "skipped", "timeout", "mismatch"]
+
+
+class WarehouseInspectionMissionCreate(BaseModel):
+    warehouse_map_id: int = Field(..., ge=1)
+    name: str = Field(default="Warehouse Product Scan", min_length=1, max_length=160)
+    target_ids: list[int] = Field(..., min_length=1)
+    scan_mode: WarehouseInspectionScanMode = "barcode"
+    optimize_order: bool = True
+    return_to_dock: bool = True
+    default_hover_time_s: float | None = Field(default=None, ge=0.0, le=300.0)
+    default_scan_timeout_s: float | None = Field(default=None, gt=0.0, le=300.0)
+
+    @field_validator("default_hover_time_s", "default_scan_timeout_s")
+    @classmethod
+    def _finite_times(cls, value: float | None, info) -> float | None:
+        if value is None:
+            return None
+        return _finite(value, str(info.field_name))
+
+
+class WarehouseInspectionWaypoint(BaseModel):
+    target_id: int
+    purpose: str
+    pose: WarehouseLocalPose
+    hover_time_s: float
+    scan_timeout_s: float
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class WarehouseInspectionMissionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    warehouse_map_id: int
+    name: str
+    status: WarehouseInspectionMissionStatus | str
+    scan_mode: WarehouseInspectionScanMode | str
+    return_to_dock: bool
+    target_ids: list[int]
+    waypoints: list[WarehouseInspectionWaypoint]
+    created_at: datetime
+    updated_at: datetime
+
+
+class WarehouseInspectionResultRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    mission_id: int
+    target_id: int
+    status: WarehouseInspectionResultStatus | str
+    expected_barcode: str | None = None
+    detected_barcode: str | None = None
+    confidence: float | None = None
+    image_asset_id: int | None = None
+    video_asset_id: int | None = None
+    drone_pose_local_json: WarehouseLocalPose | None = None
+    error_message: str | None = None
+    scanned_at: datetime
+
+
+class WarehouseScanPoseComputeIn(BaseModel):
+    target_point: WarehouseLocalPoint
+    shelf_normal: WarehouseShelfNormal | None = None
+    standoff_m: float = Field(default=1.2, gt=0.0, le=20.0)
+    yaw_deg: float | None = Field(default=None, ge=-180.0, le=180.0)
+
+
+class WarehouseScanPoseComputeOut(BaseModel):
+    scan_pose: WarehouseLocalPose

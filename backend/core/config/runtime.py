@@ -404,6 +404,14 @@ class RuntimeSettings(BaseSettings):
     otel_resource_attributes: str = "service.namespace=drone,service.version=local"
     otel_service_name: str = "drone-api"
     app_env: str = "local"
+    grafana_public_url: str = ""
+    prometheus_public_url: str = ""
+    grafana_fleet_dashboard_path: str = "/d/drone-fleet/fleet-health"
+    grafana_api_dashboard_path: str = "/d/drone-api/api-observability"
+    grafana_workers_dashboard_path: str = "/d/drone-workers/worker-observability"
+    grafana_video_dashboard_path: str = "/d/drone-video/video-pipeline"
+    grafana_mavlink_dashboard_path: str = "/d/drone-mavlink/mavlink-telemetry"
+    observability_health_timeout_s: float = 1.5
 
     # Shadow-mode: run old direct-DB-write path alongside new queued path so
     # both can be compared before fully removing the legacy write. Set to False

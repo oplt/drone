@@ -295,6 +295,7 @@ class MissionCreateIn(BaseModel):
     grid: GridMissionParams | None = None
     private_patrol: PrivatePatrolMissionParams | None = None
     warehouse_scan: Any | None = None
+    warehouse_inspection: Any | None = None
     mission_profile: PhotogrammetryMissionProfile | None = None
     preflight_run_id: str | None = Field(
         default=None,
@@ -320,12 +321,18 @@ class MissionCreateIn(BaseModel):
                 raise ValueError("field_polygon_lonlat must have at least 3 coordinate pairs.")
         elif self.mission_type in {
             MissionType.WAREHOUSE_SCAN,
+            MissionType.WAREHOUSE_INSPECTION,
             MissionType.INDOOR_EXPLORATION,
         }:
             if self.mission_type == MissionType.WAREHOUSE_SCAN:
                 if self.warehouse_scan is None:
                     raise ValueError(
                         "mission_type='warehouse_scan' requires a 'warehouse_scan' object."
+                    )
+            elif self.mission_type == MissionType.WAREHOUSE_INSPECTION:
+                if self.warehouse_inspection is None:
+                    raise ValueError(
+                        "mission_type='warehouse_inspection' requires a 'warehouse_inspection' object."
                     )
             else:
                 raise ValueError(
@@ -984,6 +991,7 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
 
     if payload.mission_type in {
         MissionType.WAREHOUSE_SCAN,
+        MissionType.WAREHOUSE_INSPECTION,
         MissionType.INDOOR_EXPLORATION,
     }:
         if payload.mission_type == MissionType.WAREHOUSE_SCAN:
@@ -1004,6 +1012,11 @@ def _build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> 
                 base_height_m=float(payload.cruise_alt),
                 scan=scan_params,
                 owner_id=owner_id,
+            )
+        if payload.mission_type == MissionType.WAREHOUSE_INSPECTION:
+            raise ValueError(
+                "mission_type='warehouse_inspection' must be created via "
+                "POST /warehouse/inspection-missions so local scan poses and results are persisted."
             )
         raise ValueError(f"mission_type='{payload.mission_type.value}' is no longer supported")
 

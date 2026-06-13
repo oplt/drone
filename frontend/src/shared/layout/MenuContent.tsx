@@ -25,6 +25,7 @@ import WarehouseRoundedIcon from '@mui/icons-material/WarehouseRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import SmartDisplayRoundedIcon from '@mui/icons-material/SmartDisplayRounded';
+import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
 import { Link, useLocation } from 'react-router-dom';
 
 interface MenuChildItem {
@@ -62,6 +63,7 @@ const mainListItems: MenuItem[] = [
     ],
   },
   { text: 'Insights', icon: <InsightsRoundedIcon />, path: '/dashboard/insights' },
+  { text: 'Observability', icon: <QueryStatsRoundedIcon />, path: '/observability' },
   { text: 'Fleet', icon: <PrecisionManufacturingRoundedIcon />, path: '/dashboard/fleet' },
   { text: 'Templates', icon: <ContentCopyRoundedIcon />, path: '/dashboard/templates' },
 ];

@@ -64,8 +64,8 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
     ),
     "nvblox_color": LiveMapSourceConfig(
         source_id="nvblox_color",
-        # Internal nvblox layer blocks (nvblox_msgs/VoxelBlockLayer), not PointCloud2.
-        # Kept for diagnostics only; the colored bridge does not subscribe here.
+        # Integrated color voxels (nvblox_msgs/VoxelBlockLayer) in global_frame.
+        # Captured by nvblox_layers_live_map_bridge — not back_projected_depth.
         topic="/nvblox_node/color_layer",
         layer="nvblox_color",
         chunk_prefix="nvblox_color",

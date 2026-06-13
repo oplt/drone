@@ -507,7 +507,18 @@ class _NvbloxLayersLiveMapNode:
             return
 
         xyz = parsed.xyz
+        header = getattr(msg, "header", None)
+        source_frame = (getattr(header, "frame_id", None) or "").strip()
         transform = self._lookup_transform(msg, config.global_frame)
+        if source_frame and source_frame != config.global_frame:
+            if transform is None:
+                self.node.get_logger().warning(
+                    "Skipping nvblox layer chunk source=%s: TF %s <- %s unavailable",
+                    source_id,
+                    config.global_frame,
+                    source_frame,
+                )
+                return
         xyz = self._transform_xyz(xyz, transform)
 
         digest = hashlib.sha1()
@@ -567,17 +578,6 @@ def resolve_nvblox_layer_bridge_sources(
     mesh_type = topic_types.get(mesh_topic)
     if mesh_topic in topics and mesh_type and "nvblox_msgs/msg/Mesh" in mesh_type:
         sources["nvblox_mesh"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_mesh"]
-
-    try:
-        from backend.modules.warehouse.service.live_map_readiness import (
-            resolve_colored_bridge_sources,
-        )
-
-        colored = resolve_colored_bridge_sources(topics=topics)
-        if "nvblox_color" in colored:
-            sources.pop("nvblox_color", None)
-    except Exception:
-        logger.debug("Could not resolve colored bridge overlap for nvblox layers")
 
     return sources
 

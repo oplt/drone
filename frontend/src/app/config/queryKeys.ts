@@ -7,6 +7,8 @@ export const sessionKeys = {
 export const dashboardKeys = {
   all: ["dashboard"] as const,
   analyticsOverview: () => [...dashboardKeys.all, "analytics-overview"] as const,
+  observabilityLinks: () => [...dashboardKeys.all, "observability-links"] as const,
+  observabilityStatus: () => [...dashboardKeys.all, "observability-status"] as const,
 };
 
 export const missionKeys = {

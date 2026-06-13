@@ -33,6 +33,7 @@ from backend.modules.livestock.api import router as animal_farm_router
 from backend.modules.mapping.api import router as mapping_router
 from backend.modules.media.api import router as video_router
 from backend.modules.missions.api.routes import router as missions_router
+from backend.modules.observability.api import router as observability_router
 from backend.modules.patrol.api import router as patrol_debug_router
 from backend.modules.patrol.live_detection_api import router as live_detection_router
 from backend.modules.patrol.vision_api import router as ml_router
@@ -165,6 +166,7 @@ app.include_router(integrations_router)
 app.include_router(deliverables_share_router)
 app.include_router(video_analysis_router)
 app.include_router(warehouse_router)
+app.include_router(observability_router)
 
 mapping_assets_dir = Path(settings.PHOTOGRAMMETRY_STORAGE_DIR).resolve()
 mapping_assets_dir.mkdir(parents=True, exist_ok=True)

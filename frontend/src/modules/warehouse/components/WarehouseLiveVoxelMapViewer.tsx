@@ -11,8 +11,11 @@ import {
   Select,
   Slider,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
+import { WarehouseCoordinateSetupPanel } from "./WarehouseCoordinateSetupPanel";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
 import { useLiveMapChunkCache, chunkCacheKey } from "../hooks/useLiveMapChunkCache";
 import {
@@ -28,6 +31,7 @@ import {
   type LiveVoxelLayers,
   type LiveVoxelRenderOptions,
 } from "./WarehouseLiveVoxelScene";
+import type { WarehouseMapPlacementViewerProps, WarehouseMapPlacementPanelProps } from "../hooks/useWarehouseMapPlacement";
 import {
   WarehouseLiveVoxelHeader,
   WarehouseLiveVoxelHealthChips,
@@ -49,18 +53,10 @@ import {
   layerHasStoredChunks,
   LAYER_CAPTURE_UNAVAILABLE,
   LIVE_MAP_LAYER_LABELS,
+  MAP_INSPECTION_LAYER_KEYS,
   type LiveMapColorMode,
   type LiveMapLayerKey,
 } from "../utils/liveMapLayerUtils";
-
-const POINT_CLOUD_LAYERS: LiveMapLayerKey[] = [
-  "rgbdColored",
-  "mid360LiDAR",
-  "nvbloxColor",
-  "nvbloxEsdf",
-  "nvbloxTsdf",
-  "nvbloxMesh",
-];
 
 export function WarehouseLiveVoxelMapViewer({
   state,
@@ -75,6 +71,13 @@ export function WarehouseLiveVoxelMapViewer({
   onClearMap,
   onToggleStream,
   streamPaused = false,
+  mapPlacement = null,
+  warehouseMapId = null,
+  mapPlacementPanel = null,
+  mapDetailTab = "layers",
+  onMapDetailTabChange,
+  onCoordinateSetupError,
+  coordinateSetupToken = null,
 }: {
   state: WarehouseLiveVoxelMapState;
   flightId?: string | null;
@@ -88,6 +91,13 @@ export function WarehouseLiveVoxelMapViewer({
   onClearMap?: () => void;
   onToggleStream?: () => void;
   streamPaused?: boolean;
+  mapPlacement?: WarehouseMapPlacementViewerProps | null;
+  warehouseMapId?: number | null;
+  mapPlacementPanel?: WarehouseMapPlacementPanelProps | null;
+  mapDetailTab?: "layers" | "coordinateSetup";
+  onMapDetailTabChange?: (tab: "layers" | "coordinateSetup") => void;
+  onCoordinateSetupError?: (message: string) => void;
+  coordinateSetupToken?: string | null;
 }) {
   const [layers, setLayers] = useState<LiveVoxelLayers>(DEFAULT_LAYER_VISIBILITY);
   const [pointSize, setPointSize] = useState(0.035);
@@ -314,6 +324,7 @@ export function WarehouseLiveVoxelMapViewer({
           border: "1px solid",
           borderColor: "divider",
           position: "relative",
+          cursor: mapPlacement?.pickMode ? "crosshair" : "default",
         }}
       >
           {!hidden && (
@@ -322,8 +333,26 @@ export function WarehouseLiveVoxelMapViewer({
                   layers={layers}
                   cachedChunks={cachedChunks}
                   renderOptions={renderOptions}
+                  mapPlacement={mapPlacement}
               />
           )}
+        {mapPlacement?.pickMode ? (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              right: 8,
+              zIndex: 2,
+              pointerEvents: "none",
+            }}
+          >
+            <Alert severity="info" sx={{ py: 0.25 }}>
+              Click the map to place a bin target at Z={mapPlacement.placementZ.toFixed(2)} m.
+              Orange = saved targets, yellow = draft.
+            </Alert>
+          </Box>
+        ) : null}
         {["empty", "connecting", "reconnecting", "stale", "failed"].includes(
           state.connectionState,
         ) && <WarehouseLiveVoxelOverlay state={state} />}
@@ -331,79 +360,104 @@ export function WarehouseLiveVoxelMapViewer({
 
       <WarehouseLiveVoxelHealthChips state={state} />
 
-      <Typography variant="subtitle2" color="text.secondary">
-        Layers
-      </Typography>
-      <Stack direction="row" spacing={1} flexWrap="wrap">
-        {(
-          [
-            ...POINT_CLOUD_LAYERS,
-            "dronePath",
-            "grid",
-          ] as LiveMapLayerKey[]
-        ).map((key) => {
-          const hasData = layerHasStoredChunks(
-            key,
-            state.chunks,
-            state.manifest,
-          );
-          const captureUnavailable = LAYER_CAPTURE_UNAVAILABLE[key];
-          const disabled =
-            key !== "dronePath" && key !== "grid" && !hasData;
-          const helper = !hasData
-            ? captureUnavailable ??
-              (key === "mid360LiDAR"
-                ? "No Mid360 chunks in this saved scan. Re-run the flight after the latest backend update, or enable WAREHOUSE_LIVE_MAP_RAW_LIDAR_ENABLED before scanning."
-                : "No stored chunks for this layer in the selected scan.")
-            : null;
-          const label = `${LIVE_MAP_LAYER_LABELS[key]}${
-            hasData && key !== "dronePath" && key !== "grid"
-              ? ` (${chunksByLayer[key]})`
-              : ""
-          }`;
-
-          return (
-            <FormControlLabel
-              key={key}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={layers[key]}
-                  disabled={disabled}
-                  onChange={() => updateLayer(key)}
-                />
-              }
-              label={label}
-              title={helper ?? undefined}
-            />
-          );
-        })}
-      </Stack>
-
-      <Stack spacing={0.75}>
-        <Typography variant="caption" color="text.secondary">
-          Max points per layer
+      {warehouseMapId != null ? (
+        <Tabs
+          value={mapDetailTab}
+          onChange={(_, value: "layers" | "coordinateSetup") =>
+            onMapDetailTabChange?.(value)
+          }
+          variant="fullWidth"
+        >
+          <Tab value="layers" label="Layers" />
+          <Tab value="coordinateSetup" label="Coordinate Setup" />
+        </Tabs>
+      ) : (
+        <Typography variant="subtitle2" color="text.secondary">
+          Layers
         </Typography>
-        {POINT_CLOUD_LAYERS.map((key) => (
-          <Stack key={key} direction="row" spacing={1} alignItems="center">
-            <Typography variant="caption" sx={{ minWidth: 160 }}>
-              {LIVE_MAP_LAYER_LABELS[key]}
-            </Typography>
-            <Slider
-              size="small"
-              sx={{ flex: 1 }}
-              min={10_000}
-              max={250_000}
-              step={10_000}
-              value={Math.min(layerPointBudget[key], 250_000)}
-              onChange={(_event, value) => updateBudget(key, Number(value))}
-            />
-            <Typography variant="caption" sx={{ minWidth: 72 }}>
-              {(layerPointBudget[key] / 1000).toFixed(0)}k
-            </Typography>
+      )}
+
+      {mapDetailTab === "layers" || warehouseMapId == null ? (
+        <>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {(
+              [
+                ...MAP_INSPECTION_LAYER_KEYS,
+                "dronePath",
+                "grid",
+              ] as LiveMapLayerKey[]
+            ).map((key) => {
+              const hasData = layerHasStoredChunks(
+                key,
+                state.chunks,
+                state.manifest,
+              );
+              const captureUnavailable = LAYER_CAPTURE_UNAVAILABLE[key];
+              const disabled =
+                key !== "dronePath" && key !== "grid" && !hasData;
+              const helper = !hasData
+                ? captureUnavailable ??
+                  (key === "mid360LiDAR"
+                    ? "No Mid360 chunks in this saved scan. Re-run the flight after the latest backend update, or enable WAREHOUSE_LIVE_MAP_RAW_LIDAR_ENABLED before scanning."
+                    : "No stored chunks for this layer in the selected scan.")
+                : null;
+              const label = `${LIVE_MAP_LAYER_LABELS[key]}${
+                hasData && key !== "dronePath" && key !== "grid"
+                  ? ` (${chunksByLayer[key]})`
+                  : ""
+              }`;
+
+              return (
+                <FormControlLabel
+                  key={key}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={layers[key]}
+                      disabled={disabled}
+                      onChange={() => updateLayer(key)}
+                    />
+                  }
+                  label={label}
+                  title={helper ?? undefined}
+                />
+              );
+            })}
           </Stack>
-        ))}
-      </Stack>
+
+          <Stack spacing={0.75}>
+            <Typography variant="caption" color="text.secondary">
+              Max points per layer
+            </Typography>
+            {MAP_INSPECTION_LAYER_KEYS.map((key) => (
+              <Stack key={key} direction="row" spacing={1} alignItems="center">
+                <Typography variant="caption" sx={{ minWidth: 160 }}>
+                  {LIVE_MAP_LAYER_LABELS[key]}
+                </Typography>
+                <Slider
+                  size="small"
+                  sx={{ flex: 1 }}
+                  min={10_000}
+                  max={250_000}
+                  step={10_000}
+                  value={Math.min(layerPointBudget[key], 250_000)}
+                  onChange={(_event, value) => updateBudget(key, Number(value))}
+                />
+                <Typography variant="caption" sx={{ minWidth: 72 }}>
+                  {(layerPointBudget[key] / 1000).toFixed(0)}k
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </>
+      ) : mapPlacementPanel && onCoordinateSetupError ? (
+        <WarehouseCoordinateSetupPanel
+          warehouseMapId={warehouseMapId}
+          token={coordinateSetupToken}
+          onError={onCoordinateSetupError}
+          mapPlacement={mapPlacementPanel}
+        />
+      ) : null}
     </Stack>
   );
 }

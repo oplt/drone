@@ -20,8 +20,6 @@ type Props = {
   running?: boolean;
   error?: string | null;
   onRunChecks: () => void;
-  onOpenFlight?: () => void;
-  flightAvailable?: boolean;
 };
 
 export function WarehousePreflightChecksPanel({
@@ -29,8 +27,6 @@ export function WarehousePreflightChecksPanel({
   running = false,
   error,
   onRunChecks,
-  onOpenFlight,
-  flightAvailable = false,
 }: Props) {
   const { passed, total } = preflightProgress(preflight);
   const groups = buildPreflightGroups(preflight);
@@ -137,22 +133,8 @@ export function WarehousePreflightChecksPanel({
           disabled={preflightBusy}
           onClick={onRunChecks}
         >
-          {preflightBusy
-            ? "Running checks..."
-            : preflight
-              ? "Run preflight checks"
-              : "Run preflight checks"}
+          {preflightBusy ? "Running checks..." : "Run preflight checks"}
         </Button>
-
-        {flightAvailable && onOpenFlight ? (
-          <Button variant="text" size="small" onClick={onOpenFlight}>
-            View diagnostics
-          </Button>
-        ) : (
-          <Button variant="text" size="small" disabled>
-            View diagnostics
-          </Button>
-        )}
       </Stack>
 
       {error ? (
@@ -175,13 +157,22 @@ export function WarehousePreflightChecksPanel({
         </Typography>
       ) : null}
 
-      {groups.map((group) => (
-        <PreflightGroup
-          key={group.title}
-          title={group.title}
-          checks={group.checks}
-        />
-      ))}
+      <Stack spacing={1}>
+        {[0, 2].map((rowStart) => (
+          <Stack
+            key={rowStart}
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1}
+            alignItems="stretch"
+          >
+            {groups.slice(rowStart, rowStart + 2).map((group) => (
+              <Box key={group.title} sx={{ flex: 1, minWidth: 0 }}>
+                <PreflightGroup title={group.title} checks={group.checks} />
+              </Box>
+            ))}
+          </Stack>
+        ))}
+      </Stack>
 
       {preflight?.suggested_actions?.length ? (
         <Box

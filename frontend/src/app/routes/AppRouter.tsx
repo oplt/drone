@@ -42,6 +42,7 @@ const MissionTimeline = lazyWithStaleChunkReload(() => import("../../modules/mis
 const AdminPage = lazyWithStaleChunkReload(() => import("../../modules/admin"));
 const TemplatesPage = lazyWithStaleChunkReload(() => import("../../modules/templates"));
 const VideoAnalysisPage = lazyWithStaleChunkReload(() => import("../../modules/video-analysis"));
+const ObservabilityPage = lazyWithStaleChunkReload(() => import("../../modules/observability"));
 
 export function AppRouter() {
   return (
@@ -96,6 +97,17 @@ export function AppRouter() {
           <Route path="admin" element={renderLazyRoute(<AdminPage />)} />
           <Route path="templates" element={renderLazyRoute(<TemplatesPage />)} />
           <Route path="video-analysis" element={renderLazyRoute(<VideoAnalysisPage />)} />
+          <Route path="observability" element={renderLazyRoute(<ObservabilityPage />)} />
+        </Route>
+        <Route
+          path="/observability"
+          element={
+            <ProtectedRoute>
+              {renderLazyRoute(<DashboardShell />, true)}
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={renderLazyRoute(<ObservabilityPage />)} />
         </Route>
         <Route
           path="/admin/settings"

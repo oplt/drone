@@ -8,6 +8,7 @@ class MissionType(str, Enum):
     GRID = "grid"
     PHOTOGRAMMETRY = "photogrammetry"
     WAREHOUSE_SCAN = "warehouse_scan"
+    WAREHOUSE_INSPECTION = "warehouse_inspection"
     INDOOR_EXPLORATION = "indoor_exploration"
     ORBIT = "orbit"
     TERRAIN_FOLLOW = "terrain_follow"

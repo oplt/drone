@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 COLORED_BRIDGE_SOURCES: tuple[str, ...] = (
     "rgbd_colored",
     "nvblox_esdf",
-    "nvblox_color",
 )
 
 
@@ -538,7 +537,17 @@ class _ColoredPointCloudLiveMapNode:
             metric_add("mapping_frames", attrs={"source": config.source_id})
 
         xyz = parsed.xyz
+        source_frame = (getattr(getattr(msg, "header", None), "frame_id", None) or "").strip()
         transform = self._lookup_transform(msg, config.global_frame)
+        if source_frame and source_frame != config.global_frame:
+            if transform is None:
+                self.node.get_logger().warning(
+                    "Skipping colored live-map chunk source=%s: TF %s <- %s unavailable",
+                    source_id,
+                    config.global_frame,
+                    source_frame,
+                )
+                return None
         xyz = self._transform_xyz(xyz, transform)
         metric_record(
             "ros_callback_latency",

@@ -522,11 +522,12 @@ describe("defaultLayerVisibilityForChunks", () => {
     expect(visibility.nvbloxColor).toBe(false);
   });
 
-  it("enables nvblox esdf when manifest reports chunks", () => {
+  it("does not auto-enable diagnostic nvblox esdf/tsdf layers in the 3D map", () => {
     const visibility = defaultLayerVisibilityForChunks([], {
-      chunk_counts: { nvblox_esdf: 12 },
+      chunk_counts: { nvblox_esdf: 12, nvblox_tsdf: 3 },
     });
-    expect(visibility.nvbloxEsdf).toBe(true);
+    expect(visibility.nvbloxEsdf).toBe(false);
+    expect(visibility.nvbloxTsdf).toBe(false);
     expect(visibility.rgbdColored).toBe(false);
   });
 

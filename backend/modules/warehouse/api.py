@@ -26,6 +26,7 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
@@ -59,13 +60,33 @@ from backend.modules.telemetry.websocket_api import _authorize_websocket
 from backend.modules.warehouse.models import (
     WarehouseAsset,
     WarehouseDockStation,
+    WarehouseInspectionMission,
+    WarehouseInspectionResult,
     WarehouseMap,
     WarehouseMappingJob,
     WarehouseModel,
+    WarehouseScanTarget,
     WarehouseSensorRig,
 )
 from backend.modules.warehouse.repository import WarehouseMappingRepository
 from backend.modules.warehouse.repository.settings import WarehouseSettingsRepository
+from backend.modules.warehouse.schemas import (
+    WarehouseInspectionMissionCreate,
+    WarehouseInspectionMissionRead,
+    WarehouseInspectionResultRead,
+    WarehouseScanPoseComputeIn,
+    WarehouseScanPoseComputeOut,
+    WarehouseScanTargetCreate,
+    WarehouseScanTargetImport,
+    WarehouseScanTargetRead,
+    WarehouseScanTargetUpdate,
+)
+from backend.modules.warehouse.service.inspection import (
+    MockWarehouseScanner,
+    build_inspection_waypoints,
+    compute_scan_pose,
+    order_targets,
+)
 from backend.modules.warehouse.service.live_map_replay import (
     build_disk_live_map_snapshot,
     resolve_client_flight_id_for_scan_job,
@@ -512,6 +533,90 @@ def _dock_out(row: WarehouseDockStation) -> WarehouseDockOut:
         active=bool(row.active),
         created_at=row.created_at,
     )
+
+
+def _scan_target_out(row: WarehouseScanTarget) -> WarehouseScanTargetRead:
+    return WarehouseScanTargetRead.model_validate(
+        {
+            "id": int(row.id),
+            "warehouse_map_id": int(row.warehouse_map_id),
+            "reference_model_id": row.reference_model_id,
+            "dock_station_id": row.dock_station_id,
+            "aisle_code": row.aisle_code,
+            "rack_code": row.rack_code,
+            "shelf_level": row.shelf_level,
+            "bin_code": row.bin_code,
+            "sku": row.sku,
+            "barcode": row.barcode,
+            "product_name": row.product_name,
+            "target_point_local_json": row.target_point_local_json,
+            "scan_pose_local_json": row.scan_pose_local_json,
+            "shelf_normal_local_json": row.shelf_normal_local_json,
+            "standoff_m": row.standoff_m,
+            "hover_time_s": row.hover_time_s,
+            "scan_timeout_s": row.scan_timeout_s,
+            "priority": row.priority,
+            "active": row.active,
+            "created_at": row.created_at,
+            "updated_at": row.updated_at,
+        }
+    )
+
+
+def _inspection_mission_out(row: WarehouseInspectionMission) -> WarehouseInspectionMissionRead:
+    plan = row.plan_json if isinstance(row.plan_json, dict) else {}
+    return WarehouseInspectionMissionRead.model_validate(
+        {
+            "id": int(row.id),
+            "warehouse_map_id": int(row.warehouse_map_id),
+            "name": row.name,
+            "status": row.status,
+            "scan_mode": row.scan_mode,
+            "return_to_dock": row.return_to_dock,
+            "target_ids": list(row.target_ids_json or []),
+            "waypoints": list(plan.get("waypoints") or []),
+            "created_at": row.created_at,
+            "updated_at": row.updated_at,
+        }
+    )
+
+
+def _inspection_result_out(row: WarehouseInspectionResult) -> WarehouseInspectionResultRead:
+    return WarehouseInspectionResultRead.model_validate(
+        {
+            "id": int(row.id),
+            "mission_id": int(row.mission_id),
+            "target_id": int(row.target_id),
+            "status": row.status,
+            "expected_barcode": row.expected_barcode,
+            "detected_barcode": row.detected_barcode,
+            "confidence": row.confidence,
+            "image_asset_id": row.image_asset_id,
+            "video_asset_id": row.video_asset_id,
+            "drone_pose_local_json": row.drone_pose_local_json,
+            "error_message": row.error_message,
+            "scanned_at": row.scanned_at,
+        }
+    )
+
+
+async def _get_scan_target_or_404(
+    db: AsyncSession,
+    *,
+    warehouse_map_id: int,
+    target_id: int,
+    active_only: bool = False,
+) -> WarehouseScanTarget:
+    clauses = [
+        WarehouseScanTarget.id == target_id,
+        WarehouseScanTarget.warehouse_map_id == warehouse_map_id,
+    ]
+    if active_only:
+        clauses.append(WarehouseScanTarget.active.is_(True))
+    target = (await db.execute(select(WarehouseScanTarget).where(*clauses))).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="Warehouse scan target not found")
+    return target
 
 
 def _sensor_rig_out(row: WarehouseSensorRig) -> WarehouseSensorRigOut:
@@ -1275,6 +1380,476 @@ async def delete_warehouse_map(
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse map not found")
     await db.commit()
+
+
+@router.get("/maps/{warehouse_map_id}/scan-targets", response_model=list[WarehouseScanTargetRead])
+async def list_warehouse_scan_targets(
+    warehouse_map_id: int,
+    active: bool | None = Query(default=True),
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> list[WarehouseScanTargetRead]:
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    clauses = [WarehouseScanTarget.warehouse_map_id == warehouse_map_id]
+    if active is not None:
+        clauses.append(WarehouseScanTarget.active.is_(active))
+    rows = (
+        (
+            await db.execute(
+                select(WarehouseScanTarget)
+                .where(*clauses)
+                .order_by(
+                    WarehouseScanTarget.priority.asc(),
+                    WarehouseScanTarget.aisle_code.asc(),
+                    WarehouseScanTarget.rack_code.asc(),
+                    WarehouseScanTarget.bin_code.asc(),
+                    WarehouseScanTarget.id.asc(),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [_scan_target_out(row) for row in rows]
+
+
+@router.post(
+    "/maps/{warehouse_map_id}/scan-targets",
+    response_model=WarehouseScanTargetRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_warehouse_scan_target(
+    warehouse_map_id: int,
+    payload: WarehouseScanTargetCreate,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+) -> WarehouseScanTargetRead:
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    row = WarehouseScanTarget(
+        warehouse_map_id=warehouse_map_id,
+        reference_model_id=payload.reference_model_id,
+        dock_station_id=payload.dock_station_id,
+        aisle_code=payload.aisle_code.strip(),
+        rack_code=payload.rack_code,
+        shelf_level=payload.shelf_level,
+        bin_code=payload.bin_code,
+        sku=payload.sku,
+        barcode=payload.barcode,
+        product_name=payload.product_name,
+        target_point_local_json=payload.target_point_local_json.model_dump(),
+        scan_pose_local_json=payload.scan_pose_local_json.model_dump(),
+        shelf_normal_local_json=(
+            payload.shelf_normal_local_json.model_dump()
+            if payload.shelf_normal_local_json is not None
+            else None
+        ),
+        standoff_m=float(payload.standoff_m),
+        hover_time_s=float(payload.hover_time_s),
+        scan_timeout_s=float(payload.scan_timeout_s),
+        priority=int(payload.priority),
+        active=bool(payload.active),
+    )
+    try:
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+    except Exception:
+        await db.rollback()
+        raise
+    logger.info(
+        "warehouse_scan_target_created",
+        extra={"warehouse_map_id": warehouse_map_id, "target_id": int(row.id)},
+    )
+    return _scan_target_out(row)
+
+
+@router.post(
+    "/maps/{warehouse_map_id}/scan-targets/import",
+    response_model=list[WarehouseScanTargetRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_warehouse_scan_targets(
+    warehouse_map_id: int,
+    payload: WarehouseScanTargetImport,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+) -> list[WarehouseScanTargetRead]:
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    rows: list[WarehouseScanTarget] = []
+    try:
+        for target in payload.targets:
+            row = WarehouseScanTarget(
+                warehouse_map_id=warehouse_map_id,
+                reference_model_id=target.reference_model_id,
+                dock_station_id=target.dock_station_id,
+                aisle_code=target.aisle_code.strip(),
+                rack_code=target.rack_code,
+                shelf_level=target.shelf_level,
+                bin_code=target.bin_code,
+                sku=target.sku,
+                barcode=target.barcode,
+                product_name=target.product_name,
+                target_point_local_json=target.target_point_local_json.model_dump(),
+                scan_pose_local_json=target.scan_pose_local_json.model_dump(),
+                shelf_normal_local_json=(
+                    target.shelf_normal_local_json.model_dump()
+                    if target.shelf_normal_local_json is not None
+                    else None
+                ),
+                standoff_m=float(target.standoff_m),
+                hover_time_s=float(target.hover_time_s),
+                scan_timeout_s=float(target.scan_timeout_s),
+                priority=int(target.priority),
+                active=bool(target.active),
+            )
+            db.add(row)
+            rows.append(row)
+        await db.commit()
+        for row in rows:
+            await db.refresh(row)
+    except Exception:
+        await db.rollback()
+        raise
+    logger.info(
+        "warehouse_scan_targets_imported",
+        extra={"warehouse_map_id": warehouse_map_id, "count": len(rows)},
+    )
+    return [_scan_target_out(row) for row in rows]
+
+
+@router.get(
+    "/maps/{warehouse_map_id}/scan-targets/{target_id}",
+    response_model=WarehouseScanTargetRead,
+)
+async def get_warehouse_scan_target(
+    warehouse_map_id: int,
+    target_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseScanTargetRead:
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    row = await _get_scan_target_or_404(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        target_id=target_id,
+    )
+    return _scan_target_out(row)
+
+
+@router.patch(
+    "/maps/{warehouse_map_id}/scan-targets/{target_id}",
+    response_model=WarehouseScanTargetRead,
+)
+async def update_warehouse_scan_target(
+    warehouse_map_id: int,
+    target_id: int,
+    payload: WarehouseScanTargetUpdate,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+) -> WarehouseScanTargetRead:
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    row = await _get_scan_target_or_404(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        target_id=target_id,
+    )
+    fields_set = getattr(payload, "model_fields_set", set())
+    for field_name in (
+        "reference_model_id",
+        "dock_station_id",
+        "rack_code",
+        "shelf_level",
+        "bin_code",
+        "sku",
+        "barcode",
+        "product_name",
+        "standoff_m",
+        "hover_time_s",
+        "scan_timeout_s",
+        "priority",
+        "active",
+    ):
+        if field_name in fields_set:
+            setattr(row, field_name, getattr(payload, field_name))
+    if "aisle_code" in fields_set and payload.aisle_code is not None:
+        row.aisle_code = payload.aisle_code.strip()
+    if "target_point_local_json" in fields_set and payload.target_point_local_json is not None:
+        row.target_point_local_json = payload.target_point_local_json.model_dump()
+    if "scan_pose_local_json" in fields_set and payload.scan_pose_local_json is not None:
+        row.scan_pose_local_json = payload.scan_pose_local_json.model_dump()
+    if "shelf_normal_local_json" in fields_set:
+        row.shelf_normal_local_json = (
+            payload.shelf_normal_local_json.model_dump()
+            if payload.shelf_normal_local_json is not None
+            else None
+        )
+    validated = WarehouseScanTargetCreate.model_validate(
+        {
+            "reference_model_id": row.reference_model_id,
+            "dock_station_id": row.dock_station_id,
+            "aisle_code": row.aisle_code,
+            "rack_code": row.rack_code,
+            "shelf_level": row.shelf_level,
+            "bin_code": row.bin_code,
+            "sku": row.sku,
+            "barcode": row.barcode,
+            "product_name": row.product_name,
+            "target_point_local_json": row.target_point_local_json,
+            "scan_pose_local_json": row.scan_pose_local_json,
+            "shelf_normal_local_json": row.shelf_normal_local_json,
+            "standoff_m": row.standoff_m,
+            "hover_time_s": row.hover_time_s,
+            "scan_timeout_s": row.scan_timeout_s,
+            "priority": row.priority,
+            "active": row.active,
+        }
+    )
+    row.target_point_local_json = validated.target_point_local_json.model_dump()
+    row.scan_pose_local_json = validated.scan_pose_local_json.model_dump()
+    row.shelf_normal_local_json = (
+        validated.shelf_normal_local_json.model_dump()
+        if validated.shelf_normal_local_json is not None
+        else None
+    )
+    try:
+        await db.commit()
+        await db.refresh(row)
+    except Exception:
+        await db.rollback()
+        raise
+    return _scan_target_out(row)
+
+
+@router.delete(
+    "/maps/{warehouse_map_id}/scan-targets/{target_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_warehouse_scan_target(
+    warehouse_map_id: int,
+    target_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+) -> None:
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    row = await _get_scan_target_or_404(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        target_id=target_id,
+    )
+    row.active = False
+    await db.commit()
+
+
+@router.post("/scan-targets/compute-scan-pose", response_model=WarehouseScanPoseComputeOut)
+async def compute_warehouse_scan_pose(
+    payload: WarehouseScanPoseComputeIn,
+    _org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseScanPoseComputeOut:
+    return WarehouseScanPoseComputeOut(
+        scan_pose=compute_scan_pose(
+            target_point=payload.target_point,
+            shelf_normal=payload.shelf_normal,
+            standoff_m=payload.standoff_m,
+            yaw_deg=payload.yaw_deg,
+        )
+    )
+
+
+@router.post(
+    "/inspection-missions",
+    response_model=WarehouseInspectionMissionRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_warehouse_inspection_mission(
+    payload: WarehouseInspectionMissionCreate,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_mission_exec),
+) -> WarehouseInspectionMissionRead:
+    warehouse_map_id = int(payload.warehouse_map_id)
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    rows = (
+        (
+            await db.execute(
+                select(WarehouseScanTarget).where(
+                    WarehouseScanTarget.id.in_(payload.target_ids),
+                    WarehouseScanTarget.warehouse_map_id == warehouse_map_id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_id = {int(row.id): row for row in rows}
+    missing = [target_id for target_id in payload.target_ids if int(target_id) not in by_id]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Scan targets not found for selected map: {missing}",
+        )
+    inactive = [int(row.id) for row in rows if not row.active]
+    if inactive:
+        raise HTTPException(status_code=400, detail=f"Scan targets are inactive: {inactive}")
+    ordered_targets = order_targets(
+        [by_id[int(target_id)] for target_id in payload.target_ids],
+        optimize_order=payload.optimize_order,
+    )
+    waypoints = build_inspection_waypoints(
+        ordered_targets,
+        default_hover_time_s=payload.default_hover_time_s,
+        default_scan_timeout_s=payload.default_scan_timeout_s,
+    )
+    row = WarehouseInspectionMission(
+        warehouse_map_id=warehouse_map_id,
+        name=payload.name.strip(),
+        status="planned",
+        scan_mode=payload.scan_mode,
+        return_to_dock=bool(payload.return_to_dock),
+        target_ids_json=[int(target.id) for target in ordered_targets],
+        plan_json={
+            "frame_id": "warehouse_map",
+            "warehouse_map_to_odom_transform": None,
+            "waypoints": [waypoint.model_dump() for waypoint in waypoints],
+            "warnings": [
+                "ESDF clearance validation not wired in MVP.",
+                "warehouse_map == odom assumed until persistent localization is added.",
+            ],
+        },
+    )
+    try:
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+    except Exception:
+        await db.rollback()
+        raise
+    logger.info(
+        "warehouse_inspection_mission_planned",
+        extra={"mission_id": int(row.id), "target_count": len(ordered_targets)},
+    )
+    metric_add("warehouse_inspection_missions_planned_total", 1)
+    return _inspection_mission_out(row)
+
+
+@router.get(
+    "/inspection-missions/{mission_id}",
+    response_model=WarehouseInspectionMissionRead,
+)
+async def get_warehouse_inspection_mission(
+    mission_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseInspectionMissionRead:
+    row = (
+        await db.execute(
+            select(WarehouseInspectionMission).where(WarehouseInspectionMission.id == mission_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
+    await _get_map_or_404(db, warehouse_map_id=int(row.warehouse_map_id), user=org_user.user)
+    return _inspection_mission_out(row)
+
+
+@router.post(
+    "/inspection-missions/{mission_id}/run-mock",
+    response_model=list[WarehouseInspectionResultRead],
+)
+async def run_warehouse_inspection_mission_mock(
+    mission_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_mission_exec),
+) -> list[WarehouseInspectionResultRead]:
+    mission = (
+        await db.execute(
+            select(WarehouseInspectionMission).where(WarehouseInspectionMission.id == mission_id)
+        )
+    ).scalar_one_or_none()
+    if mission is None:
+        raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
+    await _get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    target_ids = [int(value) for value in (mission.target_ids_json or [])]
+    targets = (
+        (
+            await db.execute(
+                select(WarehouseScanTarget).where(WarehouseScanTarget.id.in_(target_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_id = {int(target.id): target for target in targets}
+    ordered = [by_id[target_id] for target_id in target_ids if target_id in by_id]
+    scanner = MockWarehouseScanner()
+    mission.status = "running"
+    results: list[WarehouseInspectionResult] = []
+    try:
+        for target in ordered:
+            logger.info(
+                "warehouse_inspection_scan_started",
+                extra={"mission_id": int(mission.id), "target_id": int(target.id)},
+            )
+            scan = await scanner.scan_target(target, timeout_s=float(target.scan_timeout_s))
+            result = WarehouseInspectionResult(
+                mission_id=int(mission.id),
+                target_id=int(target.id),
+                status=scan.status,
+                expected_barcode=target.barcode,
+                detected_barcode=scan.detected_barcode,
+                confidence=scan.confidence,
+                image_asset_id=scan.image_asset_id,
+                video_asset_id=scan.video_asset_id,
+                drone_pose_local_json=target.scan_pose_local_json,
+                error_message=scan.error_message,
+            )
+            db.add(result)
+            results.append(result)
+        mission.status = "completed"
+        await db.commit()
+        for result in results:
+            await db.refresh(result)
+    except Exception:
+        mission.status = "failed"
+        await db.rollback()
+        raise
+    logger.info(
+        "warehouse_inspection_mission_completed",
+        extra={"mission_id": int(mission.id), "status": mission.status},
+    )
+    return [_inspection_result_out(row) for row in results]
+
+
+@router.get(
+    "/inspection-missions/{mission_id}/results",
+    response_model=list[WarehouseInspectionResultRead],
+)
+async def list_warehouse_inspection_results(
+    mission_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> list[WarehouseInspectionResultRead]:
+    mission = (
+        await db.execute(
+            select(WarehouseInspectionMission).where(WarehouseInspectionMission.id == mission_id)
+        )
+    ).scalar_one_or_none()
+    if mission is None:
+        raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
+    await _get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    rows = (
+        (
+            await db.execute(
+                select(WarehouseInspectionResult)
+                .where(WarehouseInspectionResult.mission_id == mission_id)
+                .order_by(
+                    WarehouseInspectionResult.scanned_at.asc(),
+                    WarehouseInspectionResult.id.asc(),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [_inspection_result_out(row) for row in rows]
 
 
 @router.get("/maps/{warehouse_map_id}/docks", response_model=list[WarehouseDockOut])

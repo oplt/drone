@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import ExploreRoundedIcon from "@mui/icons-material/ExploreRounded";
+import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import Header from "../../../shared/layout/WorkflowHeader";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { ApiError } from "../../../shared/api/apiError";
@@ -88,6 +89,8 @@ import { WarehouseFlightReadinessPanel } from "../components/WarehouseFlightRead
 import { WarehouseFlightReadinessRibbon } from "../components/WarehouseFlightReadinessRibbon";
 import { WarehouseScanResultsSelector } from "../components/WarehouseScanResultsSelector";
 import { WarehouseMissionStatusSummary } from "../components/WarehouseMissionStatusSummary";
+import { WarehouseProductScanFlyPanel } from "../components/WarehouseProductScanFlyPanel";
+import { useWarehouseMapPlacement } from "../hooks/useWarehouseMapPlacement";
 import {
   WarehouseDashboardCard,
   WarehouseSystemStatusStrip,
@@ -660,14 +663,16 @@ const toWarehouseMissionDefaultsPayload = (
 
 export default function WarehousePage() {
   const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
+  const warehouseChecksDrawer = useTaskPreflightCommandsDrawer();
   const warehouseMissionDrawer = useTaskPreflightCommandsDrawer();
 
   const closeOtherWarehouseDrawers = useCallback(
-    (except: "setup" | "mission") => {
+    (except: "setup" | "checks" | "mission") => {
       if (except !== "setup") warehouseSetupDrawer.closeDrawer();
+      if (except !== "checks") warehouseChecksDrawer.closeDrawer();
       if (except !== "mission") warehouseMissionDrawer.closeDrawer();
     },
-    [warehouseMissionDrawer, warehouseSetupDrawer],
+    [warehouseChecksDrawer, warehouseMissionDrawer, warehouseSetupDrawer],
   );
 
   const handleWarehouseSetupOpenChange = useCallback(
@@ -676,6 +681,14 @@ export default function WarehousePage() {
       if (open) closeOtherWarehouseDrawers("setup");
     },
     [closeOtherWarehouseDrawers, warehouseSetupDrawer],
+  );
+
+  const handleWarehouseChecksOpenChange = useCallback(
+    (open: boolean) => {
+      warehouseChecksDrawer.onOpenChange(open);
+      if (open) closeOtherWarehouseDrawers("checks");
+    },
+    [closeOtherWarehouseDrawers, warehouseChecksDrawer],
   );
 
   const handleWarehouseMissionOpenChange = useCallback(
@@ -734,10 +747,15 @@ export default function WarehousePage() {
   const [missionDefaultsMessage, setMissionDefaultsMessage] = useState<
     string | null
   >(null);
-  const [setupTab, setSetupTab] = useState<"map" | "rig" | "dock" | "defaults">(
-    "map",
-  );
-  const [flyMode, setFlyMode] = useState<"automated" | "manual">("automated");
+  const [setupTab, setSetupTab] = useState<
+    "map" | "rig" | "dock" | "defaults"
+  >("map");
+  const [flyMode, setFlyMode] = useState<
+    "automated" | "productScan" | "manual"
+  >("automated");
+  const [mapDetailTab, setMapDetailTab] = useState<
+    "layers" | "coordinateSetup"
+  >("layers");
   const [showAdvancedDefaults, setShowAdvancedDefaults] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WarehouseDeleteTarget>(null);
 
@@ -789,9 +807,31 @@ export default function WarehousePage() {
     missionLoaded: missionLoadedForReadiness,
     enabled:
       Boolean(authToken) &&
-      (warehouseMissionDrawer.open || preflightRunning),
+      (warehouseChecksDrawer.open ||
+        warehouseMissionDrawer.open ||
+        preflightRunning),
     preflightRunning,
   });
+  const warehouseMapPlacement = useWarehouseMapPlacement({
+    warehouseMapId: selectedWarehouseMapId,
+    token: authToken,
+    onError: addError,
+  });
+
+  const { panelProps: mapPlacementPanelProps } = warehouseMapPlacement;
+
+  useEffect(() => {
+    if (mapDetailTab !== "coordinateSetup") {
+      mapPlacementPanelProps.setPickMode(false);
+    }
+  }, [mapDetailTab, mapPlacementPanelProps.setPickMode]);
+
+  useEffect(() => {
+    if (selectedWarehouseMapId == null) {
+      setMapDetailTab("layers");
+    }
+  }, [selectedWarehouseMapId]);
+
   const [flightCommandBusy, setFlightCommandBusy] = useState(false);
 
   const {
@@ -833,6 +873,7 @@ export default function WarehousePage() {
       activeFlightId &&
       !viewingScanReplay &&
       !warehouseSetupDrawer.open &&
+      !warehouseChecksDrawer.open &&
       !warehouseMissionDrawer.open,
     ),
     token: authToken,
@@ -1107,7 +1148,7 @@ export default function WarehousePage() {
       await deleteWarehouseScannedMap(jobId, token);
       setSelectedMapJobId((current) => (current === jobId ? null : current));
       setViewerMapJobId((current) => (current === jobId ? null : current));
-      const records = await loadScannedMaps();
+      await loadScannedMaps();
       setScanLaunchMessage(`Deleted scan result "${label}".`);
     } catch (error) {
       addError(`Could not delete scan result: ${toMessage(error)}`);
@@ -1289,7 +1330,7 @@ export default function WarehousePage() {
         selectedWarehouseMapId?: number | null;
         selectedSensorRigId?: number | null;
         selectedDockId?: number | null;
-        setupTab?: "map" | "rig" | "dock" | "defaults";
+        setupTab?: "map" | "rig" | "dock" | "defaults" | "inspection";
       };
       if (typeof saved.selectedWarehouseMapId === "number") {
         setSelectedWarehouseMapId(saved.selectedWarehouseMapId);
@@ -1300,7 +1341,7 @@ export default function WarehousePage() {
       if (typeof saved.selectedDockId === "number") {
         setSelectedDockId(saved.selectedDockId);
       }
-      if (saved.setupTab) {
+      if (saved.setupTab && saved.setupTab !== "inspection") {
         setSetupTab(saved.setupTab);
       }
     } catch {
@@ -1823,8 +1864,19 @@ export default function WarehousePage() {
                     viewingScanReplay ? null : mappingStackStatus
                   }
                   hidden={
-                    warehouseSetupDrawer.open || warehouseMissionDrawer.open
+                    (warehouseSetupDrawer.open ||
+                      warehouseChecksDrawer.open ||
+                      warehouseMissionDrawer.open) &&
+                    !warehouseMapPlacement.viewerProps.pickMode &&
+                    mapDetailTab !== "coordinateSetup"
                   }
+                  mapPlacement={warehouseMapPlacement.viewerProps}
+                  warehouseMapId={selectedWarehouseMapId}
+                  mapPlacementPanel={warehouseMapPlacement.panelProps}
+                  mapDetailTab={mapDetailTab}
+                  onMapDetailTabChange={setMapDetailTab}
+                  onCoordinateSetupError={addError}
+                  coordinateSetupToken={authToken}
                   onClearMap={
                     viewingScanReplay ? undefined : liveVoxelMap.clearMap
                   }
@@ -1851,7 +1903,7 @@ export default function WarehousePage() {
         tabLabel="SETUP"
         tabIcon={<TuneRoundedIcon fontSize="small" />}
         edgeTabIndex={0}
-        edgeTabCount={2}
+        edgeTabCount={3}
         paperSx={{
           width: {
             xs: "min(100vw, 560px)",
@@ -1865,7 +1917,10 @@ export default function WarehousePage() {
         <Stack spacing={2}>
           <Tabs
             value={setupTab}
-            onChange={(_, value: "map" | "rig" | "dock" | "defaults") =>
+            onChange={(
+              _,
+              value: "map" | "rig" | "dock" | "defaults",
+            ) =>
               setSetupTab(value)
             }
             variant="scrollable"
@@ -2440,32 +2495,40 @@ export default function WarehousePage() {
       </TaskPreflightCommandsDrawer>
 
       <TaskPreflightCommandsDrawer
+        open={warehouseChecksDrawer.open}
+        onOpenChange={handleWarehouseChecksOpenChange}
+        title="Warehouse Checks"
+        subtitle="Preflight readiness and system diagnostics"
+        tabLabel="CHECKS"
+        tabIcon={<ChecklistRoundedIcon fontSize="small" />}
+        edgeTabIndex={1}
+        edgeTabCount={3}
+        paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
+      >
+        <WarehousePreflightChecksPanel
+          preflight={warehousePreflight}
+          running={preflightRunning}
+          error={preflightError}
+          onRunChecks={() => {
+            void runWarehousePreflightChecks({
+              missionLoaded: missionLoadedForReadiness,
+            });
+          }}
+        />
+      </TaskPreflightCommandsDrawer>
+
+      <TaskPreflightCommandsDrawer
         open={warehouseMissionDrawer.open}
         onOpenChange={handleWarehouseMissionOpenChange}
         title="Warehouse Fly"
-        subtitle="Preflight, automated scan, and manual mapping"
+        subtitle="Automated scan, product scan, and manual mapping"
         tabLabel="FLY"
         tabIcon={<ExploreRoundedIcon fontSize="small" />}
-        edgeTabIndex={1}
-        edgeTabCount={2}
+        edgeTabIndex={2}
+        edgeTabCount={3}
         paperSx={{ width: { xs: "min(100vw, 520px)", sm: 540, md: 560 } }}
       >
         <Stack spacing={2}>
-          <WarehousePreflightChecksPanel
-            preflight={warehousePreflight}
-            running={preflightRunning}
-            error={preflightError}
-            flightAvailable={warehousePreflightPassed}
-            onOpenFlight={() => {
-              viewerSectionRef.current?.scrollIntoView({ block: "start" });
-            }}
-            onRunChecks={() => {
-              void runWarehousePreflightChecks({
-                missionLoaded: missionLoadedForReadiness,
-              });
-            }}
-          />
-
           <WarehouseDrawerSection
             title="Mission Status"
             info="Live mission state from the warehouse scan runtime."
@@ -2480,12 +2543,20 @@ export default function WarehousePage() {
 
           <Tabs
             value={flyMode}
-            onChange={(_, value: "automated" | "manual") => setFlyMode(value)}
+            onChange={(
+              _,
+              value: "automated" | "productScan" | "manual",
+            ) => setFlyMode(value)}
             variant="fullWidth"
           >
             <Tab
               value="automated"
               label="Automated"
+              disabled={!warehousePreflightPassed}
+            />
+            <Tab
+              value="productScan"
+              label="Product Scan"
               disabled={!warehousePreflightPassed}
             />
             <Tab
@@ -2497,8 +2568,8 @@ export default function WarehousePage() {
 
           {!warehousePreflightPassed && (
             <Alert severity="warning">
-              Run Warehouse Preflight and wait for checks to pass before
-              choosing Manual or Automated flight.
+              Open Checks, run preflight, and wait for checks to pass before
+              choosing a flight mode.
             </Alert>
           )}
 
@@ -2548,6 +2619,21 @@ export default function WarehousePage() {
                 />
               </WarehouseDrawerSection>
             </>
+          )}
+
+          {warehousePreflightPassed && flyMode === "productScan" && (
+            <WarehouseDrawerSection
+              title="Product Scan Flight"
+              info="Select saved bin targets and create a warehouse product scan mission."
+              showDivider={false}
+            >
+              <WarehouseProductScanFlyPanel
+                warehouseMapId={selectedWarehouseMapId}
+                token={authToken}
+                onError={addError}
+                mapPlacement={warehouseMapPlacement.panelProps}
+              />
+            </WarehouseDrawerSection>
           )}
 
           {warehousePreflightPassed && flyMode === "manual" && (

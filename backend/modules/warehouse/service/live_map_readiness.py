@@ -613,21 +613,17 @@ def resolve_colored_bridge_sources(
         elif topic.startswith("/nvblox_node/back_projected_depth/"):
             back_projected_topic = topic
 
-    if back_projected_topic:
-        base = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_color"]
-        sources["nvblox_color"] = replace(
-            base,
+    # back_projected_depth is published in the camera optical frame. Using it for
+    # nvblox_color produced ceiling-height artifacts when TF lookup failed silently.
+    # The integrated color map comes from /nvblox_node/color_layer (VoxelBlockLayer,
+    # world-frame voxel centers) via nvblox_layers_live_map_bridge.
+    if back_projected_topic and "rgbd_colored" not in sources:
+        sources["rgbd_colored"] = replace(
+            WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"],
             topic=back_projected_topic,
-            source_id="nvblox_color",
-            layer="nvblox_color",
+            source_id="rgbd_colored",
+            layer="rgbd_colored",
         )
-        if "rgbd_colored" not in sources:
-            sources["rgbd_colored"] = replace(
-                WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"],
-                topic=back_projected_topic,
-                source_id="rgbd_colored",
-                layer="rgbd_colored",
-            )
 
     if topic_probes:
         for source_id in list(sources):

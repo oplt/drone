@@ -80,7 +80,7 @@ export function PreflightGroup({
 }) {
   const passed = checks.filter((check) => check.status === "ready").length;
   return (
-    <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: "action.hover" }}>
+    <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: "action.hover", height: "100%" }}>
       <Stack spacing={0.5}>
         <Stack
           direction="row"

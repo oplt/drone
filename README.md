@@ -178,6 +178,26 @@ python -c "from backend.core.security.secrets import Vault; print(Vault.generate
 
 Do not commit real secrets. Replace all placeholder values before any shared or production deployment.
 
+### Observability Hub
+
+The dashboard includes an Observability Hub at `/observability`. It shows operational health cards and opens Grafana dashboards in a new browser tab. Grafana is intentionally not embedded in an iframe because iframe auth adds cookie, SSO, cross-origin, clickjacking, and RBAC complexity.
+
+Configure public, reverse-proxied URLs in `backend/.env`:
+
+| Variable | Purpose |
+|----------|---------|
+| `GRAFANA_PUBLIC_URL` | Public Grafana base URL, for example `https://grafana.example.com` |
+| `PROMETHEUS_PUBLIC_URL` | Public Prometheus base URL for admin/developer debug access |
+| `GRAFANA_FLEET_DASHBOARD_PATH` | Fleet health dashboard path |
+| `GRAFANA_API_DASHBOARD_PATH` | Backend API dashboard path |
+| `GRAFANA_WORKERS_DASHBOARD_PATH` | Worker/Celery dashboard path |
+| `GRAFANA_VIDEO_DASHBOARD_PATH` | Video AI pipeline dashboard path |
+| `GRAFANA_MAVLINK_DASHBOARD_PATH` | MAVLink/telemetry dashboard path |
+
+Grafana links receive `orgId=1`, `from=now-1h`, `to=now`, and optional dashboard variables `var-drone_id` and `var-mission_id` from the page context. Define matching Grafana dashboard variables named `drone_id` and `mission_id`.
+
+Access expectations: authenticated operators can open Grafana dashboards, users who investigate missions can open Tempo through Grafana Explore, and Prometheus Debug is hidden from normal users. Do not expose internal Docker service names or credentials through these URLs.
+
 ---
 
 ## Installation

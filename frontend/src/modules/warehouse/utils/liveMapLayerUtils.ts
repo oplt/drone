@@ -15,6 +15,14 @@ export type LiveMapLayerKey =
 
 export type LiveMapColorMode = "rgb" | "height" | "distance" | "layer";
 
+/** Layers offered in the Warehouse 3D map UI for scan inspection / review. */
+export const MAP_INSPECTION_LAYER_KEYS: LiveMapLayerKey[] = [
+  "rgbdColored",
+  "mid360LiDAR",
+  "nvbloxColor",
+  "nvbloxMesh",
+];
+
 export const LIVE_MAP_LAYER_LABELS: Record<LiveMapLayerKey, string> = {
   rgbdColored: "RGB-D Colored Cloud",
   mid360LiDAR: "Mid360 LiDAR Raw",
@@ -160,14 +168,7 @@ export function defaultLayerVisibilityForChunks(
     return next;
   }
 
-  const layerKeys: LiveMapLayerKey[] = [
-    "rgbdColored",
-    "mid360LiDAR",
-    "nvbloxColor",
-    "nvbloxEsdf",
-    "nvbloxTsdf",
-    "nvbloxMesh",
-  ];
+  const layerKeys: LiveMapLayerKey[] = [...MAP_INSPECTION_LAYER_KEYS];
   for (const key of layerKeys) {
     if (available[key] > 0) {
       next[key] = true;
@@ -191,7 +192,10 @@ const MANIFEST_SOURCE_TO_LAYER_KEY: Record<string, LiveMapLayerKey> = {
   nvblox_mesh: "nvbloxMesh",
 };
 
-export const LAYER_CAPTURE_UNAVAILABLE: Partial<Record<LiveMapLayerKey, string>> = {};
+export const LAYER_CAPTURE_UNAVAILABLE: Partial<Record<LiveMapLayerKey, string>> = {
+  nvbloxColor:
+    "Integrated nvBlox color voxels (world frame). Re-scan after the latest backend update if this layer only shows ceiling-height points.",
+};
 
 export function countChunksByLayerKey(
   chunks: WarehouseLiveVoxelChunk[],
