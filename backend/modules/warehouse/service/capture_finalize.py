@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from backend.modules.warehouse.ports import (
     WarehouseMappingStartRequest,
     WarehousePerceptionCommandResult,
 )
 
+logger = logging.getLogger(__name__)
+
 _UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
+_ARTIFACT_SUFFIXES: frozenset[str] = frozenset(
+    {".db3", ".mcap", ".bag", ".ply", ".pcd", ".glb", ".json", ".bt"}
+)
+_DEFAULT_CAPTURE_ROOT = Path("backend/storage/warehouse_ros/captures")
 
 
 def safe_flight_token(raw: object) -> str:
@@ -28,7 +35,29 @@ def resolve_capture_session_dir(
             value = stop_data.get(key)
             if value:
                 return Path(str(value)).expanduser().resolve()
-    return Path("backend/storage/warehouse_ros/captures") / f"flight_{safe_flight_token(flight_id)}"
+    return (_DEFAULT_CAPTURE_ROOT / f"flight_{safe_flight_token(flight_id)}").resolve()
+
+
+def _iter_files(root: Path) -> Iterable[Path]:
+    if not root.exists():
+        return ()
+    return (p for p in root.rglob("*") if p.is_file())
+
+
+def _count_files(root: Path) -> int:
+    try:
+        return sum(1 for _ in _iter_files(root))
+    except OSError:
+        logger.exception("Failed to count capture files under %s", root)
+        return 0
+
+
+def _contains_mapping_artifact(root: Path, suffixes: frozenset[str] = _ARTIFACT_SUFFIXES) -> bool:
+    try:
+        return any(p.suffix.lower() in suffixes for p in _iter_files(root))
+    except OSError:
+        logger.exception("Failed to scan mapping artifacts under %s", root)
+        return False
 
 
 async def wait_for_mapping_artifacts(
@@ -37,16 +66,14 @@ async def wait_for_mapping_artifacts(
     timeout_s: float = 15.0,
     poll_interval_s: float = 1.0,
 ) -> bool:
-    suffixes = {".db3", ".mcap", ".bag", ".ply", ".pcd", ".glb", ".json", ".bt"}
-    deadline = asyncio.get_running_loop().time() + max(0.0, timeout_s)
+    deadline = asyncio.get_running_loop().time() + max(0.0, float(timeout_s))
+    poll = max(0.2, float(poll_interval_s))
     while True:
-        if session_dir.exists() and any(
-            p.is_file() and p.suffix.lower() in suffixes for p in session_dir.rglob("*")
-        ):
+        if await asyncio.to_thread(_contains_mapping_artifact, session_dir):
             return True
         if asyncio.get_running_loop().time() >= deadline:
             return False
-        await asyncio.sleep(max(0.2, poll_interval_s))
+        await asyncio.sleep(poll)
 
 
 async def start_warehouse_ros_mapping(
@@ -61,7 +88,7 @@ async def start_warehouse_ros_mapping(
         WarehouseMappingStartRequest(
             flight_id=safe_flight_token(flight_id),
             warehouse_map_id=warehouse_map_id,
-            metadata=metadata or {},
+            metadata=dict(metadata or {}),
         )
     )
 
@@ -89,17 +116,16 @@ async def persist_warehouse_ros_capture(
     from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
 
     session_dir = resolve_capture_session_dir(flight_id, stop_data=stop_data)
+    file_count = await asyncio.to_thread(_count_files, session_dir)
+    status = "ready" if file_count > 0 else ("empty" if session_dir.exists() else "missing")
+
     capture_result = {
         "flight_id": safe_flight_token(flight_id),
         "source": source,
         "source_dir": session_dir.name,
         "absolute_dir": str(session_dir),
-        "file_count": (
-            len([p for p in session_dir.rglob("*") if p.is_file()])
-            if session_dir.exists()
-            else 0
-        ),
-        "status": "ready" if session_dir.exists() else "missing",
+        "file_count": file_count,
+        "status": status,
         "mission_kind": mission_kind,
     }
     return await WarehouseScanMappingService().persist_capture(

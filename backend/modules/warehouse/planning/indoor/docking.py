@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Protocol
 
 from .enums import IndoorFrame
 from .local_navigation import LocalNavigationAdapter
 from .models import DockingTarget, DockPose, LocalPose
+
+logger = logging.getLogger(__name__)
 
 
 class DockingController(Protocol):
@@ -31,8 +34,9 @@ class PrecisionDockingController:
     _dock: DockPose | None = None
 
     async def initialize_dock_reference(self, dock: DockPose) -> bool:
-        self._dock = dock
-        return bool(dock.dock_id and dock.pose is not None and dock.entry_pose is not None)
+        valid = bool(getattr(dock, "dock_id", None) and getattr(dock, "pose", None) is not None and getattr(dock, "entry_pose", None) is not None)
+        self._dock = dock if valid else None
+        return valid
 
     async def compute_dock_approach(self, current_pose: LocalPose, dock: DockPose) -> DockingTarget:
         del current_pose
@@ -86,10 +90,17 @@ class PrecisionDockingController:
     async def confirm_docked(self, dock: DockPose) -> bool:
         slam_provider = getattr(self.navigator, "slam_provider", None)
         if slam_provider is None:
-            return True
+            logger.warning("Cannot confirm docking: navigator has no SLAM provider")
+            return False
         try:
             current = await slam_provider.get_pose()
             target = await slam_provider.to_control_frame(dock.pose, frame_id=current.frame_id)
         except Exception:
-            return True
-        return current.distance_to(target) <= max(float(self.tolerance_m), float(self.dock_search_radius_m))
+            logger.exception("Cannot confirm docking because pose lookup failed")
+            return False
+
+        # dock_search_radius_m is useful while searching for a dock marker. Final
+        # confirmation must use precision tolerance, otherwise a drone can be more
+        # than a metre from the pad and still be reported as docked.
+        tolerance = max(0.01, float(self.tolerance_m))
+        return current.distance_to(target) <= tolerance

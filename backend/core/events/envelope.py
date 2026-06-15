@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 import threading
+from collections import OrderedDict
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from enum import Enum
@@ -28,8 +30,9 @@ MissionLifecycleStateV1 = Literal[
     "failed",
 ]
 
-_SEQUENCE_LOCK = threading.Lock()
-_SEQUENCE_COUNTERS: dict[str, int] = {}
+_MAX_SEQUENCE_KEYS = 10_000
+_SEQUENCE_LOCK = threading.RLock()
+_SEQUENCE_COUNTERS: OrderedDict[str, int] = OrderedDict()
 
 
 def utc_now() -> datetime:
@@ -37,11 +40,29 @@ def utc_now() -> datetime:
 
 
 def next_runtime_sequence(mission_runtime_id: str | None, source: str) -> int:
-    key = mission_runtime_id or f"producer:{source}"
+    """Return a monotonic per-runtime sequence number.
+
+    The public behavior is unchanged, but the backing cache is now bounded so
+    producer-only keys cannot grow forever in long-running processes.
+    """
+    key = str(mission_runtime_id or f"producer:{source or 'unknown'}")
     with _SEQUENCE_LOCK:
         current = _SEQUENCE_COUNTERS.get(key, 0) + 1
         _SEQUENCE_COUNTERS[key] = current
+        _SEQUENCE_COUNTERS.move_to_end(key)
+        while len(_SEQUENCE_COUNTERS) > _MAX_SEQUENCE_KEYS:
+            _SEQUENCE_COUNTERS.popitem(last=False)
         return current
+
+
+def reset_runtime_sequences() -> None:
+    """Clear in-process sequence counters.
+
+    This is mainly useful for tests and process lifecycle hooks. It does not
+    affect the envelope schema.
+    """
+    with _SEQUENCE_LOCK:
+        _SEQUENCE_COUNTERS.clear()
 
 
 def _event_id() -> str:
@@ -50,20 +71,37 @@ def _event_id() -> str:
 
 def _float_or_none(value: Any) -> float | None:
     try:
-        if value is None:
+        if value is None or isinstance(value, bool):
             return None
-        return float(value)
+        parsed = float(value)
     except (TypeError, ValueError):
         return None
+    return parsed if math.isfinite(parsed) else None
 
 
 def _int_or_none(value: Any) -> int | None:
     try:
-        if value is None:
+        if value is None or isinstance(value, bool):
             return None
-        return int(value)
+        parsed = int(value)
     except (TypeError, ValueError):
         return None
+    return parsed
+
+
+def _bool_flag(value: Any, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        return value != 0
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on", "armed"}:
+        return True
+    if text in {"0", "false", "no", "n", "off", "disarmed"}:
+        return False
+    return default
 
 
 def _first_present(*values: Any) -> Any:
@@ -71,6 +109,10 @@ def _first_present(*values: Any) -> Any:
         if value is not None:
             return value
     return None
+
+
+def _value_or_zero(value: float | int | None) -> float | int:
+    return value if value is not None else 0
 
 
 class MissionContextV1(BaseModel):
@@ -258,19 +300,21 @@ class TelemetryPayloadV1(BaseModel):
         coalesced_message_count: int | None = None,
     ) -> TelemetryPayloadV1:
         snap = dict(snapshot or {})
-        position = snap.get("position") or {}
-        attitude = snap.get("attitude") or {}
-        battery = snap.get("battery") or {}
-        gps = snap.get("gps") or {}
-        link = snap.get("link") or {}
-        wind = snap.get("wind") or {}
-        motion = snap.get("status") or snap.get("motion") or {}
-        system = snap.get("system") or {}
-        failsafe = snap.get("failsafe") or {}
-        camera = snap.get("camera") or {}
-        heartbeat_data = snap.get("heartbeat") or {}
-        ekf_data = snap.get("ekf") or {}
-        compass_data = snap.get("compass") or {}
+        position = snap.get("position") if isinstance(snap.get("position"), Mapping) else {}
+        attitude = snap.get("attitude") if isinstance(snap.get("attitude"), Mapping) else {}
+        battery = snap.get("battery") if isinstance(snap.get("battery"), Mapping) else {}
+        gps = snap.get("gps") if isinstance(snap.get("gps"), Mapping) else {}
+        link = snap.get("link") if isinstance(snap.get("link"), Mapping) else {}
+        wind = snap.get("wind") if isinstance(snap.get("wind"), Mapping) else {}
+        motion = snap.get("status") if isinstance(snap.get("status"), Mapping) else (
+            snap.get("motion") if isinstance(snap.get("motion"), Mapping) else {}
+        )
+        system = snap.get("system") if isinstance(snap.get("system"), Mapping) else {}
+        failsafe = snap.get("failsafe") if isinstance(snap.get("failsafe"), Mapping) else {}
+        camera = snap.get("camera") if isinstance(snap.get("camera"), Mapping) else {}
+        heartbeat_data = snap.get("heartbeat") if isinstance(snap.get("heartbeat"), Mapping) else {}
+        ekf_data = snap.get("ekf") if isinstance(snap.get("ekf"), Mapping) else {}
+        compass_data = snap.get("compass") if isinstance(snap.get("compass"), Mapping) else {}
 
         return cls(
             position=TelemetryPositionV1(
@@ -349,9 +393,7 @@ class TelemetryPayloadV1(BaseModel):
                         snap.get("satellites_visible"),
                     )
                 ),
-                hdop=_float_or_none(
-                    _first_present(gps.get("hdop"), snap.get("hdop"))
-                ),
+                hdop=_float_or_none(_first_present(gps.get("hdop"), snap.get("hdop"))),
             ),
             link=TelemetryLinkV1(
                 rc_quality_pct=_int_or_none(link.get("rc_quality_pct", link.get("rc"))),
@@ -406,9 +448,7 @@ class TelemetryPayloadV1(BaseModel):
             camera=TelemetryCameraV1(
                 gimbal_pitch_deg=_float_or_none(camera.get("gimbal_pitch_deg"))
             ),
-            heartbeat=TelemetryHeartbeatV1(
-                last_received=heartbeat_data.get("last_received"),
-            ),
+            heartbeat=TelemetryHeartbeatV1(last_received=heartbeat_data.get("last_received")),
             ekf=TelemetryEkfV1(
                 **{k: ekf_data[k] for k in ekf_data if k in TelemetryEkfV1.model_fields}
             ),
@@ -416,7 +456,7 @@ class TelemetryPayloadV1(BaseModel):
                 **{k: compass_data[k] for k in compass_data if k in TelemetryCompassV1.model_fields}
             ),
             flight_mode=str(snap.get("flight_mode", snap.get("mode", "DISCONNECTED"))),
-            armed=bool(snap.get("armed", False)),
+            armed=_bool_flag(snap.get("armed", False)),
             coalesced_message_count=coalesced_message_count,
         )
 
@@ -426,6 +466,8 @@ class TelemetryPayloadV1(BaseModel):
         return (
             lat is not None
             and lon is not None
+            and math.isfinite(lat)
+            and math.isfinite(lon)
             and -90.0 <= lat <= 90.0
             and -180.0 <= lon <= 180.0
             and not (abs(lat) < 1e-8 and abs(lon) < 1e-8)
@@ -434,28 +476,28 @@ class TelemetryPayloadV1(BaseModel):
     def to_legacy_snapshot(self, *, timestamp_s: float | None = None) -> dict[str, Any]:
         return {
             "position": {
-                "lat": self.position.lat or 0,
-                "lon": self.position.lon or 0,
-                "alt": self.position.alt_m or 0,
-                "relative_alt": self.position.relative_alt_m or 0,
+                "lat": _value_or_zero(self.position.lat),
+                "lon": _value_or_zero(self.position.lon),
+                "alt": _value_or_zero(self.position.alt_m),
+                "relative_alt": _value_or_zero(self.position.relative_alt_m),
             },
             "attitude": {
-                "roll": self.attitude.roll_rad or 0,
-                "pitch": self.attitude.pitch_rad or 0,
-                "yaw": self.attitude.yaw_rad or 0,
-                "rollspeed": self.attitude.roll_rate_rad_s or 0,
-                "pitchspeed": self.attitude.pitch_rate_rad_s or 0,
-                "yawspeed": self.attitude.yaw_rate_rad_s or 0,
+                "roll": _value_or_zero(self.attitude.roll_rad),
+                "pitch": _value_or_zero(self.attitude.pitch_rad),
+                "yaw": _value_or_zero(self.attitude.yaw_rad),
+                "rollspeed": _value_or_zero(self.attitude.roll_rate_rad_s),
+                "pitchspeed": _value_or_zero(self.attitude.pitch_rate_rad_s),
+                "yawspeed": _value_or_zero(self.attitude.yaw_rate_rad_s),
             },
             "battery": {
-                "voltage": self.battery.voltage_v or 0,
-                "current": self.battery.current_a or 0,
-                "remaining": self.battery.remaining_pct or 0,
-                "temperature": self.battery.temperature_c or 0,
+                "voltage": _value_or_zero(self.battery.voltage_v),
+                "current": _value_or_zero(self.battery.current_a),
+                "remaining": _value_or_zero(self.battery.remaining_pct),
+                "temperature": _value_or_zero(self.battery.temperature_c),
             },
             "gps": {
                 "fix_type": self.gps.fix_type,
-                "satellites": self.gps.satellites_visible or 0,
+                "satellites": _value_or_zero(self.gps.satellites_visible),
                 "hdop": self.gps.hdop,
             },
             "link": {
@@ -464,24 +506,20 @@ class TelemetryPayloadV1(BaseModel):
                 "telemetry": self.link.telemetry_quality_pct,
             },
             "wind": {
-                "speed": self.wind.speed_mps or 0,
-                "direction": self.wind.direction_deg or 0,
+                "speed": _value_or_zero(self.wind.speed_mps),
+                "direction": _value_or_zero(self.wind.direction_deg),
             },
             "failsafe": {"state": self.failsafe.state or "Normal"},
             "system": {"status": self.system.status or "UNKNOWN"},
             "status": {
-                "groundspeed": self.motion.groundspeed_mps or 0,
-                "airspeed": self.motion.airspeed_mps or 0,
-                "heading": self.motion.heading_deg or 0,
-                "throttle": self.motion.throttle_pct or 0,
-                "climb": self.motion.climb_mps or 0,
+                "groundspeed": _value_or_zero(self.motion.groundspeed_mps),
+                "airspeed": _value_or_zero(self.motion.airspeed_mps),
+                "heading": _value_or_zero(self.motion.heading_deg),
+                "throttle": _value_or_zero(self.motion.throttle_pct),
+                "climb": _value_or_zero(self.motion.climb_mps),
             },
-            "camera": {
-                "gimbal_pitch_deg": self.camera.gimbal_pitch_deg,
-            },
-            "heartbeat": {
-                "last_received": self.heartbeat.last_received,
-            },
+            "camera": {"gimbal_pitch_deg": self.camera.gimbal_pitch_deg},
+            "heartbeat": {"last_received": self.heartbeat.last_received},
             "ekf": {
                 "flags": self.ekf.flags,
                 "ok": self.ekf.ok,
@@ -503,7 +541,7 @@ class TelemetryPayloadV1(BaseModel):
             },
             "mode": self.flight_mode,
             "armed": self.armed,
-            "timestamp": timestamp_s or 0,
+            "timestamp": timestamp_s if timestamp_s is not None else 0,
         }
 
 
@@ -559,15 +597,15 @@ class VideoHealthPayloadV1(BaseModel):
         raw = dict(status or {})
         source = raw.get("source")
         return cls(
-            stream_started=bool(raw.get("stream_started", raw.get("started", False))),
-            healthy=bool(raw.get("healthy", False)),
+            stream_started=_bool_flag(raw.get("stream_started", raw.get("started", False))),
+            healthy=_bool_flag(raw.get("healthy", False)),
             frame_count=_int_or_none(raw.get("frame_count")) or 0,
             fps=_float_or_none(raw.get("fps")),
             resolution=(
                 str(raw.get("resolution")) if raw.get("resolution") not in (None, "") else None
             ),
             source=str(source) if source not in (None, "") else None,
-            recording_active=bool(raw.get("recording_active", raw.get("recording", False))),
+            recording_active=_bool_flag(raw.get("recording_active", raw.get("recording", False))),
             recording_file=raw.get("recording_file"),
             recording_path=raw.get("recording_path"),
             error=raw.get("error"),

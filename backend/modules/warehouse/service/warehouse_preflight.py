@@ -17,10 +17,59 @@ logger = logging.getLogger(__name__)
 
 WAREHOUSE_ROS_PREFLIGHT_MISSION_TYPES = frozenset(
     {
-        MissionType.WAREHOUSE_SCAN.value,
-        MissionType.INDOOR_EXPLORATION.value,
+        str(MissionType.WAREHOUSE_SCAN.value).strip().lower(),
+        str(MissionType.INDOOR_EXPLORATION.value).strip().lower(),
     }
 )
+
+_TRUE_STRINGS = {"1", "true", "yes", "on", "y", "t"}
+_FALSE_STRINGS = {"0", "false", "no", "off", "n", "f", ""}
+
+
+def _setting(name: str, default: object = None) -> object:
+    return getattr(settings, name, default)
+
+
+def _float_or_none(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _safe_float(value: object, default: float) -> float:
+    parsed = _float_or_none(value)
+    return parsed if parsed is not None else default
+
+
+def _bool_or_none(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        return bool(value)
+    if value is None:
+        return None
+    lowered = str(value).strip().lower()
+    if lowered in _TRUE_STRINGS:
+        return True
+    if lowered in _FALSE_STRINGS:
+        return False
+    return None
+
+
+def _bool_flag(value: object) -> bool:
+    return _bool_or_none(value) is True
+
+
+def _any_true(*values: object) -> bool:
+    return any(_bool_or_none(value) is True for value in values)
+
+
+def _any_false(*values: object) -> bool:
+    return any(_bool_or_none(value) is False for value in values)
 
 
 def uses_warehouse_ros_preflight(mission_type: str | MissionType | None) -> bool:
@@ -36,10 +85,11 @@ def uses_warehouse_ros_preflight(mission_type: str | MissionType | None) -> bool
 
 def default_warehouse_scan_preflight_mission_data(*, cruise_alt: float = 2.0) -> dict[str, Any]:
     """Minimal warehouse_scan payload for UI preflight (matches mission-start checks)."""
+    altitude = max(0.1, _safe_float(cruise_alt, 2.0))
     return {
         "type": MissionType.WAREHOUSE_SCAN.value,
         "speed": 0.8,
-        "altitude_agl": float(cruise_alt),
+        "altitude_agl": altitude,
         "waypoints": [],
         "local_polygon": [
             {"x_m": 0.0, "y_m": 0.0, "z_m": 0.0},
@@ -55,23 +105,41 @@ def default_warehouse_scan_preflight_mission_data(*, cruise_alt: float = 2.0) ->
 def warehouse_preflight_failed_checks(report: PreflightReport) -> list[str]:
     return [
         result.name
-        for result in report.base_checks + report.mission_checks
+        for result in (*report.base_checks, *report.mission_checks)
         if result.status == CheckStatus.FAIL
     ]
 
 
-def warehouse_preflight_can_start(report: PreflightReport) -> bool:
-    from backend.modules.preflight.checks.profiles.warehouse_scan import (
-        WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS,
-        WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS,
-    )
+def _critical_check_names() -> set[str]:
+    critical: set[str] = set()
+    try:
+        from backend.modules.preflight.checks.profiles.warehouse_scan import (
+            WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS,
+            WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS,
+        )
 
+        critical.update(WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS)
+        critical.update(WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS)
+    except Exception:
+        logger.debug("Warehouse scan critical check profile unavailable", exc_info=True)
+    try:
+        from backend.modules.preflight.checks.profiles.indoor_warehouse import (
+            INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS,
+            INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS,
+        )
+
+        critical.update(INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS)
+        critical.update(INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS)
+    except Exception:
+        logger.debug("Indoor warehouse critical check profile unavailable", exc_info=True)
+    return critical
+
+
+def warehouse_preflight_can_start(report: PreflightReport) -> bool:
     if report.overall_status == CheckStatus.FAIL:
         return False
-    critical = set(WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS) | set(
-        WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS
-    )
-    for result in report.base_checks + report.mission_checks:
+    critical = _critical_check_names()
+    for result in (*report.base_checks, *report.mission_checks):
         if result.name in critical and result.status == CheckStatus.FAIL:
             return False
     return True
@@ -100,29 +168,14 @@ def apply_ros_preflight_gate(
     report: PreflightReport,
 ) -> tuple[bool, list[str], list[str]]:
     """Merge orchestrator preflight results into UI snapshot; returns ready flag + blockers."""
-    from backend.modules.preflight.checks.profiles.indoor_warehouse import (
-        INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS,
-        INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS,
-    )
-    from backend.modules.preflight.checks.profiles.warehouse_scan import (
-        WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS,
-        WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS,
-    )
-
-    critical = set(WAREHOUSE_SCAN_CRITICAL_BASE_CHECKS) | set(
-        WAREHOUSE_SCAN_CRITICAL_MISSION_CHECKS
-    ) | set(INDOOR_WAREHOUSE_CRITICAL_BASE_CHECKS) | set(
-        INDOOR_WAREHOUSE_CRITICAL_MISSION_CHECKS
-    )
+    critical = _critical_check_names()
     failed_names = warehouse_preflight_failed_checks(report)
     merged_blockers = list(blockers)
-    for result in report.base_checks + report.mission_checks:
-        if result.status != CheckStatus.FAIL:
-            continue
-        if result.name not in critical:
+    for result in (*report.base_checks, *report.mission_checks):
+        if result.status != CheckStatus.FAIL or result.name not in critical:
             continue
         label = result.name
-        if result.message:
+        if getattr(result, "message", None):
             label = f"{result.name}: {result.message}"
         if label not in merged_blockers:
             merged_blockers.append(label)
@@ -131,20 +184,6 @@ def apply_ros_preflight_gate(
             categories[category] = "FAIL"
     can_start = warehouse_preflight_can_start(report)
     return can_start, merged_blockers, failed_names
-
-
-def _float_or_none(value: object) -> float | None:
-    if value is None:
-        return None
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return None
-    return parsed if math.isfinite(parsed) else None
-
-
-def _bool_flag(value: object) -> bool:
-    return value is True or str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def perception_status_to_dict(status: WarehousePerceptionStatus) -> dict[str, Any]:
@@ -162,22 +201,45 @@ def _merge_probe_components(
     overlay: dict[str, Any],
 ) -> dict[str, Any]:
     merged = dict(base)
-    probe_components = overlay.get("components")
+    if overlay:
+        try:
+            converted = bridge_probe_to_components(overlay)
+        except Exception:
+            logger.debug("Failed to convert ROS bridge probe to components", exc_info=True)
+            converted = {}
+        if isinstance(converted, dict):
+            merged.update(converted)
+        for key in (
+            "listed_ros_topics",
+            "listed_topics",
+            "ros_graph_healthy",
+            "preflight_core_ready",
+            "local_position_ok",
+            "slam_ready",
+            "gz_probe_error",
+        ):
+            if key in overlay:
+                merged[key] = overlay[key]
+    probe_components = overlay.get("components") if isinstance(overlay, dict) else None
     if isinstance(probe_components, dict):
         merged.update(probe_components)
-    elif overlay:
-        merged.update(bridge_probe_to_components(overlay))
     return merged
+
+
+def _components_from_status(status: WarehousePerceptionStatus | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(status, WarehousePerceptionStatus):
+        raw = status.components
+    elif isinstance(status, dict):
+        raw = status.get("components")
+    else:
+        raw = None
+    return dict(raw) if isinstance(raw, dict) else {}
 
 
 def build_warehouse_vehicle_state_from_perception(
     status: WarehousePerceptionStatus | dict[str, Any],
 ) -> Telemetry:
-    components = (
-        status.components
-        if isinstance(status, WarehousePerceptionStatus)
-        else status.get("components") if isinstance(status.get("components"), dict) else {}
-    )
+    components = _components_from_status(status)
     odom = components.get("local_odometry_state")
     odom = odom if isinstance(odom, dict) else {}
 
@@ -185,22 +247,31 @@ def build_warehouse_vehicle_state_from_perception(
     east = _float_or_none(odom.get("local_east_m"))
     down = _float_or_none(odom.get("local_down_m"))
     numeric_local_pose = north is not None and east is not None and down is not None
-    local_position_ok = bool(
-        _bool_flag(components.get("local_odometry_healthy"))
-        or _bool_flag(components.get("local_position_ok"))
+
+    explicit_local_unhealthy = _any_false(
+        components.get("local_odometry_healthy"),
+        components.get("local_position_ok"),
+        odom.get("local_odometry_healthy"),
+        odom.get("local_position_ok"),
+    )
+    local_position_ok = False if explicit_local_unhealthy else bool(
+        _any_true(components.get("local_odometry_healthy"), components.get("local_position_ok"))
         or numeric_local_pose
     )
-    vslam_ok = bool(
-        _bool_flag(components.get("visual_slam_healthy"))
-        or _bool_flag(components.get("visual_slam"))
-        or _bool_flag(components.get("vslam"))
+
+    vslam_ok = False if _any_false(
+        components.get("visual_slam_healthy"),
+        components.get("visual_slam"),
+        components.get("vslam"),
+        odom.get("slam_tracking_ok"),
+    ) else _any_true(
+        components.get("visual_slam_healthy"),
+        components.get("visual_slam"),
+        components.get("vslam"),
     )
+
     raw_lidar_component = components.get("raw_lidar_healthy")
-    raw_lidar_ok = (
-        _bool_flag(raw_lidar_component)
-        if raw_lidar_component is not None
-        else None
-    )
+    raw_lidar_ok = _bool_or_none(raw_lidar_component)
     depth_ok = (
         components.get("depth")
         if isinstance(components.get("depth"), bool)
@@ -214,9 +285,17 @@ def build_warehouse_vehicle_state_from_perception(
         drift = 0.0
     alt_m = -down if down is not None else 0.0
 
-    from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
+    try:
+        from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
-    sim_mode = resolve_warehouse_bridge_flow().gazebo_sim
+        sim_mode = resolve_warehouse_bridge_flow().gazebo_sim
+    except Exception:
+        sim_mode = False
+
+    slam_tracking = _bool_or_none(odom.get("slam_tracking_ok"))
+    if slam_tracking is None:
+        slam_tracking = vslam_ok
+
     return Telemetry(
         lat=0.0,
         lon=0.0,
@@ -245,7 +324,7 @@ def build_warehouse_vehicle_state_from_perception(
         estimator_ready=vslam_ok or local_position_ok,
         rangefinder_healthy=bool(depth_ok),
         slam_ready=vslam_ok,
-        slam_tracking_ok=_bool_flag(odom.get("slam_tracking_ok")) or vslam_ok,
+        slam_tracking_ok=bool(slam_tracking),
         localization_confidence=_float_or_none(odom.get("localization_confidence")),
         obstacle_distance_m=_float_or_none(components.get("obstacle_distance_m")),
         ceiling_distance_m=_float_or_none(components.get("ceiling_distance_m")),
@@ -261,8 +340,13 @@ async def fetch_warehouse_perception_status(
     from backend.infrastructure.warehouse.bridge_config import probe_bridge_topics
     from backend.modules.warehouse.api import _ensure_ros_bridge_running, _ros2_workspace
 
+    bridge_start_error: str | None = None
     if deep or force:
-        await _ensure_ros_bridge_running(start=True)
+        try:
+            await _ensure_ros_bridge_running(start=True)
+        except Exception as exc:
+            bridge_start_error = str(exc)
+            logger.warning("Warehouse ROS bridge start/check failed: %s", exc)
 
     status = await build_warehouse_perception_port().status(deep=deep, force=force)
     ws = _ros2_workspace()
@@ -275,33 +359,38 @@ async def fetch_warehouse_perception_status(
 
     components = _merge_probe_components(dict(status.components or {}), overlay)
 
-    ros_topics = set(overlay.get("listed_ros_topics") or components.get("listed_topics") or [])
+    ros_topics = set(
+        str(topic)
+        for topic in (
+            overlay.get("listed_ros_topics")
+            or overlay.get("listed_topics")
+            or components.get("listed_topics")
+            or []
+        )
+    )
     reachable = bool(
-        status.reachable
-        or overlay.get("ros_graph_healthy")
-        or overlay.get("local_position_ok")
-        or ros_topics
+        _bool_flag(getattr(status, "reachable", False))
+        or _bool_flag(overlay.get("ros_graph_healthy"))
+        or _bool_flag(overlay.get("local_position_ok"))
+        or bool(ros_topics)
     )
     ready = bool(
-        overlay.get("preflight_core_ready")
+        _bool_flag(overlay.get("preflight_core_ready"))
         or (
             reachable
             and (
-                overlay.get("local_position_ok")
-                or overlay.get("slam_ready")
-                or components.get("local_position_ok")
-                or components.get("visual_slam_healthy")
+                _bool_flag(overlay.get("local_position_ok"))
+                or _bool_flag(overlay.get("slam_ready"))
+                or _bool_flag(components.get("local_position_ok"))
+                or _bool_flag(components.get("visual_slam_healthy"))
             )
         )
     )
-    detail = status.detail
-    if overlay.get("gz_probe_error") and detail:
-        detail = f"{detail}; {overlay['gz_probe_error']}"
-    elif overlay.get("gz_probe_error"):
-        detail = str(overlay["gz_probe_error"])
+    detail_parts = [str(part) for part in (getattr(status, "detail", None), overlay.get("gz_probe_error"), bridge_start_error) if part]
+    detail = "; ".join(dict.fromkeys(detail_parts)) or None
 
     return WarehousePerceptionStatus(
-        configured=bool(status.configured or ws.exists()),
+        configured=bool(getattr(status, "configured", False) or ws.exists()),
         reachable=reachable,
         ready=ready,
         status="ready" if ready else ("configured" if reachable else "unavailable"),
@@ -330,36 +419,37 @@ async def run_warehouse_ros_preflight_report(
 
     config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
     config_overrides.update(warehouse_perception_config_overrides(status))
-    config_overrides.setdefault("CRUISE_ALT_M", cruise_alt)
+    config_overrides.setdefault("CRUISE_ALT_M", max(0.1, _safe_float(cruise_alt, 2.0)))
 
     runtime_preflight = {
-        "ENFORCE_PREFLIGHT_RANGE": settings.enforce_preflight_range,
-        "HDOP_MAX": settings.HDOP_MAX,
-        "SAT_MIN": settings.SAT_MIN,
-        "HOME_MAX_DIST": settings.HOME_MAX_DIST,
-        "GPS_FIX_TYPE_MIN": settings.GPS_FIX_TYPE_MIN,
-        "EKF_THRESHOLD": settings.EKF_THRESHOLD,
-        "COMPASS_HEALTH_REQUIRED": settings.COMPASS_HEALTH_REQUIRED,
-        "BATTERY_MIN_V": settings.BATTERY_MIN_V,
-        "BATTERY_MIN_PERCENT": settings.BATTERY_MIN_PERCENT,
-        "BATTERY_RESERVE_PCT": settings.BATTERY_MIN_PERCENT,
-        "HEARTBEAT_MAX_AGE": settings.HEARTBEAT_MAX_AGE,
-        "MSG_RATE_MIN_HZ": settings.MSG_RATE_MIN_HZ,
-        "RTL_MIN_ALT": settings.RTL_MIN_ALT,
-        "MIN_CLEARANCE": settings.MIN_CLEARANCE,
-        "MIN_CLEARANCE_M": settings.MIN_CLEARANCE,
-        "AGL_MIN": settings.AGL_MIN,
-        "AGL_MAX": settings.AGL_MAX,
-        "MAX_RANGE_M": settings.MAX_RANGE_M,
-        "MAX_WAYPOINTS": settings.MAX_WAYPOINTS,
-        "NFZ_BUFFER_M": settings.NFZ_BUFFER_M,
-        "A_LAT_MAX": settings.A_LAT_MAX,
-        "BANK_MAX_DEG": settings.BANK_MAX_DEG,
-        "TURN_PENALTY_S": settings.TURN_PENALTY_S,
-        "WP_RADIUS_M": settings.WP_RADIUS_M,
+        "ENFORCE_PREFLIGHT_RANGE": _setting("enforce_preflight_range"),
+        "HDOP_MAX": _setting("HDOP_MAX"),
+        "SAT_MIN": _setting("SAT_MIN"),
+        "HOME_MAX_DIST": _setting("HOME_MAX_DIST"),
+        "GPS_FIX_TYPE_MIN": _setting("GPS_FIX_TYPE_MIN"),
+        "EKF_THRESHOLD": _setting("EKF_THRESHOLD"),
+        "COMPASS_HEALTH_REQUIRED": _setting("COMPASS_HEALTH_REQUIRED"),
+        "BATTERY_MIN_V": _setting("BATTERY_MIN_V"),
+        "BATTERY_MIN_PERCENT": _setting("BATTERY_MIN_PERCENT"),
+        "BATTERY_RESERVE_PCT": _setting("BATTERY_MIN_PERCENT"),
+        "HEARTBEAT_MAX_AGE": _setting("HEARTBEAT_MAX_AGE"),
+        "MSG_RATE_MIN_HZ": _setting("MSG_RATE_MIN_HZ"),
+        "RTL_MIN_ALT": _setting("RTL_MIN_ALT"),
+        "MIN_CLEARANCE": _setting("MIN_CLEARANCE"),
+        "MIN_CLEARANCE_M": _setting("MIN_CLEARANCE"),
+        "AGL_MIN": _setting("AGL_MIN"),
+        "AGL_MAX": _setting("AGL_MAX"),
+        "MAX_RANGE_M": _setting("MAX_RANGE_M"),
+        "MAX_WAYPOINTS": _setting("MAX_WAYPOINTS"),
+        "NFZ_BUFFER_M": _setting("NFZ_BUFFER_M"),
+        "A_LAT_MAX": _setting("A_LAT_MAX"),
+        "BANK_MAX_DEG": _setting("BANK_MAX_DEG"),
+        "TURN_PENALTY_S": _setting("TURN_PENALTY_S"),
+        "WP_RADIUS_M": _setting("WP_RADIUS_M"),
     }
     for key, value in runtime_preflight.items():
-        config_overrides.setdefault(key, value)
+        if value is not None:
+            config_overrides.setdefault(key, value)
 
     orchestrator = PreflightOrchestrator(config=preflight_config or {})
     mission_type = str(mission_data.get("type") or "").lower()

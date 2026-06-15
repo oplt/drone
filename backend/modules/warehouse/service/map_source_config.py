@@ -36,6 +36,16 @@ class LiveMapSourceConfig:
     colored: bool
     kind: Literal["point_cloud", "mesh", "esdf", "costmap", "occupancy"] = "point_cloud"
 
+    def __post_init__(self) -> None:
+        if not self.topic.startswith("/"):
+            raise ValueError(f"ROS topic must be absolute: {self.topic!r}")
+        if self.chunk_sequence_width < 1:
+            raise ValueError("chunk_sequence_width must be >= 1")
+        if self.max_points < 0:
+            raise ValueError("max_points must be >= 0")
+        if self.min_publish_interval_s < 0:
+            raise ValueError("min_publish_interval_s must be >= 0")
+
 
 WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
     "mid360_raw": LiveMapSourceConfig(
@@ -54,7 +64,7 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
         source_id="rgbd_colored",
         topic="/warehouse/front/rgbd/points",
         layer="rgbd_colored",
-        chunk_prefix="rgbd",
+        chunk_prefix="rgbd_colored",
         chunk_sequence_width=6,
         global_frame="odom",
         max_points=25_000,
@@ -64,8 +74,6 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
     ),
     "nvblox_color": LiveMapSourceConfig(
         source_id="nvblox_color",
-        # Integrated color voxels (nvblox_msgs/VoxelBlockLayer) in global_frame.
-        # Captured by nvblox_layers_live_map_bridge — not back_projected_depth.
         topic="/nvblox_node/color_layer",
         layer="nvblox_color",
         chunk_prefix="nvblox_color",
@@ -90,7 +98,6 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
     ),
     "nvblox_tsdf": LiveMapSourceConfig(
         source_id="nvblox_tsdf",
-        # Internal nvblox layer blocks (nvblox_msgs/VoxelBlockLayer), not PointCloud2.
         topic="/nvblox_node/tsdf_layer",
         layer="nvblox_tsdf",
         chunk_prefix="nvblox_tsdf",
@@ -128,29 +135,15 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
 }
 
 ODOM_PREFLIGHT_TOPICS: tuple[str, ...] = ("/warehouse/drone/odometry",)
-
-NVBLOX_INTERNAL_LAYER_TOPICS: tuple[str, ...] = (
-    "/nvblox_node/color_layer",
-    "/nvblox_node/tsdf_layer",
-)
-
-NVBLOX_REQUIRED_POINTCLOUD_TOPICS: tuple[str, ...] = (
-    "/nvblox_node/static_esdf_pointcloud",
-)
-
+NVBLOX_INTERNAL_LAYER_TOPICS: tuple[str, ...] = ("/nvblox_node/color_layer", "/nvblox_node/tsdf_layer")
+NVBLOX_REQUIRED_POINTCLOUD_TOPICS: tuple[str, ...] = ("/nvblox_node/static_esdf_pointcloud",)
 NVBLOX_OPTIONAL_ESDF_TOPICS: tuple[str, ...] = (
     "/nvblox_node/pessimistic_static_esdf_pointcloud",
     "/nvblox_node/combined_esdf_pointcloud",
     "/nvblox_node/dynamic_esdf_pointcloud",
 )
-
-NVBLOX_POINTCLOUD_OUTPUT_TOPICS: tuple[str, ...] = (
-    *NVBLOX_REQUIRED_POINTCLOUD_TOPICS,
-    *NVBLOX_OPTIONAL_ESDF_TOPICS,
-)
-
+NVBLOX_POINTCLOUD_OUTPUT_TOPICS: tuple[str, ...] = (*NVBLOX_REQUIRED_POINTCLOUD_TOPICS, *NVBLOX_OPTIONAL_ESDF_TOPICS)
 RGBD_VISUALIZATION_TOPIC: str = "/warehouse/front/rgbd/points"
-
 NVBLOX_OUTPUT_TOPICS: tuple[str, ...] = (
     *NVBLOX_INTERNAL_LAYER_TOPICS,
     *NVBLOX_POINTCLOUD_OUTPUT_TOPICS,
@@ -159,33 +152,24 @@ NVBLOX_OUTPUT_TOPICS: tuple[str, ...] = (
     "/nvblox_node/static_map_slice",
     "/nvblox_node/static_occupancy_grid",
 )
-
 RGBD_INPUT_TOPICS: tuple[str, ...] = (
     "/warehouse/front/rgbd/image",
     "/warehouse/front/rgbd/depth_image",
     "/warehouse/front/rgbd/camera_info",
     *ODOM_PREFLIGHT_TOPICS,
 )
-
 RGBD_POINTCLOUD_CANDIDATE_PREFIXES: tuple[str, ...] = (
     "/warehouse/front/rgbd/points",
     "/nvblox_node/back_projected_depth/",
 )
-
-RGBD_PREFLIGHT_TOPICS: tuple[str, ...] = (
-    "/warehouse/front/rgbd/points",
-    *RGBD_INPUT_TOPICS[0:3],
-)
-
+RGBD_PREFLIGHT_TOPICS: tuple[str, ...] = ("/warehouse/front/rgbd/points", *RGBD_INPUT_TOPICS[0:3])
 LIDAR_PREFLIGHT_TOPICS: tuple[str, ...] = ("/warehouse/mid360/points",)
 
 
 def chunk_id_for_source(source: LiveMapSourceConfig, sequence: int) -> str:
-    return f"{source.chunk_prefix}_{sequence:0{source.chunk_sequence_width}d}"
+    safe_sequence = max(0, int(sequence))
+    return f"{source.chunk_prefix}_{safe_sequence:0{source.chunk_sequence_width}d}"
 
 
 def source_by_layer(layer: LiveMapLayerId) -> LiveMapSourceConfig | None:
-    for entry in WAREHOUSE_LIVE_MAP_SOURCES.values():
-        if entry.layer == layer:
-            return entry
-    return None
+    return next((entry for entry in WAREHOUSE_LIVE_MAP_SOURCES.values() if entry.layer == layer), None)

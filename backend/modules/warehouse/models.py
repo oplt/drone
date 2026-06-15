@@ -104,7 +104,14 @@ class WarehouseSensorRig(Base):
             "org_id",
             "name",
             unique=True,
-            postgresql_where=text("active IS TRUE"),
+            postgresql_where=text("active IS TRUE AND org_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_warehouse_sensor_rig_owner_name_active",
+            "owner_id",
+            "name",
+            unique=True,
+            postgresql_where=text("active IS TRUE AND org_id IS NULL"),
         ),
         Index("idx_warehouse_sensor_rig_org_active", "org_id", "active"),
     )
@@ -128,15 +135,25 @@ class WarehouseDockStation(Base):
     )
     exit_pose_local_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
     warehouse_map: Mapped[WarehouseMap] = relationship(back_populates="docks")
 
     __table_args__ = (
-        UniqueConstraint("warehouse_map_id", "name", name="uq_warehouse_dock_station_name"),
+        Index(
+            "uq_warehouse_dock_station_map_name_active",
+            "warehouse_map_id",
+            "name",
+            unique=True,
+            postgresql_where=text("active IS TRUE"),
+        ),
+        Index("idx_warehouse_dock_station_map_active", "warehouse_map_id", "active"),
     )
 
 

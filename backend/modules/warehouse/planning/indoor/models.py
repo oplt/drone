@@ -2,10 +2,48 @@ from __future__ import annotations
 
 import heapq
 import math
+from collections import deque
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from .enums import IndoorFrame, LocalizationConfidence, OccupancyState
+
+_SQRT2 = math.sqrt(2.0)
+_NEIGHBOR8: tuple[tuple[int, int], ...] = (
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (1, 0),
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+)
+
+
+def _coerce_occupancy_state(value: OccupancyState | str) -> OccupancyState:
+    if isinstance(value, OccupancyState):
+        return value
+    return OccupancyState(str(value))
+
+
+@lru_cache(maxsize=128)
+def _inflation_offsets(inflate_cells: int) -> tuple[tuple[int, int], ...]:
+    """Return cached square-footprint offsets for obstacle inflation.
+
+    The previous implementation used a square inflation window. Keeping the same
+    footprint preserves conservative clearance behavior while avoiding repeated
+    nested-range allocation in A* and nearest-free searches.
+    """
+    radius = max(0, int(inflate_cells))
+    if radius <= 0:
+        return ()
+    return tuple(
+        (dx, dy)
+        for dy in range(-radius, radius + 1)
+        for dx in range(-radius, radius + 1)
+    )
 
 
 @dataclass(frozen=True)
@@ -177,8 +215,8 @@ class OccupancyGrid:
     height: int
     origin_x_m: float = 0.0
     origin_y_m: float = 0.0
-    default_state: OccupancyState = OccupancyState.UNKNOWN
-    cells: dict[tuple[int, int], OccupancyState] = field(default_factory=dict)
+    default_state: OccupancyState | str = OccupancyState.UNKNOWN
+    cells: dict[tuple[int, int], OccupancyState | str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.resolution_m = max(float(self.resolution_m), 1e-6)
@@ -186,6 +224,22 @@ class OccupancyGrid:
         self.height = max(0, int(self.height))
         self.origin_x_m = float(self.origin_x_m)
         self.origin_y_m = float(self.origin_y_m)
+        self.default_state = _coerce_occupancy_state(self.default_state)
+
+        # Normalize user-provided cells once. This prevents invalid strings or
+        # out-of-bounds coordinates from corrupting counts(), to_dict(), and path
+        # planning decisions later.
+        normalized: dict[tuple[int, int], OccupancyState] = {}
+        for raw_key, raw_state in self.cells.items():
+            x_idx, y_idx = raw_key
+            x = int(x_idx)
+            y = int(y_idx)
+            if not self.in_bounds(x, y):
+                continue
+            state = _coerce_occupancy_state(raw_state)
+            if state != self.default_state:
+                normalized[(x, y)] = state
+        self.cells = normalized
 
     def clone(self) -> OccupancyGrid:
         return OccupancyGrid(
@@ -201,31 +255,33 @@ class OccupancyGrid:
     def in_bounds(self, x_idx: int, y_idx: int) -> bool:
         return 0 <= int(x_idx) < int(self.width) and 0 <= int(y_idx) < int(self.height)
 
-    def set_cell(self, x_idx: int, y_idx: int, state: OccupancyState) -> None:
+    def set_cell(self, x_idx: int, y_idx: int, state: OccupancyState | str) -> None:
         x = int(x_idx)
         y = int(y_idx)
         if not self.in_bounds(x, y):
             return
+        normalized_state = _coerce_occupancy_state(state)
         key = (x, y)
-        if state == self.default_state:
+        if normalized_state == self.default_state:
             self.cells.pop(key, None)
             return
-        self.cells[key] = state
+        self.cells[key] = normalized_state
 
     def set_cells(
         self,
         coords: Iterable[tuple[int, int]],
-        state: OccupancyState,
+        state: OccupancyState | str,
     ) -> None:
+        normalized_state = _coerce_occupancy_state(state)
         for x_idx, y_idx in coords:
-            self.set_cell(x_idx, y_idx, state)
+            self.set_cell(x_idx, y_idx, normalized_state)
 
     def get_cell(self, x_idx: int, y_idx: int) -> OccupancyState:
         x = int(x_idx)
         y = int(y_idx)
         if x < 0 or x >= int(self.width) or y < 0 or y >= int(self.height):
             return OccupancyState.OCCUPIED
-        return self.cells.get((x, y), self.default_state)
+        return self.cells.get((x, y), self.default_state)  # type: ignore[return-value]
 
     def iter_cells(self) -> Iterator[OccupancyCell]:
         cells = self.cells
@@ -235,7 +291,7 @@ class OccupancyGrid:
                 yield OccupancyCell(
                     x_idx=x_idx,
                     y_idx=y_idx,
-                    state=cells.get((x_idx, y_idx), default_state),
+                    state=cells.get((x_idx, y_idx), default_state),  # type: ignore[arg-type]
                 )
 
     def world_to_cell(self, pose: LocalPose) -> tuple[int, int]:
@@ -265,16 +321,11 @@ class OccupancyGrid:
         height = int(self.height)
         x = int(x_idx)
         y = int(y_idx)
-        for dy in (-1, 0, 1):
+        for dx, dy in _NEIGHBOR8:
+            nx = x + dx
             ny = y + dy
-            if ny < 0 or ny >= height:
-                continue
-            for dx in (-1, 0, 1):
-                if dx == 0 and dy == 0:
-                    continue
-                nx = x + dx
-                if 0 <= nx < width:
-                    yield nx, ny
+            if 0 <= nx < width and 0 <= ny < height:
+                yield nx, ny
 
     def adjacent_unknown(self, x_idx: int, y_idx: int) -> bool:
         cells = self.cells
@@ -283,25 +334,46 @@ class OccupancyGrid:
         height = int(self.height)
         x = int(x_idx)
         y = int(y_idx)
-        for dy in (-1, 0, 1):
+        for dx, dy in _NEIGHBOR8:
+            nx = x + dx
             ny = y + dy
-            if ny < 0 or ny >= height:
-                continue
-            for dx in (-1, 0, 1):
-                if dx == 0 and dy == 0:
-                    continue
-                nx = x + dx
-                if 0 <= nx < width and cells.get((nx, ny), default_state) == OccupancyState.UNKNOWN:
-                    return True
+            if 0 <= nx < width and 0 <= ny < height and cells.get((nx, ny), default_state) == OccupancyState.UNKNOWN:
+                return True
         return False
 
     def clearance_at(self, pose: LocalPose, *, search_radius_m: float = 3.0) -> float:
         origin = self.world_to_cell(pose)
         radius_m = max(0.0, float(search_radius_m))
         resolution = float(self.resolution_m)
-        max_cells = max(1, int(math.ceil(radius_m / resolution)))
+        max_cells = int(math.ceil(radius_m / resolution))
         max_cells_sq = max_cells * max_cells
         best_cells_sq = max_cells_sq
+
+        if max_cells == 0:
+            return 0.0 if self.get_cell(origin[0], origin[1]) == OccupancyState.OCCUPIED else radius_m
+
+        # Sparse fast path for the usual SLAM map shape: unknown default, explicit
+        # free/occupied observations. Scanning only explicit occupied cells avoids
+        # O(radius²) work when the obstacle set is sparse.
+        if self.default_state != OccupancyState.OCCUPIED and self.cells:
+            min_x = origin[0] - max_cells
+            max_x = origin[0] + max_cells
+            min_y = origin[1] - max_cells
+            max_y = origin[1] + max_cells
+            for (x_idx, y_idx), state in self.cells.items():
+                if state != OccupancyState.OCCUPIED:
+                    continue
+                if x_idx < min_x or x_idx > max_x or y_idx < min_y or y_idx > max_y:
+                    continue
+                dx = x_idx - origin[0]
+                dy = y_idx - origin[1]
+                dist_sq = dx * dx + dy * dy
+                if dist_sq <= max_cells_sq and dist_sq < best_cells_sq:
+                    best_cells_sq = dist_sq
+                    if best_cells_sq == 0:
+                        return 0.0
+            return min(radius_m, math.sqrt(float(best_cells_sq)) * resolution)
+
         for dy in range(-max_cells, max_cells + 1):
             dy_sq = dy * dy
             for dx in range(-max_cells, max_cells + 1):
@@ -337,12 +409,9 @@ class OccupancyGrid:
     def _is_traversable_no_cache(self, x_idx: int, y_idx: int, *, inflate_cells: int) -> bool:
         if self.get_cell(x_idx, y_idx) != OccupancyState.FREE:
             return False
-        if inflate_cells <= 0:
-            return True
-        for dy in range(-inflate_cells, inflate_cells + 1):
-            for dx in range(-inflate_cells, inflate_cells + 1):
-                if self.get_cell(x_idx + dx, y_idx + dy) == OccupancyState.OCCUPIED:
-                    return False
+        for dx, dy in _inflation_offsets(int(inflate_cells)):
+            if self.get_cell(int(x_idx) + dx, int(y_idx) + dy) == OccupancyState.OCCUPIED:
+                return False
         return True
 
     def is_traversable(self, x_idx: int, y_idx: int, *, clearance_m: float = 0.0) -> bool:
@@ -356,16 +425,19 @@ class OccupancyGrid:
         clearance_m: float = 0.0,
         max_radius_m: float = 5.0,
     ) -> tuple[int, int] | None:
-        from collections import deque
-
         start = self.world_to_cell(pose)
-        max_radius_cells = max(1, int(math.ceil(float(max_radius_m) / float(self.resolution_m))))
+        max_radius_cells = int(math.ceil(max(0.0, float(max_radius_m)) / float(self.resolution_m)))
+        max_radius_sq = max_radius_cells * max_radius_cells
         inflate_cells = int(math.ceil(max(0.0, float(clearance_m)) / float(self.resolution_m)))
         traversable_cache: dict[tuple[int, int], bool] = {}
-        queue: deque[tuple[int, int, int]] = deque([(0, start[0], start[1])])
-        visited: set[tuple[int, int]] = {(start[0], start[1])}
-        while queue:
-            distance, x_idx, y_idx = queue.popleft()
+        visited: set[tuple[int, int]] = {start}
+        heap: list[tuple[int, int, int, int]] = [(0, 0, start[0], start[1])]
+
+        while heap:
+            dist_sq, manhattan, x_idx, y_idx = heapq.heappop(heap)
+            del manhattan
+            if dist_sq > max_radius_sq:
+                continue
             if not self.in_bounds(x_idx, y_idx):
                 continue
             if self._is_traversable_cached(
@@ -375,14 +447,17 @@ class OccupancyGrid:
                 cache=traversable_cache,
             ):
                 return (x_idx, y_idx)
-            if distance >= max_radius_cells:
-                continue
             for nx, ny in self.neighbors8(x_idx, y_idx):
                 key = (nx, ny)
                 if key in visited:
                     continue
+                dx = nx - start[0]
+                dy = ny - start[1]
+                neighbor_dist_sq = dx * dx + dy * dy
+                if neighbor_dist_sq > max_radius_sq:
+                    continue
                 visited.add(key)
-                queue.append((distance + 1, nx, ny))
+                heapq.heappush(heap, (neighbor_dist_sq, abs(dx) + abs(dy), nx, ny))
         return None
 
     def astar_path(
@@ -442,7 +517,22 @@ class OccupancyGrid:
                     cache=traversable_cache,
                 ):
                     continue
-                step_cost = math.sqrt(2.0) if neighbor[0] != current[0] and neighbor[1] != current[1] else 1.0
+
+                is_diagonal = neighbor[0] != current[0] and neighbor[1] != current[1]
+                if is_diagonal:
+                    # Prevent unsafe corner cutting through two blocked cardinal
+                    # cells. This is a correctness issue for inflated occupancy
+                    # grids and indoor drones operating near racks/walls.
+                    side_a = (neighbor[0], current[1])
+                    side_b = (current[0], neighbor[1])
+                    if not self._is_traversable_cached(
+                        side_a[0], side_a[1], inflate_cells=inflate_cells, cache=traversable_cache
+                    ) or not self._is_traversable_cached(
+                        side_b[0], side_b[1], inflate_cells=inflate_cells, cache=traversable_cache
+                    ):
+                        continue
+
+                step_cost = _SQRT2 if is_diagonal else 1.0
                 tentative = g_score[current] + step_cost
                 if tentative >= g_score.get(neighbor, float("inf")):
                     continue
@@ -453,8 +543,6 @@ class OccupancyGrid:
         return []
 
     def frontier_groups(self) -> list[list[tuple[int, int]]]:
-        from collections import deque
-
         groups: list[list[tuple[int, int]]] = []
         visited: set[tuple[int, int]] = set()
         cells = self.cells
@@ -465,38 +553,42 @@ class OccupancyGrid:
         def is_frontier_cell(x_idx: int, y_idx: int) -> bool:
             if cells.get((x_idx, y_idx), default_state) != OccupancyState.FREE:
                 return False
-            for dy in (-1, 0, 1):
+            for dx, dy in _NEIGHBOR8:
+                nx = x_idx + dx
                 ny = y_idx + dy
-                if ny < 0 or ny >= height:
-                    continue
-                for dx in (-1, 0, 1):
-                    if dx == 0 and dy == 0:
-                        continue
-                    nx = x_idx + dx
-                    if 0 <= nx < width and cells.get((nx, ny), default_state) == OccupancyState.UNKNOWN:
-                        return True
+                if 0 <= nx < width and 0 <= ny < height and cells.get((nx, ny), default_state) == OccupancyState.UNKNOWN:
+                    return True
             return False
 
-        for y_idx in range(height):
-            for x_idx in range(width):
-                key = (x_idx, y_idx)
-                if key in visited or not is_frontier_cell(x_idx, y_idx):
+        if default_state == OccupancyState.FREE:
+            candidates: Iterable[tuple[int, int]] = (
+                (x_idx, y_idx) for y_idx in range(height) for x_idx in range(width)
+            )
+        else:
+            candidates = (
+                (x_idx, y_idx)
+                for (x_idx, y_idx), state in cells.items()
+                if state == OccupancyState.FREE and 0 <= x_idx < width and 0 <= y_idx < height
+            )
+
+        for key in candidates:
+            if key in visited or not is_frontier_cell(*key):
+                continue
+            group: list[tuple[int, int]] = []
+            queue: deque[tuple[int, int]] = deque([key])
+            visited.add(key)
+            while queue:
+                current = queue.popleft()
+                if not is_frontier_cell(*current):
                     continue
-                group: list[tuple[int, int]] = []
-                queue: deque[tuple[int, int]] = deque([key])
-                visited.add(key)
-                while queue:
-                    current = queue.popleft()
-                    if not is_frontier_cell(*current):
+                group.append(current)
+                for neighbor in self.neighbors8(*current):
+                    if neighbor in visited or not is_frontier_cell(*neighbor):
                         continue
-                    group.append(current)
-                    for neighbor in self.neighbors8(*current):
-                        if neighbor in visited:
-                            continue
-                        visited.add(neighbor)
-                        queue.append(neighbor)
-                if group:
-                    groups.append(group)
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+            if group:
+                groups.append(group)
         return groups
 
     def copy_visible_from(
@@ -506,7 +598,7 @@ class OccupancyGrid:
         center_pose: LocalPose,
         radius_m: float,
     ) -> None:
-        radius_cells = max(1, int(math.ceil(float(radius_m) / float(self.resolution_m))))
+        radius_cells = int(math.ceil(max(0.0, float(radius_m)) / float(self.resolution_m)))
         radius_cells_sq = radius_cells * radius_cells
         center = self.world_to_cell(center_pose)
         min_x = max(0, center[0] - radius_cells)
@@ -516,6 +608,12 @@ class OccupancyGrid:
         other_cells = other.cells
         other_default = other.default_state
         default_state = self.default_state
+        same_geometry = (
+            math.isclose(float(self.resolution_m), float(other.resolution_m))
+            and math.isclose(float(self.origin_x_m), float(other.origin_x_m))
+            and math.isclose(float(self.origin_y_m), float(other.origin_y_m))
+        )
+
         for y_idx in range(min_y, max_y + 1):
             dy = y_idx - center[1]
             dy_sq = dy * dy
@@ -524,7 +622,11 @@ class OccupancyGrid:
                 if dx * dx + dy_sq > radius_cells_sq:
                     continue
                 key = (x_idx, y_idx)
-                state = other_cells.get(key, other_default)
+                if same_geometry:
+                    state = other_cells.get(key, other_default)
+                else:
+                    pose = self.cell_to_pose(x_idx, y_idx)
+                    state = other.get_cell(*other.world_to_cell(pose))
                 if state == default_state:
                     self.cells.pop(key, None)
                 else:
@@ -568,6 +670,7 @@ class OccupancyGrid:
             "height": int(self.height),
             "origin_x_m": float(self.origin_x_m),
             "origin_y_m": float(self.origin_y_m),
+            "default_state": self.default_state.value,
             "cells": [
                 {"x_idx": x_idx, "y_idx": y_idx, "state": state.value}
                 for (x_idx, y_idx), state in sorted(self.cells.items())

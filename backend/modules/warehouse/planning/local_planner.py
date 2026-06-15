@@ -91,6 +91,66 @@ def _collect_lines(geometry: object) -> list[LineString]:
     return []
 
 
+def _validate_finite_number(value: object, *, name: str) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite number") from exc
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be a finite number")
+    return result
+
+
+def _coerce_xy_ring(polygon_local_m: Sequence[Sequence[float] | tuple[float, float]]) -> list[tuple[float, float]]:
+    points: list[tuple[float, float]] = []
+    for idx, raw in enumerate(polygon_local_m):
+        if len(raw) != 2:  # type: ignore[arg-type]
+            raise ValueError(f"Warehouse polygon point {idx} must contain exactly [x_m, y_m]")
+        x = _validate_finite_number(raw[0], name=f"polygon[{idx}].x_m")  # type: ignore[index]
+        y = _validate_finite_number(raw[1], name=f"polygon[{idx}].y_m")  # type: ignore[index]
+        points.append((x, y))
+    if len(points) >= 2 and points[0] == points[-1]:
+        points = points[:-1]
+    if len(points) < 3:
+        raise ValueError("Warehouse polygon requires at least 3 distinct points")
+    if len(set(points)) < 3:
+        raise ValueError("Warehouse polygon requires at least 3 unique points")
+    return points
+
+
+def _validated_polygon(points: Sequence[tuple[float, float]]) -> Polygon:
+    footprint = Polygon(points)
+    if footprint.is_empty or footprint.area <= 0:
+        raise ValueError("Warehouse footprint has zero area")
+    if not footprint.is_valid:
+        repaired = footprint.buffer(0)
+        if repaired.is_empty or repaired.area <= 0 or not repaired.is_valid:
+            raise ValueError("Warehouse footprint is invalid and cannot be planned")
+        footprint = _largest_polygon(repaired)
+    return footprint
+
+
+def _normalize_scan_pattern(value: str) -> WarehouseScanPattern:
+    allowed = {"aisle_serpentine", "stacked_passes", "crosshatch", "perimeter_aisle_hybrid"}
+    if value not in allowed:
+        raise ValueError(f"Unsupported warehouse scan pattern: {value!r}")
+    return value  # type: ignore[return-value]
+
+
+def _normalize_lane_strategy(value: str) -> WarehouseLaneStrategy:
+    allowed = {"serpentine", "one_way"}
+    if value not in allowed:
+        raise ValueError(f"Unsupported warehouse lane strategy: {value!r}")
+    return value  # type: ignore[return-value]
+
+
+def _normalize_view_mode(value: str) -> WarehouseViewMode:
+    allowed = {"forward", "left_face", "right_face", "dual_face"}
+    if value not in allowed:
+        raise ValueError(f"Unsupported warehouse view mode: {value!r}")
+    return value  # type: ignore[return-value]
+
+
 # ---------------------------------------------------------------------------
 # Data structures — all coordinates in metres, local drone frame
 # ---------------------------------------------------------------------------
@@ -594,12 +654,33 @@ def plan_warehouse_scan(
     polygon_local_m is [[x_m, y_m], ...] relative to the dock/takeoff origin.
     No GPS coordinates are used or produced.
     """
-    if len(polygon_local_m) < 3:
-        raise ValueError("Warehouse polygon requires at least 3 points")
+    scan_pattern = _normalize_scan_pattern(str(scan_pattern))
+    lane_strategy = _normalize_lane_strategy(str(lane_strategy))
+    view_mode = _normalize_view_mode(str(view_mode))
 
-    footprint = Polygon(polygon_local_m)
-    if not footprint.is_valid:
-        raise ValueError("Warehouse footprint is invalid and cannot be planned")
+    polygon_points = _coerce_xy_ring(polygon_local_m)
+    footprint = _validated_polygon(polygon_points)
+
+    base_height_m = _validate_finite_number(base_height_m, name="base_height_m")
+    corridor_spacing_m = _validate_finite_number(corridor_spacing_m, name="corridor_spacing_m")
+    clearance_m = _validate_finite_number(clearance_m, name="clearance_m")
+    perimeter_offset_m = _validate_finite_number(perimeter_offset_m, name="perimeter_offset_m")
+    layer_spacing_m = _validate_finite_number(layer_spacing_m, name="layer_spacing_m")
+    ceiling_margin_m = _validate_finite_number(ceiling_margin_m, name="ceiling_margin_m")
+    max_route_m = _validate_finite_number(max_route_m, name="max_route_m")
+    if aisle_axis_deg is not None:
+        aisle_axis_deg = _validate_finite_number(aisle_axis_deg, name="aisle_axis_deg")
+    if ceiling_height_m is not None:
+        ceiling_height_m = _validate_finite_number(ceiling_height_m, name="ceiling_height_m")
+
+    if corridor_spacing_m <= 0:
+        raise ValueError("corridor_spacing_m must be positive")
+    if clearance_m < 0:
+        raise ValueError("clearance_m must be non-negative")
+    if max_waypoints < 1:
+        raise ValueError("max_waypoints must be at least 1")
+    if max_route_m <= 0:
+        raise ValueError("max_route_m must be positive")
 
     inset_m = max(float(perimeter_offset_m), float(clearance_m) * 0.5, 0.0)
     flyable_shape = footprint.buffer(-inset_m) if inset_m > 0 else footprint
@@ -681,11 +762,11 @@ def plan_warehouse_scan(
     precision_dock_required = False
     dock_inferred = False
 
+    ordered_corridors = sorted(
+        corridors,
+        key=lambda item: (round(item.sort_key, 6), item.source, item.corridor_id),
+    )
     for layer in scan_layers:
-        ordered_corridors = sorted(
-            corridors,
-            key=lambda item: (round(item.sort_key, 6), item.corridor_id),
-        )
         for corridor_index, corridor in enumerate(ordered_corridors):
             reverse = (
                 lane_strategy == "serpentine"
@@ -806,6 +887,12 @@ def plan_warehouse_scan(
 
     effective_obstacles = list(obstacles_3d or [])
     effective_keepouts = list(keepout_zones or [])
+    for obstacle in effective_obstacles:
+        if obstacle.size_x_m <= 0 or obstacle.size_y_m <= 0 or obstacle.size_z_m <= 0:
+            raise ValueError(f"Warehouse obstacle '{obstacle.obstacle_id}' must have positive dimensions")
+    for zone in effective_keepouts:
+        if len(zone.footprint) >= 3:
+            _validated_polygon(_coerce_xy_ring(zone.footprint))
     for segment in route_segments:
         for zone in effective_keepouts:
             if _segment_intersects_keepout(segment, zone):

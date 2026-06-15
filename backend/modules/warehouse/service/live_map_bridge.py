@@ -5,11 +5,13 @@ import json
 import logging
 import math
 import re
+import shlex
 import struct
 import subprocess
+import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import yaml
 
@@ -43,10 +45,36 @@ _YAW_RE = re.compile(
 _bridge_task: asyncio.Task[None] | None = None
 _bridge_flight_id: str | None = None
 _bridge_stop: asyncio.Event | None = None
+_bridge_lock = asyncio.Lock()
+
+
+def _setting_str(name: str, default: str = "") -> str:
+    return str(getattr(settings, name, default) or "").strip()
+
+
+def _setting_float(name: str, default: float, *, minimum: float) -> float:
+    try:
+        return max(minimum, float(getattr(settings, name, default)))
+    except (TypeError, ValueError):
+        return max(minimum, default)
+
+
+def _setting_int(name: str, default: int, *, minimum: int) -> int:
+    try:
+        return max(minimum, int(getattr(settings, name, default)))
+    except (TypeError, ValueError):
+        return max(minimum, default)
+
+
+def _setting_bool(name: str, default: bool = False) -> bool:
+    raw = getattr(settings, name, default)
+    if isinstance(raw, str):
+        return env_truthy(raw)
+    return bool(raw)
 
 
 def _ros2_workspace() -> Path:
-    raw = settings.warehouse_ros2_ws.strip() or "ros2_ws"
+    raw = _setting_str("warehouse_ros2_ws", "ros2_ws") or "ros2_ws"
     return Path(raw).expanduser().resolve()
 
 
@@ -61,17 +89,17 @@ def _odometry_topic() -> str:
                 if topic:
                     return topic
     except Exception:
-        pass
+        logger.debug("Could not load warehouse bridge config from %s", ws, exc_info=True)
     return configured
 
 
 def _esdf_topic() -> str:
     from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_bridge_flow
 
-    flow = resolve_warehouse_bridge_flow()
-    configured = settings.warehouse_esdf_topic.strip()
+    configured = _setting_str("warehouse_esdf_topic")
     if configured:
         return configured
+    flow = resolve_warehouse_bridge_flow()
     return (
         "/nvblox_node/static_esdf_pointcloud"
         if flow.gazebo_sim
@@ -90,22 +118,28 @@ def _parse_odometry_echo(stdout: str) -> WarehouseLivePose | None:
     if not pos:
         return None
 
-    x_m = float(pos.group(1))
-    y_m = float(pos.group(2))
-    z_m = float(pos.group(3))
+    try:
+        x_m = float(pos.group(1))
+        y_m = float(pos.group(2))
+        z_m = float(pos.group(3))
+    except (TypeError, ValueError):
+        return None
 
     yaw_deg: float | None = None
     orient = _YAW_RE.search(stdout)
     if orient:
-        yaw_deg = round(
-            _quat_to_yaw_deg(
-                float(orient.group(1)),
-                float(orient.group(2)),
-                float(orient.group(3)),
-                float(orient.group(4)),
-            ),
-            2,
-        )
+        try:
+            yaw_deg = round(
+                _quat_to_yaw_deg(
+                    float(orient.group(1)),
+                    float(orient.group(2)),
+                    float(orient.group(3)),
+                    float(orient.group(4)),
+                ),
+                2,
+            )
+        except (TypeError, ValueError):
+            yaw_deg = None
 
     return WarehouseLivePose(
         x_m=x_m,
@@ -116,88 +150,100 @@ def _parse_odometry_echo(stdout: str) -> WarehouseLivePose | None:
     )
 
 
-def _read_odometry_pose(*, topic: str, ws: Path) -> WarehouseLivePose | None:
-    cmd = (
-        f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
-        f"source {ws / 'install/setup.bash'} && "
-        f"timeout 2 ros2 topic echo {topic} --once"
+def _ros_setup_command(ws: Path) -> str:
+    install_setup = ws / "install/setup.bash"
+    return (
+        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+        f"source {shlex.quote(str(install_setup))}"
+    )
+
+
+def _run_ros2_command(
+    *,
+    ws: Path,
+    ros_args: Iterable[str],
+    shell_timeout_s: float,
+    process_timeout_s: float,
+) -> subprocess.CompletedProcess[str] | None:
+    command = (
+        f"{_ros_setup_command(ws)} && "
+        f"timeout {shlex.quote(str(max(1, int(math.ceil(shell_timeout_s)))))} "
+        f"ros2 {' '.join(shlex.quote(str(arg)) for arg in ros_args)}"
     )
     try:
-        result = subprocess.run(
-            ["bash", "-lc", cmd],
+        return subprocess.run(
+            ["bash", "-lc", command],
             cwd=str(ws),
             capture_output=True,
             text=True,
-            timeout=5.0,
+            timeout=process_timeout_s,
             check=False,
             env=ros_command_env(),
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except subprocess.TimeoutExpired:
+        logger.debug("ROS command timed out: ros2 %s", " ".join(map(str, ros_args)))
+        return None
+    except OSError:
+        logger.debug("ROS command failed to start: ros2 %s", " ".join(map(str, ros_args)), exc_info=True)
         return None
 
+
+def _read_odometry_pose(*, topic: str, ws: Path) -> WarehouseLivePose | None:
+    result = _run_ros2_command(
+        ws=ws,
+        ros_args=("topic", "echo", topic, "--once"),
+        shell_timeout_s=2.0,
+        process_timeout_s=5.0,
+    )
+    if result is None:
+        return None
     if result.returncode != 0 and not result.stdout.strip():
         return None
-
     return _parse_odometry_echo(result.stdout)
 
 
-def _nvblox_ready(*, ws: Path, esdf_topic: str) -> bool:
+def _list_ros2_topics_safe(ws: Path) -> set[str]:
+    try:
+        return set(list_ros2_topics(ws))
+    except RuntimeError:
+        logger.debug("Could not list ROS2 topics", exc_info=True)
+        return set()
+
+
+def _nvblox_ready_from_topics(*, topics: set[str], esdf_topic: str) -> bool:
     status = nvblox_status_tracker.status()
     if status in {"live", "degraded", "warming"}:
         return status == "live"
 
-    try:
-        topics = list_ros2_topics(ws)
-    except RuntimeError:
-        return False
-
     nvblox_status_tracker.note_topic_list(topics)
-
     if esdf_topic in topics:
         return True
-
     return any(str(topic).startswith("/nvblox_node/") for topic in topics)
+
+
+def _nvblox_ready(*, ws: Path, esdf_topic: str) -> bool:
+    return _nvblox_ready_from_topics(topics=_list_ros2_topics_safe(ws), esdf_topic=esdf_topic)
 
 
 def _read_pointcloud2_yaml(*, topic: str, ws: Path) -> dict[str, Any] | None:
     """
     Development bridge: reads one PointCloud2 sample via ROS CLI and parses YAML.
 
-    This is intentionally a minimal bridge to prove the UI data path:
-      /nvblox_node/static_esdf_pointcloud -> changed_chunks -> frontend.
-
-    Later, replace this with a persistent rclpy subscriber for performance.
+    This is expensive for large PointCloud2 messages. Prefer the persistent rclpy
+    subscribers used by the raw/colored/nvblox live-map bridges for production.
     """
-    cmd = (
-        f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
-        f"source {ws / 'install/setup.bash'} && "
-        f"timeout 2 ros2 topic echo {topic} --once --full-length"
+    result = _run_ros2_command(
+        ws=ws,
+        ros_args=("topic", "echo", topic, "--once", "--full-length"),
+        shell_timeout_s=2.0,
+        process_timeout_s=4.0,
     )
-    try:
-        result = subprocess.run(
-            ["bash", "-lc", cmd],
-            cwd=str(ws),
-            capture_output=True,
-            text=True,
-            timeout=4.0,
-            check=False,
-            env=ros_command_env(),
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-
-    if result.returncode != 0 or not result.stdout.strip():
+    if result is None or result.returncode != 0 or not result.stdout.strip():
         return None
 
     try:
-        # `ros2 topic echo` appends a trailing `---` document marker; safe_load()
-        # rejects that as a second document and would drop every ESDF chunk.
         payload = next(
-            (
-                doc
-                for doc in yaml.safe_load_all(result.stdout)
-                if isinstance(doc, dict)
-            ),
+            (doc for doc in yaml.safe_load_all(result.stdout) if isinstance(doc, dict)),
             None,
         )
     except Exception:
@@ -220,11 +266,11 @@ _POINTFIELD_DATATYPE_SIZE: dict[int, int] = {
 
 
 def _unpack_field(
-        raw: bytes,
-        *,
-        offset: int,
-        datatype: int,
-        little_endian: bool,
+    raw: bytes,
+    *,
+    offset: int,
+    datatype: int,
+    little_endian: bool,
 ) -> float | None:
     prefix = "<" if little_endian else ">"
 
@@ -251,13 +297,32 @@ def _unpack_field(
     return None
 
 
+def _field_spec(
+    field: dict[str, Any],
+    *,
+    point_step: int,
+) -> tuple[int, int] | None:
+    try:
+        offset = int(field["offset"])
+        datatype = int(field["datatype"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    size = _POINTFIELD_DATATYPE_SIZE.get(datatype)
+    if size is None or offset < 0 or offset + size > point_step:
+        return None
+    return offset, datatype
+
+
 def _pointcloud2_to_chunk(
-        payload: dict[str, Any],
-        *,
-        flight_id: str,
-        sequence: int,
-        max_points: int,
+    payload: dict[str, Any],
+    *,
+    flight_id: str,
+    sequence: int,
+    max_points: int,
+    source_topic: str = "/nvblox_node/static_esdf_pointcloud",
 ) -> dict[str, Any] | None:
+    del flight_id
     fields = payload.get("fields")
     data = payload.get("data")
     point_step_raw = payload.get("point_step")
@@ -282,8 +347,7 @@ def _pointcloud2_to_chunk(
         if name:
             field_by_name[name] = field
 
-    required = ["x", "y", "z"]
-    if not all(name in field_by_name for name in required):
+    if not all(name in field_by_name for name in ("x", "y", "z")):
         return None
 
     try:
@@ -295,22 +359,19 @@ def _pointcloud2_to_chunk(
     if total_points <= 0:
         return None
 
-    stride = max(1, total_points // max(1, max_points))
+    max_preview_points = max(1, int(max_points))
+    stride = max(1, math.ceil(total_points / max_preview_points))
     little_endian = not is_bigendian
 
-    x_field = field_by_name["x"]
-    y_field = field_by_name["y"]
-    z_field = field_by_name["z"]
-
-    try:
-        x_offset = int(x_field["offset"])
-        y_offset = int(y_field["offset"])
-        z_offset = int(z_field["offset"])
-        x_type = int(x_field["datatype"])
-        y_type = int(y_field["datatype"])
-        z_type = int(z_field["datatype"])
-    except (KeyError, TypeError, ValueError):
+    x_spec = _field_spec(field_by_name["x"], point_step=point_step)
+    y_spec = _field_spec(field_by_name["y"], point_step=point_step)
+    z_spec = _field_spec(field_by_name["z"], point_step=point_step)
+    if x_spec is None or y_spec is None or z_spec is None:
         return None
+
+    x_offset, x_type = x_spec
+    y_offset, y_type = y_spec
+    z_offset, z_type = z_spec
 
     sampled: list[list[float]] = []
     min_x = min_y = min_z = float("inf")
@@ -318,7 +379,6 @@ def _pointcloud2_to_chunk(
 
     for index in range(0, total_points, stride):
         base = index * point_step
-
         x = _unpack_field(raw, offset=base + x_offset, datatype=x_type, little_endian=little_endian)
         y = _unpack_field(raw, offset=base + y_offset, datatype=y_type, little_endian=little_endian)
         z = _unpack_field(raw, offset=base + z_offset, datatype=z_type, little_endian=little_endian)
@@ -329,7 +389,6 @@ def _pointcloud2_to_chunk(
             continue
 
         sampled.append([round(x, 3), round(y, 3), round(z, 3)])
-
         min_x = min(min_x, x)
         min_y = min(min_y, y)
         min_z = min(min_z, z)
@@ -337,19 +396,17 @@ def _pointcloud2_to_chunk(
         max_y = max(max_y, y)
         max_z = max(max_z, z)
 
-        if len(sampled) >= max_points:
+        if len(sampled) >= max_preview_points:
             break
 
     if not sampled:
         return None
 
-    # The frontend currently uses chunk metadata for rendering.
-    # `preview_points` is included for the next frontend upgrade; existing Pydantic
-    # models may ignore it, but it is harmless if extra fields are allowed.
+    header = payload.get("header") if isinstance(payload.get("header"), dict) else {}
     chunk_payload = {
         "format": "xyz_preview_v1",
-        "frame_id": str((payload.get("header") or {}).get("frame_id") or "odom"),
-        "source_topic": "/nvblox_node/static_esdf_pointcloud",
+        "frame_id": str(header.get("frame_id") or "odom"),
+        "source_topic": source_topic,
         "sampled_point_count": len(sampled),
         "source_point_count": total_points,
         "points": sampled,
@@ -372,26 +429,30 @@ def _pointcloud2_to_chunk(
             round(max_z, 3),
         ],
         "preview_points_m": sampled,
+        "source": "nvblox_esdf",
+        "layer": "esdf",
+        "source_topic": source_topic,
     }
 
 
 def _read_nvblox_chunk(
-        *,
-        flight_id: str,
-        topic: str,
-        ws: Path,
-        sequence: int,
+    *,
+    flight_id: str,
+    topic: str,
+    ws: Path,
+    sequence: int,
 ) -> dict[str, Any] | None:
     payload = _read_pointcloud2_yaml(topic=topic, ws=ws)
     if payload is None:
         return None
 
-    max_points = settings.warehouse_live_map_max_preview_points
+    max_points = _setting_int("warehouse_live_map_max_preview_points", 500, minimum=100)
     return _pointcloud2_to_chunk(
         payload,
         flight_id=flight_id,
         sequence=sequence,
-        max_points=max(100, max_points),
+        max_points=max_points,
+        source_topic=topic,
     )
 
 
@@ -399,62 +460,91 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
     ws = _ros2_workspace()
     odom_topic = _odometry_topic()
     esdf_topic = _esdf_topic()
-    poll_s = settings.warehouse_live_map_poll_s
+    poll_s = _setting_float("warehouse_live_map_poll_s", 1.0, minimum=0.2)
+    cli_pointcloud_enabled = _setting_bool("warehouse_live_map_cli_pointcloud_enabled", False)
+    cli_pointcloud_poll_s = _setting_float(
+        "warehouse_live_map_cli_pointcloud_poll_s",
+        max(2.0, poll_s * 5.0),
+        minimum=1.0,
+    )
+    next_chunk_at = 0.0
+    chunk_sequence = 0
 
     logger.info(
-        "Warehouse live map bridge started flight_id=%s odom=%s esdf=%s config=%s",
+        "Warehouse live map bridge started flight_id=%s odom=%s esdf=%s config=%s cli_pointcloud=%s",
         flight_id,
         odom_topic,
         esdf_topic,
         bridge_config_path(ws),
+        cli_pointcloud_enabled,
     )
 
-    while not stop.is_set():
-        pose = await asyncio.to_thread(_read_odometry_pose, topic=odom_topic, ws=ws)
-        nvblox_ok = await asyncio.to_thread(_nvblox_ready, ws=ws, esdf_topic=esdf_topic)
-        nvblox_status = nvblox_status_tracker.status()
+    try:
+        while not stop.is_set():
+            try:
+                pose_result, topics_result = await asyncio.gather(
+                    asyncio.to_thread(_read_odometry_pose, topic=odom_topic, ws=ws),
+                    asyncio.to_thread(_list_ros2_topics_safe, ws),
+                )
+                pose = pose_result if isinstance(pose_result, WarehouseLivePose) else None
+                topics = topics_result if isinstance(topics_result, set) else set()
+                nvblox_ok = _nvblox_ready_from_topics(topics=topics, esdf_topic=esdf_topic)
+                nvblox_status = nvblox_status_tracker.status()
 
-        try:
-            topics = list_ros2_topics(ws)
-        except RuntimeError:
-            topics = set()
-        else:
-            topics = set(topics)
+                rgbd_topic = WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"].topic
+                lidar_topic = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].topic
+                changed_chunks: list[dict[str, Any]] = []
 
-        rgbd_topic = WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"].topic
-        lidar_topic = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].topic
+                now = time.monotonic()
+                if cli_pointcloud_enabled and nvblox_ok and now >= next_chunk_at:
+                    next_chunk_at = now + cli_pointcloud_poll_s
+                    chunk_sequence += 1
+                    chunk = await asyncio.to_thread(
+                        _read_nvblox_chunk,
+                        flight_id=flight_id,
+                        topic=esdf_topic,
+                        ws=ws,
+                        sequence=chunk_sequence,
+                    )
+                    if chunk is not None:
+                        changed_chunks.append(chunk)
 
-        if pose is not None:
-            health = WarehouseLiveHealthFlags(
-                nvblox_ready=nvblox_ok or nvblox_status == "live",
-                nvblox_status=nvblox_status,
-                rgbd_live=rgbd_topic in topics,
-                lidar_live=lidar_topic in topics,
-                mapping_recording=True,
-                stack_running=True,
-                missing_mesh=nvblox_status not in {"live", "degraded", "warming"},
-                missing_point_cloud=False,
-            )
+                if pose is not None or changed_chunks:
+                    health = WarehouseLiveHealthFlags(
+                        nvblox_ready=nvblox_ok or nvblox_status == "live",
+                        nvblox_status=nvblox_status,
+                        rgbd_live=rgbd_topic in topics,
+                        lidar_live=lidar_topic in topics,
+                        mapping_recording=True,
+                        stack_running=bool(topics),
+                        missing_mesh=nvblox_status not in {"live", "degraded", "warming"},
+                        missing_point_cloud=not (nvblox_ok or changed_chunks),
+                    )
 
-            pose_payload = pose.model_dump(mode="python")
-            payload: dict[str, Any] = {
-                "flight_id": flight_id,
-                "timestamp": datetime.now(UTC),
-                "health": health.model_dump(mode="python"),
-                "pose": pose_payload,
-                "scan_path_sample": [pose_payload],
-                "changed_chunks": [],
-            }
+                    pose_payload = pose.model_dump(mode="python") if pose is not None else None
+                    payload: dict[str, Any] = {
+                        "flight_id": flight_id,
+                        "timestamp": datetime.now(UTC),
+                        "health": health.model_dump(mode="python"),
+                        "changed_chunks": changed_chunks,
+                    }
+                    if pose_payload is not None:
+                        payload["pose"] = pose_payload
+                        payload["scan_path_sample"] = [pose_payload]
 
-            update = normalize_live_map_payload(payload)
-            await warehouse_live_map_stream.publish(update)
+                    update = normalize_live_map_payload(payload)
+                    await warehouse_live_map_stream.publish(update)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Warehouse live map bridge publish iteration failed")
 
-        try:
-            await asyncio.wait_for(stop.wait(), timeout=max(0.2, poll_s))
-        except TimeoutError:
-            continue
-
-    logger.info("Warehouse live map bridge stopped flight_id=%s", flight_id)
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=poll_s)
+            except TimeoutError:
+                continue
+    finally:
+        logger.info("Warehouse live map bridge stopped flight_id=%s", flight_id)
 
 
 async def start_warehouse_live_map_bridge(flight_id: str) -> None:
@@ -464,60 +554,78 @@ async def start_warehouse_live_map_bridge(flight_id: str) -> None:
 
     global _bridge_task, _bridge_flight_id, _bridge_stop
 
-    await stop_warehouse_live_map_bridge()
+    async with _bridge_lock:
+        await _stop_warehouse_live_map_bridge_locked(stop_child_bridges=False)
+        stop = asyncio.Event()
+        _bridge_stop = stop
+        _bridge_flight_id = flight_id
+        _bridge_task = asyncio.create_task(
+            _publish_loop(flight_id, stop),
+            name=f"warehouse-live-map-bridge:{flight_id}",
+        )
 
-    stop = asyncio.Event()
-    _bridge_stop = stop
-    _bridge_flight_id = flight_id
-    _bridge_task = asyncio.create_task(_publish_loop(flight_id, stop))
+
+async def _stop_child_bridges() -> None:
+    child_stoppers = (
+        (
+            "raw point-cloud live map bridge",
+            "backend.modules.warehouse.service.raw_pointcloud_live_map_bridge",
+            "stop_raw_pointcloud_live_map_bridge",
+        ),
+        (
+            "colored point-cloud live map bridge",
+            "backend.modules.warehouse.service.colored_pointcloud_live_map_bridge",
+            "stop_colored_pointcloud_live_map_bridge",
+        ),
+        (
+            "nvblox layers live map bridge",
+            "backend.modules.warehouse.service.nvblox_layers_live_map_bridge",
+            "stop_nvblox_layers_live_map_bridge",
+        ),
+    )
+
+    for label, module_name, function_name in child_stoppers:
+        try:
+            module = __import__(module_name, fromlist=[function_name])
+            stopper = getattr(module, function_name)
+            await stopper()
+        except Exception:
+            logger.exception("Failed to stop %s", label)
 
 
-async def stop_warehouse_live_map_bridge() -> None:
+async def _stop_warehouse_live_map_bridge_locked(*, stop_child_bridges: bool = True) -> None:
     global _bridge_task, _bridge_flight_id, _bridge_stop
 
-    if _bridge_stop is not None:
-        _bridge_stop.set()
+    task = _bridge_task
+    stop = _bridge_stop
+    if stop is not None:
+        stop.set()
 
-    if _bridge_task is not None:
+    if task is not None:
         try:
-            await asyncio.wait_for(_bridge_task, timeout=3.0)
+            await asyncio.wait_for(task, timeout=3.0)
         except TimeoutError:
-            _bridge_task.cancel()
+            task.cancel()
             try:
-                await _bridge_task
+                await task
             except asyncio.CancelledError:
                 pass
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Warehouse live map bridge task stopped with an error")
 
     _bridge_task = None
     _bridge_flight_id = None
     _bridge_stop = None
 
-    try:
-        from backend.modules.warehouse.service.raw_pointcloud_live_map_bridge import (
-            stop_raw_pointcloud_live_map_bridge,
-        )
+    if stop_child_bridges:
+        await _stop_child_bridges()
 
-        await stop_raw_pointcloud_live_map_bridge()
-    except Exception:
-        logger.exception("Failed to stop raw point-cloud live map bridge")
 
-    try:
-        from backend.modules.warehouse.service.colored_pointcloud_live_map_bridge import (
-            stop_colored_pointcloud_live_map_bridge,
-        )
-
-        await stop_colored_pointcloud_live_map_bridge()
-    except Exception:
-        logger.exception("Failed to stop colored point-cloud live map bridge")
-
-    try:
-        from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
-            stop_nvblox_layers_live_map_bridge,
-        )
-
-        await stop_nvblox_layers_live_map_bridge()
-    except Exception:
-        logger.exception("Failed to stop nvblox layers live map bridge")
+async def stop_warehouse_live_map_bridge() -> None:
+    async with _bridge_lock:
+        await _stop_warehouse_live_map_bridge_locked(stop_child_bridges=True)
 
 
 def live_map_bridge_status() -> dict[str, Any]:

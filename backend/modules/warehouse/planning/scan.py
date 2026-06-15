@@ -55,6 +55,38 @@ def _safe_token(raw: object) -> str:
     return token or "unknown"
 
 
+def _normalize_angle_deg(value: float) -> float:
+    normalized = float(value) % 360.0
+    if normalized > 180.0:
+        normalized -= 360.0
+    return normalized
+
+
+def _angle_delta_deg(start_deg: float, end_deg: float) -> float:
+    return _normalize_angle_deg(float(end_deg) - float(start_deg))
+
+
+def _interpolate_yaw_deg(start_deg: float | None, end_deg: float | None, t: float) -> float | None:
+    if start_deg is None and end_deg is None:
+        return None
+    if start_deg is None:
+        return _normalize_angle_deg(float(end_deg))  # type: ignore[arg-type]
+    if end_deg is None:
+        return _normalize_angle_deg(float(start_deg))
+    return _normalize_angle_deg(float(start_deg) + (_angle_delta_deg(float(start_deg), float(end_deg)) * float(t)))
+
+
+def _dedupe_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
 def build_warehouse_perception_port() -> WarehousePerceptionPort:
     from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
 
@@ -182,6 +214,12 @@ class WarehouseScanMission:
         repr=False,
         compare=False,
     )
+    _plan_cache_key: tuple[object, ...] | None = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
     _runtime_safety: WarehouseRuntimeSafetyTracker = field(
         default_factory=WarehouseRuntimeSafetyTracker,
         init=False,
@@ -303,6 +341,7 @@ class WarehouseScanMission:
         if alt != self.base_height_m:
             self.base_height_m = float(alt)
             self._plan_cache = None
+            self._plan_cache_key = None
 
         await orch.run_mission(
             self,
@@ -751,12 +790,45 @@ class WarehouseScanMission:
     # Plan building
     # ------------------------------------------------------------------
 
+    def _plan_cache_fingerprint(self) -> tuple[object, ...]:
+        dock = self.dock_config
+        dock_key: tuple[object, ...] | None = None
+        if dock is not None:
+            dock_key = (
+                dock.dock_pose,
+                dock.entry_pose,
+                dock.exit_pose,
+                dock.marker_id,
+                dock.dock_yaw_deg,
+                bool(dock.precision_required),
+            )
+        return (
+            tuple((float(x), float(y)) for x, y in (self.area_polygon_local_m or [])),
+            float(self.base_height_m),
+            float(self.corridor_spacing_m),
+            self.aisle_axis_deg if self.aisle_axis_deg is None else float(self.aisle_axis_deg),
+            float(self.clearance_m),
+            float(self.perimeter_offset_m),
+            self.scan_pattern,
+            self.lane_strategy,
+            self.view_mode,
+            int(self.layer_count),
+            float(self.layer_spacing_m),
+            self.ceiling_height_m if self.ceiling_height_m is None else float(self.ceiling_height_m),
+            float(self.ceiling_margin_m),
+            int(self.max_segments),
+            float(self.max_route_m),
+            dock_key,
+        )
+
     def _build_plan(self) -> tuple[WarehousePlanResult, float]:
-        if self._plan_cache is not None:
-            route_m = float(self._plan_cache.stats.get("route_m", 0.0) or 0.0)
-            return self._plan_cache, route_m
         if not self.area_polygon_local_m:
             raise ValueError("WarehouseScanMission requires area_polygon_local_m.")
+
+        cache_key = self._plan_cache_fingerprint()
+        if self._plan_cache is not None and self._plan_cache_key == cache_key:
+            route_m = float(self._plan_cache.stats.get("route_m", 0.0) or 0.0)
+            return self._plan_cache, route_m
 
         plan = plan_warehouse_scan(
             polygon_local_m=list(self.area_polygon_local_m),
@@ -777,6 +849,7 @@ class WarehouseScanMission:
             dock_config=self.dock_config,
         )
         self._plan_cache = plan
+        self._plan_cache_key = cache_key
         route_m = float(plan.stats.get("route_m", 0.0) or 0.0)
         return plan, route_m
 
@@ -981,11 +1054,7 @@ class WarehouseScanMission:
         pts: list[LocalCoordinate] = []
         for i in range(steps + 2):
             t = i / (steps + 1)
-            yaw_deg = (
-                None
-                if a.yaw_deg is None
-                else float(a.yaw_deg) + ((float(b.yaw_deg or a.yaw_deg) - float(a.yaw_deg)) * t)
-            )
+            yaw_deg = _interpolate_yaw_deg(a.yaw_deg, b.yaw_deg, t)
             pts.append(
                 LocalCoordinate(
                     north_m=(a.north_m + (b.north_m - a.north_m) * t),
@@ -1007,28 +1076,45 @@ class WarehouseScanMission:
     ) -> None:
         if speed_mps is None:
             return
+        speed = float(speed_mps)
         if self._last_speed_mps is not None and math.isclose(
-            float(self._last_speed_mps), float(speed_mps), abs_tol=1e-3
+            float(self._last_speed_mps), speed, abs_tol=1e-3
         ):
             return
 
+        attempted: list[str] = []
+        last_error: Exception | None = None
         for name in ("set_speed", "set_groundspeed", "set_cruise_speed"):
             fn = getattr(orch.drone, name, None)
             if not callable(fn):
                 continue
+            attempted.append(name)
             try:
-                await asyncio.to_thread(fn, float(speed_mps))
-                self._last_speed_mps = float(speed_mps)
+                await asyncio.to_thread(fn, speed)
+                self._last_speed_mps = speed
                 return
-            except TypeError:
+            except TypeError as exc:
+                last_error = exc
                 try:
-                    await asyncio.to_thread(fn, speed_mps=float(speed_mps))
-                    self._last_speed_mps = float(speed_mps)
+                    await asyncio.to_thread(fn, speed_mps=speed)
+                    self._last_speed_mps = speed
                     return
-                except Exception:
-                    logger.debug("Speed setter %s rejected keyword form", name)
-            except Exception:
-                logger.debug("Speed setter %s failed", name)
+                except TypeError as keyword_exc:
+                    last_error = keyword_exc
+                    logger.debug("Speed setter %s did not accept positional or keyword speed", name)
+                except Exception as keyword_exc:
+                    last_error = keyword_exc
+                    logger.debug("Speed setter %s failed with keyword speed", name, exc_info=True)
+            except Exception as exc:
+                last_error = exc
+                logger.debug("Speed setter %s failed", name, exc_info=True)
+
+        if attempted:
+            logger.warning(
+                "All warehouse scan speed setters failed; continuing with previous/default speed attempted=%s error=%s",
+                attempted,
+                last_error,
+            )
 
     # ------------------------------------------------------------------
     # Capture hooks
@@ -1619,8 +1705,7 @@ class WarehouseScanMission:
                     downloaded.extend(str(item) for item in result)
             except Exception:
                 logger.exception("Warehouse scan download hook %s failed", name)
-        seen: set[str] = set()
-        return [x for x in downloaded if not (x in seen or seen.add(x))]  # type: ignore[func-returns-value]
+        return _dedupe_preserving_order(downloaded)
 
     # ------------------------------------------------------------------
     # Video recording
@@ -1669,10 +1754,12 @@ class WarehouseScanMission:
             logger.exception("Failed to start backend warehouse video recording")
 
         drone_started = False
-        try:
-            drone_started = bool(await asyncio.to_thread(orch.drone.start_video_recording))
-        except Exception:
-            logger.exception("Failed to trigger drone-side video recording hook")
+        drone_start = getattr(orch.drone, "start_video_recording", None)
+        if callable(drone_start):
+            try:
+                drone_started = bool(await asyncio.to_thread(drone_start))
+            except Exception:
+                logger.exception("Failed to trigger drone-side video recording hook")
 
         payload = {
             "enabled": True,
@@ -1694,10 +1781,12 @@ class WarehouseScanMission:
             logger.exception("Failed to stop backend warehouse video recording")
 
         drone_stopped = False
-        try:
-            drone_stopped = bool(await asyncio.to_thread(orch.drone.stop_video_recording))
-        except Exception:
-            logger.exception("Failed to stop drone-side video recording hook")
+        drone_stop = getattr(orch.drone, "stop_video_recording", None)
+        if callable(drone_stop):
+            try:
+                drone_stopped = bool(await asyncio.to_thread(drone_stop))
+            except Exception:
+                logger.exception("Failed to stop drone-side video recording hook")
 
         payload = {
             "recording": bool(backend_result.get("recording")),

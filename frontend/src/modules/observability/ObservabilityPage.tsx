@@ -4,6 +4,7 @@ import Alert from "@mui/material/Alert";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
+import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import ApiRoundedIcon from "@mui/icons-material/ApiRounded";
 import BugReportRoundedIcon from "@mui/icons-material/BugReportRounded";
@@ -21,7 +22,11 @@ import PageLayout, { PageSection } from "../../shared/layout/PageLayout";
 import { useCurrentUser } from "../session";
 import { fetchObservabilityLinks, fetchObservabilityStatus } from "./api";
 import HealthStatusCard, { titleCaseStatus } from "./components/HealthStatusCard";
+import HealthStatusGrid from "./components/HealthStatusGrid";
 import ObservabilityShortcutCard from "./components/ObservabilityShortcutCard";
+import ObservabilityShortcutGrid, {
+  SHORTCUTS_PER_ROW,
+} from "./components/ObservabilityShortcutGrid";
 import type { ObservabilityLinks } from "./types";
 import { buildGrafanaUrl } from "./urlBuilders";
 
@@ -55,6 +60,11 @@ function contextUrl(
     orgId: 1,
   });
 }
+
+const COMPACT_SECTION_SX = {
+  p: { xs: 2, md: 2.25 },
+  "& > .MuiStack-root:first-of-type": { mb: 1.5 },
+} as const;
 
 export default function ObservabilityPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -173,18 +183,17 @@ export default function ObservabilityPage() {
     <>
       <Header />
       <PageLayout
-        eyebrow="Observability Hub"
         title="Observability"
-        description="Monitor drone operations, backend health, telemetry ingestion, workers, traces, and alerts."
       >
-        {linksQuery.error ? (
-          <Alert severity="warning">Observability links are unavailable right now.</Alert>
-        ) : null}
+        <Stack spacing={1.5}>
+          {linksQuery.error ? (
+            <Alert severity="warning">Observability links are unavailable right now.</Alert>
+          ) : null}
 
-        <PageSection
-          title="Context"
-          description="Dashboard links include the selected drone, mission, and time range when configured."
-        >
+          <PageSection
+            sx={COMPACT_SECTION_SX}
+            description="Dashboard links include the selected drone, mission, and time range when configured."
+          >
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField
@@ -225,18 +234,16 @@ export default function ObservabilityPage() {
               </TextField>
             </Grid>
           </Grid>
-        </PageSection>
+          </PageSection>
 
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+          <PageSection title="System health" sx={COMPACT_SECTION_SX}>
+            <HealthStatusGrid>
             <HealthStatusCard
               title="API Status"
               value={titleCaseStatus(health?.api.status ?? "unknown")}
               status={health?.api.status ?? "unknown"}
               loading={statusQuery.isLoading}
             />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard
               title="Telemetry Lag"
               value={
@@ -247,74 +254,71 @@ export default function ObservabilityPage() {
               status={health?.telemetry.status ?? "unknown"}
               loading={statusQuery.isLoading}
             />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard
               title="Prometheus"
               value={titleCaseStatus(health?.prometheus.status ?? "unknown")}
               status={health?.prometheus.status ?? "unknown"}
+              caption={health?.prometheus.url ?? links.prometheusUrl ?? undefined}
+              href={health?.prometheus.url ?? links.prometheusUrl}
               loading={statusQuery.isLoading}
             />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard
               title="Grafana"
               value={titleCaseStatus(health?.grafana.status ?? "unknown")}
               status={health?.grafana.status ?? "unknown"}
+              caption={health?.grafana.url ?? links.grafanaBaseUrl ?? undefined}
+              href={health?.grafana.url ?? links.grafanaBaseUrl}
               loading={statusQuery.isLoading}
             />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard
               title="Tempo"
               value={titleCaseStatus(health?.tempo.status ?? "unknown")}
               status={health?.tempo.status ?? "unknown"}
+              caption={health?.tempo.url ?? links.tracesUrl ?? undefined}
+              href={health?.tempo.url ?? links.tracesUrl}
               loading={statusQuery.isLoading}
             />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard title="Active Drones" value="Unknown" status="unknown" />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard title="Running Missions" value="Unknown" status="unknown" />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard
               title="Worker Queue"
-              value={health?.workers.queueDepth == null ? "Unknown" : String(health.workers.queueDepth)}
+              value={
+                health?.workers.queueDepth == null ? "Unknown" : String(health.workers.queueDepth)
+              }
               status={health?.workers.status ?? "unknown"}
               loading={statusQuery.isLoading}
             />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <HealthStatusCard title="Failed Commands" value="Unknown" status="unknown" />
-          </Grid>
-        </Grid>
+            </HealthStatusGrid>
+          </PageSection>
 
-        <PageSection
-          title="Investigation shortcuts"
-          description="Grafana is the main investigation UI. Prometheus remains a restricted debug tool."
-        >
+          <PageSection
+            sx={COMPACT_SECTION_SX}
+            title="Investigation shortcuts"
+            description="Grafana is the main investigation UI. Prometheus remains a restricted debug tool."
+          >
           {linksQuery.isLoading ? (
-            <Grid container spacing={2}>
-              {Array.from({ length: 6 }).map((_, index) => (
-                <Grid key={index} size={{ xs: 12, md: 6, xl: 4 }}>
-                  <Skeleton variant="rounded" height={190} />
-                </Grid>
+            <ObservabilityShortcutGrid>
+              {Array.from({ length: SHORTCUTS_PER_ROW }).map((_, index) => (
+                <Skeleton
+                  key={index}
+                  variant="rectangular"
+                  height={148}
+                  sx={{ borderRight: "1px solid", borderBottom: "1px solid", borderColor: "divider" }}
+                />
               ))}
-            </Grid>
+            </ObservabilityShortcutGrid>
           ) : (
-            <Grid container spacing={2}>
+            <ObservabilityShortcutGrid>
               {shortcuts
                 .filter((shortcut) => shortcut.visible)
                 .map((shortcut) => (
-                  <Grid key={shortcut.title} size={{ xs: 12, md: 6, xl: 4 }}>
-                    <ObservabilityShortcutCard {...shortcut} onOpen={openExternal} />
-                  </Grid>
+                  <ObservabilityShortcutCard key={shortcut.title} {...shortcut} onOpen={openExternal} />
                 ))}
-            </Grid>
+            </ObservabilityShortcutGrid>
           )}
-        </PageSection>
+          </PageSection>
+        </Stack>
       </PageLayout>
     </>
   );

@@ -21,20 +21,20 @@ class WarehousePerceptionStatus(BaseModel):
 
 
 class WarehouseMappingStartRequest(BaseModel):
-    flight_id: str
-    warehouse_map_id: int | None = None
-    profile: str | None = None
-    bridge_flow: str | None = None
-    sensor_rig_id: int | None = None
-    capture_root: str | None = None
+    flight_id: str = Field(..., min_length=1, max_length=128)
+    warehouse_map_id: int | None = Field(default=None, ge=1)
+    profile: str | None = Field(default=None, max_length=64)
+    bridge_flow: str | None = Field(default=None, max_length=64)
+    sensor_rig_id: int | None = Field(default=None, ge=1)
+    capture_root: str | None = Field(default=None, max_length=4096)
     metadata: dict[str, object] = Field(default_factory=dict)
     calibration: dict[str, object] = Field(default_factory=dict)
 
 
 class WarehouseReplayStartRequest(BaseModel):
-    replay_id: str
-    rosbag_path: str
-    profile: str | None = None
+    replay_id: str = Field(..., min_length=1, max_length=128)
+    rosbag_path: str = Field(..., min_length=1, max_length=4096)
+    profile: str | None = Field(default=None, max_length=64)
     metadata: dict[str, object] = Field(default_factory=dict)
 
 

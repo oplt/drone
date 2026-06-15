@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
+import shlex
 import subprocess
 import time
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Literal
 
 from backend.infrastructure.warehouse.bridge_config import list_ros2_topics, ros_command_env
@@ -28,6 +31,9 @@ TopicBridgeKind = Literal[
     "missing",
     "wrong_type",
 ]
+
+_MAX_TOPIC_INFO_WORKERS = 8
+_MAX_MESSAGE_PROBE_CONCURRENCY = 4
 
 
 @dataclass
@@ -54,19 +60,14 @@ class MappingReadinessResult:
 
     def readiness_flags(self) -> dict[str, bool]:
         probes_by_topic = {probe.topic: probe for probe in self.topic_probes}
-        rgbd_pc_probe = (
-            probes_by_topic.get(self.rgbd_pointcloud_topic)
-            if self.rgbd_pointcloud_topic
-            else None
-        )
+        rgbd_pc_probe = probes_by_topic.get(self.rgbd_pointcloud_topic) if self.rgbd_pointcloud_topic else None
         return {
             "rgbd_input_ready": self.rgbd_input_topics_ready,
             "rgbd_colored_pointcloud_ready": bool(
                 rgbd_pc_probe is not None and rgbd_pc_probe.ok_for_pointcloud_bridge
             ),
             "nvblox_esdf_ready": any(
-                probe.topic.endswith("static_esdf_pointcloud")
-                and probe.ok_for_pointcloud_bridge
+                probe.topic.endswith("static_esdf_pointcloud") and probe.ok_for_pointcloud_bridge
                 for probe in self.topic_probes
             ),
             "nvblox_color_layer_present": any(
@@ -94,23 +95,24 @@ class MappingReadinessResult:
 
 def _note_mapping_startup(mark: str) -> None:
     try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            note_mapping_startup,
-        )
+        from backend.modules.warehouse.service.mapping_startup_timing import note_mapping_startup
 
         note_mapping_startup(mark)
     except ModuleNotFoundError as exc:
         logger.warning("Optional mapping startup timing unavailable: %s", exc)
+    except Exception:
+        logger.debug("Could not record mapping startup mark=%s", mark, exc_info=True)
 
 
 def _active_mapping_startup_timing():
     try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            active_mapping_startup_timing,
-        )
+        from backend.modules.warehouse.service.mapping_startup_timing import active_mapping_startup_timing
 
         return active_mapping_startup_timing()
     except ModuleNotFoundError:
+        return None
+    except Exception:
+        logger.debug("Could not read active mapping startup timing", exc_info=True)
         return None
 
 
@@ -245,34 +247,43 @@ def _rgbd_visualization_probe_topics(topics: set[str]) -> list[str]:
     return ordered
 
 
-def _ros2_workspace():
-    from pathlib import Path
-
+def _ros2_workspace() -> Path:
     from backend.core.config.runtime import settings
 
-    raw = settings.warehouse_ros2_ws.strip() or "ros2_ws"
+    raw = str(getattr(settings, "warehouse_ros2_ws", "") or "").strip() or "ros2_ws"
     return Path(raw).expanduser().resolve()
 
 
-def _topic_info(topic: str, ws) -> str | None:
-    cmd = (
-        f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
-        f"source {ws / 'install/setup.bash'} && "
-        f"timeout 3 ros2 topic info {topic} -v"
+def _source_setup(ws: Path) -> str:
+    return (
+        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
+        f"source {shlex.quote(str(ws / 'install/setup.bash'))}"
     )
+
+
+def _run_sourced_ros_command(command: str, *, ws: Path, timeout_s: float) -> subprocess.CompletedProcess[str] | None:
+    cmd = f"{_source_setup(ws)} && {command}"
     try:
-        result = subprocess.run(
+        return subprocess.run(
             ["bash", "-lc", cmd],
             cwd=str(ws),
             capture_output=True,
             text=True,
-            timeout=5.0,
+            timeout=max(0.5, timeout_s),
             check=False,
             env=ros_command_env(),
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
-    if result.returncode != 0:
+
+
+def _topic_info(topic: str, ws: Path) -> str | None:
+    result = _run_sourced_ros_command(
+        f"timeout 3 ros2 topic info {shlex.quote(topic)} -v",
+        ws=ws,
+        timeout_s=5.0,
+    )
+    if result is None or result.returncode != 0:
         return None
     for line in result.stdout.splitlines():
         if "Type:" in line:
@@ -280,44 +291,18 @@ def _topic_info(topic: str, ws) -> str | None:
     return None
 
 
-def _topic_has_message(topic: str, ws, *, timeout_s: float = 3.0) -> bool:
+def _topic_has_message(topic: str, ws: Path, *, timeout_s: float = 3.0) -> bool:
     """Check that at least one message arrives on topic (no hz averaging)."""
-    cmd = (
-        f"source /opt/ros/${{ROS_DISTRO:-jazzy}}/setup.bash && "
-        f"source {ws / 'install/setup.bash'} && "
-        f"timeout {max(2.5, timeout_s)} ros2 topic echo {topic} --once"
+    bounded_timeout = max(0.5, float(timeout_s))
+    result = _run_sourced_ros_command(
+        f"timeout {max(0.5, bounded_timeout):.3f} ros2 topic echo {shlex.quote(topic)} --once",
+        ws=ws,
+        timeout_s=bounded_timeout + 1.0,
     )
-    try:
-        result = subprocess.run(
-            ["bash", "-lc", cmd],
-            cwd=str(ws),
-            capture_output=True,
-            text=True,
-            timeout=max(4.0, timeout_s + 1.0),
-            check=False,
-            env=ros_command_env(),
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-    return result.returncode == 0 and bool(result.stdout.strip())
+    return bool(result is not None and result.returncode == 0 and (result.stdout or "").strip())
 
 
-def probe_live_map_topic_types(
-    *,
-    topics: set[str] | None = None,
-    quiet: bool = False,
-) -> tuple[list[TopicTypeProbe], dict[str, str | None]]:
-    ws = _ros2_workspace()
-    if topics is None:
-        try:
-            topics = set(list_ros2_topics(ws))
-        except RuntimeError as exc:
-            logger.warning("Could not list ROS topics for type probe: %s", exc)
-            topics = set()
-
-    topic_types: dict[str, str | None] = {}
-    probes: list[TopicTypeProbe] = []
-
+def _probe_specs_for_topics(topics: set[str]) -> list[tuple[str, bool, bool, bool]]:
     probe_specs: list[tuple[str, bool, bool, bool]] = []
     for topic in RGBD_INPUT_TOPICS:
         probe_specs.append((topic, False, False, True))
@@ -333,16 +318,53 @@ def probe_live_map_topic_types(
             probe_specs.append((topic, True, False, False))
 
     seen: set[str] = set()
+    deduped: list[tuple[str, bool, bool, bool]] = []
+    for item in probe_specs:
+        if item[0] in seen:
+            continue
+        seen.add(item[0])
+        deduped.append(item)
+    return deduped
+
+
+def _collect_topic_types(topics_to_probe: list[str], *, topics: set[str], ws: Path) -> dict[str, str | None]:
+    present_topics = [topic for topic in topics_to_probe if topic in topics]
+    if not present_topics:
+        return {}
+    max_workers = min(_MAX_TOPIC_INFO_WORKERS, len(present_topics))
+    topic_types: dict[str, str | None] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="ros-topic-info") as pool:
+        future_by_topic = {pool.submit(_topic_info, topic, ws): topic for topic in present_topics}
+        for future in concurrent.futures.as_completed(future_by_topic):
+            topic = future_by_topic[future]
+            try:
+                topic_types[topic] = future.result()
+            except Exception:
+                topic_types[topic] = None
+    return topic_types
+
+
+def probe_live_map_topic_types(
+    *,
+    topics: set[str] | None = None,
+    quiet: bool = False,
+) -> tuple[list[TopicTypeProbe], dict[str, str | None]]:
+    ws = _ros2_workspace()
+    if topics is None:
+        try:
+            topics = set(list_ros2_topics(ws))
+        except RuntimeError as exc:
+            logger.warning("Could not list ROS topics for type probe: %s", exc)
+            topics = set()
+
+    probe_specs = _probe_specs_for_topics(topics)
+    topic_types = _collect_topic_types([spec[0] for spec in probe_specs], topics=topics, ws=ws)
+    probes: list[TopicTypeProbe] = []
     rgb_inputs_present = all(topic in topics for topic in RGBD_INPUT_TOPICS)
 
     for topic, expect_pc2, internal_layer, required in probe_specs:
-        if topic in seen:
-            continue
-        seen.add(topic)
         present = topic in topics
-        msg_type = _topic_info(topic, ws) if present else None
-        if msg_type is not None:
-            topic_types[topic] = msg_type
+        msg_type = topic_types.get(topic) if present else None
         probe = classify_topic_for_bridge(
             topic=topic,
             present=present,
@@ -350,11 +372,7 @@ def probe_live_map_topic_types(
             expect_pointcloud2=expect_pc2,
             internal_layer=internal_layer,
         )
-        if (
-            topic == WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"].topic
-            and not present
-            and rgb_inputs_present
-        ):
+        if topic == WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"].topic and not present and rgb_inputs_present:
             probe = TopicTypeProbe(
                 topic=topic,
                 present=False,
@@ -386,12 +404,38 @@ def _rgb_inputs_ready(topics: set[str], publishing: set[str]) -> tuple[bool, lis
     missing = [topic for topic in RGBD_INPUT_TOPICS if topic not in topics]
     publishing_inputs = [topic for topic in RGBD_INPUT_TOPICS if topic in publishing]
     odom_ready = all(topic in topics for topic in ODOM_PREFLIGHT_TOPICS)
-    ready = (
-        odom_ready
-        and len(missing) == 0
-        and len(publishing_inputs) >= max(3, len(RGBD_INPUT_TOPICS) - 1)
-    )
+    ready = odom_ready and len(missing) == 0 and len(publishing_inputs) >= max(3, len(RGBD_INPUT_TOPICS) - 1)
     return ready, missing
+
+
+async def _probe_messages(
+    *,
+    topics: list[str],
+    ws: Path,
+    per_topic_timeout_s: float,
+) -> set[str]:
+    semaphore = asyncio.Semaphore(_MAX_MESSAGE_PROBE_CONCURRENCY)
+
+    async def _one(topic: str) -> tuple[str, bool]:
+        async with semaphore:
+            return topic, await asyncio.to_thread(_topic_has_message, topic, ws, timeout_s=per_topic_timeout_s)
+
+    publishing: set[str] = set()
+    for topic, ok in await asyncio.gather(*[_one(topic) for topic in topics]):
+        if ok:
+            publishing.add(topic)
+    return publishing
+
+
+def _timing_ms(wait_started: float) -> dict[str, int]:
+    timing = {"wait_for_rgbd_mapping_topics_ms": int((time.monotonic() - wait_started) * 1000)}
+    active = _active_mapping_startup_timing()
+    if active is not None:
+        try:
+            timing.update(active.as_dict())
+        except Exception:
+            logger.debug("Could not merge active mapping startup timing", exc_info=True)
+    return timing
 
 
 async def wait_for_rgbd_mapping_topics(
@@ -415,51 +459,29 @@ async def wait_for_rgbd_mapping_topics(
             topics = set()
 
         rgbd_candidates = discover_rgbd_pointcloud_topics(topics)
-        probe_topics = _rgbd_visualization_probe_topics(topics)
-        publishing: set[str] = set()
+        probe_topics = [topic for topic in _rgbd_visualization_probe_topics(topics) if topic in topics]
+        remaining = max(0.2, deadline - loop.time())
+        per_topic_timeout = min(3.0, max(0.5, remaining / max(1, min(len(probe_topics), _MAX_MESSAGE_PROBE_CONCURRENCY))))
+        publishing = await _probe_messages(topics=probe_topics, ws=ws, per_topic_timeout_s=per_topic_timeout)
 
-        for topic in probe_topics:
-            if topic not in topics:
-                continue
-            has_message = await asyncio.to_thread(
-                _topic_has_message,
-                topic,
-                ws,
-                timeout_s=3.0,
-            )
-            if has_message:
-                publishing.add(topic)
-                if (
-                    first_rgbd_msg_at is None
-                    and topic in rgbd_candidates
-                ):
-                    first_rgbd_msg_at = time.monotonic()
-                    _note_mapping_startup("first_rgbd_pointcloud_msg_monotonic")
+        if first_rgbd_msg_at is None:
+            first_msg_topic = next((topic for topic in rgbd_candidates if topic in publishing), None)
+            if first_msg_topic is not None:
+                first_rgbd_msg_at = time.monotonic()
+                _note_mapping_startup("first_rgbd_pointcloud_msg_monotonic")
 
         rgbd_pointcloud_topic = next(
             (topic for topic in rgbd_candidates if topic in publishing),
             rgbd_candidates[0] if rgbd_candidates else None,
         )
-        rgbd_pc_ready = bool(
-            rgbd_pointcloud_topic and rgbd_pointcloud_topic in publishing
-        )
+        rgbd_pc_ready = bool(rgbd_pointcloud_topic and rgbd_pointcloud_topic in publishing)
         rgb_inputs_ready, missing_inputs = _rgb_inputs_ready(topics, publishing)
 
         if rgbd_pc_ready:
             _note_mapping_startup("rgbd_readiness_monotonic")
-            last_probes, _ = probe_live_map_topic_types(topics=topics, quiet=True)
-            last_warnings = [
-                p.warning for p in last_probes if p.warning and p.topic in probe_topics
-            ]
-            nvblox_pc_topics = discover_nvblox_pointcloud_topics(topics)
-            timing_ms = {
-                "wait_for_rgbd_mapping_topics_ms": int(
-                    (time.monotonic() - wait_started) * 1000
-                ),
-            }
-            active = _active_mapping_startup_timing()
-            if active is not None:
-                timing_ms.update(active.as_dict())
+            last_probes, topic_types = probe_live_map_topic_types(topics=topics, quiet=True)
+            last_warnings = [p.warning for p in last_probes if p.warning and p.topic in probe_topics]
+            nvblox_pc_topics = discover_nvblox_pointcloud_topics(topics, topic_types=topic_types)
             return MappingReadinessResult(
                 ready=True,
                 missing_topics=[],
@@ -468,27 +490,13 @@ async def wait_for_rgbd_mapping_topics(
                 rgbd_pointcloud_topic=rgbd_pointcloud_topic,
                 rgbd_input_topics_ready=rgb_inputs_ready,
                 nvblox_pointcloud_topics=nvblox_pc_topics,
-                timing_ms=timing_ms,
+                timing_ms=_timing_ms(wait_started),
             )
 
         if rgb_inputs_ready and RGBD_VISUALIZATION_TOPIC not in topics:
             _note_mapping_startup("rgbd_readiness_monotonic")
-            last_probes, topic_types = probe_live_map_topic_types(
-                topics=topics,
-                quiet=True,
-            )
-            nvblox_pc_topics = discover_nvblox_pointcloud_topics(
-                topics,
-                topic_types=topic_types,
-            )
-            timing_ms = {
-                "wait_for_rgbd_mapping_topics_ms": int(
-                    (time.monotonic() - wait_started) * 1000
-                ),
-            }
-            active = _active_mapping_startup_timing()
-            if active is not None:
-                timing_ms.update(active.as_dict())
+            last_probes, topic_types = probe_live_map_topic_types(topics=topics, quiet=True)
+            nvblox_pc_topics = discover_nvblox_pointcloud_topics(topics, topic_types=topic_types)
             return MappingReadinessResult(
                 ready=True,
                 missing_topics=missing_inputs,
@@ -497,26 +505,18 @@ async def wait_for_rgbd_mapping_topics(
                 rgbd_pointcloud_topic=rgbd_pointcloud_topic,
                 rgbd_input_topics_ready=True,
                 nvblox_pointcloud_topics=nvblox_pc_topics,
-                timing_ms=timing_ms,
+                timing_ms=_timing_ms(wait_started),
             )
 
-        await asyncio.sleep(max(0.15, poll_s))
+        await asyncio.sleep(min(max(0.15, poll_s), max(0.15, deadline - loop.time())))
 
     try:
         topics = set(await asyncio.to_thread(list_ros2_topics, ws))
     except RuntimeError:
         topics = set()
-    last_probes, topic_types = probe_live_map_topic_types(topics=topics)
+    last_probes, topic_types = await asyncio.to_thread(probe_live_map_topic_types, topics=topics)
     _, missing_inputs = _rgb_inputs_ready(topics, set())
     rgbd_candidates = discover_rgbd_pointcloud_topics(topics, topic_types=topic_types)
-    timing_ms = {
-        "wait_for_rgbd_mapping_topics_ms": int(
-            (time.monotonic() - wait_started) * 1000
-        ),
-    }
-    active = _active_mapping_startup_timing()
-    if active is not None:
-        timing_ms.update(active.as_dict())
     return MappingReadinessResult(
         ready=False,
         missing_topics=missing_inputs,
@@ -528,11 +528,8 @@ async def wait_for_rgbd_mapping_topics(
         ],
         rgbd_pointcloud_topic=rgbd_candidates[0] if rgbd_candidates else None,
         rgbd_input_topics_ready=False,
-        nvblox_pointcloud_topics=discover_nvblox_pointcloud_topics(
-            topics,
-            topic_types=topic_types,
-        ),
-        timing_ms=timing_ms,
+        nvblox_pointcloud_topics=discover_nvblox_pointcloud_topics(topics, topic_types=topic_types),
+        timing_ms=_timing_ms(wait_started),
     )
 
 
@@ -549,7 +546,8 @@ async def probe_mapping_tf_degraded(
         result = await asyncio.to_thread(
             subprocess.run,
             _sourced_ros_cmd(
-                f"timeout 3.0 ros2 run tf2_ros tf2_echo {parent_frame} {child_frame}"
+                "timeout 3.0 ros2 run tf2_ros tf2_echo "
+                f"{shlex.quote(parent_frame)} {shlex.quote(child_frame)}"
             ),
             env=env,
             capture_output=True,
@@ -589,7 +587,15 @@ def resolve_colored_bridge_sources(
         except RuntimeError:
             topics = set()
 
-    _, topic_types = probe_live_map_topic_types(topics=topics, quiet=True)
+    if topic_probes:
+        topic_types = {
+            topic: probe.message_type
+            for topic, probe in topic_probes.items()
+            if probe.message_type is not None
+        }
+    else:
+        _, topic_types = probe_live_map_topic_types(topics=topics, quiet=True)
+
     rgbd_candidates = discover_rgbd_pointcloud_topics(topics, topic_types=topic_types)
     resolved_rgbd = rgbd_pointcloud_topic or (rgbd_candidates[0] if rgbd_candidates else None)
 
@@ -613,10 +619,6 @@ def resolve_colored_bridge_sources(
         elif topic.startswith("/nvblox_node/back_projected_depth/"):
             back_projected_topic = topic
 
-    # back_projected_depth is published in the camera optical frame. Using it for
-    # nvblox_color produced ceiling-height artifacts when TF lookup failed silently.
-    # The integrated color map comes from /nvblox_node/color_layer (VoxelBlockLayer,
-    # world-frame voxel centers) via nvblox_layers_live_map_bridge.
     if back_projected_topic and "rgbd_colored" not in sources:
         sources["rgbd_colored"] = replace(
             WAREHOUSE_LIVE_MAP_SOURCES["rgbd_colored"],

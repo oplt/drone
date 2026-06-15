@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
+import shlex
 import subprocess
 import time
+from collections import OrderedDict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -26,7 +29,7 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
@@ -116,13 +119,31 @@ logger = logging.getLogger(__name__)
 
 _repo = WarehouseMappingRepository()
 _settings_repo = WarehouseSettingsRepository()
-_PREFLIGHT_RUNS: dict[str, WarehousePreflightRefreshOut] = {}
+_PREFLIGHT_RUNS: OrderedDict[str, WarehousePreflightRefreshOut] = OrderedDict()
+_PREFLIGHT_RUNS_MAX = 50
+_PREFLIGHT_RUNS_TTL_S = 60 * 60
 _BRIDGE_PROCESS: subprocess.Popen[bytes] | None = None
 _BRIDGE_LOCK = asyncio.Lock()
 _PREFLIGHT_DRONE_LOCK = asyncio.Lock()
 _SETTINGS_SECTION = "warehouse"
 _MISSION_DEFAULTS_KEY = "mission_defaults"
 _EXPLORATION_PROFILE_KEY = "exploration_profile"
+
+
+def _remember_preflight_run(run: WarehousePreflightRefreshOut) -> None:
+    """Keep recent preflight refresh results bounded in memory."""
+    now = datetime.now(UTC)
+    _PREFLIGHT_RUNS[run.run_id] = run
+    _PREFLIGHT_RUNS.move_to_end(run.run_id)
+    stale_keys = [
+        key
+        for key, value in _PREFLIGHT_RUNS.items()
+        if (now - value.started_at).total_seconds() > _PREFLIGHT_RUNS_TTL_S
+    ]
+    for key in stale_keys:
+        _PREFLIGHT_RUNS.pop(key, None)
+    while len(_PREFLIGHT_RUNS) > _PREFLIGHT_RUNS_MAX:
+        _PREFLIGHT_RUNS.popitem(last=False)
 
 
 class WarehouseLocalPose(BaseModel):
@@ -680,6 +701,31 @@ def _quality(
     )
 
 
+async def _get_scanned_map_row_or_404(
+    db: AsyncSession,
+    *,
+    job_id: int,
+    user: Any,
+) -> tuple[WarehouseMappingJob, WarehouseMap, WarehouseModel]:
+    scope = (
+        or_(WarehouseMap.owner_id == int(user.id), WarehouseMap.org_id == user.org_id)
+        if can_access_org_scope(user) and user.org_id is not None
+        else WarehouseMap.owner_id == int(user.id)
+    )
+    # Use a direct indexed lookup instead of listing the latest 200 maps and scanning in Python.
+    row = (
+        await db.execute(
+            select(WarehouseMappingJob, WarehouseMap, WarehouseModel)
+            .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)
+            .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)
+            .where(WarehouseMappingJob.id == int(job_id), scope)
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Warehouse scanned map not found")
+    return row[0], row[1], row[2]
+
+
 async def _get_map_or_404(
     db: AsyncSession,
     *,
@@ -706,11 +752,18 @@ async def _dock_config_for_mission(
 ) -> dict[str, Any] | None:
     if dock_id is None:
         return None
-    docks = await _repo.list_dock_stations(db, warehouse_map_id=warehouse_map_id)
-    dock = next((row for row in docks if int(row.id) == int(dock_id)), None)
+    dock = (
+        await db.execute(
+            select(WarehouseDockStation).where(
+                WarehouseDockStation.id == int(dock_id),
+                WarehouseDockStation.warehouse_map_id == int(warehouse_map_id),
+                WarehouseDockStation.active.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
     if dock is None:
         raise HTTPException(status_code=404, detail="Warehouse dock station not found")
-    meta = dock.meta_data or {}
+    meta = dock.meta_data if isinstance(dock.meta_data, dict) else {}
     return {
         "dock_pose": dock.pose_local_json,
         "entry_pose": dock.entry_pose_local_json,
@@ -824,7 +877,7 @@ def _status(ok: bool | None, *, required: bool = True) -> str:
     return "UNKNOWN" if required else "DEFERRED"
 
 
-def _read_odometry_overlay() -> tuple[dict[str, Any], str | None]:
+def _read_odometry_overlay_sync() -> tuple[dict[str, Any], str | None]:
     path_raw = str(getattr(settings, "WAREHOUSE_ODOMETRY_STATE_PATH", "") or "").strip()
     if not path_raw:
         return {}, "WAREHOUSE_ODOMETRY_STATE_PATH is not configured."
@@ -836,6 +889,10 @@ def _read_odometry_overlay() -> tuple[dict[str, Any], str | None]:
     except Exception as exc:
         return {}, f"Odometry state file is unreadable: {exc}"
     return (payload if isinstance(payload, dict) else {}), None
+
+
+async def _read_odometry_overlay() -> tuple[dict[str, Any], str | None]:
+    return await asyncio.to_thread(_read_odometry_overlay_sync)
 
 
 def _bool_from(payload: dict[str, Any], *keys: str) -> bool | None:
@@ -923,20 +980,20 @@ async def _ensure_ros_bridge_running(*, start: bool) -> tuple[bool | None, str]:
         log_path = log_dir / "warehouse_bridge.log"
         cmd = (
             "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && "
-            f"source {setup} && "
+            f"source {shlex.quote(str(setup))} && "
             "ros2 launch drone_gz_bridge warehouse_bridge.launch.py"
         )
         env = ros_command_env()
         try:
-            log_file = log_path.open("ab")
-            _BRIDGE_PROCESS = subprocess.Popen(
-                ["bash", "-lc", cmd],
-                cwd=str(ws),
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                env=env,
-                start_new_session=True,
-            )
+            with log_path.open("ab") as log_file:
+                _BRIDGE_PROCESS = subprocess.Popen(
+                    ["bash", "-lc", cmd],
+                    cwd=str(ws),
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    env=env,
+                    start_new_session=True,
+                )
         except FileNotFoundError:
             return False, "bash is not available; cannot start ROS 2 bridge."
         except Exception as exc:
@@ -994,7 +1051,7 @@ async def _build_preflight_snapshot(
     telemetry_age_ms = int(max(0.0, time.time() - last_update) * 1000) if last_update else None
     telemetry_fresh = telemetry_age_ms is not None and telemetry_age_ms <= 5_000
 
-    overlay, overlay_error = _read_odometry_overlay()
+    overlay, overlay_error = await _read_odometry_overlay()
     topic_probe_error: str | None = None
     ros_setup = ws / "install" / "setup.bash"
     if ros_setup.exists():
@@ -2268,19 +2325,11 @@ async def get_scanned_map_quality(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseScannedMapQualityOut:
-    rows = await _repo.list_scanned_maps(
-        db,
-        owner_id=int(org_user.user.id),
-        org_id=org_user.user.org_id,
-        allow_org_access=can_access_org_scope(org_user.user),
-        warehouse_map_id=None,
-        limit=200,
+    job, warehouse_map, model = await _get_scanned_map_row_or_404(
+        db, job_id=job_id, user=org_user.user
     )
-    for job, warehouse_map, model in rows:
-        if int(job.id) == job_id:
-            assets = await _repo.list_assets_for_models(db, model_ids=[int(model.id)])
-            return _quality(job, warehouse_map, assets)
-    raise HTTPException(status_code=404, detail="Warehouse scanned map not found")
+    assets = await _repo.list_assets_for_models(db, model_ids=[int(model.id)])
+    return _quality(job, warehouse_map, assets)
 
 
 @router.post("/scanned-maps/compare", response_model=WarehouseScannedMapCompareOut)
@@ -2289,23 +2338,16 @@ async def compare_scanned_maps(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseScannedMapCompareOut:
-    rows = await _repo.list_scanned_maps(
-        db,
-        owner_id=int(org_user.user.id),
-        org_id=org_user.user.org_id,
-        allow_org_access=can_access_org_scope(org_user.user),
-        warehouse_map_id=None,
-        limit=200,
+    baseline = await _get_scanned_map_row_or_404(
+        db, job_id=payload.baseline_job_id, user=org_user.user
     )
-    by_id: dict[int, tuple[WarehouseMappingJob, WarehouseMap, WarehouseModel]] = {
-        int(job.id): (job, warehouse_map, model) for job, warehouse_map, model in rows
-    }
-    baseline = by_id.get(payload.baseline_job_id)
-    candidate = by_id.get(payload.candidate_job_id)
-    if baseline is None or candidate is None:
-        raise HTTPException(status_code=404, detail="Warehouse scanned map not found")
-    baseline_assets = await _repo.list_assets_for_models(db, model_ids=[int(baseline[2].id)])
-    candidate_assets = await _repo.list_assets_for_models(db, model_ids=[int(candidate[2].id)])
+    candidate = await _get_scanned_map_row_or_404(
+        db, job_id=payload.candidate_job_id, user=org_user.user
+    )
+    baseline_assets, candidate_assets = await asyncio.gather(
+        _repo.list_assets_for_models(db, model_ids=[int(baseline[2].id)]),
+        _repo.list_assets_for_models(db, model_ids=[int(candidate[2].id)]),
+    )
     bq = _quality(baseline[0], baseline[1], baseline_assets)
     cq = _quality(candidate[0], candidate[1], candidate_assets)
     return WarehouseScannedMapCompareOut(
@@ -2427,7 +2469,7 @@ async def refresh_preflight(
         finished_at=datetime.now(UTC),
         snapshot=snapshot,
     )
-    _PREFLIGHT_RUNS[run.run_id] = run
+    _remember_preflight_run(run)
     return run
 
 
@@ -2612,8 +2654,11 @@ async def exploration_start(
 
 
 def _live_map_ingest_authorized(ingest_key: str | None) -> bool:
-    expected = settings.warehouse_live_map_ingest_token.strip() or "dev-live-map-ingest"
-    return bool(ingest_key and ingest_key == expected)
+    expected = str(getattr(settings, "warehouse_live_map_ingest_token", "") or "").strip()
+    if not expected:
+        logger.warning("Warehouse live-map ingest token is not configured; rejecting ingest request")
+        return False
+    return bool(ingest_key and hmac.compare_digest(str(ingest_key), expected))
 
 
 @router.get("/live-map/config")

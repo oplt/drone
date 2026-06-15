@@ -15,8 +15,15 @@ class WarehouseMissionFailure(Exception):
     stage: str = "flight"
 
     def __post_init__(self) -> None:
+        self.reason = str(self.reason or "unknown")
+        self.action = str(self.action or "abort")
+        self.stage = str(self.stage or "flight")
+        self.details = dict(self.details or {})
         if self.message is None:
             self.message = self.reason
+        else:
+            self.message = str(self.message)
+        Exception.__init__(self, self.message)
 
     def __str__(self) -> str:
         base = f"Warehouse mission failed ({self.reason})"
@@ -44,6 +51,13 @@ class WarehouseFlightNotReadyError(Exception):
 
     blocking_reasons: list[str]
     readiness: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.blocking_reasons = [str(reason) for reason in (self.blocking_reasons or [])]
+        if not self.blocking_reasons:
+            self.blocking_reasons = ["Warehouse flight readiness checks did not pass."]
+        self.readiness = dict(self.readiness or {})
+        Exception.__init__(self, str(self))
 
     def __str__(self) -> str:
         return "Warehouse flight not ready: " + "; ".join(self.blocking_reasons)

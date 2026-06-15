@@ -7,7 +7,7 @@ import logging
 import math
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -33,6 +33,8 @@ COLORED_BRIDGE_SOURCES: tuple[str, ...] = (
     "rgbd_colored",
     "nvblox_esdf",
 )
+_MAX_PREVIEW_POINTS = 500
+_MAX_CHUNK_BYTES = 48 * 1024 * 1024
 
 
 def _note_mapping_startup(mark: str) -> None:
@@ -44,6 +46,9 @@ def _note_mapping_startup(mark: str) -> None:
         note_mapping_startup(mark)
     except ModuleNotFoundError as exc:
         logger.warning("Optional mapping startup timing unavailable: %s", exc)
+    except Exception:
+        # Observability hooks should not crash the mapping bridge.
+        logger.exception("Optional mapping startup timing hook failed: %s", mark)
 
 
 class _MemoryUpload:
@@ -92,9 +97,23 @@ def _rotation_matrix_from_quaternion_xyzw(
     )
 
 
+def _finite_xyz_rows(xyz: np.ndarray) -> np.ndarray:
+    if xyz.ndim != 2 or xyz.shape[1] != 3:
+        return np.zeros(0, dtype=bool)
+    return np.isfinite(xyz).all(axis=1)
+
+
 def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
-    mins = np.nanmin(xyz, axis=0)
-    maxs = np.nanmax(xyz, axis=0)
+    if xyz.size <= 0:
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    finite = _finite_xyz_rows(xyz)
+    if not finite.any():
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    clean_xyz = xyz[finite] if not finite.all() else xyz
+    mins = clean_xyz.min(axis=0)
+    maxs = clean_xyz.max(axis=0)
     return [
         float(mins[0]),
         float(mins[1]),
@@ -103,6 +122,65 @@ def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
         float(maxs[1]),
         float(maxs[2]),
     ]
+
+
+def _preview_points_m(xyz: np.ndarray, *, limit: int = _MAX_PREVIEW_POINTS) -> list[list[float]]:
+    point_count = int(xyz.shape[0]) if xyz.ndim == 2 else 0
+    if point_count <= 0 or limit <= 0:
+        return []
+
+    sample_count = min(limit, point_count)
+    if sample_count == point_count:
+        sampled = xyz
+    else:
+        indices = np.linspace(0, point_count - 1, sample_count, dtype=np.intp)
+        sampled = xyz[indices]
+    return np.round(sampled.astype(np.float64, copy=False), 3).tolist()
+
+
+def _encode_pointcloud_payload(
+    source: LiveMapSourceConfig,
+    xyz: np.ndarray,
+    rgb: np.ndarray | None,
+) -> tuple[bytes, str, str, str]:
+    if source.colored and rgb is not None:
+        return (
+            encode_xyzrgb32(xyz, rgb),
+            "xyzrgb32_v1",
+            "application/vnd.live-map.xyzrgb32",
+            "point_cloud_rgb",
+        )
+    return (
+        encode_xyz32(xyz),
+        "xyz32_v1",
+        "application/vnd.live-map.xyz32",
+        "point_cloud",
+    )
+
+
+def _content_digest(source_id: str, has_rgb: bool, xyz: np.ndarray, rgb: np.ndarray | None) -> str:
+    digest = hashlib.blake2b(digest_size=16)
+    digest.update(source_id.encode("utf-8"))
+    digest.update(b"1" if has_rgb else b"0")
+    digest.update(np.ascontiguousarray(xyz).view(np.uint8))
+    if rgb is not None:
+        digest.update(np.ascontiguousarray(rgb).view(np.uint8))
+    return digest.hexdigest()
+
+
+def _log_future_exception(done: Any) -> None:
+    try:
+        exc = done.exception()
+    except asyncio.CancelledError:
+        return
+    except Exception:
+        logger.exception("Failed to inspect colored point-cloud worker result")
+        return
+    if exc is not None:
+        logger.error(
+            "Colored point-cloud worker failed",
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
 
 
 @dataclass
@@ -116,6 +194,7 @@ class _SourceRuntime:
     last_backpressure_log_monotonic: float = 0.0
     last_content_digest: str | None = None
     duplicate_chunks_skipped: int = 0
+    lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
 
 @dataclass
@@ -181,23 +260,19 @@ async def _store_and_publish_colored_chunk(
         },
     ):
         try:
-            if source.colored and rgb is not None:
-                payload = encode_xyzrgb32(xyz, rgb)
-                encoding = "xyzrgb32_v1"
-                content_type = "application/vnd.live-map.xyzrgb32"
-                storage_kind = "point_cloud_rgb"
-            else:
-                payload = encode_xyz32(xyz)
-                encoding = "xyz32_v1"
-                content_type = "application/vnd.live-map.xyz32"
-                storage_kind = "point_cloud"
+            payload, encoding, content_type, storage_kind = await asyncio.to_thread(
+                _encode_pointcloud_payload,
+                source,
+                xyz,
+                rgb,
+            )
 
             stored = await warehouse_live_map_chunk_storage.save_upload(
                 flight_id=flight_id,
                 chunk_id=chunk_id,
                 kind=storage_kind,
                 upload=_MemoryUpload(payload, content_type=content_type),
-                max_bytes=48 * 1024 * 1024,
+                max_bytes=_MAX_CHUNK_BYTES,
             )
             metric_add(
                 "mapping_chunks_saved",
@@ -227,20 +302,20 @@ async def _store_and_publish_colored_chunk(
 
     priority = render_priority_for_source(source.source_id)
     sidecar_metadata = {
-            "source": source.source_id,
-            "layer": source.layer,
-            "layer_type": source.layer,
-            "kind": source.kind,
-            "encoding": encoding,
-            "has_rgb": has_rgb,
-            "sequence": sequence,
-            "point_count": int(xyz.shape[0]),
-            "bbox_local_m": bbox,
-            "frame_id": frame_id,
-            "content_type": content_type,
-            "priority": priority,
-            "stamp": stamp,
-        }
+        "source": source.source_id,
+        "layer": source.layer,
+        "layer_type": source.layer,
+        "kind": source.kind,
+        "encoding": encoding,
+        "has_rgb": has_rgb,
+        "sequence": sequence,
+        "point_count": int(xyz.shape[0]),
+        "bbox_local_m": bbox,
+        "frame_id": frame_id,
+        "content_type": content_type,
+        "priority": priority,
+        "stamp": stamp,
+    }
     await asyncio.to_thread(
         warehouse_live_map_chunk_storage.save_chunk_metadata,
         flight_id=flight_id,
@@ -261,12 +336,6 @@ async def _store_and_publish_colored_chunk(
         sequence,
     )
 
-    preview_stride = max(1, xyz.shape[0] // 500)
-    preview_points = [
-        [round(float(x), 3), round(float(y), 3), round(float(z), 3)]
-        for x, y, z in xyz[::preview_stride][:500]
-    ]
-
     update = normalize_live_map_payload(
         {
             "flight_id": flight_id,
@@ -282,7 +351,7 @@ async def _store_and_publish_colored_chunk(
                     "byte_size": stored.byte_size,
                     "checksum_sha256": stored.checksum_sha256,
                     "bbox_local_m": bbox,
-                    "preview_points_m": preview_points,
+                    "preview_points_m": _preview_points_m(xyz),
                     "source": source.source_id,
                     "layer": source.layer,
                     "layer_type": source.layer,
@@ -369,7 +438,11 @@ class _ColoredPointCloudLiveMapNode:
 
     def _make_callback(self, source_id: str):
         def _callback(msg: Any) -> None:
-            topic = self.source_runtimes[source_id].config.topic
+            runtime = self.source_runtimes.get(source_id)
+            if runtime is None:
+                return
+
+            topic = runtime.config.topic
             started = time.monotonic()
             with observed_span(
                 "ros.callback",
@@ -398,36 +471,41 @@ class _ColoredPointCloudLiveMapNode:
         return _callback
 
     def _lookup_transform(self, msg: Any, global_frame: str) -> Any | None:
-        import rclpy
         from rclpy.duration import Duration
         from rclpy.time import Time
 
-        source_frame = (msg.header.frame_id or "").strip()
+        header = getattr(msg, "header", None)
+        source_frame = (getattr(header, "frame_id", "") or "").strip()
         if not source_frame or source_frame == global_frame:
             return None
+
+        stamp = getattr(header, "stamp", None)
+        try:
+            if stamp is not None:
+                return self.tf_buffer.lookup_transform(
+                    global_frame,
+                    source_frame,
+                    Time.from_msg(stamp),
+                    timeout=Duration(seconds=0.05),
+                )
+        except Exception:
+            pass
 
         try:
             return self.tf_buffer.lookup_transform(
                 global_frame,
                 source_frame,
-                Time.from_msg(msg.header.stamp),
+                Time(),
                 timeout=Duration(seconds=0.05),
             )
-        except Exception:
-            try:
-                return self.tf_buffer.lookup_transform(
-                    global_frame,
-                    source_frame,
-                    rclpy.time.Time(),
-                    timeout=Duration(seconds=0.05),
-                )
-            except Exception as exc:
-                self.node.get_logger().debug(
-                    f"TF lookup failed {global_frame} <- {source_frame}: {exc}"
-                )
-                return None
+        except Exception as exc:
+            self.node.get_logger().debug(
+                f"TF lookup failed {global_frame} <- {source_frame}: {exc}"
+            )
+            return None
 
     def _transform_xyz(self, xyz: np.ndarray, transform: Any | None) -> np.ndarray:
+        xyz = np.ascontiguousarray(xyz, dtype=np.float32)
         if transform is None:
             return xyz
 
@@ -444,6 +522,13 @@ class _ColoredPointCloudLiveMapNode:
 
         return np.ascontiguousarray((xyz @ rotation.T) + translation, dtype=np.float32)
 
+    def _schedule_drain(self, source_id: str) -> None:
+        future = asyncio.run_coroutine_threadsafe(
+            self._drain_source(source_id),
+            self.event_loop,
+        )
+        future.add_done_callback(_log_future_exception)
+
     def _on_pointcloud(self, source_id: str, msg: Any) -> None:
         runtime = self.source_runtimes.get(source_id)
         if runtime is None:
@@ -451,42 +536,53 @@ class _ColoredPointCloudLiveMapNode:
 
         config = runtime.config
         now = time.monotonic()
-        if now - runtime.last_publish_monotonic < config.min_publish_interval_s:
-            return
+        should_schedule = False
+        should_log_backpressure = False
+        dropped_frames = 0
 
-        runtime.last_publish_monotonic = now
-        if runtime.processing and runtime.queued_msg is not None:
-            runtime.dropped_frames += 1
-            if now - runtime.last_backpressure_log_monotonic >= 5.0:
-                runtime.last_backpressure_log_monotonic = now
-                self.node.get_logger().warning(
-                    f"Colored point-cloud bridge falling behind source={source_id}; "
-                    f"dropped_stale_frames={runtime.dropped_frames}"
-                )
-        runtime.queued_msg = msg
-        if runtime.processing:
-            return
+        with runtime.lock:
+            if now - runtime.last_publish_monotonic < config.min_publish_interval_s:
+                return
 
-        runtime.processing = True
-        future = asyncio.run_coroutine_threadsafe(
-            self._drain_source(source_id),
-            self.event_loop,
-        )
-        future.add_done_callback(
-            lambda done: done.exception() if not done.cancelled() else None
-        )
+            runtime.last_publish_monotonic = now
+            if runtime.processing:
+                if runtime.queued_msg is not None:
+                    runtime.dropped_frames += 1
+                    dropped_frames = runtime.dropped_frames
+                    if now - runtime.last_backpressure_log_monotonic >= 5.0:
+                        runtime.last_backpressure_log_monotonic = now
+                        should_log_backpressure = True
+                runtime.queued_msg = msg
+                return
+
+            runtime.queued_msg = msg
+            runtime.processing = True
+            should_schedule = True
+
+        if should_log_backpressure:
+            self.node.get_logger().warning(
+                f"Colored point-cloud bridge falling behind source={source_id}; "
+                f"dropped_stale_frames={dropped_frames}"
+            )
+
+        if should_schedule:
+            self._schedule_drain(source_id)
 
     async def _drain_source(self, source_id: str) -> None:
         runtime = self.source_runtimes.get(source_id)
         if runtime is None:
             return
 
+        reschedule = False
         try:
             while True:
-                msg = runtime.queued_msg
-                runtime.queued_msg = None
-                if msg is None:
-                    return
+                with runtime.lock:
+                    msg = runtime.queued_msg
+                    runtime.queued_msg = None
+                    if msg is None:
+                        runtime.processing = False
+                        return
+
                 chunk = await asyncio.to_thread(self._prepare_chunk, source_id, msg)
                 if chunk is None:
                     continue
@@ -497,16 +593,14 @@ class _ColoredPointCloudLiveMapNode:
                 source_id,
             )
         finally:
-            runtime.processing = False
-            if runtime.queued_msg is not None:
-                runtime.processing = True
-                future = asyncio.run_coroutine_threadsafe(
-                    self._drain_source(source_id),
-                    self.event_loop,
-                )
-                future.add_done_callback(
-                    lambda done: done.exception() if not done.cancelled() else None
-                )
+            with runtime.lock:
+                if runtime.queued_msg is not None:
+                    runtime.processing = True
+                    reschedule = True
+                else:
+                    runtime.processing = False
+            if reschedule:
+                self._schedule_drain(source_id)
 
     def _prepare_chunk(self, source_id: str, msg: Any) -> dict[str, Any] | None:
         runtime = self.source_runtimes.get(source_id)
@@ -536,38 +630,67 @@ class _ColoredPointCloudLiveMapNode:
         if config.source_id == "rgbd_colored":
             metric_add("mapping_frames", attrs={"source": config.source_id})
 
-        xyz = parsed.xyz
+        xyz = np.asarray(parsed.xyz, dtype=np.float32)
+        if xyz.ndim != 2 or xyz.shape[1] != 3:
+            self.node.get_logger().warning(
+                "Skipping colored live-map chunk source=%s: invalid xyz shape=%s",
+                source_id,
+                getattr(xyz, "shape", None),
+            )
+            return None
+
+        rgb = parsed.rgb
+        has_rgb = bool(parsed.has_rgb and rgb is not None)
+        if rgb is not None and getattr(rgb, "shape", (0,))[0] != xyz.shape[0]:
+            self.node.get_logger().warning(
+                "Dropping RGB for source=%s because xyz/rgb lengths differ: xyz=%s rgb=%s",
+                source_id,
+                xyz.shape[0],
+                getattr(rgb, "shape", None),
+            )
+            rgb = None
+            has_rgb = False
+
         source_frame = (getattr(getattr(msg, "header", None), "frame_id", None) or "").strip()
         transform = self._lookup_transform(msg, config.global_frame)
-        if source_frame and source_frame != config.global_frame:
-            if transform is None:
-                self.node.get_logger().warning(
-                    "Skipping colored live-map chunk source=%s: TF %s <- %s unavailable",
-                    source_id,
-                    config.global_frame,
-                    source_frame,
-                )
-                return None
+        if source_frame and source_frame != config.global_frame and transform is None:
+            self.node.get_logger().warning(
+                "Skipping colored live-map chunk source=%s: TF %s <- %s unavailable",
+                source_id,
+                config.global_frame,
+                source_frame,
+            )
+            return None
+
         xyz = self._transform_xyz(xyz, transform)
+        finite = _finite_xyz_rows(xyz)
+        if not finite.any():
+            metric_add("mapping_pointclouds_empty_after_filter", attrs={"source": config.source_id})
+            return None
+        if not finite.all():
+            xyz = np.ascontiguousarray(xyz[finite], dtype=np.float32)
+            if rgb is not None:
+                rgb = np.ascontiguousarray(rgb[finite])
+            metric_add("mapping_pointclouds_filtered", attrs={"source": config.source_id})
+
+        if rgb is not None:
+            rgb = np.ascontiguousarray(rgb)
+
         metric_record(
-            "ros_callback_latency",
+            "mapping_pointcloud_prepare_latency",
             (time.monotonic() - started) * 1000.0,
             {"topic": config.topic, "stage": "prepare"},
         )
 
-        digest = hashlib.sha1()
-        digest.update(config.source_id.encode("utf-8"))
-        digest.update(str(parsed.has_rgb).encode("ascii"))
-        digest.update(np.ascontiguousarray(xyz).view(np.uint8))
-        if parsed.rgb is not None:
-            digest.update(np.ascontiguousarray(parsed.rgb).view(np.uint8))
-        content_digest = digest.hexdigest()
-        if runtime.last_content_digest == content_digest:
-            runtime.duplicate_chunks_skipped += 1
-            return None
-        runtime.last_content_digest = content_digest
+        content_digest = _content_digest(config.source_id, has_rgb, xyz, rgb)
+        with runtime.lock:
+            if runtime.last_content_digest == content_digest:
+                runtime.duplicate_chunks_skipped += 1
+                return None
+            runtime.last_content_digest = content_digest
+            runtime.sequence += 1
+            sequence = runtime.sequence
 
-        runtime.sequence += 1
         metric_add(
             "mapping_chunks_generated",
             attrs={"source": config.source_id, "layer": config.layer},
@@ -575,13 +698,21 @@ class _ColoredPointCloudLiveMapNode:
         return {
             "flight_id": self.flight_id,
             "source": config,
-            "sequence": runtime.sequence,
+            "sequence": sequence,
             "xyz": xyz,
-            "rgb": parsed.rgb,
-            "has_rgb": parsed.has_rgb,
+            "rgb": rgb,
+            "has_rgb": has_rgb,
             "frame_id": config.global_frame,
             "stamp": _stamp_from_msg(msg),
         }
+
+
+def _runtime_busy(runtime: _ColoredBridgeRuntime) -> bool:
+    for source in runtime.sources.values():
+        with source.lock:
+            if source.processing or source.queued_msg is not None:
+                return True
+    return False
 
 
 async def start_colored_pointcloud_live_map_bridge(
@@ -599,12 +730,27 @@ async def start_colored_pointcloud_live_map_bridge(
             resolve_colored_bridge_sources,
         )
 
-        topic_probes_list, _ = probe_live_map_topic_types()
+        topic_probes_list, _ = await asyncio.to_thread(probe_live_map_topic_types)
         topic_probes = {probe.topic: probe for probe in topic_probes_list}
 
-        sources = resolve_colored_bridge_sources(topic_probes=topic_probes)
+        resolved_sources = resolve_colored_bridge_sources(topic_probes=topic_probes)
+        requested_sources = set(source_ids)
+        sources = {
+            source_id: config
+            for source_id, config in resolved_sources.items()
+            if source_id in requested_sources
+        }
+        missing_sources = requested_sources.difference(resolved_sources)
+        if missing_sources:
+            logger.warning(
+                "Requested colored live-map sources were not resolved: %s",
+                sorted(missing_sources),
+            )
         if not sources:
-            logger.warning("No colored live-map PointCloud2 sources resolved")
+            logger.warning(
+                "No colored live-map PointCloud2 sources resolved for requested sources=%s",
+                sorted(requested_sources),
+            )
             return
 
         import rclpy
@@ -654,11 +800,7 @@ async def drain_colored_pointcloud_live_map_bridge(*, timeout_s: float = 5.0) ->
 
     deadline = time.monotonic() + max(0.1, timeout_s)
     while time.monotonic() < deadline:
-        busy = any(
-            source.processing or source.queued_msg is not None
-            for source in runtime.sources.values()
-        )
-        if not busy:
+        if not _runtime_busy(runtime):
             logger.info(
                 "Colored point-cloud bridge drained sources=%s",
                 list(runtime.sources.keys()),
@@ -684,7 +826,7 @@ async def stop_colored_pointcloud_live_map_bridge() -> None:
         return
 
     try:
-        runtime.executor.shutdown()
+        await asyncio.to_thread(runtime.executor.shutdown)
     except Exception:
         logger.exception("Failed to shutdown colored point-cloud executor")
 
@@ -694,6 +836,6 @@ async def stop_colored_pointcloud_live_map_bridge() -> None:
         logger.exception("Failed to destroy colored point-cloud node")
 
     if runtime.thread.is_alive():
-        runtime.thread.join(timeout=2.0)
+        await asyncio.to_thread(runtime.thread.join, 2.0)
 
     logger.info("Stopped colored point-cloud live-map bridge")

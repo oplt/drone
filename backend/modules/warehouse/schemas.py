@@ -16,11 +16,30 @@ def _finite(value: float, field_name: str) -> float:
     return value
 
 
+def _strip_required(value: str, field_name: str) -> str:
+    text = str(value).strip()
+    if not text:
+        raise ValueError(f"{field_name} must not be blank")
+    return text
+
+
+def _strip_optional(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 class WarehouseLocalPoint(BaseModel):
     frame_id: str = Field(default=WAREHOUSE_MAP_FRAME_ID, min_length=1, max_length=64)
     x_m: float
     y_m: float
     z_m: float
+
+    @field_validator("frame_id")
+    @classmethod
+    def _clean_frame_id(cls, value: str) -> str:
+        return _strip_required(value, "frame_id")
 
     @field_validator("x_m", "y_m", "z_m")
     @classmethod
@@ -44,6 +63,11 @@ class WarehouseShelfNormal(BaseModel):
     x: float
     y: float
     z: float = 0.0
+
+    @field_validator("frame_id")
+    @classmethod
+    def _clean_frame_id(cls, value: str) -> str:
+        return _strip_required(value, "frame_id")
 
     @field_validator("x", "y", "z")
     @classmethod
@@ -75,6 +99,16 @@ class WarehouseScanTargetBase(BaseModel):
     scan_timeout_s: float = Field(default=8.0, gt=0.0, le=300.0)
     priority: int = Field(default=100, ge=0)
     active: bool = True
+
+    @field_validator("aisle_code")
+    @classmethod
+    def _clean_required_text(cls, value: str, info) -> str:
+        return _strip_required(value, str(info.field_name))
+
+    @field_validator("rack_code", "bin_code", "sku", "barcode", "product_name")
+    @classmethod
+    def _clean_optional_text(cls, value: str | None) -> str | None:
+        return _strip_optional(value)
 
     @field_validator("standoff_m", "hover_time_s", "scan_timeout_s")
     @classmethod
@@ -116,6 +150,18 @@ class WarehouseScanTargetUpdate(BaseModel):
     priority: int | None = Field(default=None, ge=0)
     active: bool | None = None
 
+    @field_validator("aisle_code")
+    @classmethod
+    def _clean_required_text(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+        return _strip_required(value, str(info.field_name))
+
+    @field_validator("rack_code", "bin_code", "sku", "barcode", "product_name")
+    @classmethod
+    def _clean_optional_text(cls, value: str | None) -> str | None:
+        return _strip_optional(value)
+
     @field_validator("standoff_m", "hover_time_s", "scan_timeout_s")
     @classmethod
     def _finite_times(cls, value: float | None, info) -> float | None:
@@ -151,6 +197,27 @@ class WarehouseInspectionMissionCreate(BaseModel):
     return_to_dock: bool = True
     default_hover_time_s: float | None = Field(default=None, ge=0.0, le=300.0)
     default_scan_timeout_s: float | None = Field(default=None, gt=0.0, le=300.0)
+
+    @field_validator("name")
+    @classmethod
+    def _clean_name(cls, value: str) -> str:
+        return _strip_required(value, "name")
+
+    @field_validator("target_ids")
+    @classmethod
+    def _dedupe_target_ids(cls, value: list[int]) -> list[int]:
+        seen: set[int] = set()
+        deduped: list[int] = []
+        for item in value:
+            target_id = int(item)
+            if target_id <= 0:
+                raise ValueError("target_ids must contain positive ids")
+            if target_id not in seen:
+                seen.add(target_id)
+                deduped.append(target_id)
+        if not deduped:
+            raise ValueError("target_ids must contain at least one id")
+        return deduped
 
     @field_validator("default_hover_time_s", "default_scan_timeout_s")
     @classmethod

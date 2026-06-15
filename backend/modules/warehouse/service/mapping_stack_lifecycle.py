@@ -9,7 +9,7 @@ import time
 from asyncio.subprocess import PIPE
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from backend.core.config.runtime import settings
 from backend.modules.warehouse.ports import WarehousePerceptionCommandResult
@@ -47,6 +47,38 @@ _mapping_stack_lock = asyncio.Lock()
 _last_nvblox_restart_at: float = 0.0
 _restart_in_progress = False
 _warned_missing_startup_timing = False
+_background_tasks: set[asyncio.Task[Any]] = set()
+
+
+def _track_background_task(task: asyncio.Task[Any]) -> asyncio.Task[Any]:
+    _background_tasks.add(task)
+
+    def _cleanup(done: asyncio.Task[Any]) -> None:
+        _background_tasks.discard(done)
+        if done.cancelled():
+            return
+        try:
+            done.exception()
+        except Exception:
+            logger.exception("background mapping-stack task failed")
+
+    task.add_done_callback(_cleanup)
+    return task
+
+
+def _setting_float(name: str, default: float) -> float:
+    try:
+        value = float(getattr(settings, name, default))
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 0 else default
+
+
+def _setting_int(name: str, default: int) -> int:
+    try:
+        return max(0, int(getattr(settings, name, default)))
+    except (TypeError, ValueError):
+        return default
 
 
 class _OptionalProbeResult:
@@ -273,14 +305,11 @@ def _log_nvblox_line(prefix: str, line: str) -> None:
     level, emit = nvblox_log_parser.ingest(line)
     if not emit:
         if nvblox_log_parser.should_restart_for_tf_instability(
-            jump_threshold=settings.warehouse_nvblox_tf_restart_jump_threshold,
-            cooldown_s=settings.warehouse_nvblox_tf_restart_cooldown_s,
+            jump_threshold=_setting_int("warehouse_nvblox_tf_restart_jump_threshold", 3),
+            cooldown_s=_setting_float("warehouse_nvblox_tf_restart_cooldown_s", 30.0),
             last_restart_at=_last_nvblox_restart_at,
         ):
-            restart_task = asyncio.create_task(_restart_mapping_stack_for_tf())
-            restart_task.add_done_callback(
-                lambda task: task.exception() if not task.cancelled() else None
-            )
+            _track_background_task(asyncio.create_task(_restart_mapping_stack_for_tf()))
         return
 
     text = line.rstrip()
@@ -330,7 +359,7 @@ async def _restart_mapping_stack_for_tf() -> None:
         clock = await _probe_clock_monotonic()
         if not clock.ok:
             logger.warning("Clock still not monotonic before nvblox restart: %s", clock.to_dict())
-        tf = await _wait_for_tf_stable(timeout_s=settings.warehouse_preflight_tf_wait_s)
+        tf = await _wait_for_tf_stable(timeout_s=_setting_float("warehouse_preflight_tf_wait_s", 10.0))
         if not tf.ok:
             logger.warning("TF still unstable before nvblox restart: %s", tf.to_dict())
 
@@ -368,10 +397,7 @@ async def _watch_mapping_stack_process(
                 "Nvblox mapping stack process exited with code %s.",
                 exit_code,
             )
-            cleanup_task = asyncio.create_task(_kill_stale_nvblox_processes())
-            cleanup_task.add_done_callback(
-                lambda done: done.exception() if not done.cancelled() else None
-            )
+            _track_background_task(asyncio.create_task(_kill_stale_nvblox_processes()))
 
 
 async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> None:
@@ -406,7 +432,7 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
                 "TF broadcaster check failed before nvblox start: %s",
                 broadcasters.to_dict(),
             )
-        tf = await _wait_for_tf_stable(timeout_s=settings.warehouse_preflight_tf_wait_s)
+        tf = await _wait_for_tf_stable(timeout_s=_setting_float("warehouse_preflight_tf_wait_s", 10.0))
         if not tf.ok:
             logger.warning(
                 "TF not stable before nvblox start (continuing degraded): %s",
@@ -469,25 +495,13 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
             nvblox_status_tracker.reset_tf_counters()
             _note_mapping_startup("nvblox_start_monotonic")
 
-            stdout_task = asyncio.create_task(
-                _log_process_stream(
-                    process.stdout,
-                    prefix="nvblox:stdout",
-                )
-            )
-
-            stderr_task = asyncio.create_task(
-                _log_process_stream(
-                    process.stderr,
-                    prefix="nvblox:stderr",
-                )
-            )
-
-            watch_task = asyncio.create_task(_watch_mapping_stack_process(process))
-            for task in (stdout_task, stderr_task, watch_task):
-                task.add_done_callback(
-                    lambda done: done.exception() if not done.cancelled() else None
-                )
+            _track_background_task(asyncio.create_task(
+                _log_process_stream(process.stdout, prefix="nvblox:stdout")
+            ))
+            _track_background_task(asyncio.create_task(
+                _log_process_stream(process.stderr, prefix="nvblox:stderr")
+            ))
+            _track_background_task(asyncio.create_task(_watch_mapping_stack_process(process)))
 
         except Exception as exc:
             _mapping_stack_process = None
@@ -498,7 +512,7 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
                 f"Failed to start Nvblox mapping stack: {exc}"
             ) from exc
 
-    boot_grace_s = settings.warehouse_nvblox_boot_grace_s
+    boot_grace_s = _setting_float("warehouse_nvblox_boot_grace_s", 2.0)
     await asyncio.sleep(max(0.0, boot_grace_s))
 
     if (
@@ -755,7 +769,8 @@ async def _stop_mapping_stack_process(*, strict: bool = False) -> bool:
     """
     global _mapping_stack_process
 
-    process = _mapping_stack_process
+    async with _mapping_stack_lock:
+        process = _mapping_stack_process
     if process is None:
         return True
 
@@ -764,7 +779,9 @@ async def _stop_mapping_stack_process(*, strict: bool = False) -> bool:
     try:
         if process.returncode is not None:
             logger.info("Nvblox mapping stack already stopped pid=%s", pid)
-            _mapping_stack_process = None
+            async with _mapping_stack_lock:
+                if _mapping_stack_process is process:
+                    _mapping_stack_process = None
             return True
 
         logger.info("Stopping Nvblox mapping stack process pid=%s", pid)
@@ -774,7 +791,9 @@ async def _stop_mapping_stack_process(*, strict: bool = False) -> bool:
             os.killpg(pid, signal.SIGTERM)
         except ProcessLookupError:
             logger.info("Nvblox process group already gone pid=%s", pid)
-            _mapping_stack_process = None
+            async with _mapping_stack_lock:
+                if _mapping_stack_process is process:
+                    _mapping_stack_process = None
             return True
         except Exception:
             logger.warning(
@@ -840,7 +859,9 @@ async def _stop_mapping_stack_process(*, strict: bool = False) -> bool:
     finally:
         # Always clear the stored handle so stale process objects do not poison
         # the next warehouse scan.
-        _mapping_stack_process = None
+        async with _mapping_stack_lock:
+            if _mapping_stack_process is process:
+                _mapping_stack_process = None
 
 
 async def shutdown_warehouse_mapping_stack() -> None:
@@ -865,7 +886,12 @@ async def shutdown_warehouse_mapping_stack() -> None:
         await _stop_mapping_stack_process()
         await _kill_stale_nvblox_processes()
 
-    shutdown_cmd = settings.warehouse_shutdown_mapping_stack_cmd.strip()
+    if _background_tasks:
+        for task in tuple(_background_tasks):
+            task.cancel()
+        await asyncio.gather(*tuple(_background_tasks), return_exceptions=True)
+
+    shutdown_cmd = str(getattr(settings, "warehouse_shutdown_mapping_stack_cmd", "") or "").strip()
     if shutdown_cmd:
         try:
             await asyncio.to_thread(

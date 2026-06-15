@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -115,9 +115,9 @@ def _readiness_out(payload: dict[str, Any]) -> WarehouseFlightReadinessOut:
         try:
             updated_at = datetime.fromisoformat(updated_at_raw.replace("Z", "+00:00"))
         except ValueError:
-            updated_at = datetime.utcnow()
+            updated_at = datetime.now(UTC)
     else:
-        updated_at = datetime.utcnow()
+        updated_at = datetime.now(UTC)
     return WarehouseFlightReadinessOut(
         ready_to_arm=bool(payload.get("ready_to_arm")),
         ready_to_takeoff=bool(payload.get("ready_to_takeoff")),
@@ -169,20 +169,18 @@ async def start_warehouse_flight(
             readiness=_readiness_out(exc.readiness),
         )
 
-    from backend.modules.warehouse.api import WarehouseScanStartIn, start_warehouse_scan
+    from backend.modules.warehouse.api import _start_warehouse_scan_mission
 
-    launch = await start_warehouse_scan(
-        WarehouseScanStartIn(
-            warehouse_map_id=payload.warehouse_map_id,
-            mission_name=payload.mission_name,
-            reference_mapping_job_id=payload.reference_mapping_job_id,
-            sensor_rig_id=payload.sensor_rig_id,
-            dock_id=payload.dock_id,
-            cruise_alt=payload.cruise_alt,
-            work_speed_mps=payload.work_speed_mps,
-        ),
+    launch = await _start_warehouse_scan_mission(
         db=db,
-        org_user=org_user,
+        user=org_user.user,
+        warehouse_map_id=payload.warehouse_map_id,
+        mission_name=payload.mission_name,
+        sensor_rig_id=payload.sensor_rig_id,
+        dock_id=payload.dock_id,
+        reference_mapping_job_id=payload.reference_mapping_job_id,
+        cruise_alt=payload.cruise_alt,
+        work_speed_mps=payload.work_speed_mps,
     )
     from backend.modules.warehouse.service.flight_watchdog import get_warehouse_flight_watchdog
 
@@ -190,8 +188,25 @@ async def start_warehouse_flight(
     return WarehouseFlightStartOut(
         accepted=True,
         readiness=_readiness_out(snapshot.to_dict()),
-        launch=launch.model_dump(mode="json"),
+        launch=launch,
     )
+
+
+async def _run_drone_command(drone: Any, method_name: str, *args: Any) -> bool:
+    import asyncio
+
+    method = getattr(drone, method_name, None)
+    if not callable(method):
+        raise HTTPException(status_code=501, detail=f"Drone does not support {method_name}().")
+    try:
+        result = await asyncio.wait_for(asyncio.to_thread(method, *args), timeout=10.0)
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail=f"Drone command {method_name} timed out.") from exc
+    except Exception as exc:
+        logger.exception("Warehouse flight command %s failed", method_name)
+        raise HTTPException(status_code=502, detail=f"Drone command {method_name} failed: {exc}") from exc
+    # Many drone SDK methods return None on successful fire-and-forget commands.
+    return True if result is None else bool(result)
 
 
 @router.post("/command", response_model=WarehouseFlightCommandOut)
@@ -199,27 +214,28 @@ async def warehouse_flight_command(
     payload: WarehouseFlightCommandIn,
     _org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseFlightCommandOut:
-    import asyncio
-
     from backend.modules.missions.api.routes import get_orchestrator
 
     orch = await get_orchestrator()
+    drone = getattr(orch, "drone", None)
+    if drone is None:
+        raise HTTPException(status_code=503, detail="Drone runtime is not configured.")
+
     command = payload.command
-    success = False
     if command == "pause":
-        success = await asyncio.to_thread(orch.drone.pause_mission)
+        success = await _run_drone_command(drone, "pause_mission")
         message = "Mission paused." if success else "Pause command failed."
     elif command == "resume":
-        success = await asyncio.to_thread(orch.drone.resume_mission)
+        success = await _run_drone_command(drone, "resume_mission")
         message = "Mission resumed." if success else "Resume command failed."
     elif command == "abort":
-        success = await asyncio.to_thread(orch.drone.abort_mission)
+        success = await _run_drone_command(drone, "abort_mission")
         message = "Mission aborted." if success else "Abort command failed."
     elif command == "land":
-        success = await asyncio.to_thread(orch.drone.set_mode, "LAND")
+        success = await _run_drone_command(drone, "set_mode", "LAND")
         message = "Land command sent." if success else "Land command failed."
     elif command == "rth":
-        success = await asyncio.to_thread(orch.drone.set_mode, "RTL")
+        success = await _run_drone_command(drone, "set_mode", "RTL")
         message = "Return-to-home initiated." if success else "RTH command failed."
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported command: {command}")

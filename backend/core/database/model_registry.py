@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+import threading
 from importlib import import_module
+
+logger = logging.getLogger(__name__)
 
 _MODEL_MODULES = (
     "backend.modules.alerts.models",
@@ -29,13 +33,31 @@ _MODEL_MODULES = (
     "backend.modules.warehouse.models",
     "backend.modules.video_analysis.models",
 )
+
 _registered = False
+_register_lock = threading.RLock()
 
 
 def register_models() -> None:
+    """Import all ORM model modules exactly once.
+
+    The previous implementation marked the registry as complete before imports ran.
+    If one import failed, later calls became no-ops and SQLAlchemy metadata stayed
+    partially registered. This function now marks registration complete only after
+    every module imports successfully and is safe to call from concurrent startup
+    paths.
+    """
     global _registered
+
     if _registered:
         return
-    _registered = True
-    for module_name in _MODEL_MODULES:
-        import_module(module_name)
+
+    with _register_lock:
+        if _registered:
+            return
+
+        for module_name in _MODEL_MODULES:
+            import_module(module_name)
+            logger.debug("Registered ORM model module %s", module_name)
+
+        _registered = True

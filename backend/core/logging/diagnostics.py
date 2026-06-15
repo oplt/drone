@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import zipfile
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,6 +16,8 @@ TEXT_LOG_SUFFIXES = {".log", ".txt", ".json", ".jsonl", ".out", ".err"}
 MAX_FILES_DEFAULT = 80
 MAX_FILE_BYTES_DEFAULT = 5 * 1024 * 1024
 MAX_BUNDLE_BYTES_DEFAULT = 25 * 1024 * 1024
+
+_SAFE_ZIP_PART_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 @dataclass(frozen=True)
@@ -46,51 +50,85 @@ def _utc_iso(timestamp: float) -> str:
     return datetime.fromtimestamp(timestamp, UTC).replace(microsecond=0).isoformat()
 
 
+def _sanitize_zip_part(part: str) -> str:
+    cleaned = _SAFE_ZIP_PART_RE.sub("_", part.strip()).strip("._-/\\")
+    return cleaned or "unknown"
+
+
 def _safe_source_name(path: Path, root: Path) -> str:
     try:
-        relative = path.relative_to(root)
+        relative = path.resolve().relative_to(root.resolve())
     except ValueError:
         return "unknown"
-    return relative.parts[0] if len(relative.parts) > 1 else "backend"
+    return _sanitize_zip_part(relative.parts[0]) if len(relative.parts) > 1 else "backend"
 
 
-def _iter_log_files(root: Path, *, legacy: bool = False) -> list[RuntimeLogFile]:
+def _safe_relative_path(path: Path, root: Path) -> str | None:
+    try:
+        resolved = path.resolve()
+        relative = resolved.relative_to(root.resolve())
+    except (OSError, ValueError):
+        return None
+    if any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    return relative.as_posix()
+
+
+def _iter_log_files(root: Path, *, legacy: bool = False) -> Iterator[RuntimeLogFile]:
     resolved_root = root.resolve()
     if not resolved_root.exists() or not resolved_root.is_dir():
-        return []
+        return
 
-    files: list[RuntimeLogFile] = []
     for path in resolved_root.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in TEXT_LOG_SUFFIXES:
-            continue
         try:
+            if path.is_symlink() or not path.is_file():
+                continue
+            if path.suffix.lower() not in TEXT_LOG_SUFFIXES:
+                continue
+            relative = _safe_relative_path(path, resolved_root)
+            if relative is None:
+                continue
             stat = path.stat()
-            relative = path.relative_to(resolved_root).as_posix()
         except OSError:
             continue
-        files.append(
-            RuntimeLogFile(
-                source=_safe_source_name(path, resolved_root),
-                path=path,
-                relative_path=relative,
-                size_bytes=stat.st_size,
-                modified_at=_utc_iso(stat.st_mtime),
-                legacy=legacy,
-            )
+        yield RuntimeLogFile(
+            source=_safe_source_name(path, resolved_root),
+            path=path,
+            relative_path=relative,
+            size_bytes=stat.st_size,
+            modified_at=_utc_iso(stat.st_mtime),
+            legacy=legacy,
         )
-    return files
 
 
 def list_latest_runtime_logs(
     *, limit: int = 50, include_legacy: bool = True
 ) -> list[RuntimeLogFile]:
-    files = _iter_log_files(runtime_log_root())
+    limit = max(1, min(1000, int(limit)))
+    files = list(_iter_log_files(runtime_log_root()))
     if include_legacy:
+        canonical = runtime_log_root().resolve()
         for root in legacy_runtime_log_roots():
-            if root == runtime_log_root():
+            if root.resolve() == canonical:
                 continue
             files.extend(_iter_log_files(root, legacy=True))
-    return sorted(files, key=lambda item: item.modified_at, reverse=True)[: max(1, limit)]
+    return sorted(files, key=lambda item: item.modified_at, reverse=True)[:limit]
+
+
+def _archive_name_for(log_file: RuntimeLogFile, used: set[str]) -> str:
+    prefix = "legacy" if log_file.legacy else "runtime"
+    safe_parts = [_sanitize_zip_part(part) for part in Path(log_file.relative_path).parts]
+    archive_name = "/".join([prefix, log_file.source, *safe_parts])
+    original = archive_name
+    index = 2
+    while archive_name in used:
+        stem = Path(original).stem
+        suffix = Path(original).suffix
+        parent = str(Path(original).parent).replace("\\", "/")
+        archive_name = f"{parent}/{stem}-{index}{suffix}"
+        index += 1
+    used.add(archive_name)
+    return archive_name
 
 
 def build_diagnostics_bundle(
@@ -100,6 +138,10 @@ def build_diagnostics_bundle(
     max_bundle_bytes: int = MAX_BUNDLE_BYTES_DEFAULT,
     include_legacy: bool = True,
 ) -> DiagnosticsBundle:
+    max_files = max(1, int(max_files))
+    max_file_bytes = max(1, int(max_file_bytes))
+    max_bundle_bytes = max(1024, int(max_bundle_bytes))
+
     now = datetime.now(UTC).replace(microsecond=0)
     latest_logs = list_latest_runtime_logs(limit=max_files, include_legacy=include_legacy)
     manifest: dict[str, Any] = {
@@ -113,6 +155,7 @@ def build_diagnostics_bundle(
     }
     total_bytes = 0
     buffer = io.BytesIO()
+    used_names: set[str] = set()
 
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for log_file in latest_logs:
@@ -142,8 +185,7 @@ def build_diagnostics_bundle(
                 )
                 continue
 
-            prefix = "legacy" if log_file.legacy else "runtime"
-            archive_name = f"{prefix}/{log_file.source}/{Path(log_file.relative_path).name}"
+            archive_name = _archive_name_for(log_file, used_names)
             archive.writestr(archive_name, data)
             total_bytes += len(data)
             manifest["files"].append({**log_file.to_dict(), "archive_path": archive_name})

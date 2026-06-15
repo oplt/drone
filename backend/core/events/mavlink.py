@@ -23,6 +23,65 @@ TELEMETRY_MAVLINK_TYPES: list[str] = [
 ]
 
 
+def _float_or_none(value: Any) -> float | None:
+    try:
+        if value is None or isinstance(value, bool):
+            return None
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        if value is None or isinstance(value, bool):
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _bounded_percent(value: float | int | None) -> int | None:
+    if value is None:
+        return None
+    return max(0, min(100, int(round(float(value)))))
+
+
+def _compact(updates: Mapping[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in updates.items() if value is not None}
+
+
+def _valid_lat_lon(lat: float | None, lon: float | None) -> bool:
+    return (
+        lat is not None
+        and lon is not None
+        and -90.0 <= lat <= 90.0
+        and -180.0 <= lon <= 180.0
+        and not (abs(lat) < 1e-12 and abs(lon) < 1e-12)
+    )
+
+
+def _mavlink_position(msg_dict: Mapping[str, Any]) -> dict[str, float] | None:
+    lat_raw = _float_or_none(msg_dict.get("lat"))
+    lon_raw = _float_or_none(msg_dict.get("lon"))
+    if lat_raw is None or lon_raw is None:
+        return None
+    lat = lat_raw / 1e7
+    lon = lon_raw / 1e7
+    if not _valid_lat_lon(lat, lon):
+        return None
+
+    position = {"lat": lat, "lon": lon}
+    alt = _float_or_none(msg_dict.get("alt"))
+    rel_alt = _float_or_none(msg_dict.get("relative_alt"))
+    if alt is not None:
+        position["alt"] = alt / 1e3
+    if rel_alt is not None:
+        position["relative_alt"] = rel_alt / 1e3
+    return position
+
+
 def check_mavlink_connection(mav_conn: Any) -> bool:
     try:
         msg = mav_conn.recv_match(blocking=False, timeout=0.1)
@@ -36,90 +95,99 @@ def process_mavlink_message(
     *,
     current_snapshot: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    msg_type = msg_dict.get("mavpackettype", "")
+    msg_type = str(msg_dict.get("mavpackettype", "") or "")
     processed: dict[str, Any] = {}
     snapshot = current_snapshot or {}
 
-    def merge(section: str, updates: dict[str, Any]) -> None:
-        current = dict(snapshot.get(section, {}))
-        current.update(updates)
+    def merge(section: str, updates: Mapping[str, Any]) -> None:
+        current = dict(snapshot.get(section, {}) if isinstance(snapshot.get(section), Mapping) else {})
+        current.update(_compact(updates))
         processed[section] = current
 
     try:
         if msg_type == "GLOBAL_POSITION_INT":
-            lat = msg_dict.get("lat", 0)
-            lon = msg_dict.get("lon", 0)
-            if lat != 0 or lon != 0:
-                processed["position"] = {
-                    "lat": float(lat) / 1e7,
-                    "lon": float(lon) / 1e7,
-                    "alt": float(msg_dict.get("alt", 0)) / 1e3,
-                    "relative_alt": float(msg_dict.get("relative_alt", 0)) / 1e3,
-                }
+            position = _mavlink_position(msg_dict)
+            if position is not None:
+                processed["position"] = position
 
         elif msg_type == "GPS_RAW_INT":
-            lat = msg_dict.get("lat", 0)
-            lon = msg_dict.get("lon", 0)
-            if lat != 0 or lon != 0:
-                processed["position"] = {
-                    "lat": float(lat) / 1e7,
-                    "lon": float(lon) / 1e7,
-                    "alt": float(msg_dict.get("alt", 0)) / 1e3,
-                }
-            satellites = msg_dict.get("satellites_visible")
-            hdop_raw = msg_dict.get("eph")
-            hdop = None
-            if hdop_raw not in (None, 65535):
-                try:
-                    hdop = float(hdop_raw) / 100.0
-                except Exception:
-                    hdop = None
-            fix_type = msg_dict.get("fix_type")
+            position = _mavlink_position(msg_dict)
+            if position is not None:
+                processed["position"] = position
+
+            satellites = _int_or_none(msg_dict.get("satellites_visible"))
+            hdop_raw = _int_or_none(msg_dict.get("eph"))
+            hdop = None if hdop_raw in (None, 65535) else max(0.0, float(hdop_raw) / 100.0)
+            fix_type = _int_or_none(msg_dict.get("fix_type"))
             merge(
                 "gps",
                 {
-                    "fix_type": int(fix_type)
-                    if fix_type is not None
-                    else snapshot.get("gps", {}).get("fix_type"),
-                    "satellites": int(satellites)
-                    if satellites is not None
-                    else snapshot.get("gps", {}).get("satellites", 0),
+                    "fix_type": fix_type,
+                    "satellites": satellites,
                     "hdop": hdop,
                 },
             )
 
         elif msg_type == "VFR_HUD":
-            processed["status"] = {
-                "groundspeed": float(msg_dict.get("groundspeed", 0)),
-                "airspeed": float(msg_dict.get("airspeed", 0)),
-                "heading": float(msg_dict.get("heading", 0)),
-                "throttle": float(msg_dict.get("throttle", 0)),
-                "alt": float(msg_dict.get("alt", 0)),
-                "climb": float(msg_dict.get("climb", 0)),
-            }
+            heading = _float_or_none(msg_dict.get("heading"))
+            if heading is not None and heading < 0:
+                heading = heading % 360.0
+            processed["status"] = _compact(
+                {
+                    "groundspeed": _float_or_none(msg_dict.get("groundspeed")),
+                    "airspeed": _float_or_none(msg_dict.get("airspeed")),
+                    "heading": heading,
+                    "throttle": _float_or_none(msg_dict.get("throttle")),
+                    "alt": _float_or_none(msg_dict.get("alt")),
+                    "climb": _float_or_none(msg_dict.get("climb")),
+                }
+            )
 
         elif msg_type == "BATTERY_STATUS":
-            voltages = msg_dict.get("voltages", [0])
-            voltage = float(voltages[0]) / 1000 if voltages and voltages[0] > 0 else 0.0
+            voltages = msg_dict.get("voltages", [])
+            valid_millivolts: list[float] = []
+            if isinstance(voltages, (list, tuple)):
+                for value in voltages:
+                    mv = _float_or_none(value)
+                    if mv is not None and 0 < mv < 65535:
+                        valid_millivolts.append(mv)
+            voltage = sum(valid_millivolts) / 1000.0 if valid_millivolts else None
+
+            current_raw = _float_or_none(msg_dict.get("current_battery"))
+            current = None if current_raw is None or current_raw < 0 else current_raw / 100.0
+
+            remaining = _int_or_none(msg_dict.get("battery_remaining"))
+            if remaining is not None and remaining < 0:
+                remaining = None
+
+            temperature_raw = _float_or_none(msg_dict.get("temperature"))
+            temperature = (
+                None
+                if temperature_raw is None or int(temperature_raw) == 32767
+                else temperature_raw / 100.0
+            )
+
             merge(
                 "battery",
                 {
                     "voltage": voltage,
-                    "current": float(msg_dict.get("current_battery", 0)) / 100,
-                    "remaining": int(msg_dict.get("battery_remaining", -1)),
-                    "temperature": float(msg_dict.get("temperature", 0)),
+                    "current": current,
+                    "remaining": remaining,
+                    "temperature": temperature,
                 },
             )
 
         elif msg_type == "ATTITUDE":
-            processed["attitude"] = {
-                "roll": float(msg_dict.get("roll", 0)),
-                "pitch": float(msg_dict.get("pitch", 0)),
-                "yaw": float(msg_dict.get("yaw", 0)),
-                "rollspeed": float(msg_dict.get("rollspeed", 0)),
-                "pitchspeed": float(msg_dict.get("pitchspeed", 0)),
-                "yawspeed": float(msg_dict.get("yawspeed", 0)),
-            }
+            processed["attitude"] = _compact(
+                {
+                    "roll": _float_or_none(msg_dict.get("roll")),
+                    "pitch": _float_or_none(msg_dict.get("pitch")),
+                    "yaw": _float_or_none(msg_dict.get("yaw")),
+                    "rollspeed": _float_or_none(msg_dict.get("rollspeed")),
+                    "pitchspeed": _float_or_none(msg_dict.get("pitchspeed")),
+                    "yawspeed": _float_or_none(msg_dict.get("yawspeed")),
+                }
+            )
 
         elif msg_type == "HEARTBEAT":
             mode_mapping = {
@@ -145,10 +213,12 @@ def process_mavlink_message(
                 20: "GUIDED_NOGPS",
                 21: "SMART_RTL",
             }
-            custom_mode = msg_dict.get("custom_mode", 0)
+            custom_mode = _int_or_none(msg_dict.get("custom_mode")) or 0
             processed["mode"] = mode_mapping.get(custom_mode, "UNKNOWN")
-            processed["armed"] = bool(msg_dict.get("base_mode", 0) & 0x80)
-            system_status = msg_dict.get("system_status")
+            base_mode = _int_or_none(msg_dict.get("base_mode")) or 0
+            processed["armed"] = bool(base_mode & 0x80)
+
+            system_status = _int_or_none(msg_dict.get("system_status"))
             status_map = {
                 0: "UNINIT",
                 1: "BOOT",
@@ -161,63 +231,53 @@ def process_mavlink_message(
                 8: "FLIGHT_TERMINATION",
             }
             if system_status is not None:
-                status_label = status_map.get(int(system_status), "UNKNOWN")
+                status_label = status_map.get(system_status, "UNKNOWN")
                 merge("system", {"status": status_label})
                 if status_label in {"CRITICAL", "EMERGENCY", "FLIGHT_TERMINATION"}:
                     merge("failsafe", {"state": status_label})
             merge("heartbeat", {"last_received": datetime.now(UTC).isoformat()})
 
         elif msg_type == "SYS_STATUS":
-            drop_rate = msg_dict.get("drop_rate_comm")
+            drop_rate = _float_or_none(msg_dict.get("drop_rate_comm"))
+            telemetry_quality = None
             if drop_rate is not None:
-                try:
-                    telemetry_quality = max(0, 100 - int(drop_rate))
-                except Exception:
-                    telemetry_quality = None
-                merge("link", {"telemetry": telemetry_quality})
+                # MAVLink drop_rate_comm is centi-percent.
+                telemetry_quality = _bounded_percent(100.0 - (drop_rate / 100.0))
+            merge("link", {"telemetry": telemetry_quality})
 
-            battery_remaining = msg_dict.get("battery_remaining")
-            if battery_remaining is not None:
-                merge("battery", {"remaining": int(battery_remaining)})
+            battery_remaining = _int_or_none(msg_dict.get("battery_remaining"))
+            if battery_remaining is not None and battery_remaining >= 0:
+                merge("battery", {"remaining": battery_remaining})
 
         elif msg_type == "RADIO_STATUS":
-            rssi = msg_dict.get("rssi")
-            remrssi = msg_dict.get("remrssi")
-            rc_quality = None
-            telem_quality = None
-            if rssi is not None:
-                rc_quality = min(100, round((int(rssi) / 255) * 100))
-            if remrssi is not None:
-                telem_quality = min(100, round((int(remrssi) / 255) * 100))
+            rssi = _int_or_none(msg_dict.get("rssi"))
+            remrssi = _int_or_none(msg_dict.get("remrssi"))
+            rc_quality = _bounded_percent((rssi / 255.0) * 100.0) if rssi is not None else None
+            telem_quality = (
+                _bounded_percent((remrssi / 255.0) * 100.0) if remrssi is not None else None
+            )
             merge("link", {"rc": rc_quality, "telemetry": telem_quality})
 
         elif msg_type == "RC_CHANNELS":
-            rssi = msg_dict.get("rssi")
+            rssi = _int_or_none(msg_dict.get("rssi"))
             if rssi is not None:
-                rc_quality = min(100, round((int(rssi) / 255) * 100))
-                merge("link", {"rc": rc_quality})
+                merge("link", {"rc": _bounded_percent((rssi / 255.0) * 100.0)})
 
         elif msg_type == "WIND":
-            speed = msg_dict.get("speed")
-            direction = msg_dict.get("direction")
+            speed = _float_or_none(msg_dict.get("speed"))
+            direction = _float_or_none(msg_dict.get("direction"))
             if speed is not None or direction is not None:
-                merge(
-                    "wind",
-                    {
-                        "speed": float(speed) if speed is not None else 0,
-                        "direction": float(direction) if direction is not None else 0,
-                    },
-                )
+                merge("wind", {"speed": speed, "direction": direction})
 
         elif msg_type == "STATUSTEXT":
-            text = str(msg_dict.get("text", "")).strip()
+            text = str(msg_dict.get("text", "") or "").strip()
             if text:
                 lowered = text.lower()
                 if "failsafe" in lowered or "emergency" in lowered:
                     merge("failsafe", {"state": text[:64]})
 
         elif msg_type == "EKF_STATUS_REPORT":
-            flags = msg_dict.get("flags", 0)
+            flags = _int_or_none(msg_dict.get("flags")) or 0
             velocity_ok = bool(flags & 0x01)
             pos_horiz_ok = bool(flags & 0x02)
             pos_vert_ok = bool(flags & 0x04)
@@ -225,37 +285,38 @@ def process_mavlink_message(
             merge(
                 "ekf",
                 {
-                    "flags": int(flags),
+                    "flags": flags,
                     "velocity_ok": velocity_ok,
                     "pos_horiz_ok": pos_horiz_ok,
                     "pos_vert_ok": pos_vert_ok,
                     "compass_ok": compass_ok,
                     "ok": velocity_ok and pos_horiz_ok and pos_vert_ok,
-                    "velocity_variance": float(msg_dict.get("velocity_variance", 0)),
-                    "pos_horiz_variance": float(msg_dict.get("pos_horiz_variance", 0)),
-                    "pos_vert_variance": float(msg_dict.get("pos_vert_variance", 0)),
-                    "compass_variance": float(msg_dict.get("compass_variance", 0)),
+                    "velocity_variance": _float_or_none(msg_dict.get("velocity_variance")),
+                    "pos_horiz_variance": _float_or_none(msg_dict.get("pos_horiz_variance")),
+                    "pos_vert_variance": _float_or_none(msg_dict.get("pos_vert_variance")),
+                    "compass_variance": _float_or_none(msg_dict.get("compass_variance")),
                 },
             )
 
         elif msg_type in ("RAW_IMU", "SCALED_IMU2"):
-            xmag = msg_dict.get("xmag", 0)
-            ymag = msg_dict.get("ymag", 0)
-            zmag = msg_dict.get("zmag", 0)
-            mag_field = math.sqrt(float(xmag) ** 2 + float(ymag) ** 2 + float(zmag) ** 2)
+            xmag = _float_or_none(msg_dict.get("xmag")) or 0.0
+            ymag = _float_or_none(msg_dict.get("ymag")) or 0.0
+            zmag = _float_or_none(msg_dict.get("zmag")) or 0.0
+            mag_field = math.sqrt(xmag * xmag + ymag * ymag + zmag * zmag)
             healthy = 100 < mag_field < 800
             merge(
                 "compass",
                 {
-                    "x": float(xmag),
-                    "y": float(ymag),
-                    "z": float(zmag),
+                    "x": xmag,
+                    "y": ymag,
+                    "z": zmag,
                     "mag_field": round(mag_field, 1),
                     "healthy": healthy,
                 },
             )
 
     except Exception:
+        # Preserve backward-compatible "best effort" behavior.
         return processed
 
     return processed
@@ -268,24 +329,26 @@ def raw_event_from_mavlink_message(
     timestamp_s: float,
 ) -> dict[str, Any]:
     payload = dict(msg_dict)
-    payload["timestamp"] = timestamp_s
+    timestamp = _float_or_none(timestamp_s)
+    if timestamp is None or timestamp < 0:
+        timestamp = datetime.now(UTC).timestamp()
+    payload["timestamp"] = timestamp
 
     time_unix_usec_raw = payload.get("time_unix_usec")
     time_unix_usec = None
     if time_unix_usec_raw:
-        try:
-            time_unix_usec = datetime.fromtimestamp(
-                float(time_unix_usec_raw) / 1_000_000,
-                tz=UTC,
-            )
-        except Exception:
-            time_unix_usec = None
+        parsed = _float_or_none(time_unix_usec_raw)
+        if parsed is not None and parsed > 0:
+            try:
+                time_unix_usec = datetime.fromtimestamp(parsed / 1_000_000, tz=UTC)
+            except (OverflowError, OSError, ValueError):
+                time_unix_usec = None
 
     return {
         "flight_id": flight_id,
         "msg_type": payload.get("mavpackettype"),
         "time_boot_ms": payload.get("time_boot_ms"),
         "time_unix_usec": time_unix_usec,
-        "timestamp": datetime.fromtimestamp(timestamp_s, tz=UTC),
+        "timestamp": datetime.fromtimestamp(timestamp, tz=UTC),
         "payload": payload,
     }

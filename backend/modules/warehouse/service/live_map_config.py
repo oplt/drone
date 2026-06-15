@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.core.config.runtime import settings
+from backend.core.config.runtime import env_truthy, settings
 from backend.modules.warehouse.service.map_source_config import LiveMapSourceId
 
 SOURCE_RENDER_PRIORITY: dict[LiveMapSourceId, int] = {
@@ -18,10 +18,32 @@ SOURCE_RENDER_PRIORITY: dict[LiveMapSourceId, int] = {
 PREFERRED_LAYER_CHOICES = frozenset({"rgbd_colored", "nvblox_color", "mid360_raw"})
 
 
+def _setting_bool(name: str, default: bool = False) -> bool:
+    raw = getattr(settings, name, default)
+    if isinstance(raw, str):
+        return env_truthy(raw)
+    return bool(raw)
+
+
+def _setting_float(name: str, default: float, *, minimum: float) -> float:
+    try:
+        return max(minimum, float(getattr(settings, name, default)))
+    except (TypeError, ValueError):
+        return max(minimum, default)
+
+
+def _setting_int(name: str, default: int, *, minimum: int) -> int:
+    try:
+        return max(minimum, int(getattr(settings, name, default)))
+    except (TypeError, ValueError):
+        return max(minimum, default)
+
+
 def raw_lidar_enabled() -> bool:
-    if bool(getattr(settings, "warehouse_live_map_raw_lidar_enabled", False)):
-        return True
-    return bool(getattr(settings, "warehouse_include_raw_lidar_preview", False))
+    return _setting_bool("warehouse_live_map_raw_lidar_enabled", False) or _setting_bool(
+        "warehouse_include_raw_lidar_preview",
+        False,
+    )
 
 
 def include_raw_lidar_preview() -> bool:
@@ -29,7 +51,7 @@ def include_raw_lidar_preview() -> bool:
 
 
 def persist_raw_lidar_layer() -> bool:
-    return bool(getattr(settings, "warehouse_persist_raw_lidar_layer", False))
+    return _setting_bool("warehouse_persist_raw_lidar_layer", False)
 
 
 def should_persist_raw_lidar_chunks() -> bool:
@@ -38,11 +60,11 @@ def should_persist_raw_lidar_chunks() -> bool:
 
 
 def raw_lidar_max_hz() -> float:
-    return max(0.1, float(getattr(settings, "warehouse_live_map_raw_lidar_max_hz", 0.5)))
+    return _setting_float("warehouse_live_map_raw_lidar_max_hz", 0.5, minimum=0.1)
 
 
 def raw_lidar_voxel_size_m() -> float:
-    return max(0.01, float(getattr(settings, "warehouse_live_map_raw_lidar_voxel_size", 0.15)))
+    return _setting_float("warehouse_live_map_raw_lidar_voxel_size", 0.15, minimum=0.01)
 
 
 def raw_lidar_min_publish_interval_s() -> float:
@@ -50,7 +72,7 @@ def raw_lidar_min_publish_interval_s() -> float:
 
 
 def raw_lidar_max_points() -> int:
-    return max(1000, int(getattr(settings, "warehouse_live_map_raw_lidar_max_points", 8000)))
+    return _setting_int("warehouse_live_map_raw_lidar_max_points", 8000, minimum=1000)
 
 
 def preferred_map_layer() -> str:
@@ -65,28 +87,27 @@ def preferred_map_layer() -> str:
 
 
 def require_rgb_for_save() -> bool:
-    return bool(getattr(settings, "warehouse_require_rgb_for_save", True))
+    return _setting_bool("warehouse_require_rgb_for_save", True)
 
 
 def frontend_max_concurrent_chunk_downloads() -> int:
-    return max(
-        1,
-        int(getattr(settings, "warehouse_live_map_frontend_max_concurrent_chunk_downloads", 4)),
+    return _setting_int(
+        "warehouse_live_map_frontend_max_concurrent_chunk_downloads",
+        4,
+        minimum=1,
     )
 
 
 def frontend_max_points_per_layer() -> int:
-    return max(
-        10_000,
-        int(getattr(settings, "warehouse_live_map_frontend_max_points_per_layer", 800_000)),
+    return _setting_int(
+        "warehouse_live_map_frontend_max_points_per_layer",
+        800_000,
+        minimum=10_000,
     )
 
 
 def render_priority_for_source(source_id: str) -> int:
-    try:
-        return SOURCE_RENDER_PRIORITY[source_id]  # type: ignore[index]
-    except KeyError:
-        return 50
+    return SOURCE_RENDER_PRIORITY.get(source_id, 50)  # type: ignore[arg-type]
 
 
 def live_map_public_config() -> dict[str, Any]:

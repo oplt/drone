@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -119,7 +120,7 @@ class WarehouseApplication:
         if not isinstance(warehouse, dict):
             return {}
         defaults = warehouse.get(_DEFAULTS_KEY)
-        return defaults if isinstance(defaults, dict) else {}
+        return deepcopy(defaults) if isinstance(defaults, dict) else {}
 
     async def save_mission_defaults(
         self, db: AsyncSession, *, defaults: WarehouseMissionDefaults
@@ -138,7 +139,7 @@ class WarehouseApplication:
         if not isinstance(warehouse, dict):
             return {}
         profile = warehouse.get(_EXPLORATION_PROFILE_KEY)
-        return profile if isinstance(profile, dict) else {}
+        return deepcopy(profile) if isinstance(profile, dict) else {}
 
     async def save_exploration_profile(
         self, db: AsyncSession, *, profile: dict[str, Any]
@@ -206,16 +207,20 @@ class WarehouseApplication:
             raise
 
     async def delete_map(self, db: AsyncSession, *, map_id: int, user: User) -> bool:
-        deleted = await self.maps.delete_warehouse_map(
-            db,
-            warehouse_map_id=map_id,
-            owner_id=int(user.id),
-            org_id=user.org_id,
-            allow_org_access=can_access_org_scope(user),
-        )
-        if deleted:
-            await db.commit()
-        return deleted
+        try:
+            deleted = await self.maps.delete_warehouse_map(
+                db,
+                warehouse_map_id=map_id,
+                owner_id=int(user.id),
+                org_id=user.org_id,
+                allow_org_access=can_access_org_scope(user),
+            )
+            if deleted:
+                await db.commit()
+            return deleted
+        except Exception:
+            await db.rollback()
+            raise
 
     async def create_dock(
         self, db: AsyncSession, *, map_id: int, payload: Any
@@ -246,12 +251,16 @@ class WarehouseApplication:
             raise
 
     async def delete_dock(self, db: AsyncSession, *, map_id: int, dock_id: int) -> bool:
-        deactivated = await self.maps.deactivate_dock_station(
-            db, dock_id=dock_id, warehouse_map_id=map_id
-        )
-        if deactivated:
-            await db.commit()
-        return deactivated
+        try:
+            deactivated = await self.maps.deactivate_dock_station(
+                db, dock_id=dock_id, warehouse_map_id=map_id
+            )
+            if deactivated:
+                await db.commit()
+            return deactivated
+        except Exception:
+            await db.rollback()
+            raise
 
     async def update_dock(
         self, db: AsyncSession, *, map_id: int, dock_id: int, payload: Any
@@ -286,15 +295,19 @@ class WarehouseApplication:
             meta_data = dict(current.meta_data or {}) if current is not None else {}
             meta_data.update(meta_values)
             values["meta_data"] = meta_data
-        updated = await self.maps.update_dock_station(
-            db,
-            dock_id=dock_id,
-            warehouse_map_id=map_id,
-            values=values,
-        )
-        if updated is not None:
-            await db.commit()
-        return updated
+        try:
+            updated = await self.maps.update_dock_station(
+                db,
+                dock_id=dock_id,
+                warehouse_map_id=map_id,
+                values=values,
+            )
+            if updated is not None:
+                await db.commit()
+            return updated
+        except Exception:
+            await db.rollback()
+            raise
 
     async def create_sensor_rig(
         self,
@@ -350,8 +363,12 @@ class WarehouseApplication:
     async def delete_sensor_rig(
         self, db: AsyncSession, *, rig: WarehouseSensorRig
     ) -> None:
-        await self.maps.delete_sensor_rig(db, rig=rig)
-        await db.commit()
+        try:
+            await self.maps.delete_sensor_rig(db, rig=rig)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
 
 warehouse_application = WarehouseApplication()

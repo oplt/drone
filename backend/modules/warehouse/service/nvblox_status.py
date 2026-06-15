@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -12,10 +13,11 @@ NvbloxStatus = Literal["off", "warming", "live", "degraded", "error"]
 _LIVE_TOPICS = (
     "/nvblox_node/static_esdf_pointcloud",
     "/nvblox_node/mesh",
+    "/nvblox_node/color_layer",
 )
-
 _STALE_AFTER_S = 3.0
 _TF_DEGRADED_THRESHOLD = 3
+_MAX_TRACKED_MESSAGES = 256
 
 
 @dataclass
@@ -30,125 +32,146 @@ class NvbloxStatusTracker:
     tf_lookup_failed_count: int = 0
     tf_authority_issues: int = 0
     last_tf_issue_at: float | None = None
+    _lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False, compare=False)
+
+    def _prune_messages_locked(self) -> None:
+        if len(self.last_message_at) <= _MAX_TRACKED_MESSAGES:
+            return
+        keep = sorted(self.last_message_at.items(), key=lambda item: item[1], reverse=True)[:_MAX_TRACKED_MESSAGES]
+        self.last_message_at = dict(keep)
 
     def note_topic_list(self, topics: set[str] | list[str]) -> None:
         normalized = {str(topic) for topic in topics}
-        self.topics_present = {
-            topic for topic in normalized if topic.startswith("/nvblox_node/")
-        }
+        with self._lock:
+            self.topics_present = {topic for topic in normalized if topic.startswith("/nvblox_node/")}
 
     def note_message(self, topic: str) -> None:
-        self.last_message_at[str(topic)] = time.monotonic()
+        with self._lock:
+            self.last_message_at[str(topic)] = time.monotonic()
+            self.last_error = None if self.process_running else self.last_error
+            self._prune_messages_locked()
 
     def note_process_running(self, running: bool) -> None:
-        self.process_running = running
-        if not running:
-            self.last_error = self.last_error or "nvblox process not running"
+        with self._lock:
+            self.process_running = bool(running)
+            if running:
+                self.last_error = None
+            elif not self.last_error:
+                self.last_error = "nvblox process not running"
 
     def note_error(self, message: str) -> None:
-        self.last_error = message
+        with self._lock:
+            self.last_error = str(message)[:500]
 
     def note_tf_depth_failure(self, failed: bool) -> None:
-        self.tf_depth_failure = failed
-        if failed:
-            self.last_tf_issue_at = time.monotonic()
+        with self._lock:
+            self.tf_depth_failure = bool(failed)
+            if failed:
+                self.last_tf_issue_at = time.monotonic()
 
     def note_tf_old_data(self) -> None:
-        self.tf_old_data_count += 1
-        self.tf_depth_failure = True
-        self.last_tf_issue_at = time.monotonic()
+        with self._lock:
+            self.tf_old_data_count += 1
+            self.tf_depth_failure = True
+            self.last_tf_issue_at = time.monotonic()
 
     def note_tf_jump_back(self) -> None:
-        self.tf_jump_back_count += 1
-        self.tf_depth_failure = True
-        self.last_tf_issue_at = time.monotonic()
+        with self._lock:
+            self.tf_jump_back_count += 1
+            self.tf_depth_failure = True
+            self.last_tf_issue_at = time.monotonic()
 
     def note_tf_lookup_failed(self) -> None:
-        self.tf_lookup_failed_count += 1
-        self.tf_depth_failure = True
-        self.last_tf_issue_at = time.monotonic()
+        with self._lock:
+            self.tf_lookup_failed_count += 1
+            self.tf_depth_failure = True
+            self.last_tf_issue_at = time.monotonic()
 
     def note_tf_authority_issue(self) -> None:
-        self.tf_authority_issues += 1
-        self.tf_depth_failure = True
-        self.last_tf_issue_at = time.monotonic()
+        with self._lock:
+            self.tf_authority_issues += 1
+            self.tf_depth_failure = True
+            self.last_tf_issue_at = time.monotonic()
 
     def reset_tf_counters(self) -> None:
-        self.tf_old_data_count = 0
-        self.tf_jump_back_count = 0
-        self.tf_lookup_failed_count = 0
-        self.tf_authority_issues = 0
-        self.tf_depth_failure = False
-        self.last_tf_issue_at = None
+        with self._lock:
+            self.tf_old_data_count = 0
+            self.tf_jump_back_count = 0
+            self.tf_lookup_failed_count = 0
+            self.tf_authority_issues = 0
+            self.tf_depth_failure = False
+            self.last_tf_issue_at = None
 
-    def tf_degraded(self) -> bool:
+    def _tf_degraded_locked(self) -> bool:
         return (
             self.tf_depth_failure
             or self.tf_jump_back_count >= _TF_DEGRADED_THRESHOLD
             or self.tf_old_data_count >= _TF_DEGRADED_THRESHOLD * 5
         )
 
+    def tf_degraded(self) -> bool:
+        with self._lock:
+            return self._tf_degraded_locked()
+
     def status(self) -> NvbloxStatus:
-        if self.tf_degraded() and self.process_running:
+        with self._lock:
+            tf_degraded = self._tf_degraded_locked()
+            process_running = self.process_running
+            last_error = self.last_error
+            topics_present = set(self.topics_present)
+            last_message_at = dict(self.last_message_at)
+            tf_depth_failure = self.tf_depth_failure
+
+        if tf_degraded and process_running:
             return "degraded"
-        if self.last_error and not self.process_running:
+        if last_error and not process_running:
             return "error"
-        if self.tf_depth_failure and not self.process_running:
+        if tf_depth_failure and not process_running:
             return "error"
 
-        nvblox_topics = self.topics_present or {
-            topic for topic in self.last_message_at if topic.startswith("/nvblox_node/")
-        }
-        if not nvblox_topics and not self.process_running:
+        nvblox_topics = topics_present or {topic for topic in last_message_at if topic.startswith("/nvblox_node/")}
+        if not nvblox_topics and not process_running:
             return "off"
 
         now = time.monotonic()
-        live_hits = [
-            topic
-            for topic in _LIVE_TOPICS
-            if topic in self.last_message_at
-            and (now - self.last_message_at[topic]) <= _STALE_AFTER_S
-        ]
-        if live_hits and not self.tf_degraded():
+        live_hits = [topic for topic in _LIVE_TOPICS if topic in last_message_at and (now - last_message_at[topic]) <= _STALE_AFTER_S]
+        if live_hits and not tf_degraded:
             return "live"
-
-        any_recent = any(
-            (now - ts) <= _STALE_AFTER_S for ts in self.last_message_at.values()
-        )
-        if any_recent:
+        if any((now - ts) <= _STALE_AFTER_S for ts in last_message_at.values()):
             return "degraded"
-
-        if nvblox_topics or self.process_running:
+        if nvblox_topics or process_running:
             return "warming"
-
-        if self.last_error:
+        if last_error:
             return "error"
-
         return "off"
 
     def as_dict(self) -> dict[str, object]:
-        return {
-            "status": self.status(),
-            "process_running": self.process_running,
-            "topics_present": sorted(self.topics_present),
-            "last_message_at": {
-                topic: datetime.fromtimestamp(ts, UTC).isoformat()
-                for topic, ts in self.last_message_at.items()
-            },
-            "last_error": self.last_error,
-            "tf_depth_failure": self.tf_depth_failure,
-            "tf_degraded": self.tf_degraded(),
-            "tf_old_data_count": self.tf_old_data_count,
-            "tf_jump_back_count": self.tf_jump_back_count,
-            "tf_lookup_failed_count": self.tf_lookup_failed_count,
-            "tf_authority_issues": self.tf_authority_issues,
-            "last_tf_issue_at": (
-                datetime.fromtimestamp(self.last_tf_issue_at, UTC).isoformat()
-                if self.last_tf_issue_at is not None
-                else None
-            ),
-            "monitored_topics": list(NVBLOX_OUTPUT_TOPICS),
-        }
+        with self._lock:
+            last_message_at = dict(self.last_message_at)
+            last_tf_issue_at = self.last_tf_issue_at
+            payload = {
+                "status": self.status(),
+                "process_running": self.process_running,
+                "topics_present": sorted(self.topics_present),
+                "last_message_at": {
+                    topic: datetime.fromtimestamp(ts, UTC).isoformat()
+                    for topic, ts in last_message_at.items()
+                },
+                "last_error": self.last_error,
+                "tf_depth_failure": self.tf_depth_failure,
+                "tf_degraded": self._tf_degraded_locked(),
+                "tf_old_data_count": self.tf_old_data_count,
+                "tf_jump_back_count": self.tf_jump_back_count,
+                "tf_lookup_failed_count": self.tf_lookup_failed_count,
+                "tf_authority_issues": self.tf_authority_issues,
+                "last_tf_issue_at": (
+                    datetime.fromtimestamp(last_tf_issue_at, UTC).isoformat()
+                    if last_tf_issue_at is not None
+                    else None
+                ),
+                "monitored_topics": list(NVBLOX_OUTPUT_TOPICS),
+            }
+        return payload
 
 
 nvblox_status_tracker = NvbloxStatusTracker()

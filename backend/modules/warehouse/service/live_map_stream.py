@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import deque
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -10,6 +11,8 @@ from pydantic import BaseModel, Field
 
 from backend.observability.instruments import observed_span
 from backend.observability.metrics import add as metric_add
+
+logger = logging.getLogger(__name__)
 
 
 class WarehouseLivePose(BaseModel):
@@ -112,12 +115,31 @@ class WarehouseLiveMapSnapshot(BaseModel):
 
 
 class WarehouseLiveMapStream:
-    def __init__(self, *, max_updates_per_flight: int = 1000) -> None:
+    def __init__(
+        self,
+        *,
+        max_updates_per_flight: int = 1000,
+        max_flights: int = 64,
+        send_timeout_s: float = 1.0,
+        max_concurrent_sends: int = 64,
+    ) -> None:
         self._updates: dict[str, deque[WarehouseLiveMapUpdate]] = {}
         self._clients: dict[str, set[WebSocket]] = {}
         self._finalized_jobs: dict[str, int] = {}
-        self._max_updates_per_flight = max_updates_per_flight
+        self._max_updates_per_flight = max(1, int(max_updates_per_flight))
+        self._max_flights = max(1, int(max_flights))
+        self._send_timeout_s = max(0.1, float(send_timeout_s))
+        self._send_semaphore = asyncio.Semaphore(max(1, int(max_concurrent_sends)))
         self._lock = asyncio.Lock()
+
+    async def _trim_flight_cache_locked(self) -> None:
+        if len(self._updates) <= self._max_flights:
+            return
+        # Drop oldest non-client, non-finalized flight buffers first.
+        protected = set(self._clients) | set(self._finalized_jobs)
+        removable = [flight_id for flight_id in self._updates if flight_id not in protected]
+        for flight_id in removable[: max(0, len(self._updates) - self._max_flights)]:
+            self._updates.pop(flight_id, None)
 
     async def _send_update(
         self,
@@ -125,17 +147,23 @@ class WarehouseLiveMapStream:
         payload: dict[str, Any],
     ) -> WebSocket | None:
         try:
-            with observed_span(
-                "api.websocket.publish",
-                flight_id=payload.get("flight_id"),
-                **{"websocket.message_type": str(payload.get("type") or "live_map_update")},
-            ):
-                await asyncio.wait_for(client.send_json(payload), timeout=1.0)
+            async with self._send_semaphore:
+                with observed_span(
+                    "api.websocket.publish",
+                    flight_id=payload.get("flight_id"),
+                    **{"websocket.message_type": str(payload.get("type") or "live_map_update")},
+                ):
+                    await asyncio.wait_for(
+                        client.send_json(payload),
+                        timeout=self._send_timeout_s,
+                    )
             metric_add(
                 "api_websocket_messages",
                 attrs={"channel": "warehouse_live_map", "message_type": str(payload.get("type"))},
             )
             return None
+        except asyncio.CancelledError:
+            raise
         except Exception:
             metric_add("api_websocket_disconnects", attrs={"channel": "warehouse_live_map"})
             return client
@@ -149,28 +177,33 @@ class WarehouseLiveMapStream:
             flight_updates.append(update)
             if update.finalized_scan_job_id is not None:
                 self._finalized_jobs[update.flight_id] = int(update.finalized_scan_job_id)
-            clients = list(self._clients.get(update.flight_id, set()))
+            await self._trim_flight_cache_locked()
+            clients = tuple(self._clients.get(update.flight_id, set()))
+
+        if not clients:
+            return update
 
         payload = update.model_dump(mode="json")
-        stale_clients = [
-            stale
-            for stale in await asyncio.gather(
-                *(self._send_update(client, payload) for client in clients)
-            )
-            if stale is not None
-        ]
+        results = await asyncio.gather(
+            *(self._send_update(client, payload) for client in clients),
+            return_exceptions=True,
+        )
+        stale_clients = [item for item in results if item is not None and not isinstance(item, Exception)]
         if stale_clients:
             async with self._lock:
                 active = self._clients.get(update.flight_id)
                 if active is not None:
-                    active.difference_update(stale_clients)
+                    active.difference_update(stale_clients)  # type: ignore[arg-type]
+                    if not active:
+                        self._clients.pop(update.flight_id, None)
         return update
 
-    async def snapshot(self, flight_id: str) -> WarehouseLiveMapSnapshot:
+    async def snapshot(self, flight_id: str, *, max_updates: int | None = None) -> WarehouseLiveMapSnapshot:
         async with self._lock:
-            updates = list(self._updates.get(flight_id, ()))
+            all_updates = list(self._updates.get(flight_id, ()))
             finalized_job_id = self._finalized_jobs.get(flight_id)
-        last_update = updates[-1].timestamp if updates else None
+        updates = all_updates[-max_updates:] if max_updates and max_updates > 0 else all_updates
+        last_update = all_updates[-1].timestamp if all_updates else None
         status: Literal["empty", "live", "stale", "finalized"] = "empty"
         if finalized_job_id is not None:
             status = "finalized"
@@ -188,17 +221,24 @@ class WarehouseLiveMapStream:
         await websocket.accept()
         async with self._lock:
             self._clients.setdefault(flight_id, set()).add(websocket)
-        snapshot = await self.snapshot(flight_id)
-        with observed_span(
-            "api.websocket.publish",
-            flight_id=flight_id,
-            **{"websocket.message_type": "live_map_snapshot"},
-        ):
-            await websocket.send_json(snapshot.model_dump(mode="json"))
-        metric_add(
-            "api_websocket_messages",
-            attrs={"channel": "warehouse_live_map", "message_type": "live_map_snapshot"},
-        )
+        try:
+            snapshot = await self.snapshot(flight_id)
+            with observed_span(
+                "api.websocket.publish",
+                flight_id=flight_id,
+                **{"websocket.message_type": "live_map_snapshot"},
+            ):
+                await asyncio.wait_for(
+                    websocket.send_json(snapshot.model_dump(mode="json")),
+                    timeout=self._send_timeout_s,
+                )
+            metric_add(
+                "api_websocket_messages",
+                attrs={"channel": "warehouse_live_map", "message_type": "live_map_snapshot"},
+            )
+        except Exception:
+            await self.disconnect(flight_id, websocket)
+            raise
 
     async def disconnect(self, flight_id: str, websocket: WebSocket) -> None:
         async with self._lock:
@@ -215,27 +255,35 @@ class WarehouseLiveMapStream:
             return
         async with self._lock:
             self._finalized_jobs[flight_id] = int(job_id)
+            clients = tuple(self._clients.get(flight_id, set()))
         snapshot = await self.snapshot(flight_id)
-        for client in list(self._clients.get(flight_id, set())):
-            try:
-                await client.send_json(
-                    {
-                        "type": "live_map_finalized",
-                        "flight_id": flight_id,
-                        "finalized_scan_job_id": int(job_id),
-                        "last_update_at": snapshot.last_update_at.isoformat()
-                        if snapshot.last_update_at
-                        else None,
-                    }
-                )
-            except Exception:
-                await self.disconnect(flight_id, client)
+        payload = {
+            "type": "live_map_finalized",
+            "flight_id": flight_id,
+            "finalized_scan_job_id": int(job_id),
+            "last_update_at": snapshot.last_update_at.isoformat() if snapshot.last_update_at else None,
+        }
+        results = await asyncio.gather(
+            *(self._send_update(client, payload) for client in clients),
+            return_exceptions=True,
+        )
+        stale_clients = [item for item in results if item is not None and not isinstance(item, Exception)]
+        if stale_clients:
+            async with self._lock:
+                active = self._clients.get(flight_id)
+                if active is not None:
+                    active.difference_update(stale_clients)  # type: ignore[arg-type]
+                    if not active:
+                        self._clients.pop(flight_id, None)
 
-    async def clear(self) -> None:
+    async def clear(self, *, close_clients: bool = False) -> None:
         async with self._lock:
+            clients = [client for values in self._clients.values() for client in values]
             self._updates.clear()
             self._clients.clear()
             self._finalized_jobs.clear()
+        if close_clients:
+            await asyncio.gather(*(client.close() for client in clients), return_exceptions=True)
 
 
 warehouse_live_map_stream = WarehouseLiveMapStream()

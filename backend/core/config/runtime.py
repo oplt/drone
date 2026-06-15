@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -11,12 +13,23 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 _TRUTHY_TOKENS = {"1", "true", "yes", "on"}
+_FALSEY_TOKENS = {"0", "false", "no", "off", ""}
 
 
 def env_truthy(value: str | bool | int | None) -> bool:
     if isinstance(value, bool):
         return value
+    if isinstance(value, int):
+        return value != 0
     return str(value or "").strip().lower() in _TRUTHY_TOKENS
+
+
+def env_falsey(value: str | bool | int | None) -> bool:
+    if isinstance(value, bool):
+        return not value
+    if isinstance(value, int):
+        return value == 0
+    return str(value or "").strip().lower() in _FALSEY_TOKENS
 
 
 class DailyDateFileHandler(logging.Handler):
@@ -104,7 +117,7 @@ class RepeatedAutopilotLogFilter(logging.Filter):
         if record.name != "autopilot":
             return True
         message = record.getMessage()
-        now = datetime.now().timestamp()
+        now = time.monotonic()
         with self._lock:
             last_at = self._last_by_message.get(message)
             if last_at is not None and now - last_at <= self.window_s:
@@ -118,8 +131,39 @@ class RepeatedAutopilotLogFilter(logging.Filter):
         return True
 
 
+class DefaultLogRecordFieldsFilter(logging.Filter):
+    """Ensure structured log formatters can always render trace/service fields."""
+
+    _DEFAULTS = {
+        "service_name": os.getenv("OTEL_SERVICE_NAME") or os.getenv("OTEL_SERVICE_NAME_OVERRIDE") or "drone-api",
+        "environment": os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "local",
+        "otel_trace_id": "",
+        "otel_span_id": "",
+    }
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        for key, value in self._DEFAULTS.items():
+            if not hasattr(record, key):
+                setattr(record, key, value)
+        return True
+
+
+def _normalize_log_level(log_level: str | int) -> int:
+    if isinstance(log_level, int):
+        return log_level
+    value = str(log_level or "INFO").strip()
+    if value.isdigit():
+        return int(value)
+    return int(getattr(logging, value.upper(), logging.INFO))
+
+
+def _ensure_filter(handler: logging.Handler, filter_type: type[logging.Filter]) -> None:
+    if not any(isinstance(item, filter_type) for item in handler.filters):
+        handler.addFilter(filter_type())
+
+
 def _make_formatter(log_format: str) -> logging.Formatter:
-    if log_format == "json":
+    if str(log_format or "text").strip().lower() == "json":
         try:
             from pythonjsonlogger import jsonlogger
 
@@ -146,7 +190,7 @@ def setup_logging(
     """Centralized logging configuration with environment variable support"""
     from backend.core.logging.paths import runtime_log_dir
 
-    level = log_level if isinstance(log_level, int) else getattr(logging, log_level, logging.INFO)
+    level = _normalize_log_level(log_level)
     log_dir = (log_file.parent if log_file else runtime_log_dir("backend")).resolve()
 
     root_logger = logging.getLogger()
@@ -162,23 +206,27 @@ def setup_logging(
                 has_daily_file_handler = True
                 handler.setLevel(level)
                 handler.setFormatter(formatter)
+                _ensure_filter(handler, DefaultLogRecordFieldsFilter)
         elif isinstance(handler, logging.StreamHandler) and not isinstance(
             handler, logging.FileHandler
         ):
             has_stream_handler = True
             handler.setLevel(level)
             handler.setFormatter(formatter)
+            _ensure_filter(handler, DefaultLogRecordFieldsFilter)
 
     if not has_daily_file_handler:
         file_handler = DailyDateFileHandler(log_dir=log_dir)
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
+        _ensure_filter(file_handler, DefaultLogRecordFieldsFilter)
         root_logger.addHandler(file_handler)
 
     if not has_stream_handler:
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(level)
         stream_handler.setFormatter(formatter)
+        _ensure_filter(stream_handler, DefaultLogRecordFieldsFilter)
         root_logger.addHandler(stream_handler)
 
     try:
@@ -187,6 +235,8 @@ def setup_logging(
         install_trace_context_filter()
     except Exception:
         pass
+
+    logging.captureWarnings(True)
 
     autopilot_logger = logging.getLogger("autopilot")
     if not any(isinstance(item, RepeatedAutopilotLogFilter) for item in autopilot_logger.filters):
@@ -406,6 +456,7 @@ class RuntimeSettings(BaseSettings):
     app_env: str = "local"
     grafana_public_url: str = ""
     prometheus_public_url: str = ""
+    tempo_public_url: str = ""
     grafana_fleet_dashboard_path: str = "/d/drone-fleet/fleet-health"
     grafana_api_dashboard_path: str = "/d/drone-api/api-observability"
     grafana_workers_dashboard_path: str = "/d/drone-workers/worker-observability"

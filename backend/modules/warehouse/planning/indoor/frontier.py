@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import heapq
 from dataclasses import dataclass, replace
 
 from .models import Frontier, LocalPose, MapSnapshot, OccupancyGrid
@@ -84,7 +85,7 @@ class FrontierExtractor:
                     return_graph_distance_m=return_graph_distance_m,
                     battery_cost_pct=0.0,
                     corridor_preference=corridor_preference,
-                    metadata={"cells": group},
+                    metadata={"cells": tuple(group)},
                 )
             )
         return frontiers
@@ -159,5 +160,9 @@ class FrontierSelector:
         *,
         max_candidates: int,
     ) -> list[Frontier]:
-        ranked = sorted(frontiers, key=lambda frontier: frontier.score, reverse=True)
-        return ranked[: max(1, int(max_candidates))]
+        limit = int(max_candidates)
+        if limit <= 0 or not frontiers:
+            return []
+        if limit >= len(frontiers):
+            return sorted(frontiers, key=lambda frontier: frontier.score, reverse=True)
+        return heapq.nlargest(limit, frontiers, key=lambda frontier: frontier.score)

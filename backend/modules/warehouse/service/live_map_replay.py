@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,9 +22,28 @@ from backend.modules.warehouse.service.live_map_stream import (
 )
 from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
 
+logger = logging.getLogger(__name__)
+
 _CHUNK_ID_RE = re.compile(r"^(.+)-[0-9a-f]{16}\.[a-z0-9]+$", re.IGNORECASE)
 _PREVIEW_CHUNK_ID_RE = re.compile(r"^(.+)-[0-9a-f]{16}\.preview\.json$", re.IGNORECASE)
 _META_CHUNK_ID_RE = re.compile(r"^(.+)\.meta\.json$", re.IGNORECASE)
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_sequence(value: Any, fallback: int) -> int:
+    return max(0, _safe_int(value, fallback))
+
+
+def _safe_flight_root(client_flight_id: str) -> Path:
+    if hasattr(warehouse_live_map_chunk_storage, "flight_dir"):
+        return warehouse_live_map_chunk_storage.flight_dir(client_flight_id)  # type: ignore[attr-defined]
+    return (warehouse_live_map_chunk_storage.root / client_flight_id.strip()).resolve()
 
 
 def _chunk_id_from_filename(path: Path) -> str:
@@ -36,7 +56,7 @@ def _chunk_id_from_filename(path: Path) -> str:
     match = _CHUNK_ID_RE.match(path.name)
     if match:
         return match.group(1)
-    return path.stem.split("-", 1)[0]
+    return path.stem.rsplit("-", 1)[0]
 
 
 def _infer_chunk_metadata(chunk_id: str, path: Path) -> dict[str, Any]:
@@ -50,10 +70,10 @@ def _infer_chunk_metadata(chunk_id: str, path: Path) -> dict[str, Any]:
     encoding: str | None = None
     has_rgb = False
 
-    if lower_id.startswith("rgbd_"):
+    if lower_id.startswith(("rgbd_colored_", "rgbd_")):
         source = "rgbd_colored"
         layer = "rgbd_colored"
-    elif lower_id.startswith("mid360_"):
+    elif lower_id.startswith(("mid360_raw_", "mid360_")):
         source = "mid360_raw"
         layer = "mid360_lidar"
     elif lower_id.startswith("nvblox_color_"):
@@ -118,10 +138,14 @@ def _merge_chunk_metadata(
     return merged
 
 
-def _load_preview_chunk(path: Path, *, sequence: int) -> WarehouseLiveVoxelChunk | None:
+def _load_preview_chunk(path: Path, *, sequence: int, sources: set[str] | None = None) -> WarehouseLiveVoxelChunk | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
+        stat = path.stat()
     except (OSError, json.JSONDecodeError):
+        logger.debug("Could not load live-map preview chunk path=%s", path, exc_info=True)
+        return None
+    if not isinstance(payload, dict):
         return None
     preview_points = payload.get("preview_points_m")
     if not isinstance(preview_points, list) or not preview_points:
@@ -129,15 +153,18 @@ def _load_preview_chunk(path: Path, *, sequence: int) -> WarehouseLiveVoxelChunk
     chunk_id = _chunk_id_from_filename(path)
     bbox = payload.get("bbox_local_m")
     metadata = _infer_chunk_metadata(chunk_id, path)
+    source = metadata.get("source")
+    if sources is not None and str(source or "unknown") not in sources:
+        return None
     return WarehouseLiveVoxelChunk(
         id=chunk_id,
         kind="point_cloud",
-        sequence=int(payload.get("sequence", metadata.get("sequence", sequence))),
+        sequence=_safe_sequence(payload.get("sequence", metadata.get("sequence", sequence)), sequence),
         point_count=payload.get("point_count"),
-        byte_size=path.stat().st_size,
+        byte_size=stat.st_size,
         bbox_local_m=bbox if isinstance(bbox, list) and len(bbox) == 6 else None,
         preview_points_m=preview_points,
-        source=metadata.get("source"),
+        source=source,
         layer=metadata.get("layer"),
         has_rgb=metadata.get("has_rgb"),
         encoding=metadata.get("encoding"),
@@ -146,7 +173,6 @@ def _load_preview_chunk(path: Path, *, sequence: int) -> WarehouseLiveVoxelChunk
 
 def _chunk_from_metadata(
     *,
-    stored_path: Path,
     stored,
     metadata: dict[str, Any],
     fallback_sequence: int,
@@ -161,11 +187,9 @@ def _chunk_from_metadata(
         content_type=str(metadata.get("content_type") or stored.content_type),
         byte_size=stored.byte_size,
         checksum_sha256=stored.checksum_sha256,
-        sequence=int(metadata.get("sequence", fallback_sequence)),
+        sequence=_safe_sequence(metadata.get("sequence", fallback_sequence), fallback_sequence),
         point_count=metadata.get("point_count"),
-        bbox_local_m=metadata.get("bbox_local_m")
-        if isinstance(metadata.get("bbox_local_m"), list)
-        else None,
+        bbox_local_m=metadata.get("bbox_local_m") if isinstance(metadata.get("bbox_local_m"), list) else None,
         source=metadata.get("source"),
         layer=metadata.get("layer"),
         layer_type=metadata.get("layer_type") or metadata.get("layer"),
@@ -177,14 +201,44 @@ def _chunk_from_metadata(
     )
 
 
+def _iter_preview_paths(root: Path) -> Iterable[Path]:
+    for path in sorted(root.glob("*.preview.json"), key=lambda item: item.name):
+        if path.is_file():
+            yield path
+
+
+def _iter_stored_chunks(client_flight_id: str) -> list[Any]:
+    if hasattr(warehouse_live_map_chunk_storage, "iter_chunk_files"):
+        return list(warehouse_live_map_chunk_storage.iter_chunk_files(flight_id=client_flight_id))  # type: ignore[attr-defined]
+    root = _safe_flight_root(client_flight_id)
+    if not root.exists() or not root.is_dir():
+        return []
+    seen: set[str] = set()
+    stored_items: list[Any] = []
+    for path in sorted(root.iterdir(), key=lambda item: item.name):
+        if not path.is_file():
+            continue
+        name = path.name.lower()
+        if name.endswith(".meta.json") or name.endswith(".uploading") or name.endswith(".preview.json"):
+            continue
+        chunk_id = _chunk_id_from_filename(path)
+        if chunk_id in seen:
+            continue
+        seen.add(chunk_id)
+        stored = warehouse_live_map_chunk_storage.resolve(flight_id=client_flight_id, chunk_id=chunk_id)
+        if stored is not None:
+            stored_items.append(stored)
+    return stored_items
+
+
 def build_disk_live_map_snapshot(
     client_flight_id: str,
     *,
     mode: str = "full",
     sources: set[str] | None = None,
 ) -> WarehouseLiveMapSnapshot:
-    safe_flight = client_flight_id.strip()
-    root = (warehouse_live_map_chunk_storage.root / safe_flight).resolve()
+    safe_flight = str(client_flight_id or "").strip()
+    root = _safe_flight_root(safe_flight)
     if not root.exists() or not root.is_dir():
         return WarehouseLiveMapSnapshot(
             flight_id=client_flight_id,
@@ -196,54 +250,48 @@ def build_disk_live_map_snapshot(
     changed_chunks: list[WarehouseLiveVoxelChunk] = []
     latest_mtime = 0.0
     seen_chunk_ids: set[str] = set()
+    sequence = 0
 
-    for sequence, path in enumerate(sorted(root.iterdir(), key=lambda item: item.name)):
-        if not path.is_file():
+    for path in _iter_preview_paths(root):
+        try:
+            latest_mtime = max(latest_mtime, path.stat().st_mtime)
+        except OSError:
             continue
+        preview_chunk = _load_preview_chunk(path, sequence=sequence, sources=sources)
+        sequence += 1
+        if preview_chunk is not None and preview_chunk.id not in seen_chunk_ids:
+            changed_chunks.append(preview_chunk)
+            seen_chunk_ids.add(preview_chunk.id)
 
-        name = path.name.lower()
-        if name.endswith(".meta.json") or name.endswith(".uploading"):
-            continue
-
-        latest_mtime = max(latest_mtime, path.stat().st_mtime)
-
-        if path.suffix.lower() == ".json" and path.name.endswith(".preview.json"):
-            preview_chunk = _load_preview_chunk(path, sequence=sequence)
-            if preview_chunk is not None and preview_chunk.id not in seen_chunk_ids:
-                changed_chunks.append(preview_chunk)
-                seen_chunk_ids.add(preview_chunk.id)
-            continue
-
-        chunk_id = _chunk_id_from_filename(path)
+    for stored in _iter_stored_chunks(safe_flight):
+        chunk_id = str(stored.chunk_id)
         if chunk_id in seen_chunk_ids:
             continue
-
-        stored = warehouse_live_map_chunk_storage.resolve(
-            flight_id=client_flight_id,
-            chunk_id=chunk_id,
-        )
-        if stored is None:
-            continue
+        try:
+            latest_mtime = max(latest_mtime, stored.path.stat().st_mtime)
+        except OSError:
+            pass
 
         sidecar = warehouse_live_map_chunk_storage.load_chunk_metadata(
-            flight_id=client_flight_id,
+            flight_id=safe_flight,
             chunk_id=chunk_id,
         )
         metadata = _merge_chunk_metadata(
             chunk_id=chunk_id,
-            stored_path=path,
+            stored_path=stored.path,
             sidecar=sidecar,
         )
 
+        chunk_source = str(metadata.get("source") or "unknown")
+        if sources is not None and chunk_source not in sources:
+            continue
+
         chunk = _chunk_from_metadata(
-            stored_path=path,
             stored=stored,
             metadata=metadata,
             fallback_sequence=sequence,
         )
-        chunk_source = str(chunk.source or metadata.get("source") or "unknown")
-        if sources is not None and chunk_source not in sources:
-            continue
+        sequence += 1
         changed_chunks.append(chunk)
         seen_chunk_ids.add(chunk_id)
 
@@ -272,7 +320,7 @@ def build_disk_live_map_snapshot(
             chunk.id,
         )
     )
-    timestamp = datetime.fromtimestamp(latest_mtime, tz=UTC)
+    timestamp = datetime.fromtimestamp(latest_mtime or datetime.now(UTC).timestamp(), tz=UTC)
     manifest_model = load_flight_manifest(safe_flight)
     manifest_summary = None
     if manifest_model is not None:
@@ -305,6 +353,20 @@ def build_disk_live_map_snapshot(
     )
 
 
+def _extract_capture_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        capture = value.get("capture_result")
+        return capture if isinstance(capture, dict) else {}
+    return {}
+
+
+def _clean_token(value: Any) -> str | None:
+    if value is None:
+        return None
+    token = str(value).strip()
+    return token or None
+
+
 async def resolve_client_flight_id_for_scan_job(
     db: AsyncSession,
     *,
@@ -322,26 +384,27 @@ async def resolve_client_flight_id_for_scan_job(
         warehouse_map_id=None,
         limit=200,
     )
+    target_job_id = int(job_id)
     for job, _warehouse_map, model in rows:
-        if int(job.id) != int(job_id):
+        try:
+            current_job_id = int(job.id)
+        except (TypeError, ValueError):
+            continue
+        if current_job_id != target_job_id:
             continue
 
-        params = job.params if isinstance(job.params, dict) else {}
-        capture = params.get("capture_result") if isinstance(params.get("capture_result"), dict) else {}
-        client_flight_id = capture.get("client_flight_id")
-        if client_flight_id:
-            token = str(client_flight_id).strip()
-            if token:
-                return token
+        capture = _extract_capture_dict(job.params if isinstance(job.params, dict) else {})
+        token = _clean_token(capture.get("client_flight_id"))
+        if token:
+            return token
 
         assets = await repo.list_assets_for_models(db, model_ids=[int(model.id)])
         for asset in assets:
-            capture = (asset.meta_data or {}).get("capture_result") or {}
-            client_flight_id = capture.get("client_flight_id")
-            if client_flight_id:
-                token = str(client_flight_id).strip()
-                if token:
-                    return token
+            asset_meta = asset.meta_data if isinstance(asset.meta_data, dict) else {}
+            capture = _extract_capture_dict(asset_meta)
+            token = _clean_token(capture.get("client_flight_id"))
+            if token:
+                return token
 
             raw_flight_id = capture.get("flight_id")
             if raw_flight_id is None:
@@ -349,8 +412,7 @@ async def resolve_client_flight_id_for_scan_job(
             try:
                 db_flight_id = int(raw_flight_id)
             except (TypeError, ValueError):
-                token = str(raw_flight_id).strip()
-                return token or None
+                return _clean_token(raw_flight_id)
             runtime = (
                 await db.execute(
                     select(MissionRuntime.client_flight_id)

@@ -14,19 +14,52 @@ class ParsedVoxelLayer:
     point_count: int
 
 
+def _finite_xyz_mask(xyz: np.ndarray) -> np.ndarray:
+    return np.isfinite(xyz).all(axis=1)
+
+
 def _subsample(
     xyz: np.ndarray,
     rgb: np.ndarray | None,
     *,
     max_points: int,
 ) -> tuple[np.ndarray, np.ndarray | None]:
+    max_points = max(1, int(max_points or 1))
     if xyz.shape[0] <= max_points:
         return xyz, rgb
     stride = max(1, int(np.ceil(xyz.shape[0] / max_points)))
-    xyz = xyz[::stride][:max_points]
+    xyz = np.ascontiguousarray(xyz[::stride][:max_points], dtype=np.float32)
     if rgb is not None:
-        rgb = rgb[::stride][:max_points]
+        rgb = np.ascontiguousarray(rgb[::stride][:max_points], dtype=np.float32)
     return xyz, rgb
+
+
+def _point_xyz(point: Any) -> tuple[float, float, float] | None:
+    try:
+        x = float(getattr(point, "x", 0.0))
+        y = float(getattr(point, "y", 0.0))
+        z = float(getattr(point, "z", 0.0))
+    except (TypeError, ValueError):
+        return None
+    if not (np.isfinite(x) and np.isfinite(y) and np.isfinite(z)):
+        return None
+    return x, y, z
+
+
+def _color_rgb(color: Any) -> tuple[float, float, float] | None:
+    try:
+        r = float(getattr(color, "r", 0.0))
+        g = float(getattr(color, "g", 0.0))
+        b = float(getattr(color, "b", 0.0))
+    except (TypeError, ValueError):
+        return None
+    if max(r, g, b) > 1.0:
+        r, g, b = r / 255.0, g / 255.0, b / 255.0
+    arr = np.asarray([r, g, b], dtype=np.float32)
+    if not np.isfinite(arr).all():
+        return None
+    arr = np.clip(arr, 0.0, 1.0)
+    return float(arr[0]), float(arr[1]), float(arr[2])
 
 
 def parse_voxel_block_layer_msg(
@@ -35,7 +68,7 @@ def parse_voxel_block_layer_msg(
     max_points: int = 20_000,
     require_color: bool = False,
 ) -> ParsedVoxelLayer | None:
-    """Decode nvBlox VoxelBlockLayer plugin stream into XYZ (+ optional RGB)."""
+    """Decode nvBlox VoxelBlockLayer plugin stream into XYZ plus optional RGB."""
     if bool(getattr(msg, "clear", False)):
         return None
 
@@ -43,39 +76,39 @@ def parse_voxel_block_layer_msg(
     if not blocks:
         return None
 
-    xyz_parts: list[list[float]] = []
-    rgb_parts: list[list[float]] = []
-    has_rgb = False
+    xyz_parts: list[tuple[float, float, float]] = []
+    rgb_parts: list[tuple[float, float, float] | None] = []
+    color_seen = False
 
     for block in blocks:
         centers = getattr(block, "centers", None) or []
         colors = getattr(block, "colors", None) or []
         for index, center in enumerate(centers):
-            xyz_parts.append(
-                [
-                    float(getattr(center, "x", 0.0)),
-                    float(getattr(center, "y", 0.0)),
-                    float(getattr(center, "z", 0.0)),
-                ]
-            )
+            xyz = _point_xyz(center)
+            if xyz is None:
+                continue
+            xyz_parts.append(xyz)
+            rgb: tuple[float, float, float] | None = None
             if index < len(colors):
-                color = colors[index]
-                rgb_parts.append(
-                    [
-                        float(getattr(color, "r", 0.0)),
-                        float(getattr(color, "g", 0.0)),
-                        float(getattr(color, "b", 0.0)),
-                    ]
-                )
-                has_rgb = True
+                rgb = _color_rgb(colors[index])
+                if rgb is not None:
+                    color_seen = True
+            rgb_parts.append(rgb)
 
     if not xyz_parts:
         return None
 
-    xyz = np.asarray(xyz_parts, dtype=np.float32)
+    xyz = np.ascontiguousarray(np.asarray(xyz_parts, dtype=np.float32).reshape((-1, 3)))
+    mask = _finite_xyz_mask(xyz)
+    if not bool(mask.any()):
+        return None
+    if not bool(mask.all()):
+        xyz = xyz[mask]
+        rgb_parts = [rgb for rgb, keep in zip(rgb_parts, mask.tolist()) if keep]
+
     rgb_array: np.ndarray | None = None
-    if has_rgb and len(rgb_parts) == xyz.shape[0]:
-        rgb_array = np.clip(np.asarray(rgb_parts, dtype=np.float32), 0.0, 1.0)
+    if color_seen and all(rgb is not None for rgb in rgb_parts) and len(rgb_parts) == xyz.shape[0]:
+        rgb_array = np.ascontiguousarray(np.asarray(rgb_parts, dtype=np.float32).reshape((-1, 3)))
     elif require_color:
         return None
 

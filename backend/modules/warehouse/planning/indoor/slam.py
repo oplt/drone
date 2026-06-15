@@ -115,7 +115,9 @@ class SimulatedSLAMProvider:
         *,
         frame_id: str = IndoorFrame.ODOM.value,
     ) -> LocalPose:
-        if pose.frame_id == IndoorFrame.DOCK.value and self.dock is not None:
+        if pose.frame_id == IndoorFrame.DOCK.value:
+            if self.dock is None:
+                raise ValueError("Cannot resolve a dock-frame pose without a dock reference")
             resolved = LocalPose(
                 x_m=float(self.dock.pose.x_m) + float(pose.x_m),
                 y_m=float(self.dock.pose.y_m) + float(pose.y_m),

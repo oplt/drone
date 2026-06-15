@@ -44,6 +44,9 @@ class ApiError(Exception):
     details: dict[str, Any] = field(default_factory=dict)
     headers: dict[str, str] | None = None
 
+    def __post_init__(self) -> None:
+        Exception.__init__(self, self.message)
+
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -51,12 +54,36 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         request_id = (
             supplied_request_id
             if REQUEST_ID_PATTERN.fullmatch(supplied_request_id)
-            else str(uuid.uuid4())[:8]
+            else uuid.uuid4().hex
         )
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response
+
+
+def _request_id(request: Request) -> str | None:
+    return cast(str | None, getattr(request.state, "request_id", None))
+
+
+async def _safe_emit_app_log(
+    *,
+    level: str,
+    source: str,
+    message: str,
+    details: dict[str, Any],
+    request_id: str | None,
+) -> None:
+    try:
+        await emit_app_log(
+            level=level,
+            source=source,
+            message=message,
+            details=sanitize_log_details(details),
+            request_id=request_id,
+        )
+    except Exception:
+        logger.debug("Failed to emit application log", exc_info=True)
 
 
 def _response(
@@ -74,14 +101,16 @@ def _response(
     return JSONResponse(
         status_code=status_code,
         headers=response_headers,
-        content={
-            "error": {
-                "code": code,
-                "message": message,
-                "details": details if details is not None else {},
-                "request_id": request_id,
+        content=jsonable_encoder(
+            {
+                "error": {
+                    "code": code,
+                    "message": message,
+                    "details": details if details is not None else {},
+                    "request_id": request_id,
+                }
             }
-        },
+        ),
     )
 
 
@@ -99,7 +128,7 @@ def _safe_http_message(status_code: int, detail: Any) -> tuple[str, Any]:
 
 async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
     error = cast(ApiError, exc)
-    request_id = getattr(request.state, "request_id", None)
+    request_id = _request_id(request)
     level = "error" if error.status_code >= 500 else "warn"
     logger.log(
         logging.ERROR if level == "error" else logging.WARNING,
@@ -116,7 +145,7 @@ async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
             "details": sanitize_log_details(error.details),
         },
     )
-    await emit_app_log(
+    await _safe_emit_app_log(
         level=level,
         source="api",
         message=error.message,
@@ -140,7 +169,7 @@ async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     error = cast(StarletteHTTPException, exc)
     message, details = _safe_http_message(error.status_code, error.detail)
-    request_id = getattr(request.state, "request_id", None)
+    request_id = _request_id(request)
     if error.status_code >= 500:
         logger.error(
             "HTTP exception request_id=%s status=%s path=%s",
@@ -154,7 +183,7 @@ async def http_exception_handler(request: Request, exc: Exception) -> JSONRespon
                 "details": sanitize_log_details(details),
             },
         )
-        await emit_app_log(
+        await _safe_emit_app_log(
             level="error",
             source="api",
             message=message,
@@ -177,27 +206,28 @@ async def http_exception_handler(request: Request, exc: Exception) -> JSONRespon
 
 async def validation_error_handler(request: Request, exc: Exception) -> JSONResponse:
     error = cast(RequestValidationError, exc)
-    request_id = getattr(request.state, "request_id", None)
+    request_id = _request_id(request)
+    validation_errors = error.errors()
     logger.warning(
         "Request validation failed request_id=%s path=%s error_count=%s",
         request_id,
         request.url.path,
-        len(error.errors()),
+        len(validation_errors),
         extra={
             "request_id": request_id,
             "path": request.url.path,
-            "error_count": len(error.errors()),
-            "validation_errors": sanitize_log_details(error.errors()),
+            "error_count": len(validation_errors),
+            "validation_errors": sanitize_log_details(validation_errors),
         },
     )
-    await emit_app_log(
+    await _safe_emit_app_log(
         level="warn",
         source="api",
         message="Request validation failed",
         details={
             "status_code": 422,
             "path": request.url.path,
-            "error_count": len(error.errors()),
+            "error_count": len(validation_errors),
         },
         request_id=request_id,
     )
@@ -205,13 +235,13 @@ async def validation_error_handler(request: Request, exc: Exception) -> JSONResp
         status_code=422,
         code="VALIDATION_ERROR",
         message="Request validation failed",
-        details={"errors": jsonable_encoder(error.errors())},
+        details={"errors": validation_errors},
         request_id=request_id,
     )
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    request_id = getattr(request.state, "request_id", None)
+    request_id = _request_id(request)
     logger.error(
         "Unhandled request exception request_id=%s path=%s type=%s",
         request_id,
@@ -224,7 +254,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         },
         exc_info=(type(exc), exc, exc.__traceback__),
     )
-    await emit_app_log(
+    await _safe_emit_app_log(
         level="critical",
         source="api",
         message="Unexpected server error",

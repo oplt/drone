@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.core.config.runtime import settings
 from backend.modules.warehouse.planning.local_planner import (
@@ -88,14 +89,14 @@ def merge_warehouse_mission_defaults(
     overrides: WarehouseMissionDefaultsPatch | Mapping[str, Any] | None = None,
 ) -> WarehouseMissionDefaults:
     if overrides is None:
-        return defaults
+        return WarehouseMissionDefaults.model_validate(defaults.model_dump(mode="python"))
     update = (
         overrides.model_dump(exclude_unset=True)
         if isinstance(overrides, WarehouseMissionDefaultsPatch)
         else dict(overrides)
     )
     if not update:
-        return defaults
+        return WarehouseMissionDefaults.model_validate(defaults.model_dump(mode="python"))
     return WarehouseMissionDefaults.model_validate({**defaults.model_dump(mode="python"), **update})
 
 
@@ -162,6 +163,23 @@ class WarehouseScanMissionParams(BaseModel):
     )
     dock_config: WarehouseDockConfigParams | None = None
 
+    @field_validator("polygon_local_m")
+    @classmethod
+    def _validate_polygon_points(cls, value: list[list[float]]) -> list[list[float]]:
+        cleaned: list[list[float]] = []
+        for idx, point in enumerate(value):
+            if len(point) != 2:
+                raise ValueError(f"polygon_local_m[{idx}] must contain exactly [x_m, y_m]")
+            x = float(point[0])
+            y = float(point[1])
+            if not math.isfinite(x) or not math.isfinite(y):
+                raise ValueError(f"polygon_local_m[{idx}] contains a non-finite coordinate")
+            cleaned.append([x, y])
+        unique = {tuple(point) for point in cleaned}
+        if len(unique) < 3:
+            raise ValueError("polygon_local_m requires at least 3 unique points")
+        return cleaned
+
     @model_validator(mode="after")
     def _validate_warehouse_target(self) -> WarehouseScanMissionParams:
         if self.warehouse_map_id is None and not (self.warehouse_name or "").strip():
@@ -206,7 +224,7 @@ def build_warehouse_scan_mission(
     scan: WarehouseScanMissionParams,
     owner_id: int | None = None,
 ):
-    poly = [tuple(pt) for pt in scan.polygon_local_m]
+    poly = [(float(pt[0]), float(pt[1])) for pt in scan.polygon_local_m]
     dock_config = None
     if scan.dock_config is not None:
         dock_config = WarehouseDockConfig(

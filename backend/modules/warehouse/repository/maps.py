@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -7,21 +8,81 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.modules.warehouse.models import (
-    WarehouseMap,
-)
+from backend.modules.warehouse.models import WarehouseMap
 
 
 class WarehouseRepositoryError(RuntimeError):
     pass
 
 
-@dataclass
+_MAX_LIST_LIMIT = 500
+
+
+@dataclass(slots=True)
 class WarehouseModelVersionEntry:
     id: int
     version: int
     status: str
     created_at: datetime
+
+
+def _clamp_limit(limit: int, *, default: int = 100, max_limit: int = _MAX_LIST_LIMIT) -> int:
+    try:
+        value = int(limit)
+    except (TypeError, ValueError):
+        value = default
+    return max(1, min(max_limit, value))
+
+
+def _normalize_polygon_local(
+    polygon_local_m: list[tuple[float, float]] | list[list[float]],
+) -> list[tuple[float, float]]:
+    if not isinstance(polygon_local_m, list) or len(polygon_local_m) < 3:
+        raise WarehouseRepositoryError("Warehouse polygon requires at least 3 points.")
+
+    normalized: list[tuple[float, float]] = []
+    for index, point in enumerate(polygon_local_m):
+        try:
+            if len(point) < 2:  # type: ignore[arg-type]
+                raise ValueError
+            x = float(point[0])  # type: ignore[index]
+            y = float(point[1])  # type: ignore[index]
+        except (TypeError, ValueError, IndexError):
+            raise WarehouseRepositoryError(
+                f"Warehouse polygon point {index} must be [x_m, y_m]."
+            ) from None
+        if not (math.isfinite(x) and math.isfinite(y)):
+            raise WarehouseRepositoryError(
+                f"Warehouse polygon point {index} must contain finite coordinates."
+            )
+        normalized.append((x, y))
+
+    distinct = set(normalized[:-1] if normalized[0] == normalized[-1] else normalized)
+    if len(distinct) < 3:
+        raise WarehouseRepositoryError("Warehouse polygon requires at least 3 distinct points.")
+    return normalized
+
+
+def _polygon_area_m2(polygon_local_m: list[tuple[float, float]]) -> float:
+    from shapely.geometry import Polygon as _Polygon
+
+    polygon = _Polygon(polygon_local_m)
+    if not polygon.is_valid or polygon.is_empty or polygon.area <= 0:
+        raise WarehouseRepositoryError("Warehouse polygon is invalid or has zero area.")
+    return float(polygon.area)
+
+
+def _scope_for_owner(
+    *,
+    owner_id: int,
+    org_id: int | None,
+    allow_org_access: bool,
+):
+    return (
+        or_(WarehouseMap.owner_id == int(owner_id), WarehouseMap.org_id == int(org_id))
+        if allow_org_access and org_id is not None
+        else WarehouseMap.owner_id == int(owner_id)
+    )
 
 
 class WarehouseMapMixin:
@@ -34,13 +95,15 @@ class WarehouseMapMixin:
         org_id: int | None = None,
         allow_org_access: bool = False,
     ) -> WarehouseMap | None:
-        scope = (
-            or_(WarehouseMap.owner_id == owner_id, WarehouseMap.org_id == org_id)
-            if allow_org_access and org_id is not None
-            else WarehouseMap.owner_id == owner_id
+        scope = _scope_for_owner(
+            owner_id=owner_id,
+            org_id=org_id,
+            allow_org_access=allow_org_access,
         )
         return (
-            await db.execute(select(WarehouseMap).where(WarehouseMap.id == warehouse_map_id, scope))
+            await db.execute(
+                select(WarehouseMap).where(WarehouseMap.id == int(warehouse_map_id), scope)
+            )
         ).scalar_one_or_none()
 
     async def list_warehouse_maps(
@@ -52,15 +115,18 @@ class WarehouseMapMixin:
         allow_org_access: bool = False,
         limit: int = 100,
     ) -> list[WarehouseMap]:
-        scope = (
-            or_(WarehouseMap.owner_id == owner_id, WarehouseMap.org_id == org_id)
-            if allow_org_access and org_id is not None
-            else WarehouseMap.owner_id == owner_id
+        scope = _scope_for_owner(
+            owner_id=owner_id,
+            org_id=org_id,
+            allow_org_access=allow_org_access,
         )
-        return (
+        return list(
             (
                 await db.execute(
-                    select(WarehouseMap).where(scope).order_by(WarehouseMap.id.desc()).limit(limit)
+                    select(WarehouseMap)
+                    .where(scope)
+                    .order_by(WarehouseMap.id.desc())
+                    .limit(_clamp_limit(limit))
                 )
             )
             .scalars()
@@ -79,14 +145,15 @@ class WarehouseMapMixin:
         """Returns True if a row was deleted, False if not found / not owned."""
         warehouse_map = await self.get_owned_warehouse_map(
             db,
-            warehouse_map_id=warehouse_map_id,
-            owner_id=owner_id,
+            warehouse_map_id=int(warehouse_map_id),
+            owner_id=int(owner_id),
             org_id=org_id,
             allow_org_access=allow_org_access,
         )
         if warehouse_map is None:
             return False
         await db.delete(warehouse_map)
+        await db.flush()
         return True
 
     async def create_warehouse_map(
@@ -101,24 +168,20 @@ class WarehouseMapMixin:
         meta_data: dict[str, Any] | None = None,
     ) -> WarehouseMap:
         """Create a warehouse map defined by a local metric polygon (no GPS)."""
-        if len(polygon_local_m) < 3:
-            raise WarehouseRepositoryError("Warehouse polygon requires at least 3 points.")
-        # Compute area from the local polygon directly (metres²)
-        from shapely.geometry import Polygon as _Polygon
-
-        try:
-            area_m2 = float(_Polygon(polygon_local_m).area)
-        except Exception:
-            area_m2 = None
+        polygon = _normalize_polygon_local(polygon_local_m)
+        area_m2 = _polygon_area_m2(polygon)
+        name = str(warehouse_name or "").strip()
+        if not name:
+            raise WarehouseRepositoryError("Warehouse name cannot be empty.")
 
         base_meta = dict(meta_data or {})
-        base_meta["polygon_local_m"] = [[float(x), float(y)] for x, y in polygon_local_m]
+        base_meta["polygon_local_m"] = [[float(x), float(y)] for x, y in polygon]
 
         warehouse_map = WarehouseMap(
-            owner_id=owner_id,
+            owner_id=int(owner_id),
             org_id=org_id,
             project_id=project_id,
-            name=warehouse_name.strip(),
+            name=name,
             boundary=None,  # indoor — no GPS boundary
             centroid=None,
             area_m2=area_m2,
@@ -139,14 +202,15 @@ class WarehouseMapMixin:
         warehouse_name: str | None,
         polygon_local_m: list[tuple[float, float]],
         meta_data: dict[str, Any] | None = None,
+        allow_org_access: bool = False,
     ) -> WarehouseMap:
         if warehouse_map_id is not None:
             warehouse_map = await self.get_owned_warehouse_map(
                 db,
                 warehouse_map_id=int(warehouse_map_id),
-                owner_id=owner_id,
+                owner_id=int(owner_id),
                 org_id=org_id,
-                allow_org_access=org_id is not None,
+                allow_org_access=allow_org_access,
             )
             if warehouse_map is None:
                 raise WarehouseRepositoryError("Selected warehouse map was not found.")
@@ -154,7 +218,7 @@ class WarehouseMapMixin:
         resolved_name = (warehouse_name or "").strip() or self.auto_warehouse_name()
         return await self.create_warehouse_map(
             db,
-            owner_id=owner_id,
+            owner_id=int(owner_id),
             org_id=org_id,
             project_id=project_id,
             warehouse_name=resolved_name,
@@ -172,6 +236,17 @@ class WarehouseMapMixin:
         """Return the local polygon [[x_m, y_m], ...] stored in meta_data."""
         meta = warehouse_map.meta_data if isinstance(warehouse_map.meta_data, dict) else {}
         raw = meta.get("polygon_local_m")
-        if isinstance(raw, list):
-            return [[float(pt[0]), float(pt[1])] for pt in raw if len(pt) >= 2]
-        return []
+        if not isinstance(raw, list):
+            return []
+        points: list[list[float]] = []
+        for point in raw:
+            try:
+                if len(point) < 2:  # type: ignore[arg-type]
+                    continue
+                x = float(point[0])  # type: ignore[index]
+                y = float(point[1])  # type: ignore[index]
+            except (TypeError, ValueError, IndexError):
+                continue
+            if math.isfinite(x) and math.isfinite(y):
+                points.append([x, y])
+        return points

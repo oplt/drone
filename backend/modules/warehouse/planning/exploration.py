@@ -373,7 +373,9 @@ class UnknownWarehouseExplorationMission:
                     },
                 )
 
-            await dock_controller.initialize_dock_reference(self.dock)
+            dock_initialized = await dock_controller.initialize_dock_reference(self.dock)
+            if not dock_initialized:
+                raise RuntimeError("Dock reference initialization failed")
             self._graph.ensure_dock_node(self.dock)
             await self._add_event_safe(
                 orch,
@@ -607,18 +609,29 @@ class UnknownWarehouseExplorationMission:
                 )
                 from backend.modules.warehouse.service.mapping import WarehouseScanMappingError
 
-                stop_result = await stop_warehouse_ros_mapping(flight_id=flight_token)
-                await self._add_event_safe(
-                    orch,
-                    "indoor_exploration_mapping_stopped",
-                    {
-                        "accepted": stop_result.accepted,
-                        "status": stop_result.status,
-                        "detail": stop_result.detail,
-                    },
-                )
+                try:
+                    stop_result = await stop_warehouse_ros_mapping(flight_id=flight_token)
+                except Exception as exc:
+                    stop_result = None
+                    await self._add_event_safe(
+                        orch,
+                        "indoor_exploration_mapping_stop_failed",
+                        {"error": str(exc)},
+                    )
+                    logger.exception("Indoor exploration mapping stop failed flight_id=%s", flight_token)
+                if stop_result is not None:
+                    await self._add_event_safe(
+                        orch,
+                        "indoor_exploration_mapping_stopped",
+                        {
+                            "accepted": stop_result.accepted,
+                            "status": stop_result.status,
+                            "detail": stop_result.detail,
+                        },
+                    )
                 if (
-                    stop_result.accepted
+                    stop_result is not None
+                    and stop_result.accepted
                     and self.owner_id is not None
                     and self.warehouse_map_id is not None
                 ):
@@ -656,7 +669,15 @@ class UnknownWarehouseExplorationMission:
                     shutdown_warehouse_mapping_stack,
                 )
 
-                await shutdown_warehouse_mapping_stack()
+                try:
+                    await shutdown_warehouse_mapping_stack()
+                except Exception as exc:
+                    await self._add_event_safe(
+                        orch,
+                        "indoor_exploration_mapping_cleanup_failed",
+                        {"error": str(exc)},
+                    )
+                    logger.warning("Indoor exploration mapping stack shutdown failed", exc_info=True)
 
         await self._finish_flight_safe(orch, status=final_status, note=final_note)
 
@@ -829,13 +850,25 @@ class UnknownWarehouseExplorationMission:
         return max(0.0, time.monotonic() - self._mission_started_at)
 
     async def _get_battery_remaining_pct(self, orch: Orchestrator) -> float:
-        telemetry = await asyncio.to_thread(orch.drone.get_telemetry)
+        drone = getattr(orch, "drone", None)
+        get_telemetry = getattr(drone, "get_telemetry", None)
+        if not callable(get_telemetry):
+            return 100.0
+        try:
+            telemetry = await asyncio.to_thread(get_telemetry)
+        except Exception:
+            logger.warning("Failed to read battery telemetry for indoor exploration", exc_info=True)
+            return 100.0
         battery = getattr(telemetry, "battery_remaining", None)
         if battery is None:
             battery = getattr(telemetry, "battery_remaining_pct", None)
         if battery is None:
             return 100.0
-        return max(0.0, min(100.0, float(battery)))
+        try:
+            return max(0.0, min(100.0, float(battery)))
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid battery telemetry value: %r", battery)
+            return 100.0
 
     def _register_confirmed_node(self, *, pose: LocalPose, confidence: float, kind: str) -> None:
         if self._graph is None:
@@ -984,8 +1017,8 @@ class UnknownWarehouseExplorationMission:
         snapshot: MapSnapshot,
         frontier: Frontier,
     ) -> list[LocalPose]:
-        raw_cells = list(frontier.metadata.get("cells", []))
-        if not raw_cells:
+        raw_cells = frontier.metadata.get("cells", [])
+        if not isinstance(raw_cells, list) or not raw_cells:
             return []
         limit = max(
             1,
@@ -996,11 +1029,23 @@ class UnknownWarehouseExplorationMission:
                 )
             ),
         )
-        selected_cells = raw_cells[:limit]
-        return [
-            snapshot.occupancy_grid.cell_to_pose(x_idx, y_idx, z_m=float(self.indoor_hover_alt_m))
-            for x_idx, y_idx in selected_cells
-        ]
+        poses: list[LocalPose] = []
+        for raw_cell in raw_cells[:limit]:
+            if (
+                not isinstance(raw_cell, tuple)
+                or len(raw_cell) != 2
+                or not all(isinstance(value, int) for value in raw_cell)
+            ):
+                continue
+            x_idx, y_idx = raw_cell
+            poses.append(
+                snapshot.occupancy_grid.cell_to_pose(
+                    x_idx,
+                    y_idx,
+                    z_m=float(self.indoor_hover_alt_m),
+                )
+            )
+        return poses
 
     async def _run_loop_closure(
         self,
@@ -1179,7 +1224,7 @@ class UnknownWarehouseExplorationMission:
     ) -> bool:
         current_pose = await slam.get_pose()
         if await dock_controller.run_precision_docking(current_pose, self.dock):
-            return await dock_controller.confirm_docked(self.dock)
+            return True
 
         # Bounded search near dock, then retry once.
         search_path = self._dock_search_path()
@@ -1191,18 +1236,31 @@ class UnknownWarehouseExplorationMission:
             )
         current_pose = await slam.get_pose()
         if await dock_controller.run_precision_docking(current_pose, self.dock):
-            return await dock_controller.confirm_docked(self.dock)
+            return True
         return False
 
     def _dock_search_path(self) -> list[LocalPose]:
         radius = min(1.0, float(self.dock_search_radius_m))
+        search_z_m = max(float(self.indoor_hover_alt_m), float(self.dock.entry_pose.z_m))
+
+        def _at_search_height(pose: LocalPose) -> LocalPose:
+            return LocalPose(
+                x_m=float(pose.x_m),
+                y_m=float(pose.y_m),
+                z_m=search_z_m,
+                yaw_deg=pose.yaw_deg,
+                frame_id=pose.frame_id,
+            )
+
+        dock_center = _at_search_height(self.dock.pose)
+        entry = _at_search_height(self.dock.entry_pose)
         return [
-            self.dock.entry_pose,
-            self.dock.pose.translated(dx_m=radius),
-            self.dock.pose.translated(dy_m=radius),
-            self.dock.pose.translated(dx_m=-radius),
-            self.dock.pose.translated(dy_m=-radius),
-            self.dock.entry_pose,
+            entry,
+            dock_center.translated(dx_m=radius),
+            dock_center.translated(dy_m=radius),
+            dock_center.translated(dx_m=-radius),
+            dock_center.translated(dy_m=-radius),
+            entry,
         ]
 
     async def _safe_land(

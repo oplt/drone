@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import math
 import os
+import shlex
 import signal
 import subprocess
 import time
@@ -13,29 +16,63 @@ from typing import Any
 from backend.core.config.runtime import settings
 from backend.infrastructure.warehouse.bridge_config import ros_command_env
 
+logger = logging.getLogger(__name__)
+
+
+def _safe_str(value: object, default: str = "") -> str:
+    if value is None:
+        return default
+    return str(value)
+
+
+def _safe_float(value: object, default: float, *, min_value: float | None = None) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = default
+    if not math.isfinite(parsed):
+        parsed = default
+    if min_value is not None:
+        parsed = max(min_value, parsed)
+    return parsed
+
 
 def _clock_stability_window_s() -> float:
-    return float(getattr(settings, "warehouse_live_map_clock_stability_s", 4.0))
+    return _safe_float(
+        getattr(settings, "warehouse_live_map_clock_stability_s", 4.0),
+        4.0,
+        min_value=0.5,
+    )
+
+
+def _ros_workspace() -> Path:
+    raw = _safe_str(getattr(settings, "warehouse_ros2_ws", ""), "").strip() or "ros2_ws"
+    return Path(raw).expanduser().resolve()
+
+
+def _ros_distro_setup_path() -> str:
+    distro = _safe_str(getattr(settings, "ROS_DISTRO", ""), "").strip() or "jazzy"
+    configured = _safe_str(getattr(settings, "WAREHOUSE_ROS_SETUP_FILE", ""), "").strip()
+    return configured or f"/opt/ros/{distro}/setup.bash"
 
 
 def _sourced_ros_cmd(inner: str) -> list[str]:
-    """Wrap a ros2 CLI invocation in a shell that sources the ROS environment.
+    """Return a shell command that sources ROS and workspace setup safely.
 
-    The backend process is not started from a ROS-sourced shell and
-    ``ros_command_env()`` strips PYTHONPATH, so invoking ``ros2`` directly
-    always fails; every probe must source setup.bash first.
+    ``inner`` is still a shell fragment because most ROS CLI probes use shell
+    helpers such as ``timeout``. Callers must quote user/config values before
+    inserting them into ``inner``.
     """
-    ws = Path(settings.warehouse_ros2_ws.strip() or "ros2_ws").expanduser().resolve()
+    ws = _ros_workspace()
     setup = ws / "install" / "setup.bash"
-    source_ws = f"source {setup} && " if setup.exists() else ""
-    return [
-        "bash",
-        "-lc",
-        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && " f"{source_ws}{inner}",
-    ]
+    script_parts = [f"source {shlex.quote(_ros_distro_setup_path())}"]
+    if setup.exists():
+        script_parts.append(f"source {shlex.quote(str(setup))}")
+    script_parts.append(inner)
+    return ["bash", "-lc", " && ".join(script_parts)]
 
 
-_CLOCK_PROBE_SCRIPT = """
+_CLOCK_PROBE_SCRIPT = r"""
 import json, sys, time
 import rclpy
 from rclpy.node import Node
@@ -108,17 +145,17 @@ def _parse_clock_time(stdout: str) -> float | None:
                 return None
     if sec is None:
         return None
-    return float(sec) + (float(nanosec) / 1_000_000_000.0)
+    value = float(sec) + (float(nanosec) / 1_000_000_000.0)
+    return value if math.isfinite(value) else None
 
 
 async def _read_clock_once(timeout_s: float = 3.0) -> float | None:
-    # The ros2 CLI takes >1s just to start up; shorter timeouts always
-    # false-negative as "/clock missing" even when the clock is publishing.
+    timeout_s = _safe_float(timeout_s, 3.0, min_value=0.5)
     try:
         result = await asyncio.to_thread(
             subprocess.run,
             _sourced_ros_cmd(
-                f"timeout {max(2.0, timeout_s)} ros2 topic echo /clock --once"
+                f"timeout {shlex.quote(str(max(2.0, timeout_s)))} ros2 topic echo /clock --once"
             ),
             env=ros_command_env(),
             capture_output=True,
@@ -127,19 +164,28 @@ async def _read_clock_once(timeout_s: float = 3.0) -> float | None:
             check=False,
         )
     except Exception:
+        logger.debug("Failed to read /clock once", exc_info=True)
         return None
     if result.returncode != 0:
         return None
     return _parse_clock_time(result.stdout)
 
 
-async def probe_clock_monotonic(
-    *,
-    window_s: float | None = None,
-    poll_s: float = 0.25,
-    max_forward_jump_s: float = 2.0,
-) -> SimTimeStatus:
-    window = max(4.0, float(window_s if window_s is not None else _clock_stability_window_s()))
+def _normalize_clock_samples(raw_samples: object, *, max_samples: int = 256) -> list[float]:
+    if not isinstance(raw_samples, list):
+        return []
+    samples: list[float] = []
+    for sample in raw_samples[-max_samples:]:
+        try:
+            value = float(sample)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value):
+            samples.append(value)
+    return samples
+
+
+async def _probe_clock_with_rclpy_script(window: float) -> list[float]:
     try:
         result = await asyncio.to_thread(
             subprocess.run,
@@ -154,12 +200,40 @@ async def probe_clock_monotonic(
             timeout=max(3.0, window + 3.0),
             check=False,
         )
-        samples = json.loads((result.stdout or "[]").splitlines()[-1])
-        if not isinstance(samples, list):
-            samples = []
-        samples = [float(sample) for sample in samples]
+        if result.returncode != 0 and not result.stdout.strip():
+            return []
+        last_line = (result.stdout or "[]").splitlines()[-1]
+        return _normalize_clock_samples(json.loads(last_line))
     except Exception:
-        samples = []
+        logger.debug("rclpy /clock probe failed", exc_info=True)
+        return []
+
+
+async def _probe_clock_with_cli_loop(window: float, poll_s: float) -> list[float]:
+    deadline = time.monotonic() + max(0.5, window)
+    samples: list[float] = []
+    while time.monotonic() < deadline:
+        remaining = max(0.5, deadline - time.monotonic())
+        sample = await _read_clock_once(timeout_s=min(3.0, remaining))
+        if sample is not None:
+            samples.append(sample)
+        await asyncio.sleep(max(0.1, poll_s))
+    return _normalize_clock_samples(samples)
+
+
+async def probe_clock_monotonic(
+    *,
+    window_s: float | None = None,
+    poll_s: float = 0.25,
+    max_forward_jump_s: float = 2.0,
+) -> SimTimeStatus:
+    window = max(0.5, _safe_float(window_s, _clock_stability_window_s()) if window_s is not None else _clock_stability_window_s())
+    poll = _safe_float(poll_s, 0.25, min_value=0.05)
+    max_forward = _safe_float(max_forward_jump_s, 2.0, min_value=0.0)
+
+    samples = await _probe_clock_with_rclpy_script(window)
+    if not samples:
+        samples = await _probe_clock_with_cli_loop(window=min(window, 4.0), poll_s=poll)
 
     if not samples:
         return SimTimeStatus(False, "/clock missing or not publishing", samples=[])
@@ -173,11 +247,11 @@ async def probe_clock_monotonic(
                 jumps += 1
             elif abs(delta) <= 1e-9:
                 frozen += 1
-            elif delta > max_forward_jump_s:
+            elif delta > max_forward:
                 forward += 1
         previous = sample
 
-    ok = bool(samples) and jumps == 0 and frozen < max(2, len(samples) // 2) and forward == 0
+    ok = jumps == 0 and frozen < max(2, len(samples) // 2) and forward == 0
     detail = "clock monotonic" if ok else "clock unstable"
     return SimTimeStatus(ok, detail, jumps, frozen, forward, samples)
 
@@ -192,40 +266,48 @@ async def wait_for_tf_stable(
     parent_frame: str = "odom",
     child_frame: str = "iris_with_standoffs/base_link",
 ) -> SimTimeStatus:
-    deadline = time.monotonic() + max(0.1, timeout_s)
+    timeout_s = _safe_float(timeout_s, 1.5, min_value=0.1)
+    deadline = time.monotonic() + timeout_s
     last_detail = "tf lookup failed"
+    parent = shlex.quote(_safe_str(parent_frame, "odom"))
+    child = shlex.quote(_safe_str(child_frame, "iris_with_standoffs/base_link"))
+
     while time.monotonic() < deadline:
+        remaining = max(0.1, deadline - time.monotonic())
+        cli_timeout = min(3.0, max(1.0, remaining + 0.5))
         try:
-            # tf2_echo needs ~2s to start, subscribe and print its first
-            # lookup; a 1s timeout would fail even with a healthy TF tree.
             result = await asyncio.to_thread(
                 subprocess.run,
                 _sourced_ros_cmd(
-                    f"timeout 3.0 ros2 run tf2_ros tf2_echo {parent_frame} {child_frame}"
+                    f"timeout {shlex.quote(str(cli_timeout))} ros2 run tf2_ros tf2_echo {parent} {child}"
                 ),
                 env=ros_command_env(),
                 capture_output=True,
                 text=True,
-                timeout=5.5,
+                timeout=min(5.5, cli_timeout + 2.5),
                 check=False,
             )
-            # tf2_echo spins forever and is killed by `timeout` (exit 124), so
-            # success is determined by a printed lookup, not the exit code.
-            if "At time" in (result.stdout or ""):
+            stdout = result.stdout or ""
+            if "At time" in stdout:
                 return SimTimeStatus(True, "tf stable")
-            last_detail = (result.stderr or result.stdout or "tf lookup failed")[:240]
+            last_detail = (result.stderr or stdout or "tf lookup failed")[:240]
         except Exception as exc:
             last_detail = str(exc)[:240]
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(min(0.2, max(0.0, deadline - time.monotonic())))
     return SimTimeStatus(False, last_detail)
 
 
-async def kill_stale_nvblox_processes() -> None:
-    """Terminate orphaned Nvblox launch/container processes before restart.
+def _is_target_nvblox_process(command: str) -> bool:
+    return (
+        "warehouse_nvblox.launch.py" in command
+        or "__node:=nvblox_container" in command
+        or "[nvblox_node]" in command
+        or " nvblox_node" in command
+    )
 
-    Stale component containers keep GPU allocations alive and are a direct
-    contributor to the observed cudaMallocAsync out-of-memory crash.
-    """
+
+async def kill_stale_nvblox_processes() -> None:
+    """Terminate orphaned nvBlox launch/container processes before restart."""
     try:
         result = await asyncio.to_thread(
             subprocess.run,
@@ -237,11 +319,17 @@ async def kill_stale_nvblox_processes() -> None:
             env=ros_command_env(),
         )
     except Exception:
+        logger.debug("Could not list processes for stale nvBlox cleanup", exc_info=True)
         return
     if result.returncode != 0:
         return
 
     current_pid = os.getpid()
+    try:
+        current_pgid = os.getpgid(current_pid)
+    except OSError:
+        current_pgid = None
+
     groups: set[int] = set()
     for raw in result.stdout.splitlines():
         parts = raw.strip().split(None, 2)
@@ -253,14 +341,13 @@ async def kill_stale_nvblox_processes() -> None:
         except ValueError:
             continue
         cmd = parts[2]
-        if pid == current_pid:
+        if pid == current_pid or pgid <= 0 or pgid == current_pgid:
             continue
-        if (
-            "warehouse_nvblox.launch.py" in cmd
-            or "__node:=nvblox_container" in cmd
-            or "[nvblox_node]" in cmd
-        ):
+        if _is_target_nvblox_process(cmd):
             groups.add(pgid)
+
+    if not groups:
+        return
 
     for sig, delay in ((signal.SIGTERM, 0.8), (signal.SIGKILL, 0.0)):
         for pgid in list(groups):
@@ -270,5 +357,8 @@ async def kill_stale_nvblox_processes() -> None:
                 groups.discard(pgid)
             except PermissionError:
                 groups.discard(pgid)
-        if delay:
+            except Exception:
+                logger.debug("Failed to signal nvBlox process group pgid=%s", pgid, exc_info=True)
+                groups.discard(pgid)
+        if delay and groups:
             await asyncio.sleep(delay)

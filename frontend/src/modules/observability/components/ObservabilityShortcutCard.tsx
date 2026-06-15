@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
@@ -27,44 +26,63 @@ export default function ObservabilityShortcutCard({
   restricted,
 }: ObservabilityShortcutCardProps) {
   const configured = Boolean(url);
+
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        p: 2.5,
+        p: 1.5,
         height: "100%",
-        borderRadius: 2,
+        minHeight: 148,
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "background.paper",
+        borderRight: "1px solid",
+        borderBottom: "1px solid",
         borderColor: "divider",
       }}
     >
-      <Stack spacing={2} sx={{ height: "100%" }}>
-        <Stack direction="row" spacing={1.5} alignItems="center">
+      <Stack spacing={1.25} sx={{ height: "100%" }}>
+        <Stack direction="row" spacing={1} alignItems="center">
           <Box
             sx={{
               display: "grid",
               placeItems: "center",
-              width: 38,
-              height: 38,
-              borderRadius: 1.5,
+              width: 32,
+              height: 32,
+              flexShrink: 0,
+              borderRadius: 1,
               backgroundColor: "action.hover",
               color: "primary.main",
+              "& svg": { fontSize: 18 },
             }}
           >
             {icon}
           </Box>
-          <Stack spacing={0.25}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          <Stack spacing={0.25} minWidth={0}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
               {title}
             </Typography>
-            {restricted ? <Chip size="small" label="Admin / developer" /> : null}
+            {restricted ? <Chip size="small" label="Admin" sx={{ alignSelf: "flex-start" }} /> : null}
           </Stack>
         </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            flexGrow: 1,
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            lineHeight: 1.45,
+          }}
+        >
           {description}
         </Typography>
         <Button
+          size="small"
           variant={configured ? "contained" : "outlined"}
-          endIcon={<LaunchRoundedIcon />}
+          endIcon={<LaunchRoundedIcon fontSize="small" />}
           disabled={!configured}
           onClick={() => {
             if (url) onOpen(url);
@@ -74,6 +92,6 @@ export default function ObservabilityShortcutCard({
           {configured ? buttonLabel : "Not configured"}
         </Button>
       </Stack>
-    </Paper>
+    </Box>
   );
 }

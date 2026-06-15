@@ -9,11 +9,19 @@ REPO_ROOT = BACKEND_DIR.parent
 _SOURCE_SEGMENT_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 
+def _settings_string(name: str, default: str = "") -> str:
+    try:
+        from backend.core.config.runtime import settings
+
+        value = getattr(settings, name, default)
+    except Exception:
+        value = default
+    return str(value or "").strip()
+
+
 def runtime_log_root() -> Path:
     """Canonical root for runtime logs produced by the application."""
-    from backend.core.config.runtime import settings
-
-    raw = settings.drone_runtime_log_root.strip()
+    raw = _settings_string("drone_runtime_log_root")
     if raw:
         path = Path(raw).expanduser()
         if not path.is_absolute():
@@ -24,7 +32,7 @@ def runtime_log_root() -> Path:
 
 def runtime_log_dir(source: str) -> Path:
     """Return a source-specific runtime log directory under the canonical root."""
-    normalized = _SOURCE_SEGMENT_RE.sub("_", source.strip().lower()).strip("._-")
+    normalized = _SOURCE_SEGMENT_RE.sub("_", str(source or "").strip().lower()).strip("._-")
     if not normalized:
         normalized = "backend"
     path = runtime_log_root() / normalized

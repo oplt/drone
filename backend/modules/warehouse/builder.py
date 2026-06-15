@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import shutil
+import shlex
 import subprocess
 import time
 from collections.abc import AsyncIterator
@@ -99,14 +100,23 @@ def _start_streaming_server_via_ssh() -> None:
             "Missing Raspberry Pi SSH settings in backend.core.config.runtime.settings"
         )
 
-    command = f"nohup python3 {remote_script} > /tmp/pi_cam_server.log 2>&1 &"
+    safe_script = shlex.quote(str(remote_script))
+    command = f"nohup python3 {safe_script} > /tmp/pi_cam_server.log 2>&1 &"
 
     ssh = paramiko.SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(hostname=pi_host, username=pi_user, key_filename=ssh_key, timeout=10)
-    ssh.exec_command(command)
-    ssh.close()
+    try:
+        ssh.connect(hostname=pi_host, username=pi_user, key_filename=ssh_key, timeout=10)
+        _stdin, stdout, stderr = ssh.exec_command(command, timeout=10)
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status != 0:
+            detail = stderr.read().decode(errors="replace").strip()
+            raise RuntimeError(
+                f"Pi streaming server command failed with exit_status={exit_status}: {detail}"
+            )
+    finally:
+        ssh.close()
 
 
 async def _wait_for_stream(url: str, timeout_s: float = 15.0) -> bool:
@@ -126,7 +136,8 @@ async def _wait_for_stream(url: str, timeout_s: float = 15.0) -> bool:
 async def _gazebo_stream_generator():
     video = None
     try:
-        video = DroneVideoStream(
+        video = await asyncio.to_thread(
+            DroneVideoStream,
             source=settings.drone_video_source_gazebo,
             width=settings.drone_video_width,
             height=settings.drone_video_height,
@@ -136,21 +147,28 @@ async def _gazebo_stream_generator():
             recording_path=settings.drone_video_save_path,
             recording_format="mp4",
         )
+        frame_iter = video.frames()
 
-        for _width, frame in video.frames():
-            ret, buffer = cv2.imencode(".jpg", frame)
+        while True:
+            packet = await asyncio.to_thread(next, frame_iter, None)
+            if packet is None:
+                break
+            _width, frame = packet
+            ret, buffer = await asyncio.to_thread(cv2.imencode, ".jpg", frame)
             if not ret:
                 continue
             frame_bytes = buffer.tobytes()
             yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
             await asyncio.sleep(0.01)
 
+    except asyncio.CancelledError:
+        raise
     except Exception as e:
-        logger.error(f"Error in Gazebo stream generator: {e}")
+        logger.error("Error in Gazebo stream generator: %s", e)
         yield (b"--frame\r\nContent-Type: text/plain\r\n\r\nError streaming from Gazebo\r\n\r\n")
     finally:
         if video:
-            video.close()
+            await asyncio.to_thread(video.close)
 
 
 async def _gazebo_stream_generator_auto(request: Request):
@@ -269,27 +287,18 @@ def _recording_source_url() -> str:
 
 
 async def _recorder_pump(video: DroneVideoStream):
-    """
-    Drain frames so OpenCV writer actually receives them.
-    Uses asyncio.wait_for so the task responds to cancellation without
-    blocking inside the thread indefinitely.
-    """
+    """Drain frames so OpenCV's writer receives data without blocking the event loop."""
     frame_iter = video.frames()
-    while True:
-        try:
-            packet = await asyncio.wait_for(
-                asyncio.to_thread(next, frame_iter, None),
-                timeout=2.0,
-            )
-        except TimeoutError:
-            # No frame in 2 s — check for cancellation then retry
+    try:
+        while True:
+            packet = await asyncio.to_thread(next, frame_iter, None)
+            if packet is None:
+                break
             await asyncio.sleep(0)
-            continue
-        except asyncio.CancelledError:
-            break
-        if packet is None:
-            break
-        await asyncio.sleep(0)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("Warehouse video recorder pump failed")
 
 
 @router.post("/recording/start")
@@ -321,7 +330,8 @@ async def start_recording(user=Depends(require_user)):
             await asyncio.to_thread(_ensure_gazebo_streaming_enabled)
 
         source = _recording_source_url()
-        _recorder = DroneVideoStream(
+        recorder = await asyncio.to_thread(
+            DroneVideoStream,
             source=source,
             width=settings.drone_video_width,
             height=settings.drone_video_height,
@@ -331,10 +341,15 @@ async def start_recording(user=Depends(require_user)):
             recording_path=settings.drone_video_save_path,
             recording_format="mp4",
         )
-        _recorder.start_recording()
-        _recorder_task = asyncio.create_task(_recorder_pump(_recorder))
+        try:
+            await asyncio.to_thread(recorder.start_recording)
+        except Exception:
+            await asyncio.to_thread(recorder.close)
+            raise
+        _recorder = recorder
+        _recorder_task = asyncio.create_task(_recorder_pump(recorder), name="warehouse-video-recorder")
 
-        status = _recorder.get_connection_status()
+        status = recorder.get_connection_status()
         return {"status": "recording", "recording_file": status.get("recording_file")}
 
 
@@ -351,8 +366,8 @@ async def stop_recording(user=Depends(require_user)):
         _recorder = None
         _recorder_task = None
 
-        filename = recorder.stop_recording()
-        recorder.close()
+        filename = await asyncio.to_thread(recorder.stop_recording)
+        await asyncio.to_thread(recorder.close)
 
         if task:
             task.cancel()

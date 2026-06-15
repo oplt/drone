@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from backend.core.config.runtime import settings
 from backend.modules.mapping.service.flight_capture import (
@@ -16,6 +17,33 @@ from backend.modules.mapping.service.flight_capture import (
 logger = logging.getLogger(__name__)
 
 
+def _setting_text(name: str, default: str = "") -> str:
+    value = getattr(settings, name, default)
+    return str(value or "").strip()
+
+
+def _safe_float(value: Any, *, minimum: float, default: float) -> float:
+    try:
+        return max(minimum, float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(value: Any, *, minimum: int = 0, default: int = 0) -> int:
+    try:
+        return max(minimum, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _is_relative_to(child: Path, parent: Path) -> bool:
+    try:
+        child.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
 class WarehouseCaptureSessionService(FlightCaptureSessionService):
     """Warehouse-flavoured capture session service.
 
@@ -25,14 +53,39 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
 
     def __init__(self) -> None:
         super().__init__()
-        self.sync_root = Path(settings.warehouse_drone_sync_dir).resolve()
-        staging_raw = settings.warehouse_drone_capture_staging_dir.strip()
-        self.capture_staging_dir = Path(staging_raw).resolve() if staging_raw else None
-        self.default_wait_timeout_s = settings.warehouse_capture_sync_timeout_s
-        self.default_poll_interval_s = settings.warehouse_capture_sync_poll_s
-        self.default_min_images = max(0, settings.warehouse_capture_sync_min_files)
-        self.capture_sync_cmd_template = settings.warehouse_capture_sync_cmd.strip()
-        self.capture_sync_timeout_s = settings.warehouse_capture_sync_cmd_timeout_s
+        self.sync_root = Path(_setting_text("warehouse_drone_sync_dir")).expanduser().resolve()
+
+        staging_raw = _setting_text("warehouse_drone_capture_staging_dir")
+        self.capture_staging_dir = (
+            Path(staging_raw).expanduser().resolve() if staging_raw else None
+        )
+
+        self.default_wait_timeout_s = _safe_float(
+            getattr(settings, "warehouse_capture_sync_timeout_s", 0.0),
+            minimum=0.0,
+            default=0.0,
+        )
+        self.default_poll_interval_s = _safe_float(
+            getattr(settings, "warehouse_capture_sync_poll_s", 1.0),
+            minimum=0.2,
+            default=1.0,
+        )
+        self.default_min_images = _safe_int(
+            getattr(settings, "warehouse_capture_sync_min_files", 0),
+            minimum=0,
+            default=0,
+        )
+        self.capture_sync_cmd_template = _setting_text("warehouse_capture_sync_cmd")
+        self.capture_sync_timeout_s = _safe_float(
+            getattr(settings, "warehouse_capture_sync_cmd_timeout_s", 0.0),
+            minimum=0.0,
+            default=0.0,
+        )
+
+        # Track files imported from the staging directory per session to avoid
+        # repeatedly copying the same file on every polling iteration.
+        self._staging_imported_by_session: dict[Path, set[Path]] = {}
+
         self.sync_root.mkdir(parents=True, exist_ok=True)
         if self.capture_staging_dir:
             self.capture_staging_dir.mkdir(parents=True, exist_ok=True)
@@ -41,12 +94,17 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
     def _iso(dt: datetime) -> str:
         return dt.isoformat()
 
+    def _expected_min_files(self, min_files: int | None) -> int:
+        return self.default_min_images if min_files is None else _safe_int(min_files)
+
     def start_session(self, *, flight_id: Any) -> FlightCaptureSession:
         safe_flight_id = self._sanitize_flight_id(flight_id)
         relative_dir = f"flight_{safe_flight_id}"
         session_dir = (self.sync_root / relative_dir).resolve()
-        if not str(session_dir).startswith(str(self.sync_root)):
+
+        if not _is_relative_to(session_dir, self.sync_root):
             raise RuntimeError("Resolved warehouse capture directory is outside sync root.")
+
         session_dir.mkdir(parents=True, exist_ok=True)
 
         session = FlightCaptureSession(
@@ -74,10 +132,14 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         return session
 
     @staticmethod
-    def _list_files(root: Path) -> list[Path]:
+    def _iter_files(root: Path) -> Iterable[Path]:
         if not root.exists():
-            return []
-        return sorted(p for p in root.rglob("*") if p.is_file())
+            return ()
+        return (p for p in root.rglob("*") if p.is_file())
+
+    @classmethod
+    def _list_files(cls, root: Path) -> list[Path]:
+        return sorted(cls._iter_files(root))
 
     def _import_from_staging(self, session: FlightCaptureSession) -> int:
         staging_dir = self.capture_staging_dir
@@ -89,16 +151,30 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
                 staging_dir,
             )
             return 0
+
+        session_key = session.session_dir.resolve()
+        already_imported = self._staging_imported_by_session.setdefault(session_key, set())
         start_ts = session.started_at.timestamp() - 1.0
         copied = 0
+
         for src in self._list_files(staging_dir):
             try:
-                if src.stat().st_mtime < start_ts:
+                src = src.resolve()
+                if src in already_imported:
                     continue
+
+                src_stat = src.stat()
+                if src_stat.st_mtime < start_ts:
+                    continue
+
                 self._copy_into_session(session.session_dir, src)
+                already_imported.add(src)
                 copied += 1
+            except OSError:
+                logger.exception("Failed to stat/import staged capture file: %s", src)
             except Exception:
-                continue
+                logger.exception("Failed to copy staged capture file into session: %s", src)
+
         return copied
 
     def trigger_external_sync(
@@ -114,6 +190,7 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
                 "ok": False,
                 "reason": "WAREHOUSE_CAPTURE_SYNC_CMD is not set",
             }
+
         result = super().trigger_external_sync(session, force=force)
         if result.get("configured"):
             logger.info(
@@ -132,14 +209,18 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
     ) -> int:
         copied = 0
         for raw in capture_paths or []:
-            src = Path(str(raw)).expanduser().resolve()
-            if not src.exists() or not src.is_file():
-                continue
             try:
+                src = Path(str(raw)).expanduser().resolve()
+                if not src.exists() or not src.is_file():
+                    logger.debug("Skipping missing/non-file external capture path: %s", raw)
+                    continue
+
                 self._copy_into_session(session.session_dir, src)
                 copied += 1
+            except OSError:
+                logger.exception("Failed to access external capture path: %s", raw)
             except Exception:
-                continue
+                logger.exception("Failed to import external capture path: %s", raw)
         return copied
 
     def wait_for_files(
@@ -150,15 +231,26 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         timeout_s: float | None = None,
         poll_interval_s: float | None = None,
     ) -> list[Path]:
-        needed = self.default_min_images if min_files is None else max(0, int(min_files))
-        timeout = self.default_wait_timeout_s if timeout_s is None else max(0.0, float(timeout_s))
+        needed = self._expected_min_files(min_files)
+        timeout = (
+            self.default_wait_timeout_s
+            if timeout_s is None
+            else _safe_float(timeout_s, minimum=0.0, default=0.0)
+        )
         poll = (
             self.default_poll_interval_s
             if poll_interval_s is None
-            else max(0.2, float(poll_interval_s))
+            else _safe_float(poll_interval_s, minimum=0.2, default=1.0)
         )
+
         sync_state = self.trigger_external_sync(session)
-        has_external_source = bool(sync_state.get("configured") or self.capture_staging_dir)
+        has_staging_source = bool(
+            self.capture_staging_dir
+            and self.capture_staging_dir.exists()
+            and self.capture_staging_dir.is_dir()
+        )
+        has_external_source = bool(sync_state.get("configured") or has_staging_source)
+
         imported = self._import_from_staging(session)
         files = self._list_files(session.session_dir)
         logger.info(
@@ -173,11 +265,15 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
 
         deadline = time.monotonic() + timeout
         last_count = len(files)
-        while time.monotonic() < deadline:
-            time.sleep(poll)
-            self._import_from_staging(session)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+
+            time.sleep(min(poll, remaining))
+            imported = self._import_from_staging(session)
             files = self._list_files(session.session_dir)
-            if len(files) != last_count:
+            if len(files) != last_count or imported:
                 logger.info(
                     "Warehouse capture wait progress: %s/%s files in %s",
                     len(files),
@@ -187,6 +283,7 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
                 last_count = len(files)
             if len(files) >= needed:
                 break
+
         if needed > 0 and len(files) < needed:
             logger.warning(
                 "Warehouse capture sync timeout: found %d/%d files in %s.",
@@ -195,6 +292,28 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
                 session.session_dir,
             )
         return files
+
+    async def wait_for_files_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        min_files: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+    ) -> list[Path]:
+        """Async-safe wrapper for FastAPI/async routes.
+
+        The original wait_for_files API is intentionally synchronous for backward
+        compatibility. Use this wrapper when calling from an event loop so the
+        blocking polling and filesystem work run in a worker thread.
+        """
+        return await asyncio.to_thread(
+            self.wait_for_files,
+            session,
+            min_files=min_files,
+            timeout_s=timeout_s,
+            poll_interval_s=poll_interval_s,
+        )
 
     def finalize_session(
         self,
@@ -205,7 +324,8 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         poll_interval_s: float | None = None,
         extra_meta: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        files = self.wait_for_files(
+        expected_min_files = self._expected_min_files(min_files)
+        self.wait_for_files(
             session,
             min_files=min_files,
             timeout_s=timeout_s,
@@ -214,6 +334,8 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         ended_at = datetime.now(UTC)
         all_files = self._list_files(session.session_dir)
         image_count = sum(1 for p in all_files if p.suffix.lower() in IMAGE_EXTENSIONS)
+        status = "ready" if len(all_files) >= expected_min_files else "incomplete"
+
         result: dict[str, Any] = {
             "flight_id": session.flight_id,
             "source_dir": session.relative_source_dir,
@@ -223,12 +345,14 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
             "file_count": len(all_files),
             "image_count": image_count,
             "files": [str(p) for p in all_files],
-            "status": "ready" if len(files) >= max(0, int(min_files or 0)) else "incomplete",
-            "min_files_expected": max(0, int(min_files or 0)),
+            "status": status,
+            "min_files_expected": expected_min_files,
         }
         if extra_meta:
             result["meta"] = dict(extra_meta)
         self._write_manifest(session, result)
+        self._staging_imported_by_session.pop(session.session_dir.resolve(), None)
+
         logger.info(
             "Warehouse capture session finalized: flight_id=%s status=%s file_count=%s manifest=%s",
             session.flight_id,
@@ -237,3 +361,22 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
             self._manifest_path(session),
         )
         return result
+
+    async def finalize_session_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        min_files: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+        extra_meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Async-safe wrapper around finalize_session."""
+        return await asyncio.to_thread(
+            self.finalize_session,
+            session,
+            min_files=min_files,
+            timeout_s=timeout_s,
+            poll_interval_s=poll_interval_s,
+            extra_meta=extra_meta,
+        )

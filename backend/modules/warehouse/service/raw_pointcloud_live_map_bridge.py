@@ -51,8 +51,7 @@ class _MemoryUpload:
 def _voxel_downsample(xyz: np.ndarray, voxel_size: float) -> np.ndarray:
     if xyz.shape[0] <= 0 or voxel_size <= 0:
         return xyz
-
-    voxels = np.floor(xyz / voxel_size).astype(np.int64)
+    voxels = np.floor(xyz / voxel_size).astype(np.int64, copy=False)
     _, unique_indices = np.unique(voxels, axis=0, return_index=True)
     return np.ascontiguousarray(xyz[np.sort(unique_indices)], dtype=np.float32)
 
@@ -101,12 +100,25 @@ def _stamp_from_msg(msg: Any) -> str | None:
     nanosec = getattr(stamp, "nanosec", None)
     if sec is None or nanosec is None:
         return None
-    return f"{int(sec)}.{int(nanosec):09d}"
+    try:
+        return f"{int(sec)}.{int(nanosec):09d}"
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _finite_xyz(xyz: np.ndarray) -> np.ndarray:
+    arr = np.ascontiguousarray(xyz, dtype=np.float32).reshape((-1, 3))
+    if arr.size == 0:
+        return arr
+    return np.ascontiguousarray(arr[np.isfinite(arr).all(axis=1)], dtype=np.float32)
 
 
 def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
-    mins = np.nanmin(xyz, axis=0)
-    maxs = np.nanmax(xyz, axis=0)
+    clean = _finite_xyz(xyz)
+    if clean.shape[0] <= 0:
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    mins = clean.min(axis=0)
+    maxs = clean.max(axis=0)
     return [
         float(mins[0]),
         float(mins[1]),
@@ -117,14 +129,23 @@ def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
     ]
 
 
+def _preview_points(xyz: np.ndarray, *, limit: int = 500) -> list[list[float]]:
+    clean = _finite_xyz(xyz)
+    if clean.shape[0] <= 0:
+        return []
+    stride = max(1, clean.shape[0] // max(1, limit))
+    sample = clean[::stride][:limit]
+    return np.round(sample.astype(np.float64, copy=False), 3).tolist()
+
+
 def _safe_xyz_array(raw: Any) -> np.ndarray:
     arr = np.asarray(raw)
-
     if arr.size == 0:
         return np.empty((0, 3), dtype=np.float32)
 
     if arr.dtype.fields:
-        # Structured array from sensor_msgs_py.point_cloud2.read_points_numpy().
+        if not all(name in arr.dtype.fields for name in ("x", "y", "z")):
+            return np.empty((0, 3), dtype=np.float32)
         xyz = np.column_stack(
             [
                 arr["x"].astype(np.float32, copy=False),
@@ -133,13 +154,20 @@ def _safe_xyz_array(raw: Any) -> np.ndarray:
             ]
         )
     else:
+        if arr.ndim == 0:
+            return np.empty((0, 3), dtype=np.float32)
         xyz = arr.astype(np.float32, copy=False)
-        xyz = xyz.reshape((-1, xyz.shape[-1]))[:, :3]
+        if xyz.ndim == 1:
+            if xyz.size < 3:
+                return np.empty((0, 3), dtype=np.float32)
+            xyz = xyz.reshape((-1, 3))
+        else:
+            xyz = xyz.reshape((-1, xyz.shape[-1]))
+            if xyz.shape[1] < 3:
+                return np.empty((0, 3), dtype=np.float32)
+            xyz = xyz[:, :3]
 
-    finite = np.isfinite(xyz).all(axis=1)
-    xyz = xyz[finite]
-
-    return np.ascontiguousarray(xyz, dtype=np.float32)
+    return _finite_xyz(xyz)
 
 
 @dataclass
@@ -147,6 +175,7 @@ class _RawPointCloudRuntime:
     node: Any
     executor: Any
     thread: threading.Thread
+    wrapper: Any
 
 
 _runtime: _RawPointCloudRuntime | None = None
@@ -169,23 +198,20 @@ async def _store_and_publish_pointcloud_chunk(
         warehouse_live_map_stream,
     )
 
+    xyz = _finite_xyz(xyz)
     if xyz.size <= 0:
         return
 
-    payload = np.ascontiguousarray(xyz, dtype=np.float32).reshape((-1, 3)).tobytes()
     mid360_source = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"]
     chunk_id = chunk_id_for_source(mid360_source, sequence)
     started = time.monotonic()
     bbox = _bbox_from_xyz(xyz)
     priority = render_priority_for_source(mid360_source.source_id)
-    preview_stride = max(1, xyz.shape[0] // 500)
-    preview_points = [
-        [round(float(x), 3), round(float(y), 3), round(float(z), 3)]
-        for x, y, z in xyz[::preview_stride][:500]
-    ]
+    preview_points = _preview_points(xyz)
 
     stored = None
     if persist_to_disk:
+        payload = np.ascontiguousarray(xyz, dtype=np.float32).reshape((-1, 3)).tobytes()
         with observed_span(
             "mapping.save_chunk",
             flight_id=flight_id,
@@ -259,21 +285,21 @@ async def _store_and_publish_pointcloud_chunk(
         )
 
     chunk_payload: dict[str, object] = {
-                    "id": stored.chunk_id if stored is not None else chunk_id,
-                    "kind": "point_cloud",
-                    "sequence": sequence,
-                    "point_count": int(xyz.shape[0]),
-                    "bbox_local_m": bbox,
-                    "preview_points_m": preview_points,
-                    "source": mid360_source.source_id,
-                    "layer": mid360_source.layer,
-                    "layer_type": mid360_source.layer,
-                    "has_rgb": False,
-                    "encoding": "xyz32_v1",
-                    "frame_id": mid360_source.global_frame,
-                    "stamp": stamp,
-                    "priority": priority,
-                }
+        "id": stored.chunk_id if stored is not None else chunk_id,
+        "kind": "point_cloud",
+        "sequence": sequence,
+        "point_count": int(xyz.shape[0]),
+        "bbox_local_m": bbox,
+        "preview_points_m": preview_points,
+        "source": mid360_source.source_id,
+        "layer": mid360_source.layer,
+        "layer_type": mid360_source.layer,
+        "has_rgb": False,
+        "encoding": "xyz32_v1",
+        "frame_id": mid360_source.global_frame,
+        "stamp": stamp,
+        "priority": priority,
+    }
     if stored is not None:
         chunk_payload.update(
             {
@@ -335,14 +361,19 @@ class _RawPointCloudLiveMapNode:
         self.node = NodeImpl("warehouse_raw_pointcloud_live_map_bridge")
         self.flight_id = flight_id
         self.event_loop = event_loop
-        self.topic = topic
-        self.global_frame = global_frame
-        self.max_points = max(1, int(max_points))
-        self.min_publish_interval_s = max(0.1, float(min_publish_interval_s))
+        self.topic = str(topic).strip() or DEFAULT_POINTCLOUD_TOPIC
+        self.global_frame = str(global_frame).strip() or DEFAULT_GLOBAL_FRAME
+        self.max_points = max(1, int(max_points or 1))
+        self.min_publish_interval_s = max(0.1, float(min_publish_interval_s or 0.1))
         self.sequence = 0
         self.last_publish_monotonic = 0.0
-        self.persist_to_disk = persist_to_disk
-        self.voxel_size_m = max(0.0, float(voxel_size_m))
+        self.persist_to_disk = bool(persist_to_disk)
+        self.voxel_size_m = max(0.0, float(voxel_size_m or 0.0))
+        self._state_lock = threading.Lock()
+        self._queued_msg: Any | None = None
+        self._processing = False
+        self._dropped_frames = 0
+        self._last_backpressure_log_monotonic = 0.0
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
@@ -355,14 +386,14 @@ class _RawPointCloudLiveMapNode:
 
         self.subscription = self.node.create_subscription(
             PointCloud2,
-            topic,
+            self.topic,
             self._on_pointcloud,
             sensor_qos,
         )
 
         self.node.get_logger().info(
-            f"Raw point-cloud live-map bridge subscribed topic={topic} "
-            f"flight_id={flight_id} global_frame={global_frame}"
+            f"Raw point-cloud live-map bridge subscribed topic={self.topic} "
+            f"flight_id={flight_id} global_frame={self.global_frame}"
         )
 
     def _lookup_transform(self, msg: Any) -> Any | None:
@@ -370,23 +401,20 @@ class _RawPointCloudLiveMapNode:
         from rclpy.duration import Duration
         from rclpy.time import Time
 
-        source_frame = (msg.header.frame_id or "").strip()
-        if not source_frame:
-            return None
-
-        if source_frame == self.global_frame:
+        header = getattr(msg, "header", None)
+        source_frame = (getattr(header, "frame_id", None) or "").strip()
+        if not source_frame or source_frame == self.global_frame:
             return None
 
         try:
             return self.tf_buffer.lookup_transform(
                 self.global_frame,
                 source_frame,
-                Time.from_msg(msg.header.stamp),
+                Time.from_msg(header.stamp),
                 timeout=Duration(seconds=0.05),
             )
         except Exception:
             try:
-                # Fallback to latest available TF. Useful during startup/sim-time jumps.
                 return self.tf_buffer.lookup_transform(
                     self.global_frame,
                     source_frame,
@@ -402,10 +430,8 @@ class _RawPointCloudLiveMapNode:
     def _transform_xyz(self, xyz: np.ndarray, transform: Any | None) -> np.ndarray:
         if transform is None:
             return xyz
-
         t = transform.transform.translation
         q = transform.transform.rotation
-
         rotation = _rotation_matrix_from_quaternion_xyzw(
             float(q.x),
             float(q.y),
@@ -413,8 +439,7 @@ class _RawPointCloudLiveMapNode:
             float(q.w),
         )
         translation = np.asarray([float(t.x), float(t.y), float(t.z)], dtype=np.float32)
-
-        return np.ascontiguousarray((xyz @ rotation.T) + translation, dtype=np.float32)
+        return _finite_xyz((xyz @ rotation.T) + translation)
 
     def _decode_pointcloud(self, msg: Any) -> np.ndarray:
         from sensor_msgs_py import point_cloud2
@@ -427,14 +452,12 @@ class _RawPointCloudLiveMapNode:
             )
             xyz = _safe_xyz_array(raw)
         else:
-            raw = list(
-                point_cloud2.read_points(
-                    msg,
-                    field_names=("x", "y", "z"),
-                    skip_nans=True,
-                )
+            raw_iter = point_cloud2.read_points(
+                msg,
+                field_names=("x", "y", "z"),
+                skip_nans=True,
             )
-            xyz = _safe_xyz_array(raw)
+            xyz = _safe_xyz_array(list(raw_iter))
 
         if xyz.shape[0] > self.max_points:
             stride = max(1, math.ceil(xyz.shape[0] / self.max_points))
@@ -445,74 +468,116 @@ class _RawPointCloudLiveMapNode:
 
         if xyz.shape[0] > self.max_points:
             stride = max(1, math.ceil(xyz.shape[0] / self.max_points))
-            xyz = xyz[::stride]
+            xyz = xyz[::stride][: self.max_points]
 
-        return np.ascontiguousarray(xyz, dtype=np.float32)
+        return _finite_xyz(xyz)
+
+    def _prepare_chunk(self, msg: Any) -> dict[str, Any] | None:
+        started = time.monotonic()
+        with observed_span(
+            "ros.callback",
+            flight_id=self.flight_id,
+            ros_topic=self.topic,
+            ros_message_type=type(msg).__name__,
+            frame_id=getattr(getattr(msg, "header", None), "frame_id", None),
+        ):
+            xyz = self._decode_pointcloud(msg)
+            if xyz.shape[0] <= 0:
+                return None
+            transform = self._lookup_transform(msg)
+            xyz = self._transform_xyz(xyz, transform)
+            if xyz.shape[0] <= 0:
+                return None
+            with self._state_lock:
+                self.sequence += 1
+                sequence = self.sequence
+
+        metric_add("ros_messages", attrs={"topic": self.topic, "message_type": type(msg).__name__})
+        metric_add("mapping_pointclouds", attrs={"source": "mid360_raw", "layer": "mid360_lidar"})
+        metric_add("mapping_chunks_generated", attrs={"source": "mid360_raw", "layer": "mid360_lidar"})
+        metric_record(
+            "ros_callback_latency",
+            (time.monotonic() - started) * 1000.0,
+            {"topic": self.topic, "message_type": type(msg).__name__},
+        )
+        return {
+            "flight_id": self.flight_id,
+            "sequence": sequence,
+            "xyz": xyz,
+            "persist_to_disk": self.persist_to_disk,
+            "stamp": _stamp_from_msg(msg),
+        }
+
+    def _schedule_drain(self) -> None:
+        future = asyncio.run_coroutine_threadsafe(self._drain_messages(), self.event_loop)
+
+        def _done(done: Any) -> None:
+            if done.cancelled():
+                return
+            exc = done.exception()
+            if exc is not None:
+                self.node.get_logger().error(f"Raw point-cloud drain failed: {exc}")
+
+        future.add_done_callback(_done)
 
     def _on_pointcloud(self, msg: Any) -> None:
         now = time.monotonic()
         if now - self.last_publish_monotonic < self.min_publish_interval_s:
             return
-
         self.last_publish_monotonic = now
 
-        try:
-            started = time.monotonic()
-            with observed_span(
-                "ros.callback",
-                flight_id=self.flight_id,
-                ros_topic=self.topic,
-                ros_message_type=type(msg).__name__,
-                frame_id=getattr(getattr(msg, "header", None), "frame_id", None),
-            ):
-                xyz = self._decode_pointcloud(msg)
-                if xyz.shape[0] <= 0:
-                    return
-
-                transform = self._lookup_transform(msg)
-                xyz = self._transform_xyz(xyz, transform)
-
-                self.sequence += 1
-                sequence = self.sequence
-            metric_add(
-                "ros_messages",
-                attrs={"topic": self.topic, "message_type": type(msg).__name__},
-            )
-            metric_add(
-                "mapping_pointclouds",
-                attrs={"source": "mid360_raw", "layer": "mid360_lidar"},
-            )
-            metric_add(
-                "mapping_chunks_generated",
-                attrs={"source": "mid360_raw", "layer": "mid360_lidar"},
-            )
-            metric_record(
-                "ros_callback_latency",
-                (time.monotonic() - started) * 1000.0,
-                {"topic": self.topic, "message_type": type(msg).__name__},
-            )
-            point_step = getattr(msg, "point_step", None)
-            width = getattr(msg, "width", None)
-            height = getattr(msg, "height", 1)
-            if point_step is not None and width is not None:
+        point_step = getattr(msg, "point_step", None)
+        width = getattr(msg, "width", None)
+        height = getattr(msg, "height", 1)
+        if point_step is not None and width is not None:
+            try:
                 metric_record(
                     "ros_message_size",
                     float(point_step) * float(width) * float(height or 1),
                     {"topic": self.topic, "message_type": type(msg).__name__},
                 )
+            except (TypeError, ValueError, OverflowError):
+                pass
 
-            asyncio.run_coroutine_threadsafe(
-                _store_and_publish_pointcloud_chunk(
-                    flight_id=self.flight_id,
-                    sequence=sequence,
-                    xyz=xyz,
-                    persist_to_disk=self.persist_to_disk,
-                    stamp=_stamp_from_msg(msg),
-                ),
-                self.event_loop,
-            )
-        except Exception:
-            self.node.get_logger().exception("Failed to publish raw point-cloud chunk")
+        with self._state_lock:
+            if self._processing and self._queued_msg is not None:
+                self._dropped_frames += 1
+                if now - self._last_backpressure_log_monotonic >= 5.0:
+                    self._last_backpressure_log_monotonic = now
+                    self.node.get_logger().warning(
+                        "Raw point-cloud bridge falling behind topic=%s; dropped_stale_frames=%s",
+                        self.topic,
+                        self._dropped_frames,
+                    )
+            self._queued_msg = msg
+            if self._processing:
+                return
+            self._processing = True
+        self._schedule_drain()
+
+    async def _drain_messages(self) -> None:
+        try:
+            while True:
+                with self._state_lock:
+                    msg = self._queued_msg
+                    self._queued_msg = None
+                if msg is None:
+                    return
+                try:
+                    chunk = await asyncio.to_thread(self._prepare_chunk, msg)
+                    if chunk is not None:
+                        await _store_and_publish_pointcloud_chunk(**chunk)
+                except Exception:
+                    self.node.get_logger().exception("Failed to publish raw point-cloud chunk")
+        finally:
+            restart = False
+            with self._state_lock:
+                if self._queued_msg is None:
+                    self._processing = False
+                else:
+                    restart = True
+            if restart:
+                self._schedule_drain()
 
 
 async def start_raw_pointcloud_live_map_bridge(
@@ -529,14 +594,8 @@ async def start_raw_pointcloud_live_map_bridge(
     async with _runtime_lock:
         await stop_raw_pointcloud_live_map_bridge()
 
-        resolved_persist = (
-            should_persist_raw_lidar_chunks()
-            if persist_to_disk is None
-            else persist_to_disk
-        )
-        resolved_max_points = (
-            max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
-        )
+        resolved_persist = should_persist_raw_lidar_chunks() if persist_to_disk is None else bool(persist_to_disk)
+        resolved_max_points = max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
         resolved_interval = (
             min_publish_interval_s
             if min_publish_interval_s != DEFAULT_MIN_PUBLISH_INTERVAL_S
@@ -551,7 +610,6 @@ async def start_raw_pointcloud_live_map_bridge(
             rclpy.init(args=None)
 
         loop = asyncio.get_running_loop()
-
         wrapper = _RawPointCloudLiveMapNode(
             flight_id=flight_id,
             event_loop=loop,
@@ -565,7 +623,6 @@ async def start_raw_pointcloud_live_map_bridge(
 
         executor = SingleThreadedExecutor()
         executor.add_node(wrapper.node)
-
         thread = threading.Thread(
             target=executor.spin,
             name="warehouse-raw-pointcloud-live-map-bridge",
@@ -577,18 +634,35 @@ async def start_raw_pointcloud_live_map_bridge(
             node=wrapper.node,
             executor=executor,
             thread=thread,
+            wrapper=wrapper,
         )
 
         logger.info(
-            "Started raw point-cloud live-map bridge flight_id=%s topic=%s "
-            "max_hz=%.2f voxel_size=%.3f max_points=%s persist=%s",
+            "Started raw point-cloud live-map bridge flight_id=%s topic=%s max_hz=%.2f "
+            "voxel_size=%.3f max_points=%s persist=%s",
             flight_id,
             topic,
-            1.0 / resolved_interval,
+            1.0 / max(0.001, float(resolved_interval)),
             resolved_voxel,
             resolved_max_points,
             resolved_persist,
         )
+
+
+async def drain_raw_pointcloud_live_map_bridge(*, timeout_s: float = 5.0) -> bool:
+    runtime = _runtime
+    if runtime is None:
+        return True
+    wrapper = runtime.wrapper
+    deadline = time.monotonic() + max(0.1, float(timeout_s))
+    while time.monotonic() < deadline:
+        with wrapper._state_lock:
+            busy = wrapper._processing or wrapper._queued_msg is not None
+        if not busy:
+            return True
+        await asyncio.sleep(0.05)
+    logger.warning("Raw point-cloud bridge drain timed out after %.1fs", timeout_s)
+    return False
 
 
 async def stop_raw_pointcloud_live_map_bridge() -> None:
@@ -596,21 +670,20 @@ async def stop_raw_pointcloud_live_map_bridge() -> None:
 
     runtime = _runtime
     _runtime = None
-
     if runtime is None:
         return
 
     try:
-        runtime.executor.shutdown()
+        await asyncio.to_thread(runtime.executor.shutdown)
     except Exception:
         logger.exception("Failed to shutdown raw point-cloud executor")
 
     try:
-        runtime.node.destroy_node()
+        await asyncio.to_thread(runtime.node.destroy_node)
     except Exception:
         logger.exception("Failed to destroy raw point-cloud node")
 
     if runtime.thread.is_alive():
-        runtime.thread.join(timeout=2.0)
+        await asyncio.to_thread(runtime.thread.join, 2.0)
 
     logger.info("Stopped raw point-cloud live-map bridge")

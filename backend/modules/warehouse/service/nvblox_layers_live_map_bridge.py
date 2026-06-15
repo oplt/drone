@@ -7,7 +7,7 @@ import logging
 import math
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -72,16 +72,30 @@ def _rotation_matrix_from_quaternion_xyzw(
 
 
 def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
-    mins = np.nanmin(xyz, axis=0)
-    maxs = np.nanmax(xyz, axis=0)
-    return [
-        float(mins[0]),
-        float(mins[1]),
-        float(mins[2]),
-        float(maxs[0]),
-        float(maxs[1]),
-        float(maxs[2]),
-    ]
+    """Return a finite bbox; invalid/all-NaN clouds become a harmless zero bbox."""
+    if xyz.size <= 0:
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    arr = np.asarray(xyz, dtype=np.float32).reshape((-1, 3))
+    finite = np.isfinite(arr).all(axis=1)
+    if not bool(finite.any()):
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    valid = arr[finite]
+    mins = valid.min(axis=0)
+    maxs = valid.max(axis=0)
+    return [float(mins[0]), float(mins[1]), float(mins[2]), float(maxs[0]), float(maxs[1]), float(maxs[2])]
+
+
+def _preview_points_from_xyz(xyz: np.ndarray, *, limit: int = 500) -> list[list[float]]:
+    if xyz.size <= 0 or limit <= 0:
+        return []
+    arr = np.asarray(xyz, dtype=np.float32).reshape((-1, 3))
+    finite = np.isfinite(arr).all(axis=1)
+    if not bool(finite.any()):
+        return []
+    arr = arr[finite]
+    stride = max(1, int(np.ceil(arr.shape[0] / limit)))
+    preview = np.round(arr[::stride][:limit], 3)
+    return preview.astype(float, copy=False).tolist()
 
 
 def _stamp_from_msg(msg: Any) -> str | None:
@@ -104,6 +118,9 @@ class _LayerRuntime:
     queued_msg: Any | None = None
     processing: bool = False
     last_content_digest: str | None = None
+    dropped_frames: int = 0
+    last_backpressure_log_monotonic: float = 0.0
+    lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
 
 @dataclass
@@ -183,11 +200,7 @@ async def _store_and_publish_point_chunk(
         },
     )
 
-    preview_stride = max(1, xyz.shape[0] // 500)
-    preview_points = [
-        [round(float(x), 3), round(float(y), 3), round(float(z), 3)]
-        for x, y, z in xyz[::preview_stride][:500]
-    ]
+    preview_points = _preview_points_from_xyz(xyz, limit=500)
     update = normalize_live_map_payload(
         {
             "flight_id": flight_id,
@@ -430,41 +443,60 @@ class _NvbloxLayersLiveMapNode:
         now = time.monotonic()
         if now - runtime.last_publish_monotonic < config.min_publish_interval_s:
             return
-        runtime.last_publish_monotonic = now
-        if runtime.processing:
+        start_worker = False
+        with runtime.lock:
+            runtime.last_publish_monotonic = now
+            if runtime.processing:
+                if runtime.queued_msg is not None:
+                    runtime.dropped_frames += 1
+                    if now - runtime.last_backpressure_log_monotonic >= 5.0:
+                        runtime.last_backpressure_log_monotonic = now
+                        self.node.get_logger().warning(
+                            f"Nvblox layers bridge falling behind source={source_id}; "
+                            f"dropped_stale_frames={runtime.dropped_frames}"
+                        )
+                runtime.queued_msg = msg
+                return
+            runtime.processing = True
             runtime.queued_msg = msg
+            start_worker = True
+        if not start_worker:
             return
-        runtime.processing = True
         future = asyncio.run_coroutine_threadsafe(
-            self._drain_source(source_id, msg),
+            self._drain_source(source_id),
             self.event_loop,
         )
         future.add_done_callback(
             lambda done: done.exception() if not done.cancelled() else None
         )
 
-    async def _drain_source(self, source_id: str, msg: Any) -> None:
+    async def _drain_source(self, source_id: str) -> None:
         runtime = self.source_runtimes.get(source_id)
         if runtime is None:
             return
         try:
-            while msg is not None:
+            while True:
+                with runtime.lock:
+                    msg = runtime.queued_msg
+                    runtime.queued_msg = None
+                if msg is None:
+                    return
                 await self._publish_source_message(source_id, msg)
-                msg = runtime.queued_msg
-                runtime.queued_msg = None
         except Exception:
             self.node.get_logger().exception(
                 "Failed to publish nvblox layer chunk source=%s",
                 source_id,
             )
         finally:
-            runtime.processing = False
-            if runtime.queued_msg is not None:
-                queued = runtime.queued_msg
-                runtime.queued_msg = None
-                runtime.processing = True
+            restart = False
+            with runtime.lock:
+                runtime.processing = False
+                if runtime.queued_msg is not None:
+                    runtime.processing = True
+                    restart = True
+            if restart:
                 future = asyncio.run_coroutine_threadsafe(
-                    self._drain_source(source_id, queued),
+                    self._drain_source(source_id),
                     self.event_loop,
                 )
                 future.add_done_callback(
@@ -483,14 +515,16 @@ class _NvbloxLayersLiveMapNode:
             if not glb_bytes:
                 return
             digest = hashlib.sha1(glb_bytes).hexdigest()
-            if runtime.last_content_digest == digest:
-                return
-            runtime.last_content_digest = digest
-            runtime.sequence += 1
+            with runtime.lock:
+                if runtime.last_content_digest == digest:
+                    return
+                runtime.last_content_digest = digest
+                runtime.sequence += 1
+                sequence = runtime.sequence
             await _store_and_publish_mesh_chunk(
                 flight_id=self.flight_id,
                 source=config,
-                sequence=runtime.sequence,
+                sequence=sequence,
                 glb_bytes=glb_bytes,
                 frame_id=config.global_frame,
                 stamp=_stamp_from_msg(msg),
@@ -527,14 +561,16 @@ class _NvbloxLayersLiveMapNode:
         if parsed.rgb is not None:
             digest.update(np.ascontiguousarray(parsed.rgb).view(np.uint8))
         content_digest = digest.hexdigest()
-        if runtime.last_content_digest == content_digest:
-            return
-        runtime.last_content_digest = content_digest
-        runtime.sequence += 1
+        with runtime.lock:
+            if runtime.last_content_digest == content_digest:
+                return
+            runtime.last_content_digest = content_digest
+            runtime.sequence += 1
+            sequence = runtime.sequence
         await _store_and_publish_point_chunk(
             flight_id=self.flight_id,
             source=config,
-            sequence=runtime.sequence,
+            sequence=sequence,
             xyz=xyz,
             rgb=parsed.rgb,
             has_rgb=parsed.has_rgb,
@@ -637,7 +673,7 @@ async def stop_nvblox_layers_live_map_bridge() -> None:
     if runtime is None:
         return
     try:
-        runtime.executor.shutdown()
+        await asyncio.to_thread(runtime.executor.shutdown)
     except Exception:
         logger.exception("Failed to shutdown nvblox layers executor")
     try:
@@ -645,5 +681,5 @@ async def stop_nvblox_layers_live_map_bridge() -> None:
     except Exception:
         logger.exception("Failed to destroy nvblox layers node")
     if runtime.thread.is_alive():
-        runtime.thread.join(timeout=2.0)
+        await asyncio.to_thread(runtime.thread.join, 2.0)
     logger.info("Stopped nvblox layers live-map bridge")
