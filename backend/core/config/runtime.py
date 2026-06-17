@@ -136,9 +136,14 @@ class DefaultLogRecordFieldsFilter(logging.Filter):
 
     _DEFAULTS = {
         "service_name": os.getenv("OTEL_SERVICE_NAME") or os.getenv("OTEL_SERVICE_NAME_OVERRIDE") or "drone-api",
-        "environment": os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "local",
+        "environment": os.getenv("OTEL_ENVIRONMENT") or os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "local",
         "otel_trace_id": "",
         "otel_span_id": "",
+        "trace_id": "",
+        "span_id": "",
+        "request_id": "",
+        "correlation_id": "",
+        "job_id": "",
     }
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -170,7 +175,8 @@ def _make_formatter(log_format: str) -> logging.Formatter:
             return jsonlogger.JsonFormatter(
                 (
                     "%(asctime)s %(levelname)s %(name)s %(message)s "
-                    "%(service_name)s %(environment)s %(otel_trace_id)s %(otel_span_id)s"
+                    "%(service_name)s %(environment)s %(trace_id)s %(span_id)s "
+                    "%(request_id)s %(correlation_id)s %(job_id)s"
                 ),
                 rename_fields={"asctime": "ts", "levelname": "level", "name": "logger"},
             )
@@ -178,7 +184,8 @@ def _make_formatter(log_format: str) -> logging.Formatter:
             pass
     return logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(service_name)s | "
-        "%(environment)s | trace=%(otel_trace_id)s span=%(otel_span_id)s | %(message)s"
+        "%(environment)s | trace=%(trace_id)s span=%(span_id)s | "
+        "req=%(request_id)s corr=%(correlation_id)s job=%(job_id)s | %(message)s"
     )
 
 

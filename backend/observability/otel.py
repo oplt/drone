@@ -97,7 +97,11 @@ def _resource(service_name: str):
     attrs = {
         **_resource_attributes(),
         "service.name": service_name,
-        "deployment.environment": settings.app_env or _env("APP_ENV", "local"),
+        "deployment.environment": (
+            os.getenv("OTEL_ENVIRONMENT")
+            or settings.app_env
+            or _env("APP_ENV", "local")
+        ),
         "drone.app": "drone-api",
         "drone.autopilot": _env("DRONE_AUTOPILOT", "ardupilot"),
         "drone.simulator": _env("DRONE_SIMULATOR", "gazebo"),

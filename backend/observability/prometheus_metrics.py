@@ -2,23 +2,175 @@
 
 from prometheus_client import Counter, Gauge, Histogram
 
+# --- HTTP API ---
+
 http_requests_total = Counter(
     "http_requests_total",
     "Total HTTP requests",
-    ["method", "path", "status_code"],
+    ["method", "route", "status_code"],
 )
 
 http_request_duration_seconds = Histogram(
     "http_request_duration_seconds",
     "HTTP request latency in seconds",
-    ["method", "path"],
+    ["method", "route", "status_code"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0),
+)
+
+http_requests_in_progress = Gauge(
+    "http_requests_in_progress",
+    "HTTP requests currently being processed",
+    ["method", "route"],
 )
 
 http_exceptions_total = Counter(
     "http_exceptions_total",
     "Total unhandled HTTP exceptions",
-    ["method", "path", "exception_type"],
+    ["method", "route", "exception_type"],
 )
+
+# --- Jobs / workers ---
+
+jobs_started_total = Counter(
+    "jobs_started_total",
+    "Total background jobs started",
+    ["job_name", "queue"],
+)
+
+jobs_completed_total = Counter(
+    "jobs_completed_total",
+    "Total background jobs completed successfully",
+    ["job_name", "queue"],
+)
+
+jobs_failed_total = Counter(
+    "jobs_failed_total",
+    "Total background jobs failed",
+    ["job_name", "queue", "error_type"],
+)
+
+job_duration_seconds = Histogram(
+    "job_duration_seconds",
+    "Background job execution duration in seconds",
+    ["job_name", "queue"],
+    buckets=(0.1, 0.5, 1.0, 5.0, 15.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1800.0, 3600.0),
+)
+
+job_retries_total = Counter(
+    "job_retries_total",
+    "Total background job retry attempts",
+    ["job_name", "queue", "retry_reason"],
+)
+
+job_dead_letter_total = Counter(
+    "job_dead_letter_total",
+    "Total jobs moved to dead-letter after max retries",
+    ["job_name", "queue"],
+)
+
+queue_lag_seconds = Histogram(
+    "queue_lag_seconds",
+    "Time between job enqueue and worker start in seconds",
+    ["queue"],
+    buckets=(0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 15.0, 30.0, 60.0, 120.0, 300.0, 600.0),
+)
+
+queue_depth = Gauge(
+    "queue_depth",
+    "Number of pending messages in a queue",
+    ["queue"],
+)
+
+# --- Database ---
+
+db_query_duration_seconds = Histogram(
+    "db_query_duration_seconds",
+    "Database query duration in seconds",
+    ["operation", "table"],
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+)
+
+db_errors_total = Counter(
+    "db_errors_total",
+    "Total database errors",
+    ["operation", "error_type"],
+)
+
+db_connection_errors_total = Counter(
+    "db_connection_errors_total",
+    "Total database connection errors",
+)
+
+db_pool_active_connections = Gauge(
+    "db_pool_active_connections",
+    "Active database pool connections",
+)
+
+db_pool_idle_connections = Gauge(
+    "db_pool_idle_connections",
+    "Idle database pool connections",
+)
+
+# --- External APIs ---
+
+external_api_requests_total = Counter(
+    "external_api_requests_total",
+    "Total outbound external API requests",
+    ["service", "endpoint_group", "status_code"],
+)
+
+external_api_request_duration_seconds = Histogram(
+    "external_api_request_duration_seconds",
+    "Outbound external API request duration in seconds",
+    ["service", "endpoint_group"],
+    buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0),
+)
+
+external_api_errors_total = Counter(
+    "external_api_errors_total",
+    "Total outbound external API errors",
+    ["service", "error_type"],
+)
+
+# --- Reliability / scheduler ---
+
+retry_count_total = Counter(
+    "retry_count_total",
+    "Total retry attempts across subsystems",
+    ["subsystem", "reason"],
+)
+
+stale_data_detected_total = Counter(
+    "stale_data_detected_total",
+    "Total stale-data detections",
+    ["source"],
+)
+
+fallback_used_total = Counter(
+    "fallback_used_total",
+    "Total safe fallback usages",
+    ["subsystem", "fallback_type"],
+)
+
+scheduler_runs_total = Counter(
+    "scheduler_runs_total",
+    "Total scheduler/beat task runs",
+    ["scheduler_name"],
+)
+
+scheduler_failures_total = Counter(
+    "scheduler_failures_total",
+    "Total scheduler/beat task failures",
+    ["scheduler_name", "error_type"],
+)
+
+scheduler_lag_seconds = Gauge(
+    "scheduler_lag_seconds",
+    "Scheduler lag in seconds since last successful run",
+    ["scheduler_name"],
+)
+
+# --- Domain-specific (retained for backward compatibility) ---
 
 active_drone_connections = Gauge(
     "drone_active_connections",
@@ -63,13 +215,13 @@ video_analysis_job_failures = Counter(
 
 celery_task_duration_seconds = Histogram(
     "drone_celery_task_duration_seconds",
-    "Celery task duration in seconds",
+    "Celery task duration in seconds (legacy alias)",
     ["task_name", "status"],
 )
 
 redis_queue_depth = Gauge(
     "drone_redis_queue_depth",
-    "Redis queue depth",
+    "Redis queue depth (legacy alias)",
     ["queue_name"],
 )
 
@@ -165,9 +317,13 @@ patrol_preflight_failures_total = Counter(
     "Total Property Patrol preflight failures",
 )
 
-
-# TODO: Wire active_drone_connections from vehicle_runtime connection lifecycle.
-# TODO: Wire mission command counters from missions command dispatch path.
-# TODO: Wire telemetry lag from telemetry ingest timestamps.
-# TODO: Wire Celery task duration via task_prerun/task_postrun signals.
-# TODO: Wire Redis queue depth only where queue names and Redis client are explicit.
+KNOWN_QUEUES = (
+    "default",
+    "photogrammetry",
+    "video-analysis",
+    "warehouse-mapping",
+    "exports",
+    "webhooks",
+    "scheduling",
+    "notifications",
+)

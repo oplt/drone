@@ -308,3 +308,110 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
 
     assert any(name == "video_inference_latency" for name, _ in recorded)
     assert any(name == "video_detection_count" and value == 1 for name, value in recorded)
+
+
+def test_correlation_middleware_sets_headers():
+    import asyncio
+
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+
+    from backend.observability.correlation import CorrelationMiddleware
+
+    app = FastAPI()
+    app.add_middleware(CorrelationMiddleware)
+
+    @app.get("/ping")
+    async def ping():
+        return {"ok": True}
+
+    async def run():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/ping")
+            assert response.status_code == 200
+            assert response.headers.get("X-Request-ID")
+            assert response.headers.get("X-Correlation-ID")
+
+    asyncio.run(run())
+
+
+def test_http_metrics_increment_on_request(monkeypatch):
+    from fastapi import FastAPI
+    from httpx import ASGITransport, Client
+
+    from backend.observability import prometheus_metrics
+    from backend.observability.metrics import setup_metrics
+
+    monkeypatch.setenv("PROMETHEUS_METRICS_ENABLED", "true")
+    app = FastAPI()
+    setup_metrics(app)
+
+    @app.get("/test-route")
+    def test_route():
+        return {"ok": True}
+
+    before = prometheus_metrics.http_requests_total.labels(
+        method="GET", route="/test-route", status_code="200"
+    )._value.get()  # noqa: SLF001
+
+    with Client(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = client.get("/test-route")
+        assert response.status_code == 200
+
+    after = prometheus_metrics.http_requests_total.labels(
+        method="GET", route="/test-route", status_code="200"
+    )._value.get()  # noqa: SLF001
+    assert after > before
+
+
+def test_audit_event_emits_structured_fields(caplog):
+    from backend.observability.audit import emit_audit_event
+
+    with caplog.at_level("INFO", logger="audit"):
+        emit_audit_event(
+            event_name="test_event",
+            action="create",
+            resource_type="mission",
+            resource_id="m-1",
+            result="success",
+            actor_type="user",
+            actor_id="42",
+        )
+    assert any("test_event" in record.message for record in caplog.records)
+
+
+def test_normalize_error_type_maps_db_errors():
+    from backend.observability.errors import normalize_error_type
+    from sqlalchemy.exc import OperationalError
+
+    assert normalize_error_type(TimeoutError()) == "timeout"
+    assert normalize_error_type(OperationalError("stmt", {}, ConnectionError())) == "connection_error"
+
+
+def test_db_error_increments_metric():
+    from backend.observability import prometheus_metrics
+    from backend.observability.database import record_db_error
+
+    before = prometheus_metrics.db_errors_total.labels(
+        operation="write", error_type="runtime_error"
+    )._value.get()  # noqa: SLF001
+    record_db_error("write", RuntimeError("disk full"))
+    after = prometheus_metrics.db_errors_total.labels(
+        operation="write", error_type="runtime_error"
+    )._value.get()  # noqa: SLF001
+    assert after > before
+
+
+def test_trace_context_filter_adds_ids():
+    import logging
+
+    from backend.observability.context import set_correlation_id, set_request_id
+    from backend.observability.logging import TraceContextFilter
+
+    set_request_id("req-1")
+    set_correlation_id("corr-1")
+    record = logging.LogRecord("test", logging.INFO, "", 0, "hello", (), None)
+    assert TraceContextFilter().filter(record) is True
+    assert record.request_id == "req-1"
+    assert record.correlation_id == "corr-1"

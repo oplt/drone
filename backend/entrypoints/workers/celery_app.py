@@ -58,3 +58,7 @@ celery_app.conf.beat_schedule = {
     },
 }
 celery_app.conf.timezone = "UTC"
+
+from backend.observability.celery_instrumentation import instrument_celery  # noqa: E402
+
+instrument_celery(celery_app)

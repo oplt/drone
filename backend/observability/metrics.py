@@ -10,6 +10,8 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from backend.observability import prometheus_metrics
 from backend.observability.config import load_config
+from backend.observability.database import refresh_pool_metrics
+from backend.observability.queue_metrics import refresh_queue_depth_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -119,44 +121,39 @@ def setup_metrics(app: Any) -> None:
 
     @app.middleware("http")
     async def prometheus_metrics_middleware(request: Request, call_next: Any) -> Response:
-        path = _route_path(request)
-        if path == config.prometheus_metrics_path:
+        route = _route_path(request)
+        if route == config.prometheus_metrics_path:
             return await call_next(request)
 
+        method = request.method
+        prometheus_metrics.http_requests_in_progress.labels(method=method, route=route).inc()
         started_at = time.perf_counter()
         try:
             response = await call_next(request)
+            elapsed = time.perf_counter() - started_at
+            status_code = str(response.status_code)
+            _record_http_request(method, route, status_code, elapsed)
+            return response
         except Exception as exc:
             elapsed = time.perf_counter() - started_at
-            prometheus_metrics.http_request_duration_seconds.labels(
-                request.method,
-                path,
-            ).observe(elapsed)
-            prometheus_metrics.http_requests_total.labels(
-                request.method,
-                path,
-                "500",
-            ).inc()
+            _record_http_request(method, route, "500", elapsed)
             prometheus_metrics.http_exceptions_total.labels(
-                request.method,
-                path,
+                method,
+                route,
                 type(exc).__name__,
             ).inc()
             raise
-
-        elapsed = time.perf_counter() - started_at
-        prometheus_metrics.http_request_duration_seconds.labels(
-            request.method,
-            path,
-        ).observe(elapsed)
-        prometheus_metrics.http_requests_total.labels(
-            request.method,
-            path,
-            str(response.status_code),
-        ).inc()
-        return response
+        finally:
+            prometheus_metrics.http_requests_in_progress.labels(method=method, route=route).dec()
 
     def metrics_endpoint() -> Response:
+        try:
+            from backend.core.database.session import engine
+
+            refresh_pool_metrics(engine)
+        except Exception:
+            pass
+        refresh_queue_depth_metrics()
         return Response(
             content=generate_latest(),
             media_type=CONTENT_TYPE_LATEST,
@@ -169,6 +166,19 @@ def setup_metrics(app: Any) -> None:
         include_in_schema=False,
     )
     app.state.prometheus_metrics_instrumented = True
+
+
+def _record_http_request(method: str, route: str, status_code: str, elapsed: float) -> None:
+    prometheus_metrics.http_request_duration_seconds.labels(
+        method=method,
+        route=route,
+        status_code=status_code,
+    ).observe(elapsed)
+    prometheus_metrics.http_requests_total.labels(
+        method=method,
+        route=route,
+        status_code=status_code,
+    ).inc()
 
 
 def _route_path(request: Request) -> str:

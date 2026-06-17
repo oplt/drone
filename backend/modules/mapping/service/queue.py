@@ -30,8 +30,14 @@ class MappingJobQueue:
 
         try:
             from backend.entrypoints.workers.photogrammetry_tasks import process_photogrammetry_job
+            from backend.observability.instruments import observed_span
 
-            result = process_photogrammetry_job.delay(job_id=job_id)
+            with observed_span(
+                "job.enqueue",
+                job_name="photogrammetry.process_job",
+                queue="photogrammetry",
+            ):
+                result = process_photogrammetry_job.delay(job_id=job_id)
         except Exception as exc:
             raise MappingJobQueueError(
                 "Failed to enqueue mapping job. Ensure Redis broker and Celery workers are running."

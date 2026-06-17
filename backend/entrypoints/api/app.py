@@ -7,8 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.core.config.runtime import settings, setup_logging
-from backend.core.database.session import close_db, init_db
-from backend.core.errors.handlers import RequestIDMiddleware, register_error_handlers
+from backend.core.database.session import close_db, engine, init_db
+from backend.core.errors.handlers import register_error_handlers
+from backend.observability.correlation import CorrelationMiddleware
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
 from backend.modules.ai.api import router as ai_router
@@ -106,10 +107,10 @@ async def healthz():
 
 # Observability
 setup_metrics(app)
-setup_tracing(app)
+setup_tracing(app, engine=engine)
 
-# Request ID middleware
-app.add_middleware(RequestIDMiddleware)
+# Request / correlation ID middleware
+app.add_middleware(CorrelationMiddleware)
 
 # React dev servers
 app.add_middleware(

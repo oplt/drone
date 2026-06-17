@@ -43,7 +43,7 @@ def load_config() -> ObservabilityConfig:
     return ObservabilityConfig(
         enabled=env_bool("OBSERVABILITY_ENABLED", enabled_default),
         service_name=env_str("OTEL_SERVICE_NAME", settings.otel_service_name or "drone-api"),
-        environment=settings.app_env or env_str("APP_ENV", "local"),
+        environment=settings.app_env or env_str("OTEL_ENVIRONMENT", env_str("APP_ENV", "local")),
         otlp_endpoint=(endpoint or "http://127.0.0.1:4318").rstrip("/"),
         traces_exporter=env_str("OTEL_TRACES_EXPORTER", "otlp").lower(),
         metrics_exporter=env_str("OTEL_METRICS_EXPORTER", "none").lower(),
