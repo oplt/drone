@@ -5,7 +5,11 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ObservabilityPage from "./ObservabilityPage";
 import * as observabilityApi from "./api";
-import type { ObservabilityLinks, ObservabilityStatus } from "./types";
+import type {
+  ObservabilityContextOptions,
+  ObservabilityLinks,
+  ObservabilityStatus,
+} from "./types";
 
 vi.mock("../session", () => ({
   useCurrentUser: vi.fn(() => ({
@@ -26,6 +30,11 @@ const configuredLinks: ObservabilityLinks = {
   videoDashboardUrl: "https://grafana.example.com/d/drone-video/video-pipeline",
   mavlinkDashboardUrl: "https://grafana.example.com/d/drone-mavlink/mavlink-telemetry",
   tracesUrl: "https://grafana.example.com/explore",
+};
+
+const configuredContextOptions: ObservabilityContextOptions = {
+  drones: [{ value: "DRONE-001", label: "Scout (DRONE-001)" }],
+  missions: [{ value: "flight-abc12345", label: "Perimeter Patrol (flight-ab)" }],
 };
 
 const configuredStatus: ObservabilityStatus = {
@@ -51,6 +60,9 @@ describe("ObservabilityPage", () => {
     vi.restoreAllMocks();
     vi.spyOn(observabilityApi, "fetchObservabilityLinks").mockResolvedValue(configuredLinks);
     vi.spyOn(observabilityApi, "fetchObservabilityStatus").mockResolvedValue(configuredStatus);
+    vi.spyOn(observabilityApi, "fetchObservabilityContextOptions").mockResolvedValue(
+      configuredContextOptions,
+    );
   });
 
   it("renders configured state and hides Prometheus Debug for non-admin users", async () => {

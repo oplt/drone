@@ -120,8 +120,9 @@ class WarehouseLiveMapStream:
         *,
         max_updates_per_flight: int = 1000,
         max_flights: int = 64,
-        send_timeout_s: float = 1.0,
+        send_timeout_s: float = 5.0,
         max_concurrent_sends: int = 64,
+        max_consecutive_send_timeouts: int = 4,
     ) -> None:
         self._updates: dict[str, deque[WarehouseLiveMapUpdate]] = {}
         self._clients: dict[str, set[WebSocket]] = {}
@@ -130,6 +131,12 @@ class WarehouseLiveMapStream:
         self._max_flights = max(1, int(max_flights))
         self._send_timeout_s = max(0.1, float(send_timeout_s))
         self._send_semaphore = asyncio.Semaphore(max(1, int(max_concurrent_sends)))
+        self._max_consecutive_send_timeouts = max(1, int(max_consecutive_send_timeouts))
+        # Per-socket consecutive send-timeout counter. A slow client (busy
+        # downloading chunks → TCP backpressure) must NOT be evicted on a single
+        # timeout; that froze the live map mid-scan and only recovered on a
+        # reconnect snapshot. We only drop it after several consecutive timeouts.
+        self._send_timeout_strikes: dict[WebSocket, int] = {}
         self._lock = asyncio.Lock()
 
     async def _trim_flight_cache_locked(self) -> None:
@@ -161,10 +168,27 @@ class WarehouseLiveMapStream:
                 "api_websocket_messages",
                 attrs={"channel": "warehouse_live_map", "message_type": str(payload.get("type"))},
             )
+            self._send_timeout_strikes.pop(client, None)
             return None
         except asyncio.CancelledError:
             raise
+        except asyncio.TimeoutError:
+            # Transient backpressure (client busy fetching chunks), not a
+            # disconnect. Keep the client subscribed so it keeps receiving
+            # chunk metadata live; only evict after repeated stalls.
+            strikes = self._send_timeout_strikes.get(client, 0) + 1
+            self._send_timeout_strikes[client] = strikes
+            metric_add(
+                "api_websocket_send_timeouts",
+                attrs={"channel": "warehouse_live_map"},
+            )
+            if strikes >= self._max_consecutive_send_timeouts:
+                self._send_timeout_strikes.pop(client, None)
+                metric_add("api_websocket_disconnects", attrs={"channel": "warehouse_live_map"})
+                return client
+            return None
         except Exception:
+            self._send_timeout_strikes.pop(client, None)
             metric_add("api_websocket_disconnects", attrs={"channel": "warehouse_live_map"})
             return client
 
@@ -248,6 +272,7 @@ class WarehouseLiveMapStream:
             clients.discard(websocket)
             if not clients:
                 self._clients.pop(flight_id, None)
+            self._send_timeout_strikes.pop(websocket, None)
         metric_add("api_websocket_disconnects", attrs={"channel": "warehouse_live_map"})
 
     async def finalize(self, flight_id: str, job_id: int | None) -> None:

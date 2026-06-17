@@ -621,18 +621,32 @@ class WarehouseScanMission:
                     orch,
                     phase="pre_finalize",
                 )
-                manifest = build_manifest_from_flight_dir(
-                    client_flight_id,
-                    missing_topics=list(
-                        pre_shutdown_diagnostics.get("missing_required_topics", [])
-                    )
-                    + list(pre_shutdown_diagnostics.get("missing_nvblox_topics", [])),
-                    localization_ok=bool(pre_shutdown_diagnostics.get("can_localize")),
-                    diagnostics_phase="pre_finalize",
+                manifest_missing_topics = list(
+                    pre_shutdown_diagnostics.get("missing_required_topics", [])
+                ) + list(pre_shutdown_diagnostics.get("missing_nvblox_topics", []))
+                manifest_localization_ok = bool(
+                    pre_shutdown_diagnostics.get("can_localize")
                 )
-                manifest = finalize_manifest_integrity(manifest)
-                save_flight_manifest(manifest)
-                save_ok, save_detail = validate_save_quality(manifest)
+
+                def _build_save_validate_manifest():
+                    # build_manifest_from_flight_dir scans + hashes every chunk file
+                    # on disk (O(total bytes)); running it inline blocks the event
+                    # loop for seconds during teardown. Offload the whole sync block
+                    # to a worker thread so live WS clients / other flights keep moving.
+                    built = build_manifest_from_flight_dir(
+                        client_flight_id,
+                        missing_topics=manifest_missing_topics,
+                        localization_ok=manifest_localization_ok,
+                        diagnostics_phase="pre_finalize",
+                    )
+                    built = finalize_manifest_integrity(built)
+                    save_flight_manifest(built)
+                    ok, detail = validate_save_quality(built)
+                    return built, ok, detail
+
+                manifest, save_ok, save_detail = await asyncio.to_thread(
+                    _build_save_validate_manifest
+                )
                 sync_result["live_map_manifest"] = manifest.as_dict()
                 sync_result["live_map_quality"] = {
                     "ok": save_ok,
@@ -1128,7 +1142,14 @@ class WarehouseScanMission:
         )
 
     async def _restart_live_map_publisher(self, flight_id: str) -> None:
-        """Stream odometry + RGB-D/nvblox colored layers; raw Mid360 is optional."""
+        """Stream odometry + RGB-D/nvblox colored layers; raw Mid360 is optional.
+
+        The bridges are independent, so they are started concurrently instead of
+        serially — that removed the ~9s serial start gap before first pixels.
+        """
+        from backend.modules.warehouse.service.colored_pointcloud_live_map_bridge import (
+            start_colored_pointcloud_live_map_bridge,
+        )
         from backend.modules.warehouse.service.live_map_bridge import (
             start_warehouse_live_map_bridge,
         )
@@ -1137,70 +1158,74 @@ class WarehouseScanMission:
             raw_lidar_enabled,
             should_persist_raw_lidar_chunks,
         )
+        from backend.modules.warehouse.service.map_source_config import (
+            WAREHOUSE_LIVE_MAP_SOURCES,
+        )
+        from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
+            start_nvblox_layers_live_map_bridge,
+        )
         from backend.modules.warehouse.service.raw_pointcloud_live_map_bridge import (
             start_raw_pointcloud_live_map_bridge,
         )
 
-        try:
-            await start_warehouse_live_map_bridge(flight_id)
-            logger.info("Started warehouse live map bridge for flight_id=%s", flight_id)
-        except Exception as exc:
-            logger.warning("Could not start warehouse live map bridge: %s", exc)
+        async def _start_main_bridge() -> None:
+            try:
+                await start_warehouse_live_map_bridge(flight_id)
+                logger.info("Started warehouse live map bridge for flight_id=%s", flight_id)
+            except Exception as exc:
+                logger.warning("Could not start warehouse live map bridge: %s", exc)
 
-        from backend.modules.warehouse.service.colored_pointcloud_live_map_bridge import (
-            start_colored_pointcloud_live_map_bridge,
-        )
-        from backend.modules.warehouse.service.map_source_config import (
-            WAREHOUSE_LIVE_MAP_SOURCES,
-        )
+        async def _start_colored_bridge() -> None:
+            try:
+                await start_colored_pointcloud_live_map_bridge(flight_id)
+                logger.info(
+                    "Started colored point-cloud live map bridge for flight_id=%s",
+                    flight_id,
+                )
+            except Exception as exc:
+                logger.warning("Could not start colored point-cloud live map bridge: %s", exc)
 
-        try:
-            await start_colored_pointcloud_live_map_bridge(flight_id)
-            logger.info(
-                "Started colored point-cloud live map bridge for flight_id=%s",
-                flight_id,
-            )
-        except Exception as exc:
-            logger.warning("Could not start colored point-cloud live map bridge: %s", exc)
+        async def _start_nvblox_bridge() -> None:
+            try:
+                await start_nvblox_layers_live_map_bridge(flight_id)
+                logger.info(
+                    "Started nvblox layers live-map bridge for flight_id=%s",
+                    flight_id,
+                )
+            except Exception as exc:
+                logger.warning("Could not start nvblox layers live-map bridge: %s", exc)
 
-        from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
-            start_nvblox_layers_live_map_bridge,
-        )
+        async def _start_raw_bridge() -> None:
+            mid360 = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"]
+            try:
+                await start_raw_pointcloud_live_map_bridge(
+                    flight_id,
+                    topic=mid360.topic,
+                    global_frame=mid360.global_frame,
+                    max_points=mid360.max_points,
+                    min_publish_interval_s=mid360.min_publish_interval_s,
+                    persist_to_disk=should_persist_raw_lidar_chunks(),
+                )
+                logger.info(
+                    "Started warehouse raw point-cloud live map bridge for flight_id=%s persist=%s",
+                    flight_id,
+                    should_persist_raw_lidar_chunks(),
+                )
+            except Exception as exc:
+                logger.warning("Could not start raw point-cloud live map bridge: %s", exc)
 
-        try:
-            await start_nvblox_layers_live_map_bridge(flight_id)
-            logger.info(
-                "Started nvblox layers live-map bridge for flight_id=%s",
-                flight_id,
-            )
-        except Exception as exc:
-            logger.warning("Could not start nvblox layers live-map bridge: %s", exc)
+        starters = [_start_main_bridge(), _start_colored_bridge(), _start_nvblox_bridge()]
 
-        if not raw_lidar_enabled() and not persist_raw_lidar_layer():
+        if raw_lidar_enabled() or persist_raw_lidar_layer():
+            starters.append(_start_raw_bridge())
+        else:
             logger.info(
                 "Skipping raw Mid360 live-map bridge for flight_id=%s "
                 "(preview and persist disabled)",
                 flight_id,
             )
-            return
 
-        mid360 = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"]
-        try:
-            await start_raw_pointcloud_live_map_bridge(
-                flight_id,
-                topic=mid360.topic,
-                global_frame=mid360.global_frame,
-                max_points=mid360.max_points,
-                min_publish_interval_s=mid360.min_publish_interval_s,
-                persist_to_disk=should_persist_raw_lidar_chunks(),
-            )
-            logger.info(
-                "Started warehouse raw point-cloud live map bridge for flight_id=%s persist=%s",
-                flight_id,
-                should_persist_raw_lidar_chunks(),
-            )
-        except Exception as exc:
-            logger.warning("Could not start raw point-cloud live map bridge: %s", exc)
+        await asyncio.gather(*starters)
 
     async def _collect_mission_diagnostics(
         self,
@@ -1216,8 +1241,16 @@ class WarehouseScanMission:
         )
 
         del orch
+        # After cleanup the mapping stack + ROS bridge are already torn down, so a
+        # deep/forced probe just burns seconds on _ensure_ros_bridge_running +
+        # `ros2 topic list` timeouts (and would try to restart the bridge). Use a
+        # shallow, non-forcing probe for the post-cleanup snapshot.
+        is_post_cleanup = phase == "post_cleanup"
         try:
-            status = await fetch_warehouse_perception_status(deep=True, force=True)
+            status = await fetch_warehouse_perception_status(
+                deep=not is_post_cleanup,
+                force=not is_post_cleanup,
+            )
             readiness = readiness_from_perception_status_strict(status)
         except Exception as exc:
             logger.warning("Mission diagnostic health probe failed (%s): %s", phase, exc)

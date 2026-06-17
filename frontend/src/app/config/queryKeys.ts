@@ -9,6 +9,8 @@ export const dashboardKeys = {
   analyticsOverview: () => [...dashboardKeys.all, "analytics-overview"] as const,
   observabilityLinks: () => [...dashboardKeys.all, "observability-links"] as const,
   observabilityStatus: () => [...dashboardKeys.all, "observability-status"] as const,
+  observabilityContextOptions: () =>
+    [...dashboardKeys.all, "observability-context-options"] as const,
 };
 
 export const missionKeys = {

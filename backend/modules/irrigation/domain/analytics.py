@@ -28,31 +28,27 @@ def _zscore(values: np.ndarray) -> np.ndarray:
 
 
 def _cluster_mask(mask: np.ndarray) -> list[list[tuple[int, int]]]:
+    # 4-connected connected components. cv2 runs the labelling in native code,
+    # replacing the O(rows*cols) pure-Python BFS. Results are equivalent for
+    # downstream consumers, which only use per-cluster bbox/score aggregates
+    # (order-independent).
+    binary = np.ascontiguousarray(mask, dtype=np.uint8)
+    if not binary.any():
+        return []
+    count, labels = cv2.connectedComponents(binary, connectivity=4)
+    if count <= 1:
+        return []
+    order = np.argsort(labels.ravel(), kind="stable")
+    sorted_labels = labels.ravel()[order]
+    # Boundaries between label groups in the flattened, label-sorted index array.
+    boundaries = np.flatnonzero(np.diff(sorted_labels)) + 1
+    groups = np.split(order, boundaries)
     clusters: list[list[tuple[int, int]]] = []
-    visited = np.zeros_like(mask, dtype=bool)
-    rows, cols = mask.shape
-    for row in range(rows):
-        for col in range(cols):
-            if visited[row, col] or not mask[row, col]:
-                continue
-            queue = [(row, col)]
-            visited[row, col] = True
-            cluster: list[tuple[int, int]] = []
-            while queue:
-                current_row, current_col = queue.pop()
-                cluster.append((current_row, current_col))
-                for delta_row, delta_col in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    next_row = current_row + delta_row
-                    next_col = current_col + delta_col
-                    if (
-                        0 <= next_row < rows
-                        and 0 <= next_col < cols
-                        and not visited[next_row, next_col]
-                        and mask[next_row, next_col]
-                    ):
-                        visited[next_row, next_col] = True
-                        queue.append((next_row, next_col))
-            clusters.append(cluster)
+    for group in groups:
+        if labels.ravel()[group[0]] == 0:
+            continue  # background
+        rows_idx, cols_idx = np.unravel_index(group, mask.shape)
+        clusters.append(list(zip(rows_idx.tolist(), cols_idx.tolist(), strict=True)))
     return clusters
 
 
@@ -119,27 +115,46 @@ def analyze_irrigation(
 
     rows = max(1, math.ceil(canvas_height / patch_size_px))
     cols = max(1, math.ceil(canvas_width / patch_size_px))
-    exg_grid = np.zeros((rows, cols), dtype=np.float32)
-    brightness_grid = np.zeros((rows, cols), dtype=np.float32)
-    saturation_grid = np.zeros((rows, cols), dtype=np.float32)
-    valid_grid = np.zeros((rows, cols), dtype=bool)
 
-    for row in range(rows):
-        for col in range(cols):
-            row_slice = slice(row * patch_size_px, min(canvas_height, (row + 1) * patch_size_px))
-            col_slice = slice(col * patch_size_px, min(canvas_width, (col + 1) * patch_size_px))
-            patch_brightness = brightness[row_slice, col_slice]
-            patch_valid = patch_brightness > 0.02
-            if np.count_nonzero(patch_valid) < 16:
-                continue
-            valid_grid[row, col] = True
-            exg_grid[row, col] = float(np.mean(green_excess[row_slice, col_slice][patch_valid]))
-            brightness_grid[row, col] = float(np.mean(patch_brightness[patch_valid]))
-            saturation_grid[row, col] = float(
-                np.mean(saturation[row_slice, col_slice][patch_valid])
-            )
+    # Vectorized patch aggregation: pad the image up to a whole number of
+    # patches (padding stays invalid because brightness 0.0 <= 0.02), reshape
+    # into (rows, patch, cols, patch) blocks, and reduce per patch. Replaces the
+    # rows*cols Python loop with a handful of NumPy reductions.
+    padded_h = rows * patch_size_px
+    padded_w = cols * patch_size_px
 
-    valid_values = valid_grid.astype(bool)
+    def _pad(channel: np.ndarray) -> np.ndarray:
+        out = np.zeros((padded_h, padded_w), dtype=np.float32)
+        out[:canvas_height, :canvas_width] = channel
+        return out
+
+    def _blocks(channel: np.ndarray) -> np.ndarray:
+        return channel.reshape(rows, patch_size_px, cols, patch_size_px).swapaxes(1, 2)
+
+    block_brightness = _blocks(_pad(brightness))
+    block_exg = _blocks(_pad(green_excess))
+    block_saturation = _blocks(_pad(saturation))
+
+    valid_px = block_brightness > 0.02
+    valid_px_f = valid_px.astype(np.float32)
+    counts = valid_px.reshape(rows, cols, -1).sum(axis=2)
+    valid_grid = counts >= 16
+
+    safe_counts = np.where(counts > 0, counts, 1).astype(np.float32)
+    exg_grid = (block_exg * valid_px_f).reshape(rows, cols, -1).sum(axis=2) / safe_counts
+    brightness_grid = (block_brightness * valid_px_f).reshape(rows, cols, -1).sum(
+        axis=2
+    ) / safe_counts
+    saturation_grid = (block_saturation * valid_px_f).reshape(rows, cols, -1).sum(
+        axis=2
+    ) / safe_counts
+
+    # Match the original: cells below the validity threshold stay zeroed.
+    exg_grid = np.where(valid_grid, exg_grid, 0.0).astype(np.float32)
+    brightness_grid = np.where(valid_grid, brightness_grid, 0.0).astype(np.float32)
+    saturation_grid = np.where(valid_grid, saturation_grid, 0.0).astype(np.float32)
+
+    valid_values = valid_grid
     if not np.any(valid_values):
         return {"zones": [], "inspection_points": [], "summary": {"status": "failed"}}
 
@@ -165,22 +180,18 @@ def analyze_irrigation(
 
     under_score = np.zeros_like(exg_grid)
     over_score = np.zeros_like(exg_grid)
-    uneven_score = np.zeros_like(exg_grid)
     under_score[valid_values] = (
         np.maximum(-exg_z[valid_values], 0.0) + np.maximum(bright_z[valid_values], 0.0) * 0.35
     )
     over_score[valid_values] = (
         np.maximum(-bright_z[valid_values], 0.0) + np.maximum(-sat_z[valid_values], 0.0) * 0.25
     )
-    for row in range(rows):
-        for col in range(cols):
-            if not valid_grid[row, col]:
-                continue
-            uneven_score[row, col] = (
-                abs(float(row_z[row])) * 0.6
-                + abs(float(col_z[col])) * 0.4
-                + abs(float(exg_z[row, col])) * 0.25
-            )
+    uneven_full = (
+        np.abs(row_z)[:, None] * 0.6
+        + np.abs(col_z)[None, :] * 0.4
+        + np.abs(exg_z) * 0.25
+    )
+    uneven_score = np.where(valid_grid, uneven_full, 0.0).astype(np.float32)
 
     thresholds = {
         "under_irrigated": max(0.8, float(np.quantile(under_score[valid_values], 0.82))),

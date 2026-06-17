@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import math
+import time
 from typing import Any
 
 from backend.core.config.runtime import settings
@@ -331,7 +333,51 @@ def build_warehouse_vehicle_state_from_perception(
     )
 
 
+# Short-lived cache + single-flight guard for the (expensive) ROS perception
+# probe. The UI polls preflight every ~15s and the mission-start path runs it
+# too; without coalescing, overlapping calls each spawn a `ros2 topic list`
+# subprocess + deep bridge probe. The TTL absorbs burst duplicates; the lock
+# collapses concurrent callers onto one probe. The readiness wait-loop passes
+# bypass_cache=True so it never reads stale data on the critical path.
+_PERCEPTION_PROBE_LOCK = asyncio.Lock()
+_perception_status_cache: WarehousePerceptionStatus | None = None
+_perception_status_cache_at: float = 0.0
+
+
+def _perception_status_ttl_s() -> float:
+    return max(0.0, _safe_float(_setting("warehouse_perception_status_cache_ttl_s", 2.5), 2.5))
+
+
 async def fetch_warehouse_perception_status(
+    *,
+    deep: bool = True,
+    force: bool = False,
+    bypass_cache: bool = False,
+) -> WarehousePerceptionStatus:
+    global _perception_status_cache, _perception_status_cache_at
+
+    ttl = 0.0 if bypass_cache else _perception_status_ttl_s()
+
+    if ttl > 0.0 and _perception_status_cache is not None:
+        age = time.monotonic() - _perception_status_cache_at
+        if age < ttl:
+            return _perception_status_cache
+
+    async with _PERCEPTION_PROBE_LOCK:
+        # Re-check after acquiring: a concurrent caller may have just refreshed
+        # it, so overlapping requests share a single probe instead of stacking.
+        if ttl > 0.0 and _perception_status_cache is not None:
+            age = time.monotonic() - _perception_status_cache_at
+            if age < ttl:
+                return _perception_status_cache
+
+        status = await _probe_warehouse_perception_status(deep=deep, force=force)
+        _perception_status_cache = status
+        _perception_status_cache_at = time.monotonic()
+        return status
+
+
+async def _probe_warehouse_perception_status(
     *,
     deep: bool = True,
     force: bool = False,
@@ -404,6 +450,38 @@ async def fetch_warehouse_perception_status(
     )
 
 
+def _warm_nvblox_in_background() -> None:
+    """Kick off nvblox warm-up (fire-and-forget) when preflight starts.
+
+    A1 made the mapping stack reusable, so starting it here lets the ~20s init
+    overlap the preflight/arming phase; the mission then adopts the warm stack
+    instead of paying the init on the pre-takeoff critical path. Idempotent: the
+    lifecycle reuse guard returns early if a healthy stack is already running.
+    """
+    if not _bool_flag(_setting("warehouse_preflight_warm_nvblox", True)):
+        return
+    try:
+        from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+            _is_mapping_stack_process_running,
+            _maybe_start_mapping_stack_cmd,
+        )
+    except Exception:
+        logger.debug("nvblox warm-up unavailable", exc_info=True)
+        return
+    if _is_mapping_stack_process_running():
+        return
+
+    async def _warm() -> None:
+        try:
+            await _maybe_start_mapping_stack_cmd()
+        except Exception:
+            logger.debug("Background nvblox warm-up failed", exc_info=True)
+
+    # No running loop (e.g. called from a sync context) → skip warm-up silently.
+    with contextlib.suppress(RuntimeError):
+        asyncio.get_running_loop().create_task(_warm())
+
+
 async def run_warehouse_ros_preflight_report(
     mission_data: dict[str, Any],
     *,
@@ -413,6 +491,8 @@ async def run_warehouse_ros_preflight_report(
     **kwargs: Any,
 ) -> PreflightReport:
     """Run warehouse mission preflight from ROS bridge health, not MAVLink telemetry."""
+
+    _warm_nvblox_in_background()
 
     status = await fetch_warehouse_perception_status(deep=True, force=True)
     vehicle_state = build_warehouse_vehicle_state_from_perception(status)

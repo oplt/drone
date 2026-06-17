@@ -31,7 +31,7 @@ from fastapi import (
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, StreamingResponse
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import get_db
@@ -520,6 +520,14 @@ class WarehouseLiveMapChunkUploadOut(BaseModel):
     url: str
     byte_size: int
     checksum_sha256: str
+
+
+# Upper bound on chunks fetched per batch request, to bound per-request work.
+WAREHOUSE_LIVE_MAP_BATCH_MAX_CHUNKS = 256
+
+
+class WarehouseLiveMapChunkBatchIn(BaseModel):
+    chunk_ids: list[str] = Field(default_factory=list, max_length=WAREHOUSE_LIVE_MAP_BATCH_MAX_CHUNKS)
 
 
 def _map_out(row: WarehouseMap) -> WarehouseMapOut:
@@ -2847,6 +2855,83 @@ async def live_map_chunk_download(
         headers={
             "Cache-Control": "private, max-age=31536000, immutable",
             "ETag": etag,
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.post("/live-map/{flight_id}/chunks/batch")
+async def live_map_chunk_batch_download(
+    flight_id: str,
+    payload: WarehouseLiveMapChunkBatchIn,
+    _org_user: OrgUser = Depends(require_org_user),
+):
+    """Stream many chunks in a single response to kill the per-chunk N+1 fan-out.
+
+    Body: {"chunk_ids": [...]} (max WAREHOUSE_LIVE_MAP_BATCH_MAX_CHUNKS).
+    Response: a length-prefixed binary stream. For each requested chunk, in order:
+        [uint32 big-endian header_len][header_len bytes of UTF-8 JSON][data bytes]
+    where the JSON header is
+        {"chunk_id", "status", "byte_size", "content_type", "checksum_sha256"}
+    and exactly "byte_size" raw data bytes follow when status == 200 (0 when 404).
+    The client reads header_len, parses the JSON, then consumes byte_size bytes.
+    """
+    # De-duplicate while preserving request order.
+    seen: set[str] = set()
+    requested: list[str] = []
+    for raw_id in payload.chunk_ids:
+        chunk_id = str(raw_id)
+        if chunk_id and chunk_id not in seen:
+            seen.add(chunk_id)
+            requested.append(chunk_id)
+
+    resolved: list[tuple[str, object | None]] = []
+    for chunk_id in requested:
+        with observed_span(
+            "mapping.load_chunk",
+            flight_id=flight_id,
+            map_id=flight_id,
+            chunk_id=chunk_id,
+        ):
+            stored = warehouse_live_map_chunk_storage.resolve(
+                flight_id=flight_id, chunk_id=chunk_id
+            )
+        resolved.append((chunk_id, stored))
+
+    def _frame_header(meta: dict[str, object]) -> bytes:
+        body = json.dumps(meta, separators=(",", ":")).encode("utf-8")
+        return len(body).to_bytes(4, "big") + body
+
+    async def _stream():
+        for chunk_id, stored in resolved:
+            if stored is None:
+                yield _frame_header(
+                    {
+                        "chunk_id": chunk_id,
+                        "status": 404,
+                        "byte_size": 0,
+                        "content_type": "application/octet-stream",
+                        "checksum_sha256": "",
+                    }
+                )
+                continue
+            yield _frame_header(
+                {
+                    "chunk_id": chunk_id,
+                    "status": 200,
+                    "byte_size": int(stored.byte_size),
+                    "content_type": stored.content_type,
+                    "checksum_sha256": stored.checksum_sha256,
+                }
+            )
+            data = await asyncio.to_thread(stored.path.read_bytes)
+            yield data
+
+    return StreamingResponse(
+        _stream(),
+        media_type="application/octet-stream",
+        headers={
+            "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )

@@ -30,7 +30,7 @@ export const DEFAULT_LIVE_MAP_CONFIG: LiveMapRuntimeConfig = {
     max_points: 8000,
   },
   frontend: {
-    max_concurrent_chunk_downloads: 4,
+    max_concurrent_chunk_downloads: 8,
     max_points_per_layer: 800_000,
   },
   preferred_layer: "rgbd_colored",

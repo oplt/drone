@@ -166,13 +166,13 @@ def _note_mapping_startup(mark: str) -> None:
             _warned_missing_startup_timing = True
 
 
-async def _kill_stale_nvblox_processes() -> None:
+async def _kill_stale_nvblox_processes(keep_pgids: set[int] | None = None) -> None:
     try:
         from backend.modules.warehouse.service.sim_time_tf_readiness import (
             kill_stale_nvblox_processes,
         )
 
-        await kill_stale_nvblox_processes()
+        await kill_stale_nvblox_processes(keep_pgids=keep_pgids)
     except ModuleNotFoundError as exc:
         logger.warning("Optional TF readiness cleanup unavailable: %s", exc)
 
@@ -418,8 +418,21 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
     global _mapping_stack_last_error
     global _last_nvblox_restart_at
 
+    # Reuse a warm, healthy stack instead of killing + restarting it.
+    # The preflight warm-up already started nvblox; restarting here would
+    # SIGTERM the warm process and pay the full re-warm (~25-30s) again on the
+    # pre-takeoff critical path.
+    if _is_mapping_stack_process_running():
+        logger.info(
+            "Nvblox mapping stack already running (pid=%s); reusing warm stack.",
+            _mapping_stack_pid(),
+        )
+        return
+
     if not skip_stale_kill:
-        await _kill_stale_nvblox_processes()
+        # Never reap our own tracked stack (it runs in its own session/pgid).
+        keep_pgids = {pid} if (pid := _mapping_stack_pid()) else None
+        await _kill_stale_nvblox_processes(keep_pgids=keep_pgids)
         clock = await _probe_clock_monotonic()
         if not clock.ok:
             logger.warning(
@@ -721,7 +734,9 @@ async def prepare_warehouse_scan_ros(
 
         await asyncio.sleep(1.0)
 
-        status = await fetch_warehouse_perception_status(deep=True, force=True)
+        status = await fetch_warehouse_perception_status(
+            deep=True, force=True, bypass_cache=True
+        )
         takeoff_ready = readiness_for_takeoff(status)
         flight_readiness = readiness_from_perception_status_strict(status)
 

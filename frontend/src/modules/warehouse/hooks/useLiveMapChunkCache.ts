@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   fetchWarehouseLiveChunk,
+  fetchWarehouseLiveChunkBatched,
   clearLiveMapChunkFetchCache,
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
@@ -103,10 +104,18 @@ function fetchChunkOnce(
   url: string,
   token: string | null | undefined,
   signal: AbortSignal,
+  flightId?: string | null,
+  chunkId?: string | null,
 ): Promise<ArrayBuffer> {
   const existing = inFlightChunkFetches.get(key);
   if (existing) return existing;
-  const request = fetchWarehouseLiveChunk(url, token, signal, key).finally(() => {
+  // Coalesce concurrent fetches into one batched request when we know the
+  // flight + chunk id; otherwise fall back to the single-chunk endpoint.
+  const request = (
+    flightId && chunkId
+      ? fetchWarehouseLiveChunkBatched(flightId, chunkId, key, url, token, signal)
+      : fetchWarehouseLiveChunk(url, token, signal, key)
+  ).finally(() => {
     inFlightChunkFetches.delete(key);
   });
   inFlightChunkFetches.set(key, request);
@@ -338,11 +347,15 @@ export function useLiveMapChunkCache(
       });
 
       try {
+        // Batch only the bulk snapshot/replay load (kills the N+1 fan-out).
+        // Live deltas keep the per-chunk path for lowest latency.
         const arrayBuffer = await fetchChunkOnce(
           key,
           chunk.url,
           token,
           controller.signal,
+          mode === "replay" ? flightId : null,
+          mode === "replay" ? chunk.id : null,
         );
 
         if (downloadEffectGenRef.current !== effectGen) {
@@ -424,6 +437,7 @@ export function useLiveMapChunkCache(
     candidateByKey,
     config.frontend.max_concurrent_chunk_downloads,
     flightId,
+    mode,
     pendingSignature,
     token,
     visibleLayers,

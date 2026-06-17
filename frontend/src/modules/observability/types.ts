@@ -16,6 +16,16 @@ export type ServiceStatus = {
   url?: string | null;
 };
 
+export type ContextOption = {
+  value: string;
+  label: string;
+};
+
+export type ObservabilityContextOptions = {
+  drones: ContextOption[];
+  missions: ContextOption[];
+};
+
 export type ObservabilityStatus = {
   api: ServiceStatus;
   prometheus: ServiceStatus;

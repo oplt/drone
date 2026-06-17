@@ -1,0 +1,289 @@
+================================================================================
+WAREHOUSE SCAN FLIGHT — LOG + FLOW ANALYSIS (bugs, failures, latency, bottlenecks)
+================================================================================
+Inputs analysed:
+  - logs.txt  (one warehouse_scan run, flight_id=127 / flight_1781708829_f44413ab,
+               JSON-lines via honcho, 1673 lines / 818 structured records)
+  - flow.txt  (documented Start-Flight + Live-Mapping + Map-Record flow)
+  - source under backend/modules/warehouse/** and frontend/src/modules/warehouse/**
+
+No ERROR/CRITICAL/traceback lines were emitted. The run "succeeded"
+(17:10:00 "Mission 'Warehouse Scan - test' completed successfully").
+The problems are LATENCY / WASTED-WORK / LIVE-DELIVERY issues, not crashes.
+
+
+--------------------------------------------------------------------------------
+RECONSTRUCTED TIMELINE (key milestones, HH:MM:SS)
+--------------------------------------------------------------------------------
+  17:05:25  API up
+  17:05:59  warehouse ROS preflight #1 (bridge_ready=True)
+  17:06:11  Nvblox mapping stack STARTED (1st time, during preflight warm-up)
+  17:06:13  nvblox node up
+  17:06:37 / 17:06:51 / 17:07:09 / 17:07:15 / 17:07:19  warehouse ROS preflight #3..#7
+  17:07:19  Preflight overall: WARN pass=19 warn=1 fail=0
+  17:07:20  Capture session prepared (flight_id=127)
+  17:07:20  >>> Nvblox mapping stack EXITED code -15 (SIGTERM)  <<<  (the warm stack is killed)
+  17:07:32  Nvblox mapping stack STARTED AGAIN (2nd time, for the mission)
+  17:07:34  nvblox node up (again)
+  17:07:47  RGB-D PointCloud2 stream ready   (≈15s re-warm after the restart)
+  17:07:47  Arming motors
+  17:07:51  warehouse live map bridge started
+  17:07:56  Takeoff reached 2.54m
+  17:07:57  colored point-cloud bridge started
+  17:08:00  nvblox-layers bridge + raw mid360 bridge started (persist=True)
+  17:08:01..17:08:24  colored chunks #1..#38 served to viewer (~0.5–0.6s cadence)
+  17:08:24..17:09:16  >>> NO live chunk delivery during the core scan  <<<
+  17:09:16  Disarming motors
+  17:09:33  Capture session finalized (have=1 need=1 imported=0)        (+17s)
+  17:09:43  live_map_manifest_finalized (rgbd_colored=126, mid360_raw=49, esdf=37) (+10s)
+  17:09:51  diagnostic pre_cleanup
+  17:09:52  live map bridge stopped + nvblox stopped
+  17:10:00  diagnostic post_cleanup + Mission completed                  (disarm→done ≈ 44s)
+  17:11:41  WS disconnect, then colored chunks #39..#126 served in a BURST (post-flight)
+  17:11:53 / 17:11:58 / 17:12:03  scanned-map replays 63/64/65 → 50–150 per-chunk GETs each
+
+
+================================================================================
+A. HIGH-IMPACT CRITICAL-PATH LATENCY
+================================================================================
+
+fixed A1
+A1. Nvblox mapping stack is started during preflight, KILLED, then RESTARTED
+    for the mission — ~25–30s wasted on the pre-takeoff critical path.
+    -----------------------------------------------------------------------
+    Evidence:
+      17:06:11 start nvblox → 17:07:20 "exited normally code -15"
+      → 17:07:32 start nvblox AGAIN → 17:07:47 RGB-D ready (≈15s re-warm).
+    Classification: concurrency/lifecycle bottleneck (CPU+I/O warm-up redone).
+    Root cause:
+      backend/modules/warehouse/service/mapping_stack_lifecycle.py
+        - _maybe_start_mapping_stack_cmd(skip_stale_kill=False)   (line 403)
+          calls _kill_stale_nvblox_processes()                    (line 421-422)
+          BEFORE the "already running" guard                       (line 443-444).
+        - _kill_stale_nvblox_processes() → sim_time_tf_readiness.kill_stale_nvblox_processes
+          kills nvblox by process pattern (pgrep), NOT by the tracked PID, so the
+          healthy preflight-warmed stack is treated as "stale" and SIGTERM'd.
+        - prepare_warehouse_scan_ros() (line 661) and scan.py
+          _start_perception_mapping() (scan.py:1492-1505) call it with the default
+          skip_stale_kill=False → guaranteed kill+restart every mission.
+    Best solution:
+      - Reuse the warm stack. Move the "already running & healthy" check BEFORE the
+        stale-kill: if _is_mapping_stack_process_running() and the tracked process is
+        healthy, return early and DO NOT kill.
+      - Make the stale-kill exclude the currently tracked PID (pass keep_pid=_mapping_stack_pid()
+        into kill_stale_nvblox_processes) so it only reaps orphans, never the live one.
+      - Unify the preflight warm-up and mission lifecycle so one stack spans both phases
+        (the preflight already warms nvblox; the mission should adopt it).
+      Expected win: removes the ~12s kill gap + ~15s re-warm ≈ 25–30s before arm.
+
+fixed A2
+A2. Warehouse ROS preflight runs 7× in ~80s (redundant recomputation).
+    --------------------------------------------------------------------
+    Evidence: "Running warehouse ROS preflight ..." at 17:05:59, 17:05:59,
+              17:06:37, 17:06:51, 17:07:09, 17:07:15, 17:07:19.
+    Classification: repeated-computation / database-API-style bottleneck (ROS probes).
+    Root cause: each call does live ROS topic/TF/perception probing
+      (warehouse_preflight.fetch_warehouse_perception_status(deep=True, force=True))
+      driven by frontend polling + the mission-start path, with no short-TTL cache.
+      A cache layer exists (modules/preflight/checks/cache.py) but the warehouse ROS
+      report is fetched with force=True, bypassing it.
+    Best solution:
+      - Add a short TTL (e.g. 3–5s) memo for the deep perception/ROS report keyed by
+        mission_type; serve cached result to rapid repeat callers (the GET polling path),
+        and only force=True on the actual mission-start transition.
+      - Coalesce concurrent callers with a single in-flight asyncio.Lock+future so 7
+        overlapping requests trigger ONE probe.
+
+fixed A3 (offloaded blocking manifest build/validate to a worker thread so the
+         ~10s teardown step no longer stalls the event loop; incremental-manifest
+         + early-UI-return left as a follow-up — higher risk, spans persist_capture)
+A3. Post-flight teardown takes ~44s (disarm 17:09:16 → completed 17:10:00).
+    ----------------------------------------------------------------------
+    Evidence: disarm 17:09:16 → capture finalize 17:09:33 (+17s) → manifest 17:09:43
+              (+10s) → diagnostics/cleanup → completed 17:10:00.
+    Classification: I/O-bound + sequential scheduling on the shutdown path.
+    Root cause: wait_for_mapping_artifacts → finalize_session → build_manifest_from_flight_dir
+      → persist_capture run sequentially; manifest hashes/scans every chunk file on disk.
+    Best solution:
+      - Run independent teardown steps concurrently (asyncio.gather) where they don't
+        depend on each other (telemetry summary build, video stop, diagnostics).
+      - Build the live-map manifest incrementally during flight (append per chunk) instead
+        of a full directory re-scan + re-hash at the end.
+      - Return "completed" to the UI as soon as the DB record is durable; finish
+        manifest/quality-gate as a background task.
+
+
+================================================================================
+B. LIVE-MAP DATA PATH (visualization latency)
+================================================================================
+
+fixed B1 (root cause: a single WS send exceeding send_timeout_s evicted the still-
+         connected viewer from the broadcast set, so it got nothing until reconnect.
+         Now a send timeout is a transient strike — the slow client stays subscribed
+         and is only dropped after N consecutive timeouts; send timeout 1s→5s; client
+         chunk-download concurrency 4→8. Periodic snapshot-delta left as follow-up.)
+B1. Live map froze mid-scan: only 38/126 colored chunks reached the viewer during
+    flight; chunks #39..#126 arrived in a post-flight burst at 17:11:41.
+    ------------------------------------------------------------------------------
+    Evidence: chunk_download #1..#38 = 17:08:01–17:08:24, then nothing until
+              17:11:41 (after WS disconnect/reconnect → snapshot catch-up).
+    Classification: concurrency/scheduling + delivery bottleneck.
+    Likely root causes (verify):
+      - Live download is gated 1-chunk-per-WS-message and effectively serialized
+        (~0.5–0.6s each) while production continued at a similar rate, so any stall in
+        WS metadata delivery (the bridge throttles + drops stale frames:
+        colored_pointcloud_live_map_bridge.py:_on_pointcloud line 544 min_publish_interval_s,
+        queued_msg drop line 549-556) leaves the viewer behind with no catch-up until a
+        full snapshot is pulled on reconnect.
+      - The post-flight burst is WarehouseLiveMapStream.snapshot replaying the whole history.
+    Best solution:
+      - Push small chunk metadata in BATCHES over the WS (changed_chunks already supports a
+        list) and let the client fetch with real concurrency
+        (frontend max_concurrent_chunk_downloads — useLiveMapChunkCache.ts:318; raise from
+        the current low value, the post-flight burst shows 4 in parallel works fine).
+      - Add a lightweight periodic "snapshot delta" during flight so a viewer that falls
+        behind catches up live instead of only at reconnect.
+      - Confirm the WS publish path is not blocked behind the synchronous chunk write.
+
+fixed B2 (added POST /live-map/{flight}/chunks/batch streaming length-prefixed
+         framed chunks; frontend coalesces replay/snapshot loads into one batched
+         request via fetchWarehouseLiveChunkBatched (per-chunk fallback on error);
+         live deltas keep the per-chunk path; chunk responses already 304 via
+         immutable ETag + Cache-Control.)
+B2. Per-chunk HTTP fan-out (N+1) when opening a live/replay map.
+    -----------------------------------------------------------
+    Evidence: replay of scanned_map 63/64/65 each issues 50–150 individual
+      GET /warehouse/live-map/{flight}/chunks/{id}/download requests
+      (e.g. map 65: mid360_000001..mid360_000054 + rgbd_colored..., one HTTP round-trip each).
+    Classification: database/API-call batching bottleneck (too many small requests).
+    Root cause: every chunk is fetched one-by-one (fetchWarehouseLiveChunk →
+      api.py live_map_chunk_download line 2800, FileResponse line 2844). Backend per-request
+      is fine (FileResponse sendfile), but auth + headers + round-trips × ~150 dominate
+      first-paint latency for a map.
+    Best solution:
+      - Add a bulk endpoint: POST /live-map/{flight}/chunks/batch (ids[]) returning a
+        concatenated/length-prefixed binary stream, OR a tar/zip, OR an HTTP/2 multiplexed
+        manifest so the whole map loads in 1–few requests.
+      - Keep per-chunk endpoint for live deltas; use the bulk path for snapshot/replay load.
+      - Cache-Control + ETag on chunk responses so re-opens are 304s.
+
+B3. Bridge intentionally drops stale frames under load (data completeness vs. latency).
+    ----------------------------------------------------------------------------------
+    Evidence: "dropped_stale_frames" warnings (2×).
+    Note: this is BY DESIGN for live throttling (min_publish_interval_s). It is correct for
+    the live view but means the live stream is lossy. The persisted rosbag/manifest path is
+    the source of truth — keep them separate (already the case). No fix needed; documented so
+    it is not mistaken for data loss.
+
+
+================================================================================
+C. WASTED WORK / MINOR CORRECTNESS
+================================================================================
+
+fixed C1 (root cause: _start_mission_recording excluded warehouse via
+         mission.mission_type=="warehouse_scan", but WarehouseScanMission only has
+         mission_kind (mission_type is None) so the exclusion silently failed and
+         Gazebo fallback recorded the whole flight. Now warehouse/indoor missions are
+         detected robustly via mission_type/mission_kind/type/current_mission_type.)
+C1. Gazebo fallback video recording runs even though warehouse video is "not configured".
+    Evidence: 17:07:20 "Started Gazebo fallback recording: ...mp4" then 17:08:00
+              "Warehouse video recording skipped: Warehouse video source is not configured."
+    Impact: an mp4 is encoded/written for the whole flight but the warehouse video pipeline
+            is skipped — wasted CPU/disk, and a confusing dual code path.
+    Fix: gate the Gazebo fallback recording on the same "video configured" decision; don't
+         start it if the warehouse video source is intentionally absent (or clearly label it
+         as the chosen source so the later "skipped" log is not contradictory).
+
+C2. Capture finalize reports "imported=0" (have=1 need=1).
+    Evidence: 17:09:33 "Warehouse capture file check: have=1 need=1 imported=0 timeout_s=0.0".
+    Action: confirm imported=0 is expected for sim; if not, the artifact import step is a
+    silent no-op and the persisted map may be missing rosbag-derived assets.
+
+
+================================================================================
+D. OBSERVABILITY / BACKGROUND POLLING (low priority)
+================================================================================
+
+fixed D1 (grafana+prometheus now probed concurrently via asyncio.gather over one
+         shared AsyncClient hitting /api/health and /-/ready (no redirect chains),
+         with a 25s single-flight TTL cache so the 30s poll reuses results.)
+D1. Observability status poll every 30s does sequential external HTTP with redirect chains
+    and a fresh client per check.
+    Evidence: every 30s a block of GETs — grafana :3000 (302→/login→200) and
+              prometheus :9090 (301→302→200), repeated 17:07/17:10/17:11...
+    Root cause: backend/modules/observability/service.py
+      _check_url() opens a NEW httpx.AsyncClient per URL (line 55-67) and
+      get_observability_status() awaits grafana THEN prometheus sequentially (line 70-83);
+      follow_redirects chases /login each time.
+    Fix: probe grafana+prometheus concurrently (asyncio.gather), reuse one AsyncClient,
+      hit cheap health paths (/api/health, /-/ready) instead of redirecting roots, and cache
+      the result for the 30s poll window. (Cosmetic for perf, but removes ~9 redirect
+      requests every 30s.)
+
+
+================================================================================
+E. CODE-FLOW BOTTLENECKS (from flow.txt, independent of this run)
+================================================================================
+
+deferred E1 (higher-risk refactor of the per-frame live write path; needs a new
+            append-only chunk-container format + reader changes across bridges,
+            manifest, replay and the frontend — left as a dedicated follow-up)
+E1. Colored-bridge per-cloud pipeline writes a chunk file + sidecar metadata per frame.
+    (colored_pointcloud_live_map_bridge.py: _store_and_publish_colored_chunk line 224;
+     save_upload line 270; metadata write line 319). Parse+encode are already offloaded with
+     asyncio.to_thread (good). At sustained rate this is many tiny synchronous disk writes.
+    Improve: buffer/coalesce sidecar metadata writes; consider a single append-only chunk
+    container per layer instead of thousands of small files (also speeds B2 and A3/manifest).
+
+deferred E2 (depends on E1's incremental write path; the event-loop stall it caused
+            on teardown is already removed in A3 by offloading to a worker thread)
+E2. Manifest build (build_manifest_from_flight_dir) re-scans + re-hashes all chunk files at
+    end of flight. O(total bytes) on the teardown critical path. Make it incremental (E1).
+
+fixed E3 (the 3 always-on bridges + optional raw-lidar bridge now start
+         concurrently via asyncio.gather in _restart_live_map_publisher, each
+         keeping its own try/except; removes the ~9s serial start gap.)
+E3. Bridges are started serially after takeoff (17:07:51 → 17:08:00, ~9s):
+    live_map_bridge, colored bridge, nvblox-layers bridge, raw mid360 bridge.
+    Start them concurrently (asyncio.gather) to shave first-pixel latency.
+
+
+================================================================================
+PRIORITY (do in this order)
+================================================================================
+  P0  A1  reuse warm nvblox (don't kill+restart)          ~25–30s/flight saved
+  P0  B1  fix live mid-scan delivery gap                   operator sees live map
+  P1  A2  cache/coalesce warehouse ROS preflight           fewer ROS probes, faster start
+  P1  B2  bulk chunk endpoint (kill N+1 downloads)         fast map open/replay
+  P2  A3+E2 concurrent + incremental teardown/manifest     ~20–30s/flight saved
+  P2  C1  stop redundant Gazebo recording
+  P3  D1  concurrent+cached observability health poll
+  P3  E1/E3 chunk container + concurrent bridge start
+
+
+================================================================================
+ROUND 2 — post-fix log re-analysis (18:18–18:22 run)
+================================================================================
+Verified in new logs: A1 (nvblox started once @18:19:25, reused @18:19:59, no
+kill+restart), B1 (chunks streamed continuously the whole flight, no freeze, no
+post-flight burst, no dropped_stale_frames), C1 (no Gazebo fallback recording),
+A3 (teardown ~8s vs ~44s), E3 (bridges start within one concurrent window).
+
+Remaining culprits found + fixed:
+
+fixed T1. Teardown tail ~8s: post_cleanup diagnostics ran a deep/forced ROS probe
+   (fetch_warehouse_perception_status deep=True, force=True) AFTER nvblox + the ROS
+   bridge were already torn down → _ensure_ros_bridge_running + `ros2 topic list`
+   timeouts (and a wasteful bridge restart). Fix: _collect_mission_diagnostics now
+   uses a shallow, non-forcing probe for phase == "post_cleanup" (scan.py).
+
+fixed S1. nvblox ~20s init sat on the pre-takeoff critical path (start @18:19:25,
+   ready @~18:19:48). Implements the A1 follow-up: warehouse preflight now warms
+   nvblox in the background (run_warehouse_ros_preflight_report ->
+   _warm_nvblox_in_background, gated by warehouse_preflight_warm_nvblox=True), so the
+   init overlaps preflight/arming and the mission adopts the warm stack.
+
+note S2. ~31s idle between WS-connect (18:18:29) and mission start (18:19:00) is
+   operator/UI think-time on the preflight screen — backend is idle, not blocked, so
+   no code change. S1's early warm now overlaps the nvblox init with this window once
+   preflight begins.

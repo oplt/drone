@@ -329,3 +329,187 @@ export async function fetchWarehouseLiveChunk(
 
   return body;
 }
+
+// ---------------------------------------------------------------------------
+// Bulk chunk download (kills the per-chunk N+1 fan-out on snapshot/replay load)
+// ---------------------------------------------------------------------------
+
+const LIVE_MAP_BATCH_MAX_CHUNKS = 256;
+const LIVE_MAP_BATCH_FLUSH_MS = 12;
+
+type BatchFrame = { status: number; byteSize: number; data: ArrayBuffer | null };
+
+/**
+ * Parse the length-prefixed binary stream produced by the batch endpoint.
+ * Layout, repeated per chunk:
+ *   [uint32 big-endian header_len][header_len bytes UTF-8 JSON][byte_size data bytes]
+ */
+export function parseLiveMapChunkBatch(
+  buffer: ArrayBuffer,
+): Map<string, BatchFrame> {
+  const out = new Map<string, BatchFrame>();
+  const view = new DataView(buffer);
+  const decoder = new TextDecoder();
+  let offset = 0;
+  const total = buffer.byteLength;
+  while (offset + 4 <= total) {
+    const headerLen = view.getUint32(offset, false);
+    offset += 4;
+    if (headerLen <= 0 || offset + headerLen > total) break;
+    const headerBytes = new Uint8Array(buffer, offset, headerLen);
+    offset += headerLen;
+    let header: {
+      chunk_id?: string;
+      status?: number;
+      byte_size?: number;
+    };
+    try {
+      header = JSON.parse(decoder.decode(headerBytes));
+    } catch {
+      break;
+    }
+    const chunkId = String(header.chunk_id ?? "");
+    const status = Number(header.status ?? 0);
+    const byteSize = Number(header.byte_size ?? 0);
+    let data: ArrayBuffer | null = null;
+    if (status === 200 && byteSize > 0) {
+      if (offset + byteSize > total) break;
+      data = buffer.slice(offset, offset + byteSize);
+      offset += byteSize;
+    }
+    if (chunkId) out.set(chunkId, { status, byteSize, data });
+  }
+  return out;
+}
+
+type BatchWaiter = {
+  chunkId: string;
+  cacheKey: string;
+  url: string;
+  token?: string | null;
+  signal?: AbortSignal;
+  resolve: (buffer: ArrayBuffer) => void;
+  reject: (error: unknown) => void;
+};
+
+const batchQueues = new Map<string, BatchWaiter[]>();
+const batchTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function rejectAborted(waiter: BatchWaiter): boolean {
+  if (waiter.signal?.aborted) {
+    waiter.reject(new DOMException("Aborted", "AbortError"));
+    return true;
+  }
+  return false;
+}
+
+function fallbackToPerChunk(waiter: BatchWaiter): void {
+  fetchWarehouseLiveChunk(waiter.url, waiter.token, waiter.signal, waiter.cacheKey)
+    .then(waiter.resolve)
+    .catch(waiter.reject);
+}
+
+async function runLiveMapChunkBatch(
+  flightId: string,
+  waiters: BatchWaiter[],
+): Promise<void> {
+  const ids = Array.from(new Set(waiters.map((w) => w.chunkId)));
+  const headers = new Headers({ "Content-Type": "application/json" });
+  const authToken = waiters.find((w) => w.token)?.token?.trim();
+  if (shouldAttachBearerToken(authToken)) {
+    headers.set("Authorization", `Bearer ${authToken}`);
+  }
+  try {
+    const response = await fetch(
+      resolveApiUrl(
+        `/warehouse/live-map/${encodeURIComponent(flightId)}/chunks/batch`,
+      ),
+      {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: JSON.stringify({ chunk_ids: ids }),
+        cache: "no-store",
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Live chunk batch failed: ${response.status}`);
+    }
+    const frames = parseLiveMapChunkBatch(await response.arrayBuffer());
+    for (const waiter of waiters) {
+      if (rejectAborted(waiter)) continue;
+      const frame = frames.get(waiter.chunkId);
+      if (frame?.data && frame.data.byteLength > 0) {
+        chunkBinaryCache.set(waiter.cacheKey, frame.data);
+        waiter.resolve(frame.data);
+      } else {
+        // Missing from the batch (e.g. produced after the request) → per-chunk.
+        fallbackToPerChunk(waiter);
+      }
+    }
+  } catch {
+    // Whole batch failed → degrade gracefully to individual requests.
+    for (const waiter of waiters) {
+      if (rejectAborted(waiter)) continue;
+      fallbackToPerChunk(waiter);
+    }
+  }
+}
+
+function flushLiveMapChunkBatch(flightId: string): void {
+  const timer = batchTimers.get(flightId);
+  if (timer) clearTimeout(timer);
+  batchTimers.delete(flightId);
+  const queued = batchQueues.get(flightId);
+  batchQueues.delete(flightId);
+  if (!queued || queued.length === 0) return;
+  for (let i = 0; i < queued.length; i += LIVE_MAP_BATCH_MAX_CHUNKS) {
+    void runLiveMapChunkBatch(
+      flightId,
+      queued.slice(i, i + LIVE_MAP_BATCH_MAX_CHUNKS),
+    );
+  }
+}
+
+/**
+ * Coalesce many concurrent chunk fetches for a flight into a single batched
+ * HTTP request. Serves from the in-memory cache when possible and falls back to
+ * the per-chunk endpoint on any batch error, so behaviour is never worse than
+ * the original N+1 path.
+ */
+export function fetchWarehouseLiveChunkBatched(
+  flightId: string,
+  chunkId: string,
+  cacheKey: string,
+  url: string,
+  token?: string | null,
+  signal?: AbortSignal,
+): Promise<ArrayBuffer> {
+  const cached = chunkBinaryCache.get(cacheKey);
+  if (cached) return Promise.resolve(cached);
+  if (!flightId || !chunkId) {
+    return fetchWarehouseLiveChunk(url, token, signal, cacheKey);
+  }
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const waiter: BatchWaiter = {
+      chunkId,
+      cacheKey,
+      url,
+      token,
+      signal,
+      resolve,
+      reject,
+    };
+    const queue = batchQueues.get(flightId) ?? [];
+    queue.push(waiter);
+    batchQueues.set(flightId, queue);
+    if (queue.length >= LIVE_MAP_BATCH_MAX_CHUNKS) {
+      flushLiveMapChunkBatch(flightId);
+    } else if (!batchTimers.has(flightId)) {
+      batchTimers.set(
+        flightId,
+        setTimeout(() => flushLiveMapChunkBatch(flightId), LIVE_MAP_BATCH_FLUSH_MS),
+      );
+    }
+  });
+}

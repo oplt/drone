@@ -36,3 +36,16 @@ class ObservabilityStatus(BaseModel):
     tempo: ServiceStatus
     telemetry: TelemetryStatus
     workers: WorkerStatus
+
+
+class ContextOption(BaseModel):
+    """A selectable filter value whose ``value`` matches the label used in
+    telemetry/metrics (mission.id = client_flight_id, drone.id = device_id)."""
+
+    value: str
+    label: str
+
+
+class ObservabilityContextOptions(BaseModel):
+    drones: list[ContextOption]
+    missions: list[ContextOption]

@@ -470,6 +470,7 @@ class RuntimeSettings(BaseSettings):
     grafana_video_dashboard_path: str = "/d/drone-video/video-pipeline"
     grafana_mavlink_dashboard_path: str = "/d/drone-mavlink/mavlink-telemetry"
     observability_health_timeout_s: float = 1.5
+    observability_status_cache_ttl_s: float = 25.0
 
     # Shadow-mode: run old direct-DB-write path alongside new queued path so
     # both can be compared before fully removing the legacy write. Set to False
@@ -576,7 +577,7 @@ class RuntimeSettings(BaseSettings):
     warehouse_live_map_raw_lidar_max_hz: float = 0.5
     warehouse_live_map_raw_lidar_voxel_size: float = 0.15
     warehouse_live_map_raw_lidar_max_points: int = 8000
-    warehouse_live_map_frontend_max_concurrent_chunk_downloads: int = 4
+    warehouse_live_map_frontend_max_concurrent_chunk_downloads: int = 8
     warehouse_live_map_frontend_max_points_per_layer: int = 800_000
     warehouse_require_rgb_for_save: bool = True
     warehouse_drone_video_source: str = ""
@@ -596,6 +597,10 @@ class RuntimeSettings(BaseSettings):
     warehouse_flight_mapping_wait_s: float = 45.0
     warehouse_mapping_warmup_rgbd_timeout_s: float = 45.0
     warehouse_preflight_tf_wait_s: float = 8.0
+    # Warm the nvblox mapping stack in the background as soon as warehouse
+    # preflight runs, so its ~20s init overlaps preflight/arming instead of
+    # blocking the pre-takeoff critical path. The mission reuses the warm stack.
+    warehouse_preflight_warm_nvblox: bool = True
     warehouse_live_map_clock_stability_s: float = 4.0
     warehouse_mapping_stack_preflight_clock_s: float = 4.0
     warehouse_nvblox_tf_restart_jump_threshold: int = 5

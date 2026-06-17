@@ -124,11 +124,31 @@ class RuntimeVideoServiceMixin:
 
             await asyncio.sleep(0)
 
+    # Warehouse/indoor missions own their own perception capture pipeline; the
+    # generic Gazebo fallback recorder must NOT also record them. The previous
+    # guard only checked ``mission.mission_type == "warehouse_scan"``, but the
+    # warehouse scan mission exposes its kind via ``mission_kind`` (and has no
+    # ``mission_type`` attribute), so the exclusion silently failed and recorded
+    # the whole flight to a throwaway mp4.
+    _WAREHOUSE_MISSION_KINDS = frozenset({"warehouse_scan", "indoor_exploration"})
+
+    def _is_warehouse_owned_mission(self, mission: Any) -> bool:
+        for candidate in (
+            getattr(mission, "mission_type", None),
+            getattr(mission, "mission_kind", None),
+            getattr(mission, "type", None),
+            getattr(self, "current_mission_type", None),
+        ):
+            value = getattr(candidate, "value", candidate)
+            if str(value or "").strip().lower() in self._WAREHOUSE_MISSION_KINDS:
+                return True
+        return False
+
     async def _start_mission_recording(self, mission: Any) -> bool:
         if (
             settings.drone_video_use_gazebo
             and (settings.drone_video_save_stream or bool(getattr(mission, "record_video_stream", False)))
-            and getattr(mission, "mission_type", None) != "warehouse_scan"
+            and not self._is_warehouse_owned_mission(mission)
         ):
             if self._shared_video is None:
                 logger.warning(

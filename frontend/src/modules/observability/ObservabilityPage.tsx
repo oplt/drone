@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
@@ -20,7 +21,11 @@ import { dashboardKeys } from "../../app/config/queryKeys";
 import Header from "../../shared/layout/WorkflowHeader";
 import PageLayout, { PageSection } from "../../shared/layout/PageLayout";
 import { useCurrentUser } from "../session";
-import { fetchObservabilityLinks, fetchObservabilityStatus } from "./api";
+import {
+  fetchObservabilityContextOptions,
+  fetchObservabilityLinks,
+  fetchObservabilityStatus,
+} from "./api";
 import HealthStatusCard, { titleCaseStatus } from "./components/HealthStatusCard";
 import HealthStatusGrid from "./components/HealthStatusGrid";
 import ObservabilityShortcutCard from "./components/ObservabilityShortcutCard";
@@ -82,6 +87,26 @@ export default function ObservabilityPage() {
     queryFn: ({ signal }) => fetchObservabilityStatus(signal),
     refetchInterval: 30_000,
   });
+  const contextOptionsQuery = useQuery({
+    queryKey: dashboardKeys.observabilityContextOptions(),
+    queryFn: ({ signal }) => fetchObservabilityContextOptions(signal),
+  });
+
+  const droneOptions = contextOptionsQuery.data?.drones ?? [];
+  const missionOptions = contextOptionsQuery.data?.missions ?? [];
+  const droneValues = useMemo(() => droneOptions.map((item) => item.value), [droneOptions]);
+  const missionValues = useMemo(
+    () => missionOptions.map((item) => item.value),
+    [missionOptions],
+  );
+  const droneLabels = useMemo(
+    () => new Map(droneOptions.map((item) => [item.value, item.label])),
+    [droneOptions],
+  );
+  const missionLabels = useMemo(
+    () => new Map(missionOptions.map((item) => [item.value, item.label])),
+    [missionOptions],
+  );
 
   const filters = useMemo(
     () => ({ droneId, missionId, from: range.from, to: range.to }),
@@ -196,23 +221,57 @@ export default function ObservabilityPage() {
           >
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
+              <Autocomplete
+                freeSolo
                 fullWidth
-                label="Drone ID"
+                options={droneValues}
+                loading={contextOptionsQuery.isLoading}
                 value={droneId}
-                placeholder="DRONE-001"
-                onChange={(event) => setDroneId(event.target.value)}
-                onBlur={(event) => updateContextParam("drone_id", event.target.value)}
+                getOptionLabel={(option) => droneLabels.get(option) ?? option}
+                onChange={(_event, value) => {
+                  const next = (value ?? "").toString();
+                  setDroneId(next);
+                  updateContextParam("drone_id", next);
+                }}
+                onInputChange={(_event, value, reason) => {
+                  if (reason === "input") setDroneId(value);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Drone ID"
+                    placeholder="Select or type a drone"
+                    helperText="Drones registered in fleet readiness"
+                    onBlur={() => updateContextParam("drone_id", droneId)}
+                  />
+                )}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
+              <Autocomplete
+                freeSolo
                 fullWidth
-                label="Mission ID"
+                options={missionValues}
+                loading={contextOptionsQuery.isLoading}
                 value={missionId}
-                placeholder="MISSION-123"
-                onChange={(event) => setMissionId(event.target.value)}
-                onBlur={(event) => updateContextParam("mission_id", event.target.value)}
+                getOptionLabel={(option) => missionLabels.get(option) ?? option}
+                onChange={(_event, value) => {
+                  const next = (value ?? "").toString();
+                  setMissionId(next);
+                  updateContextParam("mission_id", next);
+                }}
+                onInputChange={(_event, value, reason) => {
+                  if (reason === "input") setMissionId(value);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Mission ID"
+                    placeholder="Select or type a mission"
+                    helperText="Recent missions from the database"
+                    onBlur={() => updateContextParam("mission_id", missionId)}
+                  />
+                )}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>

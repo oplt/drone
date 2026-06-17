@@ -306,8 +306,14 @@ def _is_target_nvblox_process(command: str) -> bool:
     )
 
 
-async def kill_stale_nvblox_processes() -> None:
-    """Terminate orphaned nvBlox launch/container processes before restart."""
+async def kill_stale_nvblox_processes(keep_pgids: set[int] | None = None) -> None:
+    """Terminate orphaned nvBlox launch/container processes before restart.
+
+    ``keep_pgids`` lists process-group ids that must NOT be killed (e.g. the
+    currently tracked, healthy mapping stack which runs in its own session).
+    Without this the warm preflight stack would be reaped and restarted.
+    """
+    protected = {int(p) for p in (keep_pgids or set()) if p}
     try:
         result = await asyncio.to_thread(
             subprocess.run,
@@ -342,6 +348,8 @@ async def kill_stale_nvblox_processes() -> None:
             continue
         cmd = parts[2]
         if pid == current_pid or pgid <= 0 or pgid == current_pgid:
+            continue
+        if pid in protected or pgid in protected:
             continue
         if _is_target_nvblox_process(cmd):
             groups.add(pgid)
