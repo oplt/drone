@@ -11,7 +11,6 @@ import {
   type WarehouseLiveMapUpdate,
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
-import { chunkStateKey } from "../utils/liveMapChunkRetention";
 
 type ConnectionState =
   | "empty"
@@ -74,7 +73,7 @@ export function mergeUpdate(
     }
   }
   for (const chunk of update.changed_chunks) {
-    const key = chunkStateKey(chunk);
+    const key = chunk.id;
     const existing = chunksById.get(key);
     if (
       existing &&

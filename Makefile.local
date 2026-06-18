@@ -84,11 +84,13 @@ export DRONE_AUTOPILOT
 export DRONE_SIMULATOR
 
 DEV_PROCS := redis backend frontend
+WAREHOUSE_PROCS := redis backend frontend warehouse_mapping_worker
 ifeq ($(OPEN_BROWSER),1)
 DEV_PROCS += browser
+WAREHOUSE_PROCS += browser
 endif
 
-.PHONY: local-dev local-dev-with-backend-env local-dev-no-observability observability-status start-observability-stack stop-observability-stack check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev start-maple stop-maple
+.PHONY: local-dev warehouse local-dev-with-backend-env local-dev-no-observability observability-status start-observability-stack stop-observability-stack check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev start-maple stop-maple
 
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
@@ -233,6 +235,9 @@ stop-observability-stack:
 
 local-dev: check-local-tools kill-dev start-observability-stack start-maple
 	$(HONCHO) $(HONCHO_ENV_ARGS) -f Procfile.dev start $(DEV_PROCS)
+
+warehouse: check-local-tools kill-dev start-observability-stack start-maple
+	$(HONCHO) $(HONCHO_ENV_ARGS) -f Procfile.dev start $(WAREHOUSE_PROCS)
 
 local-dev-with-backend-env: check-local-tools kill-dev start-observability-stack start-maple
 	$(HONCHO) -e $(BACKEND_ENV) -f Procfile.dev start $(DEV_PROCS)

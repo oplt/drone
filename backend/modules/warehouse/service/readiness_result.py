@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 from backend.modules.warehouse.service.map_source_config import (
     NVBLOX_OPTIONAL_ESDF_TOPICS,
@@ -63,9 +64,7 @@ def _explicit_false(value: Any) -> bool:
         return True
     if isinstance(value, (int, float)) and value == 0:
         return True
-    if isinstance(value, str) and value.strip().lower() in _FALSE_VALUES:
-        return True
-    return False
+    return isinstance(value, str) and value.strip().lower() in _FALSE_VALUES
 
 
 def _as_topic_set(value: Any) -> set[str]:
@@ -94,11 +93,11 @@ def _detail_from_status(status: Any) -> str | None:
 def _nvblox_topic_ready(topic: str) -> bool:
     if topic in NVBLOX_REQUIRED_POINTCLOUD_TOPICS or topic in NVBLOX_OPTIONAL_ESDF_TOPICS:
         return True
+    if topic.startswith("/nvblox_node/back_projected_depth/"):
+        return True
     if topic.startswith("/nvblox_node/") and topic.endswith("_esdf_pointcloud"):
         return True
-    if topic.startswith("nvblox_esdf_") or topic.startswith("/nvblox_esdf_"):
-        return True
-    return False
+    return topic.startswith("nvblox_esdf_") or topic.startswith("/nvblox_esdf_")
 
 
 def _first_topic(topics: Iterable[str], fallback: str) -> str:
@@ -125,7 +124,7 @@ def readiness_from_perception_status_strict(status: Any) -> WarehouseReadinessRe
         or _truthy(components.get("preflight_core_ready"))
         or bool(listed)
     )
-    if _explicit_false(components.get("bridge_alive")) or _explicit_false(getattr(status, "reachable", None)):
+    if _explicit_false(components.get("bridge_alive")):
         bridge_alive = False
 
     ros_graph_ready = bool(
@@ -157,7 +156,9 @@ def readiness_from_perception_status_strict(status: Any) -> WarehouseReadinessRe
             "preflight_core_ready",
         )
     )
-    can_localize = bool(not localization_negative and (localization_positive or odom_topic in listed))
+    can_localize = bool(
+        not localization_negative and (localization_positive or odom_topic in listed)
+    )
 
     nvblox_status = str(components.get("nvblox_status") or "").strip().lower()
     nvblox_negative = any(
@@ -167,7 +168,7 @@ def readiness_from_perception_status_strict(status: Any) -> WarehouseReadinessRe
     nvblox_positive = any(
         _truthy(components.get(key))
         for key in ("nvblox_ok", "nvblox_ready", "nvblox_healthy")
-    ) or nvblox_status in {"live", "ready", "warming", "degraded"}
+    ) or nvblox_status in {"live", "ready"}
     nvblox_ready = bool(
         not nvblox_negative
         and (
@@ -180,7 +181,9 @@ def readiness_from_perception_status_strict(status: Any) -> WarehouseReadinessRe
         _truthy(components.get("preflight_core_ready"))
         or (bridge_alive and ros_graph_ready and can_localize)
     )
-    if _explicit_false(components.get("preflight_core_ready")) and not (bridge_alive and can_localize):
+    if _explicit_false(components.get("preflight_core_ready")) and not (
+        bridge_alive and can_localize
+    ):
         core_ready = False
 
     missing_required_topics = [] if can_localize else [odom_topic]

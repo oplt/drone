@@ -1,4 +1,4 @@
-.PHONY: start local-dev docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
+.PHONY: start local-dev warehouse docker-dev prod-dev fix check backend-lint backend-typecheck backend-tests backend-integration-tests backend-guardrails backend-quality frontend-quality frontend-tests frontend-e2e install-hooks commit-ready
 .PHONY: kill-dev kill-ports kill-workers kill-warehouse kill-ros-bridge stop-bridge reset-dev reset-frontend-cache
 .PHONY: start-maple stop-maple observability-status start-observability-stack stop-observability-stack local-dev-no-observability
 
@@ -10,6 +10,9 @@ start: local-dev
 
 local-dev:
 	$(MAKE) -f Makefile.local local-dev
+
+warehouse:
+	$(MAKE) -f Makefile.local warehouse
 
 docker-dev:
 	@test -f Makefile.docker || { echo "Makefile.docker not found. Use 'make start' or add Makefile.docker."; exit 1; }

@@ -12,7 +12,9 @@ CELERY_WAREHOUSE_MAPPING_QUEUE = settings.celery_warehouse_mapping_queue
 CELERY_VIDEO_ANALYSIS_QUEUE = settings.celery_video_analysis_queue
 CELERY_WORKER_MAX_TASKS_PER_CHILD = settings.celery_worker_max_tasks_per_child
 CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_time_limit_seconds
-CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_soft_time_limit_seconds
+CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = (
+    settings.celery_photogrammetry_soft_time_limit_seconds
+)
 
 celery_app = Celery(
     "drone_backend",
@@ -34,6 +36,7 @@ celery_app.conf.update(
     task_routes={
         "photogrammetry.process_job": {"queue": CELERY_PHOTOGRAMMETRY_QUEUE},
         "warehouse_mapping.process_job": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
+        "warehouse_mapping.extract_structure": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "video_analysis.process_job": {"queue": CELERY_VIDEO_ANALYSIS_QUEUE},
     },
     worker_max_tasks_per_child=CELERY_WORKER_MAX_TASKS_PER_CHILD,
@@ -62,3 +65,17 @@ celery_app.conf.timezone = "UTC"
 from backend.observability.celery_instrumentation import instrument_celery  # noqa: E402
 
 instrument_celery(celery_app)
+
+# Celery workers are launched with ``-A backend.entrypoints.workers.celery_app``.
+# Import task modules here so direct submodule loading still registers every
+# named task; relying on package ``__init__`` is not enough for this entrypoint.
+from backend.entrypoints.workers import (  # noqa: E402, F401
+    deliverable_tasks,
+    export_tasks,
+    outbox_tasks,
+    photogrammetry_tasks,
+    scheduling_tasks,
+    video_analysis_tasks,
+    warehouse_mapping_tasks,
+    webhook_tasks,
+)

@@ -74,6 +74,7 @@ export function inferLayerKey(chunk: WarehouseLiveVoxelChunk): LiveMapLayerKey {
   if (layer === "nvblox_color") return "nvbloxColor";
   if (layer === "nvblox_esdf") return "nvbloxEsdf";
   if (layer === "nvblox_tsdf") return "nvbloxTsdf";
+  if (layer === "nvblox_occupancy") return "nvbloxEsdf";
   if (layer === "nvblox_mesh") return "nvbloxMesh";
 
   if (chunk.source === "rgbd_colored") return "rgbdColored";
@@ -81,6 +82,7 @@ export function inferLayerKey(chunk: WarehouseLiveVoxelChunk): LiveMapLayerKey {
   if (chunk.source === "nvblox_color") return "nvbloxColor";
   if (chunk.source === "nvblox_esdf") return "nvbloxEsdf";
   if (chunk.source === "nvblox_tsdf") return "nvbloxTsdf";
+  if (chunk.source === "nvblox_occupancy") return "nvbloxEsdf";
   if (chunk.source === "nvblox_mesh") return "nvbloxMesh";
 
   const id = chunk.id.toLowerCase();
@@ -89,8 +91,10 @@ export function inferLayerKey(chunk: WarehouseLiveVoxelChunk): LiveMapLayerKey {
   if (id.startsWith("nvblox_color_")) return "nvbloxColor";
   if (id.startsWith("nvblox_esdf_")) return "nvbloxEsdf";
   if (id.startsWith("nvblox_tsdf_")) return "nvbloxTsdf";
+  if (id.startsWith("nvblox_occupancy_")) return "nvbloxEsdf";
   if (id.startsWith("nvblox_mesh_")) return "nvbloxMesh";
-  if (chunk.kind === "esdf" || chunk.kind === "costmap") return "nvbloxEsdf";
+  if (chunk.kind === "esdf" || chunk.kind === "costmap" || chunk.kind === "occupancy")
+    return "nvbloxEsdf";
   if (chunk.kind === "mesh") return "nvbloxMesh";
   return "mid360LiDAR";
 }

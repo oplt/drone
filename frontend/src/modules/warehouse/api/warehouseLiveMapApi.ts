@@ -32,6 +32,7 @@ export type WarehouseLiveVoxelChunk = {
     | "nvblox_color"
     | "nvblox_esdf"
     | "nvblox_tsdf"
+    | "nvblox_occupancy"
     | "nvblox_mesh"
     | "odom"
     | null;
@@ -41,6 +42,7 @@ export type WarehouseLiveVoxelChunk = {
     | "nvblox_color"
     | "nvblox_esdf"
     | "nvblox_tsdf"
+    | "nvblox_occupancy"
     | "nvblox_mesh"
     | null;
   has_rgb?: boolean | null;
@@ -334,7 +336,7 @@ export async function fetchWarehouseLiveChunk(
 // Bulk chunk download (kills the per-chunk N+1 fan-out on snapshot/replay load)
 // ---------------------------------------------------------------------------
 
-const LIVE_MAP_BATCH_MAX_CHUNKS = 256;
+export const LIVE_MAP_BATCH_MAX_CHUNKS = 256;
 const LIVE_MAP_BATCH_FLUSH_MS = 12;
 
 type BatchFrame = { status: number; byteSize: number; data: ArrayBuffer | null };
@@ -422,7 +424,7 @@ async function runLiveMapChunkBatch(
   try {
     const response = await fetch(
       resolveApiUrl(
-        `/warehouse/live-map/${encodeURIComponent(flightId)}/chunks/batch`,
+        `/warehouse/live-map/${encodeURIComponent(flightId)}/chunks/-/batch`,
       ),
       {
         method: "POST",

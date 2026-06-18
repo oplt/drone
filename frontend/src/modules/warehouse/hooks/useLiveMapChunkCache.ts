@@ -11,6 +11,7 @@ import {
   fetchWarehouseLiveChunk,
   fetchWarehouseLiveChunkBatched,
   clearLiveMapChunkFetchCache,
+  LIVE_MAP_BATCH_MAX_CHUNKS,
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
 import type { LiveVoxelLayers } from "../components/WarehouseLiveVoxelScene";
@@ -52,8 +53,8 @@ export type CachedLiveMapChunk = {
   bbox_local_m?: [number, number, number, number, number, number];
   encoding?: string | null;
   has_rgb?: boolean | null;
-  layer?: string | null;
-  source?: string | null;
+  layer?: WarehouseLiveVoxelChunk["layer"];
+  source?: WarehouseLiveVoxelChunk["source"];
   point_count?: number | null;
 };
 
@@ -97,6 +98,14 @@ function chunkVersion(chunk: WarehouseLiveVoxelChunk): string {
     chunk.checksum_sha256 ?? "",
     chunk.byte_size ?? "",
   ].join("|");
+}
+
+function shouldBatchChunkDownloads(
+  mode: LiveMapChunkCacheMode,
+  pendingCount: number,
+): boolean {
+  void pendingCount;
+  return mode === "replay";
 }
 
 function fetchChunkOnce(
@@ -324,7 +333,13 @@ export function useLiveMapChunkCache(
   useEffect(() => {
     if (!flightId || uniquePendingDownloads.length === 0) return;
 
-    const maxConcurrent = config.frontend.max_concurrent_chunk_downloads;
+    const useBatchDownloads = shouldBatchChunkDownloads(
+      mode,
+      uniquePendingDownloads.length,
+    );
+    const maxConcurrent = useBatchDownloads
+      ? Math.min(uniquePendingDownloads.length, LIVE_MAP_BATCH_MAX_CHUNKS)
+      : config.frontend.max_concurrent_chunk_downloads;
     const effectGen = ++downloadEffectGenRef.current;
 
     void runWithConcurrency(uniquePendingDownloads, maxConcurrent, async (chunk) => {
@@ -347,15 +362,14 @@ export function useLiveMapChunkCache(
       });
 
       try {
-        // Batch only the bulk snapshot/replay load (kills the N+1 fan-out).
-        // Live deltas keep the per-chunk path for lowest latency.
+        // Replay always batches; live uses batch only for catch-up bursts (≥3 pending).
         const arrayBuffer = await fetchChunkOnce(
           key,
           chunk.url,
           token,
           controller.signal,
-          mode === "replay" ? flightId : null,
-          mode === "replay" ? chunk.id : null,
+          useBatchDownloads ? flightId : null,
+          useBatchDownloads ? chunk.id : null,
         );
 
         if (downloadEffectGenRef.current !== effectGen) {

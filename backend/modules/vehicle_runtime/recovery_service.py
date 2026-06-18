@@ -141,6 +141,8 @@ class RuntimeRecoveryServiceMixin:
                 flight_id=str(self._flight_id) if self._flight_id is not None else None,
                 preflight_config=kwargs.pop("preflight_config", {}),
                 mission_speed=kwargs.pop("mission_speed", settings.cruise_speed_mps),
+                force=True,
+                source="mission_recovery",
                 **kwargs,
             )
         else:

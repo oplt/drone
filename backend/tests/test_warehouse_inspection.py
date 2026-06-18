@@ -6,12 +6,23 @@ from pydantic import ValidationError
 from backend.modules.missions.flight_profile import flight_profile_for_mission_type
 from backend.modules.missions.schemas.mission_types import MissionType
 from backend.modules.warehouse.models import WarehouseScanTarget
+from backend.modules.warehouse.planning.indoor.enums import OccupancyState
+from backend.modules.warehouse.planning.indoor.models import OccupancyGrid
 from backend.modules.warehouse.schemas import WarehouseLocalPoint, WarehouseScanTargetCreate
 from backend.modules.warehouse.service.inspection import (
     MockWarehouseScanner,
     build_inspection_waypoints,
     compute_scan_pose,
     order_targets,
+)
+from backend.modules.warehouse.service.structure_extraction import (
+    GeneratedTarget,
+    StructureResult,
+    _assign_astar_priority,
+)
+from backend.modules.warehouse.service.structure_jobs import (
+    _attach_quality_gate,
+    ensure_structure_quality_summary,
 )
 
 
@@ -117,6 +128,126 @@ def test_nearest_neighbor_ordering_after_priority_sort() -> None:
     ordered = order_targets(targets, optimize_order=True)
 
     assert [target.id for target in ordered] == [1, 3, 2]
+
+
+def test_structure_targets_use_occupancy_astar_priority() -> None:
+    grid = OccupancyGrid(
+        resolution_m=1.0,
+        width=6,
+        height=5,
+        default_state=OccupancyState.FREE,
+    )
+    for y_idx in range(1, 5):
+        grid.set_cell(2, y_idx, OccupancyState.OCCUPIED)
+
+    def generated(bin_code: str, x_m: float, y_m: float) -> GeneratedTarget:
+        pose = {
+            "frame_id": "warehouse_map",
+            "x_m": x_m,
+            "y_m": y_m,
+            "z_m": 1.0,
+            "yaw_deg": 0.0,
+        }
+        return GeneratedTarget(
+            aisle_code="A1",
+            rack_code="R1",
+            shelf_level=0,
+            bin_code=bin_code,
+            target_point=pose,
+            shelf_normal={"frame_id": "warehouse_map", "x": 1.0, "y": 0.0, "z": 0.0},
+            scan_pose=pose,
+            standoff_m=1.2,
+            priority=100,
+        )
+
+    start = generated("B1", 0.5, 2.5)
+    blocked_near = generated("B2", 3.5, 2.5)
+    same_side = generated("B3", 0.5, 4.5)
+
+    _assign_astar_priority([start, blocked_near, same_side], occupancy_grid=grid, clearance_m=0.0)
+
+    assert same_side.priority == 1
+    assert blocked_near.priority == 2
+
+
+def test_structure_quality_gate_drafts_noisy_pointcloud_fallback() -> None:
+    result = StructureResult(
+        targets=[],
+        summary={
+            "counts": {
+                "aisles": 1,
+                "racks": 7,
+                "targets": 198,
+                "rejected_clearance": 185,
+            },
+            "clearance": {"source": "point_cloud_fallback"},
+            "map_quality": {
+                "chunk_counts": {"rgbd_colored": 127, "mid360_raw": 48, "nvblox_esdf": 40},
+                "point_counts": {"rgbd_colored": 2_626_723, "mid360_raw": 301_863, "nvblox_esdf": 2_103},
+                "missing_topics": [],
+            },
+        },
+        rejected_clearance=185,
+    )
+
+    _attach_quality_gate(result)
+
+    quality = result.summary["quality"]
+    assert quality["status"] == "needs_review"
+    assert quality["active_target_count"] == 0
+    assert "missing_occupancy_grid" in quality["reasons"]
+    assert "too_many_targets_per_rack" in quality["reasons"]
+    assert "clearance_rejection_ratio_high" in quality["reasons"]
+    assert "weak_esdf" in quality["reasons"]
+
+
+def test_structure_quality_gate_accepts_occupancy_backed_output() -> None:
+    result = StructureResult(
+        targets=[],
+        summary={
+            "counts": {
+                "aisles": 2,
+                "racks": 8,
+                "targets": 64,
+                "rejected_clearance": 4,
+            },
+            "clearance": {"source": "occupancy_grid"},
+            "map_quality": {
+                "chunk_counts": {"nvblox_occupancy": 1, "nvblox_esdf": 40},
+                "point_counts": {"nvblox_esdf": 25_000},
+                "missing_topics": [],
+            },
+        },
+        rejected_clearance=4,
+    )
+
+    _attach_quality_gate(result)
+
+    quality = result.summary["quality"]
+    assert quality["status"] == "ready"
+    assert quality["active_target_count"] == 64
+    assert quality["reasons"] == []
+
+
+def test_structure_quality_backfills_legacy_summary() -> None:
+    summary = {
+        "counts": {
+            "aisles": 1,
+            "racks": 7,
+            "targets": 198,
+            "rejected_clearance": 185,
+        },
+        "clearance": {"source": "point_cloud_kdtree"},
+        "map_quality": {
+            "chunk_counts": {"nvblox_esdf": 40, "rgbd_colored": 127},
+            "missing_topics": ["/nvblox_node/static_esdf_pointcloud"],
+        },
+    }
+
+    ensure_structure_quality_summary(summary)
+
+    assert summary["quality"]["status"] == "needs_review"
+    assert summary["quality"]["active_target_count"] == 0
 
 
 @pytest.mark.asyncio

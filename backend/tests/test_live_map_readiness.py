@@ -261,6 +261,70 @@ def test_readiness_ros_graph_ready_without_bridge_http() -> None:
     assert readiness.missing_required_topics == []
 
 
+def test_readiness_accepts_nvblox_back_projected_depth_output() -> None:
+    back_topic = (
+        "/nvblox_node/back_projected_depth/"
+        "iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera"
+    )
+    status = SimpleNamespace(
+        reachable=True,
+        detail=None,
+        components={
+            "listed_topics": [
+                "/warehouse/drone/odometry",
+                back_topic,
+            ],
+            "odometry_topic": "/warehouse/drone/odometry",
+        },
+    )
+
+    readiness = readiness_from_perception_status_strict(status)
+
+    assert readiness.nvblox_ready is True
+    assert readiness.ready is True
+    assert readiness.missing_nvblox_topics == []
+
+
+def test_rgbd_readiness_promotes_nvblox_gate_when_perception_probe_lags() -> None:
+    from backend.modules.warehouse.service.live_map_readiness import (
+        MappingReadinessResult,
+    )
+    from backend.modules.warehouse.service.mapping_stack_lifecycle import (
+        _merge_nvblox_readiness_from_rgbd,
+    )
+    from backend.modules.warehouse.service.readiness_result import (
+        WarehouseReadinessResult,
+    )
+
+    flight_readiness = WarehouseReadinessResult(
+        bridge_alive=True,
+        ros_graph_ready=True,
+        can_localize=True,
+        nvblox_ready=False,
+        core_ready=True,
+        bridge_reachable=True,
+        ready=False,
+        detail="Nvblox is not publishing a ready ESDF/costmap signal.",
+        missing_required_topics=[],
+        missing_nvblox_topics=["/nvblox_node/static_esdf_pointcloud"],
+        unhealthy_topics=[],
+    )
+    rgbd_readiness = MappingReadinessResult(
+        ready=True,
+        rgbd_pointcloud_topic="/warehouse/front/rgbd/points",
+        nvblox_pointcloud_topics=[
+            "/nvblox_node/back_projected_depth/"
+            "iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera"
+        ],
+    )
+
+    merged = _merge_nvblox_readiness_from_rgbd(flight_readiness, rgbd_readiness)
+
+    assert merged.nvblox_ready is True
+    assert merged.ready is True
+    assert merged.missing_nvblox_topics == []
+
+
 @pytest.mark.asyncio
 async def test_mapping_stack_status_includes_log_parser_health(monkeypatch) -> None:
     from backend.modules.warehouse.service import (

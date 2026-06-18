@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from backend.modules.warehouse.service.live_map_config import require_rgb_for_save
 from backend.modules.warehouse.service.live_map_storage import warehouse_live_map_chunk_storage
@@ -15,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 _MANIFEST_NAME = "live_map_manifest.json"
 _CHUNK_ID_RE = re.compile(
-    r"^(rgbd|rgbd_colored|mid360|mid360_raw|nvblox_color|nvblox_esdf|nvblox_tsdf|nvblox_mesh)_",
+    r"^(rgbd|rgbd_colored|mid360|mid360_raw|nvblox_color|nvblox_esdf|"
+    r"nvblox_tsdf|nvblox_mesh|nvblox_occupancy)_",
     re.IGNORECASE,
 )
 
@@ -98,6 +100,8 @@ def _infer_source_from_chunk_id(chunk_id: str) -> str:
         return "nvblox_tsdf"
     if lower.startswith("nvblox_mesh_"):
         return "nvblox_mesh"
+    if lower.startswith("nvblox_occupancy_"):
+        return "nvblox_occupancy"
     return "unknown"
 
 
@@ -170,7 +174,13 @@ def build_manifest_from_flight_dir(
     rgbd_count = chunk_counts.get("rgbd_colored", 0)
     nvblox_count = sum(
         chunk_counts.get(key, 0)
-        for key in ("nvblox_color", "nvblox_esdf", "nvblox_tsdf", "nvblox_mesh")
+        for key in (
+            "nvblox_color",
+            "nvblox_esdf",
+            "nvblox_tsdf",
+            "nvblox_mesh",
+            "nvblox_occupancy",
+        )
     )
     raw_count = chunk_counts.get("mid360_raw", 0)
     colored_available = rgbd_count > 0 or nvblox_count > 0
@@ -288,7 +298,8 @@ def finalize_manifest_integrity(manifest: LiveMapFlightManifest) -> LiveMapFligh
     if missing:
         manifest.manifest_status = "partial"
         logger.warning(
-            "live_map_manifest_partial flight_id=%s missing_chunks=%s total_bytes=%s chunk_counts=%s point_counts=%s",
+            "live_map_manifest_partial flight_id=%s missing_chunks=%s "
+            "total_bytes=%s chunk_counts=%s point_counts=%s",
             manifest.flight_id,
             missing,
             total_bytes,
@@ -298,7 +309,8 @@ def finalize_manifest_integrity(manifest: LiveMapFlightManifest) -> LiveMapFligh
     else:
         manifest.manifest_status = "complete"
         logger.info(
-            "live_map_manifest_finalized flight_id=%s chunk_counts=%s point_counts=%s total_bytes=%s",
+            "live_map_manifest_finalized flight_id=%s chunk_counts=%s "
+            "point_counts=%s total_bytes=%s",
             manifest.flight_id,
             manifest.chunk_counts,
             manifest.point_counts,

@@ -32,6 +32,7 @@ import {
   type LiveVoxelRenderOptions,
 } from "./WarehouseLiveVoxelScene";
 import type { WarehouseMapPlacementViewerProps, WarehouseMapPlacementPanelProps } from "../hooks/useWarehouseMapPlacement";
+import { useWarehouseStructure } from "../hooks/useWarehouseStructure";
 import {
   WarehouseLiveVoxelHeader,
   WarehouseLiveVoxelHealthChips,
@@ -107,6 +108,8 @@ export function WarehouseLiveVoxelMapViewer({
   );
   const [liveMapConfig, setLiveMapConfig] = useState(DEFAULT_LIVE_MAP_CONFIG);
   const layerDefaultsFlightRef = useRef<string | null>(null);
+
+  const structure = useWarehouseStructure(warehouseMapId, coordinateSetupToken);
 
   useEffect(() => {
     if (!state.token) return;
@@ -334,6 +337,11 @@ export function WarehouseLiveVoxelMapViewer({
                   cachedChunks={cachedChunks}
                   renderOptions={renderOptions}
                   mapPlacement={mapPlacement}
+                  structure={
+                    structure.structure?.status === "ready"
+                      ? structure.structure.summary
+                      : null
+                  }
               />
           )}
         {mapPlacement?.pickMode ? (
@@ -456,6 +464,11 @@ export function WarehouseLiveVoxelMapViewer({
           token={coordinateSetupToken}
           onError={onCoordinateSetupError}
           mapPlacement={mapPlacementPanel}
+          structure={structure.structure}
+          extractionStatus={structure.extractionStatus}
+          autoDetecting={structure.extracting}
+          structureError={structure.error}
+          onAutoDetect={structure.extract}
         />
       ) : null}
     </Stack>

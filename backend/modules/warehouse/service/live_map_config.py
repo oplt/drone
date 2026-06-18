@@ -12,6 +12,7 @@ SOURCE_RENDER_PRIORITY: dict[LiveMapSourceId, int] = {
     "nvblox_tsdf": 4,
     "mid360_raw": 5,
     "nvblox_mesh": 6,
+    "nvblox_occupancy": 7,
     "odom": 99,
 }
 

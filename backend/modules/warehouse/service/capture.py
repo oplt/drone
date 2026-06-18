@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from backend.core.config.runtime import settings
 from backend.modules.mapping.service.flight_capture import (
@@ -254,12 +255,17 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         imported = self._import_from_staging(session)
         files = self._list_files(session.session_dir)
         logger.info(
-            "Warehouse capture file check: have=%s need=%s imported=%s timeout_s=%s",
+            "Warehouse capture file check: have=%s need=%s staging_imported=%s timeout_s=%s",
             len(files),
             needed,
             imported,
             timeout if has_external_source else 0.0,
         )
+        if needed > 0 and len(files) >= needed and imported == 0 and not has_external_source:
+            logger.debug(
+                "Capture files already present in session dir (%s); staging import not required.",
+                session.session_dir,
+            )
         if needed <= 0 or len(files) >= needed or not has_external_source:
             return files
 
@@ -335,6 +341,11 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         all_files = self._list_files(session.session_dir)
         image_count = sum(1 for p in all_files if p.suffix.lower() in IMAGE_EXTENSIONS)
         status = "ready" if len(all_files) >= expected_min_files else "incomplete"
+        mission_kind = ""
+        if extra_meta and extra_meta.get("mission_kind") is not None:
+            mission_kind = str(extra_meta.get("mission_kind") or "").strip()
+        if mission_kind == "warehouse_scan" and status == "ready":
+            status = "staged"
 
         result: dict[str, Any] = {
             "flight_id": session.flight_id,
@@ -360,6 +371,12 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
             result.get("file_count"),
             self._manifest_path(session),
         )
+        if mission_kind == "warehouse_scan":
+            logger.info(
+                "Warehouse scan capture session dir has %s file(s); live-map chunks and "
+                "manifest are finalized separately under warehouse-live-map storage.",
+                len(all_files),
+            )
         return result
 
     async def finalize_session_async(

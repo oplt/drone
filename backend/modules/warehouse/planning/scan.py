@@ -576,6 +576,7 @@ class WarehouseScanMission:
                         "reference_mapping_job_id": self.reference_mapping_job_id,
                         "perception_artifacts_count": len(perception_paths),
                         "direct_downloaded_paths_count": len(fallback_paths),
+                        "direct_import_count": imported_direct,
                         "rosbag_paths": [
                             str(Path(path).name)
                             for path in perception_paths
@@ -652,9 +653,29 @@ class WarehouseScanMission:
                     "ok": save_ok,
                     "detail": save_detail,
                     "map_quality": manifest.map_quality,
+                    "manifest_status": manifest.manifest_status,
+                    "chunk_counts": dict(manifest.chunk_counts),
+                    "point_counts": dict(manifest.point_counts),
+                    "missing_topics": list(manifest.missing_topics),
+                    "nvblox_available": manifest.nvblox_available,
                 }
+                live_map_chunk_total = sum(int(v) for v in manifest.chunk_counts.values())
+                sync_result["live_map_chunk_total"] = live_map_chunk_total
+                sync_result["live_map_manifest_status"] = manifest.manifest_status
+                logger.info(
+                    "Warehouse scan map readiness: capture_session_files=%s "
+                    "live_map_chunks=%s manifest_status=%s nvblox_available=%s",
+                    sync_result.get("file_count"),
+                    live_map_chunk_total,
+                    manifest.manifest_status,
+                    manifest.nvblox_available,
+                )
                 if not save_ok:
                     raise RuntimeError(save_detail)
+                sync_result["status"] = "ready"
+                if not manifest.nvblox_available:
+                    sync_result["status"] = "degraded"
+                    sync_result["degradation_reason"] = "nvblox_unavailable"
 
                 db_flight_id = getattr(orch, "_flight_id", None)
                 if db_flight_id is not None:
@@ -1534,11 +1555,20 @@ class WarehouseScanMission:
         )
 
         t0 = startup_t0 if startup_t0 is not None else time.monotonic()
+        require_nvblox_ready = bool(
+            getattr(settings, "warehouse_scan_require_nvblox_ready", True)
+            or getattr(settings, "warehouse_preflight_wait_nvblox", False)
+        )
+        nvblox_timeout_s = (
+            float(getattr(settings, "warehouse_flight_mapping_wait_s", 45.0))
+            if require_nvblox_ready
+            else 0.0
+        )
         stack_status, flight_readiness, takeoff_ready, rgbd_readiness = (
             await prepare_warehouse_scan_ros(
-                require_nvblox=False,
+                require_nvblox=require_nvblox_ready,
                 sensor_timeout_s=30.0,
-                nvblox_timeout_s=0,
+                nvblox_timeout_s=nvblox_timeout_s,
                 wait_for_rgbd=True,
             )
         )
@@ -1564,6 +1594,17 @@ class WarehouseScanMission:
                 message=takeoff_ready.detail
                 or "Warehouse sensors not ready for takeoff",
                 details=takeoff_ready.to_dict(),
+            )
+        if require_nvblox_ready and not flight_readiness.nvblox_ready:
+            raise WarehouseMissionFailure(
+                reason="nvblox_not_ready",
+                action="abort",
+                stage="takeoff",
+                message=(
+                    flight_readiness.detail
+                    or "Nvblox ESDF/costmap did not become ready before takeoff."
+                ),
+                details=flight_readiness.to_dict(),
             )
         if not flight_readiness.core_ready:
             logger.warning(

@@ -545,9 +545,8 @@ class _RawPointCloudLiveMapNode:
                 if now - self._last_backpressure_log_monotonic >= 5.0:
                     self._last_backpressure_log_monotonic = now
                     self.node.get_logger().warning(
-                        "Raw point-cloud bridge falling behind topic=%s; dropped_stale_frames=%s",
-                        self.topic,
-                        self._dropped_frames,
+                        "Raw point-cloud bridge falling behind "
+                        f"topic={self.topic}; dropped_stale_frames={self._dropped_frames}"
                     )
             self._queued_msg = msg
             if self._processing:

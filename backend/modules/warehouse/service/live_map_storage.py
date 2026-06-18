@@ -6,9 +6,10 @@ import json
 import os
 import re
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from fastapi import UploadFile
 
@@ -19,7 +20,7 @@ _EXTENSIONS = {
     "mesh": ".glb",
     "point_cloud": ".xyz32",
     "point_cloud_rgb": ".xyzrgb32",
-    "occupancy": ".vox",
+    "occupancy": ".grid",
     "esdf": ".vox",
     "costmap": ".grid",
 }
@@ -106,7 +107,9 @@ class WarehouseLiveMapChunkStorage:
     def _url(self, *, safe_flight: str, safe_chunk: str) -> str:
         return f"/warehouse/live-map/{safe_flight}/chunks/{safe_chunk}/download"
 
-    def _stored_from_path(self, *, safe_flight: str, safe_chunk: str, path: Path) -> StoredLiveMapChunk:
+    def _stored_from_path(
+        self, *, safe_flight: str, safe_chunk: str, path: Path
+    ) -> StoredLiveMapChunk:
         path = path.resolve()
         root = self.flight_dir(safe_flight)
         if not _is_relative_to(path, root):
@@ -236,7 +239,11 @@ class WarehouseLiveMapChunkStorage:
             return None
 
         matches = sorted(
-            (path for path in self._metadata_candidates(root=root, safe_chunk=safe_chunk) if path.is_file()),
+            (
+                path
+                for path in self._metadata_candidates(root=root, safe_chunk=safe_chunk)
+                if path.is_file()
+            ),
             key=lambda path: path.stat().st_mtime,
             reverse=True,
         )
@@ -299,7 +306,11 @@ class WarehouseLiveMapChunkStorage:
             if not path.is_file():
                 continue
             name = path.name.lower()
-            if name.endswith(".meta.json") or name.endswith(".preview.json") or name.endswith(".uploading"):
+            if (
+                name.endswith(".meta.json")
+                or name.endswith(".preview.json")
+                or name.endswith(".uploading")
+            ):
                 continue
             if not _is_relative_to(path, root):
                 continue
@@ -327,7 +338,11 @@ class WarehouseLiveMapChunkStorage:
             if not path.is_file():
                 continue
             name = path.name.lower()
-            if name.endswith(".meta.json") or name.endswith(".preview.json") or name.endswith(".uploading"):
+            if (
+                name.endswith(".meta.json")
+                or name.endswith(".preview.json")
+                or name.endswith(".uploading")
+            ):
                 continue
             stem = path.stem
             if "-" not in stem:
@@ -345,7 +360,11 @@ class WarehouseLiveMapChunkStorage:
         stored: list[StoredLiveMapChunk] = []
         for safe_chunk, (_mtime, path) in latest_by_chunk.items():
             try:
-                stored.append(self._stored_from_path(safe_flight=safe_flight, safe_chunk=safe_chunk, path=path))
+                stored.append(
+                    self._stored_from_path(
+                        safe_flight=safe_flight, safe_chunk=safe_chunk, path=path
+                    )
+                )
             except (OSError, LiveMapStorageError):
                 continue
         return sorted(stored, key=lambda item: item.path.name)

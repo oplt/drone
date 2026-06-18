@@ -97,7 +97,11 @@ class MissionRuntimeWriteMixin:
                     )
                 )
                 current_state = current.scalar_one_or_none()
-                if current_state is not None and not validate_transition(current_state, state):
+                if (
+                    current_state is not None
+                    and current_state != state
+                    and not validate_transition(current_state, state)
+                ):
                     raise ValueError(
                         f"Invalid state transition: {current_state!r} → {state!r} "
                         f"for mission {client_flight_id!r}"

@@ -14,14 +14,21 @@ import numpy as np
 
 from backend.modules.warehouse.service.live_map_config import render_priority_for_source
 from backend.modules.warehouse.service.map_source_config import (
-    LiveMapSourceConfig,
     WAREHOUSE_LIVE_MAP_SOURCES,
+    LiveMapSourceConfig,
     chunk_id_for_source,
 )
 from backend.modules.warehouse.service.nvblox_mesh_adapter import parse_nvblox_mesh_message
 from backend.modules.warehouse.service.nvblox_status import nvblox_status_tracker
 from backend.modules.warehouse.service.nvblox_voxel_layer_parser import (
     parse_voxel_block_layer_msg,
+)
+from backend.modules.warehouse.service.occupancy_grid_parser import (
+    encode_occupancy_grid,
+    parse_occupancy_grid_msg,
+)
+from backend.modules.warehouse.service.occupancy_live_map_chunk import (
+    store_and_publish_occupancy_chunk,
 )
 from backend.modules.warehouse.service.pointcloud2_parser import encode_xyz32, encode_xyzrgb32
 
@@ -82,7 +89,14 @@ def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
     valid = arr[finite]
     mins = valid.min(axis=0)
     maxs = valid.max(axis=0)
-    return [float(mins[0]), float(mins[1]), float(mins[2]), float(maxs[0]), float(maxs[1]), float(maxs[2])]
+    return [
+        float(mins[0]),
+        float(mins[1]),
+        float(mins[2]),
+        float(maxs[0]),
+        float(maxs[1]),
+        float(maxs[2]),
+    ]
 
 
 def _preview_points_from_xyz(xyz: np.ndarray, *, limit: int = 500) -> list[list[float]]:
@@ -345,8 +359,7 @@ class _NvbloxLayersLiveMapNode:
         self.flight_id = flight_id
         self.event_loop = event_loop
         self.source_runtimes = {
-            source_id: _LayerRuntime(config=config)
-            for source_id, config in sources.items()
+            source_id: _LayerRuntime(config=config) for source_id, config in sources.items()
         }
 
         self.tf_buffer = tf2_ros.Buffer()
@@ -366,6 +379,15 @@ class _NvbloxLayersLiveMapNode:
                     Mesh,
                     config.topic,
                     self._make_mesh_callback(source_id),
+                    sensor_qos,
+                )
+            elif config.kind == "occupancy":
+                from nav_msgs.msg import OccupancyGrid
+
+                self.node.create_subscription(
+                    OccupancyGrid,
+                    config.topic,
+                    self._make_occupancy_callback(source_id),
                     sensor_qos,
                 )
             else:
@@ -389,6 +411,12 @@ class _NvbloxLayersLiveMapNode:
         return _callback
 
     def _make_mesh_callback(self, source_id: str):
+        def _callback(msg: Any) -> None:
+            self._on_message(source_id, msg)
+
+        return _callback
+
+    def _make_occupancy_callback(self, source_id: str):
         def _callback(msg: Any) -> None:
             self._on_message(source_id, msg)
 
@@ -466,9 +494,7 @@ class _NvbloxLayersLiveMapNode:
             self._drain_source(source_id),
             self.event_loop,
         )
-        future.add_done_callback(
-            lambda done: done.exception() if not done.cancelled() else None
-        )
+        future.add_done_callback(lambda done: done.exception() if not done.cancelled() else None)
 
     async def _drain_source(self, source_id: str) -> None:
         runtime = self.source_runtimes.get(source_id)
@@ -531,12 +557,41 @@ class _NvbloxLayersLiveMapNode:
             )
             return
 
+        if config.kind == "occupancy":
+            parsed_grid = await asyncio.to_thread(parse_occupancy_grid_msg, msg)
+            if parsed_grid is None:
+                return
+            payload = await asyncio.to_thread(encode_occupancy_grid, parsed_grid)
+            digest = hashlib.sha1(payload).hexdigest()
+            with runtime.lock:
+                if runtime.last_content_digest == digest:
+                    return
+                runtime.last_content_digest = digest
+                runtime.sequence += 1
+                sequence = runtime.sequence
+            await store_and_publish_occupancy_chunk(
+                flight_id=self.flight_id,
+                source=config,
+                sequence=sequence,
+                payload=payload,
+                width=parsed_grid.width,
+                height=parsed_grid.height,
+                resolution_m=parsed_grid.resolution_m,
+                origin_x_m=parsed_grid.origin_x_m,
+                origin_y_m=parsed_grid.origin_y_m,
+                frame_id=parsed_grid.frame_id or config.global_frame,
+                stamp=_stamp_from_msg(msg),
+            )
+            return
+
+        parse_started = time.monotonic()
         parsed = await asyncio.to_thread(
             parse_voxel_block_layer_msg,
             msg,
             max_points=config.max_points,
             require_color=source_id == "nvblox_color",
         )
+        parse_ms = (time.monotonic() - parse_started) * 1000.0
         if parsed is None or parsed.point_count <= 0:
             return
 
@@ -544,15 +599,14 @@ class _NvbloxLayersLiveMapNode:
         header = getattr(msg, "header", None)
         source_frame = (getattr(header, "frame_id", None) or "").strip()
         transform = self._lookup_transform(msg, config.global_frame)
-        if source_frame and source_frame != config.global_frame:
-            if transform is None:
-                self.node.get_logger().warning(
-                    "Skipping nvblox layer chunk source=%s: TF %s <- %s unavailable",
-                    source_id,
-                    config.global_frame,
-                    source_frame,
-                )
-                return
+        if source_frame and source_frame != config.global_frame and transform is None:
+            self.node.get_logger().warning(
+                "Skipping nvblox layer chunk source=%s: TF %s <- %s unavailable",
+                source_id,
+                config.global_frame,
+                source_frame,
+            )
+            return
         xyz = self._transform_xyz(xyz, transform)
 
         digest = hashlib.sha1()
@@ -567,6 +621,7 @@ class _NvbloxLayersLiveMapNode:
             runtime.last_content_digest = content_digest
             runtime.sequence += 1
             sequence = runtime.sequence
+        publish_started = time.monotonic()
         await _store_and_publish_point_chunk(
             flight_id=self.flight_id,
             source=config,
@@ -577,14 +632,24 @@ class _NvbloxLayersLiveMapNode:
             frame_id=config.global_frame,
             stamp=_stamp_from_msg(msg),
         )
+        total_ms = (time.monotonic() - parse_started) * 1000.0
+        publish_ms = (time.monotonic() - publish_started) * 1000.0
+        logger.info(
+            "nvblox_layer_bridge_timing source=%s points=%s parse_ms=%.1f "
+            "publish_ms=%.1f total_ms=%.1f dropped=%s",
+            source_id,
+            parsed.point_count,
+            parse_ms,
+            publish_ms,
+            total_ms,
+            runtime.dropped_frames,
+        )
 
 
 def resolve_nvblox_layer_bridge_sources(
     *,
     topics: set[str] | None = None,
 ) -> dict[str, LiveMapSourceConfig]:
-    from dataclasses import replace
-
     from backend.infrastructure.warehouse.bridge_config import list_ros2_topics
     from backend.modules.warehouse.service.live_map_readiness import (
         _is_voxel_block_layer_type,
@@ -614,6 +679,15 @@ def resolve_nvblox_layer_bridge_sources(
     mesh_type = topic_types.get(mesh_topic)
     if mesh_topic in topics and mesh_type and "nvblox_msgs/msg/Mesh" in mesh_type:
         sources["nvblox_mesh"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_mesh"]
+
+    occupancy_topic = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"].topic
+    occupancy_type = topic_types.get(occupancy_topic)
+    if (
+        occupancy_topic in topics
+        and occupancy_type
+        and "nav_msgs/msg/OccupancyGrid" in occupancy_type
+    ):
+        sources["nvblox_occupancy"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"]
 
     return sources
 

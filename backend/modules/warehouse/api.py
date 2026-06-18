@@ -83,6 +83,9 @@ from backend.modules.warehouse.schemas import (
     WarehouseScanTargetImport,
     WarehouseScanTargetRead,
     WarehouseScanTargetUpdate,
+    WarehouseStructureExtractIn,
+    WarehouseStructureExtractOut,
+    WarehouseStructureSummaryOut,
 )
 from backend.modules.warehouse.service.inspection import (
     MockWarehouseScanner,
@@ -102,6 +105,14 @@ from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveMapSnapshot,
     normalize_live_map_payload,
     warehouse_live_map_stream,
+)
+from backend.modules.warehouse.service.structure_jobs import (
+    STRUCTURE_ASSET_TYPE,
+    ensure_structure_quality_summary,
+    get_extraction_state,
+    record_extraction_queued,
+    resolve_latest_model_flight,
+    warehouse_mapping_worker_ready,
 )
 from backend.modules.warehouse.service.warehouse_preflight import (
     apply_ros_preflight_gate,
@@ -1180,6 +1191,8 @@ async def _build_preflight_snapshot(
     ros_report = await run_warehouse_ros_preflight_report(
         default_warehouse_scan_preflight_mission_data(),
         cruise_alt=2.0,
+        force=force,
+        source="ui_poll",
     )
     ros_can_start, blockers, ros_failed_checks = apply_ros_preflight_gate(
         categories,
@@ -1445,6 +1458,169 @@ async def delete_warehouse_map(
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse map not found")
     await db.commit()
+
+
+@router.post(
+    "/maps/{warehouse_map_id}/structure/extract",
+    response_model=WarehouseStructureExtractOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def extract_warehouse_structure_endpoint(
+    warehouse_map_id: int,
+    payload: WarehouseStructureExtractIn | None = None,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+) -> WarehouseStructureExtractOut:
+    """Trigger automatic aisle/rack/shelf/bin extraction for the latest map.
+
+    Runs in the warehouse-mapping Celery worker; auto-generated scan targets and
+    a STRUCTURE_MAP asset are written when it completes. Re-runnable with
+    different bin pitch / standoff / clearance without re-flying.
+    """
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    resolved = await resolve_latest_model_flight(db, warehouse_map_id=warehouse_map_id)
+    if resolved is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No ready 3D map with a live-map flight is available to extract from.",
+        )
+    model_id, client_flight_id = resolved
+    params_payload = payload.to_params_payload() if payload is not None else {}
+
+    worker_ok, worker_detail = await asyncio.to_thread(warehouse_mapping_worker_ready)
+    if not worker_ok:
+        raise HTTPException(
+            status_code=503,
+            detail=worker_detail or "Warehouse mapping worker is not running.",
+        )
+
+    task_id: str | None = None
+    try:
+        from backend.entrypoints.workers.warehouse_mapping_tasks import (
+            extract_warehouse_structure,
+        )
+
+        async_result = extract_warehouse_structure.delay(
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=int(model_id),
+            client_flight_id=client_flight_id,
+            params=params_payload,
+        )
+        task_id = getattr(async_result, "id", None)
+        record_extraction_queued(
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=int(model_id),
+            client_flight_id=client_flight_id,
+            task_id=task_id,
+            source="api",
+        )
+    except Exception as exc:
+        logger.exception("warehouse_structure_extraction_enqueue_failed_api")
+        raise HTTPException(
+            status_code=503,
+            detail="Structure extraction worker is unavailable.",
+        ) from exc
+
+    logger.info(
+        "warehouse_structure_extraction_requested map_id=%s model_id=%s flight=%s task=%s",
+        warehouse_map_id,
+        model_id,
+        client_flight_id,
+        task_id,
+    )
+    return WarehouseStructureExtractOut(
+        status="queued",
+        warehouse_map_id=int(warehouse_map_id),
+        model_id=int(model_id),
+        client_flight_id=client_flight_id,
+        task_id=task_id,
+    )
+
+
+@router.get(
+    "/maps/{warehouse_map_id}/structure",
+    response_model=WarehouseStructureSummaryOut,
+)
+async def get_warehouse_structure(
+    warehouse_map_id: int,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> WarehouseStructureSummaryOut:
+    """Return the most recent detected structure (aisles/racks) for overlays."""
+    await _get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    asset = (
+        await db.execute(
+            select(WarehouseAsset)
+            .join(WarehouseModel, WarehouseAsset.model_id == WarehouseModel.id)
+            .where(
+                WarehouseModel.warehouse_map_id == int(warehouse_map_id),
+                WarehouseAsset.type == STRUCTURE_ASSET_TYPE,
+            )
+            .order_by(WarehouseAsset.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if asset is None:
+        task_state = get_extraction_state(warehouse_map_id) or {}
+        if not task_state:
+            resolved = await resolve_latest_model_flight(db, warehouse_map_id=warehouse_map_id)
+            if resolved is not None:
+                model_id, client_flight_id = resolved
+                task_state = {
+                    "status": "not_started",
+                    "model_id": int(model_id),
+                    "client_flight_id": client_flight_id,
+                }
+        raw_status = str(task_state.get("status") or "not_started")
+        structure_status: Literal["not_started", "queued", "running", "ready", "needs_review", "failed"]
+        if raw_status == "queued":
+            structure_status = "queued"
+        elif raw_status == "running":
+            structure_status = "running"
+        elif raw_status == "ready":
+            structure_status = "ready"
+        elif raw_status == "failed":
+            structure_status = "failed"
+        else:
+            structure_status = "not_started"
+        return WarehouseStructureSummaryOut(
+            status=structure_status,
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=task_state.get("model_id"),
+            client_flight_id=task_state.get("client_flight_id"),
+            task_id=task_state.get("task_id"),
+            error_message=task_state.get("error_message"),
+            target_count=0,
+            active_target_count=0,
+            summary={},
+        )
+    meta = asset.meta_data if isinstance(asset.meta_data, dict) else {}
+    summary = meta.get("summary")
+    summary_dict = summary if isinstance(summary, dict) else {}
+    ensure_structure_quality_summary(summary_dict)
+    quality = summary_dict.get("quality") if isinstance(summary_dict, dict) else {}
+    quality = quality if isinstance(quality, dict) else {}
+    quality_status = str(meta.get("quality_status") or quality.get("status") or "ready")
+    if quality_status not in {"ready", "needs_review", "failed"}:
+        quality_status = "needs_review"
+    return WarehouseStructureSummaryOut(
+        status=quality_status,  # type: ignore[arg-type]
+        warehouse_map_id=int(warehouse_map_id),
+        model_id=int(asset.model_id),
+        generated_at=meta.get("generated_at"),
+        target_count=int(meta.get("target_count") or 0),
+        active_target_count=int(
+            meta.get(
+                "active_target_count",
+                int(meta.get("target_count") or 0) if quality_status == "ready" else 0,
+            )
+            or 0
+        ),
+        quality_status=quality_status,  # type: ignore[arg-type]
+        quality_reasons=list(meta.get("quality_reasons") or quality.get("reasons") or []),
+        confidence=meta.get("confidence") if meta.get("confidence") is not None else quality.get("confidence"),
+        summary=summary_dict,
+    )
 
 
 @router.get("/maps/{warehouse_map_id}/scan-targets", response_model=list[WarehouseScanTargetRead])
@@ -2607,6 +2783,8 @@ async def mission_start(
     preflight_report = await run_warehouse_ros_preflight_report(
         mission.get_preflight_mission_data(),
         cruise_alt=base_height_m,
+        force=True,
+        source="mission_start",
     )
     preflight_status = str(preflight_report.overall_status)
     if not warehouse_preflight_can_start(preflight_report):
@@ -2860,7 +3038,7 @@ async def live_map_chunk_download(
     )
 
 
-@router.post("/live-map/{flight_id}/chunks/batch")
+@router.post("/live-map/{flight_id}/chunks/-/batch")
 async def live_map_chunk_batch_download(
     flight_id: str,
     payload: WarehouseLiveMapChunkBatchIn,

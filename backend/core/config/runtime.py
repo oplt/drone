@@ -601,11 +601,33 @@ class RuntimeSettings(BaseSettings):
     # preflight runs, so its ~20s init overlaps preflight/arming instead of
     # blocking the pre-takeoff critical path. The mission reuses the warm stack.
     warehouse_preflight_warm_nvblox: bool = True
+    warehouse_preflight_warm_rgbd: bool = True
+    warehouse_rgbd_readiness_cache_ttl_s: float = 30.0
+    warehouse_preflight_report_cache_ttl_s: float = 4.0
+    warehouse_live_map_topic_probe_cache_ttl_s: float = 15.0
     warehouse_live_map_clock_stability_s: float = 4.0
     warehouse_mapping_stack_preflight_clock_s: float = 4.0
     warehouse_nvblox_tf_restart_jump_threshold: int = 5
     warehouse_nvblox_tf_restart_cooldown_s: float = 60.0
     warehouse_preflight_wait_nvblox: bool = False
+    warehouse_scan_require_nvblox_ready: bool = True
+
+    # Automatic warehouse structure extraction (3D map -> aisles/racks/shelves/bins).
+    # Runs as a post-flight Celery job; tunables drive the geometry heuristics and
+    # the clearance gate applied to every auto-generated scan pose.
+    warehouse_structure_extraction_enabled: bool = True
+    warehouse_structure_voxel_m: float = 0.05
+    warehouse_structure_grid_res_m: float = 0.10
+    warehouse_structure_floor_margin_m: float = 0.15
+    warehouse_structure_ceiling_max_m: float = 8.0
+    warehouse_structure_min_aisle_width_m: float = 0.9
+    warehouse_structure_min_rack_length_m: float = 0.6
+    warehouse_structure_bin_pitch_m: float = 0.9
+    warehouse_structure_shelf_min_spacing_m: float = 0.3
+    warehouse_structure_standoff_m: float = 1.2
+    warehouse_structure_drone_radius_m: float = 0.35
+    warehouse_structure_clearance_margin_m: float = 0.25
+    warehouse_structure_max_points: int = 6_000_000
 
     # Simulation / indoor navigation flags
     sim_mode: bool = False

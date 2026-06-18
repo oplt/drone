@@ -1,289 +1,287 @@
 ================================================================================
-WAREHOUSE SCAN FLIGHT — LOG + FLOW ANALYSIS (bugs, failures, latency, bottlenecks)
+WAREHOUSE 3D MAP -> AISLE / RACK / SHELF / BIN EXTRACTION
+How to auto-determine structure + inspection coordinates from a ready 3D map
 ================================================================================
-Inputs analysed:
-  - logs.txt  (one warehouse_scan run, flight_id=127 / flight_1781708829_f44413ab,
-               JSON-lines via honcho, 1673 lines / 818 structured records)
-  - flow.txt  (documented Start-Flight + Live-Mapping + Map-Record flow)
-  - source under backend/modules/warehouse/** and frontend/src/modules/warehouse/**
 
-No ERROR/CRITICAL/traceback lines were emitted. The run "succeeded"
-(17:10:00 "Mission 'Warehouse Scan - test' completed successfully").
-The problems are LATENCY / WASTED-WORK / LIVE-DELIVERY issues, not crashes.
-
-
---------------------------------------------------------------------------------
-RECONSTRUCTED TIMELINE (key milestones, HH:MM:SS)
---------------------------------------------------------------------------------
-  17:05:25  API up
-  17:05:59  warehouse ROS preflight #1 (bridge_ready=True)
-  17:06:11  Nvblox mapping stack STARTED (1st time, during preflight warm-up)
-  17:06:13  nvblox node up
-  17:06:37 / 17:06:51 / 17:07:09 / 17:07:15 / 17:07:19  warehouse ROS preflight #3..#7
-  17:07:19  Preflight overall: WARN pass=19 warn=1 fail=0
-  17:07:20  Capture session prepared (flight_id=127)
-  17:07:20  >>> Nvblox mapping stack EXITED code -15 (SIGTERM)  <<<  (the warm stack is killed)
-  17:07:32  Nvblox mapping stack STARTED AGAIN (2nd time, for the mission)
-  17:07:34  nvblox node up (again)
-  17:07:47  RGB-D PointCloud2 stream ready   (≈15s re-warm after the restart)
-  17:07:47  Arming motors
-  17:07:51  warehouse live map bridge started
-  17:07:56  Takeoff reached 2.54m
-  17:07:57  colored point-cloud bridge started
-  17:08:00  nvblox-layers bridge + raw mid360 bridge started (persist=True)
-  17:08:01..17:08:24  colored chunks #1..#38 served to viewer (~0.5–0.6s cadence)
-  17:08:24..17:09:16  >>> NO live chunk delivery during the core scan  <<<
-  17:09:16  Disarming motors
-  17:09:33  Capture session finalized (have=1 need=1 imported=0)        (+17s)
-  17:09:43  live_map_manifest_finalized (rgbd_colored=126, mid360_raw=49, esdf=37) (+10s)
-  17:09:51  diagnostic pre_cleanup
-  17:09:52  live map bridge stopped + nvblox stopped
-  17:10:00  diagnostic post_cleanup + Mission completed                  (disarm→done ≈ 44s)
-  17:11:41  WS disconnect, then colored chunks #39..#126 served in a BURST (post-flight)
-  17:11:53 / 17:11:58 / 17:12:03  scanned-map replays 63/64/65 → 50–150 per-chunk GETs each
+GOAL
+  After a warehouse_scan flight finishes and the 3D map is "ready", automatically
+  determine the coordinates (+ approach poses) of aisles, racks, shelves and bins
+  so the drone can be sent to each location to check products / scan barcodes,
+  instead of an operator hand-placing every target by clicking the 3D viewer.
 
 
 ================================================================================
-A. HIGH-IMPACT CRITICAL-PATH LATENCY
+1. CURRENT FLOW (what exists today)
 ================================================================================
 
-fixed A1
-A1. Nvblox mapping stack is started during preflight, KILLED, then RESTARTED
-    for the mission — ~25–30s wasted on the pre-takeoff critical path.
-    -----------------------------------------------------------------------
-    Evidence:
-      17:06:11 start nvblox → 17:07:20 "exited normally code -15"
-      → 17:07:32 start nvblox AGAIN → 17:07:47 RGB-D ready (≈15s re-warm).
-    Classification: concurrency/lifecycle bottleneck (CPU+I/O warm-up redone).
-    Root cause:
-      backend/modules/warehouse/service/mapping_stack_lifecycle.py
-        - _maybe_start_mapping_stack_cmd(skip_stale_kill=False)   (line 403)
-          calls _kill_stale_nvblox_processes()                    (line 421-422)
-          BEFORE the "already running" guard                       (line 443-444).
-        - _kill_stale_nvblox_processes() → sim_time_tf_readiness.kill_stale_nvblox_processes
-          kills nvblox by process pattern (pgrep), NOT by the tracked PID, so the
-          healthy preflight-warmed stack is treated as "stale" and SIGTERM'd.
-        - prepare_warehouse_scan_ros() (line 661) and scan.py
-          _start_perception_mapping() (scan.py:1492-1505) call it with the default
-          skip_stale_kill=False → guaranteed kill+restart every mission.
-    Best solution:
-      - Reuse the warm stack. Move the "already running & healthy" check BEFORE the
-        stale-kill: if _is_mapping_stack_process_running() and the tracked process is
-        healthy, return early and DO NOT kill.
-      - Make the stale-kill exclude the currently tracked PID (pass keep_pid=_mapping_stack_pid()
-        into kill_stale_nvblox_processes) so it only reaps orphans, never the live one.
-      - Unify the preflight warm-up and mission lifecycle so one stack spans both phases
-        (the preflight already warms nvblox; the mission should adopt it).
-      Expected win: removes the ~12s kill gap + ~15s re-warm ≈ 25–30s before arm.
+Scan -> Map:
+  - plan_warehouse_scan() (planning/local_planner.py) generates a lawnmower /
+    serpentine path from polygon_local_m (metres, dock-origin local frame).
+    NOTE: the "aisle corridors" here are PRE-FLIGHT geometry from the polygon,
+    NOT derived from the actual map.
+  - fly_scan() (planning/scan.py) runs the flight; live-map bridges stream chunks.
+  - On completion: build_manifest_from_flight_dir + validate_save_quality, then
+    mapping_service.persist_capture() (service/mapping.py) marks the model "ready".
 
-fixed A2
-A2. Warehouse ROS preflight runs 7× in ~80s (redundant recomputation).
-    --------------------------------------------------------------------
-    Evidence: "Running warehouse ROS preflight ..." at 17:05:59, 17:05:59,
-              17:06:37, 17:06:51, 17:07:09, 17:07:15, 17:07:19.
-    Classification: repeated-computation / database-API-style bottleneck (ROS probes).
-    Root cause: each call does live ROS topic/TF/perception probing
-      (warehouse_preflight.fetch_warehouse_perception_status(deep=True, force=True))
-      driven by frontend polling + the mission-start path, with no short-TTL cache.
-      A cache layer exists (modules/preflight/checks/cache.py) but the warehouse ROS
-      report is fetched with force=True, bypassing it.
-    Best solution:
-      - Add a short TTL (e.g. 3–5s) memo for the deep perception/ROS report keyed by
-        mission_type; serve cached result to rapid repeat callers (the GET polling path),
-        and only force=True on the actual mission-start transition.
-      - Coalesce concurrent callers with a single in-flight asyncio.Lock+future so 7
-        overlapping requests trigger ONE probe.
+Artifacts available once "ready" (all in METRES, frame = odom == warehouse_map
+when starting from the same dock):
+  - Point-cloud chunks on disk under storage/warehouse-live-map/{flight_id}/:
+      *.xyz32     (mono XYZ float32, e.g. mid360 raw lidar)
+      *.xyzrgb32  (XYZ + RGB, e.g. rgbd_colored, nvblox_color/tsdf/esdf)
+      *.glb       (nvblox mesh)
+      *.meta.json (sidecar: source, layer, bbox_local_m[6], point_count, frame_id)
+      live_map_manifest.json (chunk_counts, point_counts, map_quality, ...)
+  - nvblox layers (the key ones for structure):
+      /nvblox_node/static_esdf_pointcloud  -> nvblox_esdf  (distance-to-obstacle)
+      /nvblox_node/tsdf_layer              -> nvblox_tsdf  (surfaces)
+      /nvblox_node/color_layer             -> nvblox_color
+      /nvblox_node/static_occupancy_grid / static_map_slice (NOT currently bridged)
+  - DB: WarehouseModel/WarehouseMappingJob (status=ready), WarehouseAsset rows
+    (ROSBAG / POINT_CLOUD / MESH_GLB / OCTOMAP / QUALITY_REPORT) with file paths.
 
-fixed A3 (offloaded blocking manifest build/validate to a worker thread so the
-         ~10s teardown step no longer stalls the event loop; incremental-manifest
-         + early-UI-return left as a follow-up — higher risk, spans persist_capture)
-A3. Post-flight teardown takes ~44s (disarm 17:09:16 → completed 17:10:00).
-    ----------------------------------------------------------------------
-    Evidence: disarm 17:09:16 → capture finalize 17:09:33 (+17s) → manifest 17:09:43
-              (+10s) → diagnostics/cleanup → completed 17:10:00.
-    Classification: I/O-bound + sequential scheduling on the shutdown path.
-    Root cause: wait_for_mapping_artifacts → finalize_session → build_manifest_from_flight_dir
-      → persist_capture run sequentially; manifest hashes/scans every chunk file on disk.
-    Best solution:
-      - Run independent teardown steps concurrently (asyncio.gather) where they don't
-        depend on each other (telemetry summary build, video stop, diagnostics).
-      - Build the live-map manifest incrementally during flight (append per chunk) instead
-        of a full directory re-scan + re-hash at the end.
-      - Return "completed" to the UI as soon as the DB record is durable; finish
-        manifest/quality-gate as a background task.
+Inspection (what exists):
+  - WarehouseScanTarget (models.py:249) already models aisle_code, rack_code,
+    shelf_level, bin_code, sku, barcode, product_name, target_point_local_json,
+    scan_pose_local_json, shelf_normal_local_json, standoff_m, hover_time_s.
+  - compute_scan_pose() (service/inspection.py:94) already turns a target point +
+    shelf normal + standoff into a safe hover/approach pose with yaw.
+  - build_inspection_waypoints() / execute_inspection_mission() already navigate
+    target->target, hover, trigger scan, record results (MockWarehouseScanner).
+  - Frontend: operator MANUALLY clicks the 3D viewer to drop bin targets
+    (WarehouseLiveVoxelMapViewer.tsx) and fills aisle/rack/bin codes.
+
+THE GAP (what does NOT exist anywhere):
+  - No plane fitting / RANSAC, no clustering (DBSCAN/region grow), no occupancy
+    grid analysis, no segmentation of the saved cloud.
+  - No automatic aisle/rack/shelf/bin detection from the 3D map.
+  - No automatic generation of WarehouseScanTarget rows or shelf normals.
+  - No post-map re-planning: scan waypoints are computed once, pre-flight, from
+    the polygon only.
+  => Today, going from "3D map ready" to "coordinates to inspect" is 100% manual.
 
 
 ================================================================================
-B. LIVE-MAP DATA PATH (visualization latency)
+2. BEST APPROACH — automatic structure extraction pipeline
 ================================================================================
 
-fixed B1 (root cause: a single WS send exceeding send_timeout_s evicted the still-
-         connected viewer from the broadcast set, so it got nothing until reconnect.
-         Now a send timeout is a transient strike — the slow client stays subscribed
-         and is only dropped after N consecutive timeouts; send timeout 1s→5s; client
-         chunk-download concurrency 4→8. Periodic snapshot-delta left as follow-up.)
-B1. Live map froze mid-scan: only 38/126 colored chunks reached the viewer during
-    flight; chunks #39..#126 arrived in a post-flight burst at 17:11:41.
-    ------------------------------------------------------------------------------
-    Evidence: chunk_download #1..#38 = 17:08:01–17:08:24, then nothing until
-              17:11:41 (after WS disconnect/reconnect → snapshot catch-up).
-    Classification: concurrency/scheduling + delivery bottleneck.
-    Likely root causes (verify):
-      - Live download is gated 1-chunk-per-WS-message and effectively serialized
-        (~0.5–0.6s each) while production continued at a similar rate, so any stall in
-        WS metadata delivery (the bridge throttles + drops stale frames:
-        colored_pointcloud_live_map_bridge.py:_on_pointcloud line 544 min_publish_interval_s,
-        queued_msg drop line 549-556) leaves the viewer behind with no catch-up until a
-        full snapshot is pulled on reconnect.
-      - The post-flight burst is WarehouseLiveMapStream.snapshot replaying the whole history.
-    Best solution:
-      - Push small chunk metadata in BATCHES over the WS (changed_chunks already supports a
-        list) and let the client fetch with real concurrency
-        (frontend max_concurrent_chunk_downloads — useLiveMapChunkCache.ts:318; raise from
-        the current low value, the post-flight burst shows 4 in parallel works fine).
-      - Add a lightweight periodic "snapshot delta" during flight so a viewer that falls
-        behind catches up live instead of only at reconnect.
-      - Confirm the WS publish path is not blocked behind the synchronous chunk write.
+Run a post-flight "map -> structure" job that converts the saved cloud into a
+hierarchy: warehouse -> aisles -> racks -> shelves -> bins, each with a centre
+point, bounding box, and a shelf face normal (for approach pose). This is a
+classic, well-bounded geometry problem on an axis-dominant environment.
 
-fixed B2 (added POST /live-map/{flight}/chunks/batch streaming length-prefixed
-         framed chunks; frontend coalesces replay/snapshot loads into one batched
-         request via fetchWarehouseLiveChunkBatched (per-chunk fallback on error);
-         live deltas keep the per-chunk path; chunk responses already 304 via
-         immutable ETag + Cache-Control.)
-B2. Per-chunk HTTP fan-out (N+1) when opening a live/replay map.
-    -----------------------------------------------------------
-    Evidence: replay of scanned_map 63/64/65 each issues 50–150 individual
-      GET /warehouse/live-map/{flight}/chunks/{id}/download requests
-      (e.g. map 65: mid360_000001..mid360_000054 + rgbd_colored..., one HTTP round-trip each).
-    Classification: database/API-call batching bottleneck (too many small requests).
-    Root cause: every chunk is fetched one-by-one (fetchWarehouseLiveChunk →
-      api.py live_map_chunk_download line 2800, FileResponse line 2844). Backend per-request
-      is fine (FileResponse sendfile), but auth + headers + round-trips × ~150 dominate
-      first-paint latency for a map.
-    Best solution:
-      - Add a bulk endpoint: POST /live-map/{flight}/chunks/batch (ids[]) returning a
-        concatenated/length-prefixed binary stream, OR a tar/zip, OR an HTTP/2 multiplexed
-        manifest so the whole map loads in 1–few requests.
-      - Keep per-chunk endpoint for live deltas; use the bulk path for snapshot/replay load.
-      - Cache-Control + ETag on chunk responses so re-opens are 304s.
+Recommended layered algorithm (cheap -> rich; ship Stage A first):
 
-B3. Bridge intentionally drops stale frames under load (data completeness vs. latency).
-    ----------------------------------------------------------------------------------
-    Evidence: "dropped_stale_frames" warnings (2×).
-    Note: this is BY DESIGN for live throttling (min_publish_interval_s). It is correct for
-    the live view but means the live stream is lossy. The persisted rosbag/manifest path is
-    the source of truth — keep them separate (already the case). No fix needed; documented so
-    it is not mistaken for data loss.
+STAGE A — Floor + vertical-structure separation (fast, deterministic)
+  Input: merged downsampled cloud (voxel grid ~5 cm), prefer nvblox_tsdf/color
+         (clean surfaces) or rgbd_colored; fall back to mid360 raw.
+  1. Voxel-downsample the merged cloud (Open3D voxel_down_sample) for speed.
+  2. Floor plane: RANSAC plane with normal ~ +Z (segment_plane). Gives floor z0
+     and the working height band [z0+min, z0+max].
+  3. Remove floor + ceiling; keep the vertical "rack mass".
+  4. Project remaining points to the XY plane -> 2D occupancy/height map
+     (e.g. 5-10 cm grid). Racks become thick lines; aisles become the empty gaps.
 
+STAGE B — Aisle axis + aisle lanes
+  1. Dominant axis: PCA on the 2D footprint OR reuse _dominant_axis_deg()
+     (local_planner.py) / mission.aisle_axis_deg if the operator set it.
+  2. Rotate footprint so racks are axis-aligned.
+  3. Collapse occupancy onto the cross-axis -> 1D density profile. Peaks = rack
+     rows; valleys (below threshold, width >= drone clearance from ESDF) = aisles.
+  4. Each aisle lane = a free corridor centerline (start, end, width, axis).
 
-================================================================================
-C. WASTED WORK / MINOR CORRECTNESS
-================================================================================
+STAGE C — Racks + bays/columns
+  1. Within each rack row band, cluster points along the aisle axis (1D gaps /
+     DBSCAN on the along-axis coordinate) -> rack segments / bays.
+  2. Each rack: oriented bounding box (face plane = side facing the aisle).
+     Face normal = horizontal normal pointing into the adjacent aisle (this is
+     exactly the shelf_normal compute_scan_pose() needs).
 
-fixed C1 (root cause: _start_mission_recording excluded warehouse via
-         mission.mission_type=="warehouse_scan", but WarehouseScanMission only has
-         mission_kind (mission_type is None) so the exclusion silently failed and
-         Gazebo fallback recorded the whole flight. Now warehouse/indoor missions are
-         detected robustly via mission_type/mission_kind/type/current_mission_type.)
-C1. Gazebo fallback video recording runs even though warehouse video is "not configured".
-    Evidence: 17:07:20 "Started Gazebo fallback recording: ...mp4" then 17:08:00
-              "Warehouse video recording skipped: Warehouse video source is not configured."
-    Impact: an mp4 is encoded/written for the whole flight but the warehouse video pipeline
-            is skipped — wasted CPU/disk, and a confusing dual code path.
-    Fix: gate the Gazebo fallback recording on the same "video configured" decision; don't
-         start it if the warehouse video source is intentionally absent (or clearly label it
-         as the chosen source so the later "skipped" log is not contradictory).
+STAGE D — Shelves (height levels) + bins
+  1. Within a rack, histogram point density along Z -> horizontal shelf beams =
+     density peaks => shelf_level z-values (regular spacing is a strong prior).
+  2. Bins: divide each shelf face into regular cells along the aisle axis (use a
+     configured bin pitch, or detect uprights as vertical density peaks).
+  3. Each bin -> target_point_local (centre of the bin face) + the rack face
+     normal + a default standoff -> WarehouseScanTarget.
 
-C2. Capture finalize reports "imported=0" (have=1 need=1).
-    Evidence: 17:09:33 "Warehouse capture file check: have=1 need=1 imported=0 timeout_s=0.0".
-    Action: confirm imported=0 is expected for sim; if not, the artifact import step is a
-    silent no-op and the persisted map may be missing rosbag-derived assets.
+OUTPUT of the job (write straight into existing schema):
+  - One WarehouseScanTarget per bin (or per shelf if bins unknown):
+      aisle_code   = "A{aisle_index}"        (or operator-mapped)
+      rack_code    = "R{rack_index}"
+      shelf_level  = level_index
+      bin_code     = "B{bin_index}"
+      target_point_local_json = bin face centre (x_m,y_m,z_m, frame warehouse_map)
+      shelf_normal_local_json = rack face normal (into aisle)
+      scan_pose_local_json    = compute_scan_pose(target, normal, standoff)
+      standoff_m, hover_time_s, scan_timeout_s, priority = defaults/config
+  - A structure summary JSON asset (aisles/racks/shelves with bboxes + centroids)
+    saved as a WarehouseAsset (type e.g. "STRUCTURE_MAP") so the frontend can
+    draw aisle/rack overlays and let the operator confirm/relabel.
+
+WHY this fits the codebase:
+  - Coordinates are already metric and in the same frame inspection uses
+    (warehouse_map == odom from the same dock), so detected points are directly
+    flyable via the existing inspection waypoint builder.
+  - WarehouseScanTarget + compute_scan_pose + build_inspection_waypoints already
+    consume exactly (target_point, shelf_normal, standoff) -> the detector only
+    needs to PRODUCE those rows. Minimal new surface area.
 
 
 ================================================================================
-D. OBSERVABILITY / BACKGROUND POLLING (low priority)
+3. PREFER ESDF/OCCUPANCY FOR NAVIGATION SAFETY
 ================================================================================
 
-fixed D1 (grafana+prometheus now probed concurrently via asyncio.gather over one
-         shared AsyncClient hitting /api/health and /-/ready (no redirect chains),
-         with a 25s single-flight TTL cache so the 30s poll reuses results.)
-D1. Observability status poll every 30s does sequential external HTTP with redirect chains
-    and a fresh client per check.
-    Evidence: every 30s a block of GETs — grafana :3000 (302→/login→200) and
-              prometheus :9090 (301→302→200), repeated 17:07/17:10/17:11...
-    Root cause: backend/modules/observability/service.py
-      _check_url() opens a NEW httpx.AsyncClient per URL (line 55-67) and
-      get_observability_status() awaits grafana THEN prometheus sequentially (line 70-83);
-      follow_redirects chases /login each time.
-    Fix: probe grafana+prometheus concurrently (asyncio.gather), reuse one AsyncClient,
-      hit cheap health paths (/api/health, /-/ready) instead of redirecting roots, and cache
-      the result for the 30s poll window. (Cosmetic for perf, but removes ~9 redirect
-      requests every 30s.)
+  - Use nvblox ESDF (distance field) to validate every generated scan pose has
+    clearance >= drone radius + margin BEFORE saving it as a target (the current
+    inspection MVP explicitly does NOT check clearance — api.py warns about this).
+  - Bridge + persist the nvblox occupancy grid / static_map_slice (currently
+    produced by nvblox but NOT bridged) to get a clean 2D free/occupied grid for
+    aisle extraction and for A* routing between targets.
+  - Reuse the existing OccupancyGrid.astar_path (planning/indoor/models.py) to
+    order/route inspection targets along aisles (replace the greedy
+    nearest_neighbor_targets() with aisle-aware, collision-free ordering).
 
 
 ================================================================================
-E. CODE-FLOW BOTTLENECKS (from flow.txt, independent of this run)
+4. WHERE THIS SHOULD RUN (architecture)
 ================================================================================
 
-deferred E1 (higher-risk refactor of the per-frame live write path; needs a new
-            append-only chunk-container format + reader changes across bridges,
-            manifest, replay and the frontend — left as a dedicated follow-up)
-E1. Colored-bridge per-cloud pipeline writes a chunk file + sidecar metadata per frame.
-    (colored_pointcloud_live_map_bridge.py: _store_and_publish_colored_chunk line 224;
-     save_upload line 270; metadata write line 319). Parse+encode are already offloaded with
-     asyncio.to_thread (good). At sustained rate this is many tiny synchronous disk writes.
-    Improve: buffer/coalesce sidecar metadata writes; consider a single append-only chunk
-    container per layer instead of thousands of small files (also speeds B2 and A3/manifest).
-
-deferred E2 (depends on E1's incremental write path; the event-loop stall it caused
-            on teardown is already removed in A3 by offloading to a worker thread)
-E2. Manifest build (build_manifest_from_flight_dir) re-scans + re-hashes all chunk files at
-    end of flight. O(total bytes) on the teardown critical path. Make it incremental (E1).
-
-fixed E3 (the 3 always-on bridges + optional raw-lidar bridge now start
-         concurrently via asyncio.gather in _restart_live_map_publisher, each
-         keeping its own try/except; removes the ~9s serial start gap.)
-E3. Bridges are started serially after takeoff (17:07:51 → 17:08:00, ~9s):
-    live_map_bridge, colored bridge, nvblox-layers bridge, raw mid360 bridge.
-    Start them concurrently (asyncio.gather) to shave first-pixel latency.
+  - This is heavy, job-shaped, post-flight CPU work (downsample, RANSAC, cluster)
+    => run it in the warehouse-mapping Celery worker, NOT inline in fly_scan and
+    NOT on the API event loop.
+  - warehouse_mapping_tasks.py is currently a STUB ("tasks were removed"); the
+    celery queue/route warehouse_mapping.process_job already exists in
+    entrypoints/workers/celery_app.py. Re-implement it:
+        persist_capture (map ready) -> enqueue warehouse_mapping.extract_structure
+        -> writes WarehouseScanTarget rows + STRUCTURE_MAP asset -> notifies UI.
+  - Keep it idempotent + re-runnable (operator can re-extract with different bin
+    pitch / clearance without re-flying).
+  - Libraries: Open3D (voxel/RANSAC/DBSCAN/OBB) or numpy+scipy (KDTree, label).
+    Use GPU only if a batch justifies it; CPU Open3D is fine for one warehouse.
 
 
 ================================================================================
-PRIORITY (do in this order)
+5. SUGGESTED IMPLEMENTATION ORDER (incremental, each independently useful)
 ================================================================================
-  P0  A1  reuse warm nvblox (don't kill+restart)          ~25–30s/flight saved
-  P0  B1  fix live mid-scan delivery gap                   operator sees live map
-  P1  A2  cache/coalesce warehouse ROS preflight           fewer ROS probes, faster start
-  P1  B2  bulk chunk endpoint (kill N+1 downloads)         fast map open/replay
-  P2  A3+E2 concurrent + incremental teardown/manifest     ~20–30s/flight saved
-  P2  C1  stop redundant Gazebo recording
-  P3  D1  concurrent+cached observability health poll
-  P3  E1/E3 chunk container + concurrent bridge start
+
+  P0  Loader: merge {flight_id} chunks (.xyz32/.xyzrgb32 via pointcloud2_parser
+      decoders) + voxel-downsample into one numpy array in warehouse_map frame.
+  P0  Stage A+B: floor removal + aisle extraction -> aisle centerlines + a
+      STRUCTURE_MAP asset; render aisle overlays in the 3D viewer for confirmation.
+  P1  Stage C+D: rack/shelf/bin segmentation -> auto-create WarehouseScanTarget
+      rows (operator confirms/edits codes + SKUs in the existing panel).
+  P1  ESDF clearance gate on generated scan poses (safety before any auto-fly).
+  P2  Bridge + persist nvblox occupancy grid; aisle-aware A* target routing.
+  P2  Re-run/refine endpoint (bin pitch, standoff, clearance as params).
+  P3  Optional learned refinement (only if geometric heuristics prove too noisy):
+      train a small classifier on labelled shelves; keep geometry as the prior.
 
 
 ================================================================================
-ROUND 2 — post-fix log re-analysis (18:18–18:22 run)
+6. KEY FILE TOUCHPOINTS
 ================================================================================
-Verified in new logs: A1 (nvblox started once @18:19:25, reused @18:19:59, no
-kill+restart), B1 (chunks streamed continuously the whole flight, no freeze, no
-post-flight burst, no dropped_stale_frames), C1 (no Gazebo fallback recording),
-A3 (teardown ~8s vs ~44s), E3 (bridges start within one concurrent window).
+  service/mapping.py:persist_capture        -> enqueue extraction after "ready"
+  entrypoints/workers/warehouse_mapping_tasks.py (STUB) -> implement extract job
+  NEW service/structure_extraction.py        -> the A-D algorithm
+  service/pointcloud2_parser.py (decode_*)   -> chunk loading/merge
+  service/inspection.py:compute_scan_pose    -> reuse for approach poses (no change)
+  models.py:WarehouseScanTarget              -> output rows (no schema change needed)
+  planning/indoor/models.py:OccupancyGrid    -> reuse A* for routing
+  frontend WarehouseLiveVoxelMapViewer/Scene -> draw aisle/rack overlays + confirm UI
 
-Remaining culprits found + fixed:
 
-fixed T1. Teardown tail ~8s: post_cleanup diagnostics ran a deep/forced ROS probe
-   (fetch_warehouse_perception_status deep=True, force=True) AFTER nvblox + the ROS
-   bridge were already torn down → _ensure_ros_bridge_running + `ros2 topic list`
-   timeouts (and a wasteful bridge restart). Fix: _collect_mission_diagnostics now
-   uses a shallow, non-forcing probe for phase == "post_cleanup" (scan.py).
+================================================================================
+7. IMPLEMENTED (this change) — what now exists
+================================================================================
 
-fixed S1. nvblox ~20s init sat on the pre-takeoff critical path (start @18:19:25,
-   ready @~18:19:48). Implements the A1 follow-up: warehouse preflight now warms
-   nvblox in the background (run_warehouse_ros_preflight_report ->
-   _warm_nvblox_in_background, gated by warehouse_preflight_warm_nvblox=True), so the
-   init overlaps preflight/arming and the mission adopts the warm stack.
+Backend (runs in the warehouse-mapping Celery worker, never on the API loop):
+  - NEW service/structure_extraction.py  — pure numpy/scipy pipeline:
+      P0 load_flight_cloud(): merge {flight_id} .xyz32/.xyzrgb32 chunks (ESDF/mesh
+         excluded) + voxel-downsample into one (N,3) array in warehouse_map frame.
+      A  floor/ceiling removal via z-histogram -> vertical rack mass.
+      B  PCA dominant aisle axis -> cross-axis density profile (scipy.ndimage.label)
+         -> rack rows (dense) + aisle lanes (free gaps >= min_aisle_width).
+      C  along-axis density split of each rack row -> rack bays + face normal
+         (horizontal, pointing into the nearest adjacent aisle).
+      D  z-histogram -> shelf levels; bin pitch -> bins -> target_point + scan_pose
+         (reuses inspection.compute_scan_pose, no change there).
+      + clearance gate: cKDTree distance from every scan pose to the rack mass must
+        be >= drone_radius + clearance_margin, else the target is dropped (counted).
+      + aisle-aware serpentine ordering -> WarehouseScanTarget.priority (boustrophedon
+        per aisle) so inspection flies the shortest sweep without full A*.
+  - NEW service/structure_jobs.py        — async orchestration: runs the geometry in
+      a thread, idempotently replaces auto targets for a model
+      (reference_model_id == model_id; operator/manual targets preserved), writes a
+      STRUCTURE_MAP WarehouseAsset (summary JSON: floor_z, axis_deg, aisles[], racks[]
+      with bboxes + face codes, counts, params) next to the flight chunks.
+  - entrypoints/workers/warehouse_mapping_tasks.py — task warehouse_mapping.extract_structure
+      (queue warehouse-mapping), routed in celery_app.py. Re-runnable with param overrides.
+  - service/mapping.py:persist_capture — enqueues extraction automatically once a map
+      becomes "ready" (gated by warehouse_structure_extraction_enabled; best-effort).
+  - api.py:
+      POST /warehouse/maps/{id}/structure/extract  (re-run; optional bin_pitch/standoff/
+           clearance/voxel/axis overrides) -> 202 queued.
+      GET  /warehouse/maps/{id}/structure          -> latest STRUCTURE_MAP summary.
+  - runtime.py: warehouse_structure_* tunables (voxel, grid res, floor margin, aisle
+      width, bin pitch, standoff, drone radius, clearance margin, max points).
 
-note S2. ~31s idle between WS-connect (18:18:29) and mission start (18:19:00) is
-   operator/UI think-time on the preflight screen — backend is idle, not blocked, so
-   no code change. S1's early warm now overlaps the nvblox init with this window once
-   preflight begins.
+Frontend:
+  - api/warehouseInspectionApi.ts: fetchWarehouseStructure / extractWarehouseStructure + types.
+  - hooks/useWarehouseStructure.ts: loads the latest structure, polls passively, and
+      exposes extract() that resolves once a *newer* structure is persisted.
+  - WarehouseLiveVoxelScene.tsx: StructureOverlay draws aisle centrelines (cyan dashed)
+      + rack wireframe boxes (purple, rotated by axis_deg) over the point cloud.
+  - WarehouseCoordinateSetupPanel.tsx: "Auto-detect warehouse plan" button (+ bin pitch),
+      shows aisle/rack/target counts, then refreshes the editable target table so the
+      operator confirms/edits codes, SKUs and barcodes on the auto-generated rows.
+
+Still open (noted, not done here — needs ROS runtime, not a pure code change):
+  - Bridging/persisting the nvblox static occupancy grid for full A* routing; the
+      current ordering is aisle-serpentine via priority. ESDF clearance is approximated
+      with the cloud KD-tree instead of the nvblox distance field.
+
+
+================================================================================
+8. HOW TO ASSIGN A "WAREHOUSE PLAN"
+================================================================================
+
+A "warehouse plan" = the detected structure (STRUCTURE_MAP asset) + the set of
+WarehouseScanTarget rows, both assigned to a warehouse_map_id and tied to the
+WarehouseModel version they were derived from (reference_model_id). It is what
+turns a raw 3D map into a flyable inspection program.
+
+Lifecycle / operator workflow
+  1. Fly a warehouse_scan mission. On completion persist_capture() marks the model
+     "ready" and AUTO-ENQUEUES warehouse_mapping.extract_structure for that flight.
+     (If warehouse_structure_extraction_enabled is False, skip to step 3.)
+  2. The worker builds the plan: it writes the STRUCTURE_MAP asset and the
+     auto-generated WarehouseScanTarget rows (priority = serpentine order, all
+     active=True, reference_model_id = the ready model).
+  3. Operator opens the map -> "Coordinate Setup" tab. Aisles (cyan) and racks
+     (purple) are overlaid on the cloud. To (re)generate or tune, click
+     "Auto-detect warehouse plan" (optionally set bin pitch); this calls
+     POST /warehouse/maps/{id}/structure/extract and reloads the target table.
+  4. Operator CONFIRMS the plan: review/edit the generated rows (aisle/rack/bin
+     codes, SKU, barcode, product, standoff, hover) inline, archive false positives,
+     or hand-place extra bins with the existing pick-on-map flow. This human pass is
+     the "assignment": the geometry proposes, the operator ratifies.
+  5. Assign the plan to an inspection run: select targets and create a mission via
+     POST /warehouse/inspection-missions (warehouse_map_id + target_ids + scan_mode,
+     optimize_order=True). build_inspection_waypoints consumes the assigned targets'
+     scan_pose/shelf_normal/standoff directly; results persist per target.
+
+Assignment rules / guarantees
+  - Scope: a plan belongs to exactly one warehouse_map_id; targets and the
+    STRUCTURE_MAP asset are filtered by it (ownership enforced via _get_map_or_404).
+  - Provenance: auto targets carry reference_model_id = the model they came from.
+  - Idempotent re-assignment: re-running extraction for the same model replaces only
+    that model's auto targets (reference_model_id == model_id). Manual targets
+    (reference_model_id NULL) and targets from other models are never touched, so an
+    operator can re-detect without losing hand edits made on a different basis.
+  - Re-tuning: change bin pitch / standoff / clearance / axis via the extract
+    endpoint params to re-assign a denser/sparser plan; no re-flight required.
+  - Versioning: a new scan creates a new WarehouseModel version -> a new plan; the
+    previous plan's targets remain until explicitly archived, so plans are
+    comparable across scans (reuse /scanned-maps/compare for the underlying maps).
+  - Safety: only poses passing the clearance gate are assigned, so an assigned plan
+    is collision-light by construction; the serpentine priority defines fly order.

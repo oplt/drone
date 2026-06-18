@@ -95,6 +95,115 @@ export type WarehouseInspectionResult = {
   scanned_at: string;
 };
 
+export type WarehouseStructureAisle = {
+  code: string;
+  centerline_world: [number, number, number, number];
+  width_m: number;
+  z_min: number;
+  z_max: number;
+};
+
+export type WarehouseStructureRack = {
+  code: string;
+  row_v: number;
+  center_world: [number, number, number];
+  length_m: number;
+  depth_m: number;
+  z_min: number;
+  z_max: number;
+  faces: string[];
+};
+
+export type WarehouseStructureSummary = {
+  frame_id?: string;
+  floor_z?: number;
+  axis_deg?: number;
+  height_band_m?: [number, number];
+  aisles?: WarehouseStructureAisle[];
+  racks?: WarehouseStructureRack[];
+  counts?: {
+    aisles?: number;
+    racks?: number;
+    targets?: number;
+    rejected_clearance?: number;
+  };
+  quality?: {
+    status?: "ready" | "needs_review" | "failed";
+    confidence?: number;
+    reasons?: string[];
+    active_target_count?: number;
+    candidate_count?: number;
+    rejected_clearance?: number;
+    rejection_ratio?: number;
+    targets_per_rack?: number | null;
+    clearance_source?: string;
+  };
+  params?: Record<string, number | null>;
+};
+
+export type WarehouseStructureResponse = {
+  status:
+    | "not_started"
+    | "queued"
+    | "running"
+    | "ready"
+    | "needs_review"
+    | "failed";
+  warehouse_map_id: number;
+  model_id: number | null;
+  client_flight_id?: string | null;
+  task_id?: string | null;
+  error_message?: string | null;
+  generated_at: string | null;
+  target_count: number;
+  active_target_count?: number;
+  quality_status?: "ready" | "needs_review" | "failed" | null;
+  quality_reasons?: string[];
+  confidence?: number | null;
+  summary: WarehouseStructureSummary;
+};
+
+export type WarehouseStructureExtractParams = {
+  voxel_m?: number;
+  grid_res_m?: number;
+  bin_pitch_m?: number;
+  standoff_m?: number;
+  drone_radius_m?: number;
+  clearance_margin_m?: number;
+  min_aisle_width_m?: number;
+  shelf_min_spacing_m?: number;
+  axis_deg?: number;
+};
+
+export type WarehouseStructureExtractResponse = {
+  status: "queued";
+  warehouse_map_id: number;
+  model_id: number;
+  client_flight_id: string;
+  task_id: string | null;
+};
+
+export async function fetchWarehouseStructure(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<WarehouseStructureResponse> {
+  return httpRequest<WarehouseStructureResponse>(
+    `/warehouse/maps/${warehouseMapId}/structure`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export async function extractWarehouseStructure(
+  warehouseMapId: number,
+  params: WarehouseStructureExtractParams = {},
+  token?: string | null,
+): Promise<WarehouseStructureExtractResponse> {
+  return httpRequest<WarehouseStructureExtractResponse>(
+    `/warehouse/maps/${warehouseMapId}/structure/extract`,
+    { method: "POST", body: params, token, skipUnauthorizedRedirect: true },
+  );
+}
+
 export async function computeWarehouseScanPose(
   payload: {
     target_point: WarehouseLocalPoint;

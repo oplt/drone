@@ -2,7 +2,6 @@ import type {
   WarehouseLiveMapSnapshot,
   WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
-import { chunkStateKey } from "./liveMapChunkRetention";
 
 export function mergeReplaySnapshot(snapshot: WarehouseLiveMapSnapshot): {
   chunks: WarehouseLiveVoxelChunk[];
@@ -23,7 +22,7 @@ export function mergeReplaySnapshot(snapshot: WarehouseLiveMapSnapshot): {
       }
     }
     for (const chunk of update.changed_chunks) {
-      chunksById.set(chunkStateKey(chunk), chunk);
+      chunksById.set(chunk.id, chunk);
     }
     scanPath = [...scanPath, ...update.scan_path_sample];
   }

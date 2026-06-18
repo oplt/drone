@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearLiveMapChunkFetchCache,
   fetchWarehouseLiveChunk,
+  fetchWarehouseLiveChunkBatched,
   getLiveMapChunkBinaryCache,
   isWarehouseLiveMapSnapshot,
   isWarehouseLiveMapUpdate,
@@ -242,5 +243,51 @@ describe("fetchWarehouseLiveChunk", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][1]?.headers?.get("If-None-Match")).toBeNull();
     expect(fetchMock.mock.calls[1][1]?.headers?.get("If-None-Match")).toBeNull();
+  });
+});
+
+describe("fetchWarehouseLiveChunkBatched", () => {
+  it("posts JSON chunk_ids to the batch endpoint", async () => {
+    vi.useFakeTimers();
+    const body = new Uint8Array([1, 2, 3, 4]).buffer;
+    const header = new TextEncoder().encode(
+      JSON.stringify({
+        chunk_id: "rgbd_000001",
+        status: 200,
+        byte_size: body.byteLength,
+        content_type: "application/octet-stream",
+        checksum_sha256: "abc",
+      }),
+    );
+    const frame = new Uint8Array(4 + header.byteLength + body.byteLength);
+    const view = new DataView(frame.buffer);
+    view.setUint32(0, header.byteLength, false);
+    frame.set(header, 4);
+    frame.set(new Uint8Array(body), 4 + header.byteLength);
+
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(init?.method).toBe("POST");
+      const headers = new Headers(init?.headers);
+      expect(headers.get("Content-Type")).toBe("application/json");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        chunk_ids: ["rgbd_000001"],
+      });
+      return new Response(frame.buffer, { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const loadedPromise = fetchWarehouseLiveChunkBatched(
+      "flight-1",
+      "rgbd_000001",
+      "flight-1:rgbd_000001",
+      "/warehouse/live-map/flight-1/chunks/rgbd_000001/download",
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(20);
+    const loaded = await loadedPromise;
+
+    expect(loaded.byteLength).toBe(body.byteLength);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

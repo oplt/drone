@@ -277,3 +277,61 @@ class WarehouseScanPoseComputeIn(BaseModel):
 
 class WarehouseScanPoseComputeOut(BaseModel):
     scan_pose: WarehouseLocalPose
+
+
+class WarehouseStructureExtractIn(BaseModel):
+    """Optional overrides for an automatic structure-extraction run."""
+
+    voxel_m: float | None = Field(default=None, gt=0.0, le=1.0)
+    grid_res_m: float | None = Field(default=None, gt=0.0, le=2.0)
+    bin_pitch_m: float | None = Field(default=None, gt=0.0, le=10.0)
+    standoff_m: float | None = Field(default=None, gt=0.0, le=20.0)
+    drone_radius_m: float | None = Field(default=None, gt=0.0, le=5.0)
+    clearance_margin_m: float | None = Field(default=None, ge=0.0, le=5.0)
+    min_aisle_width_m: float | None = Field(default=None, gt=0.0, le=20.0)
+    shelf_min_spacing_m: float | None = Field(default=None, gt=0.0, le=10.0)
+    axis_deg: float | None = Field(default=None, ge=-180.0, le=180.0)
+
+    def to_params_payload(self) -> dict[str, float]:
+        payload: dict[str, float] = {}
+        for name in (
+            "voxel_m",
+            "grid_res_m",
+            "bin_pitch_m",
+            "standoff_m",
+            "drone_radius_m",
+            "clearance_margin_m",
+            "min_aisle_width_m",
+            "shelf_min_spacing_m",
+            "axis_deg",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                payload[name] = float(value)
+        return payload
+
+
+class WarehouseStructureExtractOut(BaseModel):
+    status: Literal["queued"]
+    warehouse_map_id: int
+    model_id: int
+    client_flight_id: str
+    task_id: str | None = None
+
+
+class WarehouseStructureSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    status: Literal["not_started", "queued", "running", "ready", "needs_review", "failed"] = "ready"
+    warehouse_map_id: int
+    model_id: int | None = None
+    client_flight_id: str | None = None
+    task_id: str | None = None
+    error_message: str | None = None
+    generated_at: str | None = None
+    target_count: int = 0
+    active_target_count: int = 0
+    quality_status: Literal["ready", "needs_review", "failed"] | None = None
+    quality_reasons: list[str] = Field(default_factory=list)
+    confidence: float | None = None
+    summary: dict[str, object] = Field(default_factory=dict)

@@ -9,6 +9,7 @@ LiveMapLayerId = Literal[
     "nvblox_color",
     "nvblox_esdf",
     "nvblox_tsdf",
+    "nvblox_occupancy",
     "nvblox_mesh",
 ]
 
@@ -18,6 +19,7 @@ LiveMapSourceId = Literal[
     "nvblox_color",
     "nvblox_esdf",
     "nvblox_tsdf",
+    "nvblox_occupancy",
     "nvblox_mesh",
     "odom",
 ]
@@ -120,6 +122,18 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
         colored=False,
         kind="mesh",
     ),
+    "nvblox_occupancy": LiveMapSourceConfig(
+        source_id="nvblox_occupancy",
+        topic="/nvblox_node/static_occupancy_grid",
+        layer="nvblox_occupancy",
+        chunk_prefix="nvblox_occupancy",
+        chunk_sequence_width=6,
+        global_frame="odom",
+        max_points=0,
+        min_publish_interval_s=1.0,
+        colored=False,
+        kind="occupancy",
+    ),
     "odom": LiveMapSourceConfig(
         source_id="odom",
         topic="/warehouse/drone/odometry",
@@ -135,14 +149,20 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
 }
 
 ODOM_PREFLIGHT_TOPICS: tuple[str, ...] = ("/warehouse/drone/odometry",)
-NVBLOX_INTERNAL_LAYER_TOPICS: tuple[str, ...] = ("/nvblox_node/color_layer", "/nvblox_node/tsdf_layer")
+NVBLOX_INTERNAL_LAYER_TOPICS: tuple[str, ...] = (
+    "/nvblox_node/color_layer",
+    "/nvblox_node/tsdf_layer",
+)
 NVBLOX_REQUIRED_POINTCLOUD_TOPICS: tuple[str, ...] = ("/nvblox_node/static_esdf_pointcloud",)
 NVBLOX_OPTIONAL_ESDF_TOPICS: tuple[str, ...] = (
     "/nvblox_node/pessimistic_static_esdf_pointcloud",
     "/nvblox_node/combined_esdf_pointcloud",
     "/nvblox_node/dynamic_esdf_pointcloud",
 )
-NVBLOX_POINTCLOUD_OUTPUT_TOPICS: tuple[str, ...] = (*NVBLOX_REQUIRED_POINTCLOUD_TOPICS, *NVBLOX_OPTIONAL_ESDF_TOPICS)
+NVBLOX_POINTCLOUD_OUTPUT_TOPICS: tuple[str, ...] = (
+    *NVBLOX_REQUIRED_POINTCLOUD_TOPICS,
+    *NVBLOX_OPTIONAL_ESDF_TOPICS,
+)
 RGBD_VISUALIZATION_TOPIC: str = "/warehouse/front/rgbd/points"
 NVBLOX_OUTPUT_TOPICS: tuple[str, ...] = (
     *NVBLOX_INTERNAL_LAYER_TOPICS,
@@ -172,4 +192,6 @@ def chunk_id_for_source(source: LiveMapSourceConfig, sequence: int) -> str:
 
 
 def source_by_layer(layer: LiveMapLayerId) -> LiveMapSourceConfig | None:
-    return next((entry for entry in WAREHOUSE_LIVE_MAP_SOURCES.values() if entry.layer == layer), None)
+    return next(
+        (entry for entry in WAREHOUSE_LIVE_MAP_SOURCES.values() if entry.layer == layer), None
+    )

@@ -13,6 +13,19 @@ from backend.modules.warehouse.service.live_map_stream import (
 )
 
 
+def test_live_map_chunk_batch_in_accepts_chunk_ids() -> None:
+    from pydantic import ValidationError
+
+    from backend.modules.warehouse.api import WarehouseLiveMapChunkBatchIn
+
+    payload = WarehouseLiveMapChunkBatchIn(chunk_ids=["rgbd_000001", "mid360_000002"])
+    assert payload.chunk_ids == ["rgbd_000001", "mid360_000002"]
+    assert payload.model_dump() == {"chunk_ids": ["rgbd_000001", "mid360_000002"]}
+
+    with pytest.raises(ValidationError):
+        WarehouseLiveMapChunkBatchIn.model_validate({"chunk_ids": "rgbd_000001"})
+
+
 class _FakeWebSocket:
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail

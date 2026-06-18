@@ -122,17 +122,93 @@ class WarehouseScanMappingService:
                     )
                 await repo.mark_job_ready(db, job=job, model=model)
                 await db.commit()
+                model_id = int(model.id)
+                job_id = int(job.id)
             except Exception as exc:
                 await db.rollback()
                 logger.exception("warehouse_scan_mapping_persist_failed")
                 raise WarehouseScanMappingError(str(exc)) from exc
+
+        _maybe_enqueue_structure_extraction(
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=model_id,
+            capture_result=capture_result,
+        )
+
         return {
             "warehouse_map_id": int(warehouse_map_id),
-            "model_id": int(model.id),
-            "job_id": int(job.id),
+            "model_id": model_id,
+            "job_id": job_id,
             "artifact_count": len(files),
             "status": "ready",
         }
+
+
+def _maybe_enqueue_structure_extraction(
+    *,
+    warehouse_map_id: int,
+    model_id: int,
+    capture_result: dict[str, Any],
+) -> None:
+    """Enqueue post-flight structure extraction once a map becomes ready.
+
+    Best-effort: a failure to enqueue must never fail map persistence (the
+    operator can re-trigger extraction from the UI).
+    """
+    from backend.core.config.runtime import settings
+
+    if not getattr(settings, "warehouse_structure_extraction_enabled", True):
+        return
+    client_flight_id = str(capture_result.get("client_flight_id") or "").strip()
+    if not client_flight_id:
+        logger.info(
+            "warehouse_structure_extraction_skipped reason=no_client_flight_id map_id=%s",
+            warehouse_map_id,
+        )
+        return
+    try:
+        from backend.entrypoints.workers.warehouse_mapping_tasks import (
+            extract_warehouse_structure,
+        )
+
+        from backend.modules.warehouse.service.structure_jobs import (
+            record_extraction_queued,
+            warehouse_mapping_worker_ready,
+        )
+
+        worker_ok, worker_detail = warehouse_mapping_worker_ready()
+        if not worker_ok:
+            logger.warning(
+                "warehouse_structure_extraction_skipped reason=worker_unavailable map_id=%s detail=%s",
+                warehouse_map_id,
+                worker_detail,
+            )
+            return
+
+        async_result = extract_warehouse_structure.delay(
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=int(model_id),
+            client_flight_id=client_flight_id,
+        )
+        record_extraction_queued(
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=int(model_id),
+            client_flight_id=client_flight_id,
+            task_id=getattr(async_result, "id", None),
+            source="persist_capture",
+        )
+        logger.info(
+            "warehouse_structure_extraction_enqueued map_id=%s model_id=%s flight=%s",
+            warehouse_map_id,
+            model_id,
+            client_flight_id,
+        )
+    except Exception:
+        logger.warning(
+            "warehouse_structure_extraction_enqueue_failed map_id=%s",
+            warehouse_map_id,
+            exc_info=True,
+        )
 
 
 def _asset_type(path: Path) -> str:

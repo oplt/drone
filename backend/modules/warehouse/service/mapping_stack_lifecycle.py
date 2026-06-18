@@ -218,6 +218,25 @@ def mapping_stack_not_running_result() -> WarehousePerceptionCommandResult:
     )
 
 
+def _merge_nvblox_readiness_from_rgbd(
+    flight_readiness: WarehouseReadinessResult,
+    rgbd_readiness: MappingReadinessResult,
+) -> WarehouseReadinessResult:
+    if flight_readiness.nvblox_ready:
+        return flight_readiness
+    if not rgbd_readiness.ready or not rgbd_readiness.nvblox_pointcloud_topics:
+        return flight_readiness
+    return WarehouseReadinessResult(
+        **{
+            **flight_readiness.to_dict(),
+            "nvblox_ready": True,
+            "ready": bool(flight_readiness.core_ready),
+            "missing_nvblox_topics": [],
+            "detail": None,
+        }
+    )
+
+
 def _is_mapping_stack_process_running() -> bool:
     return (
             _mapping_stack_process is not None
@@ -665,6 +684,7 @@ async def prepare_warehouse_scan_ros(
 ]:
     from backend.modules.warehouse.service.live_map_readiness import (
         MappingReadinessResult,
+        peek_cached_rgbd_readiness,
         wait_for_rgbd_mapping_topics,
     )
     from backend.modules.warehouse.service.warehouse_preflight import (
@@ -678,7 +698,16 @@ async def prepare_warehouse_scan_ros(
     flight_readiness = readiness_from_perception_status_strict(status)
 
     if wait_for_rgbd and sensor_timeout_s > 0:
-        rgbd_readiness = await wait_for_rgbd_mapping_topics(timeout_s=sensor_timeout_s)
+        cached_rgbd = peek_cached_rgbd_readiness()
+        if cached_rgbd is not None and cached_rgbd.ready:
+            rgbd_readiness = cached_rgbd
+            logger.info(
+                "Reusing pre-warmed RGB-D readiness (topic=%r nvblox_pointclouds=%s)",
+                rgbd_readiness.rgbd_pointcloud_topic,
+                rgbd_readiness.nvblox_pointcloud_topics,
+            )
+        else:
+            rgbd_readiness = await wait_for_rgbd_mapping_topics(timeout_s=sensor_timeout_s)
         if not rgbd_readiness.ready:
             logger.warning(
                 "RGB-D mapping topics not fully ready after %.1fs; missing=%s warnings=%s",
@@ -719,6 +748,7 @@ async def prepare_warehouse_scan_ros(
         )
 
     deadline = asyncio.get_running_loop().time() + max(0.0, nvblox_timeout_s)
+    flight_readiness = _merge_nvblox_readiness_from_rgbd(flight_readiness, rgbd_readiness)
 
     while require_nvblox and not flight_readiness.nvblox_ready:
         if asyncio.get_running_loop().time() >= deadline:
@@ -739,6 +769,7 @@ async def prepare_warehouse_scan_ros(
         )
         takeoff_ready = readiness_for_takeoff(status)
         flight_readiness = readiness_from_perception_status_strict(status)
+        flight_readiness = _merge_nvblox_readiness_from_rgbd(flight_readiness, rgbd_readiness)
 
     process_running = _is_mapping_stack_process_running()
 

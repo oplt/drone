@@ -3,15 +3,18 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Iterable
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.missions.runtime_models import MissionRuntime
 from backend.modules.warehouse.repository import WarehouseMappingRepository
+from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
 from backend.modules.warehouse.service.live_map_storage import warehouse_live_map_chunk_storage
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveHealthFlags,
@@ -20,7 +23,6 @@ from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveMapUpdate,
     WarehouseLiveVoxelChunk,
 )
-from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +92,10 @@ def _infer_chunk_metadata(chunk_id: str, path: Path) -> dict[str, Any]:
         source = "nvblox_mesh"
         layer = "nvblox_mesh"
         kind = "mesh"
+    elif lower_id.startswith("nvblox_occupancy_"):
+        source = "nvblox_occupancy"
+        layer = "nvblox_occupancy"
+        kind = "occupancy"
 
     if suffix == ".xyzrgb32":
         kind = "point_cloud"
@@ -105,7 +111,7 @@ def _infer_chunk_metadata(chunk_id: str, path: Path) -> dict[str, Any]:
     elif suffix == ".vox":
         kind = "esdf" if lower_id.startswith("nvblox_esdf_") else "occupancy"
     elif suffix == ".grid":
-        kind = "costmap"
+        kind = "occupancy" if lower_id.startswith("nvblox_occupancy_") else "costmap"
 
     metadata: dict[str, Any] = {
         "kind": kind,
@@ -138,7 +144,9 @@ def _merge_chunk_metadata(
     return merged
 
 
-def _load_preview_chunk(path: Path, *, sequence: int, sources: set[str] | None = None) -> WarehouseLiveVoxelChunk | None:
+def _load_preview_chunk(
+    path: Path, *, sequence: int, sources: set[str] | None = None
+) -> WarehouseLiveVoxelChunk | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
         stat = path.stat()
@@ -159,7 +167,9 @@ def _load_preview_chunk(path: Path, *, sequence: int, sources: set[str] | None =
     return WarehouseLiveVoxelChunk(
         id=chunk_id,
         kind="point_cloud",
-        sequence=_safe_sequence(payload.get("sequence", metadata.get("sequence", sequence)), sequence),
+        sequence=_safe_sequence(
+            payload.get("sequence", metadata.get("sequence", sequence)), sequence
+        ),
         point_count=payload.get("point_count"),
         byte_size=stat.st_size,
         bbox_local_m=bbox if isinstance(bbox, list) and len(bbox) == 6 else None,
@@ -189,7 +199,9 @@ def _chunk_from_metadata(
         checksum_sha256=stored.checksum_sha256,
         sequence=_safe_sequence(metadata.get("sequence", fallback_sequence), fallback_sequence),
         point_count=metadata.get("point_count"),
-        bbox_local_m=metadata.get("bbox_local_m") if isinstance(metadata.get("bbox_local_m"), list) else None,
+        bbox_local_m=metadata.get("bbox_local_m")
+        if isinstance(metadata.get("bbox_local_m"), list)
+        else None,
         source=metadata.get("source"),
         layer=metadata.get("layer"),
         layer_type=metadata.get("layer_type") or metadata.get("layer"),
@@ -219,13 +231,19 @@ def _iter_stored_chunks(client_flight_id: str) -> list[Any]:
         if not path.is_file():
             continue
         name = path.name.lower()
-        if name.endswith(".meta.json") or name.endswith(".uploading") or name.endswith(".preview.json"):
+        if (
+            name.endswith(".meta.json")
+            or name.endswith(".uploading")
+            or name.endswith(".preview.json")
+        ):
             continue
         chunk_id = _chunk_id_from_filename(path)
         if chunk_id in seen:
             continue
         seen.add(chunk_id)
-        stored = warehouse_live_map_chunk_storage.resolve(flight_id=client_flight_id, chunk_id=chunk_id)
+        stored = warehouse_live_map_chunk_storage.resolve(
+            flight_id=client_flight_id, chunk_id=chunk_id
+        )
         if stored is not None:
             stored_items.append(stored)
     return stored_items
@@ -267,10 +285,8 @@ def build_disk_live_map_snapshot(
         chunk_id = str(stored.chunk_id)
         if chunk_id in seen_chunk_ids:
             continue
-        try:
+        with suppress(OSError):
             latest_mtime = max(latest_mtime, stored.path.stat().st_mtime)
-        except OSError:
-            pass
 
         sidecar = warehouse_live_map_chunk_storage.load_chunk_metadata(
             flight_id=safe_flight,

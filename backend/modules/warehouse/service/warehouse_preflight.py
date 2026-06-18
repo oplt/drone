@@ -450,13 +450,12 @@ async def _probe_warehouse_perception_status(
     )
 
 
-def _warm_nvblox_in_background() -> None:
-    """Kick off nvblox warm-up (fire-and-forget) when preflight starts.
+def _warm_mapping_stack_in_background() -> None:
+    """Kick off nvblox + RGB-D + live-map graph warm-up when preflight starts.
 
-    A1 made the mapping stack reusable, so starting it here lets the ~20s init
-    overlap the preflight/arming phase; the mission then adopts the warm stack
-    instead of paying the init on the pre-takeoff critical path. Idempotent: the
-    lifecycle reuse guard returns early if a healthy stack is already running.
+    A1 made the mapping stack reusable; S1/R2 extend warm-up so nvblox init,
+    RGB-D readiness polling, and bridge topic probes overlap preflight/arming
+    instead of blocking the pre-takeoff critical path.
     """
     if not _bool_flag(_setting("warehouse_preflight_warm_nvblox", True)):
         return
@@ -469,6 +468,8 @@ def _warm_nvblox_in_background() -> None:
         logger.debug("nvblox warm-up unavailable", exc_info=True)
         return
     if _is_mapping_stack_process_running():
+        # Stack already warm; still refresh RGB-D / topic probes in background.
+        _schedule_mapping_warm_followups(skip_nvblox_start=True)
         return
 
     async def _warm() -> None:
@@ -476,10 +477,56 @@ def _warm_nvblox_in_background() -> None:
             await _maybe_start_mapping_stack_cmd()
         except Exception:
             logger.debug("Background nvblox warm-up failed", exc_info=True)
+        await _run_mapping_warm_followups()
 
-    # No running loop (e.g. called from a sync context) → skip warm-up silently.
+    _schedule_async_warm_task(_warm)
+
+
+def _schedule_async_warm_task(coro_factory) -> None:
     with contextlib.suppress(RuntimeError):
-        asyncio.get_running_loop().create_task(_warm())
+        asyncio.get_running_loop().create_task(coro_factory())
+
+
+async def _run_mapping_warm_followups() -> None:
+    from backend.modules.warehouse.service.live_map_readiness import (
+        warm_live_map_ros_graph,
+        warm_rgbd_readiness_background,
+    )
+
+    try:
+        await warm_live_map_ros_graph()
+    except Exception:
+        logger.debug("Live-map ROS graph warm-up failed", exc_info=True)
+    if _bool_flag(_setting("warehouse_preflight_warm_rgbd", True)):
+        try:
+            await warm_rgbd_readiness_background()
+        except Exception:
+            logger.debug("Background RGB-D warm-up failed", exc_info=True)
+
+
+def _schedule_mapping_warm_followups(*, skip_nvblox_start: bool) -> None:
+    del skip_nvblox_start
+
+    async def _followups() -> None:
+        await _run_mapping_warm_followups()
+
+    _schedule_async_warm_task(_followups)
+
+
+# Cache full orchestrator preflight reports for UI polling (not mission-start).
+_PREFLIGHT_REPORT_LOCK = asyncio.Lock()
+_preflight_report_cache_key: str | None = None
+_preflight_report_cache: PreflightReport | None = None
+_preflight_report_cache_at: float = 0.0
+
+
+def _preflight_report_cache_ttl_s() -> float:
+    return max(0.0, _safe_float(_setting("warehouse_preflight_report_cache_ttl_s", 4.0), 4.0))
+
+
+def _preflight_report_key(mission_data: dict[str, Any], cruise_alt: float) -> str:
+    mission_type = str(mission_data.get("type") or "").strip().lower()
+    return f"{mission_type}:{max(0.1, _safe_float(cruise_alt, 2.0)):.2f}"
 
 
 async def run_warehouse_ros_preflight_report(
@@ -488,64 +535,84 @@ async def run_warehouse_ros_preflight_report(
     cruise_alt: float,
     flight_id: str | None = None,
     preflight_config: dict[str, Any] | None = None,
+    force: bool = False,
+    source: str = "unknown",
     **kwargs: Any,
 ) -> PreflightReport:
     """Run warehouse mission preflight from ROS bridge health, not MAVLink telemetry."""
 
-    _warm_nvblox_in_background()
+    global _preflight_report_cache_key, _preflight_report_cache, _preflight_report_cache_at
 
-    status = await fetch_warehouse_perception_status(deep=True, force=True)
-    vehicle_state = build_warehouse_vehicle_state_from_perception(status)
+    cache_key = _preflight_report_key(mission_data, cruise_alt)
+    ttl = 0.0 if force else _preflight_report_cache_ttl_s()
+    if ttl > 0.0 and _preflight_report_cache is not None and _preflight_report_cache_key == cache_key:
+        if (time.monotonic() - _preflight_report_cache_at) < ttl:
+            return _preflight_report_cache
 
-    config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
-    config_overrides.update(warehouse_perception_config_overrides(status))
-    config_overrides.setdefault("CRUISE_ALT_M", max(0.1, _safe_float(cruise_alt, 2.0)))
+    async with _PREFLIGHT_REPORT_LOCK:
+        if ttl > 0.0 and _preflight_report_cache is not None and _preflight_report_cache_key == cache_key:
+            if (time.monotonic() - _preflight_report_cache_at) < ttl:
+                return _preflight_report_cache
 
-    runtime_preflight = {
-        "ENFORCE_PREFLIGHT_RANGE": _setting("enforce_preflight_range"),
-        "HDOP_MAX": _setting("HDOP_MAX"),
-        "SAT_MIN": _setting("SAT_MIN"),
-        "HOME_MAX_DIST": _setting("HOME_MAX_DIST"),
-        "GPS_FIX_TYPE_MIN": _setting("GPS_FIX_TYPE_MIN"),
-        "EKF_THRESHOLD": _setting("EKF_THRESHOLD"),
-        "COMPASS_HEALTH_REQUIRED": _setting("COMPASS_HEALTH_REQUIRED"),
-        "BATTERY_MIN_V": _setting("BATTERY_MIN_V"),
-        "BATTERY_MIN_PERCENT": _setting("BATTERY_MIN_PERCENT"),
-        "BATTERY_RESERVE_PCT": _setting("BATTERY_MIN_PERCENT"),
-        "HEARTBEAT_MAX_AGE": _setting("HEARTBEAT_MAX_AGE"),
-        "MSG_RATE_MIN_HZ": _setting("MSG_RATE_MIN_HZ"),
-        "RTL_MIN_ALT": _setting("RTL_MIN_ALT"),
-        "MIN_CLEARANCE": _setting("MIN_CLEARANCE"),
-        "MIN_CLEARANCE_M": _setting("MIN_CLEARANCE"),
-        "AGL_MIN": _setting("AGL_MIN"),
-        "AGL_MAX": _setting("AGL_MAX"),
-        "MAX_RANGE_M": _setting("MAX_RANGE_M"),
-        "MAX_WAYPOINTS": _setting("MAX_WAYPOINTS"),
-        "NFZ_BUFFER_M": _setting("NFZ_BUFFER_M"),
-        "A_LAT_MAX": _setting("A_LAT_MAX"),
-        "BANK_MAX_DEG": _setting("BANK_MAX_DEG"),
-        "TURN_PENALTY_S": _setting("TURN_PENALTY_S"),
-        "WP_RADIUS_M": _setting("WP_RADIUS_M"),
-    }
-    for key, value in runtime_preflight.items():
-        if value is not None:
-            config_overrides.setdefault(key, value)
+        _warm_mapping_stack_in_background()
 
-    orchestrator = PreflightOrchestrator(config=preflight_config or {})
-    mission_type = str(mission_data.get("type") or "").lower()
-    logger.info(
-        "Running warehouse ROS preflight mission_type=%s bridge_ready=%s reachable=%s",
-        mission_type,
-        status.ready,
-        status.reachable,
-    )
+        status = await fetch_warehouse_perception_status(deep=True, force=force)
+        vehicle_state = build_warehouse_vehicle_state_from_perception(status)
 
-    return await orchestrator.run(
-        vehicle_state,
-        mission_data,
-        flight_id=str(flight_id) if flight_id is not None else None,
-        allowed_modes=["STANDBY", "GUIDED", "AUTO", "LOITER"],
-        config_overrides=config_overrides,
-        gps_timeout_s=0.0,
-        **kwargs,
-    )
+        config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
+        config_overrides.update(warehouse_perception_config_overrides(status))
+        config_overrides.setdefault("CRUISE_ALT_M", max(0.1, _safe_float(cruise_alt, 2.0)))
+
+        runtime_preflight = {
+            "ENFORCE_PREFLIGHT_RANGE": _setting("enforce_preflight_range"),
+            "HDOP_MAX": _setting("HDOP_MAX"),
+            "SAT_MIN": _setting("SAT_MIN"),
+            "HOME_MAX_DIST": _setting("HOME_MAX_DIST"),
+            "GPS_FIX_TYPE_MIN": _setting("GPS_FIX_TYPE_MIN"),
+            "EKF_THRESHOLD": _setting("EKF_THRESHOLD"),
+            "COMPASS_HEALTH_REQUIRED": _setting("COMPASS_HEALTH_REQUIRED"),
+            "BATTERY_MIN_V": _setting("BATTERY_MIN_V"),
+            "BATTERY_MIN_PERCENT": _setting("BATTERY_MIN_PERCENT"),
+            "BATTERY_RESERVE_PCT": _setting("BATTERY_MIN_PERCENT"),
+            "HEARTBEAT_MAX_AGE": _setting("HEARTBEAT_MAX_AGE"),
+            "MSG_RATE_MIN_HZ": _setting("MSG_RATE_MIN_HZ"),
+            "RTL_MIN_ALT": _setting("RTL_MIN_ALT"),
+            "MIN_CLEARANCE": _setting("MIN_CLEARANCE"),
+            "MIN_CLEARANCE_M": _setting("MIN_CLEARANCE"),
+            "AGL_MIN": _setting("AGL_MIN"),
+            "AGL_MAX": _setting("AGL_MAX"),
+            "MAX_RANGE_M": _setting("MAX_RANGE_M"),
+            "MAX_WAYPOINTS": _setting("MAX_WAYPOINTS"),
+            "NFZ_BUFFER_M": _setting("NFZ_BUFFER_M"),
+            "A_LAT_MAX": _setting("A_LAT_MAX"),
+            "BANK_MAX_DEG": _setting("BANK_MAX_DEG"),
+            "TURN_PENALTY_S": _setting("TURN_PENALTY_S"),
+            "WP_RADIUS_M": _setting("WP_RADIUS_M"),
+        }
+        for key, value in runtime_preflight.items():
+            if value is not None:
+                config_overrides.setdefault(key, value)
+
+        orchestrator = PreflightOrchestrator(config=preflight_config or {})
+        mission_type = str(mission_data.get("type") or "").lower()
+        logger.info(
+            "Running warehouse ROS preflight source=%s mission_type=%s bridge_ready=%s reachable=%s",
+            str(source or "unknown"),
+            mission_type,
+            status.ready,
+            status.reachable,
+        )
+
+        report = await orchestrator.run(
+            vehicle_state,
+            mission_data,
+            flight_id=str(flight_id) if flight_id is not None else None,
+            allowed_modes=["STANDBY", "GUIDED", "AUTO", "LOITER"],
+            config_overrides=config_overrides,
+            gps_timeout_s=0.0,
+            **kwargs,
+        )
+        _preflight_report_cache_key = cache_key
+        _preflight_report_cache = report
+        _preflight_report_cache_at = time.monotonic()
+        return report

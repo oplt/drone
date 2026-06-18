@@ -12,6 +12,11 @@ from backend.modules.warehouse.service.nvblox_mesh_adapter import (
 from backend.modules.warehouse.service.nvblox_voxel_layer_parser import (
     parse_voxel_block_layer_msg,
 )
+from backend.modules.warehouse.service.occupancy_grid_parser import (
+    decode_occupancy_grid,
+    encode_occupancy_grid,
+    parse_occupancy_grid_msg,
+)
 
 
 def test_mesh_topic_supported() -> None:
@@ -79,3 +84,29 @@ def test_parse_nvblox_mesh_message_builds_glb() -> None:
     glb = parse_nvblox_mesh_message(msg)
     assert glb is not None
     assert glb[:4] == b"glTF"
+
+
+def test_occupancy_grid_roundtrip_builds_indoor_grid() -> None:
+    msg = SimpleNamespace(
+        header=SimpleNamespace(frame_id="odom"),
+        info=SimpleNamespace(
+            width=3,
+            height=2,
+            resolution=0.5,
+            origin=SimpleNamespace(position=SimpleNamespace(x=-1.0, y=2.0)),
+        ),
+        data=[0, 100, -1, 25, 80, -1],
+    )
+
+    parsed = parse_occupancy_grid_msg(msg)
+    assert parsed is not None
+    grid = decode_occupancy_grid(encode_occupancy_grid(parsed))
+
+    assert grid is not None
+    assert grid.width == 3
+    assert grid.height == 2
+    assert grid.resolution_m == 0.5
+    assert grid.origin_x_m == -1.0
+    assert grid.get_cell(0, 0).value == "free"
+    assert grid.get_cell(1, 0).value == "occupied"
+    assert grid.get_cell(2, 0).value == "unknown"

@@ -3,7 +3,9 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   FormControlLabel,
+  IconButton,
   MenuItem,
   Stack,
   Switch,
@@ -16,6 +18,7 @@ import {
   Typography,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import PlaceRoundedIcon from "@mui/icons-material/PlaceRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
@@ -23,6 +26,8 @@ import {
   createWarehouseScanTarget,
   deleteWarehouseScanTarget,
   type WarehouseScanTarget,
+  type WarehouseStructureExtractParams,
+  type WarehouseStructureResponse,
 } from "../api/warehouseInspectionApi";
 import type { WarehouseMapPlacementPanelProps } from "../hooks/useWarehouseMapPlacement";
 import {
@@ -67,17 +72,68 @@ export function WarehouseCoordinateSetupPanel({
   token,
   onError,
   mapPlacement,
+  structure = null,
+  extractionStatus = "not_started",
+  autoDetecting = false,
+  structureError = null,
+  onAutoDetect,
 }: {
   warehouseMapId: number | null;
   token?: string | null;
   onError: (message: string) => void;
   mapPlacement: WarehouseMapPlacementPanelProps;
+  structure?: WarehouseStructureResponse | null;
+  extractionStatus?: WarehouseStructureResponse["status"];
+  autoDetecting?: boolean;
+  structureError?: string | null;
+  onAutoDetect?: (params?: WarehouseStructureExtractParams) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<TargetDraft>(emptyDraft);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [binPitch, setBinPitch] = useState("0.9");
 
   const { targets, targetsLoading, refreshTargets } = mapPlacement;
+  const quality = structure?.summary.quality;
+  const qualityStatus = structure?.quality_status ?? quality?.status ?? structure?.status;
+  const qualityReasons = structure?.quality_reasons?.length
+    ? structure.quality_reasons
+    : quality?.reasons ?? [];
+  const activeTargetCount =
+    structure?.active_target_count ?? quality?.active_target_count ?? structure?.target_count ?? 0;
+
+  useEffect(() => {
+    setSelectedIds((current) =>
+      current.filter((id) => targets.some((row) => row.id === id)),
+    );
+  }, [targets]);
+
+  const allSelected =
+    targets.length > 0 && selectedIds.length === targets.length;
+  const someSelected = selectedIds.length > 0 && !allSelected;
+
+  const handleAutoDetect = useCallback(async () => {
+    if (warehouseMapId == null || !onAutoDetect) {
+      onError("Select a warehouse map first.");
+      return;
+    }
+    try {
+      const pitch = Number(binPitch);
+      await onAutoDetect(
+        Number.isFinite(pitch) && pitch > 0 ? { bin_pitch_m: pitch } : {},
+      );
+      setMessage("Structure detected. Auto-generated targets loaded below.");
+      await refreshTargets();
+    } catch (error) {
+      onError(
+        error instanceof Error
+          ? error.message
+          : "Automatic structure detection failed.",
+      );
+    }
+  }, [binPitch, onAutoDetect, onError, refreshTargets, warehouseMapId]);
 
   useEffect(() => {
     if (!mapPlacement.draftTarget) return;
@@ -162,6 +218,7 @@ export function WarehouseCoordinateSetupPanel({
       if (warehouseMapId == null) return;
       try {
         await deleteWarehouseScanTarget(warehouseMapId, targetId, token);
+        setSelectedIds((current) => current.filter((id) => id !== targetId));
         setMessage("Scan target archived.");
         await refreshTargets();
       } catch (error) {
@@ -170,6 +227,32 @@ export function WarehouseCoordinateSetupPanel({
     },
     [onError, refreshTargets, token, warehouseMapId],
   );
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (warehouseMapId == null || selectedIds.length === 0) return;
+    const count = selectedIds.length;
+    try {
+      setDeleting(true);
+      await Promise.all(
+        selectedIds.map((targetId) =>
+          deleteWarehouseScanTarget(warehouseMapId, targetId, token),
+        ),
+      );
+      setSelectedIds([]);
+      setMessage(
+        count === 1 ? "Scan target archived." : `${count} scan targets archived.`,
+      );
+      await refreshTargets();
+    } catch (error) {
+      onError(
+        error instanceof Error
+          ? error.message
+          : "Selected scan targets could not be deleted.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }, [onError, refreshTargets, selectedIds, token, warehouseMapId]);
 
   if (warehouseMapId == null) {
     return (
@@ -182,6 +265,87 @@ export function WarehouseCoordinateSetupPanel({
   return (
     <Stack spacing={2}>
       {message ? <Alert severity="success">{message}</Alert> : null}
+
+      {onAutoDetect ? (
+        <Box
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1,
+            p: 1.5,
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+            Auto-detect warehouse plan
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Analyze the 3D map to find aisles, racks, shelves and bins and
+            generate scan targets automatically. Cyan dashed lines are aisles,
+            purple wireframes are racks on the map above. Re-run any time with a
+            different bin pitch.
+          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <TextField
+              size="small"
+              type="number"
+              label="Bin pitch (m)"
+              value={binPitch}
+              onChange={(event) => setBinPitch(event.target.value)}
+              inputProps={{ step: 0.1, min: 0.2, max: 5 }}
+              sx={{ width: 140 }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AutoFixHighRoundedIcon />}
+              onClick={() => void handleAutoDetect()}
+              disabled={autoDetecting}
+            >
+              {autoDetecting ? "Detecting…" : "Auto-detect structure"}
+            </Button>
+            {structure ? (
+              <Typography variant="caption" color="text.secondary">
+                {structure.summary.counts?.aisles ?? 0} aisles ·{" "}
+                {structure.summary.counts?.racks ?? 0} racks ·{" "}
+                {activeTargetCount}/{structure.target_count} active targets
+                {quality?.confidence != null
+                  ? ` · ${Math.round(quality.confidence * 100)}% confidence`
+                  : ""}
+                {structure.generated_at
+                  ? ` · ${new Date(structure.generated_at).toLocaleString()}`
+                  : ""}
+              </Typography>
+            ) : null}
+          </Stack>
+          {structureError ? (
+            <Alert severity="warning" sx={{ mt: 1, py: 0.25 }}>
+              {structureError}
+            </Alert>
+          ) : null}
+          {!autoDetecting && extractionStatus === "queued" ? (
+            <Alert severity="info" sx={{ mt: 1, py: 0.25 }}>
+              Structure extraction is queued in the warehouse-mapping worker.
+            </Alert>
+          ) : null}
+          {!autoDetecting && extractionStatus === "running" ? (
+            <Alert severity="info" sx={{ mt: 1, py: 0.25 }}>
+              Structure extraction is running. Aisle and rack overlays will appear when it finishes.
+            </Alert>
+          ) : null}
+          {!autoDetecting && qualityStatus === "needs_review" ? (
+            <Alert severity="warning" sx={{ mt: 1, py: 0.25 }}>
+              Auto-detect produced draft-only structure data. No generated targets were activated.{" "}
+              {qualityReasons.length ? `Reasons: ${qualityReasons.join(", ")}.` : ""}
+            </Alert>
+          ) : null}
+          {!autoDetecting && extractionStatus === "failed" ? (
+            <Alert severity="error" sx={{ mt: 1, py: 0.25 }}>
+              Structure extraction failed. Restart the stack with `make warehouse`, then try again.
+            </Alert>
+          ) : null}
+        </Box>
+      ) : null}
+
       <Typography variant="body2" color="text.secondary">
         Enable pick mode, click a bin on the 3D map above, label aisle/rack/bin, then save.
         The drone flies to the computed scan pose (cyan cone), not into the shelf.
@@ -305,11 +469,34 @@ export function WarehouseCoordinateSetupPanel({
         >
           Refresh
         </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          color="error"
+          startIcon={<DeleteRoundedIcon />}
+          onClick={() => void handleDeleteSelected()}
+          disabled={targetsLoading || deleting || selectedIds.length === 0}
+        >
+          {deleting ? "Deleting…" : "Delete selected"}
+        </Button>
       </Stack>
 
       <Table size="small" aria-label="warehouse scan targets">
         <TableHead>
           <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                indeterminate={someSelected}
+                checked={allSelected}
+                disabled={targets.length === 0}
+                onChange={(event) =>
+                  setSelectedIds(
+                    event.target.checked ? targets.map((target) => target.id) : [],
+                  )
+                }
+                inputProps={{ "aria-label": "Select all targets" }}
+              />
+            </TableCell>
             <TableCell>Location</TableCell>
             <TableCell>Product</TableCell>
             <TableCell>Target Point</TableCell>
@@ -320,7 +507,7 @@ export function WarehouseCoordinateSetupPanel({
         <TableBody>
           {targets.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5}>
+              <TableCell colSpan={6}>
                 <Typography variant="body2" color="text.secondary">
                   No saved targets yet. Pick a location on the map and save.
                 </Typography>
@@ -328,7 +515,23 @@ export function WarehouseCoordinateSetupPanel({
             </TableRow>
           ) : (
             targets.map((target: WarehouseScanTarget) => (
-              <TableRow key={target.id}>
+              <TableRow
+                key={target.id}
+                selected={selectedIds.includes(target.id)}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedIds.includes(target.id)}
+                    onChange={(event) =>
+                      setSelectedIds((current) =>
+                        event.target.checked
+                          ? [...current, target.id]
+                          : current.filter((id) => id !== target.id),
+                      )
+                    }
+                    inputProps={{ "aria-label": `Select target ${target.id}` }}
+                  />
+                </TableCell>
                 <TableCell>
                   {target.aisle_code} {target.rack_code ?? ""} {target.bin_code ?? ""}
                 </TableCell>
@@ -347,14 +550,14 @@ export function WarehouseCoordinateSetupPanel({
                   {target.scan_pose_local_json.yaw_deg ?? 0}°
                 </TableCell>
                 <TableCell align="right">
-                  <Button
+                  <IconButton
                     size="small"
                     color="error"
-                    startIcon={<DeleteRoundedIcon />}
                     onClick={() => void handleDelete(target.id)}
+                    aria-label="Archive scan target"
                   >
-                    Archive
-                  </Button>
+                    <DeleteRoundedIcon fontSize="small" />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))
