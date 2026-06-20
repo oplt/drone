@@ -9,7 +9,7 @@ from importlib import import_module
 logger = logging.getLogger(__name__)
 
 _MODEL_MODULES = (
-    "backend.modules.alerts.models",
+    "backend.modules.agents.models",
     "backend.modules.automation.models",
     "backend.modules.compliance.models",
     "backend.modules.deliverables.models",

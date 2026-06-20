@@ -9,6 +9,7 @@ from jose import JWTError, jwt
 from backend.core.database.session import Session
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import get_user_from_token
+from backend.modules.identity.models import User
 from backend.observability.instruments import observed_span
 from backend.observability.metrics import add as metric_add
 
@@ -17,12 +18,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
 
-async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
+async def _authenticate_websocket(websocket: WebSocket) -> tuple[User | None, str | None]:
     """
     Enforce auth for WebSocket connections.
     1. Try Authorization: Bearer header
     2. Try access_token cookie (browser WS upgrade sends cookies automatically)
-    Returns (is_authorized, user_id_or_error_message)
+    Returns authenticated user or an error message.
     """
     token: str | None = None
 
@@ -37,22 +38,29 @@ async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
         token = websocket.query_params.get("token")
 
     if not token:
-        return False, "Missing authentication token"
+        return None, "Missing authentication token"
 
     try:
         async with Session() as db:
             user = await get_user_from_token(token, db)
             if not user:
-                return False, "Invalid authentication token"
-            return True, str(user.id)
+                return None, "Invalid authentication token"
+            return user, None
     except jwt.ExpiredSignatureError:
-        return False, "Token expired"
+        return None, "Token expired"
     except JWTError as e:
         logger.warning(f"JWT validation error: {e}")
-        return False, "Invalid token"
+        return None, "Invalid token"
     except Exception as e:
         logger.error(f"Authorization error: {e}")
-        return False, "Authorization failed"
+        return None, "Authorization failed"
+
+
+async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
+    user, error = await _authenticate_websocket(websocket)
+    if user is None:
+        return False, error
+    return True, str(user.id)
 
 
 @router.websocket("/telemetry")

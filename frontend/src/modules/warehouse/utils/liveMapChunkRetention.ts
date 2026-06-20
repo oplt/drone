@@ -116,7 +116,11 @@ export function selectDownloadableChunksPerLayer(
     );
 
     if (mode === "live") {
-      selected.push(...sorted);
+      const limit =
+        layer === "mid360_lidar" || layer === "mid360_raw"
+          ? Math.min(maxCachedChunksPerLayer, LIVE_MAX_CACHED_CHUNKS_RAW_LIDAR)
+          : maxCachedChunksPerLayer;
+      selected.push(...sorted.slice(-limit));
       continue;
     }
 

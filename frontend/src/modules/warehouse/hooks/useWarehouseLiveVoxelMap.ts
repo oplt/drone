@@ -22,8 +22,29 @@ type ConnectionState =
   | "failed";
 
 const STALE_AFTER_MS = 10_000;
-const RECONNECT_AFTER_MS = 1_500;
+const RECONNECT_BASE_MS = 1_500;
+const RECONNECT_MAX_MS = 30_000;
 const MAX_PATH_POINTS = 600;
+
+export function warehouseLiveMapReconnectDelayMs(
+  attempt: number,
+  random: () => number = Math.random,
+): number {
+  const exponent = Math.max(0, Math.floor(attempt) - 1);
+  const cappedDelay = Math.min(
+    RECONNECT_MAX_MS,
+    RECONNECT_BASE_MS * 2 ** exponent,
+  );
+  const jitter = 0.8 + Math.min(1, Math.max(0, random())) * 0.2;
+  return Math.round(cappedDelay * jitter);
+}
+
+export function warehouseLiveMapSnapshotPollDelayMs(
+  attempt: number,
+  random: () => number = Math.random,
+): number {
+  return warehouseLiveMapReconnectDelayMs(attempt, random);
+}
 
 const EMPTY_HEALTH: WarehouseLiveHealthFlags = {
   coverage_percent: null,
@@ -143,6 +164,7 @@ export function useWarehouseLiveVoxelMap(
     scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
   });
   const reconnectTimerRef = useRef<number | null>(null);
+  const snapshotPollTimerRef = useRef<number | null>(null);
   const staleTimerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const queuedMessageRef = useRef<WarehouseLiveMapMessage[]>([]);
@@ -183,16 +205,22 @@ export function useWarehouseLiveVoxelMap(
       return () => window.clearTimeout(staleTimer);
     }
 
+    const activeFlightId = flightId;
     let cancelled = false;
     let reconnectAttempt = 0;
+    let snapshotPollAttempt = 0;
+    let snapshotPollInFlight = false;
 
     const clearTimers = () => {
       if (reconnectTimerRef.current != null)
         window.clearTimeout(reconnectTimerRef.current);
+      if (snapshotPollTimerRef.current != null)
+        window.clearTimeout(snapshotPollTimerRef.current);
       if (staleTimerRef.current != null)
         window.clearTimeout(staleTimerRef.current);
       if (rafRef.current != null) window.cancelAnimationFrame(rafRef.current);
       reconnectTimerRef.current = null;
+      snapshotPollTimerRef.current = null;
       staleTimerRef.current = null;
       rafRef.current = null;
     };
@@ -204,9 +232,6 @@ export function useWarehouseLiveVoxelMap(
         setConnectionState((current) =>
           current === "live" ? "stale" : current,
         );
-        if (!wsConnectedRef.current && !cancelled) {
-          pollSnapshot();
-        }
       }, STALE_AFTER_MS);
     };
 
@@ -293,28 +318,52 @@ export function useWarehouseLiveVoxelMap(
       });
     };
 
-    const pollSnapshot = () => {
-      if (wsConnectedRef.current) {
+    function scheduleSnapshotPoll() {
+      if (cancelled || wsConnectedRef.current) {
         return;
       }
-      void fetchWarehouseLiveMapSnapshot(flightId, options.token)
+      snapshotPollAttempt += 1;
+      if (snapshotPollTimerRef.current != null) {
+        window.clearTimeout(snapshotPollTimerRef.current);
+      }
+      snapshotPollTimerRef.current = window.setTimeout(() => {
+        snapshotPollTimerRef.current = null;
+        pollSnapshot();
+      }, warehouseLiveMapSnapshotPollDelayMs(snapshotPollAttempt));
+    }
+
+    function pollSnapshot() {
+      if (cancelled || wsConnectedRef.current || snapshotPollInFlight) {
+        return;
+      }
+      snapshotPollInFlight = true;
+      void fetchWarehouseLiveMapSnapshot(activeFlightId, options.token)
         .then((snapshot) => {
-          if (!cancelled) applyMessage(snapshot);
+          if (!cancelled && !wsConnectedRef.current) applyMessage(snapshot);
         })
         .catch(() => {
           /* websocket remains primary transport */
+        })
+        .finally(() => {
+          snapshotPollInFlight = false;
+          scheduleSnapshotPoll();
         });
-    };
+    }
 
     const openSocket = () => {
       if (cancelled) return;
       setConnectionState(reconnectAttempt > 0 ? "reconnecting" : "connecting");
       socketRef.current = connectWarehouseLiveMap(
-        flightId,
+        activeFlightId,
         {
           onOpen: () => {
             reconnectAttempt = 0;
+            snapshotPollAttempt = 0;
             wsConnectedRef.current = true;
+            if (snapshotPollTimerRef.current != null) {
+              window.clearTimeout(snapshotPollTimerRef.current);
+              snapshotPollTimerRef.current = null;
+            }
             setError(null);
             setConnectionState("live");
             scheduleStaleCheck();
@@ -336,7 +385,7 @@ export function useWarehouseLiveVoxelMap(
             pollSnapshot();
             reconnectTimerRef.current = window.setTimeout(
               openSocket,
-              RECONNECT_AFTER_MS,
+              warehouseLiveMapReconnectDelayMs(reconnectAttempt),
             );
           },
         },

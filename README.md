@@ -1,224 +1,210 @@
 # Drone Operations Platform
 
-A full-stack drone mission control application with a FastAPI backend, React operator dashboard, and optional ROS 2 / Gazebo simulation integration. The platform supports mission planning and execution, live telemetry over WebSockets, warehouse indoor scanning with live 3D map streaming, video/camera runtime, photogrammetry job orchestration, and geospatial workflows.
+A full-stack drone mission control platform with a FastAPI backend, React operator dashboard, Celery workers, geospatial tooling, and optional ROS 2 / Gazebo simulation support.
 
-The codebase is under active development. Core APIs, UI modules, and simulation bridges exist, but hardware integrations, ROS/Gazebo stacks, and some domain workflows require environment-specific setup and validation before field use.
+## Overview
 
----
+Drone Operations Platform is a work-in-progress application for planning, monitoring, and reviewing drone operations. It combines a Python backend API, a TypeScript operator console, background workers, database persistence, mapping workflows, and optional simulation bridges for warehouse-style indoor mapping.
+
+The project is intended for development and experimentation around:
+
+- Mission planning and runtime monitoring
+- Telemetry and video workflows
+- Warehouse scan and live-map pipelines
+- Photogrammetry job orchestration
+- Geospatial field, geofence, and patrol workflows
+- Operational observability for API and worker processes
+
+This repository is not a drop-in autopilot product. Real aircraft, robotics, ROS/Gazebo, WebODM, MQTT, OPC UA, and object storage integrations require environment-specific setup and validation.
 
 ## Key Features
 
-- **Mission operations** — create, run, monitor, and resume missions (waypoint, grid survey, controlled flight, private patrol, warehouse scan)
-- **Live telemetry** — WebSocket broadcasting of mission and vehicle events (`/ws/telemetry`)
-- **Warehouse scanning** — indoor scan missions, preflight checks, dock/map management, scanned-map persistence
-- **Live 3D mapping** — chunked point-cloud ingest, WebSocket stream, and Three.js viewer for warehouse flights
-- **ROS / Gazebo bridge** — `ros2_ws` package bridges Gazebo Sim sensor topics into ROS 2 for warehouse mapping
-- **Video / camera runtime** — MJPEG proxy and recording hooks (`/video/*`), with sim UDP source support
-- **Photogrammetry pipeline** — mapping job orchestration via Celery workers and optional WebODM integration
-- **Geospatial tooling** — fields, geofences, mapping overlays (Google Maps, Cesium, MapLibre, Leaflet)
-- **Operational modules** — alerts, fleet management, irrigation monitoring, livestock workflows, patrol/debug tooling
-- **Integrations** — MQTT, OPC UA, S3-compatible storage (MinIO), webhooks, API keys
-- **Backend API** — modular FastAPI service with OpenAPI docs at `/docs`
-- **Frontend dashboard** — React + TypeScript + Vite operator console
+- **FastAPI backend** with modular routers for authentication, missions, telemetry, warehouse operations, mapping, fields, geofences, alerts, fleet, integrations, video analysis, and observability.
+- **React operator dashboard** built with TypeScript, Vite, Material UI, React Router, React Query, Cesium, MapLibre, Leaflet, Google Maps integrations, and Three.js-based mapping views.
+- **Mission and telemetry runtime** with REST endpoints, WebSocket telemetry, MAVLink connection settings, runtime health endpoints, and mission command paths.
+- **Warehouse scan workflows** for maps, docks, scan targets, preflight runs, mapping-stack status, manual mapping, live-map chunk ingest, and live-map WebSocket streaming.
+- **Photogrammetry pipeline** using Celery queues, Redis, optional WebODM integration, mapping asset storage, and worker deployment notes.
+- **Video and camera runtime** with stream start/status endpoints, MJPEG proxy support, recording hooks, and video-analysis job APIs.
+- **Geospatial modules** for fields, geofences, mapping jobs, patrol templates, route previews, and integration exports.
+- **Observability support** with OpenTelemetry, Prometheus metrics, Grafana/Tempo local stack configuration, structured logs, and an Observability page in the UI.
+- **Quality gates** for backend boundaries, file-size guardrails, Ruff, mypy baselines, frontend linting, Vitest, and Playwright.
 
----
+## Architecture
 
-## Architecture Overview
+The repository is organized as a layered full-stack system:
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                     React / Vite Operator Dashboard                   │
-│   mission-runtime · warehouse · photogrammetry · maps · dashboard   │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │ HTTP + WebSocket (Vite proxy in dev)
-                                v
-┌─────────────────────────────────────────────────────────────────────┐
-│                        FastAPI Backend API                            │
-│  modules/          domain APIs (missions, warehouse, telemetry, …)   │
-│  infrastructure/   camera, messaging, persistence, vehicle adapters   │
-│  core/             config, database, security, logging                │
-│  entrypoints/      api app, Celery workers, CLI                       │
-└───────┬───────────────┬────────────────┬────────────────────────────┘
-        │               │                │
-        v               v                v
- PostgreSQL/PostGIS   Redis + Celery    MinIO / S3
- (missions, maps,     (photogrammetry,   (mapping assets,
-  telemetry, etc.)     exports, etc.)     signed downloads)
-        │
-        │ optional
-        v
-┌─────────────────────────────────────────────────────────────────────┐
-│              ROS 2 / Gazebo (warehouse simulation)                  │
-│  ros2_ws/drone_gz_bridge  →  PointCloud2 / RGB-D / IMU / odom       │
-│  live-map bridges         →  chunked ingest + WS stream to frontend   │
-└─────────────────────────────────────────────────────────────────────┘
-        │
-        v
- MAVLink runtime (DroneKit / pymavlink) · sim video UDP · MQTT / OPC UA
+- `backend/entrypoints` starts the FastAPI app, Celery workers, and CLI tools.
+- `backend/modules` contains domain-facing APIs and application logic.
+- `backend/infrastructure` contains adapters for persistence, vehicle/runtime integrations, camera/video, messaging, photogrammetry, storage, warehouse bridge helpers, and external services.
+- `backend/core` contains cross-cutting configuration, database sessions, logging, security, events, and error handling.
+- `frontend/src/app` defines routing and providers.
+- `frontend/src/modules` contains UI feature modules that call backend APIs through shared clients.
+- `ros2_ws/src/drone_gz_bridge` contains optional ROS 2 / Gazebo bridge configuration and launch files for warehouse simulation.
+
+```mermaid
+flowchart TD
+  Operator[Operator Browser] --> Frontend[React + Vite Dashboard]
+  Frontend -->|REST via Vite proxy| API[FastAPI Backend]
+  Frontend -->|WebSockets| API
+
+  API --> Modules[Backend Domain Modules]
+  Modules --> Core[Core Config, DB, Security, Logging]
+  Modules --> Infra[Infrastructure Adapters]
+
+  Core --> Postgres[(PostgreSQL / PostGIS)]
+  API --> Redis[(Redis)]
+  Redis --> Workers[Celery Workers]
+  Workers --> Storage[Local Storage / MinIO / S3]
+  Modules --> Storage
+
+  Infra --> MAVLink[MAVLink / DroneKit / pymavlink]
+  Infra --> MQTT[MQTT]
+  Infra --> OPCUA[OPC UA]
+  Infra --> WebODM[Optional WebODM]
+
+  ROS[ROS 2 / Gazebo Bridge] --> API
+  API --> Observability[Prometheus / OpenTelemetry / Grafana / Tempo]
 ```
 
-**Data flow (simplified):**
+### Runtime Flow
 
-1. The frontend calls REST endpoints and opens WebSocket channels for telemetry and live maps.
-2. Mission execution runs in the API process (async) and publishes events through the telemetry manager.
-3. Warehouse scans subscribe to ROS topics, encode point clouds into chunks, and stream them to clients.
-4. Heavy photogrammetry and export work is offloaded to Celery workers.
+1. The frontend serves the operator dashboard and proxies API, WebSocket, and asset requests to the backend during local development.
+2. The FastAPI app registers routers from `backend/modules/*`, initializes the database, runtime settings, alert engine, irrigation monitor, logging, metrics, and tracing.
+3. Mission, warehouse, video, mapping, patrol, telemetry, and integration modules coordinate through repositories and infrastructure adapters.
+4. Redis backs Celery workers for heavier asynchronous jobs such as photogrammetry, exports, webhooks, video analysis, and warehouse mapping tasks.
+5. Optional ROS 2 / Gazebo bridge processes publish simulation topics that warehouse mapping code can consume for live-map workflows.
 
----
+## Tech Stack
+
+### Backend
+
+- Python 3.11
+- FastAPI, Uvicorn
+- Pydantic and pydantic-settings
+- SQLAlchemy, Alembic, asyncpg, GeoAlchemy2
+- Celery, Redis
+- DroneKit, pymavlink
+- OpenCV, NumPy, SciPy, PyTorch, Ultralytics, Supervision
+- OpenTelemetry, Prometheus client, Sentry SDK
+- MQTT via `paho-mqtt`
+- OPC UA via `asyncua` / `opcua`
+- S3-compatible storage via aiobotocore
+
+### Frontend
+
+- React 19, TypeScript, Vite
+- React Router
+- TanStack React Query
+- Material UI, MUI X components
+- Cesium / Resium
+- MapLibre GL, Leaflet, Google Maps
+- Three.js, React Three Fiber, Drei
+- Vitest, Testing Library, Playwright
+- ESLint, Biome, TypeScript compiler
+
+### Data, Infrastructure, and Simulation
+
+- PostgreSQL with PostGIS
+- Redis
+- MinIO or S3-compatible object storage
+- Docker and Docker Compose
+- ROS 2 Jazzy / Gazebo Sim bridge package under `ros2_ws`
+- Optional nvBlox launch support
+- Optional Grafana, Prometheus, and Tempo stack
 
 ## Repository Structure
 
 ```text
+.
 backend/
-├── core/                 # Settings, database session, security, logging
-├── modules/              # Domain modules (missions, warehouse, telemetry, mapping, …)
-├── infrastructure/       # Camera, messaging, persistence, vehicle, photogrammetry adapters
-├── entrypoints/
-│   ├── api/              # FastAPI application entrypoint
-│   ├── workers/          # Celery worker tasks
-│   └── cli/              # CLI utilities (e.g. run_mission)
-├── infrastructure/persistence/alembic/   # Database migrations
-├── tests/                # Backend pytest suite
-├── scripts/              # Lint baselines, guardrails, helper scripts
-├── storage/              # Local runtime storage (logs, live-map chunks, captures)
-└── .env.example          # Backend environment template
-
+  core/                         # Settings, database, logging, events, security, errors
+  entrypoints/
+    api/app.py                  # FastAPI application and router registration
+    cli/                        # CLI entrypoints
+    workers/                    # Celery app and worker task modules
+  infrastructure/               # Adapters for AI, camera, mapping, storage, messaging, vehicle, warehouse
+  modules/                      # Domain modules and API routers
+  infrastructure/persistence/
+    alembic/                    # Alembic migrations
+  scripts/                      # Quality gates and baseline checks
+  tests/                        # Backend pytest suite
+  .env.example                  # Backend environment template
+  requirements.txt              # Backend Python dependencies
 frontend/
-├── src/
-│   ├── app/              # Routing and app shell
-│   ├── modules/          # Feature modules (warehouse, mission-runtime, maps, …)
-│   └── shared/           # Shared UI, theme, utilities
-├── e2e/                  # Playwright end-to-end tests
-└── .env.example          # Frontend environment template
-
-ros2_ws/
-└── src/drone_gz_bridge/  # Gazebo ↔ ROS 2 bridge config and launch files
-
-docker-compose.yml        # Postgres, Redis, MinIO, API, workers, frontend
-Makefile                  # Quality checks, tests, local-dev entrypoint
-Makefile.local            # Honcho-based local development
-Procfile.dev              # Processes for make local-dev
-pyproject.toml            # Ruff / mypy / pytest configuration
-requirements.txt          # Python dependencies (includes ROS-related packages)
+  src/app/                      # React app shell, routing, providers, config
+  src/modules/                  # Feature modules and views
+  src/shared/                   # Shared API client, layout, UI, theme, hooks, utilities
+  e2e/                          # Playwright tests
+  package.json                  # Frontend dependencies and scripts
+  .env.example                  # Frontend environment template
+ros2_ws/src/drone_gz_bridge/    # ROS 2 / Gazebo bridge package for warehouse simulation
+docs/                           # Observability and property-patrol documentation
+infra/observability/            # Grafana, Prometheus, and Tempo configuration
+docker-compose.yml              # App, PostGIS, Redis, MinIO, workers, frontend
+docker-compose.observability.yml # Optional observability stack
+Makefile                        # Top-level quality and dev commands
+Makefile.local                  # Honcho-based local workflow
+Procfile.dev                    # Local process definitions
+pyproject.toml                  # Ruff, mypy, pytest, vulture config
+pytest.ini                      # Pytest path configuration
 ```
 
-Backend code follows a layered layout enforced by `backend/scripts/check_backend_boundaries.py`: domain APIs live in `modules/`, integrations in `infrastructure/`, and workers stay thin in `entrypoints/workers/`.
+## Getting Started
 
----
+### Prerequisites
 
-## Requirements
+Core development:
 
-### Required for core development
+- Python 3.11
+- Node.js 22 and npm
+- PostgreSQL with PostGIS
+- Redis
+- `honcho` for the local multi-process workflow
 
-| Component | Version / notes |
-|-----------|-----------------|
-| Python | **3.11** (see `pyproject.toml`, `backend/Dockerfile`) |
-| Node.js | **22** recommended (see `frontend/Dockerfile`; newer LTS may work) |
-| npm | Bundled with Node.js |
-| PostgreSQL + PostGIS | Required for the API and migrations |
-| Redis | Required for Celery and runtime caching |
-| `redis-server` | Must be installed locally for `make start` (Procfile starts it on port **6380**) |
-| `honcho` | Process manager for local dev (`pip install honcho`) |
+Optional, depending on the workflow:
 
-### Optional / feature-specific
+- Docker and Docker Compose
+- MinIO or another S3-compatible object store
+- ROS 2 Jazzy and Gazebo Sim
+- nvBlox for richer warehouse mapping experiments
+- WebODM for external photogrammetry processing
+- GDAL and mesh conversion tools for production photogrammetry workers
+- MAVLink-compatible simulator or vehicle for live command paths
+- Grafana, Prometheus, and Tempo for observability
 
-| Component | Used for |
-|-----------|----------|
-| Docker + Docker Compose | Full-stack containerized dev |
-| MinIO or S3-compatible storage | Mapping asset storage (`STORAGE_BACKEND=s3`) |
-| ROS 2 Jazzy + Gazebo Sim | Warehouse simulation and live 3D mapping |
-| nvBlox | Optional warehouse mapping layers (see warehouse live-map docs) |
-| WebODM | External photogrammetry processing |
-| MQTT broker (`mosquitto`) | MQTT integrations (commented out in `Procfile.dev`) |
-| GDAL / mesh tooling | Photogrammetry worker outputs (see `backend/entrypoints/workers/README.md`) |
-| MAVLink-compatible vehicle or SITL | Live drone telemetry and command paths |
-
----
-
-## Environment Setup
-
-Copy the example files and adjust values for your machine:
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-```
-
-### Backend (`backend/.env`)
-
-Key variables (see `backend/.env.example` for the full list):
-
-| Variable | Purpose |
-|----------|---------|
-| `DATABASE_URL` | PostgreSQL/PostGIS connection (`postgresql+asyncpg://…`) |
-| `JWT_SECRET` | Auth token signing |
-| `SETTINGS_VAULT_KEY` | Encrypts sensitive settings at rest |
-| `REDIS_URL` / `CELERY_BROKER_URL` | Redis for cache and Celery |
-| `DRONE_CONN` | MAVLink connection string |
-| `S3_*` / `STORAGE_BACKEND` | Object storage configuration |
-| `WEBODM_*` | Photogrammetry integration (`WEBODM_MOCK_MODE=1` for local mock) |
-| `ROS_DOMAIN_ID` | Must match your ROS 2 shell / simulation |
-| `WAREHOUSE_*` | Warehouse bridge, capture paths, live-map ingest |
-| `DRONE_VIDEO_*` | Sim or hardware video source |
-
-Generate a vault key:
-
-```bash
-python -c "from backend.core.security.secrets import Vault; print(Vault.generate_key())"
-```
-
-### Frontend (`frontend/.env`)
-
-| Variable | Purpose |
-|----------|---------|
-| `VITE_API_BASE_URL` | Leave **unset** for local dev so Vite proxies API calls and cookies stay same-origin |
-| `VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY` | Google Maps |
-| `VITE_GOOGLE_MAPS_MAP_ID` | Google Maps map ID |
-| `VITE_CESIUM_ION_TOKEN` | Cesium globe token |
-
-Do not commit real secrets. Replace all placeholder values before any shared or production deployment.
-
-### Observability Hub
-
-The dashboard includes an Observability Hub at `/observability`. It shows operational health cards and opens Grafana dashboards in a new browser tab. Grafana is intentionally not embedded in an iframe because iframe auth adds cookie, SSO, cross-origin, clickjacking, and RBAC complexity.
-
-Configure public, reverse-proxied URLs in `backend/.env`:
-
-| Variable | Purpose |
-|----------|---------|
-| `GRAFANA_PUBLIC_URL` | Public Grafana base URL, for example `https://grafana.example.com` |
-| `PROMETHEUS_PUBLIC_URL` | Public Prometheus base URL for admin/developer debug access |
-| `GRAFANA_FLEET_DASHBOARD_PATH` | Fleet health dashboard path |
-| `GRAFANA_API_DASHBOARD_PATH` | Backend API dashboard path |
-| `GRAFANA_WORKERS_DASHBOARD_PATH` | Worker/Celery dashboard path |
-| `GRAFANA_VIDEO_DASHBOARD_PATH` | Video AI pipeline dashboard path |
-| `GRAFANA_MAVLINK_DASHBOARD_PATH` | MAVLink/telemetry dashboard path |
-
-Grafana links receive `orgId=1`, `from=now-1h`, `to=now`, and optional dashboard variables `var-drone_id` and `var-mission_id` from the page context. Define matching Grafana dashboard variables named `drone_id` and `mission_id`.
-
-Access expectations: authenticated operators can open Grafana dashboards, users who investigate missions can open Tempo through Grafana Explore, and Prometheus Debug is hidden from normal users. Do not expose internal Docker service names or credentials through these URLs.
-
----
-
-## Installation
-
-### 1. Clone and enter the repository
+### 1. Clone the Repository
 
 ```bash
 git clone <repo-url>
 cd drone_app
 ```
 
-### 2. Backend
+### 2. Configure Environment Files
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Generate a backend settings vault key:
+
+```bash
+python -c "from backend.core.security.secrets import Vault; print(Vault.generate_key())"
+```
+
+Place the generated value in `backend/.env` as `SETTINGS_VAULT_KEY`.
+
+### 3. Install Backend Dependencies
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install honcho
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+python -m pip install honcho
 ```
 
-### 3. Frontend
+### 4. Install Frontend Dependencies
 
 ```bash
 cd frontend
@@ -226,272 +212,393 @@ npm install
 cd ..
 ```
 
-### 4. Database migrations
+### 5. Start Required Local Services
 
-Ensure PostgreSQL is running and `DATABASE_URL` in `backend/.env` is correct, then:
-
-```bash
-alembic -c backend/alembic.ini upgrade head
-```
-
-### 5. Docker Compose (alternative)
-
-Build and start the full containerized stack:
-
-```bash
-docker compose up --build
-```
-
-This starts Postgres, Redis, MinIO, API, Celery worker/beat, and the production-built frontend.
-
----
-
-## Running Locally
-
-### Recommended: Honcho dev stack
-
-```bash
-make start
-# equivalent to: make local-dev
-```
-
-This uses `Procfile.dev` to start:
-
-- Redis on `127.0.0.1:6380`
-- FastAPI backend on `http://localhost:8000`
-- Vite frontend on `http://localhost:5173`
-
-Open the dashboard at **http://localhost:5173**. API docs: **http://localhost:8000/docs**.
-
-`make local-dev` does **not** start PostgreSQL. Run it separately, for example:
+For local development without the full Docker stack, start PostgreSQL/PostGIS separately. One option is to run only the Compose database:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Or point `DATABASE_URL` at an existing PostGIS instance.
+The Honcho workflow starts a local Redis process on port `6380`, but you can also run Redis yourself if needed.
 
-### Manual startup
+### 6. Run Database Migrations
+
+Ensure `DATABASE_URL` in `backend/.env` points to your PostGIS database, then run:
 
 ```bash
-# Terminal 1 — Redis (if not using Procfile)
+source .venv/bin/activate
+python -m alembic -c backend/alembic.ini upgrade head
+```
+
+### 7. Run the App Locally
+
+```bash
+make start
+```
+
+This delegates to `make local-dev` and starts the processes defined in `Procfile.dev`:
+
+- Redis on `127.0.0.1:6380`
+- FastAPI on `http://localhost:8000`
+- Vite frontend on `http://localhost:5173`
+
+Useful URLs:
+
+- Frontend: `http://localhost:5173`
+- API docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health` and `http://localhost:8000/healthz`
+- Metrics, when enabled: `http://localhost:8000/metrics`
+
+### Manual Startup
+
+```bash
+# Terminal 1
 redis-server --port 6380
 
-# Terminal 2 — Backend
+# Terminal 2
 source .venv/bin/activate
-alembic -c backend/alembic.ini upgrade head
-uvicorn backend.entrypoints.api.app:app --reload --host localhost --port 8000
+python -m alembic -c backend/alembic.ini upgrade head
+python -m uvicorn backend.entrypoints.api.app:app --reload --host localhost --port 8000
 
-# Terminal 3 — Frontend
-cd frontend && npm run dev
+# Terminal 3
+cd frontend
+npm run dev
 ```
 
-### Optional Celery workers
+### Docker Setup
 
-`Procfile.dev` defines worker processes but they are not started by default. Run them when testing photogrammetry, exports, or warehouse-mapping queues:
+`docker-compose.yml` defines PostgreSQL/PostGIS, Redis, MinIO, the API, a Celery worker, Celery beat, and a production-built frontend.
 
 ```bash
-honcho -f Procfile.dev start photogrammetry_worker
+docker compose up --build
 ```
 
-### Docker Compose URLs
+Container URLs:
 
 | Service | URL |
-|---------|-----|
-| Frontend | http://localhost:8080 |
-| API | http://localhost:8000 |
-| Swagger | http://localhost:8000/docs |
-| MinIO console | http://localhost:9001 |
+| --- | --- |
+| API | `http://localhost:8000` |
+| Swagger UI | `http://localhost:8000/docs` |
+| Frontend | `http://localhost:8080` |
+| MinIO console | `http://localhost:9001` |
 
-### Cleanup
+TODO: `backend/Dockerfile` currently copies `requirements.txt` from the repository root, while this repository contains `backend/requirements.txt`. Confirm or update the Dockerfile before relying on a fresh container build.
 
-```bash
-make kill-dev      # stop Honcho / uvicorn / local Redis
-make kill-workers  # stop Celery workers
-make reset-dev     # kill processes and clear frontend Vite cache
-```
-
----
-
-## Running Tests
-
-### Backend
+### Optional Observability Stack
 
 ```bash
-make backend-tests              # unit tests (excludes integration marker)
-make backend-integration-tests  # tests marked @pytest.mark.integration
-make backend-quality            # ruff baseline + guardrails + mypy + unit tests
+docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability up -d
 ```
 
-Run pytest directly:
+| Service | URL |
+| --- | --- |
+| Grafana | `http://localhost:3000` |
+| Prometheus | `http://localhost:9090` |
+| Tempo | `http://localhost:3200` |
+
+See `docs/local-observability.md` and `docs/observability.md` for details.
+
+## Configuration
+
+Use placeholders for local development and real secret values only in private environment files or a secrets manager.
+
+### Backend Environment Variables
+
+| Variable | Description | Required | Example |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | Async SQLAlchemy URL for PostgreSQL/PostGIS. | Yes | `postgresql+asyncpg://drone:change-me@localhost:5432/drone` |
+| `SETTINGS_VAULT_KEY` | Encryption key for sensitive runtime settings. | Yes | `<generated-fernet-key>` |
+| `JWT_SECRET` | Secret for signing application auth tokens. | Yes | `<long-random-secret>` |
+| `ADMIN_EMAILS` | Comma-separated admin user emails. | Optional | `admin@example.com` |
+| `GOOGLE_MAPS_API_KEY` | Google Maps API key for geospatial workflows. | Optional | `<google-maps-key>` |
+| `LLM_PROVIDER` | Local or OpenAI-compatible LLM provider selector. | Optional | `ollama` |
+| `LLM_API_BASE` | LLM provider API base URL. | Optional | `http://localhost:11434/api/generate` |
+| `LLM_MODEL` | Default LLM model name. | Optional | `deepseek-r1:8b` |
+| `DRONE_CONN` | MAVLink connection string for the main runtime. | Optional for UI-only dev | `udp:127.0.0.1:14550` |
+| `DRONE_CONN_MAVPROXY` | MAVProxy-compatible MAVLink connection string. | Optional | `udp:127.0.0.1:14551` |
+| `HEARTBEAT_TIMEOUT` | Vehicle heartbeat timeout in seconds. | Optional | `5.0` |
+| `REDIS_URL` | Redis URL for runtime cache and services. | Optional | `redis://localhost:6379/0` |
+| `CELERY_BROKER_URL` | Celery broker URL. | Optional unless workers run | `redis://localhost:6379/0` |
+| `CELERY_RESULT_BACKEND` | Celery result backend URL. | Optional | `redis://localhost:6379/0` |
+| `MAPPING_JOB_QUEUE_BACKEND` | Mapping job queue backend. | Optional | `celery` |
+| `WEBODM_BASE_URL` | WebODM server URL. | Optional | `http://localhost:8001` |
+| `WEBODM_API_TOKEN` | WebODM API token. | Optional | `<webodm-token>` |
+| `WEBODM_MOCK_MODE` | Use mocked WebODM outputs for local development. | Optional | `1` |
+| `STORAGE_BACKEND` | Asset storage backend. | Optional | `local` or `s3` |
+| `S3_ENDPOINT_URL` | S3-compatible endpoint, such as MinIO. | Optional | `http://localhost:9000` |
+| `S3_ACCESS_KEY` | S3 access key. | Optional | `<access-key>` |
+| `S3_SECRET_KEY` | S3 secret key. | Optional | `<secret-key>` |
+| `S3_BUCKET_NAME` | Bucket for mapping and deliverable assets. | Optional | `drone-assets` |
+| `MQTT_BROKER` | MQTT broker hostname. | Optional | `127.0.0.1` |
+| `MQTT_PORT` | MQTT broker port. | Optional | `1883` |
+| `OPCUA_ENDPOINT` | OPC UA endpoint for industrial integrations. | Optional | `opc.tcp://0.0.0.0:4840/freeopcua/server/` |
+| `RASPBERRY_HOST` | Raspberry Pi camera host. | Optional | `raspberrypi.local` |
+| `SSH_KEY_PATH` | SSH key path for Raspberry Pi operations. | Optional | `/run/secrets/id_rsa` |
+| `DRONE_VIDEO_SOURCE_SIM` | Simulated video source URL. | Optional | `udp://127.0.0.1:5600` |
+| `DRONE_VIDEO_USE_SIM` | Use simulated video source. | Optional | `0` |
+| `ROS_DOMAIN_ID` | ROS 2 domain used by the backend and ROS shell. | Optional | `0` |
+| `WAREHOUSE_SIM_MODE` | Enable warehouse simulation behavior. | Optional | `0` |
+| `WAREHOUSE_ROS2_WS` | ROS 2 workspace path. | Optional | `ros2_ws` |
+| `WAREHOUSE_LIVE_MAP_INGEST_TOKEN` | Token for live-map ingest endpoints. | Optional for local dev | `dev-live-map-ingest` |
+| `PHOTOGRAMMETRY_STORAGE_DIR` | Local path for mapping outputs. | Optional | `backend/storage/mapping` |
+| `PHOTOGRAMMETRY_ASSET_SIGNING_SECRET` | Secret for signed mapping asset URLs. | Recommended when serving assets | `<dedicated-secret>` |
+| `OBSERVABILITY_ENABLED` | Enable tracing and metrics integration. | Optional | `true` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint for traces. | Optional | `http://127.0.0.1:4318` |
+| `PROMETHEUS_METRICS_ENABLED` | Enable Prometheus metrics endpoint. | Optional | `true` |
+| `PROMETHEUS_METRICS_PATH` | Prometheus metrics path. | Optional | `/metrics` |
+
+### Frontend Environment Variables
+
+| Variable | Description | Required | Example |
+| --- | --- | --- | --- |
+| `VITE_API_BASE_URL` | API base URL. Leave unset for local Vite proxy and same-origin cookies. | Optional | `http://localhost:8000` |
+| `VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY` | Google Maps browser API key. | Optional | `<google-maps-key>` |
+| `VITE_GOOGLE_MAPS_MAP_ID` | Google Maps map ID. | Optional | `<map-id>` |
+| `VITE_CESIUM_ION_TOKEN` | Cesium Ion token. | Optional | `<cesium-token>` |
+
+## Usage
+
+### Operator Dashboard
+
+Run the local dev stack, then open `http://localhost:5173`.
+
+The router includes pages for:
+
+- Dashboard home and insights
+- Fleet
+- Controlled flight
+- Photogrammetry
+- Field survey
+- Warehouse
+- Animal farm / livestock workflows
+- Private patrol and property patrol
+- Mission timeline
+- Admin
+- Templates and API keys
+- Video analysis
+- Observability
+- Account and settings
+
+### API Exploration
+
+Open Swagger UI at:
+
+```text
+http://localhost:8000/docs
+```
+
+Common backend areas include:
+
+| Area | Example routes |
+| --- | --- |
+| Health | `GET /health`, `GET /healthz` |
+| Auth | `POST /signup`, `POST /login`, `POST /refresh`, `GET /me` |
+| Missions | Routes registered from `backend/modules/missions/api/routes.py` |
+| Telemetry | `POST /telemetry/connect`, `GET /telemetry/status`, `POST /telemetry/manual-control` |
+| Runtime | `GET /runtime/status` |
+| Telemetry WebSocket | `WS /ws/telemetry` |
+| Warehouse | `GET /warehouse/maps`, `POST /warehouse/missions/start`, `GET /warehouse/preflight` |
+| Warehouse live map | `GET /warehouse/live-map/config`, `WS /warehouse/live-map/{flight_id}/stream` |
+| Mapping jobs | `POST /mapping/jobs`, `GET /mapping/jobs`, `POST /mapping/jobs/{job_id}/start` |
+| Video | `POST /video/start`, `GET /video/status`, `GET /video/mjpeg` |
+| Video analysis | `POST /video-analysis/videos`, `POST /video-analysis/videos/{video_id}/analyze` |
+| Fields and geofences | `GET /fields`, `GET /geofences` |
+| Property patrol | `POST /api/property-patrol/route-preview`, `POST /api/property-patrol/missions/start` |
+| Observability | `GET /observability/status`, `GET /observability/links` |
+
+### Example API Requests
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/healthz
+curl http://localhost:8000/observability/status
+curl http://localhost:8000/warehouse/live-map/config
+```
+
+Authenticated routes require browser session cookies or an API flow configured through the auth module.
+
+### Warehouse Simulation Workflow
+
+1. Configure `ROS_DOMAIN_ID`, warehouse environment variables, and ROS 2 shell consistently.
+2. Build and source the ROS workspace if using the bridge:
+
+   ```bash
+   cd ros2_ws
+   colcon build --symlink-install --packages-select drone_gz_bridge
+   source install/setup.bash
+   ```
+
+3. Launch the Gazebo to ROS bridge from the `drone_gz_bridge` package.
+4. Verify topics such as `/warehouse/front/rgbd/points`, `/warehouse/mid360/points`, `/warehouse/imu`, and `/warehouse/drone/odometry`.
+5. Start the backend and frontend.
+6. Use the Warehouse page to run preflight checks, start mapping stack actions, and inspect live-map diagnostics.
+
+### Photogrammetry Workflow
+
+1. Configure Redis and Celery variables.
+2. Configure `WEBODM_*` values or use `WEBODM_MOCK_MODE=1` for local development.
+3. Start a worker for the photogrammetry queue:
+
+   ```bash
+   celery -A backend.entrypoints.workers.celery_app:celery_app worker \
+     --loglevel=INFO \
+     --queues=photogrammetry \
+     --hostname=photogrammetry@%h
+   ```
+
+Warehouse structure extraction also requires Redis plus a worker consuming the
+`warehouse_mapping` queue. Restart that worker after task-module changes. Use
+`GET /readiness` to verify the API can reach the configured Redis broker.
+
+4. Use mapping endpoints or the Photogrammetry dashboard page to create/upload/start jobs.
+
+See `backend/entrypoints/workers/README.md` for worker topology and required production tools.
+
+## Testing
+
+### Backend Tests
+
+```bash
+make backend-tests
+make backend-integration-tests
+```
+
+Direct pytest command:
 
 ```bash
 python -m pytest backend/tests -m "not integration"
 ```
 
-### Frontend
+Backend tests are written with pytest and include coverage for flight profiles, warehouse live maps, observability, local runtime setup, point-cloud parsing, property patrol, and worker tasks.
+
+### Frontend Tests
 
 ```bash
-make frontend-tests    # vitest
-make frontend-e2e      # Playwright (installs Chromium first)
-make frontend-quality  # eslint baseline + arch checks + production build
+make frontend-tests
+make frontend-e2e
 ```
 
-### Full repo checks
+Direct frontend commands:
 
 ```bash
-make check          # backend-quality + frontend biome/tsc checks
-make fix            # auto-fix ruff + biome where possible
-make commit-ready   # fix + check
+cd frontend
+npm run test
+npm run test:e2e
 ```
 
----
+Frontend tests use Vitest, Testing Library, and Playwright.
 
-## Main Workflows
-
-### Warehouse scan mission
-
-1. Open the **Warehouse** page in the dashboard.
-2. Run preflight checks (`GET/POST /warehouse/preflight`).
-3. Start a scan (`POST /warehouse/missions/start`).
-4. The backend creates a mission, runs `WarehouseScanMission`, warms ROS/nvBlox topics when configured, and starts live-map bridges.
-5. The frontend subscribes to mission telemetry and opens the live voxel map WebSocket once a `flight_id` is active.
-
-See `flight_flow.txt` and `backend/modules/warehouse/docs/live-map-validation.md` for the traced call chain and ROS validation commands.
-
-### Live telemetry
-
-1. Authenticate via `/auth/*` (session cookies in the browser).
-2. Connect to `ws://localhost:8000/ws/telemetry` (proxied as `/ws/telemetry` through Vite).
-3. Mission lifecycle events and runtime updates are broadcast through `telemetry_manager`.
-
-### Live 3D mapping
-
-1. ROS bridges publish `PointCloud2` topics (e.g. `/warehouse/front/rgbd/points`).
-2. Backend live-map bridges encode chunks and expose:
-   - `POST /warehouse/live-map/{flight_id}/chunks/{chunk_id}`
-   - `GET /warehouse/live-map/{flight_id}/chunks/{chunk_id}/download`
-   - `WS /warehouse/live-map/{flight_id}/stream`
-3. The frontend `WarehouseLiveVoxelMapViewer` decodes chunks and renders layers in Three.js.
-
-### Video / camera
-
-1. Configure `DRONE_VIDEO_SOURCE_SIM` or hardware source in `backend/.env`.
-2. Start the stream via `POST /video/start`.
-3. View MJPEG at `/video/mjpeg` (used by `useMissionVideo` on mission pages).
-
-### Persistence and replay
-
-- Scan artifacts land under `backend/storage/warehouse-live-map/` and related capture directories.
-- Scanned maps are listed via `GET /warehouse/scanned-maps`.
-- Replay snapshots: `GET /warehouse/scanned-maps/{job_id}/live-map-snapshot`.
-
----
-
-## API Overview
-
-Interactive docs: **http://localhost:8000/docs**
-
-| Area | Prefix / path | Notes |
-|------|---------------|-------|
-| Auth | `/auth/*` | Login, session cookies, OIDC hooks |
-| Missions / tasks | `/tasks/*` | Mission CRUD, preflight, grid preview, commands |
-| Telemetry | `/telemetry/*`, `/runtime/*` | Telemetry control and runtime status |
-| WebSockets | `/ws/telemetry` | Live mission/vehicle events |
-| Warehouse | `/warehouse/*` | Maps, docks, scans, live map, flight control |
-| Live map | `/warehouse/live-map/*` | Chunk ingest, diagnostics, WebSocket stream |
-| Video | `/video/*` | Stream start/stop, MJPEG proxy |
-| Mapping | `/mapping/*` | Photogrammetry jobs and assets |
-| Fields / geofences | `/fields/*`, `/geofences/*` | Field registry and fences |
-| Alerts / settings | `/api/alerts`, `/api/settings` | Operational alerts and runtime settings |
-| Integrations | `/integrations/*`, `/tasks/webhooks/*` | Webhooks and external hooks |
-| Health | `/health`, `/healthz` | Liveness checks |
-
-Admin, fleet, irrigation, livestock, analytics, and patrol-debug routes are also registered in `backend/entrypoints/api/app.py`.
-
----
-
-## Development Notes
-
-### Coding conventions
-
-- **Python 3.11**, formatted and linted with **Ruff**; type-checked with **mypy** baselines (`backend/scripts/`).
-- **Frontend**: TypeScript, ESLint baselines, Vitest for unit tests, Playwright for e2e.
-- Import boundaries between `modules/`, `infrastructure/`, and `entrypoints/` are enforced in CI-style guardrails (`make backend-guardrails`).
-- File-size baselines exist for both backend and frontend to limit module growth.
-
-### Adding a backend module
-
-1. Create a package under `backend/modules/<name>/`.
-2. Expose an `APIRouter` from `api.py`.
-3. Register the router in `backend/entrypoints/api/app.py`.
-4. Add repositories/models under the module; keep SQLAlchemy details out of thin API layers.
-5. Add tests under `backend/tests/`.
-
-### Logs
-
-Runtime logs are written under `backend/storage/logs/` (configurable via `DRONE_RUNTIME_LOG_ROOT`). Check the API process output when running via Honcho or uvicorn.
-
-### ROS / Gazebo topics
-
-- Bridge config: `ros2_ws/src/drone_gz_bridge/config/warehouse_bridge.yaml`
-- Launch files: `ros2_ws/src/drone_gz_bridge/launch/`
-- Set `ROS_DOMAIN_ID` consistently in `backend/.env` and your ROS shell.
-- Verify topics after launching the bridge:
+### Full Quality Checks
 
 ```bash
-ros2 topic list
-ros2 topic hz /warehouse/front/rgbd/points
+make check
+make commit-ready
 ```
 
-- Live-map layer mapping and diagnostics: `backend/modules/warehouse/docs/live-map-validation.md`
+## Development Workflow
 
-### Photogrammetry workers
+Useful commands:
 
-See `backend/entrypoints/workers/README.md` for queue names, required binaries, and WebODM configuration.
+| Command | Purpose |
+| --- | --- |
+| `make start` | Start the local Honcho dev stack. |
+| `make local-dev-no-observability` | Start local dev with observability disabled. |
+| `make warehouse` | Start the warehouse-focused local process set. |
+| `make fix` | Run Ruff fixes/formatting and Biome fixes. |
+| `make check` | Run backend quality checks, frontend Biome check, and TypeScript check. |
+| `make backend-quality` | Run backend lint, typecheck, guardrails, and non-integration tests. |
+| `make backend-guardrails` | Run backend file-size, boundary, mypy, and test checks. |
+| `make frontend-quality` | Run frontend lint baseline, architecture check, and production build. |
+| `make frontend-tests` | Run Vitest. |
+| `make frontend-e2e` | Install Playwright Chromium and run e2e tests. |
+| `make kill-dev` | Stop local Honcho, uvicorn, Redis, and occupied dev ports. |
+| `make reset-dev` | Stop dev processes and clear Vite cache. |
 
----
+Backend conventions:
 
-## Troubleshooting
+- Keep API registration in `backend/entrypoints/api/app.py`.
+- Keep domain features under `backend/modules/<feature>`.
+- Keep external integrations and infrastructure details under `backend/infrastructure`.
+- Use Alembic for schema changes.
+- Respect boundary and file-size guardrails in `backend/scripts`.
 
-| Symptom | Things to check |
-|---------|-----------------|
-| Backend won't start | `DATABASE_URL` reachable? Migrations applied? Port 8000 free? Run `make kill-dev` and retry. |
-| Redis unavailable | Local dev expects `redis-server` on port **6380**. Docker Compose uses **6379**. Align `REDIS_URL`. |
-| Frontend can't reach API | Leave `VITE_API_BASE_URL` unset in local dev. Confirm Vite proxy targets port 8000. |
-| Login works but dashboard fails | Cross-origin cookies — do not set `VITE_API_BASE_URL=http://localhost:8000` during local dev. |
-| PostgreSQL connection errors | Start Postgres (`docker compose up -d postgres`) or fix credentials in `backend/.env`. |
-| ROS / Gazebo topics missing | Bridge running? `ROS_DOMAIN_ID` matches? Gazebo world `iris_warehouse` launched? |
-| Video stream unavailable | `DRONE_VIDEO_USE_SIM=1` and UDP source running? Check `POST /video/start` response and `/video/mjpeg`. |
-| Live map chunks not loading | Preflight / mapping stack status (`/warehouse/mapping-stack/status`). ROS topics publishing? WS auth cookie present? |
-| Celery jobs stuck | Redis up? Start the relevant worker from `Procfile.dev`. Check `CELERY_BROKER_URL`. |
+Frontend conventions:
 
----
+- Add routes in `frontend/src/app/routes/AppRouter.tsx`.
+- Keep feature code under `frontend/src/modules/<feature>`.
+- Use shared API, layout, UI, theme, hook, and utility code from `frontend/src/shared`.
+- Keep tests close to the relevant module when possible.
 
-## Project Status
+## Roadmap
 
-This repository is an **active development** platform. The backend architecture, frontend modules, warehouse live-mapping pipeline, and Docker Compose baseline are in place, but:
+### Completed or Present in the Repository
 
-- Hardware MAVLink, ROS 2, and Gazebo paths need target-environment validation.
-- WebODM, MQTT, OPC UA, and S3 integrations depend on external services.
-- Some domain workflows (irrigation analytics, patrol ML, multi-drone coordination) are partial or experimental.
-- A project license has not been added yet.
+- Modular FastAPI app with registered domain routers.
+- React/Vite dashboard with protected routes and feature modules.
+- PostgreSQL/PostGIS persistence with Alembic migrations.
+- Redis/Celery worker setup for asynchronous jobs.
+- Warehouse maps, preflight, scan targets, live-map endpoints, and frontend warehouse modules.
+- Mission launch ownership and preflight paths: [docs/mission_launch_architecture.md](docs/mission_launch_architecture.md).
+- Property patrol API and frontend route.
+- Observability documentation and optional Grafana/Prometheus/Tempo Compose stack.
+- Backend and frontend test suites plus quality guardrails.
 
-Treat flight and mapping features as **experimental** until validated in simulation and on your specific airframe.
+### In Progress or Environment-Dependent
 
----
+- Hardware MAVLink command paths and vehicle-specific validation.
+- ROS 2 / Gazebo warehouse simulation workflow.
+- nvBlox and live 3D warehouse mapping validation.
+- Photogrammetry production worker toolchain and WebODM integration.
+- Video AI model setup and production inference workflow.
+- MQTT, OPC UA, S3/MinIO, and external webhook integrations.
 
-## License and Contribution
+### Future Ideas
 
-**License:** not specified.
+- Add CI workflows for backend and frontend quality gates.
+- Add a root license and clarify usage rights.
+- Add production deployment documentation.
+- Add architecture decision records for module boundaries and runtime patterns.
+- Add screenshots or a short demo video for the operator dashboard.
+- Add seed data or a scripted demo scenario for reviewers.
 
-Contributions are welcome. Run `make commit-ready` before opening a pull request. Keep changes focused, match existing module boundaries, and add tests when behavior changes.
+## Security and Safety Notes
 
----
+- Do not commit real secrets, API keys, JWT secrets, S3 credentials, WebODM tokens, SSH keys, or vehicle credentials.
+- Replace all development defaults before sharing or deploying the app.
+- Use HTTPS, secure cookies, restricted CORS, strong JWT secrets, and private secret storage in production.
+- Treat drone, robotics, video AI, automation, and mapping workflows as safety-critical.
+- Validate every command path in simulation before connecting real hardware.
+- Real-world drone operation requires competent supervision, failsafe planning, airspace awareness, and compliance with local aviation and privacy regulations.
+- Sensor-triggered or AI-assisted workflows should remain operator-reviewed unless specifically validated for autonomous operation.
 
-## Security Notes
+## Contributing
 
-- Replace all development secrets before deployment.
-- Use HTTPS and secure cookies in production (`COOKIE_SECURE=1`).
-- Validate flight safety in simulation before real hardware flights.
-- Review CORS, auth, and API-key settings before exposing the API publicly.
+Contributions are welcome.
+
+1. Create a focused branch.
+2. Install backend and frontend dependencies.
+3. Make a small, reviewable change.
+4. Add or update tests when behavior changes.
+5. Run the relevant quality checks:
+
+   ```bash
+   make commit-ready
+   ```
+
+6. Open a pull request with a clear summary, test evidence, and any setup notes.
+
+Please keep module boundaries intact and avoid mixing unrelated refactors with feature changes.
+
+## License
+
+No license has been specified yet.
+
+The ROS 2 package metadata under `ros2_ws/src/drone_gz_bridge/package.xml` declares `MIT`, but there is no repository-level license file. If this project is intended to be source-available with commercial restrictions, add a proper source-available or non-commercial license instead of describing it as open source.
+
+## Contact
+
+Maintainer contact is not documented in the root repository metadata yet.
+
+- GitHub: `TODO: add GitHub profile or organization link`
+- Email: `TODO: add public contact email if desired`

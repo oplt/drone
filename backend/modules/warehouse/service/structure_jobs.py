@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,8 @@ EXTRACTION_TASK_NAME = "warehouse_mapping.extract_structure"
 # In-process extraction job state keyed by warehouse_map_id. Survives API
 # polling between enqueue (persist_capture or UI) and Celery completion.
 _EXTRACTION_STATE: dict[int, dict[str, Any]] = {}
+_EXTRACTION_CELERY_PROBE_AT: dict[int, float] = {}
+_WORKER_READY_CACHE: tuple[float, bool, str | None] | None = None
 
 
 def record_extraction_queued(
@@ -81,12 +84,26 @@ def record_extraction_failed(*, warehouse_map_id: int, error_message: str) -> No
     state["finished_at"] = datetime.now(UTC).isoformat()
 
 
+def _celery_probe_interval_s() -> float:
+    from backend.core.config.runtime import settings
+
+    return max(
+        0.5,
+        float(getattr(settings, "structure_extraction_celery_probe_interval_s", 3.0)),
+    )
+
+
 def get_extraction_state(warehouse_map_id: int) -> dict[str, Any] | None:
     state = _EXTRACTION_STATE.get(int(warehouse_map_id))
     if state is None:
         return None
     task_id = state.get("task_id")
     if not task_id:
+        return dict(state)
+    raw_status = str(state.get("status") or "queued")
+    now = time.monotonic()
+    last_probe = _EXTRACTION_CELERY_PROBE_AT.get(int(warehouse_map_id), 0.0)
+    if raw_status not in {"queued", "running"} or (now - last_probe) < _celery_probe_interval_s():
         return dict(state)
     try:
         from celery.result import AsyncResult
@@ -107,19 +124,35 @@ def get_extraction_state(warehouse_map_id: int) -> dict[str, Any] | None:
                 "status": "failed",
                 "error_message": str(result.result or state.get("error_message") or "failed"),
             }
+        _EXTRACTION_CELERY_PROBE_AT[int(warehouse_map_id)] = now
     except Exception:
         logger.debug("structure_extraction_status_probe_failed", exc_info=True)
     _EXTRACTION_STATE[int(warehouse_map_id)] = state
     return dict(state)
 
 
-def warehouse_mapping_worker_ready() -> tuple[bool, str | None]:
+def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | None]:
     """Return whether a warehouse-mapping worker has the extract task registered."""
+    global _WORKER_READY_CACHE
+    from backend.core.config.runtime import settings
+
+    ttl = max(1.0, float(getattr(settings, "warehouse_mapping_worker_probe_cache_ttl_s", 20.0)))
+    now = time.monotonic()
+    if not force and _WORKER_READY_CACHE is not None:
+        cached_at, ready, detail = _WORKER_READY_CACHE
+        if (now - cached_at) < ttl:
+            return ready, detail
+
+    def _finish(ready: bool, detail: str | None) -> tuple[bool, str | None]:
+        global _WORKER_READY_CACHE
+        _WORKER_READY_CACHE = (now, ready, detail)
+        return ready, detail
+
     try:
         from backend.entrypoints.workers.celery_app import celery_app
 
         if EXTRACTION_TASK_NAME not in celery_app.tasks:
-            return (
+            return _finish(
                 False,
                 "Structure extraction task is not registered in this API process. "
                 "Restart the dev stack with `make warehouse`.",
@@ -129,14 +162,12 @@ def warehouse_mapping_worker_ready() -> tuple[bool, str | None]:
         registered_by_worker = inspect.registered() or {}
     except Exception:
         logger.debug("warehouse_mapping_worker_probe_failed", exc_info=True)
-        return False, "Could not reach Celery workers."
+        return _finish(False, "Could not reach Celery workers.")
     if not queues_by_worker:
-        return (
+        return _finish(
             False,
             "No Celery workers are running. Start `warehouse_mapping_worker` via `make warehouse`.",
         )
-
-    from backend.core.config.runtime import settings
 
     queue_name = settings.celery_warehouse_mapping_queue
     workers_on_queue: list[str] = []
@@ -150,18 +181,18 @@ def warehouse_mapping_worker_ready() -> tuple[bool, str | None]:
             workers_missing_task.append(worker_name)
 
     if not workers_on_queue:
-        return (
+        return _finish(
             False,
             f"No worker is consuming the `{queue_name}` queue. "
             "Start `warehouse_mapping_worker` via `make warehouse`.",
         )
     if workers_missing_task:
-        return (
+        return _finish(
             False,
             "Warehouse mapping worker is running but has not loaded "
             f"`{EXTRACTION_TASK_NAME}`. Restart with `make warehouse` to pick up new code.",
         )
-    return True, None
+    return _finish(True, None)
 
 
 def _write_summary_asset(client_flight_id: str, summary: dict[str, Any]) -> Path | None:
@@ -318,10 +349,20 @@ def _attach_manifest_hints(result: StructureResult, client_flight_id: str) -> No
         return
     result.summary["map_quality"] = {
         "manifest_status": manifest.manifest_status,
+        "map_quality": manifest.map_quality,
+        "default_view_layer": manifest.default_view_layer,
+        "rgbd_cloud_available": manifest.rgbd_cloud_available,
+        "rgbd_has_rgb": manifest.rgbd_has_rgb,
+        "diagnostic_nvblox_layers": list(manifest.diagnostic_nvblox_layers),
         "nvblox_available": bool(manifest.nvblox_available),
         "missing_topics": list(manifest.missing_topics or []),
         "chunk_counts": dict(manifest.chunk_counts or {}),
         "point_counts": dict(getattr(manifest, "point_counts", {}) or {}),
+        "source_quality": dict(getattr(manifest, "source_quality", {}) or {}),
+        "tf_degraded": bool(getattr(manifest, "tf_degraded", False)),
+        "tf_jump_back_count": int(getattr(manifest, "tf_jump_back_count", 0) or 0),
+        "tf_old_data_count": int(getattr(manifest, "tf_old_data_count", 0) or 0),
+        "nvblox_restart_count": int(getattr(manifest, "nvblox_restart_count", 0) or 0),
     }
     clearance = result.summary.get("clearance")
     if isinstance(clearance, dict) and not manifest.nvblox_available:
@@ -356,10 +397,27 @@ def ensure_structure_quality_summary(
     aisle_count = int(counts.get("aisles") or 0)
     rejected = int(counts.get("rejected_clearance") or rejected_clearance or 0)
     candidate_count = target_count + rejected
-    rejection_ratio = (float(rejected) / float(candidate_count)) if candidate_count > 0 else 0.0
-    targets_per_rack = (float(target_count) / float(rack_count)) if rack_count > 0 else float(target_count)
-    chunk_counts = map_quality.get("chunk_counts") if isinstance(map_quality.get("chunk_counts"), dict) else {}
-    point_counts = map_quality.get("point_counts") if isinstance(map_quality.get("point_counts"), dict) else {}
+    rejection_ratio = (
+        float(rejected) / float(candidate_count) if candidate_count > 0 else 0.0
+    )
+    targets_per_rack = (
+        float(target_count) / float(rack_count) if rack_count > 0 else float(target_count)
+    )
+    chunk_counts = (
+        map_quality.get("chunk_counts")
+        if isinstance(map_quality.get("chunk_counts"), dict)
+        else {}
+    )
+    point_counts = (
+        map_quality.get("point_counts")
+        if isinstance(map_quality.get("point_counts"), dict)
+        else {}
+    )
+    source_quality = (
+        map_quality.get("source_quality")
+        if isinstance(map_quality.get("source_quality"), dict)
+        else {}
+    )
     clearance_source = str(clearance.get("source") or "unknown")
 
     reasons: list[str] = []
@@ -375,10 +433,23 @@ def ensure_structure_quality_summary(
         reasons.append("missing_occupancy_grid")
     if 0 < int(point_counts.get("nvblox_esdf") or 0) < 5_000:
         reasons.append("weak_esdf")
+    esdf_quality = source_quality.get("nvblox_esdf") if isinstance(source_quality, dict) else None
+    if isinstance(esdf_quality, dict):
+        try:
+            esdf_ppm2 = float(esdf_quality.get("points_per_m2") or 0.0)
+        except (TypeError, ValueError):
+            esdf_ppm2 = 0.0
+        if 0.0 < esdf_ppm2 < 15.0:
+            reasons.append("weak_esdf")
+    if bool(map_quality.get("tf_degraded")) or int(map_quality.get("tf_jump_back_count") or 0) >= 3:
+        reasons.append("tf_instability")
     missing_topics = map_quality.get("missing_topics")
-    if isinstance(missing_topics, list) and any("static_esdf" in str(topic) for topic in missing_topics):
-        if int(chunk_counts.get("nvblox_esdf") or 0) <= 0:
-            reasons.append("missing_esdf_topic")
+    if (
+        isinstance(missing_topics, list)
+        and any("static_esdf" in str(topic) for topic in missing_topics)
+        and int(chunk_counts.get("nvblox_esdf") or 0) <= 0
+    ):
+        reasons.append("missing_esdf_topic")
 
     unique_reasons = sorted(set(reasons))
     confidence = 1.0
@@ -390,6 +461,8 @@ def ensure_structure_quality_summary(
         confidence -= 0.25
     if "weak_esdf" in unique_reasons:
         confidence -= 0.10
+    if "tf_instability" in unique_reasons:
+        confidence -= 0.20
     if "insufficient_detected_structure" in unique_reasons:
         confidence -= 0.50
     confidence = max(0.0, min(1.0, confidence))
@@ -406,6 +479,8 @@ def ensure_structure_quality_summary(
         "rejection_ratio": round(rejection_ratio, 3),
         "targets_per_rack": round(targets_per_rack, 3) if rack_count > 0 else None,
         "clearance_source": clearance_source,
+        "tf_degraded": bool(map_quality.get("tf_degraded")),
+        "tf_jump_back_count": int(map_quality.get("tf_jump_back_count") or 0),
     }
     return summary
 

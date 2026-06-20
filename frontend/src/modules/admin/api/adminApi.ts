@@ -38,7 +38,7 @@ export async function updateUserRole(
 export async function fetchAdminOrganizations<T = unknown>(
   token?: string | null,
 ): Promise<T> {
-  return httpRequest<T>("/admin/organizations", { token });
+  return httpRequest<T>("/admin/organizations?page_size=100", { token });
 }
 
 export async function fetchAdminMappingJobs<T = unknown>(

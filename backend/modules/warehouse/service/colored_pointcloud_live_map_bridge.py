@@ -7,13 +7,14 @@ import logging
 import math
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import numpy as np
 
 from backend.modules.warehouse.service.live_map_config import render_priority_for_source
 from backend.modules.warehouse.service.map_source_config import (
+    WAREHOUSE_LIVE_MAP_SOURCES,
     LiveMapSourceConfig,
     chunk_id_for_source,
 )
@@ -221,6 +222,18 @@ def _stamp_from_msg(msg: Any) -> str | None:
     return f"{int(sec)}.{int(nanosec):09d}"
 
 
+def _stamp_age_ms(stamp: Any, *, now_ns: int) -> float | None:
+    if stamp is None:
+        return None
+    try:
+        stamp_ns = int(stamp.sec) * 1_000_000_000 + int(stamp.nanosec)
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if stamp_ns <= 0 or now_ns < stamp_ns:
+        return None
+    return round((now_ns - stamp_ns) / 1_000_000.0, 3)
+
+
 async def _store_and_publish_colored_chunk(
     *,
     flight_id: str,
@@ -231,6 +244,9 @@ async def _store_and_publish_colored_chunk(
     has_rgb: bool,
     frame_id: str,
     stamp: str | None = None,
+    fields: tuple[str, ...] = (),
+    cloud_age_ms: float | None = None,
+    transform_age_ms: float | None = None,
 ) -> None:
     from backend.modules.warehouse.service.live_map_storage import (
         warehouse_live_map_chunk_storage,
@@ -315,6 +331,10 @@ async def _store_and_publish_colored_chunk(
         "content_type": content_type,
         "priority": priority,
         "stamp": stamp,
+        "fields": list(fields),
+        "source_topic": source.topic,
+        "cloud_age_ms": cloud_age_ms,
+        "transform_age_ms": transform_age_ms,
     }
     await asyncio.to_thread(
         warehouse_live_map_chunk_storage.save_chunk_metadata,
@@ -359,6 +379,10 @@ async def _store_and_publish_colored_chunk(
                     "encoding": encoding,
                     "frame_id": frame_id,
                     "stamp": stamp,
+                    "fields": list(fields),
+                    "source_topic": source.topic,
+                    "cloud_age_ms": cloud_age_ms,
+                    "transform_age_ms": transform_age_ms,
                     "priority": priority,
                 }
             ],
@@ -409,9 +433,9 @@ class _ColoredPointCloudLiveMapNode:
         self.flight_id = flight_id
         self.event_loop = event_loop
         self.source_runtimes = {
-            source_id: _SourceRuntime(config=config)
-            for source_id, config in sources.items()
+            source_id: _SourceRuntime(config=config) for source_id, config in sources.items()
         }
+        self._warned_rgbd_without_color = False
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
@@ -651,6 +675,22 @@ class _ColoredPointCloudLiveMapNode:
             rgb = None
             has_rgb = False
 
+        output_config = config
+        if config.source_id == "rgbd_colored" and not has_rgb:
+            output_config = replace(
+                WAREHOUSE_LIVE_MAP_SOURCES["rgbd_xyz_uncolored"],
+                topic=config.topic,
+                global_frame=config.global_frame,
+                max_points=config.max_points,
+                min_publish_interval_s=config.min_publish_interval_s,
+            )
+            if not self._warned_rgbd_without_color:
+                self.node.get_logger().warning(
+                    "RGB-D PointCloud2 stream has geometry but no RGB/RGBA fields; "
+                    "using RGB-D XYZ/depth cloud label instead of RGB-D Colored Cloud."
+                )
+                self._warned_rgbd_without_color = True
+
         source_frame = (getattr(getattr(msg, "header", None), "frame_id", None) or "").strip()
         transform = self._lookup_transform(msg, config.global_frame)
         if source_frame and source_frame != config.global_frame and transform is None:
@@ -661,6 +701,14 @@ class _ColoredPointCloudLiveMapNode:
                 source_frame,
             )
             return None
+
+        now_ns = int(self.node.get_clock().now().nanoseconds)
+        message_stamp = getattr(getattr(msg, "header", None), "stamp", None)
+        transform_stamp = getattr(getattr(transform, "header", None), "stamp", None)
+        cloud_age_ms = _stamp_age_ms(message_stamp, now_ns=now_ns)
+        transform_age_ms = (
+            _stamp_age_ms(transform_stamp, now_ns=now_ns) if transform is not None else 0.0
+        )
 
         xyz = self._transform_xyz(xyz, transform)
         finite = _finite_xyz_rows(xyz)
@@ -682,7 +730,7 @@ class _ColoredPointCloudLiveMapNode:
             {"topic": config.topic, "stage": "prepare"},
         )
 
-        content_digest = _content_digest(config.source_id, has_rgb, xyz, rgb)
+        content_digest = _content_digest(output_config.source_id, has_rgb, xyz, rgb)
         with runtime.lock:
             if runtime.last_content_digest == content_digest:
                 runtime.duplicate_chunks_skipped += 1
@@ -693,17 +741,20 @@ class _ColoredPointCloudLiveMapNode:
 
         metric_add(
             "mapping_chunks_generated",
-            attrs={"source": config.source_id, "layer": config.layer},
+            attrs={"source": output_config.source_id, "layer": output_config.layer},
         )
         return {
             "flight_id": self.flight_id,
-            "source": config,
+            "source": output_config,
             "sequence": sequence,
             "xyz": xyz,
             "rgb": rgb,
             "has_rgb": has_rgb,
             "frame_id": config.global_frame,
             "stamp": _stamp_from_msg(msg),
+            "fields": parsed.fields,
+            "cloud_age_ms": cloud_age_ms,
+            "transform_age_ms": transform_age_ms,
         }
 
 

@@ -296,6 +296,7 @@ class RuntimeSettings(BaseSettings):
 
     telem_log_interval_sec: float = 2.0
     telemetry_topic: str = "ardupilot/telemetry"
+    mission_telemetry_startup_grace_s: float = Field(default=1.0, ge=0.0)
 
     drone_conn: str
     drone_conn_mavproxy: str
@@ -604,7 +605,12 @@ class RuntimeSettings(BaseSettings):
     warehouse_preflight_warm_rgbd: bool = True
     warehouse_rgbd_readiness_cache_ttl_s: float = 30.0
     warehouse_preflight_report_cache_ttl_s: float = 4.0
+    warehouse_preflight_snapshot_cache_ttl_s: float = 4.0
+    warehouse_mapping_worker_probe_cache_ttl_s: float = 20.0
+    structure_extraction_celery_probe_interval_s: float = 3.0
     warehouse_live_map_topic_probe_cache_ttl_s: float = 15.0
+    warehouse_live_map_diagnostics_cache_ttl_s: float = 45.0
+    warehouse_live_map_snapshot_cache_ttl_s: float = 120.0
     warehouse_live_map_clock_stability_s: float = 4.0
     warehouse_mapping_stack_preflight_clock_s: float = 4.0
     warehouse_nvblox_tf_restart_jump_threshold: int = 5
@@ -624,6 +630,8 @@ class RuntimeSettings(BaseSettings):
     warehouse_structure_min_rack_length_m: float = 0.6
     warehouse_structure_bin_pitch_m: float = 0.9
     warehouse_structure_shelf_min_spacing_m: float = 0.3
+    warehouse_structure_max_shelf_levels: int = 6
+    warehouse_structure_max_bins_per_rack_face: int = 24
     warehouse_structure_standoff_m: float = 1.2
     warehouse_structure_drone_radius_m: float = 0.35
     warehouse_structure_clearance_margin_m: float = 0.25

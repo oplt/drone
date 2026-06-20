@@ -64,7 +64,11 @@ export type LlmTaskName =
   | "alert_explanation"
   | "video_summary"
   | "telemetry_anomaly"
-  | "offline_report";
+  | "offline_report"
+  | "warehouse_scan"
+  | "warehouse_inspection"
+  | "field_survey"
+  | "livestock";
 
 export type LlmSettingsPayload = {
   active_provider: LlmProviderId;

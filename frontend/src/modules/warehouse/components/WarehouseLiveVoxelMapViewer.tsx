@@ -14,8 +14,10 @@ import {
   Tab,
   Tabs,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import { WarehouseCoordinateSetupPanel } from "./WarehouseCoordinateSetupPanel";
+import { WarehouseLayerBudgetSlider } from "./WarehouseLayerBudgetSlider";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
 import { useLiveMapChunkCache, chunkCacheKey } from "../hooks/useLiveMapChunkCache";
 import {
@@ -79,6 +81,7 @@ export function WarehouseLiveVoxelMapViewer({
   onMapDetailTabChange,
   onCoordinateSetupError,
   coordinateSetupToken = null,
+  replayLoading = false,
 }: {
   state: WarehouseLiveVoxelMapState;
   flightId?: string | null;
@@ -99,6 +102,7 @@ export function WarehouseLiveVoxelMapViewer({
   onMapDetailTabChange?: (tab: "layers" | "coordinateSetup") => void;
   onCoordinateSetupError?: (message: string) => void;
   coordinateSetupToken?: string | null;
+  replayLoading?: boolean;
 }) {
   const [layers, setLayers] = useState<LiveVoxelLayers>(DEFAULT_LAYER_VISIBILITY);
   const [pointSize, setPointSize] = useState(0.035);
@@ -107,16 +111,27 @@ export function WarehouseLiveVoxelMapViewer({
     DEFAULT_LAYER_POINT_BUDGET,
   );
   const [liveMapConfig, setLiveMapConfig] = useState(DEFAULT_LIVE_MAP_CONFIG);
+  const [configError, setConfigError] = useState<string | null>(null);
   const layerDefaultsFlightRef = useRef<string | null>(null);
 
-  const structure = useWarehouseStructure(warehouseMapId, coordinateSetupToken);
+  const structure = useWarehouseStructure(
+    mapDetailTab === "coordinateSetup" ? warehouseMapId : null,
+    coordinateSetupToken,
+  );
 
   useEffect(() => {
     if (!state.token) return;
     void fetchWarehouseLiveMapConfig(state.token)
-      .then((payload) => setLiveMapConfig(mergeLiveMapConfig(payload)))
-      .catch(() => {
-        /* keep frontend defaults */
+      .then((payload) => {
+        setLiveMapConfig(mergeLiveMapConfig(payload));
+        setConfigError(null);
+      })
+      .catch((error: unknown) => {
+        setConfigError(
+          error instanceof Error
+            ? error.message
+            : "Live-map configuration is unavailable.",
+        );
       });
   }, [state.token]);
 
@@ -232,6 +247,11 @@ export function WarehouseLiveVoxelMapViewer({
 
   return (
     <Stack spacing={1.25}>
+      {configError ? (
+        <Alert severity="warning">
+          Live-map configuration could not be loaded. Safe display defaults are active. {configError}
+        </Alert>
+      ) : null}
       {rawLidarOnly && (
         <Alert severity="warning">
           This saved map contains raw Mid360 LiDAR only. RGB-D or nvBlox colored
@@ -361,9 +381,30 @@ export function WarehouseLiveVoxelMapViewer({
             </Alert>
           </Box>
         ) : null}
+        {replayLoading ? (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "rgba(0,0,0,0.45)",
+              zIndex: 3,
+              pointerEvents: "none",
+            }}
+          >
+            <Stack spacing={0.5} alignItems="center">
+              <CircularProgress size={28} sx={{ color: "common.white" }} />
+              <Typography variant="caption" sx={{ color: "common.white" }}>
+                Loading scan replay from disk…
+              </Typography>
+            </Stack>
+          </Box>
+        ) : null}
         {["empty", "connecting", "reconnecting", "stale", "failed"].includes(
           state.connectionState,
-        ) && <WarehouseLiveVoxelOverlay state={state} />}
+        ) && !replayLoading && <WarehouseLiveVoxelOverlay state={state} />}
       </Box>
 
       <WarehouseLiveVoxelHealthChips state={state} />
@@ -438,23 +479,12 @@ export function WarehouseLiveVoxelMapViewer({
               Max points per layer
             </Typography>
             {MAP_INSPECTION_LAYER_KEYS.map((key) => (
-              <Stack key={key} direction="row" spacing={1} alignItems="center">
-                <Typography variant="caption" sx={{ minWidth: 160 }}>
-                  {LIVE_MAP_LAYER_LABELS[key]}
-                </Typography>
-                <Slider
-                  size="small"
-                  sx={{ flex: 1 }}
-                  min={10_000}
-                  max={250_000}
-                  step={10_000}
-                  value={Math.min(layerPointBudget[key], 250_000)}
-                  onChange={(_event, value) => updateBudget(key, Number(value))}
-                />
-                <Typography variant="caption" sx={{ minWidth: 72 }}>
-                  {(layerPointBudget[key] / 1000).toFixed(0)}k
-                </Typography>
-              </Stack>
+              <WarehouseLayerBudgetSlider
+                key={key}
+                label={LIVE_MAP_LAYER_LABELS[key]}
+                value={layerPointBudget[key]}
+                onCommit={(value) => updateBudget(key, value)}
+              />
             ))}
           </Stack>
         </>
@@ -467,6 +497,7 @@ export function WarehouseLiveVoxelMapViewer({
           structure={structure.structure}
           extractionStatus={structure.extractionStatus}
           autoDetecting={structure.extracting}
+          structureLoading={structure.loading}
           structureError={structure.error}
           onAutoDetect={structure.extract}
         />

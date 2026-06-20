@@ -11,12 +11,13 @@ from typing import Any
 
 from backend.modules.warehouse.service.live_map_config import require_rgb_for_save
 from backend.modules.warehouse.service.live_map_storage import warehouse_live_map_chunk_storage
+from backend.modules.warehouse.service.map_source_config import WAREHOUSE_LIVE_MAP_SOURCES
 
 logger = logging.getLogger(__name__)
 
 _MANIFEST_NAME = "live_map_manifest.json"
 _CHUNK_ID_RE = re.compile(
-    r"^(rgbd|rgbd_colored|mid360|mid360_raw|nvblox_color|nvblox_esdf|"
+    r"^(rgbd|rgbd_colored|rgbd_xyz|mid360|mid360_raw|nvblox_color|nvblox_esdf|"
     r"nvblox_tsdf|nvblox_mesh|nvblox_occupancy)_",
     re.IGNORECASE,
 )
@@ -29,6 +30,7 @@ class LiveMapFlightManifest:
     chunk_counts: dict[str, int] = field(default_factory=dict)
     point_counts: dict[str, int] = field(default_factory=dict)
     rgbd_colored_available: bool = False
+    rgbd_cloud_available: bool = False
     rgbd_has_rgb: bool = False
     nvblox_available: bool = False
     raw_lidar_only: bool = False
@@ -37,6 +39,13 @@ class LiveMapFlightManifest:
     quality_evidence: bool = False
     missing_topics: list[str] = field(default_factory=list)
     map_quality: str = "unknown"
+    default_view_layer: str | None = None
+    diagnostic_nvblox_layers: list[str] = field(default_factory=list)
+    source_quality: dict[str, dict[str, Any]] = field(default_factory=dict)
+    tf_degraded: bool = False
+    tf_jump_back_count: int = 0
+    tf_old_data_count: int = 0
+    nvblox_restart_count: int = 0
     diagnostics_phase: str = "pre_finalize"
     manifest_status: str = "complete"
     missing_chunks: list[str] = field(default_factory=list)
@@ -49,6 +58,7 @@ class LiveMapFlightManifest:
             "chunk_counts": dict(self.chunk_counts),
             "point_counts": dict(self.point_counts),
             "rgbd_colored_available": self.rgbd_colored_available,
+            "rgbd_cloud_available": self.rgbd_cloud_available,
             "rgbd_has_rgb": self.rgbd_has_rgb,
             "nvblox_available": self.nvblox_available,
             "raw_lidar_only": self.raw_lidar_only,
@@ -57,6 +67,13 @@ class LiveMapFlightManifest:
             "quality_evidence": self.quality_evidence,
             "missing_topics": list(self.missing_topics),
             "map_quality": self.map_quality,
+            "default_view_layer": self.default_view_layer,
+            "diagnostic_nvblox_layers": list(self.diagnostic_nvblox_layers),
+            "source_quality": dict(self.source_quality),
+            "tf_degraded": bool(self.tf_degraded),
+            "tf_jump_back_count": int(self.tf_jump_back_count),
+            "tf_old_data_count": int(self.tf_old_data_count),
+            "nvblox_restart_count": int(self.nvblox_restart_count),
             "diagnostics_phase": self.diagnostics_phase,
             "manifest_status": self.manifest_status,
             "missing_chunks": list(self.missing_chunks),
@@ -86,8 +103,20 @@ def _safe_str_list(value: Any) -> list[str]:
     return [str(item) for item in value if item is not None]
 
 
+def _safe_nested_dict(value: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for key, raw in value.items():
+        if isinstance(raw, dict):
+            result[str(key)] = dict(raw)
+    return result
+
+
 def _infer_source_from_chunk_id(chunk_id: str) -> str:
     lower = chunk_id.lower()
+    if lower.startswith("rgbd_xyz_"):
+        return "rgbd_xyz_uncolored"
     if lower.startswith(("rgbd_colored_", "rgbd_")):
         return "rgbd_colored"
     if lower.startswith(("mid360_raw_", "mid360_")):
@@ -151,6 +180,7 @@ def build_manifest_from_flight_dir(
     safe_flight = str(flight_id or "").strip()
     chunk_counts: dict[str, int] = {}
     point_counts: dict[str, int] = {}
+    bbox_by_source: dict[str, list[float]] = {}
     seen_ids: set[str] = set()
     rgbd_has_rgb = False
 
@@ -159,62 +189,164 @@ def build_manifest_from_flight_dir(
         if not chunk_id or chunk_id in seen_ids:
             continue
         seen_ids.add(chunk_id)
-        sidecar = warehouse_live_map_chunk_storage.load_chunk_metadata(
-            flight_id=safe_flight,
-            chunk_id=chunk_id,
-        ) or {}
+        sidecar = (
+            warehouse_live_map_chunk_storage.load_chunk_metadata(
+                flight_id=safe_flight,
+                chunk_id=chunk_id,
+            )
+            or {}
+        )
         source = str(sidecar.get("source") or _infer_source_from_chunk_id(chunk_id))
+        if source == "rgbd_colored" and not bool(sidecar.get("has_rgb")):
+            # Normalize legacy chunks whose source name claimed color despite XYZ-only data.
+            source = "rgbd_xyz_uncolored"
         chunk_counts[source] = chunk_counts.get(source, 0) + 1
         points = _safe_int(sidecar.get("point_count"), 0)
         if points > 0:
             point_counts[source] = point_counts.get(source, 0) + points
+        bbox = sidecar.get("bbox_local_m")
+        if isinstance(bbox, list) and len(bbox) == 6:
+            try:
+                values = [float(v) for v in bbox]
+            except (TypeError, ValueError):
+                values = []
+            if values and all(v == v for v in values):
+                current = bbox_by_source.get(source)
+                if current is None:
+                    bbox_by_source[source] = values
+                else:
+                    bbox_by_source[source] = [
+                        min(current[0], values[0]),
+                        min(current[1], values[1]),
+                        min(current[2], values[2]),
+                        max(current[3], values[3]),
+                        max(current[4], values[4]),
+                        max(current[5], values[5]),
+                    ]
         if source == "rgbd_colored" and bool(sidecar.get("has_rgb")):
             rgbd_has_rgb = True
 
-    rgbd_count = chunk_counts.get("rgbd_colored", 0)
-    nvblox_count = sum(
+    rgbd_colored_count = chunk_counts.get("rgbd_colored", 0)
+    rgbd_xyz_count = chunk_counts.get("rgbd_xyz_uncolored", 0)
+    nvblox_product_count = sum(
         chunk_counts.get(key, 0)
         for key in (
-            "nvblox_color",
             "nvblox_esdf",
-            "nvblox_tsdf",
             "nvblox_mesh",
             "nvblox_occupancy",
         )
     )
+    diagnostic_nvblox_layers = [
+        key for key in ("nvblox_color", "nvblox_tsdf") if chunk_counts.get(key, 0) > 0
+    ]
+    nvblox_count = nvblox_product_count + sum(
+        chunk_counts.get(key, 0) for key in diagnostic_nvblox_layers
+    )
     raw_count = chunk_counts.get("mid360_raw", 0)
-    colored_available = rgbd_count > 0 or nvblox_count > 0
-    raw_only = raw_count > 0 and not colored_available
+    rgbd_cloud_available = rgbd_colored_count > 0 or rgbd_xyz_count > 0
+    user_map_available = rgbd_cloud_available or nvblox_product_count > 0
+    raw_only = raw_count > 0 and not user_map_available
 
-    if colored_available and nvblox_count > 0:
-        quality = "colored_nvblox"
-    elif rgbd_count > 0:
-        quality = "colored_rgbd"
+    if rgbd_colored_count > 0:
+        quality = "rgbd_colored"
+        default_view_layer = "rgbd_colored"
+    elif rgbd_xyz_count > 0:
+        quality = "rgbd_xyz_uncolored"
+        default_view_layer = "rgbd_xyz_uncolored"
+    elif chunk_counts.get("nvblox_esdf", 0) > 0:
+        quality = "nvblox_esdf"
+        default_view_layer = "nvblox_esdf"
+    elif chunk_counts.get("nvblox_mesh", 0) > 0:
+        quality = "nvblox_mesh"
+        default_view_layer = "nvblox_mesh"
     elif raw_only:
-        quality = "raw_lidar_only"
+        quality = "raw_lidar"
+        default_view_layer = "mid360_raw"
     else:
         quality = "empty"
+        default_view_layer = None
 
     if require_rgb_for_save() and raw_only:
         quality = "degraded_raw_only"
 
     localization_quality = "ok" if localization_ok else "degraded"
-    quality_evidence = colored_available and (rgbd_count == 0 or rgbd_has_rgb or nvblox_count > 0)
+    quality_evidence = user_map_available
+    source_quality: dict[str, dict[str, Any]] = {}
+    for source, bbox in bbox_by_source.items():
+        dx = max(0.0, float(bbox[3]) - float(bbox[0]))
+        dy = max(0.0, float(bbox[4]) - float(bbox[1]))
+        dz = max(0.0, float(bbox[5]) - float(bbox[2]))
+        floor_area = dx * dy
+        source_quality[source] = {
+            "bbox_local_m": [round(float(v), 3) for v in bbox],
+            "bbox_volume_m3": round(dx * dy * dz, 3),
+            "floor_area_m2": round(floor_area, 3),
+            "points_per_m2": round(float(point_counts.get(source, 0)) / floor_area, 3)
+            if floor_area > 0
+            else 0.0,
+        }
+
+    captured_topics = {
+        WAREHOUSE_LIVE_MAP_SOURCES[source].topic
+        for source, count in chunk_counts.items()
+        if count > 0 and source in WAREHOUSE_LIVE_MAP_SOURCES
+    }
+    captured_topics.update(
+        {
+            "/nvblox_node/static_map_slice"
+            for source, count in chunk_counts.items()
+            if source == "nvblox_occupancy" and count > 0
+        }
+    )
+    reconciled_missing_topics = [
+        topic for topic in list(missing_topics or []) if topic not in captured_topics
+    ]
+
+    tf_degraded = False
+    tf_jump_back_count = 0
+    tf_old_data_count = 0
+    nvblox_restart_count = 0
+    try:
+        from backend.modules.warehouse.service.nvblox_log_parser import nvblox_log_parser
+        from backend.modules.warehouse.service.nvblox_status import nvblox_status_tracker
+
+        tracker = nvblox_status_tracker.as_dict()
+        parser = nvblox_log_parser.as_dict()
+        tf_degraded = bool(tracker.get("tf_degraded"))
+        tf_jump_back_count = max(
+            _safe_int(tracker.get("tf_jump_back_count")),
+            _safe_int(parser.get("tf_jump_back_count")),
+        )
+        tf_old_data_count = max(
+            _safe_int(tracker.get("tf_old_data_count")),
+            _safe_int(parser.get("tf_old_data_count")),
+        )
+        nvblox_restart_count = _safe_int(parser.get("restart_count"))
+    except Exception:
+        logger.debug("live_map_manifest_tf_health_probe_failed", exc_info=True)
 
     return LiveMapFlightManifest(
         flight_id=safe_flight,
         generated_at=datetime.now(UTC).isoformat(),
         chunk_counts=chunk_counts,
         point_counts=point_counts,
-        rgbd_colored_available=rgbd_count > 0,
+        rgbd_colored_available=rgbd_colored_count > 0 and rgbd_has_rgb,
+        rgbd_cloud_available=rgbd_cloud_available,
         rgbd_has_rgb=rgbd_has_rgb,
         nvblox_available=nvblox_count > 0,
         raw_lidar_only=raw_only,
         localization_ok=localization_ok,
         localization_quality=localization_quality,
         quality_evidence=quality_evidence,
-        missing_topics=list(missing_topics or []),
+        missing_topics=reconciled_missing_topics,
         map_quality=quality,
+        default_view_layer=default_view_layer,
+        diagnostic_nvblox_layers=diagnostic_nvblox_layers,
+        source_quality=source_quality,
+        tf_degraded=tf_degraded,
+        tf_jump_back_count=tf_jump_back_count,
+        tf_old_data_count=tf_old_data_count,
+        nvblox_restart_count=nvblox_restart_count,
         diagnostics_phase=diagnostics_phase,
     )
 
@@ -247,6 +379,9 @@ def load_flight_manifest(flight_id: str) -> LiveMapFlightManifest | None:
         chunk_counts=_safe_dict(payload.get("chunk_counts")),
         point_counts=_safe_dict(payload.get("point_counts")),
         rgbd_colored_available=bool(payload.get("rgbd_colored_available")),
+        rgbd_cloud_available=bool(
+            payload.get("rgbd_cloud_available", payload.get("rgbd_colored_available"))
+        ),
         rgbd_has_rgb=bool(payload.get("rgbd_has_rgb")),
         nvblox_available=bool(payload.get("nvblox_available")),
         raw_lidar_only=bool(payload.get("raw_lidar_only")),
@@ -255,6 +390,15 @@ def load_flight_manifest(flight_id: str) -> LiveMapFlightManifest | None:
         quality_evidence=bool(payload.get("quality_evidence")),
         missing_topics=_safe_str_list(payload.get("missing_topics")),
         map_quality=str(payload.get("map_quality") or "unknown"),
+        default_view_layer=(
+            str(payload["default_view_layer"]) if payload.get("default_view_layer") else None
+        ),
+        diagnostic_nvblox_layers=_safe_str_list(payload.get("diagnostic_nvblox_layers")),
+        source_quality=_safe_nested_dict(payload.get("source_quality")),
+        tf_degraded=bool(payload.get("tf_degraded", False)),
+        tf_jump_back_count=max(0, _safe_int(payload.get("tf_jump_back_count"), 0)),
+        tf_old_data_count=max(0, _safe_int(payload.get("tf_old_data_count"), 0)),
+        nvblox_restart_count=max(0, _safe_int(payload.get("nvblox_restart_count"), 0)),
         diagnostics_phase=str(payload.get("diagnostics_phase") or "unknown"),
         manifest_status=str(payload.get("manifest_status") or "complete"),
         missing_chunks=_safe_str_list(payload.get("missing_chunks")),

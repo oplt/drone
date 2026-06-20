@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -103,6 +104,30 @@ def test_resolve_colored_bridge_rgbd_fallback_to_back_projection() -> None:
     assert "rgbd_colored" in sources
     assert sources["rgbd_colored"].topic == back_topic
     assert "nvblox_color" not in sources
+
+
+def test_resolve_nvblox_layers_uses_static_map_slice_as_occupancy() -> None:
+    from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
+        resolve_nvblox_layer_bridge_sources,
+    )
+
+    topics = {"/nvblox_node/static_map_slice"}
+    topic_types = {"/nvblox_node/static_map_slice": "nav_msgs/msg/OccupancyGrid"}
+
+    def _fake_probe(*, topics: set[str], quiet: bool = False):
+        del quiet
+        return {}, topic_types
+
+    import backend.modules.warehouse.service.live_map_readiness as readiness
+
+    original = readiness.probe_live_map_topic_types
+    readiness.probe_live_map_topic_types = _fake_probe
+    try:
+        sources = resolve_nvblox_layer_bridge_sources(topics=topics)
+    finally:
+        readiness.probe_live_map_topic_types = original
+
+    assert sources["nvblox_occupancy"].topic == "/nvblox_node/static_map_slice"
 
 
 def test_discover_rgbd_prefers_warehouse_points_topic() -> None:
@@ -401,60 +426,25 @@ async def test_mapping_stack_start_endpoint_uses_lifecycle_launcher(monkeypatch)
     assert status.phase == "starting"
 
 
-@pytest.mark.asyncio
-async def test_preflight_refresh_starts_nvblox_when_core_ready(monkeypatch) -> None:
-    from backend.modules.warehouse import api
-    from backend.modules.warehouse.service import mapping_stack_lifecycle
+def test_preflight_refresh_returns_running_job_without_blocking(monkeypatch) -> None:
+    from backend.modules.warehouse.routers import preflight as api
+    scheduled = {}
 
-    snapshots = [
-        api.WarehousePreflightOut(
-            ready=True,
-            blocking=False,
-            ready_to_fly=True,
-            nvblox_ok=False,
-            blockers=[],
-            blocking_reasons=[],
-            categories={"nvblox": "WAITING"},
-        ),
-        api.WarehousePreflightOut(
-            ready=True,
-            blocking=False,
-            ready_to_fly=True,
-            nvblox_ok=True,
-            blockers=[],
-            blocking_reasons=[],
-            categories={"nvblox": "OK"},
-        ),
-    ]
-    started = 0
+    def _schedule(**kwargs):
+        scheduled.update(kwargs)
 
-    async def _connect_drone_for_preflight():
-        return True, None
+    monkeypatch.setattr(api, "schedule_preflight_refresh", _schedule)
 
-    async def _build_snapshot(*args, **kwargs):
-        return snapshots.pop(0)
-
-    async def _start_stack():
-        nonlocal started
-        started += 1
-        return mapping_stack_lifecycle.WarehouseMappingStackStatus(
-            running=True,
-            nvblox_running=True,
-            phase="ready",
+    result = asyncio.run(
+        api.refresh_preflight(
+            org_user=SimpleNamespace(user=object()),
         )
-
-    monkeypatch.setattr(api, "_connect_drone_for_preflight", _connect_drone_for_preflight)
-    monkeypatch.setattr(api, "_build_preflight_snapshot", _build_snapshot)
-    monkeypatch.setattr(mapping_stack_lifecycle, "start_warehouse_mapping_stack", _start_stack)
-
-    result = await api.refresh_preflight(
-        db=object(),
-        org_user=SimpleNamespace(user=object()),
     )
 
-    assert started == 1
-    assert result.snapshot is not None
-    assert result.snapshot.nvblox_ok is True
+    assert result.status == "running"
+    assert result.finished_at is None
+    assert result.snapshot is None
+    assert scheduled["run_id"] == result.run_id
 
 
 @pytest.mark.asyncio

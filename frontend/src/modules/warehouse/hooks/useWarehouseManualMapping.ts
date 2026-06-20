@@ -4,11 +4,10 @@ import { startMissionWithPreflight, type PreflightRunResponse } from "../../miss
 import { getToken } from "../../session";
 import { useManualFlightControls } from "../../controlled-flight/hooks/useManualFlightControls";
 import {
-  fetchWarehouseMappingStackStatus,
   startWarehouseManualMapping,
   stopWarehouseManualMapping,
-  type WarehouseMappingStackStatus,
 } from "../api/warehouseMissionsApi";
+import { useWarehouseMappingStack } from "./useWarehouseMappingStack";
 
 type MissionStatusLike = {
   orchestrator?: { drone_connected?: boolean };
@@ -50,28 +49,14 @@ export function useWarehouseManualMapping({
   const [manualControlEnabled, setManualControlEnabled] = useState(false);
   const [mappingActiveFlightId, setMappingActiveFlightId] = useState<string | null>(null);
   const [mappingBusy, setMappingBusy] = useState(false);
-  const [mappingStackStatus, setMappingStackStatus] =
-    useState<WarehouseMappingStackStatus | null>(null);
   const stopAllManualRef = useRef<() => void>(() => {});
-
-  const refreshMappingStackStatus = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-    try {
-      const status = await fetchWarehouseMappingStackStatus(token);
-      setMappingStackStatus(status);
-    } catch {
-      setMappingStackStatus(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshMappingStackStatus();
-    const interval = window.setInterval(() => {
-      void refreshMappingStackStatus();
-    }, activeFlightId ? 5000 : 15000);
-    return () => window.clearInterval(interval);
-  }, [refreshMappingStackStatus, activeFlightId]);
+  const {
+    mappingStackStatus,
+    refresh: refreshMappingStackStatus,
+  } = useWarehouseMappingStack({
+    getToken,
+    pollIntervalMs: activeFlightId ? 5_000 : 15_000,
+  });
 
   useEffect(() => {
     if (!warehousePreflightPassed) {

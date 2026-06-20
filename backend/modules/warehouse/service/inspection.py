@@ -395,6 +395,13 @@ async def execute_inspection_mission(
             "warehouse_inspection_mission_completed",
             extra={"mission_id": mission_id, "status": mission.status},
         )
+        if mission.status == "completed":
+            try:
+                from backend.modules.agents.hooks import schedule_warehouse_inspection_postflight
+
+                schedule_warehouse_inspection_postflight(inspection_mission_id=int(mission_id))
+            except Exception:
+                logger.exception("Failed to schedule warehouse inspection agent postflight")
     except Exception:
         if getattr(mission, "status", None) == "running":
             await _flush_mission_failed(db, mission)

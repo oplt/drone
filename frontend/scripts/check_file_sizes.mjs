@@ -120,9 +120,11 @@ function main() {
   return 0;
 }
 
-try {
-  process.exitCode = main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  try {
+    process.exitCode = main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }

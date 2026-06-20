@@ -209,6 +209,7 @@ export default function ObservabilityPage() {
       <Header />
       <PageLayout
         title="Observability"
+        description="Inspect platform health, logs, metrics, and traces."
       >
         <Stack spacing={1.5}>
           {linksQuery.error ? (

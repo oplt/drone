@@ -85,6 +85,8 @@ class StructureExtractionParams:
     min_rack_length_m: float = 0.6
     bin_pitch_m: float = 0.9
     shelf_min_spacing_m: float = 0.30
+    max_shelf_levels: int = 6
+    max_bins_per_rack_face: int = 24
     standoff_m: float = 1.2
     drone_radius_m: float = 0.35
     clearance_margin_m: float = 0.25
@@ -115,6 +117,8 @@ class StructureExtractionParams:
             min_rack_length_m=_pos(self.min_rack_length_m, 0.6),
             bin_pitch_m=_pos(self.bin_pitch_m, 0.9),
             shelf_min_spacing_m=_pos(self.shelf_min_spacing_m, 0.30),
+            max_shelf_levels=max(1, min(12, int(self.max_shelf_levels or 6))),
+            max_bins_per_rack_face=max(1, min(80, int(self.max_bins_per_rack_face or 24))),
             standoff_m=_pos(self.standoff_m, 1.2),
             drone_radius_m=_pos(self.drone_radius_m, 0.35),
             clearance_margin_m=_pos(self.clearance_margin_m, 0.25, minimum=0.0),
@@ -142,6 +146,7 @@ class StructureResult:
     summary: dict[str, Any] = field(default_factory=dict)
     point_count: int = 0
     rejected_clearance: int = 0
+    rejection_diagnostics: list[dict[str, Any]] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -462,7 +467,10 @@ def extract_structure(
                 continue
 
             shelf_levels = _detect_shelf_levels(
-                z_bay, spacing=params.shelf_min_spacing_m, res=params.grid_res_m
+                z_bay,
+                spacing=params.shelf_min_spacing_m,
+                res=params.grid_res_m,
+                max_levels=params.max_shelf_levels,
             )
             if not shelf_levels:
                 shelf_levels = [float(np.median(z_bay))]
@@ -495,10 +503,8 @@ def extract_structure(
                     rack_code=rack_code,
                 )
 
-    if not result.targets:
-        raise StructureExtractionError(
-            "Structure detected but no scan target passed the clearance gate."
-        )
+    if not result.targets and not rack_summaries:
+        raise StructureExtractionError("No usable rack structure was detected.")
 
     if occupancy_grid is not None:
         _assign_astar_priority(
@@ -510,6 +516,7 @@ def extract_structure(
         _assign_serpentine_priority(result.targets)
 
     result.summary = {
+        "status": "degraded" if not result.targets else "ready",
         "frame_id": WAREHOUSE_MAP_FRAME_ID,
         "floor_z": round(floor_z, 3),
         "axis_deg": round(math.degrees(theta), 2),
@@ -527,12 +534,16 @@ def extract_structure(
             "source": "point_cloud_kdtree",
             "required_clearance_m": round(params.required_clearance_m, 3),
         },
+        "warnings": (
+            ["Structure detected but all scan targets failed the clearance gate."]
+            if not result.targets
+            else []
+        ),
+        "rejection_diagnostics": result.rejection_diagnostics,
         "routing": {
             "mode": "occupancy_astar" if occupancy_grid is not None else "aisle_serpentine",
             "source": (
-                "persisted_occupancy_grid"
-                if occupancy_grid is not None
-                else "geometry_ordering"
+                "persisted_occupancy_grid" if occupancy_grid is not None else "geometry_ordering"
             ),
         },
     }
@@ -569,7 +580,13 @@ def _aisle_faces_for_row(
     return list(nearest.values())
 
 
-def _detect_shelf_levels(z: np.ndarray, *, spacing: float, res: float) -> list[float]:
+def _detect_shelf_levels(
+    z: np.ndarray,
+    *,
+    spacing: float,
+    res: float,
+    max_levels: int,
+) -> list[float]:
     """Z-histogram peaks = horizontal shelf beams (regular spacing prior)."""
     z_lo = float(z.min())
     z_hi = float(z.max())
@@ -582,7 +599,7 @@ def _detect_shelf_levels(z: np.ndarray, *, spacing: float, res: float) -> list[f
     norm = hist.astype(np.float64) / float(hist.max())
     # Minimum index separation between distinct shelves.
     min_sep = max(1, round(spacing / res))
-    candidates = [i for i in range(len(norm)) if norm[i] >= 0.35]
+    candidates = [i for i in range(len(norm)) if norm[i] >= 0.45]
     levels: list[float] = []
     last = -min_sep
     for i in candidates:
@@ -594,7 +611,17 @@ def _detect_shelf_levels(z: np.ndarray, *, spacing: float, res: float) -> list[f
             continue
         levels.append(float((edges[i] + edges[i + 1]) * 0.5))
         last = i
-    return levels or [0.5 * (z_lo + z_hi)]
+    if not levels:
+        return [0.5 * (z_lo + z_hi)]
+    if len(levels) <= max_levels:
+        return levels
+    # Keep the strongest separated shelf bands instead of every small noisy z peak.
+    ranked = sorted(
+        levels,
+        key=lambda level: hist[min(len(hist) - 1, max(0, int((level - z_lo) / max(res, 1e-6))))],
+        reverse=True,
+    )[:max_levels]
+    return sorted(ranked)
 
 
 def _emit_bay_targets(
@@ -625,6 +652,7 @@ def _emit_bay_targets(
 
     pitch = max(params.bin_pitch_m, params.grid_res_m * 2)
     n_bins = max(1, round(bay.width / pitch))
+    n_bins = min(n_bins, params.max_bins_per_rack_face)
     for b_idx in range(n_bins):
         u_center = bay.lo + (b_idx + 0.5) * (bay.width / n_bins)
         for level_idx, z_level in enumerate(shelf_levels):
@@ -650,6 +678,24 @@ def _emit_bay_targets(
             )
             if float(dist) < params.required_clearance_m:
                 result.rejected_clearance += 1
+                half = max(params.grid_res_m, 0.05) * 0.5
+                result.rejection_diagnostics.append(
+                    {
+                        "candidate_id": f"{rack_code}:{aisle_code}:B{b_idx + 1}:L{level_idx}",
+                        "rejection_reason": "clearance_below_required",
+                        "clearance_m": round(float(dist), 3),
+                        "required_clearance_m": round(params.required_clearance_m, 3),
+                        "bbox": [
+                            round(scan_pose.x_m - half, 3),
+                            round(scan_pose.y_m - half, 3),
+                            round(scan_pose.z_m - half, 3),
+                            round(scan_pose.x_m + half, 3),
+                            round(scan_pose.y_m + half, 3),
+                            round(scan_pose.z_m + half, 3),
+                        ],
+                        "frame_id": WAREHOUSE_MAP_FRAME_ID,
+                    }
+                )
                 continue
 
             result.targets.append(
@@ -759,6 +805,8 @@ def _params_to_dict(params: StructureExtractionParams) -> dict[str, Any]:
         "min_rack_length_m": params.min_rack_length_m,
         "bin_pitch_m": params.bin_pitch_m,
         "shelf_min_spacing_m": params.shelf_min_spacing_m,
+        "max_shelf_levels": params.max_shelf_levels,
+        "max_bins_per_rack_face": params.max_bins_per_rack_face,
         "standoff_m": params.standoff_m,
         "drone_radius_m": params.drone_radius_m,
         "clearance_margin_m": params.clearance_margin_m,

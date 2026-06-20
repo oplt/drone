@@ -11,8 +11,8 @@ from backend.modules.automation.scheduling_job import dispatch_due_templates, ex
     bind=True,
     max_retries=3,
     name="backend.tasks.scheduling_tasks.run_template_mission",
-    soft_time_limit=120,
-    time_limit=180,
+    soft_time_limit=3_600,
+    time_limit=3_660,
 )
 def run_template_mission(self, scheduled_run_id: int) -> None:
     try:

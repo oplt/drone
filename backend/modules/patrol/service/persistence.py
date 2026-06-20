@@ -188,6 +188,11 @@ class PatrolPersistenceService:
             )
             await db.commit()
 
+        if created:
+            from backend.modules.agents.hooks import schedule_patrol_incident_summary
+
+            schedule_patrol_incident_summary(incident_id=int(incident.id), created=True)
+
         return PersistedAnomalyResult(
             flight_id=int(runtime_ctx.db_flight_id),
             detection_id=detection.id,

@@ -49,6 +49,7 @@ export default function ConfirmDialog({
         <ActionIconButton
           variant="check"
           title={confirmLabel}
+          autoFocus
           color={confirmColor === "error" ? "error" : confirmColor === "warning" ? "warning" : "primary"}
           loading={loading}
           disabled={loading}

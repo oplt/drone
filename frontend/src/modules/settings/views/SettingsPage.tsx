@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../../../shared/layout/WorkflowHeader";
 import { IconButton, InputAdornment } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
@@ -23,6 +23,7 @@ import {
   PROVIDER_IDS,
 } from "../aiSettingsDefaults";
 import { AiSettingsPanel } from "../components/AiSettingsPanel";
+import { useSettingsDirtyFlag } from "../hooks/useSettingsDirtyFlag";
 import type {
   AISettings,
   SettingsDoc,
@@ -49,6 +50,7 @@ import {
 import Grid from "@mui/material/Grid";
 
 const MASK = "********";
+const SETTINGS_QUERY_KEY = ["app-settings"] as const;
 
 const DEFAULTS: SettingsDoc = {
   telemetry: {
@@ -243,15 +245,53 @@ const SETTINGS_TAB_INDEX: Record<SettingsTabKey, number> = {
   photogrammetry: 9,
 };
 
+const SETTINGS_TAB_LABELS = [
+  "Profile",
+  "Telemetry",
+  "AI",
+  "Credentials",
+  "Hardware",
+  "Preflight Check Params",
+  "Alerts",
+  "Raspberry",
+  "Camera",
+  "Photogrammetry",
+] as const;
+
+function SecretField(props: React.ComponentProps<typeof TextField>) {
+  const [show, setShow] = useState(false);
+  return (
+    <TextField
+      variant="filled"
+      {...props}
+      type={show ? "text" : "password"}
+      InputProps={{
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton
+              onClick={() => setShow((value) => !value)}
+              onMouseDown={(event) => event.preventDefault()}
+              edge="end"
+              size="small"
+              aria-label={show ? "Hide value" : "Show value"}
+            >
+              {show ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
+}
+
 export default function SettingsPage({ initialTab = "profile" }: { initialTab?: SettingsTabKey }) {
   const token = getToken();
   const queryClient = useQueryClient();
+  const cachedSettings = queryClient.getQueryData<SettingsDoc>(SETTINGS_QUERY_KEY);
   const [tab, setTab] = useState(SETTINGS_TAB_INDEX[initialTab] ?? 0);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [doc, setDoc] = useState<SettingsDoc>(DEFAULTS);
-  const [lastLoaded, setLastLoaded] = useState<SettingsDoc>(DEFAULTS);
+  const [doc, setDoc] = useState<SettingsDoc>(cachedSettings ?? DEFAULTS);
+  const { dirty, markDirty, markClean } = useSettingsDirtyFlag();
   const [fullName, setFullName] = useState("");
   const [saveProfileSuccess, setSaveProfileSuccess] = useState(false);
   const [saveProfileError, setSaveProfileError] = useState<string | null>(null);
@@ -270,6 +310,39 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
       };
     },
   });
+
+  const settingsQuery = useQuery<SettingsDoc>({
+    queryKey: SETTINGS_QUERY_KEY,
+    staleTime: 5 * 60_000,
+    queryFn: async () => normalizeDoc(await fetchAppSettings<SettingsDoc>()),
+  });
+  const loading = settingsQuery.isLoading || settingsQuery.isFetching;
+
+  useEffect(() => {
+    if (!settingsQuery.data) return;
+    setDoc(settingsQuery.data);
+    markClean();
+  }, [markClean, settingsQuery.data]);
+
+  useEffect(() => {
+    if (!settingsQuery.error) return;
+    setErr(
+      settingsQuery.error instanceof Error
+        ? settingsQuery.error.message
+        : "Failed to fetch settings",
+    );
+  }, [settingsQuery.error]);
+
+  const settingsMutation = useMutation({
+    mutationFn: async (payload: SettingsDoc) =>
+      normalizeDoc(await updateAppSettings<SettingsDoc>(payload)),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(SETTINGS_QUERY_KEY, saved);
+      setDoc(saved);
+      markClean();
+    },
+  });
+  const saving = settingsMutation.isPending;
 
   useEffect(() => {
     if (user) {
@@ -290,8 +363,6 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
       setSaveProfileSuccess(false);
     },
   });
-
-  const dirty = useMemo(() => JSON.stringify(doc) !== JSON.stringify(lastLoaded), [doc, lastLoaded]);
 
   const validateSettings = (): string | null => {
     if (doc.preflight.BATTERY_MIN_PERCENT < 10 || doc.preflight.BATTERY_MIN_PERCENT > 50) return "Battery Min (%) must be 10-50%.";
@@ -319,33 +390,27 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
   };
 
   async function fetchSettings() {
-    setLoading(true); setErr(null);
-    try {
-      const data = normalizeDoc(await fetchAppSettings<SettingsDoc>());
-      setDoc(data); setLastLoaded(data);
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Failed to fetch settings");
-    } finally {
-      setLoading(false);
+    setErr(null);
+    const result = await settingsQuery.refetch();
+    if (result.error) {
+      setErr(
+        result.error instanceof Error
+          ? result.error.message
+          : "Failed to fetch settings",
+      );
     }
   }
 
   async function saveSettings() {
     const vErr = validateSettings();
     if (vErr) { setErr(vErr); return; }
-    setSaving(true); setErr(null);
+    setErr(null);
     try {
-      const saved = normalizeDoc(await updateAppSettings<SettingsDoc>(doc));
-      setDoc(saved);
-      setLastLoaded(saved);
+      await settingsMutation.mutateAsync(doc);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Failed to save settings");
-    } finally {
-      setSaving(false);
     }
   }
-
-  useEffect(() => { void fetchSettings(); }, []);
 
   const handleSaveProfile = () => {
     setSaveProfileSuccess(false);
@@ -354,7 +419,10 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
   };
 
   const update = (section: SettingsSection, field: string, value: unknown) => {
+    const currentValue = (doc[section] as Record<string, unknown>)[field];
+    if (Object.is(currentValue, value)) return;
     setDoc(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
+    markDirty();
     if (err) setErr(null);
   };
 
@@ -378,7 +446,9 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
       };
     };
     setDoc(applyProfiles);
-    setLastLoaded(applyProfiles);
+    queryClient.setQueryData<SettingsDoc>(SETTINGS_QUERY_KEY, (current) =>
+      applyProfiles(current ?? DEFAULTS),
+    );
   };
 
   const handleFileUpload = (section: SettingsSection, field: string) => async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -404,53 +474,43 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
     }
   };
 
-function SecretField(props: React.ComponentProps<typeof TextField>) {
-  const [show, setShow] = useState(false);
-  return (
-    <TextField variant="filled"
-      {...props}
-      type={show ? "text" : "password"}
-      InputProps={{
-        endAdornment: (
-          <InputAdornment position="end">
-            <IconButton
-              onClick={() => setShow(v => !v)}
-              onMouseDown={e => e.preventDefault()}
-              edge="end"
-              size="small"
-              aria-label={show ? "Hide value" : "Show value"}
-            >
-              {show ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-            </IconButton>
-          </InputAdornment>
-        ),
-      }}
-    />
-  );
-}
-
   return (
     <>
       <Header />
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Paper variant="outlined" sx={{ p: 0 }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
-            <Tab label="Profile" />
-            <Tab label="Telemetry" />
-            <Tab label="AI" />
-            <Tab label="Credentials" />
-            <Tab label="Hardware" />
-            <Tab label="Preflight Check Params" />
-            <Tab label="Alerts" />
-            <Tab label="Raspberry" />
-            <Tab label="Camera" />
-            <Tab label="Photogrammetry" />
+          <Tabs
+            value={tab}
+            onChange={(_, value) => setTab(value)}
+            variant="scrollable"
+            scrollButtons="auto"
+            aria-label="Settings sections"
+          >
+            {SETTINGS_TAB_LABELS.map((label, index) => (
+              <Tab
+                key={label}
+                id={`settings-tab-${index}`}
+                aria-controls={`settings-tabpanel-${index}`}
+                label={label}
+              />
+            ))}
           </Tabs>
           <Divider />
 
-          <Box sx={{ p: 3 }}>
+          <Box
+            component="fieldset"
+            disabled={loading || saving}
+            aria-busy={loading || saving}
+            sx={{ p: 3, m: 0, border: 0, minWidth: 0 }}
+          >
             {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
             {loading && <Alert severity="info" sx={{ mb: 2 }}>Loading settings...</Alert>}
+
+            <Box
+              role="tabpanel"
+              id={`settings-tabpanel-${tab}`}
+              aria-labelledby={`settings-tab-${tab}`}
+            >
 
             {/* PROFILE TAB */}
             {tab === 0 && (
@@ -901,6 +961,8 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
             )}
 
 
+
+            </Box>
 
             <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
               <ActionIconButton

@@ -19,6 +19,7 @@ from backend.modules.warehouse.service.structure_extraction import (
     GeneratedTarget,
     StructureResult,
     _assign_astar_priority,
+    _detect_shelf_levels,
 )
 from backend.modules.warehouse.service.structure_jobs import (
     _attach_quality_gate,
@@ -248,6 +249,18 @@ def test_structure_quality_backfills_legacy_summary() -> None:
 
     assert summary["quality"]["status"] == "needs_review"
     assert summary["quality"]["active_target_count"] == 0
+
+
+def test_shelf_detection_caps_noisy_vertical_peaks() -> None:
+    import numpy as np
+
+    z = np.concatenate(
+        [np.full(20, level, dtype=np.float32) for level in np.linspace(0.4, 5.8, 19)]
+    )
+
+    levels = _detect_shelf_levels(z, spacing=0.25, res=0.1, max_levels=6)
+
+    assert 1 <= len(levels) <= 6
 
 
 @pytest.mark.asyncio

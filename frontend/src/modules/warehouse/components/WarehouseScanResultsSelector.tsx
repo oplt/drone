@@ -10,6 +10,7 @@ type Props = {
   maps: WarehouseScannedMapResponse[];
   selectedMap: WarehouseScannedMapResponse | null;
   loading: boolean;
+  disabled?: boolean;
   deleting?: boolean;
   onSelect: (jobId: number | null) => void;
   onRefresh: () => void;
@@ -27,6 +28,7 @@ export function WarehouseScanResultsSelector({
   maps,
   selectedMap,
   loading,
+  disabled = false,
   deleting = false,
   onSelect,
   onRefresh,
@@ -37,7 +39,7 @@ export function WarehouseScanResultsSelector({
       <TextField
         variant="filled"
         select
-        disabled={!loading && maps.length === 0}
+        disabled={disabled || (!loading && maps.length === 0)}
         size="small"
         label="Previous Scan Results"
         value={selectedMap ? String(selectedMap.job_id) : ""}
@@ -74,7 +76,12 @@ export function WarehouseScanResultsSelector({
         {loading ? (
           <CircularProgress size={20} />
         ) : (
-          <ActionIconButton variant="refresh" title="Refresh scan results" onClick={onRefresh} />
+          <ActionIconButton
+            variant="refresh"
+            title="Refresh scan results"
+            disabled={disabled}
+            onClick={onRefresh}
+          />
         )}
         {onDelete && (
           <ActionIconButton
@@ -82,7 +89,7 @@ export function WarehouseScanResultsSelector({
             title={deleting ? "Deleting scan result" : "Delete scan result"}
             color="error"
             loading={deleting}
-            disabled={!selectedMap}
+            disabled={disabled || !selectedMap}
             onClick={onDelete}
           />
         )}

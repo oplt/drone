@@ -35,6 +35,7 @@ from backend.modules.ai.schemas import (
     LLMSettingsResponse,
     LLMSettingsUpdate,
     LLMTaskDefault,
+    LLMTaskName,
 )
 from backend.modules.settings.repository import MASK, SettingsRepository
 
@@ -92,6 +93,10 @@ TASK_DEFAULTS: dict[str, LLMTaskDefault] = {
     "video_summary": LLMTaskDefault(provider="ollama"),
     "telemetry_anomaly": LLMTaskDefault(provider="ollama"),
     "offline_report": LLMTaskDefault(provider="ollama"),
+    "warehouse_scan": LLMTaskDefault(provider="ollama"),
+    "warehouse_inspection": LLMTaskDefault(provider="ollama"),
+    "field_survey": LLMTaskDefault(provider="openai"),
+    "livestock": LLMTaskDefault(provider="ollama"),
 }
 
 
@@ -125,6 +130,16 @@ def default_llm_settings() -> dict[str, Any]:
         "profiles": [],
         "default_profile_id": "",
         "task_overrides": {},
+        "agents": {
+            "enabled": True,
+            "private_patrol": True,
+            "property_patrol": True,
+            "warehouse_scan": True,
+            "warehouse_inspection": True,
+            "field_survey": True,
+            "livestock": True,
+            "assistant": True,
+        },
     }
 
 
@@ -192,6 +207,34 @@ class AISettingsService:
             if profile.id == profile_id:
                 return profile
         raise ValueError(f"Unknown LLM profile: {profile_id}")
+
+    async def resolve_profile_for_task(self, task: LLMTaskName) -> LLMProfile | None:
+        """Resolve the effective profile for a mission/agent task."""
+        if task not in TASK_DEFAULTS:
+            raise ValueError(f"Unsupported LLM task: {task}")
+        settings = await self.get_settings(effective=True)
+        override_id = (settings.task_overrides or {}).get(task)
+        if override_id:
+            for profile in settings.profiles:
+                if profile.id == override_id and profile.enabled:
+                    return profile
+        default_id = str(settings.default_profile_id or "").strip()
+        if default_id:
+            for profile in settings.profiles:
+                if profile.id == default_id and profile.enabled:
+                    return profile
+        task_default = settings.task_defaults.get(task)
+        if task_default is not None:
+            provider_settings = settings.providers.get(task_default.provider)
+            if provider_settings is not None and provider_settings.enabled:
+                for profile in settings.profiles:
+                    if (
+                        profile.enabled
+                        and profile.provider == task_default.provider
+                        and (not task_default.model or profile.model == task_default.model)
+                    ):
+                        return profile
+        return None
 
     async def update_profile(self, profile_id: str, payload: LLMProfileUpdate) -> LLMProfile:
         settings = await self.get_settings(effective=True)

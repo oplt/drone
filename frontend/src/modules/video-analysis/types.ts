@@ -53,7 +53,7 @@ export type AnalyzeVideoPayload = {
     | 'yolo26s.pt'
     | 'yolo26n-seg.pt'
     | 'yolo26s-seg.pt'
-    | 'storage/ml_models/agriculture/best.pt';
+    | 'backend/storage/ml_models/agriculture/best.pt';
   frame_stride_seconds: number;
   confidence_threshold: number;
 };

@@ -5,7 +5,9 @@ import { inferLayerKey } from "../utils/liveMapLayerUtils";
 
 export type LiveMapPreferredLayer =
   | "rgbd_colored"
-  | "nvblox_color"
+  | "rgbd_xyz_uncolored"
+  | "nvblox_esdf"
+  | "nvblox_mesh"
   | "mid360_raw";
 
 export type LiveMapRuntimeConfig = {
@@ -38,6 +40,7 @@ export const DEFAULT_LIVE_MAP_CONFIG: LiveMapRuntimeConfig = {
 
 const LAYER_KEY_TO_SOURCE: Record<LiveMapLayerKey, string | null> = {
   rgbdColored: "rgbd_colored",
+  rgbdDepth: "rgbd_xyz_uncolored",
   mid360LiDAR: "mid360_raw",
   nvbloxColor: "nvblox_color",
   nvbloxEsdf: "nvblox_esdf",
@@ -67,6 +70,7 @@ export function filterChunksForDownload(
   visibleLayers: LiveVoxelLayers,
   _preferredLayer?: LiveMapPreferredLayer,
 ): WarehouseLiveVoxelChunk[] {
+  void _preferredLayer;
   return chunks.filter(
     (chunk) => Boolean(chunk.url) && isChunkLayerVisible(chunk, visibleLayers),
   );

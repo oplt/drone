@@ -30,7 +30,7 @@ class _MemoryUpload:
         return chunk
 
 
-def _write_rgbd_chunk(flight_dir: Path, sequence: int = 1) -> None:
+def _write_rgbd_chunk(flight_dir: Path, sequence: int = 1, *, has_rgb: bool = True) -> None:
     payload = struct.pack("<ffffff", 1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
     payload += bytes([255, 0, 0, 0, 255, 0])
     chunk_id = f"rgbd_{sequence:06d}"
@@ -39,12 +39,29 @@ def _write_rgbd_chunk(flight_dir: Path, sequence: int = 1) -> None:
         "source": "rgbd_colored",
         "layer": "rgbd_colored",
         "layer_type": "rgbd_colored",
-        "has_rgb": True,
+        "has_rgb": has_rgb,
         "point_count": 2,
         "encoding": "xyzrgb32_v1",
     }
     (flight_dir / f"{chunk_id}-deadbeefcafebabe.meta.json").write_text(
         json.dumps(meta),
+        encoding="utf-8",
+    )
+
+
+def _write_internal_nvblox_color_chunk(flight_dir: Path) -> None:
+    chunk_id = "nvblox_color_000001"
+    payload = struct.pack("<fff", 1.0, 2.0, 3.0) + bytes([255, 0, 0])
+    (flight_dir / f"{chunk_id}-cafebabecafebabe.xyzrgb32").write_bytes(payload)
+    (flight_dir / f"{chunk_id}-cafebabecafebabe.meta.json").write_text(
+        json.dumps(
+            {
+                "source": "nvblox_color",
+                "layer": "nvblox_color",
+                "has_rgb": True,
+                "point_count": 1,
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -62,6 +79,26 @@ def _write_mid360_chunk(flight_dir: Path, sequence: int = 1) -> None:
         "encoding": "xyz32_v1",
     }
     (flight_dir / f"{chunk_id}-feedfacefeedface.meta.json").write_text(
+        json.dumps(meta),
+        encoding="utf-8",
+    )
+
+
+def _write_esdf_chunk(flight_dir: Path, sequence: int = 1) -> None:
+    payload = struct.pack("<ffffff", -1.0, -1.0, 0.1, 1.0, 1.0, 0.1)
+    payload += bytes([0, 0, 0, 0, 0, 0])
+    chunk_id = f"nvblox_esdf_{sequence:08d}"
+    (flight_dir / f"{chunk_id}-abc123abc123abcd.xyzrgb32").write_bytes(payload)
+    meta = {
+        "source": "nvblox_esdf",
+        "layer": "nvblox_esdf",
+        "layer_type": "nvblox_esdf",
+        "has_rgb": False,
+        "point_count": 2,
+        "encoding": "xyzrgb32_v1",
+        "bbox_local_m": [-1.0, -1.0, 0.1, 1.0, 1.0, 0.1],
+    }
+    (flight_dir / f"{chunk_id}-abc123abc123abcd.meta.json").write_text(
         json.dumps(meta),
         encoding="utf-8",
     )
@@ -89,6 +126,28 @@ def test_manifest_counts_rgbd_and_raw_separately(
     assert manifest.raw_lidar_only is False
     assert manifest.chunk_counts["rgbd_colored"] == 1
     assert manifest.chunk_counts["mid360_raw"] == 1
+
+
+def test_manifest_reconciles_missing_topic_when_chunks_exist(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_esdf_reconciled"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    _write_esdf_chunk(flight_dir)
+
+    storage = WarehouseLiveMapChunkStorage(root=tmp_path)
+    monkeypatch.setattr(live_map_manifest, "warehouse_live_map_chunk_storage", storage)
+
+    manifest = live_map_manifest.build_manifest_from_flight_dir(
+        flight_id,
+        missing_topics=["/nvblox_node/static_esdf_pointcloud"],
+    )
+
+    assert manifest.chunk_counts["nvblox_esdf"] == 1
+    assert "/nvblox_node/static_esdf_pointcloud" not in manifest.missing_topics
+    assert manifest.source_quality["nvblox_esdf"]["floor_area_m2"] == 4.0
 
 
 def test_validate_save_quality_fails_for_raw_only(
@@ -137,10 +196,57 @@ def test_manifest_quality_evidence_for_rgbd_with_has_rgb(
     )
     assert manifest.rgbd_colored_available is True
     assert manifest.rgbd_has_rgb is True
+    assert manifest.map_quality == "rgbd_colored"
+    assert manifest.default_view_layer == "rgbd_colored"
     assert manifest.quality_evidence is True
     assert manifest.localization_quality == "degraded"
     ok, _detail = live_map_manifest.validate_save_quality(manifest)
     assert ok is True
+
+
+def test_manifest_labels_rgbd_geometry_without_color_honestly(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_rgbd_xyz"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    _write_rgbd_chunk(flight_dir, has_rgb=False)
+    monkeypatch.setattr(
+        live_map_manifest,
+        "warehouse_live_map_chunk_storage",
+        WarehouseLiveMapChunkStorage(root=tmp_path),
+    )
+
+    manifest = live_map_manifest.build_manifest_from_flight_dir(flight_id)
+
+    assert manifest.rgbd_cloud_available is True
+    assert manifest.rgbd_colored_available is False
+    assert manifest.rgbd_has_rgb is False
+    assert manifest.map_quality == "rgbd_xyz_uncolored"
+    assert manifest.default_view_layer == "rgbd_xyz_uncolored"
+    assert manifest.chunk_counts["rgbd_xyz_uncolored"] == 1
+
+
+def test_internal_nvblox_color_layer_is_diagnostic_not_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_internal_nvblox_only"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    _write_internal_nvblox_color_chunk(flight_dir)
+    monkeypatch.setattr(
+        live_map_manifest,
+        "warehouse_live_map_chunk_storage",
+        WarehouseLiveMapChunkStorage(root=tmp_path),
+    )
+
+    manifest = live_map_manifest.build_manifest_from_flight_dir(flight_id)
+
+    assert manifest.default_view_layer is None
+    assert manifest.map_quality == "empty"
+    assert manifest.diagnostic_nvblox_layers == ["nvblox_color"]
 
 
 def test_validate_manifest_chunk_files_reports_missing_ids(

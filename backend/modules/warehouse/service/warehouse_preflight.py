@@ -384,18 +384,18 @@ async def _probe_warehouse_perception_status(
 ) -> WarehousePerceptionStatus:
     from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
     from backend.infrastructure.warehouse.bridge_config import probe_bridge_topics
-    from backend.modules.warehouse.api import _ensure_ros_bridge_running, _ros2_workspace
+    from backend.modules.warehouse.ros_bridge_runtime import ensure_ros_bridge_running, ros2_workspace
 
     bridge_start_error: str | None = None
     if deep or force:
         try:
-            await _ensure_ros_bridge_running(start=True)
+            await ensure_ros_bridge_running(start=True)
         except Exception as exc:
             bridge_start_error = str(exc)
             logger.warning("Warehouse ROS bridge start/check failed: %s", exc)
 
     status = await build_warehouse_perception_port().status(deep=deep, force=force)
-    ws = _ros2_workspace()
+    ws = ros2_workspace()
     overlay: dict[str, Any] = {}
     if ws.exists() and (deep or force):
         try:
@@ -533,6 +533,7 @@ async def run_warehouse_ros_preflight_report(
     mission_data: dict[str, Any],
     *,
     cruise_alt: float,
+    perception_status: WarehousePerceptionStatus | None = None,
     flight_id: str | None = None,
     preflight_config: dict[str, Any] | None = None,
     force: bool = False,
@@ -547,16 +548,34 @@ async def run_warehouse_ros_preflight_report(
     ttl = 0.0 if force else _preflight_report_cache_ttl_s()
     if ttl > 0.0 and _preflight_report_cache is not None and _preflight_report_cache_key == cache_key:
         if (time.monotonic() - _preflight_report_cache_at) < ttl:
+            try:
+                from backend.observability.prometheus_metrics import (
+                    warehouse_preflight_cache_serves_total,
+                )
+
+                warehouse_preflight_cache_serves_total.labels(state="ros_report_hit").inc()
+            except Exception:
+                pass
             return _preflight_report_cache
 
     async with _PREFLIGHT_REPORT_LOCK:
         if ttl > 0.0 and _preflight_report_cache is not None and _preflight_report_cache_key == cache_key:
             if (time.monotonic() - _preflight_report_cache_at) < ttl:
+                try:
+                    from backend.observability.prometheus_metrics import (
+                        warehouse_preflight_cache_serves_total,
+                    )
+
+                    warehouse_preflight_cache_serves_total.labels(state="ros_report_hit").inc()
+                except Exception:
+                    pass
                 return _preflight_report_cache
 
         _warm_mapping_stack_in_background()
 
-        status = await fetch_warehouse_perception_status(deep=True, force=force)
+        status = perception_status
+        if status is None:
+            status = await fetch_warehouse_perception_status(deep=True, force=force)
         vehicle_state = build_warehouse_vehicle_state_from_perception(status)
 
         config_overrides = dict(kwargs.pop("config_overrides", {}) or {})

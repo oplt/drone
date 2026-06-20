@@ -300,10 +300,17 @@ export default function PropertyPatrolPage() {
           <Stack spacing={1}>
             {incidents.length === 0 ? <Typography color="text.secondary">No incidents.</Typography> : null}
             {incidents.map((incident) => (
-              <Stack key={incident.id} direction="row" spacing={1} alignItems="center">
-                <Chip label={incident.status} />
-                <Typography>{incident.event_type}</Typography>
-                <Typography color="text.secondary">{incident.llm_summary || incident.operator_notes || "No summary"}</Typography>
+              <Stack key={incident.id} spacing={0.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label={incident.status} />
+                  <Typography>{incident.event_type}</Typography>
+                  {incident.llm_summary ? (
+                    <Chip size="small" color="primary" variant="outlined" label="AI summary" />
+                  ) : null}
+                </Stack>
+                <Typography color="text.secondary" variant="body2">
+                  {incident.llm_summary || incident.operator_notes || "No summary"}
+                </Typography>
               </Stack>
             ))}
           </Stack>

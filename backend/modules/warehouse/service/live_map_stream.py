@@ -26,6 +26,7 @@ class WarehouseLivePose(BaseModel):
 LiveMapLayer = Literal[
     "mid360_lidar",
     "rgbd_colored",
+    "rgbd_xyz_uncolored",
     "nvblox_color",
     "nvblox_esdf",
     "nvblox_tsdf",
@@ -35,6 +36,7 @@ LiveMapLayer = Literal[
 LiveMapSource = Literal[
     "mid360_raw",
     "rgbd_colored",
+    "rgbd_xyz_uncolored",
     "nvblox_color",
     "nvblox_esdf",
     "nvblox_tsdf",
@@ -62,6 +64,10 @@ class WarehouseLiveVoxelChunk(BaseModel):
     layer: LiveMapLayer | None = None
     layer_type: LiveMapLayer | None = None
     has_rgb: bool | None = None
+    fields: list[str] = Field(default_factory=list)
+    source_topic: str | None = Field(default=None, max_length=256)
+    cloud_age_ms: float | None = Field(default=None, ge=0)
+    transform_age_ms: float | None = Field(default=None, ge=0)
     encoding: str | None = Field(default=None, max_length=64)
     frame_id: str | None = Field(default=None, max_length=128)
     stamp: str | None = Field(default=None, max_length=64)
@@ -98,6 +104,10 @@ class WarehouseLiveMapUpdate(BaseModel):
 class WarehouseLiveMapManifestSummary(BaseModel):
     map_quality: str = "unknown"
     rgbd_colored_available: bool = False
+    rgbd_cloud_available: bool = False
+    rgbd_has_rgb: bool = False
+    default_view_layer: str | None = None
+    diagnostic_nvblox_layers: list[str] = Field(default_factory=list)
     nvblox_available: bool = False
     raw_lidar_only: bool = False
     chunk_counts: dict[str, int] = Field(default_factory=dict)
@@ -212,7 +222,9 @@ class WarehouseLiveMapStream:
             *(self._send_update(client, payload) for client in clients),
             return_exceptions=True,
         )
-        stale_clients = [item for item in results if item is not None and not isinstance(item, Exception)]
+        stale_clients = [
+            item for item in results if item is not None and not isinstance(item, Exception)
+        ]
         if stale_clients:
             async with self._lock:
                 active = self._clients.get(update.flight_id)
@@ -222,7 +234,9 @@ class WarehouseLiveMapStream:
                         self._clients.pop(update.flight_id, None)
         return update
 
-    async def snapshot(self, flight_id: str, *, max_updates: int | None = None) -> WarehouseLiveMapSnapshot:
+    async def snapshot(
+        self, flight_id: str, *, max_updates: int | None = None
+    ) -> WarehouseLiveMapSnapshot:
         async with self._lock:
             all_updates = list(self._updates.get(flight_id, ()))
             finalized_job_id = self._finalized_jobs.get(flight_id)
@@ -286,13 +300,17 @@ class WarehouseLiveMapStream:
             "type": "live_map_finalized",
             "flight_id": flight_id,
             "finalized_scan_job_id": int(job_id),
-            "last_update_at": snapshot.last_update_at.isoformat() if snapshot.last_update_at else None,
+            "last_update_at": snapshot.last_update_at.isoformat()
+            if snapshot.last_update_at
+            else None,
         }
         results = await asyncio.gather(
             *(self._send_update(client, payload) for client in clients),
             return_exceptions=True,
         )
-        stale_clients = [item for item in results if item is not None and not isinstance(item, Exception)]
+        stale_clients = [
+            item for item in results if item is not None and not isinstance(item, Exception)
+        ]
         if stale_clients:
             async with self._lock:
                 active = self._clients.get(flight_id)

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -30,6 +31,22 @@ const LIVE_MAX_CACHED_BYTES = 48 * 1024 * 1024;
 const REPLAY_MAX_CACHED_BYTES = 1024 * 1024 * 1024;
 const REPLAY_MAX_CACHED_CHUNKS = 4000;
 const inFlightChunkFetches = new Map<string, Promise<ArrayBuffer>>();
+
+type ChunkCacheFrameBatch = {
+  entries: Map<string, CachedLiveMapChunk>;
+  downloadedKeys: Set<string>;
+  inFlightAdds: Set<string>;
+  inFlightRemoves: Set<string>;
+};
+
+function emptyFrameBatch(): ChunkCacheFrameBatch {
+  return {
+    entries: new Map(),
+    downloadedKeys: new Set(),
+    inFlightAdds: new Set(),
+    inFlightRemoves: new Set(),
+  };
+}
 
 export type LiveMapChunkCacheMode = "live" | "replay";
 
@@ -210,6 +227,82 @@ export function useLiveMapChunkCache(
   const abortControllersRef = useRef(new Map<string, AbortController>());
   const previousFlightIdRef = useRef<string | null>(null);
   const downloadEffectGenRef = useRef(0);
+  const frameBatchRef = useRef<ChunkCacheFrameBatch>(emptyFrameBatch());
+  const frameFlushRef = useRef<number | null>(null);
+
+  const flushFrameBatch = useCallback(() => {
+    frameFlushRef.current = null;
+    const batch = frameBatchRef.current;
+    frameBatchRef.current = emptyFrameBatch();
+
+    if (batch.entries.size > 0) {
+      const next = new Map(entriesRef.current);
+      for (const [key, entry] of batch.entries) {
+        const previous = next.get(key);
+        if (previous?.objectUrl && previous.objectUrl !== entry.objectUrl) {
+          URL.revokeObjectURL(previous.objectUrl);
+        }
+        next.set(key, entry);
+      }
+      entriesRef.current = next;
+      setEntries(next);
+    }
+
+    if (batch.downloadedKeys.size > 0) {
+      const next = new Set(downloadedRef.current);
+      for (const key of batch.downloadedKeys) next.add(key);
+      downloadedRef.current = next;
+      setDownloadedChunkIds(next);
+    }
+
+    if (batch.inFlightAdds.size > 0 || batch.inFlightRemoves.size > 0) {
+      const next = new Set(inFlightRef.current);
+      for (const key of batch.inFlightAdds) next.add(key);
+      for (const key of batch.inFlightRemoves) next.delete(key);
+      inFlightRef.current = next;
+      setInFlightChunkIds(next);
+    }
+  }, []);
+
+  const scheduleFrameFlush = useCallback(() => {
+    if (frameFlushRef.current != null) return;
+    frameFlushRef.current = window.requestAnimationFrame(flushFrameBatch);
+  }, [flushFrameBatch]);
+
+  const queueInFlightChange = useCallback(
+    (key: string, inFlight: boolean) => {
+      const batch = frameBatchRef.current;
+      if (inFlight) {
+        batch.inFlightRemoves.delete(key);
+        batch.inFlightAdds.add(key);
+      } else {
+        batch.inFlightAdds.delete(key);
+        batch.inFlightRemoves.add(key);
+      }
+      scheduleFrameFlush();
+    },
+    [scheduleFrameFlush],
+  );
+
+  const queueCompletedChunk = useCallback(
+    (key: string, entry: CachedLiveMapChunk) => {
+      frameBatchRef.current.entries.set(key, entry);
+      frameBatchRef.current.downloadedKeys.add(key);
+      scheduleFrameFlush();
+    },
+    [scheduleFrameFlush],
+  );
+
+  const discardFrameBatch = useCallback(() => {
+    if (frameFlushRef.current != null) {
+      window.cancelAnimationFrame(frameFlushRef.current);
+      frameFlushRef.current = null;
+    }
+    for (const entry of frameBatchRef.current.entries.values()) {
+      if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
+    }
+    frameBatchRef.current = emptyFrameBatch();
+  }, []);
 
   const candidates = useMemo(() => {
     const withUrls = chunks.filter((chunk) => Boolean(chunk.url));
@@ -283,6 +376,7 @@ export function useLiveMapChunkCache(
 
   useEffect(() => {
     if (!flightId) {
+      discardFrameBatch();
       if (previousFlightIdRef.current) {
         clearLiveMapChunkFetchCache(previousFlightIdRef.current);
       }
@@ -304,6 +398,7 @@ export function useLiveMapChunkCache(
 
     const previousFlightId = previousFlightIdRef.current;
     if (previousFlightId !== null && previousFlightId !== flightId) {
+      discardFrameBatch();
       clearLiveMapChunkFetchCache(previousFlightId);
       for (const controller of abortControllersRef.current.values()) {
         controller.abort();
@@ -319,7 +414,9 @@ export function useLiveMapChunkCache(
       );
     }
     previousFlightIdRef.current = flightId;
-  }, [flightId]);
+  }, [discardFrameBatch, flightId]);
+
+  useEffect(() => () => discardFrameBatch(), [discardFrameBatch]);
 
   useEffect(() => {
     liveMapDebugLog("chunks_scheduled_for_download", {
@@ -354,12 +451,7 @@ export function useLiveMapChunkCache(
       const controller = new AbortController();
       abortControllersRef.current.set(key, controller);
 
-      setInFlightChunkIds((current) => {
-        const next = new Set(current);
-        next.add(key);
-        inFlightRef.current = next;
-        return next;
-      });
+      queueInFlightChange(key, true);
 
       try {
         // Replay always batches; live uses batch only for catch-up bursts (≥3 pending).
@@ -408,23 +500,7 @@ export function useLiveMapChunkCache(
           point_count: chunk.point_count,
         };
 
-        setEntries((current) => {
-          const previous = current.get(key);
-          if (previous?.objectUrl && previous.objectUrl !== objectUrl) {
-            URL.revokeObjectURL(previous.objectUrl);
-          }
-          const next = new Map(current);
-          next.set(key, nextEntry);
-          entriesRef.current = next;
-          return next;
-        });
-
-        setDownloadedChunkIds((current) => {
-          const next = new Set(current);
-          next.add(key);
-          downloadedRef.current = next;
-          return next;
-        });
+        queueCompletedChunk(key, nextEntry);
         liveMapDebugLog("chunk_downloaded", {
           flight_id: flightId,
           cache_key: key,
@@ -434,12 +510,7 @@ export function useLiveMapChunkCache(
         /* retried when pendingSignature changes */
       } finally {
         abortControllersRef.current.delete(key);
-        setInFlightChunkIds((current) => {
-          const next = new Set(current);
-          next.delete(key);
-          inFlightRef.current = next;
-          return next;
-        });
+        queueInFlightChange(key, false);
       }
     });
 
@@ -453,7 +524,10 @@ export function useLiveMapChunkCache(
     flightId,
     mode,
     pendingSignature,
+    queueCompletedChunk,
+    queueInFlightChange,
     token,
+    uniquePendingDownloads,
     visibleLayers,
   ]);
 

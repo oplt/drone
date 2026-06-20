@@ -6,6 +6,7 @@ from typing import Literal
 LiveMapLayerId = Literal[
     "mid360_lidar",
     "rgbd_colored",
+    "rgbd_xyz_uncolored",
     "nvblox_color",
     "nvblox_esdf",
     "nvblox_tsdf",
@@ -16,6 +17,7 @@ LiveMapLayerId = Literal[
 LiveMapSourceId = Literal[
     "mid360_raw",
     "rgbd_colored",
+    "rgbd_xyz_uncolored",
     "nvblox_color",
     "nvblox_esdf",
     "nvblox_tsdf",
@@ -72,6 +74,18 @@ WAREHOUSE_LIVE_MAP_SOURCES: dict[LiveMapSourceId, LiveMapSourceConfig] = {
         max_points=25_000,
         min_publish_interval_s=0.5,
         colored=True,
+        kind="point_cloud",
+    ),
+    "rgbd_xyz_uncolored": LiveMapSourceConfig(
+        source_id="rgbd_xyz_uncolored",
+        topic="/warehouse/front/rgbd/points",
+        layer="rgbd_xyz_uncolored",
+        chunk_prefix="rgbd_xyz",
+        chunk_sequence_width=6,
+        global_frame="odom",
+        max_points=25_000,
+        min_publish_interval_s=0.5,
+        colored=False,
         kind="point_cloud",
     ),
     "nvblox_color": LiveMapSourceConfig(

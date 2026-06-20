@@ -115,6 +115,42 @@ class MissionRuntimeWriteMixin:
             await s.commit()
             return result.scalar_one_or_none() is not None
 
+    async def finalize_execution(
+        self,
+        client_flight_id: str,
+        *,
+        state: str,
+        error: str | None = None,
+    ) -> MissionRuntime | None:
+        """Atomically apply an execution outcome without overwriting a terminal command state."""
+        async with self._sf() as s:
+            result = await s.execute(
+                select(MissionRuntime)
+                .where(MissionRuntime.client_flight_id == client_flight_id)
+                .with_for_update()
+            )
+            row: MissionRuntime | None = result.scalar_one_or_none()
+            if row is None:
+                return None
+            if is_terminal(row.state):
+                return row
+            if not validate_transition(row.state, state):
+                raise ValueError(
+                    f"Invalid state transition: {row.state!r} → {state!r} "
+                    f"for mission {client_flight_id!r}"
+                )
+
+            now = datetime.now(UTC)
+            row.state = state
+            row.updated_at = now
+            if error:
+                row.failure_reason = error
+            if is_terminal(state):
+                row.ended_at = now
+            await s.commit()
+            await s.refresh(row)
+            return row
+
     async def set_flight_id(self, client_flight_id: str, *, flight_id: int) -> None:
         async with self._sf() as s:
             runtime_result = await s.execute(

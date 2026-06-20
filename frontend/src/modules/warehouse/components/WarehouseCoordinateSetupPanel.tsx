@@ -13,9 +13,11 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
@@ -25,6 +27,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import {
   createWarehouseScanTarget,
   deleteWarehouseScanTarget,
+  listWarehouseScanTargets,
   type WarehouseScanTarget,
   type WarehouseStructureExtractParams,
   type WarehouseStructureResponse,
@@ -36,6 +39,11 @@ import {
   shelfNormalFromFacing,
   WAREHOUSE_MAP_FRAME_ID,
 } from "../utils/warehouseMapPlacement";
+import {
+  describeStructureQualityReasons,
+  structureNeedsReviewMessage,
+} from "../utils/structureQualityCopy";
+import { AskAgentPanel } from "../../agents/components/AskAgentPanel";
 
 type TargetDraft = {
   aisle_code: string;
@@ -59,6 +67,8 @@ const emptyDraft: TargetDraft = {
   hover_time_s: "3",
 };
 
+const TABLE_PAGE_SIZE = 50;
+
 const parseNumber = (label: string, value: string): number => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
@@ -75,6 +85,7 @@ export function WarehouseCoordinateSetupPanel({
   structure = null,
   extractionStatus = "not_started",
   autoDetecting = false,
+  structureLoading = false,
   structureError = null,
   onAutoDetect,
 }: {
@@ -85,6 +96,7 @@ export function WarehouseCoordinateSetupPanel({
   structure?: WarehouseStructureResponse | null;
   extractionStatus?: WarehouseStructureResponse["status"];
   autoDetecting?: boolean;
+  structureLoading?: boolean;
   structureError?: string | null;
   onAutoDetect?: (params?: WarehouseStructureExtractParams) => Promise<void>;
 }) {
@@ -94,25 +106,60 @@ export function WarehouseCoordinateSetupPanel({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [binPitch, setBinPitch] = useState("0.9");
+  const [tablePage, setTablePage] = useState(0);
+  const [tableRows, setTableRows] = useState<WarehouseScanTarget[]>([]);
+  const [tableTotal, setTableTotal] = useState(0);
+  const [tableLoading, setTableLoading] = useState(false);
 
-  const { targets, targetsLoading, refreshTargets } = mapPlacement;
+  const { targetsLoading, refreshTargets } = mapPlacement;
   const quality = structure?.summary.quality;
   const qualityStatus = structure?.quality_status ?? quality?.status ?? structure?.status;
   const qualityReasons = structure?.quality_reasons?.length
     ? structure.quality_reasons
     : quality?.reasons ?? [];
+  const readableQualityReasons = describeStructureQualityReasons(qualityReasons);
   const activeTargetCount =
     structure?.active_target_count ?? quality?.active_target_count ?? structure?.target_count ?? 0;
 
   useEffect(() => {
     setSelectedIds((current) =>
-      current.filter((id) => targets.some((row) => row.id === id)),
+      current.filter((id) => tableRows.some((row) => row.id === id)),
     );
-  }, [targets]);
+  }, [tableRows]);
+
+  const loadTablePage = useCallback(async () => {
+    if (warehouseMapId == null) {
+      setTableRows([]);
+      setTableTotal(0);
+      return;
+    }
+    setTableLoading(true);
+    try {
+      const page = await listWarehouseScanTargets(warehouseMapId, token, {
+        limit: TABLE_PAGE_SIZE,
+        offset: tablePage * TABLE_PAGE_SIZE,
+      });
+      setTableRows(page.items);
+      setTableTotal(page.total);
+    } catch (error) {
+      onError(
+        error instanceof Error ? error.message : "Scan targets could not be loaded.",
+      );
+    } finally {
+      setTableLoading(false);
+    }
+  }, [onError, tablePage, token, warehouseMapId]);
+
+  useEffect(() => {
+    void loadTablePage();
+  }, [loadTablePage]);
 
   const allSelected =
-    targets.length > 0 && selectedIds.length === targets.length;
-  const someSelected = selectedIds.length > 0 && !allSelected;
+    tableRows.length > 0 && tableRows.every((row) => selectedIds.includes(row.id));
+  const someSelected =
+    selectedIds.length > 0 &&
+    tableRows.some((row) => selectedIds.includes(row.id)) &&
+    !allSelected;
 
   const handleAutoDetect = useCallback(async () => {
     if (warehouseMapId == null || !onAutoDetect) {
@@ -126,6 +173,7 @@ export function WarehouseCoordinateSetupPanel({
       );
       setMessage("Structure detected. Auto-generated targets loaded below.");
       await refreshTargets();
+      await loadTablePage();
     } catch (error) {
       onError(
         error instanceof Error
@@ -133,7 +181,7 @@ export function WarehouseCoordinateSetupPanel({
           : "Automatic structure detection failed.",
       );
     }
-  }, [binPitch, onAutoDetect, onError, refreshTargets, warehouseMapId]);
+  }, [binPitch, loadTablePage, onAutoDetect, onError, refreshTargets, warehouseMapId]);
 
   useEffect(() => {
     if (!mapPlacement.draftTarget) return;
@@ -206,12 +254,13 @@ export function WarehouseCoordinateSetupPanel({
       mapPlacement.clearDraft();
       setMessage("Scan target saved. Markers updated on the 3D map.");
       await refreshTargets();
+      await loadTablePage();
     } catch (error) {
       onError(error instanceof Error ? error.message : "Scan target could not be saved.");
     } finally {
       setSaving(false);
     }
-  }, [draft, mapPlacement, onError, refreshTargets, token, warehouseMapId]);
+  }, [draft, loadTablePage, mapPlacement, onError, refreshTargets, token, warehouseMapId]);
 
   const handleDelete = useCallback(
     async (targetId: number) => {
@@ -221,11 +270,12 @@ export function WarehouseCoordinateSetupPanel({
         setSelectedIds((current) => current.filter((id) => id !== targetId));
         setMessage("Scan target archived.");
         await refreshTargets();
+        await loadTablePage();
       } catch (error) {
         onError(error instanceof Error ? error.message : "Scan target could not be deleted.");
       }
     },
-    [onError, refreshTargets, token, warehouseMapId],
+    [loadTablePage, onError, refreshTargets, token, warehouseMapId],
   );
 
   const handleDeleteSelected = useCallback(async () => {
@@ -243,6 +293,7 @@ export function WarehouseCoordinateSetupPanel({
         count === 1 ? "Scan target archived." : `${count} scan targets archived.`,
       );
       await refreshTargets();
+      await loadTablePage();
     } catch (error) {
       onError(
         error instanceof Error
@@ -252,7 +303,7 @@ export function WarehouseCoordinateSetupPanel({
     } finally {
       setDeleting(false);
     }
-  }, [onError, refreshTargets, selectedIds, token, warehouseMapId]);
+  }, [loadTablePage, onError, refreshTargets, selectedIds, token, warehouseMapId]);
 
   if (warehouseMapId == null) {
     return (
@@ -265,6 +316,12 @@ export function WarehouseCoordinateSetupPanel({
   return (
     <Stack spacing={2}>
       {message ? <Alert severity="success">{message}</Alert> : null}
+
+      {structureLoading ? (
+        <Alert severity="info" icon={<CircularProgress size={16} />}>
+          Loading structure status…
+        </Alert>
+      ) : null}
 
       {onAutoDetect ? (
         <Box
@@ -334,8 +391,17 @@ export function WarehouseCoordinateSetupPanel({
           ) : null}
           {!autoDetecting && qualityStatus === "needs_review" ? (
             <Alert severity="warning" sx={{ mt: 1, py: 0.25 }}>
-              Auto-detect produced draft-only structure data. No generated targets were activated.{" "}
-              {qualityReasons.length ? `Reasons: ${qualityReasons.join(", ")}.` : ""}
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Generated targets stayed inactive.
+              </Typography>
+              <Typography variant="body2">
+                {structureNeedsReviewMessage(qualityReasons)}
+              </Typography>
+              {readableQualityReasons.length ? (
+                <Typography variant="caption" color="text.secondary">
+                  Check the scan quality: {readableQualityReasons.join("; ")}.
+                </Typography>
+              ) : null}
             </Alert>
           ) : null}
           {!autoDetecting && extractionStatus === "failed" ? (
@@ -344,6 +410,14 @@ export function WarehouseCoordinateSetupPanel({
             </Alert>
           ) : null}
         </Box>
+      ) : null}
+
+      {warehouseMapId != null ? (
+        <AskAgentPanel
+          agentId="warehouse_scan"
+          title="Ask about this map"
+          basePayload={{ warehouse_map_id: warehouseMapId, phase: "on_demand" }}
+        />
       ) : null}
 
       <Typography variant="body2" color="text.secondary">
@@ -464,8 +538,11 @@ export function WarehouseCoordinateSetupPanel({
           variant="outlined"
           size="small"
           startIcon={<RefreshRoundedIcon />}
-          onClick={() => void refreshTargets()}
-          disabled={targetsLoading}
+          onClick={() => {
+            void refreshTargets();
+            void loadTablePage();
+          }}
+          disabled={targetsLoading || tableLoading}
         >
           Refresh
         </Button>
@@ -488,10 +565,12 @@ export function WarehouseCoordinateSetupPanel({
               <Checkbox
                 indeterminate={someSelected}
                 checked={allSelected}
-                disabled={targets.length === 0}
+                disabled={tableRows.length === 0}
                 onChange={(event) =>
                   setSelectedIds(
-                    event.target.checked ? targets.map((target) => target.id) : [],
+                    event.target.checked
+                      ? tableRows.map((target) => target.id)
+                      : [],
                   )
                 }
                 inputProps={{ "aria-label": "Select all targets" }}
@@ -505,7 +584,15 @@ export function WarehouseCoordinateSetupPanel({
           </TableRow>
         </TableHead>
         <TableBody>
-          {targets.length === 0 ? (
+          {tableLoading ? (
+            <TableRow>
+              <TableCell colSpan={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Loading scan targets…
+                </Typography>
+              </TableCell>
+            </TableRow>
+          ) : tableRows.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6}>
                 <Typography variant="body2" color="text.secondary">
@@ -514,7 +601,7 @@ export function WarehouseCoordinateSetupPanel({
               </TableCell>
             </TableRow>
           ) : (
-            targets.map((target: WarehouseScanTarget) => (
+            tableRows.map((target: WarehouseScanTarget) => (
               <TableRow
                 key={target.id}
                 selected={selectedIds.includes(target.id)}
@@ -564,6 +651,14 @@ export function WarehouseCoordinateSetupPanel({
           )}
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={tableTotal}
+        page={tablePage}
+        onPageChange={(_event, nextPage) => setTablePage(nextPage)}
+        rowsPerPage={TABLE_PAGE_SIZE}
+        rowsPerPageOptions={[TABLE_PAGE_SIZE]}
+      />
     </Stack>
   );
 }

@@ -398,6 +398,24 @@ class IrrigationProcessingService:
                     len(captures),
                     analysis["summary"]["total_anomaly_count"],
                 )
+                try:
+                    from backend.modules.agents.hooks import schedule_agent_hook
+                    from backend.modules.agents.schemas import AgentPhase, MissionAgentId
+
+                    schedule_agent_hook(
+                        AgentPhase.POSTFLIGHT,
+                        agent_id=MissionAgentId.FIELD_SURVEY,
+                        mission_type="grid",
+                        client_flight_id=mission.client_flight_id,
+                        mission_runtime_id=mission.id,
+                        structured_payload={
+                            "irrigation_trigger": True,
+                            "irrigation_summary": analysis["summary"],
+                            "mission_state": mission.state,
+                        },
+                    )
+                except Exception:
+                    logger.exception("Failed to schedule irrigation field survey agent")
                 await db.refresh(layer)
                 return layer
             except Exception as exc:

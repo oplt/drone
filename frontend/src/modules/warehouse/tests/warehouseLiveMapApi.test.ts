@@ -93,7 +93,7 @@ describe("warehouse live map API", () => {
   });
 
   it("mergeUpdate keeps canonical chunks instead of replacing them", () => {
-    const base = { chunksById: new Map(), scanPath: [] as const };
+    const base = { chunksById: new Map(), scanPath: [] };
     const first = mergeUpdate(base, {
       type: "live_map_update",
       flight_id: "flight-1",

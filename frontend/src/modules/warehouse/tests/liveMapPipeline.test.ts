@@ -8,6 +8,8 @@ import {
 import {
   applyWarehouseLiveMapMessage,
   mergeUpdate,
+  warehouseLiveMapReconnectDelayMs,
+  warehouseLiveMapSnapshotPollDelayMs,
 } from "../hooks/useWarehouseLiveVoxelMap";
 import { selectDownloadableChunksPerLayer } from "../utils/liveMapChunkRetention";
 import {
@@ -23,6 +25,33 @@ import {
   chunksAvailableByLayer,
   layerHasStoredChunks,
 } from "../utils/liveMapLayerUtils";
+
+describe("warehouseLiveMapReconnectDelayMs", () => {
+  it("backs off exponentially and caps at 30 seconds", () => {
+    const noDownwardJitter = () => 1;
+
+    expect(warehouseLiveMapReconnectDelayMs(1, noDownwardJitter)).toBe(1_500);
+    expect(warehouseLiveMapReconnectDelayMs(2, noDownwardJitter)).toBe(3_000);
+    expect(warehouseLiveMapReconnectDelayMs(5, noDownwardJitter)).toBe(24_000);
+    expect(warehouseLiveMapReconnectDelayMs(6, noDownwardJitter)).toBe(30_000);
+    expect(warehouseLiveMapReconnectDelayMs(20, noDownwardJitter)).toBe(30_000);
+  });
+
+  it("applies bounded downward jitter", () => {
+    expect(warehouseLiveMapReconnectDelayMs(2, () => 0)).toBe(2_400);
+    expect(warehouseLiveMapReconnectDelayMs(2, () => 1)).toBe(3_000);
+  });
+});
+
+describe("warehouseLiveMapSnapshotPollDelayMs", () => {
+  it("uses capped exponential backoff for HTTP fallback polling", () => {
+    const noDownwardJitter = () => 1;
+
+    expect(warehouseLiveMapSnapshotPollDelayMs(1, noDownwardJitter)).toBe(1_500);
+    expect(warehouseLiveMapSnapshotPollDelayMs(4, noDownwardJitter)).toBe(12_000);
+    expect(warehouseLiveMapSnapshotPollDelayMs(6, noDownwardJitter)).toBe(30_000);
+  });
+});
 
 describe("chunkCacheKey", () => {
   it("keys cache entries by flight and chunk id", () => {
@@ -174,6 +203,46 @@ describe("useLiveMapChunkCache", () => {
 
     await waitFor(() => expect(result.current.cachedChunks).toHaveLength(1));
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("batches same-frame replay completions into one animation-frame flush", async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    const requestFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      });
+    const fetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([1, 2, 3]), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const chunks: WarehouseLiveVoxelChunk[] = Array.from(
+      { length: 3 },
+      (_, index) => ({
+        id: `rgbd_${index}`,
+        kind: "point_cloud",
+        sequence: index,
+        source: "rgbd_colored",
+        layer: "rgbd_colored",
+        url: `/warehouse/live-map/flight/chunks/rgbd_${index}/download`,
+        byte_size: 3,
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useLiveMapChunkCache("flight", chunks, null, { mode: "replay" }),
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(requestFrame).toHaveBeenCalledTimes(1);
+      frameCallbacks.shift()?.(performance.now());
+    });
+
+    await waitFor(() => expect(result.current.cachedChunks).toHaveLength(3));
+    expect(requestFrame).toHaveBeenCalledTimes(1);
   });
 
   it("caps concurrent chunk downloads", async () => {
@@ -343,10 +412,10 @@ describe("mergeUpdate", () => {
           "rgbd_colored:rgbd_000001",
           {
             id: "rgbd_000001",
-            kind: "point_cloud",
+            kind: "point_cloud" as const,
             sequence: 1,
-            source: "rgbd_colored",
-            layer: "rgbd_colored",
+            source: "rgbd_colored" as const,
+            layer: "rgbd_colored" as const,
           },
         ],
       ]),
@@ -522,18 +591,51 @@ describe("defaultLayerVisibilityForChunks", () => {
     expect(visibility.nvbloxColor).toBe(false);
   });
 
-  it("does not auto-enable diagnostic nvblox esdf/tsdf layers in the 3D map", () => {
+  it("labels and prefers RGB-D XYZ geometry when real RGB fields are absent", () => {
+    const chunks: WarehouseLiveVoxelChunk[] = [
+      {
+        id: "rgbd_xyz_000001",
+        kind: "point_cloud",
+        sequence: 1,
+        source: "rgbd_xyz_uncolored",
+        layer: "rgbd_xyz_uncolored",
+        has_rgb: false,
+      },
+      {
+        id: "nvblox_color_000001",
+        kind: "point_cloud",
+        sequence: 1,
+        source: "nvblox_color",
+        layer: "nvblox_color",
+        has_rgb: true,
+      },
+    ];
+
+    const visibility = defaultLayerVisibilityForChunks(chunks, {
+      rgbd_cloud_available: true,
+      rgbd_has_rgb: false,
+      default_view_layer: "rgbd_xyz_uncolored",
+      diagnostic_nvblox_layers: ["nvblox_color"],
+    });
+
+    expect(inferLayerKey(chunks[0])).toBe("rgbdDepth");
+    expect(visibility.rgbdDepth).toBe(true);
+    expect(visibility.rgbdColored).toBe(false);
+    expect(visibility.nvbloxColor).toBe(false);
+  });
+
+  it("uses ESDF fallback but does not auto-enable internal TSDF blocks", () => {
     const visibility = defaultLayerVisibilityForChunks([], {
       chunk_counts: { nvblox_esdf: 12, nvblox_tsdf: 3 },
     });
-    expect(visibility.nvbloxEsdf).toBe(false);
+    expect(visibility.nvbloxEsdf).toBe(true);
     expect(visibility.nvbloxTsdf).toBe(false);
     expect(visibility.rgbdColored).toBe(false);
   });
 
   it("marks layers with manifest chunk counts as available", () => {
     const availability = chunksAvailableByLayer([], {
-      map_quality: "colored_nvblox",
+      map_quality: "nvblox_esdf",
       chunk_counts: {
         rgbd_colored: 90,
         nvblox_esdf: 22,

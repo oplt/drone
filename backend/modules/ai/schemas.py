@@ -14,6 +14,10 @@ LLMTaskName = Literal[
     "video_summary",
     "telemetry_anomaly",
     "offline_report",
+    "warehouse_scan",
+    "warehouse_inspection",
+    "field_survey",
+    "livestock",
 ]
 
 

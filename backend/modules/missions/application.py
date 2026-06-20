@@ -30,6 +30,9 @@ class MissionRuntimeApplication:
     async def set_state(self, client_flight_id: str, **values: Any) -> bool:
         return await mission_runtime_repo.set_state(client_flight_id, **values)
 
+    async def finalize_execution(self, client_flight_id: str, **values: Any):
+        return await mission_runtime_repo.finalize_execution(client_flight_id, **values)
+
     async def set_flight_id(self, client_flight_id: str, *, flight_id: int) -> None:
         await mission_runtime_repo.set_flight_id(client_flight_id, flight_id=flight_id)
 

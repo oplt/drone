@@ -95,6 +95,13 @@ export type WarehouseInspectionResult = {
   scanned_at: string;
 };
 
+export type WarehouseInspectionResultPage = {
+  items: WarehouseInspectionResult[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export type WarehouseStructureAisle = {
   code: string;
   centerline_world: [number, number, number, number];
@@ -172,6 +179,8 @@ export type WarehouseStructureExtractParams = {
   clearance_margin_m?: number;
   min_aisle_width_m?: number;
   shelf_min_spacing_m?: number;
+  max_shelf_levels?: number;
+  max_bins_per_rack_face?: number;
   axis_deg?: number;
 };
 
@@ -212,19 +221,39 @@ export async function computeWarehouseScanPose(
     yaw_deg?: number | null;
   },
   token?: string | null,
+  signal?: AbortSignal,
 ): Promise<{ scan_pose: WarehouseLocalPose }> {
   return httpRequest<{ scan_pose: WarehouseLocalPose }>(
     "/warehouse/scan-targets/compute-scan-pose",
-    { method: "POST", body: payload, token, skipUnauthorizedRedirect: true },
+    {
+      method: "POST",
+      body: payload,
+      token,
+      signal,
+      skipUnauthorizedRedirect: true,
+    },
   );
 }
+
+export type WarehouseScanTargetPage = {
+  items: WarehouseScanTarget[];
+  total: number;
+  limit: number;
+  offset: number;
+};
 
 export async function listWarehouseScanTargets(
   warehouseMapId: number,
   token?: string | null,
-): Promise<WarehouseScanTarget[]> {
-  return httpRequest<WarehouseScanTarget[]>(
-    `/warehouse/maps/${warehouseMapId}/scan-targets`,
+  params?: { limit?: number; offset?: number; active?: boolean },
+): Promise<WarehouseScanTargetPage> {
+  const search = new URLSearchParams();
+  if (params?.limit != null) search.set("limit", String(params.limit));
+  if (params?.offset != null) search.set("offset", String(params.offset));
+  if (params?.active != null) search.set("active", String(params.active));
+  const query = search.toString();
+  return httpRequest<WarehouseScanTargetPage>(
+    `/warehouse/maps/${warehouseMapId}/scan-targets${query ? `?${query}` : ""}`,
     { token, skipUnauthorizedRedirect: true },
   );
 }
@@ -295,9 +324,14 @@ export async function runWarehouseInspectionMissionMock(
 export async function listWarehouseInspectionResults(
   missionId: number,
   token?: string | null,
-): Promise<WarehouseInspectionResult[]> {
-  return httpRequest<WarehouseInspectionResult[]>(
-    `/warehouse/inspection-missions/${missionId}/results`,
+  options?: { limit?: number; offset?: number },
+): Promise<WarehouseInspectionResultPage> {
+  const params = new URLSearchParams();
+  if (options?.limit != null) params.set("limit", String(options.limit));
+  if (options?.offset != null) params.set("offset", String(options.offset));
+  const query = params.size > 0 ? `?${params.toString()}` : "";
+  return httpRequest<WarehouseInspectionResultPage>(
+    `/warehouse/inspection-missions/${missionId}/results${query}`,
     { token, skipUnauthorizedRedirect: true },
   );
 }

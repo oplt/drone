@@ -141,6 +141,33 @@ def test_build_disk_live_map_snapshot_returns_all_manifest_chunks(
     assert len(snapshot.updates[0].changed_chunks) == 5
 
 
+def test_build_disk_live_map_snapshot_preview_keeps_latest_chunk_per_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_preview_mode"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+
+    for sequence in range(1, 6):
+        payload = struct.pack("<ffffff", float(sequence), 0.0, 0.0, 1.0, 1.0, 1.0)
+        payload += bytes([255, 0, 0, 0, 255, 0])
+        chunk_id = f"rgbd_{sequence:06d}"
+        (flight_dir / f"{chunk_id}-deadbeefcafebabe.xyzrgb32").write_bytes(payload)
+
+    storage = WarehouseLiveMapChunkStorage(root=tmp_path)
+    monkeypatch.setattr(
+        live_map_replay,
+        "warehouse_live_map_chunk_storage",
+        storage,
+    )
+
+    snapshot = live_map_replay.build_disk_live_map_snapshot(flight_id, mode="preview")
+    chunks = snapshot.updates[0].changed_chunks
+    assert len(chunks) == 1
+    assert chunks[0].id == "rgbd_000005"
+
+
 def test_build_disk_live_map_snapshot_is_disk_backed_source(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -165,6 +192,54 @@ def test_build_disk_live_map_snapshot_is_disk_backed_source(
     assert len(snapshot.updates) == 1
     assert len(snapshot.updates[0].changed_chunks) == 1
     assert snapshot.updates[0].changed_chunks[0].id == "rgbd_000001"
+
+
+def test_disk_live_map_snapshot_cache_reuses_and_isolates_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_cached_replay"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    payload = struct.pack("<ffffff", 1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+    (flight_dir / "rgbd_000001-deadbeefcafebabe.xyz32").write_bytes(payload)
+    monkeypatch.setattr(
+        live_map_replay,
+        "warehouse_live_map_chunk_storage",
+        WarehouseLiveMapChunkStorage(root=tmp_path),
+    )
+    live_map_replay.disk_live_map_snapshot_cache.clear()
+
+    first = live_map_replay.build_disk_live_map_snapshot(flight_id)
+    first.updates.clear()
+    second = live_map_replay.build_disk_live_map_snapshot(flight_id)
+
+    assert len(second.updates) == 1
+    assert second.updates[0].changed_chunks[0].id == "rgbd_000001"
+
+
+def test_disk_live_map_snapshot_cache_invalidates_when_chunk_added(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_cache_invalidation"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    payload = struct.pack("<ffffff", 1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+    (flight_dir / "rgbd_000001-deadbeefcafebabe.xyz32").write_bytes(payload)
+    monkeypatch.setattr(
+        live_map_replay,
+        "warehouse_live_map_chunk_storage",
+        WarehouseLiveMapChunkStorage(root=tmp_path),
+    )
+    live_map_replay.disk_live_map_snapshot_cache.clear()
+    first = live_map_replay.build_disk_live_map_snapshot(flight_id)
+
+    (flight_dir / "rgbd_000002-feedfacefeedface.xyz32").write_bytes(payload)
+    second = live_map_replay.build_disk_live_map_snapshot(flight_id)
+
+    assert len(first.updates[0].changed_chunks) == 1
+    assert len(second.updates[0].changed_chunks) == 2
 
 
 @pytest.mark.asyncio

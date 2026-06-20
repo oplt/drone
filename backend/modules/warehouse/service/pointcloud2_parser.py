@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import math
 import struct
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -29,6 +30,8 @@ _POINTFIELD_NUMPY_DTYPE: dict[int, str] = {
     8: "f8",
 }
 
+COLOR_FIELD_NAMES = frozenset({"rgb", "rgba", "bgr", "bgra"})
+
 
 @dataclass(frozen=True)
 class ParsedPointCloud:
@@ -38,6 +41,23 @@ class ParsedPointCloud:
     frame_id: str
     point_count: int
     intensity: np.ndarray | None = None
+    fields: tuple[str, ...] = ()
+
+
+def detect_color_fields(fields: Any) -> dict[str, Any] | None:
+    """Describe a supported PointCloud2 color layout without assuming color exists."""
+    names = {
+        str(getattr(field, "name", field.get("name") if isinstance(field, Mapping) else ""))
+        .strip()
+        .lower()
+        for field in (fields or ())
+    }
+    packed = next((name for name in ("rgb", "rgba", "bgr", "bgra") if name in names), None)
+    if packed is not None:
+        return {"mode": "packed", "field": packed}
+    if {"r", "g", "b"}.issubset(names):
+        return {"mode": "separate", "fields": ("r", "g", "b")}
+    return None
 
 
 def _safe_int(value: Any, *, default: int | None = None) -> int | None:
@@ -120,7 +140,7 @@ def _decode_rgba_packed(value: float | int) -> tuple[float, float, float] | None
 def _field_map_from_msg(msg: Any) -> dict[str, tuple[int, int]]:
     fields: dict[str, tuple[int, int]] = {}
     for field in getattr(msg, "fields", ()) or ():
-        name = str(getattr(field, "name", "") or "")
+        name = str(getattr(field, "name", "") or "").strip().lower()
         if not name:
             continue
         offset = _safe_int(getattr(field, "offset", None))
@@ -139,7 +159,7 @@ def _field_map_from_yaml(payload: Mapping[str, Any]) -> dict[str, tuple[int, int
     for field in raw_fields:
         if not isinstance(field, dict):
             continue
-        name = str(field.get("name") or "")
+        name = str(field.get("name") or "").strip().lower()
         if not name:
             continue
         offset = _safe_int(field.get("offset"))
@@ -260,11 +280,12 @@ def _decode_packed_rgb_array(
         return None
 
     rgb = np.empty((packed.shape[0], 3), dtype=np.float32)
-    if mode == "rgba":
-        rgb[:, 0] = ((packed >> 24) & 0xFF) / 255.0
-        rgb[:, 1] = ((packed >> 16) & 0xFF) / 255.0
-        rgb[:, 2] = ((packed >> 8) & 0xFF) / 255.0
+    if mode in {"bgr", "bgra"}:
+        rgb[:, 0] = (packed & 0xFF) / 255.0
+        rgb[:, 1] = ((packed >> 8) & 0xFF) / 255.0
+        rgb[:, 2] = ((packed >> 16) & 0xFF) / 255.0
     else:
+        # PCL/ROS commonly stores both rgb and rgba as 0xAARRGGBB.
         rgb[:, 0] = ((packed >> 16) & 0xFF) / 255.0
         rgb[:, 1] = ((packed >> 8) & 0xFF) / 255.0
         rgb[:, 2] = (packed & 0xFF) / 255.0
@@ -284,11 +305,9 @@ def parse_pointcloud2_msg(
     if point_step is None or point_step <= 0:
         return None
     try:
-        raw_data = getattr(msg, "data")
+        raw_data = msg.data
         raw: bytes | bytearray | memoryview = (
-            raw_data
-            if isinstance(raw_data, (bytes, bytearray, memoryview))
-            else bytes(raw_data)
+            raw_data if isinstance(raw_data, (bytes, bytearray, memoryview)) else bytes(raw_data)
         )
     except (TypeError, ValueError):
         return None
@@ -429,15 +448,33 @@ def _parse_pointcloud2_binary_vectorized(
     y_offset, y_type = field_map["y"]
     z_offset, z_type = field_map["z"]
     arrays = [
-        _read_field_array(raw, offset=x_offset, datatype=x_type, point_step=point_step,
-                          total_points=total_points, little_endian=little_endian,
-                          indices=sampled_indices),
-        _read_field_array(raw, offset=y_offset, datatype=y_type, point_step=point_step,
-                          total_points=total_points, little_endian=little_endian,
-                          indices=sampled_indices),
-        _read_field_array(raw, offset=z_offset, datatype=z_type, point_step=point_step,
-                          total_points=total_points, little_endian=little_endian,
-                          indices=sampled_indices),
+        _read_field_array(
+            raw,
+            offset=x_offset,
+            datatype=x_type,
+            point_step=point_step,
+            total_points=total_points,
+            little_endian=little_endian,
+            indices=sampled_indices,
+        ),
+        _read_field_array(
+            raw,
+            offset=y_offset,
+            datatype=y_type,
+            point_step=point_step,
+            total_points=total_points,
+            little_endian=little_endian,
+            indices=sampled_indices,
+        ),
+        _read_field_array(
+            raw,
+            offset=z_offset,
+            datatype=z_type,
+            point_step=point_step,
+            total_points=total_points,
+            little_endian=little_endian,
+            indices=sampled_indices,
+        ),
     ]
     if any(array is None for array in arrays):
         return None
@@ -452,17 +489,24 @@ def _parse_pointcloud2_binary_vectorized(
         mask &= distances <= max_range_m
     if not mask.any():
         return None
-    if mask.sum() > max_points:
-        chosen = np.flatnonzero(mask)[:max_points]
-    else:
-        chosen = np.flatnonzero(mask)
+    chosen = (
+        np.flatnonzero(mask)[:max_points]
+        if mask.sum() > max_points
+        else np.flatnonzero(mask)
+    )
     xyz = np.ascontiguousarray(xyz[chosen], dtype=np.float32)
     original_indices = sampled_indices[chosen]
 
     rgb: np.ndarray | None = None
     has_rgb = False
-    if "rgb" in field_map and _field_is_valid(field_map, "rgb", point_step=point_step):
-        rgb_offset, rgb_type = field_map["rgb"]
+    color_layout = detect_color_fields([{"name": name} for name in field_map])
+    packed_name = (
+        str(color_layout["field"])
+        if color_layout is not None and color_layout.get("mode") == "packed"
+        else None
+    )
+    if packed_name and _field_is_valid(field_map, packed_name, point_step=point_step):
+        rgb_offset, rgb_type = field_map[packed_name]
         packed = _read_field_array(
             raw,
             offset=rgb_offset,
@@ -472,20 +516,11 @@ def _parse_pointcloud2_binary_vectorized(
             little_endian=little_endian,
             indices=original_indices,
         )
-        rgb = _decode_packed_rgb_array(packed, mode="rgb", datatype=rgb_type) if packed is not None else None
-        has_rgb = rgb is not None and rgb.shape[0] == xyz.shape[0]
-    elif "rgba" in field_map and _field_is_valid(field_map, "rgba", point_step=point_step):
-        rgb_offset, rgb_type = field_map["rgba"]
-        packed = _read_field_array(
-            raw,
-            offset=rgb_offset,
-            datatype=rgb_type,
-            point_step=point_step,
-            total_points=total_points,
-            little_endian=little_endian,
-            indices=original_indices,
+        rgb = (
+            _decode_packed_rgb_array(packed, mode=packed_name, datatype=rgb_type)
+            if packed is not None
+            else None
         )
-        rgb = _decode_packed_rgb_array(packed, mode="rgba", datatype=rgb_type) if packed is not None else None
         has_rgb = rgb is not None and rgb.shape[0] == xyz.shape[0]
     elif all(_field_is_valid(field_map, name, point_step=point_step) for name in ("r", "g", "b")):
         channels: list[np.ndarray] = []
@@ -509,7 +544,11 @@ def _parse_pointcloud2_binary_vectorized(
             has_rgb = rgb.shape[0] == xyz.shape[0]
 
     if not has_rgb:
-        rgb = _distance_colors(xyz) if fallback_color_mode == "distance" else _height_distance_colors(xyz)
+        rgb = (
+            _distance_colors(xyz)
+            if fallback_color_mode == "distance"
+            else _height_distance_colors(xyz)
+        )
 
     intensity: np.ndarray | None = None
     if "intensity" in field_map and _field_is_valid(field_map, "intensity", point_step=point_step):
@@ -524,7 +563,9 @@ def _parse_pointcloud2_binary_vectorized(
             indices=original_indices,
         )
         if values is not None:
-            intensity = np.nan_to_num(values.astype(np.float32, copy=False), nan=0.0, posinf=0.0, neginf=0.0)
+            intensity = np.nan_to_num(
+                values.astype(np.float32, copy=False), nan=0.0, posinf=0.0, neginf=0.0
+            )
 
     return ParsedPointCloud(
         xyz=xyz,
@@ -532,7 +573,10 @@ def _parse_pointcloud2_binary_vectorized(
         has_rgb=has_rgb,
         frame_id=frame_id,
         point_count=int(xyz.shape[0]),
-        intensity=np.ascontiguousarray(intensity, dtype=np.float32) if intensity is not None else None,
+        intensity=np.ascontiguousarray(intensity, dtype=np.float32)
+        if intensity is not None
+        else None,
+        fields=tuple(field_map),
     )
 
 
@@ -556,12 +600,15 @@ def _parse_pointcloud2_binary_generic(
 
     rgb_mode: str | None = None
     rgb_offset = rgb_type = None
-    if "rgb" in field_map and _field_is_valid(field_map, "rgb", point_step=point_step):
-        rgb_mode = "rgb"
-        rgb_offset, rgb_type = field_map["rgb"]
-    elif "rgba" in field_map and _field_is_valid(field_map, "rgba", point_step=point_step):
-        rgb_mode = "rgba"
-        rgb_offset, rgb_type = field_map["rgba"]
+    color_layout = detect_color_fields([{"name": name} for name in field_map])
+    packed_name = (
+        str(color_layout["field"])
+        if color_layout is not None and color_layout.get("mode") == "packed"
+        else None
+    )
+    if packed_name and _field_is_valid(field_map, packed_name, point_step=point_step):
+        rgb_mode = packed_name
+        rgb_offset, rgb_type = field_map[packed_name]
     elif all(_field_is_valid(field_map, name, point_step=point_step) for name in ("r", "g", "b")):
         rgb_mode = "separate"
 
@@ -593,24 +640,34 @@ def _parse_pointcloud2_binary_generic(
 
         xyz_rows.append([xf, yf, zf])
 
-        if rgb_mode == "rgb" and rgb_offset is not None and rgb_type is not None:
-            packed = _unpack_field(raw, offset=base + rgb_offset, datatype=rgb_type, little_endian=little_endian)
-            decoded = _decode_rgb_packed(packed) if packed is not None else None
-            rgb_rows.append(list(decoded) if decoded else [0.7, 0.7, 0.7])
-        elif rgb_mode == "rgba" and rgb_offset is not None and rgb_type is not None:
-            packed = _unpack_field(raw, offset=base + rgb_offset, datatype=rgb_type, little_endian=little_endian)
-            decoded = _decode_rgba_packed(packed) if packed is not None else None
-            rgb_rows.append(list(decoded) if decoded else [0.7, 0.7, 0.7])
+        if rgb_mode in COLOR_FIELD_NAMES and rgb_offset is not None and rgb_type is not None:
+            packed = _unpack_field(
+                raw, offset=base + rgb_offset, datatype=rgb_type, little_endian=little_endian
+            )
+            decoded_array = (
+                _decode_packed_rgb_array(np.asarray([packed]), mode=rgb_mode, datatype=rgb_type)
+                if packed is not None
+                else None
+            )
+            decoded = decoded_array[0] if decoded_array is not None else None
+            rgb_rows.append(list(decoded) if decoded is not None else [0.7, 0.7, 0.7])
         elif rgb_mode == "separate":
             values: list[float] = []
             for name in ("r", "g", "b"):
                 offset, datatype = field_map[name]
-                raw_value = _unpack_field(raw, offset=base + offset, datatype=datatype, little_endian=little_endian)
+                raw_value = _unpack_field(
+                    raw, offset=base + offset, datatype=datatype, little_endian=little_endian
+                )
                 values.append(float(raw_value) if raw_value is not None else 0.7)
             rgb_rows.append(values)
 
         if intensity_offset is not None and intensity_type is not None:
-            value = _unpack_field(raw, offset=base + intensity_offset, datatype=intensity_type, little_endian=little_endian)
+            value = _unpack_field(
+                raw,
+                offset=base + intensity_offset,
+                datatype=intensity_type,
+                little_endian=little_endian,
+            )
             ivalue = float(value) if value is not None else 0.0
             intensity_rows.append(ivalue if math.isfinite(ivalue) else 0.0)
 
@@ -625,7 +682,11 @@ def _parse_pointcloud2_binary_generic(
     if has_rgb:
         rgb = _normalise_rgb_array(np.asarray(rgb_rows, dtype=np.float32))
     else:
-        rgb = _distance_colors(xyz) if fallback_color_mode == "distance" else _height_distance_colors(xyz)
+        rgb = (
+            _distance_colors(xyz)
+            if fallback_color_mode == "distance"
+            else _height_distance_colors(xyz)
+        )
 
     intensity = None
     if intensity_rows and len(intensity_rows) == xyz.shape[0]:
@@ -637,7 +698,10 @@ def _parse_pointcloud2_binary_generic(
         has_rgb=has_rgb,
         frame_id=frame_id,
         point_count=int(xyz.shape[0]),
-        intensity=np.ascontiguousarray(intensity, dtype=np.float32) if intensity is not None else None,
+        intensity=np.ascontiguousarray(intensity, dtype=np.float32)
+        if intensity is not None
+        else None,
+        fields=tuple(field_map),
     )
 
 

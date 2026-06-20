@@ -179,6 +179,13 @@ class WarehouseScanTargetRead(WarehouseScanTargetBase):
     updated_at: datetime
 
 
+class WarehouseScanTargetPage(BaseModel):
+    items: list[WarehouseScanTargetRead]
+    total: int = Field(..., ge=0)
+    limit: int = Field(..., ge=1)
+    offset: int = Field(..., ge=0)
+
+
 class WarehouseScanTargetImport(BaseModel):
     targets: list[WarehouseScanTargetCreate] = Field(..., min_length=1, max_length=1000)
 
@@ -268,6 +275,13 @@ class WarehouseInspectionResultRead(BaseModel):
     scanned_at: datetime
 
 
+class WarehouseInspectionResultPage(BaseModel):
+    items: list[WarehouseInspectionResultRead]
+    total: int = Field(..., ge=0)
+    limit: int = Field(..., ge=1)
+    offset: int = Field(..., ge=0)
+
+
 class WarehouseScanPoseComputeIn(BaseModel):
     target_point: WarehouseLocalPoint
     shelf_normal: WarehouseShelfNormal | None = None
@@ -290,6 +304,8 @@ class WarehouseStructureExtractIn(BaseModel):
     clearance_margin_m: float | None = Field(default=None, ge=0.0, le=5.0)
     min_aisle_width_m: float | None = Field(default=None, gt=0.0, le=20.0)
     shelf_min_spacing_m: float | None = Field(default=None, gt=0.0, le=10.0)
+    max_shelf_levels: int | None = Field(default=None, ge=1, le=12)
+    max_bins_per_rack_face: int | None = Field(default=None, ge=1, le=80)
     axis_deg: float | None = Field(default=None, ge=-180.0, le=180.0)
 
     def to_params_payload(self) -> dict[str, float]:
@@ -303,12 +319,39 @@ class WarehouseStructureExtractIn(BaseModel):
             "clearance_margin_m",
             "min_aisle_width_m",
             "shelf_min_spacing_m",
+            "max_shelf_levels",
+            "max_bins_per_rack_face",
             "axis_deg",
         ):
             value = getattr(self, name)
             if value is not None:
                 payload[name] = float(value)
         return payload
+
+
+class WarehouseMissionDefaultsOut(BaseModel):
+    cruise_alt: float = Field(default=2.5, gt=0.2, le=20.0)
+    corridor_spacing_m: float = Field(default=3.0, gt=0.1, le=50.0)
+    aisle_axis_deg: float | None = Field(default=0.0, ge=-180.0, le=360.0)
+    clearance_m: float = Field(default=0.75, gt=0.1, le=20.0)
+    perimeter_offset_m: float = Field(default=0.5, ge=0.0, le=20.0)
+    scan_pattern: Literal[
+        "aisle_serpentine",
+        "stacked_passes",
+        "crosshatch",
+        "perimeter_aisle_hybrid",
+    ] = "aisle_serpentine"
+    lane_strategy: Literal["serpentine", "one_way"] = "serpentine"
+    view_mode: Literal["forward", "left_face", "right_face", "dual_face"] = "forward"
+    layer_count: int = Field(default=1, ge=1, le=20)
+    layer_spacing_m: float = Field(default=1.0, ge=0.0, le=20.0)
+    ceiling_height_m: float = Field(default=6.0, gt=0.1, le=100.0)
+    ceiling_margin_m: float = Field(default=0.6, ge=0.0, le=20.0)
+    work_speed_mps: float = Field(default=0.8, gt=0.0, le=20.0)
+    transit_speed_mps: float = Field(default=1.2, gt=0.0, le=30.0)
+    scan_pause_s: float = Field(default=0.0, ge=0.0, le=30.0)
+    interpolate_steps_work_leg: int = Field(default=6, ge=0, le=100)
+    interpolate_steps_transit_leg: int = Field(default=4, ge=0, le=100)
 
 
 class WarehouseStructureExtractOut(BaseModel):

@@ -29,6 +29,7 @@ export type WarehouseLiveVoxelChunk = {
   source?:
     | "mid360_raw"
     | "rgbd_colored"
+    | "rgbd_xyz_uncolored"
     | "nvblox_color"
     | "nvblox_esdf"
     | "nvblox_tsdf"
@@ -39,6 +40,7 @@ export type WarehouseLiveVoxelChunk = {
   layer?:
     | "mid360_lidar"
     | "rgbd_colored"
+    | "rgbd_xyz_uncolored"
     | "nvblox_color"
     | "nvblox_esdf"
     | "nvblox_tsdf"
@@ -46,6 +48,10 @@ export type WarehouseLiveVoxelChunk = {
     | "nvblox_mesh"
     | null;
   has_rgb?: boolean | null;
+  fields?: string[];
+  source_topic?: string | null;
+  cloud_age_ms?: number | null;
+  transform_age_ms?: number | null;
   encoding?: string | null;
   layer_type?: string | null;
   frame_id?: string | null;
@@ -56,6 +62,10 @@ export type WarehouseLiveVoxelChunk = {
 export type WarehouseLiveMapManifestSummary = {
   map_quality?: string;
   rgbd_colored_available?: boolean;
+  rgbd_cloud_available?: boolean;
+  rgbd_has_rgb?: boolean;
+  default_view_layer?: string | null;
+  diagnostic_nvblox_layers?: string[];
   nvblox_available?: boolean;
   raw_lidar_only?: boolean;
   chunk_counts?: Record<string, number>;
@@ -227,7 +237,12 @@ export type LiveMapRuntimeConfig = {
     max_concurrent_chunk_downloads: number;
     max_points_per_layer: number;
   };
-  preferred_layer: "rgbd_colored" | "nvblox_color" | "mid360_raw";
+  preferred_layer:
+    | "rgbd_colored"
+    | "rgbd_xyz_uncolored"
+    | "nvblox_esdf"
+    | "nvblox_mesh"
+    | "mid360_raw";
 };
 
 export async function fetchWarehouseLiveMapDiagnostics(

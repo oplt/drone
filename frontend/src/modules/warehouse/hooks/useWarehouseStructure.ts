@@ -5,6 +5,8 @@ import {
   type WarehouseStructureExtractParams,
   type WarehouseStructureResponse,
 } from "../api/warehouseInspectionApi";
+import { structureNeedsReviewMessage } from "../utils/structureQualityCopy";
+import { toMessage } from "../warehousePageSupport";
 
 export type UseWarehouseStructureResult = {
   structure: WarehouseStructureResponse | null;
@@ -65,17 +67,18 @@ export function useWarehouseStructure(
           result.status === "failed"
             ? result.error_message ?? "Structure extraction failed."
             : result.status === "needs_review"
-              ? `Structure needs review: ${(
+              ? structureNeedsReviewMessage(
                   result.quality_reasons?.length
                     ? result.quality_reasons
-                    : result.summary.quality?.reasons ?? []
-                ).join(", ") || "low confidence"}`
+                    : result.summary.quality?.reasons,
+                )
             : null,
         );
         return result;
-      } catch {
+      } catch (cause) {
         setStructure(null);
         setExtractionStatus("not_started");
+        setError(`Warehouse structure could not be loaded: ${toMessage(cause)}`);
         return null;
       }
     }, [token, warehouseMapId]);

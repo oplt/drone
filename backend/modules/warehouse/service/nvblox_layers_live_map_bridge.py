@@ -7,7 +7,7 @@ import logging
 import math
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import numpy as np
@@ -652,7 +652,6 @@ def resolve_nvblox_layer_bridge_sources(
 ) -> dict[str, LiveMapSourceConfig]:
     from backend.infrastructure.warehouse.bridge_config import list_ros2_topics
     from backend.modules.warehouse.service.live_map_readiness import (
-        _is_voxel_block_layer_type,
         _ros2_workspace,
         probe_live_map_topic_types,
     )
@@ -667,27 +666,32 @@ def resolve_nvblox_layer_bridge_sources(
     _, topic_types = probe_live_map_topic_types(topics=topics, quiet=True)
     sources: dict[str, LiveMapSourceConfig] = {}
 
-    color_topic = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_color"].topic
-    if color_topic in topics and _is_voxel_block_layer_type(topic_types.get(color_topic)):
-        sources["nvblox_color"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_color"]
-
-    tsdf_topic = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_tsdf"].topic
-    if tsdf_topic in topics and _is_voxel_block_layer_type(topic_types.get(tsdf_topic)):
-        sources["nvblox_tsdf"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_tsdf"]
+    # color_layer and tsdf_layer publish nvBlox voxel blocks. Their presence is
+    # reported by readiness diagnostics, but they are not user-facing map products.
 
     mesh_topic = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_mesh"].topic
     mesh_type = topic_types.get(mesh_topic)
     if mesh_topic in topics and mesh_type and "nvblox_msgs/msg/Mesh" in mesh_type:
         sources["nvblox_mesh"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_mesh"]
 
-    occupancy_topic = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"].topic
-    occupancy_type = topic_types.get(occupancy_topic)
-    if (
-        occupancy_topic in topics
-        and occupancy_type
-        and "nav_msgs/msg/OccupancyGrid" in occupancy_type
-    ):
-        sources["nvblox_occupancy"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"]
+    occupancy_candidates = (
+        WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"].topic,
+        "/nvblox_node/static_map_slice",
+        "/nvblox_node/occupancy_grid",
+        "/nvblox_node/map_slice",
+    )
+    for occupancy_topic in occupancy_candidates:
+        occupancy_type = topic_types.get(occupancy_topic)
+        if (
+            occupancy_topic in topics
+            and occupancy_type
+            and "nav_msgs/msg/OccupancyGrid" in occupancy_type
+        ):
+            sources["nvblox_occupancy"] = replace(
+                WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"],
+                topic=occupancy_topic,
+            )
+            break
 
     return sources
 

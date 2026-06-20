@@ -57,6 +57,7 @@ export function useWarehouseScannedMapReplay(
     }
 
     const generation = ++loadGenerationRef.current;
+    replayFlightIdRef.current = null;
     let cancelled = false;
     setLoading(true);
     setState({

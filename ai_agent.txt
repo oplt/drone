@@ -1,0 +1,1471 @@
+# Mission-Bound AI Agents — Analysis & Roadmap
+# drone_app backend · generated 2026-06-18
+#
+# Goal: one specialized LLM agent per flight-mission domain (warehouse, field/ag,
+# private patrol, etc.) built on the existing LLM profile/routing foundation —
+# without replacing deterministic flight executors or YOLO patrol vision.
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+This repo already has:
+  • A mission executor pattern: MissionType → _build_mission() factory →
+    class with async execute(orch, alt) → orch.run_mission(flight_fn=…).
+  • A solid LLM config layer: profiles, providers, task routing UI, vault keys,
+    chat_with_profile(), ensure_profile_ready().
+  • Patrol “AI” today = computer vision (YOLO ml_runtime), NOT LLM agents.
+
+This repo does NOT yet have:
+  • Runtime wiring from missions → LLM profiles (task_overrides are UI-only).
+  • Agent definitions (system prompts, tools, memory, handoffs).
+  • Mission-specific reasoning loops during or after flight.
+
+Best solution: introduce a thin **Mission Agent Runtime** layer that sits
+*beside* (not inside) the existing Orchestrator flight loop. Each mission
+domain gets an **AgentDefinition** (prompt + allowed tools + profile task)
+resolved at mission start and invoked at well-defined lifecycle hooks
+(plan → preflight assist → in-flight advisory → post-flight report).
+
+Do NOT put LLM inside the real-time MAVLink control path. Use agents for
+planning, explanation, summarization, anomaly triage, and operator assistance.
+
+================================================================================
+2. BACKEND MISSION INVENTORY (as implemented today)
+================================================================================
+
+2.1 Canonical mission types (backend/modules/missions/schemas/mission_types.py)
+--------------------------------------------------------------------------------
+  MissionType              Executor / module                         Flight env
+  -----------------------  ----------------------------------------  ----------
+  waypoint, route          WaypointsMission (planning/waypoint.py)   outdoor
+  grid                     GridMission (planning/grid.py)            outdoor
+  photogrammetry           PhotogrammetryMission                     outdoor
+  warehouse_scan           WarehouseScanMission (warehouse/scan.py)  indoor/local
+  warehouse_inspection     inspection service (warehouse/)           indoor/local
+  indoor_exploration       UnknownWarehouseExplorationMission        indoor (dormant API)
+  perimeter_patrol         PrivatePatrolMission (patrol/planning.py) outdoor
+  private_patrol           PrivatePatrolMission + sub-task types     outdoor
+  orbit, terrain_follow,   schemas exist; not wired in POST /missions
+  adaptive_altitude
+
+2.2 Patrol sub-task types (not top-level MissionType)
+--------------------------------------------------------------------------------
+  perimeter_patrol, waypoint_patrol, grid_surveillance, event_triggered_patrol
+  CV ai_tasks: intruder_detection, vehicle_detection, fence_breach_detection,
+               motion_detection  → DroneAnomalyPipeline (YOLO), stored on
+               MissionRuntime.ai_tasks
+
+2.3 Adjacent “mission-like” domains (separate APIs today)
+--------------------------------------------------------------------------------
+  • Livestock / herd: mission_planner builds route dicts (census, herd_sweep)
+  • Irrigation: IrrigationMonitor watches completed grid missions
+  • Property patrol: PatrolDispatchService state machine (not Orchestrator yet)
+  • Automation templates: MissionTemplate.mission_type (string, stub scheduler)
+
+2.4 Shared execution pipeline
+--------------------------------------------------------------------------------
+  POST /missions or warehouse flight/start
+    → _build_mission(payload)           # factory in missions/api/routes.py
+    → create_mission + MissionRuntime DB row (state: queued)
+    → asyncio.create_task(execute_mission)
+    → mission.execute(orch, alt)
+    → orch.run_mission(…, flight_fn=fly_*)
+         connect → flight record → preflight → telemetry → video → flight_fn
+
+  Extension points already present:
+    • _build_mission() branch per mission_type
+    • get_preflight_mission_data() on executors
+    • flight_profile_for_mission_type() (indoor vs outdoor)
+    • create_mission_preflight() registry (preflight/checks/mission_specific.py)
+    • MissionRuntime.resume_metadata, ai_tasks JSON column
+    • POST /missions/{id}/commands (pause, abort, rth, land)
+
+2.5 LLM foundation (ready but disconnected)
+--------------------------------------------------------------------------------
+  Config:  backend/modules/ai/ (profiles, routing, /api/ai/llm/*)
+  Client:  backend/infrastructure/ai/ (BaseLLMClient, factory, local_llm_runtime)
+  Tasks:   assistant | mission_planning | private_patrol | alert_explanation |
+           video_summary | telemetry_anomaly | offline_report
+  Legacy:  LLMAnalyzer on Orchestrator — constructed, never called
+  Gap:     no resolve_profile_for_task(); mission code never calls chat_with_profile()
+
+================================================================================
+3. RECOMMENDED ARCHITECTURE — “MISSION AGENT RUNTIME”
+================================================================================
+
+3.1 Design principles
+--------------------------------------------------------------------------------
+  1. One agent *definition* per mission domain, not one giant prompt.
+  2. Agents are advisory/planning/reporting; flight safety stays deterministic.
+  3. Reuse existing LLM profiles + task_overrides for model selection.
+  4. Tools are typed Python callables (read mission state, list targets, weather,
+     preflight report) — start without full OpenAI function-calling if needed.
+  5. Keep CV patrol separate: YOLO detects; LLM explains/summarizes incidents.
+  6. All agent I/O is logged (prompt hash, profile id, latency) for audit.
+
+3.2 Core abstractions (new package: backend/modules/agents/)
+--------------------------------------------------------------------------------
+
+  MissionAgentId (enum)
+    WAREHOUSE_SCAN | WAREHOUSE_INSPECTION | FIELD_SURVEY | PHOTOGRAMMETRY |
+    PRIVATE_PATROL | PROPERTY_PATROL | LIVESTOCK | MISSION_PLANNER | ASSISTANT
+
+  AgentDefinition (dataclass / Pydantic)
+    id: MissionAgentId
+    llm_task: LLMTaskName          # maps to task_overrides in settings
+    system_prompt_template: str    # Jinja2 or str.format with mission context
+    tools: list[AgentTool]         # registered callables
+    hooks: AgentHookSet            # which lifecycle events invoke the agent
+    max_turns: int = 1             # keep v1 single-shot unless tool loop needed
+    temperature_override: float | None
+
+  AgentContext (per invocation)
+    mission_runtime_id, mission_type, client_flight_id, org_id, user_id
+    structured_payload: dict       # domain facts (targets, zones, manifest, etc.)
+    phase: Literal["plan","preflight","inflight","postflight","on_demand"]
+
+  AgentResult
+    text: str
+    structured: dict | None        # optional JSON block for UI/widgets
+    tool_calls: list[…]
+    profile_id, model, latency_ms
+
+  MissionAgentRegistry
+    register(definition) / get(agent_id) / list_for_mission_type(MissionType)
+
+  MissionAgentService
+    async run(agent_id, context) -> AgentResult
+      1. resolve_profile_for_task(definition.llm_task)
+      2. ensure_profile_ready(profile)
+      3. render system prompt from template + context
+      4. optional tool loop (v2)
+      5. chat_with_profile(profile, messages)
+      6. persist AgentRun row (audit)
+
+3.3 Lifecycle hooks (where to harness agents)
+--------------------------------------------------------------------------------
+
+  Phase          When                              Agent role
+  -------------  --------------------------------  ---------------------------
+  plan           Before create_mission / UI wizard Help operator choose params,
+                                                   validate constraints, explain
+                                                   tradeoffs (altitude, overlap)
+  preflight      After preflight report            Translate failures to actions;
+                                                   warehouse: ROS topic readiness
+  inflight       Low rate (30–60s) or on event     Advisory only; never direct
+                                                   stick input. Patrol: explain
+                                                   CV detection in natural language
+  postflight     Mission terminal state            Summary report, anomalies,
+                                                   next steps, deliverable links
+  on_demand      Operator chat in mission UI       Domain Q&A with mission context
+
+  Wire hooks in:
+    • missions/api/routes.py — after preflight, on terminal transition
+    • warehouse/api.py — structure extraction status, inspection complete
+    • patrol/service — on incident persisted (if llm_summary_enabled)
+    • Celery queue for long postflight reports (reuse pattern from
+      warehouse_mapping_tasks)
+
+3.4 Mapping: mission domain → agent → LLM task → tools
+--------------------------------------------------------------------------------
+
+  Domain              Mission types              Agent id              LLM task (existing)
+  ------------------  -------------------------  --------------------  ---------------------
+  Warehouse scan      warehouse_scan             WAREHOUSE_SCAN        mission_planning *
+  Warehouse inspect   warehouse_inspection       WAREHOUSE_INSPECTION  mission_planning *
+  Field / ag survey   grid, photogrammetry       FIELD_SURVEY          mission_planning
+  Irrigation follow-up (grid complete)           FIELD_SURVEY          offline_report
+  Private patrol      private_patrol, perimeter  PRIVATE_PATROL        private_patrol
+  Property patrol     property_patrol API       PROPERTY_PATROL       private_patrol
+  Livestock           livestock planner routes   LIVESTOCK             mission_planning
+  Generic assistant   any UI                     ASSISTANT             assistant
+  Alerts / telemetry  cross-cutting              (use existing tasks)    alert_explanation,
+                                                                        telemetry_anomaly,
+                                                                        video_summary
+
+  * Add new LLMTaskName values: warehouse_scan, warehouse_inspection (see Phase 1)
+
+================================================================================
+4. AGENT CATALOG — BEHAVIOR & PROMPT FOCUS
+================================================================================
+
+4.1 Warehouse Scan Agent (WAREHOUSE_SCAN)
+--------------------------------------------------------------------------------
+  Purpose: Help operators understand mapping readiness, structure extraction,
+           and scan quality without reading logs.
+
+  Context inputs:
+    • live_map_manifest (chunk counts, nvblox_available, missing_topics)
+    • structure extraction summary (aisles, racks, clearance source)
+    • preflight ROS report (warehouse_preflight)
+    • capture session vs live-map chunk counts
+
+  Example outputs:
+    • “Nvblox ESDF missing — clearance uses point-cloud fallback; expect ~15%
+       rejected targets. Restart mapping stack before next scan for best results.”
+    • Post-flight: markdown summary + link to generated targets
+
+  Tools (v1):
+    get_warehouse_map_status(map_id)
+    get_structure_extraction_status(map_id)
+    get_live_map_manifest(flight_id)
+    list_scan_targets(map_id)
+
+  Hooks: postflight (scan complete), on_demand (Coordinate Setup panel “Ask AI”)
+
+4.2 Warehouse Inspection Agent (WAREHOUSE_INSPECTION)
+--------------------------------------------------------------------------------
+  Purpose: Plan bin inspection order, explain per-target failures, compare runs.
+
+  Context: scan targets, inspection results, barcode/SKU metadata
+
+  Tools:
+    list_scan_targets, get_inspection_results(mission_id),
+    suggest_reorder_targets (deterministic helper → agent explains)
+
+  Hooks: plan (target selection UI), postflight
+
+4.3 Field / Agriculture Survey Agent (FIELD_SURVEY)
+--------------------------------------------------------------------------------
+  Purpose: Grid/photogrammetry parameter advice, overlap/GSD explanation,
+           irrigation monitor narrative when grid mission completes.
+
+  Context: field boundary, camera spec, wind/battery from telemetry snapshot,
+           IrrigationMonitor trigger payload
+
+  Tools:
+    estimate_grid_stats(boundary, altitude, camera),
+    get_mission_runtime(id), get_deliverable_status(export_id)
+
+  Hooks: plan (mission create form), postflight, irrigation monitor callback
+
+4.4 Private Patrol Agent (PRIVATE_PATROL)
+--------------------------------------------------------------------------------
+  Purpose: Explain CV detections, draft incident summaries, suggest patrol
+           parameter changes. Does NOT run detection (YOLO does).
+
+  Context: MissionRuntime.ai_tasks, zone config, DroneAnomalyPipeline events,
+           keyframe paths
+
+  Tools:
+    list_patrol_incidents(mission_id), get_patrol_zone_config,
+    get_detection_clip(incident_id)
+
+  Hooks: on_detection (async, non-blocking), postflight
+
+  Note: property_patrol llm_summary / llm_summary_enabled columns exist —
+        this agent is the first concrete implementation target.
+
+4.5 Livestock Agent (LIVESTOCK)
+--------------------------------------------------------------------------------
+  Purpose: Explain herd sweep plans, census results, suggest waypoint order
+           given collar positions (planner stays deterministic; agent narrates).
+
+  Context: livestock task type, collar positions, generated route dict
+
+  Tools: get_livestock_task(id), get_collar_positions(herd_id)
+
+  Hooks: plan (after build_mission), postflight
+
+4.6 Mission Planner Agent (MISSION_PLANNER) — cross-domain
+--------------------------------------------------------------------------------
+  Purpose: Natural-language → structured MissionCreateIn draft (human approves
+          before launch). Uses strict JSON schema output validated by Pydantic.
+
+  Tools:
+    list_mission_types(), get_preflight_requirements(type),
+    validate_mission_payload(dict) → MissionCreateIn
+
+  Hooks: on_demand only until confidence is high
+
+4.7 Assistant Agent (ASSISTANT)
+--------------------------------------------------------------------------------
+  Purpose: General operator help; routes to domain agent when mission context
+           is present (simple intent classifier or mission_type in session).
+
+================================================================================
+5. IMPLEMENTATION ROADMAP (phased tasks)
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+PHASE 0 — Foundation wiring (1–2 weeks) · UNBLOCKS EVERYTHING
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] 0.1  Add AISettingsService.resolve_profile_for_task(task: LLMTaskName)
+           → LLMProfile using task_overrides[task] or default_profile_id
+           File: backend/modules/ai/service.py
+
+  [ ] 0.2  Add resolve_profile_for_task() tests (override, fallback, disabled)
+
+  [ ] 0.3  Inject system_prompt from settings.ai into chat_with_profile path
+           File: backend/infrastructure/ai/local_llm_runtime.py or new helper
+           chat_with_task(task, messages, *, extra_system: str = "")
+
+  [ ] 0.4  Create backend/modules/agents/ package skeleton:
+           __init__.py, registry.py, service.py, schemas.py, prompts/
+
+  [ ] 0.5  Add AgentRun audit model + migration (mission_runtime_id, agent_id,
+           phase, profile_id, prompt_version, response_preview, latency_ms)
+
+  [ ] 0.6  API: POST /api/ai/agents/{agent_id}/run (on_demand, auth required)
+           GET  /api/ai/agents/runs?mission_runtime_id=
+
+  [ ] 0.7  Deprecate direct Orchestrator.analyzer usage; document migration to
+           MissionAgentService (keep LLMAnalyzer for vision until Phase 4)
+
+────────────────────────────────────────────────────────────────────────────────
+PHASE 1 — Task routing expansion + first agent (1 week)
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] 1.1  Extend LLMTaskName:
+           warehouse_scan, warehouse_inspection, field_survey, livestock
+           Mirror in frontend aiSettingsDefaults.ts + AdvancedTaskRouting.tsx
+
+  [ ] 1.2  Register AgentDefinitions in MissionAgentRegistry (static module
+           import at app startup — same pattern as celery task imports)
+
+  [ ] 1.3  Implement PRIVATE_PATROL agent (highest product value):
+           • Hook: patrol incident persistence → enqueue Celery
+             agents.summarize_patrol_incident
+           • Fill property_patrol llm_summary field
+           • Use existing private_patrol task routing
+
+  [ ] 1.4  Frontend: incident card shows “AI summary” when present; Settings
+           already maps private_patrol → profile
+
+  [ ] 1.5  Tests: mock LLM client, assert profile resolution + prompt rendering
+
+────────────────────────────────────────────────────────────────────────────────
+PHASE 2 — Warehouse agents (1–2 weeks)
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] 2.1  WAREHOUSE_SCAN agent — postflight hook in scan teardown
+           (warehouse/planning/scan.py after persist_capture) OR mapping
+           persist callback; pass manifest + structure summary in context
+
+  [ ] 2.2  WAREHOUSE_INSPECTION agent — post inspection mission complete
+           (warehouse/service/inspection.py)
+
+  [ ] 2.3  UI: “Ask about this map” on WarehouseCoordinateSetupPanel →
+           on_demand agent run with map_id context
+
+  [ ] 2.4  Prompt templates in backend/modules/agents/prompts/warehouse_*.md
+           versioned (prompt_version in AgentRun)
+
+  [ ] 2.5  Tools: read-only DB + manifest loaders; no write tools in v1
+
+────────────────────────────────────────────────────────────────────────────────
+PHASE 3 — Field / agriculture agents (1 week)
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] 3.1  FIELD_SURVEY agent — hook on grid/photogrammetry mission terminal
+           (missions completion mixin or export_tasks callback)
+
+  [ ] 3.2  IrrigationMonitor integration — after grid complete, optional
+           agent narrative email/UI notification (offline_report task)
+
+  [ ] 3.3  Mission create UI: “Explain these grid settings” button → plan phase
+
+  [ ] 3.4  LIVESTOCK agent — hook after livestock mission_planner returns route
+
+────────────────────────────────────────────────────────────────────────────────
+PHASE 4 — Tool loop + vision (2 weeks, optional)
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] 4.1  Extend LLMChatRequest with tools[] (OpenAI-compatible function spec)
+
+  [ ] 4.2  Agent tool loop in MissionAgentService (max_turns=5, timeout budget)
+
+  [ ] 4.3  Refactor LLMAnalyzer.detect_objects onto profile + vision_support
+           for warehouse shelf photo QA (optional)
+
+  [ ] 4.4  MISSION_PLANNER agent: NL → MissionCreateIn with human confirm step
+
+────────────────────────────────────────────────────────────────────────────────
+PHASE 5 — Hardening & ops (ongoing)
+────────────────────────────────────────────────────────────────────────────────
+
+  [ ] 5.1  Rate limits per org / agent_id; queue long runs on Celery agents queue
+
+  [ ] 5.2  Redact secrets from logged prompts; truncate large context
+
+  [ ] 5.3  Feature flags: settings.ai.agents_enabled, per-agent toggles
+
+  [ ] 5.4  Metrics: agent_latency_ms, agent_errors, tokens_estimated
+
+  [ ] 5.5  Wire property_patrol dispatch → Orchestrator, then attach PROPERTY_PATROL agent
+
+  [ ] 5.6  Documentation: operator guide per mission type (what AI does / does not)
+
+================================================================================
+6. FILE / MODULE LAYOUT (proposed)
+================================================================================
+
+  backend/modules/agents/
+    __init__.py
+    schemas.py              # AgentDefinition, AgentContext, AgentResult, MissionAgentId
+    registry.py               # MissionAgentRegistry, register defaults
+    service.py                # MissionAgentService.run()
+    tools/
+      __init__.py
+      warehouse.py            # get_manifest, list_targets, …
+      patrol.py
+      field.py
+      missions.py             # validate_mission_payload, …
+    prompts/
+      warehouse_scan.md
+      warehouse_inspection.md
+      private_patrol.md
+      field_survey.md
+    hooks.py                  # dispatch_agent_hook(phase, mission_runtime, …)
+    tasks.py                  # Celery: summarize_patrol_incident, postflight_report
+
+  backend/modules/ai/service.py     # + resolve_profile_for_task()
+  backend/entrypoints/workers/agents_tasks.py   # new Celery module
+  backend/entrypoints/api/app.py    # include agents router
+
+  frontend/src/modules/agents/
+    api/agentsApi.ts
+    hooks/useMissionAgent.ts
+    components/AgentSummaryCard.tsx
+    components/AskAgentPanel.tsx
+
+================================================================================
+7. INTEGRATION PATTERNS (copy-paste targets)
+================================================================================
+
+7.1 Hook after mission reaches terminal state
+--------------------------------------------------------------------------------
+  In vehicle_runtime completion path (or missions state transition):
+    from backend.modules.agents.hooks import dispatch_agent_hook
+    await dispatch_agent_hook("postflight", mission_runtime=row, orch=orch)
+
+  dispatch_agent_hook maps mission_type → agent_id(s), builds AgentContext,
+  runs async or .delay() to Celery if report > 3s budget.
+
+7.2 Hook in warehouse scan teardown (example)
+--------------------------------------------------------------------------------
+  After sync_result["status"] = "ready" in scan.py:
+    context = AgentContext(
+      mission_type="warehouse_scan",
+      client_flight_id=client_flight_id,
+      structured_payload={
+        "live_map_quality": sync_result.get("live_map_quality"),
+        "structure_status": …,
+      },
+      phase="postflight",
+    )
+    agents_tasks.warehouse_postflight_report.delay(context.dict())
+
+7.3 On-demand from frontend
+--------------------------------------------------------------------------------
+  POST /api/ai/agents/warehouse_scan/run
+  { "warehouse_map_id": 3, "question": "Why is nvblox missing?", "phase": "on_demand" }
+
+7.4 Profile selection (operator workflow)
+--------------------------------------------------------------------------------
+  Settings → AI → Advanced task routing:
+    warehouse_scan      → local Ollama (privacy, low latency)
+    mission_planning    → cloud OpenAI (strong reasoning)
+    private_patrol      → local vision-capable model for incident summaries
+
+================================================================================
+8. WHAT NOT TO DO
+================================================================================
+
+  ✗ Do not replace _build_mission() executors with LLM-generated flight code.
+  ✗ Do not call LLM inside tight telemetry loops or MAVLink send paths.
+  ✗ Do not conflate patrol ai_tasks (YOLO) with LLM agents — keep both, link at
+    incident summary boundary.
+  ✗ Do not add LangChain/CrewAI until tool loop is proven in-house (extra deps,
+    harder to test). Start with chat_with_profile + Jinja prompts.
+  ✗ Do not block mission launch on LLM failure — agents are best-effort with
+    logged errors.
+  ✗ Do not send raw vault API keys to prompts or AgentRun logs.
+
+================================================================================
+9. SUCCESS CRITERIA (per phase)
+================================================================================
+
+  Phase 0: chat_with_task("private_patrol", messages) resolves correct profile
+            in integration test.
+
+  Phase 1: Patrol incident row gets non-empty llm_summary within 30s of detection
+           (when llm_summary_enabled).
+
+  Phase 2: Warehouse postflight produces human-readable quality report referencing
+           manifest chunk counts and structure extraction status.
+
+  Phase 3: Completed grid mission shows “Field survey summary” in mission detail UI.
+
+  Phase 4: Operator can type “plan a 40m grid over this field” → validated draft
+           mission JSON (not auto-flown).
+
+================================================================================
+10. QUICK WINS (do these first)
+================================================================================
+
+  1. resolve_profile_for_task() + unit tests
+  2. PRIVATE_PATROL post-incident summary (schema already has llm_summary)
+  3. Warehouse postflight one-shot summary after scan (no tool loop)
+  4. Settings UI already done — just wire backend task names for new domains
+
+================================================================================
+11. RELATION TO /understand KNOWLEDGE GRAPH
+================================================================================
+
+  Run `/understand` on this repo to materialize nodes for:
+    • missions/api/routes.py (_build_mission factory)
+    • modules/ai/service.py (profile routing)
+    • patrol/planning.py vs modules/agents/ (future)
+  Use the dashboard to trace import edges when adding agent hooks without
+  creating circular imports (agents → ai → settings OK; agents → vehicle_runtime
+  should go through hooks.py and tasks.py only).
+
+================================================================================
+END
+================================================================================
+
+
+
+## My implementation strategy
+
+I would build the system in **three layers**:
+
+```text
+User / UI
+  ↓
+Mission AI Agents
+  - WarehouseScanAgent
+  - FieldSurveyAgent
+  - PrivatePatrolAgent
+  - LivestockAgent
+  - MissionPlannerAgent
+  ↓
+Agent Runtime
+  - profile routing
+  - prompt templates
+  - read-only tools
+  - audit logging
+  - async execution
+  ↓
+Deterministic Drone Backend
+  - mission executors
+  - Orchestrator
+  - MAVLink
+  - YOLO / CV pipelines
+  - telemetry
+  - preflight checks
+  - database
+```
+
+The LLM agents should produce **structured outputs**, not arbitrary code or direct flight commands.
+
+Examples:
+
+```json
+{
+  "summary": "Warehouse scan completed with partial map coverage.",
+  "risk_level": "medium",
+  "recommended_action": "Repeat aisle 3 scan because point cloud density is low.",
+  "requires_human_approval": true
+}
+```
+
+or for mission planning:
+
+```json
+{
+  "mission_type": "grid",
+  "altitude_m": 40,
+  "overlap_front": 75,
+  "overlap_side": 70,
+  "speed_mps": 3,
+  "reasoning_summary": "Good balance between coverage and battery use.",
+  "human_confirmation_required": true
+}
+```
+
+## The architecture I would implement
+
+### 1. Create a real `backend/modules/agents/` package
+
+Cursor suggested this, and I agree. The attachment proposes a clean package with `schemas.py`, `registry.py`, `service.py`, `tools/`, `prompts/`, `hooks.py`, and `tasks.py`. That is the right direction. 
+
+I would define these core objects:
+
+```python
+# backend/modules/agents/schemas.py
+
+from enum import StrEnum
+from pydantic import BaseModel
+from typing import Any, Literal
+
+
+class MissionAgentId(StrEnum):
+    WAREHOUSE_SCAN = "warehouse_scan"
+    WAREHOUSE_INSPECTION = "warehouse_inspection"
+    FIELD_SURVEY = "field_survey"
+    PHOTOGRAMMETRY = "photogrammetry"
+    PRIVATE_PATROL = "private_patrol"
+    PROPERTY_PATROL = "property_patrol"
+    LIVESTOCK = "livestock"
+    MISSION_PLANNER = "mission_planner"
+    ASSISTANT = "assistant"
+
+
+class AgentPhase(StrEnum):
+    PLAN = "plan"
+    PREFLIGHT = "preflight"
+    INFLIGHT = "inflight"
+    POSTFLIGHT = "postflight"
+    ON_DEMAND = "on_demand"
+    ON_EVENT = "on_event"
+
+
+class AgentContext(BaseModel):
+    mission_runtime_id: int | None = None
+    mission_type: str | None = None
+    client_flight_id: str | None = None
+    org_id: int | None = None
+    user_id: int | None = None
+    phase: AgentPhase
+    question: str | None = None
+    structured_payload: dict[str, Any] = {}
+
+
+class AgentResult(BaseModel):
+    agent_id: MissionAgentId
+    phase: AgentPhase
+    text: str
+    structured: dict[str, Any] | None = None
+    risk_level: Literal["low", "medium", "high", "critical"] | None = None
+    requires_human_approval: bool = False
+    profile_id: str | None = None
+    model: str | None = None
+    latency_ms: int | None = None
+```
+
+The key idea: **every agent returns a controlled object**. Do not let the frontend parse random markdown when a mission decision is involved.
+
+---
+
+### 2. Build `MissionAgentService`
+
+This is the brain of the agent layer.
+
+```python
+# backend/modules/agents/service.py
+
+class MissionAgentService:
+    def __init__(
+        self,
+        registry,
+        ai_settings_service,
+        llm_runtime,
+        audit_repo,
+    ):
+        self.registry = registry
+        self.ai_settings_service = ai_settings_service
+        self.llm_runtime = llm_runtime
+        self.audit_repo = audit_repo
+
+    async def run(self, agent_id: MissionAgentId, context: AgentContext) -> AgentResult:
+        definition = self.registry.get(agent_id)
+
+        profile = await self.ai_settings_service.resolve_profile_for_task(
+            definition.llm_task
+        )
+
+        prompt = definition.render_prompt(context)
+
+        response = await self.llm_runtime.chat_with_profile(
+            profile=profile,
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": context.question or "Analyze this mission context."},
+            ],
+        )
+
+        result = definition.parse_response(response)
+
+        await self.audit_repo.create_agent_run(
+            mission_runtime_id=context.mission_runtime_id,
+            agent_id=agent_id,
+            phase=context.phase,
+            profile_id=profile.id,
+            prompt_version=definition.prompt_version,
+            response_preview=result.text[:500],
+            latency_ms=result.latency_ms,
+        )
+
+        return result
+```
+
+The attachment correctly says the repo has LLM profiles and routing but does not yet wire missions to profiles. The first foundational task should be `resolve_profile_for_task()` and a `chat_with_task()` helper. 
+
+---
+
+### 3. Add `AgentDefinition` per mission domain
+
+Each agent should have:
+
+```python
+class AgentDefinition(BaseModel):
+    id: MissionAgentId
+    llm_task: str
+    prompt_template_path: str
+    allowed_tools: list[str]
+    supported_phases: list[AgentPhase]
+    output_schema: type[BaseModel]
+    max_turns: int = 1
+    timeout_seconds: int = 20
+    prompt_version: str = "v1"
+```
+
+I would start with **single-shot agents**, not multi-agent frameworks. No LangChain, CrewAI, AutoGen, or complex agent orchestration in v1. Your attachment also recommends starting with your existing `chat_with_profile` plus prompt templates, and only adding tool loops later. 
+
+That is the right call.
+
+## How I would implement each mission agent
+
+## 1. Private Patrol Agent — implement first
+
+This is the highest-value first agent because your repo already has YOLO-based patrol AI tasks and mentions `llm_summary` / `llm_summary_enabled` as a natural integration point. The attachment also identifies private patrol as the first concrete implementation target. 
+
+### What it should do
+
+The Private Patrol Agent should **not detect intruders itself**. YOLO / CV does that.
+
+The agent should:
+
+1. Read incident metadata.
+2. Read detection labels, confidence, timestamp, GPS/location, zone, keyframe path.
+3. Summarize what happened.
+4. Classify severity.
+5. Suggest operator action.
+6. Generate a patrol report.
+
+Example output:
+
+```json
+{
+  "incident_summary": "A person-like object was detected near the north fence at 22:14.",
+  "severity": "medium",
+  "confidence_explanation": "YOLO detected a person with 0.81 confidence in two consecutive frames.",
+  "recommended_action": "Review the saved clip and dispatch a manual check if the object remains in the zone.",
+  "false_positive_risk": "medium",
+  "requires_human_approval": true
+}
+```
+
+### Hook point
+
+```text
+DroneAnomalyPipeline detects event
+  ↓
+incident persisted
+  ↓
+Celery task: summarize_patrol_incident.delay(incident_id)
+  ↓
+PrivatePatrolAgent runs
+  ↓
+llm_summary saved
+  ↓
+frontend incident card displays summary
+```
+
+### Why this is safe
+
+The drone keeps flying according to the deterministic patrol mission. The LLM only explains the event.
+
+---
+
+## 2. Warehouse Scan Agent
+
+This agent should help with indoor mapping, scan quality, ROS/Gazebo/topic readiness, nvblox/point-cloud coverage, racks, aisles, and missing data.
+
+### What it should do
+
+After a warehouse scan, it should generate:
+
+```json
+{
+  "scan_quality": "partial",
+  "coverage_summary": "Most aisles were scanned, but aisle 4 has sparse point-cloud density.",
+  "mapping_backend": "point_cloud_fallback",
+  "problems": [
+    "Nvblox ESDF unavailable",
+    "Depth camera topic missing for 12 seconds",
+    "Low overlap near shelf row B"
+  ],
+  "recommended_next_scan": [
+    "Repeat aisle 4 at lower speed",
+    "Check RGBD camera topic before launch",
+    "Restart nvblox mapping stack"
+  ]
+}
+```
+
+### Tools I would give it
+
+Read-only tools only:
+
+```python
+get_warehouse_map_status(map_id)
+get_structure_extraction_status(map_id)
+get_live_map_manifest(flight_id)
+list_scan_targets(map_id)
+get_preflight_report(mission_runtime_id)
+get_ros_topic_health_report(flight_id)
+```
+
+### Hook points
+
+```text
+warehouse_scan completed
+  ↓
+map / manifest persisted
+  ↓
+WarehouseScanAgent postflight report
+  ↓
+UI: “AI scan quality report”
+```
+
+And also:
+
+```text
+Warehouse Coordinate Setup Panel
+  ↓
+Ask AI: “Why is nvblox missing?”
+  ↓
+WarehouseScanAgent on_demand
+```
+
+Cursor’s roadmap already suggests these exact postflight and on-demand hooks for warehouse scan. 
+
+---
+
+## 3. Warehouse Inspection Agent
+
+This should be separate from Warehouse Scan.
+
+**Warehouse Scan** answers: “Did we map the space well?”
+**Warehouse Inspection** answers: “Did we inspect the shelves/bins/items well?”
+
+### What it should do
+
+1. Explain missed inspection targets.
+2. Summarize damaged/missing/blocked shelf locations.
+3. Compare inspection results against previous run.
+4. Suggest next inspection order.
+
+Example:
+
+```json
+{
+  "inspection_summary": "42 shelf targets inspected, 5 skipped, 3 low-confidence images.",
+  "missed_targets": ["Aisle 2 / Rack B / Level 3", "Aisle 5 / Rack C / Level 1"],
+  "likely_causes": [
+    "Target occlusion",
+    "Insufficient lighting",
+    "Motion blur"
+  ],
+  "recommended_action": "Repeat skipped targets at 0.5 m/s with gimbal pitch -20 degrees."
+}
+```
+
+The deterministic planner can compute the target order. The LLM should explain it, not invent it.
+
+---
+
+## 4. Field / Agriculture Survey Agent
+
+This is for outdoor grid missions, photogrammetry, crop inspection, irrigation monitoring, and field reports.
+
+### What it should do before flight
+
+The agent should help the user understand mission settings:
+
+```json
+{
+  "mission_type": "field_survey",
+  "recommended_altitude_m": 40,
+  "recommended_speed_mps": 3,
+  "front_overlap_percent": 75,
+  "side_overlap_percent": 70,
+  "estimated_duration_min": 18,
+  "battery_risk": "medium",
+  "reasoning_summary": "The field is large for one battery. Consider splitting into two missions."
+}
+```
+
+### What it should do after flight
+
+```json
+{
+  "field_summary": "The east side of the field shows lower vegetation density.",
+  "coverage_quality": "good",
+  "missing_areas": [],
+  "possible_issues": [
+    "Potential irrigation stress in the southeast corner",
+    "Image blur in 6 frames due to wind"
+  ],
+  "next_steps": [
+    "Run NDVI/multispectral analysis if available",
+    "Repeat southeast corner at lower altitude"
+  ]
+}
+```
+
+### Tools
+
+```python
+estimate_grid_stats(boundary, altitude, camera)
+get_mission_runtime(mission_id)
+get_telemetry_summary(mission_id)
+get_photogrammetry_export_status(export_id)
+get_irrigation_monitor_result(mission_id)
+```
+
+The attachment already maps grid and photogrammetry missions to a `FIELD_SURVEY` agent and suggests plan/postflight hooks. 
+
+---
+
+## 5. Livestock Agent
+
+I would keep this lightweight in v1.
+
+The livestock planner should deterministically create routes from collar positions, herd zones, and geofences. The LLM should explain the route and summarize the outcome.
+
+Example:
+
+```json
+{
+  "route_summary": "The sweep starts from the west side to minimize herd disturbance.",
+  "animals_detected": 37,
+  "missing_expected_animals": 2,
+  "risk_notes": [
+    "Two collars were last seen near the tree line.",
+    "Battery margin is low for a second sweep."
+  ],
+  "recommended_next_action": "Run a focused search near the north tree line."
+}
+```
+
+---
+
+## 6. Mission Planner Agent — powerful, but dangerous if done badly
+
+This is the one I would implement carefully.
+
+The Mission Planner Agent lets the operator type:
+
+> “Plan a 40m grid over this field with good overlap for photogrammetry.”
+
+The agent returns a **draft mission JSON**, not a launched mission.
+
+```text
+Natural language
+  ↓
+MissionPlannerAgent
+  ↓
+Pydantic-validated MissionCreateIn draft
+  ↓
+UI preview
+  ↓
+human clicks Confirm
+  ↓
+existing POST /missions
+```
+
+The attachment correctly says this should be on-demand only until confidence is high, and that human approval is required before launch. 
+
+I would enforce this rule:
+
+> The LLM may create a mission draft.
+> The LLM may not launch, arm, take off, land, return-to-home, or override failsafes.
+
+## The most important safety design
+
+You need a **Command Permission Boundary**.
+
+I would classify agent outputs into three categories:
+
+### Category A — Safe text outputs
+
+Allowed automatically:
+
+```text
+summary
+explanation
+report
+risk notes
+recommended next steps
+```
+
+### Category B — Draft mission outputs
+
+Allowed only after validation and human approval:
+
+```text
+mission draft
+grid settings
+waypoint list
+inspection target order
+patrol zone suggestion
+```
+
+### Category C — Direct control outputs
+
+Blocked in v1:
+
+```text
+arm
+takeoff
+land
+return-to-home
+change altitude during flight
+change geofence
+disable failsafe
+send MAVLink command
+manual velocity command
+```
+
+This matters because LLMs can be useful, but they are not certifiable flight controllers.
+
+## The event flow I would use
+
+```text
+Mission created
+  ↓
+Agent hook: plan
+  ↓
+Existing deterministic preflight
+  ↓
+Agent hook: preflight explanation
+  ↓
+Mission starts
+  ↓
+Telemetry / CV / map events
+  ↓
+Agent hook: on_event or low-frequency inflight advisory
+  ↓
+Mission completes
+  ↓
+Agent hook: postflight report
+  ↓
+AgentRun audit record + UI card
+```
+
+The lifecycle hooks in the attachment — plan, preflight, inflight advisory, postflight, and on-demand — are exactly the right structure. 
+
+## Database models I would add
+
+### `agent_runs`
+
+```sql
+CREATE TABLE agent_runs (
+    id BIGSERIAL PRIMARY KEY,
+    mission_runtime_id BIGINT NULL,
+    agent_id VARCHAR(80) NOT NULL,
+    phase VARCHAR(40) NOT NULL,
+    llm_task VARCHAR(80) NOT NULL,
+    profile_id VARCHAR(120) NULL,
+    model VARCHAR(120) NULL,
+    prompt_version VARCHAR(40) NOT NULL,
+    prompt_hash VARCHAR(128) NOT NULL,
+    response_preview TEXT NULL,
+    structured_result JSONB NULL,
+    latency_ms INTEGER NULL,
+    status VARCHAR(40) NOT NULL,
+    error_message TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+### `mission_agent_outputs`
+
+Optional but useful:
+
+```sql
+CREATE TABLE mission_agent_outputs (
+    id BIGSERIAL PRIMARY KEY,
+    mission_runtime_id BIGINT NOT NULL,
+    agent_run_id BIGINT NOT NULL,
+    output_type VARCHAR(80) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    body_markdown TEXT NULL,
+    structured JSONB NULL,
+    requires_human_approval BOOLEAN DEFAULT FALSE,
+    approved_by_user_id BIGINT NULL,
+    approved_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+This gives you auditability, UI history, and safety traceability.
+
+## Prompt design
+
+Each prompt should be short, versioned, and mission-specific.
+
+Example: `backend/modules/agents/prompts/private_patrol_v1.md`
+
+```text
+You are a drone security patrol analysis agent.
+
+You do not control the drone.
+You do not send MAVLink commands.
+You do not decide guilt, identity, or legal conclusions.
+
+Your job:
+- summarize detected patrol incidents
+- explain detection confidence
+- identify false-positive risks
+- suggest safe operator actions
+- produce structured JSON
+
+Use only the provided mission context.
+If evidence is insufficient, say so.
+
+Return JSON with:
+- incident_summary
+- severity: low | medium | high | critical
+- confidence_explanation
+- false_positive_risk
+- recommended_action
+- requires_human_review
+```
+
+Example: `warehouse_scan_v1.md`
+
+```text
+You are a warehouse drone mapping assistant.
+
+You analyze warehouse scan quality using map metadata, ROS topic health,
+point-cloud coverage, nvblox status, structure extraction results, and scan targets.
+
+You do not control the drone.
+You do not invent scan results.
+You only explain the provided context.
+
+Return JSON with:
+- scan_quality
+- coverage_summary
+- problems
+- likely_causes
+- recommended_next_scan
+- operator_message
+```
+
+## Tool design
+
+In v1, tools should be **read-only**.
+
+Good tools:
+
+```python
+get_mission_runtime()
+get_preflight_report()
+get_telemetry_summary()
+get_warehouse_map_status()
+get_live_map_manifest()
+list_patrol_incidents()
+get_detection_metadata()
+estimate_grid_stats()
+validate_mission_payload()
+```
+
+Bad tools for v1:
+
+```python
+send_mavlink_command()
+arm_drone()
+takeoff()
+change_altitude()
+disable_failsafe()
+update_geofence()
+```
+
+Tool access should be declared per agent.
+
+Example:
+
+```python
+WAREHOUSE_SCAN_TOOLS = [
+    "get_warehouse_map_status",
+    "get_structure_extraction_status",
+    "get_live_map_manifest",
+    "list_scan_targets",
+]
+
+PRIVATE_PATROL_TOOLS = [
+    "list_patrol_incidents",
+    "get_patrol_zone_config",
+    "get_detection_metadata",
+]
+```
+
+## The first vertical slice I would build
+
+I would not build all agents at once.
+
+I would ship this order:
+
+### Step 1 — Backend foundation
+
+Implement:
+
+```text
+AISettingsService.resolve_profile_for_task()
+chat_with_task()
+backend/modules/agents/
+AgentRun table
+Agent registry
+Agent service
+```
+
+This matches the roadmap’s Phase 0 foundation. 
+
+### Step 2 — Private Patrol Agent
+
+Why first?
+
+Because:
+
+```text
+YOLO detections already exist
+ai_tasks already exist
+llm_summary seems already planned
+incident summaries are valuable
+risk is low because the agent does not fly the drone
+```
+
+Success condition:
+
+```text
+YOLO detects incident
+  → incident row saved
+  → Celery task runs
+  → private patrol agent summarizes
+  → llm_summary appears in UI
+```
+
+### Step 3 — Warehouse Scan Agent
+
+Success condition:
+
+```text
+warehouse scan completed
+  → map manifest exists
+  → agent creates scan quality report
+  → UI shows missing topics, nvblox status, coverage quality, next scan advice
+```
+
+### Step 4 — Field Survey Agent
+
+Success condition:
+
+```text
+grid/photogrammetry mission completed
+  → agent summarizes field coverage, image quality, battery/wind risk, missing areas
+```
+
+### Step 5 — Mission Planner Agent
+
+Only after the previous agents are stable.
+
+Success condition:
+
+```text
+operator writes natural-language request
+  → agent creates draft MissionCreateIn JSON
+  → Pydantic validates it
+  → UI shows preview
+  → user confirms
+  → existing mission API creates mission
+```
+
+## What I would improve in Cursor’s roadmap
+
+Cursor’s roadmap is strong, but I would add these missing pieces:
+
+### 1. Add a strict `AgentOutputType`
+
+Do not store all outputs as generic text.
+
+Use:
+
+```python
+class AgentOutputType(StrEnum):
+    INCIDENT_SUMMARY = "incident_summary"
+    POSTFLIGHT_REPORT = "postflight_report"
+    PREFLIGHT_EXPLANATION = "preflight_explanation"
+    MISSION_DRAFT = "mission_draft"
+    PARAMETER_ADVICE = "parameter_advice"
+    ERROR_EXPLANATION = "error_explanation"
+```
+
+This will make your frontend cleaner.
+
+---
+
+### 2. Add a safety validator before any mission draft can be accepted
+
+For example:
+
+```python
+def validate_agent_mission_draft(draft: MissionCreateIn) -> SafetyValidationResult:
+    checks = [
+        validate_geofence(draft),
+        validate_altitude_limits(draft),
+        validate_battery_margin(draft),
+        validate_no_forbidden_commands(draft),
+        validate_mission_type_supported(draft),
+    ]
+    return combine(checks)
+```
+
+The LLM should never be the final authority.
+
+---
+
+### 3. Add context builders per mission
+
+Do not let each agent manually fetch random data.
+
+Create:
+
+```text
+backend/modules/agents/context_builders/
+  warehouse.py
+  patrol.py
+  field.py
+  livestock.py
+  mission_planner.py
+```
+
+Example:
+
+```python
+class WarehouseAgentContextBuilder:
+    async def build_postflight_context(self, mission_runtime_id: int) -> AgentContext:
+        mission = await self.missions.get_runtime(mission_runtime_id)
+        manifest = await self.maps.get_live_map_manifest(mission.client_flight_id)
+        structure = await self.maps.get_structure_extraction_status(mission.map_id)
+        preflight = await self.preflight.get_report(mission_runtime_id)
+
+        return AgentContext(
+            mission_runtime_id=mission_runtime_id,
+            mission_type="warehouse_scan",
+            phase=AgentPhase.POSTFLIGHT,
+            structured_payload={
+                "mission": mission.model_dump(),
+                "manifest": manifest,
+                "structure": structure,
+                "preflight": preflight,
+            },
+        )
+```
+
+This avoids messy agent code.
+
+---
+
+### 4. Add observability from day one
+
+For each agent run, log:
+
+```text
+agent_id
+phase
+mission_runtime_id
+profile_id
+model
+latency_ms
+token estimate
+status
+error type
+prompt version
+prompt hash
+```
+
+Prometheus metrics:
+
+```text
+agent_run_total{agent_id,phase,status}
+agent_latency_ms_bucket{agent_id,phase}
+agent_error_total{agent_id,error_type}
+agent_llm_timeout_total{agent_id}
+agent_output_requires_approval_total{agent_id}
+```
+
+This is especially important in drones because failures are operationally meaningful.
+
+---
+
+### 5. Add feature flags
+
+```python
+settings.ai.agents_enabled
+settings.ai.private_patrol_agent_enabled
+settings.ai.warehouse_scan_agent_enabled
+settings.ai.field_survey_agent_enabled
+settings.ai.mission_planner_enabled
+```
+
+This lets you disable LLM functionality without touching the flight system.
+
+## My final recommendation
+
+I would implement the idea like this:
+
+```text
+Do not create autonomous LLM pilots.
+
+Create mission-specific AI copilots:
+
+1. PrivatePatrolAgent
+   - explains YOLO incidents
+   - creates security summaries
+   - suggests operator actions
+
+2. WarehouseScanAgent
+   - explains map quality
+   - detects missing ROS/topic/nvblox issues from logs/context
+   - recommends rescan areas
+
+3. WarehouseInspectionAgent
+   - summarizes shelf/bin inspection results
+   - explains skipped targets
+   - compares inspection runs
+
+4. FieldSurveyAgent
+   - advises grid/photogrammetry settings
+   - summarizes field scan results
+   - explains coverage/battery/wind risks
+
+5. LivestockAgent
+   - explains herd sweep routes
+   - summarizes missing/seen animals
+   - suggests focused follow-up sweeps
+
+6. MissionPlannerAgent
+   - turns natural language into validated mission drafts
+   - never launches without human approval
+```
+
+The best implementation path is:
+
+```text
+Phase 1: Agent runtime foundation
+Phase 2: Private patrol incident summary
+Phase 3: Warehouse postflight report
+Phase 4: Field/agriculture postflight report
+Phase 5: Mission planner with human approval
+Phase 6: Tool loop, memory, and richer multimodal/vision support
+```
+
+The attachment’s strongest advice is also the most important production rule: **do not replace `_build_mission()` executors with LLM-generated flight code, do not call LLMs inside tight MAVLink/telemetry loops, and do not block mission launch on LLM failures.** 

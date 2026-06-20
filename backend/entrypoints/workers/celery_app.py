@@ -38,6 +38,8 @@ celery_app.conf.update(
         "warehouse_mapping.process_job": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "warehouse_mapping.extract_structure": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "video_analysis.process_job": {"queue": CELERY_VIDEO_ANALYSIS_QUEUE},
+        "agents.run_agent_task": {"queue": CELERY_DEFAULT_QUEUE},
+        "agents.summarize_property_patrol_incident": {"queue": CELERY_DEFAULT_QUEUE},
     },
     worker_max_tasks_per_child=CELERY_WORKER_MAX_TASKS_PER_CHILD,
     task_time_limit=CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS,
@@ -70,6 +72,7 @@ instrument_celery(celery_app)
 # Import task modules here so direct submodule loading still registers every
 # named task; relying on package ``__init__`` is not enough for this entrypoint.
 from backend.entrypoints.workers import (  # noqa: E402, F401
+    agents_tasks,
     deliverable_tasks,
     export_tasks,
     outbox_tasks,

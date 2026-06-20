@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -74,7 +74,12 @@ async def update_user_role(
 
 
 @router.get("/organizations")
-async def list_organizations(db: AsyncSession = Depends(_get_db)):
+async def list_organizations(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    db: AsyncSession = Depends(_get_db),
+):
+    offset = (page - 1) * page_size
     q = await db.execute(
         select(
             Organization.id,
@@ -86,8 +91,12 @@ async def list_organizations(db: AsyncSession = Depends(_get_db)):
         .outerjoin(User, User.org_id == Organization.id)
         .group_by(Organization.id)
         .order_by(Organization.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
     )
     rows = q.all()
+    total_q = await db.execute(select(func.count()).select_from(Organization))
+    total = int(total_q.scalar_one() or 0)
     return {
         "organizations": [
             {
@@ -98,7 +107,10 @@ async def list_organizations(db: AsyncSession = Depends(_get_db)):
                 "created_at": r.created_at.isoformat(),
             }
             for r in rows
-        ]
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
     }
 
 

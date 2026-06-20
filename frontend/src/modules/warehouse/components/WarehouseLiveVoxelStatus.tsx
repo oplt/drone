@@ -1,14 +1,10 @@
 import {
   Box,
   Chip,
-  IconButton,
   Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
-import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
-import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
-import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
 import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
 import {
@@ -137,23 +133,6 @@ export function WarehouseLiveVoxelHeader({
           variant="outlined"
           label={`${(cachedBytes / 1048576).toFixed(1)} MB cached`}
         />
-      </Stack>
-      <Stack direction="row" spacing={0.5}>
-        <Tooltip title="Layer visibility">
-          <IconButton size="small" aria-label="Layer visibility">
-            <LayersRoundedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Follow drone">
-          <IconButton size="small" aria-label="Follow drone">
-            <CenterFocusStrongRoundedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Reset camera">
-          <IconButton size="small" aria-label="Reset camera">
-            <RestartAltRoundedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
       </Stack>
     </Stack>
   );

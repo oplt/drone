@@ -940,10 +940,13 @@ async def shutdown_warehouse_mapping_stack() -> None:
     shutdown_cmd = str(getattr(settings, "warehouse_shutdown_mapping_stack_cmd", "") or "").strip()
     if shutdown_cmd:
         try:
+            shutdown_argv = shlex.split(shutdown_cmd)
+            if not shutdown_argv:
+                return
             await asyncio.to_thread(
                 __import__("subprocess").run,
-                shutdown_cmd,
-                shell=True,
+                shutdown_argv,
+                shell=False,
                 check=False,
                 timeout=10,
             )

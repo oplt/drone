@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  computeWarehouseScanPose,
   listWarehouseScanTargets,
   type WarehouseLocalPose,
   type WarehouseScanTarget,
 } from "../api/warehouseInspectionApi";
-import {
-  type MapPlacementPoint,
-  shelfNormalFromFacing,
-  WAREHOUSE_MAP_FRAME_ID,
-} from "../utils/warehouseMapPlacement";
+import { type MapPlacementPoint } from "../utils/warehouseMapPlacement";
+import { useWarehouseScanPoseDraft } from "./useWarehouseScanPoseDraft";
 
 export type WarehouseMapPlacementViewerProps = {
   pickMode: boolean;
@@ -48,14 +44,18 @@ export function useWarehouseMapPlacement({
 }) {
   const [pickMode, setPickMode] = useState(false);
   const [placementZ, setPlacementZ] = useState(1.6);
-  const [shelfFacing, setShelfFacing] = useState("+y");
-  const [standoffM, setStandoffM] = useState(1.2);
-  const [draftTarget, setDraftTarget] = useState<MapPlacementPoint | null>(null);
-  const [draftScanPose, setDraftScanPose] = useState<WarehouseLocalPose | null>(
-    null,
-  );
   const [targets, setTargets] = useState<WarehouseScanTarget[]>([]);
   const [targetsLoading, setTargetsLoading] = useState(false);
+  const {
+    shelfFacing,
+    standoffM,
+    draftTarget,
+    draftScanPose,
+    setShelfFacing,
+    setStandoffM,
+    setDraftTarget,
+    clearDraft,
+  } = useWarehouseScanPoseDraft({ token, onError });
 
   const refreshTargets = useCallback(async () => {
     if (warehouseMapId == null) {
@@ -64,8 +64,20 @@ export function useWarehouseMapPlacement({
     }
     setTargetsLoading(true);
     try {
-      const rows = await listWarehouseScanTargets(warehouseMapId, token);
-      setTargets(rows);
+      const pageSize = 200;
+      let offset = 0;
+      let total = 0;
+      const all: WarehouseScanTarget[] = [];
+      do {
+        const page = await listWarehouseScanTargets(warehouseMapId, token, {
+          limit: pageSize,
+          offset,
+        });
+        total = page.total;
+        all.push(...page.items);
+        offset += pageSize;
+      } while (all.length < total);
+      setTargets(all);
     } catch (error) {
       onError(
         error instanceof Error ? error.message : "Scan targets could not be loaded.",
@@ -80,61 +92,13 @@ export function useWarehouseMapPlacement({
   }, [refreshTargets]);
 
   useEffect(() => {
-    setDraftTarget(null);
-    setDraftScanPose(null);
+    clearDraft();
     setPickMode(false);
-  }, [warehouseMapId]);
-
-  const clearDraft = useCallback(() => {
-    setDraftTarget(null);
-    setDraftScanPose(null);
-  }, []);
+  }, [clearDraft, warehouseMapId]);
 
   const handlePick = useCallback((point: MapPlacementPoint) => {
     setDraftTarget(point);
-  }, []);
-
-  useEffect(() => {
-    if (!draftTarget) {
-      setDraftScanPose(null);
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await computeWarehouseScanPose(
-          {
-            target_point: {
-              frame_id: WAREHOUSE_MAP_FRAME_ID,
-              x_m: draftTarget.x_m,
-              y_m: draftTarget.y_m,
-              z_m: draftTarget.z_m,
-            },
-            shelf_normal: shelfNormalFromFacing(shelfFacing),
-            standoff_m: standoffM,
-          },
-          token,
-        );
-        if (!cancelled) {
-          setDraftScanPose(response.scan_pose);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          onError(
-            error instanceof Error
-              ? error.message
-              : "Scan pose could not be computed for the picked point.",
-          );
-          setDraftScanPose(null);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [draftTarget, onError, shelfFacing, standoffM, token]);
+  }, [setDraftTarget]);
 
   const viewerProps = useMemo<WarehouseMapPlacementViewerProps>(
     () => ({
@@ -179,6 +143,8 @@ export function useWarehouseMapPlacement({
       pickMode,
       placementZ,
       refreshTargets,
+      setShelfFacing,
+      setStandoffM,
       shelfFacing,
       standoffM,
       targets,

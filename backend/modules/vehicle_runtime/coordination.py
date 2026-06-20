@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 from backend.core.config.runtime import settings
 from backend.core.events import MissionContextV1, TelemetryPayloadV1, next_runtime_sequence
-from backend.infrastructure.ai.llm_client import LLMAnalyzer
 from backend.modules.preflight.range_estimator import SimpleWhPerKmModel
 from backend.modules.telemetry.repository import TelemetryBatcher, TelemetryRepository
 from backend.modules.vehicle_runtime.types import Coordinate
@@ -54,7 +53,6 @@ class RuntimeCoordinationMixin:
         self,
         drone: DroneClient,
         maps: MapPort,
-        analyzer: LLMAnalyzer,
         mqtt: MessagePublisherPort | None,
         video: VideoStreamPort | None,
         telemetry_repo: TelemetryRepository,
@@ -66,7 +64,6 @@ class RuntimeCoordinationMixin:
     ):
         self.drone = drone
         self.maps = maps
-        self.analyzer = analyzer
         self.mqtt = mqtt
         self.video = video
         self.fanout = fanout

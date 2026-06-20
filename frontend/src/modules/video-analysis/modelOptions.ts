@@ -10,5 +10,8 @@ export const MODEL_OPTIONS: ReadonlyArray<{
   { value: "yolo26s.pt", label: "YOLO26s · better/default detector" },
   { value: "yolo26n-seg.pt", label: "YOLO26n-seg · fast segmentation" },
   { value: "yolo26s-seg.pt", label: "YOLO26s-seg · better segmentation" },
-  { value: "storage/ml_models/agriculture/best.pt", label: "Custom agriculture best.pt" },
+  {
+    value: "backend/storage/ml_models/agriculture/best.pt",
+    label: "Custom agriculture best.pt",
+  },
 ];

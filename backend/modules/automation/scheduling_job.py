@@ -7,10 +7,20 @@ from croniter import croniter
 from sqlalchemy import select
 
 from backend.core.database.session import Session
+from backend.modules.identity.models import User
+from backend.modules.missions.application import mission_application
+from backend.modules.missions.schemas.mission_create import MissionCreateIn
 
 from .models import MissionTemplate, ScheduledRun
 
 logger = logging.getLogger(__name__)
+
+
+def _mission_payload(template: MissionTemplate) -> MissionCreateIn:
+    config = dict(template.config or {})
+    config.setdefault("name", template.name)
+    config["mission_type"] = template.mission_type
+    return MissionCreateIn.model_validate(config)
 
 
 async def execute_scheduled_run(scheduled_run_id: int) -> None:
@@ -34,24 +44,41 @@ async def execute_scheduled_run(scheduled_run_id: int) -> None:
             if template is None:
                 raise ValueError(f"MissionTemplate {run.template_id} not found")
 
-            # NOTE: Actual drone dispatch requires the Orchestrator singleton
-            # which lives in the API process. Until an inter-process RPC layer
-            # (e.g. Redis pub/sub or a dedicated command queue) is wired up,
-            # we log the intent and mark the run completed so the scheduling
-            # loop makes forward progress without corrupting run state.
-            logger.info(
-                "STUB dispatch: template_id=%d name=%r mission_type=%r "
-                "scheduled_run_id=%d; wire to Orchestrator RPC in next sprint",
-                template.id,
-                template.name,
-                template.mission_type,
-                scheduled_run_id,
+            if template.created_by_user_id is None:
+                raise ValueError("Mission template has no dispatch user")
+            user_query = await db.execute(
+                select(User).where(User.id == template.created_by_user_id)
             )
+            user = user_query.scalar_one_or_none()
+            if user is None or user.org_id != template.org_id:
+                raise ValueError("Mission template dispatch user is unavailable")
+
+            payload = _mission_payload(template)
+            from backend.modules.missions.service.mission_start import start_mission_for_user
+            from backend.modules.vehicle_runtime.factory import get_orchestrator
+
+            launch = await start_mission_for_user(payload, user=user)
+            orchestrator = await get_orchestrator()
+            mission_task = getattr(orchestrator, "_active_mission_task", None)
+            if mission_task is None:
+                raise RuntimeError(f"Mission {launch.flight_id} did not create an execution task")
+            await mission_task
+            runtime = await mission_application.get_by_client_id(launch.flight_id)
+            if runtime is None or runtime.state != "completed":
+                state = runtime.state if runtime is not None else "missing"
+                error = runtime.failure_reason if runtime is not None else None
+                raise RuntimeError(
+                    f"Mission {launch.flight_id} ended in state={state}: {error or 'no details'}"
+                )
 
             run.status = "completed"
             run.ended_at = datetime.now(UTC)
             await db.commit()
-            logger.info("ScheduledRun %d completed (stub)", scheduled_run_id)
+            logger.info(
+                "ScheduledRun %d completed mission=%s",
+                scheduled_run_id,
+                launch.flight_id,
+            )
 
         except Exception as exc:
             run.status = "failed"

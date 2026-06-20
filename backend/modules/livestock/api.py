@@ -213,6 +213,13 @@ async def build_mission_plan(
         )
 
     try:
-        return {"mission": build_mission(task, latest)}
+        mission_plan = build_mission(task, latest)
+        try:
+            from backend.modules.agents.hooks import schedule_livestock_plan_narrative
+
+            schedule_livestock_plan_narrative(task_id=task_id, mission_plan=mission_plan)
+        except Exception:
+            pass
+        return MissionPlanOut(mission=mission_plan)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -74,13 +74,43 @@ async def overview(
     )
 
     flights_last_7 = (
-        (await db.execute(select(Flight).where(Flight.started_at >= last_7d))).scalars().all()
-    )
-    flight_hours_7d = 0.0
-    for f in flights_last_7:
-        start = _ensure_aware(f.started_at)
-        end = _ensure_aware(f.ended_at) if f.ended_at else now
-        flight_hours_7d += (end - start).total_seconds() / 3600
+        await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(
+                        func.extract(
+                            "epoch",
+                            func.coalesce(Flight.ended_at, now) - Flight.started_at,
+                        )
+                    ),
+                    0.0,
+                )
+            ).where(Flight.started_at >= last_7d)
+        )
+    ).scalar_one()
+    flight_hours_7d = float(flights_last_7 or 0.0) / 3600.0
+
+    day_bucket = func.date(Flight.started_at)
+    flight_hour_rows = (
+        await db.execute(
+            select(
+                day_bucket,
+                func.count(),
+                func.coalesce(
+                    func.sum(
+                        func.extract(
+                            "epoch",
+                            func.coalesce(Flight.ended_at, now) - Flight.started_at,
+                        )
+                    ),
+                    0.0,
+                ),
+            )
+            .where(Flight.started_at >= last_30d)
+            .group_by(day_bucket)
+            .order_by(day_bucket)
+        )
+    ).all()
 
     flights_last_30 = (
         (await db.execute(select(Flight).where(Flight.started_at >= last_30d))).scalars().all()
@@ -91,15 +121,14 @@ async def overview(
     day_keys = [_date_key(d) for d in days]
     flight_hours_by_day = {k: 0.0 for k in day_keys}
     flight_counts_by_day = {k: 0 for k in day_keys}
-
-    for f in flights_last_30:
-        key = _date_key(_ensure_aware(f.started_at))
+    for day_value, count, seconds in flight_hour_rows:
+        if day_value is None:
+            continue
+        key = str(day_value)
         if key not in flight_hours_by_day:
             continue
-        start = _ensure_aware(f.started_at)
-        end = _ensure_aware(f.ended_at) if f.ended_at else now
-        flight_hours_by_day[key] += (end - start).total_seconds() / 3600
-        flight_counts_by_day[key] += 1
+        flight_hours_by_day[key] = float(seconds or 0.0) / 3600.0
+        flight_counts_by_day[key] = int(count or 0)
 
     # Telemetry counts by day
     day_bucket = func.date(TelemetryRecord.created_at)

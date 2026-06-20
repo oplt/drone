@@ -81,6 +81,8 @@ def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionP
         min_rack_length_m=settings.warehouse_structure_min_rack_length_m,
         bin_pitch_m=settings.warehouse_structure_bin_pitch_m,
         shelf_min_spacing_m=settings.warehouse_structure_shelf_min_spacing_m,
+        max_shelf_levels=settings.warehouse_structure_max_shelf_levels,
+        max_bins_per_rack_face=settings.warehouse_structure_max_bins_per_rack_face,
         standoff_m=settings.warehouse_structure_standoff_m,
         drone_radius_m=settings.warehouse_structure_drone_radius_m,
         clearance_margin_m=settings.warehouse_structure_clearance_margin_m,
@@ -104,6 +106,10 @@ def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionP
     defaults.clearance_margin_m = _override("clearance_margin_m", defaults.clearance_margin_m)
     defaults.min_aisle_width_m = _override("min_aisle_width_m", defaults.min_aisle_width_m)
     defaults.shelf_min_spacing_m = _override("shelf_min_spacing_m", defaults.shelf_min_spacing_m)
+    defaults.max_shelf_levels = int(_override("max_shelf_levels", defaults.max_shelf_levels))
+    defaults.max_bins_per_rack_face = int(
+        _override("max_bins_per_rack_face", defaults.max_bins_per_rack_face)
+    )
     axis = payload.get("axis_deg")
     defaults.axis_deg = None if axis is None else _override("axis_deg", 0.0)
     return defaults.sanitized()

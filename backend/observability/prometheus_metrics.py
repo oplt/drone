@@ -271,6 +271,11 @@ warehouse_preflight_refresh_duration_seconds = Histogram(
     ["deep", "force"],
 )
 
+warehouse_mapping_replay_duration_seconds = Histogram(
+    "warehouse_mapping_replay_duration_seconds",
+    "Warehouse live-map snapshot replay duration in seconds",
+)
+
 warehouse_preflight_cache_serves_total = Counter(
     "warehouse_preflight_cache_serves_total",
     "Total warehouse preflight snapshots served from cache",

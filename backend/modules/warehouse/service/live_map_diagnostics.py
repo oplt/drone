@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import re
 import shlex
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,8 @@ _AVERAGE_RATE_RE = re.compile(r"average rate:\s*([-+0-9.eE]+)")
 _DEFAULT_HZ_TIMEOUT_S = 5.0
 _DEFAULT_TF_TIMEOUT_S = 4.0
 _MAX_CONCURRENT_ROS_PROBES = 4
+_DIAGNOSTICS_CACHE: tuple[float, WarehouseLiveMapDiagnostics] | None = None
+_DIAGNOSTICS_CACHE_LOCK = asyncio.Lock()
 
 
 @dataclass
@@ -179,7 +183,7 @@ async def _probe_topic_hz_bounded(topic: str, ws: Path, semaphore: asyncio.Semap
         return topic, await asyncio.to_thread(_topic_hz, topic, ws)
 
 
-async def run_live_map_diagnostics() -> WarehouseLiveMapDiagnostics:
+async def _collect_live_map_diagnostics() -> WarehouseLiveMapDiagnostics:
     ws = _ros2_workspace()
     diagnostics = WarehouseLiveMapDiagnostics()
 
@@ -253,3 +257,54 @@ async def run_live_map_diagnostics() -> WarehouseLiveMapDiagnostics:
 
     diagnostics.nvblox_status = nvblox_status_tracker.status()
     return diagnostics
+
+
+def _diagnostics_cache_ttl_s() -> float:
+    from backend.core.config.runtime import settings
+
+    return max(
+        0.0,
+        float(getattr(settings, "warehouse_live_map_diagnostics_cache_ttl_s", 45.0)),
+    )
+
+
+def clear_live_map_diagnostics_cache() -> None:
+    global _DIAGNOSTICS_CACHE
+
+    _DIAGNOSTICS_CACHE = None
+
+
+def _cached_diagnostics(now: float, ttl_s: float) -> WarehouseLiveMapDiagnostics | None:
+    if _DIAGNOSTICS_CACHE is None or ttl_s <= 0:
+        return None
+    cached_at, report = _DIAGNOSTICS_CACHE
+    if now - cached_at >= ttl_s:
+        return None
+    return copy.deepcopy(report)
+
+
+async def run_live_map_diagnostics(
+    *,
+    force: bool = False,
+    cache_ttl_s: float | None = None,
+) -> WarehouseLiveMapDiagnostics:
+    """Return cached ROS diagnostics and coalesce concurrent refresh probes."""
+
+    ttl_s = _diagnostics_cache_ttl_s() if cache_ttl_s is None else max(0.0, cache_ttl_s)
+    now = time.monotonic()
+    if not force:
+        cached = _cached_diagnostics(now, ttl_s)
+        if cached is not None:
+            return cached
+
+    async with _DIAGNOSTICS_CACHE_LOCK:
+        now = time.monotonic()
+        if not force:
+            cached = _cached_diagnostics(now, ttl_s)
+            if cached is not None:
+                return cached
+
+        report = await _collect_live_map_diagnostics()
+        global _DIAGNOSTICS_CACHE
+        _DIAGNOSTICS_CACHE = (time.monotonic(), copy.deepcopy(report))
+        return report

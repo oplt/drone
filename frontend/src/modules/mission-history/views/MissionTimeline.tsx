@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
@@ -37,6 +37,7 @@ import {
   fetchMissionTransitions,
   startMissionExport,
 } from "../api/missionHistoryApi";
+import { MissionSectionError } from "../components/MissionSectionError";
 
 function formatTs(ts: number | null | undefined): string {
   if (!ts) return "—";
@@ -56,6 +57,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function PreflightSection({ data }: { data: any }) {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
   const theme = useTheme();
 
   const statusColor =
@@ -83,7 +85,13 @@ function PreflightSection({ data }: { data: any }) {
             </Typography>
           )}
         </Stack>
-        <IconButton size="small" onClick={() => setOpen((v) => !v)}>
+        <IconButton
+          size="small"
+          aria-label={open ? "Collapse preflight details" : "Expand preflight details"}
+          aria-expanded={open}
+          aria-controls={contentId}
+          onClick={() => setOpen((v) => !v)}
+        >
           {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
         </IconButton>
       </Stack>
@@ -92,7 +100,7 @@ function PreflightSection({ data }: { data: any }) {
           {formatTs(data.started_at)} → {formatTs(data.completed_at)}
         </Typography>
       )}
-      <Collapse in={open}>
+      <Collapse id={contentId} in={open}>
         <Stack spacing={0.5} sx={{ mt: 1.5 }}>
           {allChecks.map((check: any, i: number) => (
             <Stack key={i} direction="row" alignItems="center" spacing={1}>
@@ -199,6 +207,7 @@ function CommandItem({ item }: { item: any }) {
 
 function EventItem({ item }: { item: any }) {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
   const hasData = item.data && Object.keys(item.data).length > 0;
 
   return (
@@ -212,7 +221,14 @@ function EventItem({ item }: { item: any }) {
             {item.type}
           </Typography>
           {hasData && (
-            <IconButton size="small" onClick={() => setOpen((v) => !v)} sx={{ p: 0 }}>
+            <IconButton
+              size="small"
+              aria-label={open ? "Collapse event data" : "Expand event data"}
+              aria-expanded={open}
+              aria-controls={contentId}
+              onClick={() => setOpen((v) => !v)}
+              sx={{ p: 0 }}
+            >
               {open ? (
                 <KeyboardArrowUpIcon fontSize="small" />
               ) : (
@@ -224,7 +240,7 @@ function EventItem({ item }: { item: any }) {
         <Typography variant="caption" color="text.secondary">
           {formatTs(item.created_at)}
         </Typography>
-        <Collapse in={open}>
+        <Collapse id={contentId} in={open}>
           <Box
             component="pre"
             sx={{
@@ -253,8 +269,9 @@ type TimelineEntry =
 function ExportButton({ flightId }: { flightId: string }) {
   const [jobId, setJobId] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
-  const { data: jobStatus } = useQuery({
+  const { data: jobStatus, error: jobError } = useQuery({
     queryKey: ["export-job", flightId, jobId],
     queryFn: () => fetchMissionExportJob<any>(flightId, String(jobId)),
     enabled: jobId !== null,
@@ -267,15 +284,38 @@ function ExportButton({ flightId }: { flightId: string }) {
   const handleExport = async () => {
     if (starting) return;
     setStarting(true);
+    setStartError(null);
     try {
       const res = await startMissionExport<{ job_id: number }>(flightId);
       setJobId(res.job_id);
-    } catch {
-      // ignore
+    } catch (error: unknown) {
+      setStartError(error instanceof Error ? error.message : "Export could not be started.");
     } finally {
       setStarting(false);
     }
   };
+
+  const exportError =
+    startError ??
+    (jobError instanceof Error ? jobError.message : jobError ? "Export status is unavailable." : null);
+  if (exportError) {
+    return (
+      <Stack direction="row" alignItems="center" spacing={0.75} role="alert">
+        <Typography variant="caption" color="error">
+          {exportError}
+        </Typography>
+        <ActionIconButton
+          variant="retry"
+          title="Retry export"
+          color="error"
+          onClick={() => {
+            setStartError(null);
+            setJobId(null);
+          }}
+        />
+      </Stack>
+    );
+  }
 
   if (jobStatus?.status === "ready" && jobStatus.download_url) {
     return (
@@ -291,7 +331,7 @@ function ExportButton({ flightId }: { flightId: string }) {
     return (
       <ActionIconButton
         variant="retry"
-        title="Export failed — retry"
+        title="Export failed: retry"
         color="error"
         onClick={() => setJobId(null)}
       />
@@ -322,6 +362,7 @@ function ExportButton({ flightId }: { flightId: string }) {
 
 function ComplianceSection({ data }: { data: any }) {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Stack direction="row" alignItems="center" spacing={1} justifyContent="space-between">
@@ -336,11 +377,17 @@ function ComplianceSection({ data }: { data: any }) {
             <Chip label={`LAANC: ${data.laanc_auth_number}`} size="small" variant="outlined" />
           )}
         </Stack>
-        <IconButton size="small" onClick={() => setOpen((v) => !v)}>
+        <IconButton
+          size="small"
+          aria-label={open ? "Collapse compliance details" : "Expand compliance details"}
+          aria-expanded={open}
+          aria-controls={contentId}
+          onClick={() => setOpen((v) => !v)}
+        >
           {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
         </IconButton>
       </Stack>
-      <Collapse in={open}>
+      <Collapse id={contentId} in={open}>
         <Stack spacing={1} sx={{ mt: 1.5 }}>
           {data.preflight_ack_at && (
             <Box>
@@ -429,12 +476,18 @@ export default function MissionTimeline() {
   entries.sort((a, b) => a.ts - b.ts);
 
   const mission = missionQ.data;
+  const timelineQueries = [
+    { section: "Transitions", query: transitionsQ },
+    { section: "Commands", query: commandsQ },
+    { section: "Events", query: eventsQ },
+  ];
+  const timelineHasErrors = timelineQueries.some(({ query }) => query.isError);
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1100, mx: "auto" }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
         <Tooltip title="Back">
-          <IconButton onClick={() => navigate(-1)} size="small">
+          <IconButton aria-label="Back" onClick={() => navigate(-1)} size="small">
             <ArrowBackIcon />
           </IconButton>
         </Tooltip>
@@ -461,9 +514,12 @@ export default function MissionTimeline() {
           {missionQ.isLoading ? (
             <CircularProgress size={24} />
           ) : missionQ.error ? (
-            <Typography color="error" variant="body2">
-              Failed to load mission.
-            </Typography>
+            <MissionSectionError
+              section="Mission summary"
+              error={missionQ.error}
+              retrying={missionQ.isFetching}
+              onRetry={() => void missionQ.refetch()}
+            />
           ) : mission ? (
             <Stack spacing={1}>
               <Typography fontWeight={700} noWrap>
@@ -523,21 +579,51 @@ export default function MissionTimeline() {
         {/* Main — timeline */}
         <Stack spacing={2}>
           {/* Preflight */}
-          {preflightQ.data && <PreflightSection data={preflightQ.data} />}
+          {preflightQ.error ? (
+            <MissionSectionError
+              section="Preflight"
+              error={preflightQ.error}
+              retrying={preflightQ.isFetching}
+              onRetry={() => void preflightQ.refetch()}
+            />
+          ) : (
+            preflightQ.data && <PreflightSection data={preflightQ.data} />
+          )}
 
           {/* Compliance */}
-          {complianceQ.data && <ComplianceSection data={complianceQ.data} />}
+          {complianceQ.error ? (
+            <MissionSectionError
+              section="Compliance"
+              error={complianceQ.error}
+              retrying={complianceQ.isFetching}
+              onRetry={() => void complianceQ.refetch()}
+            />
+          ) : (
+            complianceQ.data && <ComplianceSection data={complianceQ.data} />
+          )}
+
+          {timelineQueries.map(({ section, query }) =>
+            query.error ? (
+              <MissionSectionError
+                key={section}
+                section={section}
+                error={query.error}
+                retrying={query.isFetching}
+                onRetry={() => void query.refetch()}
+              />
+            ) : null,
+          )}
 
           {/* Chronological timeline */}
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress />
             </Box>
-          ) : entries.length === 0 ? (
+          ) : entries.length === 0 && !timelineHasErrors ? (
             <Paper variant="outlined" sx={{ p: 3, textAlign: "center" }}>
               <Typography color="text.secondary">No timeline events recorded.</Typography>
             </Paper>
-          ) : (
+          ) : entries.length > 0 ? (
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
                 Events ({entries.length})
@@ -557,7 +643,7 @@ export default function MissionTimeline() {
                 })}
               </Stack>
             </Paper>
-          )}
+          ) : null}
         </Stack>
       </Box>
     </Box>

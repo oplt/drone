@@ -108,8 +108,19 @@ async def _resolve_template_for_preview(db: AsyncSession, site: PropertyPatrolSi
 
 
 @router.get("/sites", response_model=list[PropertyPatrolSiteOut])
-async def list_sites(user=Depends(require_user), db: AsyncSession = Depends(get_db)):
-    rows = (await db.scalars(select(PropertyPatrolSite).order_by(PropertyPatrolSite.updated_at.desc()))).all()
+async def list_sites(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user=Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(PropertyPatrolSite)
+        .order_by(PropertyPatrolSite.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = (await db.scalars(stmt)).all()
     return [PropertyPatrolSiteOut.model_validate(row) for row in rows]
 
 
@@ -152,10 +163,17 @@ async def delete_site(site_id: int, user=Depends(require_user), db: AsyncSession
 
 
 @router.get("/templates", response_model=list[PatrolTemplateOut])
-async def list_templates(site_id: int | None = Query(default=None), user=Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def list_templates(
+    site_id: int | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user=Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(PropertyPatrolTemplate).order_by(PropertyPatrolTemplate.updated_at.desc())
     if site_id is not None:
         stmt = stmt.where(PropertyPatrolTemplate.site_id == site_id)
+    stmt = stmt.limit(limit).offset(offset)
     return list((await db.scalars(stmt)).all())
 
 
@@ -234,10 +252,17 @@ async def start_mission(payload: MissionStartIn, user=Depends(require_user), db:
 
 
 @router.get("/missions", response_model=list[MissionRunOut])
-async def list_missions(site_id: int | None = None, user=Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def list_missions(
+    site_id: int | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user=Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(PropertyPatrolRun).order_by(PropertyPatrolRun.updated_at.desc())
     if site_id is not None:
         stmt = stmt.where(PropertyPatrolRun.site_id == site_id)
+    stmt = stmt.limit(limit).offset(offset)
     return list((await db.scalars(stmt)).all())
 
 
@@ -388,6 +413,12 @@ async def create_sensor_event(payload: SensorEventCreate, user=Depends(require_u
     await db.refresh(event)
     if run is not None:
         await db.refresh(run)
+    try:
+        from backend.entrypoints.workers.agents_tasks import summarize_property_patrol_incident
+
+        summarize_property_patrol_incident.delay(incident_id=int(incident.id))
+    except Exception:
+        logger.exception("Failed to enqueue property patrol incident summary")
     return SensorEventResponse(
         event=SensorEventOut.model_validate(event),
         action=action,  # type: ignore[arg-type]
@@ -398,18 +429,32 @@ async def create_sensor_event(payload: SensorEventCreate, user=Depends(require_u
 
 
 @router.get("/sensor-events", response_model=list[SensorEventOut])
-async def list_sensor_events(site_id: int | None = None, user=Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def list_sensor_events(
+    site_id: int | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user=Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(PropertyPatrolSensorEvent).order_by(PropertyPatrolSensorEvent.created_at.desc())
     if site_id is not None:
         stmt = stmt.where(PropertyPatrolSensorEvent.site_id == site_id)
+    stmt = stmt.limit(limit).offset(offset)
     return list((await db.scalars(stmt)).all())
 
 
 @router.get("/incidents", response_model=list[IncidentOut])
-async def list_incidents(site_id: int | None = None, user=Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def list_incidents(
+    site_id: int | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user=Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(PropertyPatrolIncident).order_by(PropertyPatrolIncident.updated_at.desc())
     if site_id is not None:
         stmt = stmt.where(PropertyPatrolIncident.site_id == site_id)
+    stmt = stmt.limit(limit).offset(offset)
     return list((await db.scalars(stmt)).all())
 
 

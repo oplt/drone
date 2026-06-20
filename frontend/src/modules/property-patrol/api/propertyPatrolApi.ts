@@ -81,7 +81,7 @@ export type PatrolIncident = {
 };
 
 export function listPropertyPatrolSites(token?: string | null) {
-  return httpRequest<PropertyPatrolSite[]>("/api/property-patrol/sites", { token });
+  return httpRequest<PropertyPatrolSite[]>("/api/property-patrol/sites?limit=100&offset=0", { token });
 }
 
 export function createPropertyPatrolSite(
@@ -96,7 +96,9 @@ export function createPropertyPatrolSite(
 }
 
 export function listPropertyPatrolTemplates(siteId?: number | null, token?: string | null) {
-  const qs = siteId ? `?site_id=${siteId}` : "";
+  const qs = siteId
+    ? `?site_id=${siteId}&limit=100&offset=0`
+    : "?limit=100&offset=0";
   return httpRequest<PatrolTemplate[]>(`/api/property-patrol/templates${qs}`, { token });
 }
 
@@ -143,7 +145,8 @@ export function startPropertyPatrolMission(
 }
 
 export function listPropertyPatrolIncidents(siteId?: number | null, token?: string | null) {
-  const qs = siteId ? `?site_id=${siteId}` : "";
+  const qs = siteId
+    ? `?site_id=${siteId}&limit=100&offset=0`
+    : "?limit=100&offset=0";
   return httpRequest<PatrolIncident[]>(`/api/property-patrol/incidents${qs}`, { token });
 }
-

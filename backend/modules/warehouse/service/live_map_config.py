@@ -6,17 +6,21 @@ from backend.core.config.runtime import env_truthy, settings
 from backend.modules.warehouse.service.map_source_config import LiveMapSourceId
 
 SOURCE_RENDER_PRIORITY: dict[LiveMapSourceId, int] = {
-    "nvblox_color": 1,
-    "rgbd_colored": 2,
+    "rgbd_colored": 1,
+    "rgbd_xyz_uncolored": 2,
     "nvblox_esdf": 3,
-    "nvblox_tsdf": 4,
+    "nvblox_mesh": 4,
     "mid360_raw": 5,
-    "nvblox_mesh": 6,
-    "nvblox_occupancy": 7,
+    "nvblox_occupancy": 6,
+    # Voxel block layers are diagnostic transport topics, not scanned-map products.
+    "nvblox_color": 90,
+    "nvblox_tsdf": 91,
     "odom": 99,
 }
 
-PREFERRED_LAYER_CHOICES = frozenset({"rgbd_colored", "nvblox_color", "mid360_raw"})
+PREFERRED_LAYER_CHOICES = frozenset(
+    {"rgbd_colored", "rgbd_xyz_uncolored", "nvblox_esdf", "nvblox_mesh", "mid360_raw"}
+)
 
 
 def _setting_bool(name: str, default: bool = False) -> bool:

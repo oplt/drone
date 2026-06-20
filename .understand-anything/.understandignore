@@ -1,0 +1,90 @@
+# .understandignore - patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore (globs, comments, ! negation, trailing / for dirs)
+
+# Dependencies and virtual environments
+node_modules/
+.venv/
+venv/
+env/
+vendor/
+
+# Python and runtime caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build and distribution output
+dist/
+build/
+out/
+coverage/
+.next/
+.nuxt/
+.svelte-kit/
+.cache/
+.turbo/
+target/
+obj/
+
+# VCS and local metadata
+.git/
+.idea/
+.vscode/
+
+# Logs and temporary output
+logs/
+log/
+*.log
+tmp/
+temp/
+
+# Generated files and source maps
+generated/
+**/generated/
+*.generated.*
+*.gen.*
+*.min.js
+*.min.css
+*.map
+
+# Large datasets and binary archives
+data/
+datasets/
+*.csv
+*.tsv
+*.parquet
+*.arrow
+*.h5
+*.hdf5
+*.sqlite
+*.db
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.7z
+
+# Videos, audio, and large media
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.mp3
+*.wav
+*.flac
+
+# Model weights and ML artifacts
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.ckpt
+*.bin
+*.weights
+*.pb
+models/
+checkpoints/

@@ -13,6 +13,7 @@ from backend.observability.correlation import CorrelationMiddleware
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
 from backend.modules.ai.api import router as ai_router
+from backend.modules.agents.api import router as agents_router
 from backend.modules.alerts.api import router as alerts_router
 from backend.modules.alerts.evaluation_service import alert_engine
 from backend.modules.analytics.api import router as analytics_router
@@ -147,6 +148,7 @@ app.include_router(runtime_router)
 app.include_router(video_router)
 app.include_router(settings_router)
 app.include_router(ai_router)
+app.include_router(agents_router)
 app.include_router(analytics_router)
 app.include_router(geofence_router)
 app.include_router(animal_farm_router)
@@ -205,3 +207,16 @@ async def health_check():
         "telemetry_source_connected": telemetry["source_connected"],
         "last_telemetry_update": telemetry["last_update"],
     }
+
+
+@app.get("/readiness")
+async def readiness_check():
+    from fastapi.responses import JSONResponse
+
+    from backend.observability.readiness import dependency_readiness
+
+    ready, dependencies = await dependency_readiness()
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={"status": "ready" if ready else "not_ready", "dependencies": dependencies},
+    )

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import OrgUser, require_mission_exec, require_org_user
+from backend.modules.vehicle_runtime.factory import get_orchestrator
 from backend.modules.warehouse.exceptions import WarehouseFlightNotReadyError
 from backend.modules.warehouse.service.flight_service import (
     WarehouseFlightMissionContext,
@@ -169,9 +170,9 @@ async def start_warehouse_flight(
             readiness=_readiness_out(exc.readiness),
         )
 
-    from backend.modules.warehouse.api import _start_warehouse_scan_mission
+    from backend.modules.warehouse.service.mission_launch import start_warehouse_scan_mission
 
-    launch = await _start_warehouse_scan_mission(
+    launch = await start_warehouse_scan_mission(
         db=db,
         user=org_user.user,
         warehouse_map_id=payload.warehouse_map_id,
@@ -214,8 +215,6 @@ async def warehouse_flight_command(
     payload: WarehouseFlightCommandIn,
     _org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseFlightCommandOut:
-    from backend.modules.missions.api.routes import get_orchestrator
-
     orch = await get_orchestrator()
     drone = getattr(orch, "drone", None)
     if drone is None:

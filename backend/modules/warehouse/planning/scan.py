@@ -704,6 +704,16 @@ class WarehouseScanMission:
                         str(client_flight_id),
                         int(job_id) if job_id is not None else None,
                     )
+                try:
+                    from backend.modules.agents.hooks import schedule_warehouse_scan_postflight
+
+                    schedule_warehouse_scan_postflight(
+                        warehouse_map_id=int(self.warehouse_map_id),
+                        client_flight_id=client_flight_id,
+                        capture_result=dict(sync_result),
+                    )
+                except Exception:
+                    logger.exception("Failed to schedule warehouse scan agent postflight")
 
             except Exception as exc:
                 mapping_error = exc

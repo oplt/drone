@@ -225,6 +225,32 @@
       ],
       "title": "Recent API traces (Tempo)",
       "type": "traces"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 58},
+      "id": 15,
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(warehouse_preflight_refresh_duration_seconds_bucket[5m])) by (le))",
+        "legendFormat": "preflight p95",
+        "refId": "A"
+      }],
+      "title": "Warehouse preflight latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 58},
+      "id": 16,
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(warehouse_mapping_replay_duration_seconds_bucket[5m])) by (le))",
+        "legendFormat": "replay p95",
+        "refId": "A"
+      }],
+      "title": "Warehouse replay latency p95",
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",

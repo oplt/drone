@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.core.logging import emit_app_log
-from backend.entrypoints.cli.run_mission import _build_orchestrator
+from backend.modules.vehicle_runtime.factory import build_orchestrator as _build_orchestrator
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import require_admin, require_user
 from backend.modules.missions.flight_profile import (

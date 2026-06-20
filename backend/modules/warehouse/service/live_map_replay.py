@@ -15,6 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.modules.missions.runtime_models import MissionRuntime
 from backend.modules.warehouse.repository import WarehouseMappingRepository
 from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
+from backend.modules.warehouse.service.live_map_snapshot_cache import (
+    disk_live_map_snapshot_cache,
+)
 from backend.modules.warehouse.service.live_map_storage import warehouse_live_map_chunk_storage
 from backend.modules.warehouse.service.live_map_stream import (
     WarehouseLiveHealthFlags,
@@ -72,7 +75,10 @@ def _infer_chunk_metadata(chunk_id: str, path: Path) -> dict[str, Any]:
     encoding: str | None = None
     has_rgb = False
 
-    if lower_id.startswith(("rgbd_colored_", "rgbd_")):
+    if lower_id.startswith("rgbd_xyz_"):
+        source = "rgbd_xyz_uncolored"
+        layer = "rgbd_xyz_uncolored"
+    elif lower_id.startswith(("rgbd_colored_", "rgbd_")):
         source = "rgbd_colored"
         layer = "rgbd_colored"
     elif lower_id.startswith(("mid360_raw_", "mid360_")):
@@ -141,6 +147,10 @@ def _merge_chunk_metadata(
     for key, value in sidecar.items():
         if value is not None:
             merged[key] = value
+    if merged.get("source") == "rgbd_colored" and merged.get("has_rgb") is not True:
+        merged["source"] = "rgbd_xyz_uncolored"
+        merged["layer"] = "rgbd_xyz_uncolored"
+        merged["layer_type"] = "rgbd_xyz_uncolored"
     return merged
 
 
@@ -177,6 +187,10 @@ def _load_preview_chunk(
         source=source,
         layer=metadata.get("layer"),
         has_rgb=metadata.get("has_rgb"),
+        fields=metadata.get("fields") if isinstance(metadata.get("fields"), list) else [],
+        source_topic=metadata.get("source_topic"),
+        cloud_age_ms=metadata.get("cloud_age_ms"),
+        transform_age_ms=metadata.get("transform_age_ms"),
         encoding=metadata.get("encoding"),
     )
 
@@ -249,7 +263,7 @@ def _iter_stored_chunks(client_flight_id: str) -> list[Any]:
     return stored_items
 
 
-def build_disk_live_map_snapshot(
+def _build_disk_live_map_snapshot_uncached(
     client_flight_id: str,
     *,
     mode: str = "full",
@@ -343,6 +357,10 @@ def build_disk_live_map_snapshot(
         manifest_summary = WarehouseLiveMapManifestSummary(
             map_quality=manifest_model.map_quality,
             rgbd_colored_available=manifest_model.rgbd_colored_available,
+            rgbd_cloud_available=manifest_model.rgbd_cloud_available,
+            rgbd_has_rgb=manifest_model.rgbd_has_rgb,
+            default_view_layer=manifest_model.default_view_layer,
+            diagnostic_nvblox_layers=list(manifest_model.diagnostic_nvblox_layers),
             nvblox_available=manifest_model.nvblox_available,
             raw_lidar_only=manifest_model.raw_lidar_only,
             chunk_counts=dict(manifest_model.chunk_counts),
@@ -367,6 +385,46 @@ def build_disk_live_map_snapshot(
         updates=[update],
         manifest=manifest_summary,
     )
+
+
+def build_disk_live_map_snapshot(
+    client_flight_id: str,
+    *,
+    mode: str = "full",
+    sources: set[str] | None = None,
+) -> WarehouseLiveMapSnapshot:
+    from backend.core.config.runtime import settings
+
+    safe_flight = str(client_flight_id or "").strip()
+    root = _safe_flight_root(safe_flight)
+    signature = disk_live_map_snapshot_cache.signature(root)
+    if signature is None:
+        return _build_disk_live_map_snapshot_uncached(
+            client_flight_id,
+            mode=mode,
+            sources=sources,
+        )
+
+    key = (str(root), mode, tuple(sorted(sources or ())))
+    ttl_s = max(
+        0.0,
+        float(getattr(settings, "warehouse_live_map_snapshot_cache_ttl_s", 120.0)),
+    )
+    cached = disk_live_map_snapshot_cache.get(
+        key,
+        signature=signature,
+        ttl_s=ttl_s,
+    )
+    if cached is not None:
+        return cached
+
+    snapshot = _build_disk_live_map_snapshot_uncached(
+        client_flight_id,
+        mode=mode,
+        sources=sources,
+    )
+    disk_live_map_snapshot_cache.put(key, signature=signature, snapshot=snapshot)
+    return snapshot
 
 
 def _extract_capture_dict(value: Any) -> dict[str, Any]:

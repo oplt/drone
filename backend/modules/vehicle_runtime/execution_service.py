@@ -19,6 +19,14 @@ from backend.modules.vehicle_runtime.vehicle_port import MissionAbortRequested
 logger = logging.getLogger(__name__)
 
 
+async def _wait_for_telemetry_startup(*, started: bool, grace_s: float) -> None:
+    """Let a newly started ingest establish its MAVLink stream before mission work continues."""
+    if not started or grace_s <= 0:
+        return
+    logger.info("Waiting %.2fs for telemetry ingest startup", grace_s)
+    await asyncio.sleep(grace_s)
+
+
 class RuntimeExecutionServiceMixin:
     async def _resolve_flight_record_anchor(
         self,
@@ -260,7 +268,10 @@ class RuntimeExecutionServiceMixin:
                     "✅ Telemetry ingest %s",
                     "started" if telemetry_started_for_mission else "already running",
                 )
-                await asyncio.sleep(1)
+                await _wait_for_telemetry_startup(
+                    started=telemetry_started_for_mission,
+                    grace_s=settings.mission_telemetry_startup_grace_s,
+                )
             except Exception as e:  # FIX (Bug 2)
                 logger.error(
                     "Failed to start telemetry stream for mission",

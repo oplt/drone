@@ -26,6 +26,10 @@ export const TASK_LABELS: Record<LlmTaskName, string> = {
   video_summary: "Video/object summary",
   telemetry_anomaly: "Telemetry anomaly",
   offline_report: "Offline report",
+  warehouse_scan: "Warehouse scan quality",
+  warehouse_inspection: "Warehouse inspection",
+  field_survey: "Field / agriculture survey",
+  livestock: "Livestock operations",
 };
 
 const defaultProviderSettings = (
@@ -77,6 +81,10 @@ export const DEFAULT_TASK_DEFAULTS: Record<
   video_summary: { provider: "ollama", model: "" },
   telemetry_anomaly: { provider: "ollama", model: "" },
   offline_report: { provider: "ollama", model: "" },
+  warehouse_scan: { provider: "ollama", model: "" },
+  warehouse_inspection: { provider: "ollama", model: "" },
+  field_survey: { provider: "openai", model: "" },
+  livestock: { provider: "ollama", model: "" },
 };
 
 export const DEFAULT_LLM_PROFILES: LlmProfile[] = [
