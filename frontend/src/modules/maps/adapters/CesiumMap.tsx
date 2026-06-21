@@ -33,6 +33,8 @@ type Props = {
   planningAltitudeM?: number;
   lockCameraToPlanningAltitude?: boolean;
   useWorldTerrain?: boolean;
+  focusRing?: LonLat[] | null;
+  focusRequestToken?: number;
 };
 const EMPTY_ZONES: LonLat[][] = [];
 
@@ -150,6 +152,8 @@ export default function CesiumMap({
   planningAltitudeM = 25,
   lockCameraToPlanningAltitude = false,
   useWorldTerrain = true,
+  focusRing = null,
+  focusRequestToken,
 }: Props) {
   const drawModeRef = useRef<DrawMode>("none");
   const onDrawCompleteRef = useRef<Props["onDrawComplete"]>(onDrawComplete);
@@ -210,8 +214,8 @@ export default function CesiumMap({
   );
   const hasDroneCenter = Boolean(droneCenter);
   const cameraCenterKey = hasDroneCenter
-    ? "drone-live"
-    : `${center.lat.toFixed(7)}:${center.lng.toFixed(7)}`;
+    ? `drone-live:${fieldCameraView?.center.lat.toFixed(7) ?? "none"}:${fieldCameraView?.center.lng.toFixed(7) ?? "none"}:${focusRequestToken ?? 0}`
+    : `${center.lat.toFixed(7)}:${center.lng.toFixed(7)}:${focusRequestToken ?? 0}`;
 
   const latestValuesRef = useRef({
     droneCenter,
@@ -1257,7 +1261,40 @@ export default function CesiumMap({
     fieldCameraView?.topHeight,
     planningAltitudeM,
     lockCameraToPlanningAltitude,
+    focusRequestToken,
   ]);
+
+  useEffect(() => {
+    if (focusRequestToken == null) return;
+    const ring = focusRing ?? fieldBoundary;
+    if (!ring || ring.length < 3) return;
+    const viewer = viewerRef.current;
+    const CesiumModule = CesiumRef.current;
+    if (!viewer || !CesiumModule) return;
+
+    const fieldView = computeFieldCameraView(ring);
+    if (!fieldView) return;
+
+    lastCameraSignatureRef.current = null;
+    viewer.trackedEntity = undefined;
+    const pitch =
+      viewMode === "top"
+        ? CesiumModule.Math.toRadians(-90)
+        : CesiumModule.Math.toRadians(-45);
+    viewer.camera.flyTo({
+      destination: CesiumModule.Cartesian3.fromDegrees(
+        fieldView.center.lng,
+        fieldView.center.lat,
+        fieldView.topHeight,
+      ),
+      orientation: {
+        heading: 0,
+        pitch,
+        roll: 0,
+      },
+      duration: 0.6,
+    });
+  }, [fieldBoundary, focusRequestToken, focusRing, viewMode]);
 
   return (
     <div

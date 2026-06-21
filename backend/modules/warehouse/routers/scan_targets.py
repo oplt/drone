@@ -129,7 +129,7 @@ def _set_scan_target_cache_headers(response: Response, *, offset: int) -> None:
 async def list_warehouse_scan_targets(
     warehouse_map_id: int,
     response: Response,
-    active: bool | None = Query(default=True),
+    active: bool | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=2000),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),

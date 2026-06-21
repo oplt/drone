@@ -1,18 +1,16 @@
 import type { MissionLifecycleSlice, PreflightRunResponse } from "../mission-runtime";
 import type { Waypoint } from "../mission-workflow";
 
-export type PrivatePatrolTaskType =
+export type PrivatePatrolMissionTaskType =
   | "perimeter_patrol"
   | "waypoint_patrol"
-  | "grid_surveillance"
+  | "grid_surveillance";
+
+/** Includes API-only task type for event-response missions. */
+export type PrivatePatrolTaskType =
+  | PrivatePatrolMissionTaskType
   | "event_triggered_patrol";
 
-export type PatrolTriggerType =
-  | "motion_sensor"
-  | "fence_alarm"
-  | "camera_detection"
-  | "night_schedule"
-  | "unknown_vehicle";
 
 export type PatrolAiTask =
   | "intruder_detection"
@@ -22,6 +20,7 @@ export type PatrolAiTask =
 
 export type PatrolPreviewStats = {
   task_type?: string;
+  response_mode?: "incident_response" | "detection_search";
   waypoints?: number;
   key_points?: number;
   rows?: number;
@@ -32,8 +31,6 @@ export type PatrolPreviewStats = {
   path_offset_applied_m?: number;
   grid_spacing_m?: number;
   grid_angle_deg?: number;
-  trigger_type?: string;
-  trigger_action?: string;
   patrol_loops?: number;
   hover_time_s?: number;
   hover_total_s?: number;
@@ -42,7 +39,8 @@ export type PatrolPreviewStats = {
 };
 
 export type PatrolGridParams = {
-  task_type: PrivatePatrolTaskType;
+  task_type: PrivatePatrolMissionTaskType;
+  event_triggered_enabled: boolean;
   path_offset_m: number;
   direction: "clockwise" | "counterclockwise";
   patrol_loops: number;
@@ -65,12 +63,9 @@ export type PatrolGridParams = {
   grid_row_stride: number;
   grid_row_phase_m: number;
   safety_inset_m: number;
-  trigger_type: PatrolTriggerType;
   verification_loiter_s: number;
   verification_radius_m: number;
   track_target: boolean;
-  auto_stream_video: boolean;
-  record_video_stream: boolean;
   target_label: string;
   ai_tasks: PatrolAiTask[];
 };
@@ -108,6 +103,7 @@ export type { Waypoint, PreflightRunResponse };
 
 export const DEFAULT_PATROL_GRID_PARAMS: PatrolGridParams = {
   task_type: "perimeter_patrol",
+  event_triggered_enabled: false,
   path_offset_m: 15,
   direction: "clockwise",
   patrol_loops: 1,
@@ -130,12 +126,9 @@ export const DEFAULT_PATROL_GRID_PARAMS: PatrolGridParams = {
   grid_row_stride: 1,
   grid_row_phase_m: 0,
   safety_inset_m: 2,
-  trigger_type: "fence_alarm",
   verification_loiter_s: 45,
   verification_radius_m: 18,
   track_target: true,
-  auto_stream_video: true,
-  record_video_stream: true,
   target_label: "",
   ai_tasks: [
     "intruder_detection",

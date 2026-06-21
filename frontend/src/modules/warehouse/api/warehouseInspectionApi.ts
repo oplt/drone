@@ -38,6 +38,9 @@ export type WarehouseScanTarget = {
   scan_timeout_s: number;
   priority: number;
   active: boolean;
+  clearance_status: "active" | "needs_review" | "rejected";
+  clearance_m?: number | null;
+  clearance_source?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -133,6 +136,9 @@ export type WarehouseStructureSummary = {
     racks?: number;
     targets?: number;
     rejected_clearance?: number;
+    active_targets?: number;
+    review_targets?: number;
+    candidate_targets?: number;
   };
   quality?: {
     status?: "ready" | "needs_review" | "failed";
@@ -146,6 +152,22 @@ export type WarehouseStructureSummary = {
     clearance_source?: string;
   };
   params?: Record<string, number | null>;
+  coordinate_setup_status?: "draft" | "active";
+  manual_review_required?: boolean;
+  target_counts?: {
+    candidate?: number;
+    active?: number;
+    needs_review?: number;
+    rejected?: number;
+  };
+  diagnostics?: {
+    esdf_available?: boolean;
+    esdf_topic?: string | null;
+    occupancy_available?: boolean;
+    occupancy_topic?: string | null;
+    missing_esdf_topic?: boolean;
+    missing_occupancy_grid?: boolean;
+  };
 };
 
 export type WarehouseStructureResponse = {
@@ -164,6 +186,11 @@ export type WarehouseStructureResponse = {
   generated_at: string | null;
   target_count: number;
   active_target_count?: number;
+  review_target_count?: number;
+  rejected_target_count?: number;
+  coordinate_setup_status?: "draft" | "active" | null;
+  manual_review_required?: boolean;
+  target_counts?: Record<string, number>;
   quality_status?: "ready" | "needs_review" | "failed" | null;
   quality_reasons?: string[];
   confidence?: number | null;
@@ -181,6 +208,8 @@ export type WarehouseStructureExtractParams = {
   shelf_min_spacing_m?: number;
   max_shelf_levels?: number;
   max_bins_per_rack_face?: number;
+  min_target_spacing_m?: number;
+  review_clearance_m?: number;
   axis_deg?: number;
 };
 

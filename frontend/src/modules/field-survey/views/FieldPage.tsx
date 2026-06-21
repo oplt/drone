@@ -9,8 +9,7 @@ import { FieldDeleteDialog } from "../components/FieldDeleteDialog";
 import { FieldSurveyMapColumn } from "../components/FieldSurveyMapColumn";
 import {
   FieldSurveyFlightDrawer,
-  FieldSurveyMissionControls,
-  FieldSurveySetupDrawer,
+  FieldSurveySetupPanel,
 } from "../components/FieldSurveyPlanningSection";
 import { FieldSurveyStatusSections } from "../components/FieldSurveyStatusSections";
 import { useFieldSurveyPage } from "../hooks/useFieldSurveyPage";
@@ -49,68 +48,44 @@ export default function FieldPage() {
             onError={vm.addError}
           />
           <Stack spacing={2} sx={{ mb: 3 }}>
-            <FieldSurveyMapColumn vm={vm} onSelectField={vm.selectField} />
+            <FieldSurveyMapColumn
+              vm={vm}
+              onSelectField={vm.selectField}
+              setupContent={
+                <FieldSurveySetupPanel
+                  fields={vm.fields}
+                  selectedFieldId={vm.selectedFieldId}
+                  selectedField={vm.selectedField}
+                  loadingFields={vm.loadingFields}
+                  deletingField={vm.deletingField}
+                  onSelectField={vm.handleSavedFieldSelect}
+                  onRefreshFields={vm.refreshFields}
+                  onFocusSelected={vm.focusSelectedField}
+                  onDeleteSelected={vm.requestDeleteSelectedField}
+                  fieldName={vm.fieldName}
+                  fieldBorder={vm.fieldBorder}
+                  metrics={vm.metrics}
+                  savingField={vm.savingField}
+                  onFieldNameChange={vm.setFieldName}
+                  onSaveOrUpdate={
+                    vm.selectedFieldId
+                      ? borderEditor.updateFieldBorder
+                      : borderEditor.saveFieldBorder
+                  }
+                  onClearBorder={borderEditor.clearFieldBorder}
+                  onNewField={vm.handleNewField}
+                  gridParams={mission.gridParams}
+                  setGridParams={mission.setGridParams}
+                  gridPreview={mission.gridPreview}
+                  gridPreviewStats={mission.gridPreviewStats}
+                  previewLegStats={mission.previewLegStats}
+                  gridPreviewTooDense={mission.gridPreviewTooDense}
+                  gridPreviewError={mission.gridPreviewError}
+                  previewLoading={mission.previewLoading}
+                />
+              }
+            />
           </Stack>
-
-          <FieldSurveyMissionControls
-            apiBase={vm.apiBase}
-            preflightRun={mission.preflightRun}
-            telemetry={telemetry}
-            droneConnected={vm.droneConnected}
-            missionStatus={vm.missionStatus}
-            activeFlightId={vm.activeFlightId}
-          />
-
-          <FieldSurveySetupDrawer
-            fields={vm.fields}
-            selectedFieldId={vm.selectedFieldId}
-            selectedField={vm.selectedField}
-            loadingFields={vm.loadingFields}
-            deletingField={vm.deletingField}
-            onSelectField={vm.handleSavedFieldSelect}
-            onRefreshFields={vm.refreshFields}
-            onFocusSelected={() =>
-              vm.selectedField &&
-              borderEditor.focusRingOnMap(vm.selectedField.ring)
-            }
-            onDeleteSelected={vm.requestDeleteSelectedField}
-            fieldName={vm.fieldName}
-            fieldBorder={vm.fieldBorder}
-            metrics={vm.metrics}
-            savingField={vm.savingField}
-            onFieldNameChange={vm.setFieldName}
-            onSaveOrUpdate={
-              vm.selectedFieldId
-                ? borderEditor.updateFieldBorder
-                : borderEditor.saveFieldBorder
-            }
-            onClearBorder={borderEditor.clearFieldBorder}
-            onNewField={vm.handleNewField}
-            gridParams={mission.gridParams}
-            setGridParams={mission.setGridParams}
-            gridPreview={mission.gridPreview}
-            gridPreviewStats={mission.gridPreviewStats}
-            previewLegStats={mission.previewLegStats}
-            gridPreviewTooDense={mission.gridPreviewTooDense}
-            gridPreviewError={mission.gridPreviewError}
-            previewLoading={mission.previewLoading}
-          />
-
-          <FieldSurveyFlightDrawer
-            fieldBorder={vm.fieldBorder}
-            name={mission.name}
-            onNameChange={mission.setName}
-            altInput={mission.altInput}
-            onAltInputChange={mission.handleAltitudeInputChange}
-            onAltBlur={mission.normalizeAltitude}
-            sending={mission.sending}
-            previewLoading={mission.previewLoading}
-            gridPreviewTooDense={mission.gridPreviewTooDense}
-            gridPreviewError={mission.gridPreviewError}
-            onSendMission={() => void mission.sendMission()}
-            activeFlightId={vm.activeFlightId}
-            missionStatus={vm.missionStatus}
-          />
 
           <Divider sx={{ mb: 2 }} />
 
@@ -124,6 +99,26 @@ export default function FieldPage() {
           />
         </>
       ) : null}
+
+      <FieldSurveyFlightDrawer
+        apiBase={vm.apiBase}
+        fieldBorder={vm.fieldBorder}
+        name={mission.name}
+        onNameChange={mission.setName}
+        altInput={mission.altInput}
+        onAltInputChange={mission.handleAltitudeInputChange}
+        onAltBlur={mission.normalizeAltitude}
+        sending={mission.sending}
+        previewLoading={mission.previewLoading}
+        gridPreviewTooDense={mission.gridPreviewTooDense}
+        gridPreviewError={mission.gridPreviewError}
+        onSendMission={() => void mission.sendMission()}
+        activeFlightId={vm.activeFlightId}
+        missionStatus={vm.missionStatus}
+        preflightRun={mission.preflightRun}
+        telemetry={telemetry}
+        droneConnected={vm.droneConnected}
+      />
 
       <FieldDeleteDialog
         field={vm.pendingDeleteField}

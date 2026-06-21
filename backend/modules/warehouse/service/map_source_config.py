@@ -177,6 +177,15 @@ NVBLOX_POINTCLOUD_OUTPUT_TOPICS: tuple[str, ...] = (
     *NVBLOX_REQUIRED_POINTCLOUD_TOPICS,
     *NVBLOX_OPTIONAL_ESDF_TOPICS,
 )
+ESDF_TOPIC_CANDIDATES: tuple[str, ...] = (
+    "/nvblox_node/static_esdf_pointcloud",
+    "/nvblox_node/pessimistic_static_esdf_pointcloud",
+)
+OCCUPANCY_TOPIC_CANDIDATES: tuple[str, ...] = (
+    "/nvblox_node/combined_occupancy_grid",
+    "/nvblox_node/static_occupancy_grid",
+    "/nvblox_node/dynamic_occupancy_grid",
+)
 RGBD_VISUALIZATION_TOPIC: str = "/warehouse/front/rgbd/points"
 NVBLOX_OUTPUT_TOPICS: tuple[str, ...] = (
     *NVBLOX_INTERNAL_LAYER_TOPICS,
@@ -184,7 +193,7 @@ NVBLOX_OUTPUT_TOPICS: tuple[str, ...] = (
     "/nvblox_node/mesh",
     "/nvblox_node/mesh_marker",
     "/nvblox_node/static_map_slice",
-    "/nvblox_node/static_occupancy_grid",
+    *OCCUPANCY_TOPIC_CANDIDATES,
 )
 RGBD_INPUT_TOPICS: tuple[str, ...] = (
     "/warehouse/front/rgbd/image",

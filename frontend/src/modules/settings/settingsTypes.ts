@@ -160,6 +160,7 @@ export type UserResponse = {
   email: string;
   full_name: string | null;
   created_at?: string;
+  org_id?: number | null;
 };
 
 export type UserUpdate = {

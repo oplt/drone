@@ -31,7 +31,25 @@ type Props = {
   loading: boolean;
 };
 
-export function LiveDetectionLog({ rows, loading }: Props) {
+export function LiveDetectionLog({ rows, loading, embedded = false }: Props & { embedded?: boolean }) {
+  const grid = (
+    <DataGrid
+      rows={rows}
+      columns={columns}
+      getRowId={(row) => row.id}
+      loading={loading}
+      density="compact"
+      pageSizeOptions={[10, 25, 50]}
+      initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+      disableRowSelectionOnClick
+      sx={{ minHeight: embedded ? 320 : 270 }}
+    />
+  );
+
+  if (embedded) {
+    return grid;
+  }
+
   return (
     <Card variant="outlined">
       <CardContent>
@@ -41,17 +59,7 @@ export function LiveDetectionLog({ rows, loading }: Props) {
             Saved while object detection is enabled during an active mission
           </Typography>
         </Stack>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          getRowId={(row) => row.id}
-          loading={loading}
-          density="compact"
-          pageSizeOptions={[10, 25, 50]}
-          initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
-          disableRowSelectionOnClick
-          sx={{ minHeight: 270 }}
-        />
+        {grid}
       </CardContent>
     </Card>
   );

@@ -7,14 +7,22 @@ from datetime import datetime
 from typing import Any
 
 from backend.modules.patrol.service.mission_runtime_store import mission_runtime_store
-from backend.modules.patrol.service.persistence import PatrolPersistenceService
 from backend.modules.patrol.vision.anomaly import AnomalyScorer
+from backend.modules.patrol.ai_tasks import (
+    PATROL_AI_TASKS,
+    apply_active_ai_tasks,
+    frozenset_ai_tasks,
+    live_detection_ai_task,
+    map_anomaly_to_ai_task,
+    yolo_detection_enabled,
+)
 from backend.modules.patrol.vision.config import ml_settings
 from backend.modules.patrol.vision.detector import ObjectDetector
 from backend.modules.patrol.vision.events import EventSink
 from backend.modules.patrol.vision.evidence import EvidenceRecorder
 from backend.modules.patrol.vision.geo import GeoProjector
 from backend.modules.patrol.vision.live_detections import LiveDetectionSampler
+from backend.modules.patrol.vision.models import AnomalyEvent, FramePacket, GeoPoint
 from backend.modules.patrol.vision.motion import MotionPrefilter
 from backend.modules.patrol.vision.stream_reader import FrameReader, create_stream_reader
 from backend.modules.patrol.vision.tracker import SimpleTracker
@@ -83,16 +91,33 @@ class DroneAnomalyPipeline:
         self._anomalies_emitted = 0
         self._stream_source: str | int | None = ml_settings.stream_source
         self.live_detections = LiveDetectionSampler(ml_settings.live_detection_persist_interval_s)
+        self.active_ai_tasks: frozenset[str] = frozenset(PATROL_AI_TASKS)
+        self._last_motion_event_at: datetime | None = None
+        self.set_active_ai_tasks(list(PATROL_AI_TASKS))
+
+    def set_active_ai_tasks(self, ai_tasks: list[str] | None) -> None:
+        self.active_ai_tasks = apply_active_ai_tasks(
+            enabled_tasks=ai_tasks,
+            detector=self.detector,
+            anomaly_scorer=self.anomaly,
+        )
 
     async def _read_next_packet(self):
         if self.reader is None:
             raise RuntimeError("Pipeline reader is not initialized. Call start() first.")
         return await asyncio.to_thread(self.reader.read)
 
-    async def start(self, stream_source: str | int | None = None) -> None:
+    async def start(
+        self,
+        stream_source: str | int | None = None,
+        ai_tasks: list[str] | None = None,
+    ) -> None:
         if self._task and not self._task.done():
+            if ai_tasks is not None:
+                self.set_active_ai_tasks(ai_tasks)
             return
 
+        self.set_active_ai_tasks(ai_tasks)
         self._stream_source = stream_source or self._stream_source or ml_settings.stream_source
         self.reader = create_stream_reader(
             self._stream_source,
@@ -103,6 +128,7 @@ class DroneAnomalyPipeline:
         self._running = True
         self._started_at = datetime.utcnow()
         self._last_error = None
+        self._last_motion_event_at = None
         self.live_detections.reset()
         self._task = asyncio.create_task(self.run_forever(), name="drone-anomaly-pipeline")
 
@@ -129,6 +155,7 @@ class DroneAnomalyPipeline:
             "frames_processed": self._frames_processed,
             "anomalies_emitted": self._anomalies_emitted,
             "detections": self.live_detections.current(),
+            "active_ai_tasks": sorted(self.active_ai_tasks),
         }
 
     def set_zones(self, zones: list[dict[str, Any]]) -> None:
@@ -225,6 +252,51 @@ class DroneAnomalyPipeline:
         )
         return telemetry
 
+    async def _emit_anomaly(
+        self,
+        *,
+        anomaly: AnomalyEvent,
+        packet: FramePacket,
+        telemetry: dict[str, Any],
+        motion_meta: dict[str, Any],
+    ) -> None:
+        if ml_settings.save_debug_frames:
+            snapshot = self.evidence.save_frame(packet.image, prefix=anomaly.event_type)
+            anomaly.payload["snapshot_path"] = snapshot
+
+        anomaly.payload["frame_id"] = packet.frame_id
+        anomaly.payload["motion_meta"] = motion_meta
+
+        if self.persistence is not None:
+            try:
+                persisted = await self.persistence.persist_anomaly(
+                    anomaly=anomaly,
+                    packet=packet,
+                    telemetry=telemetry,
+                    motion_meta=motion_meta,
+                )
+                if persisted is not None:
+                    anomaly.payload["persistence"] = {
+                        "flight_id": persisted.flight_id,
+                        "detection_id": persisted.detection_id,
+                        "incident_id": persisted.incident_id,
+                        "incident_created": persisted.incident_created,
+                        "alert_id": persisted.alert_id,
+                        "mission_task_type": persisted.mission_task_type,
+                        "ai_task": persisted.ai_task,
+                    }
+            except Exception as e:
+                log.exception("Failed to persist anomaly")
+                self._last_error = str(e)
+
+        try:
+            await self.events.send(anomaly)
+        except Exception as e:
+            log.exception("Failed to dispatch anomaly")
+            self._last_error = str(e)
+
+        self._anomalies_emitted += 1
+
     async def run_forever(self) -> None:
         if self.reader is None:
             raise RuntimeError("Pipeline reader is not initialized. Call start() first.")
@@ -241,18 +313,62 @@ class DroneAnomalyPipeline:
                 self._last_frame_at = packet.ts
 
                 motion_meta: dict[str, Any] = {}
+                has_motion = False
 
                 if ml_settings.enable_motion_prefilter:
-                    _, motion_meta = await asyncio.to_thread(
+                    has_motion, motion_meta = await asyncio.to_thread(
                         self.motion.has_motion,
                         packet,
                     )
 
-                detections = await asyncio.to_thread(self.detector.detect, packet)
-                tracks = self.tracker.update(detections, packet.ts)
+                telemetry = self._get_latest_telemetry()
+
+                if (
+                    has_motion
+                    and "motion_detection" in self.active_ai_tasks
+                    and telemetry.get("lat") is not None
+                    and telemetry.get("lon") is not None
+                ):
+                    now = datetime.utcnow()
+                    if (
+                        self._last_motion_event_at is None
+                        or (now - self._last_motion_event_at).total_seconds()
+                        >= ml_settings.max_duplicate_event_s
+                    ):
+                        motion_anomaly = AnomalyEvent(
+                            event_type="scene_motion",
+                            confidence=min(
+                                0.95,
+                                max(
+                                    0.50,
+                                    float(motion_meta.get("max_motion_area", 0.0))
+                                    / float(ml_settings.min_motion_area),
+                                ),
+                            ),
+                            location=GeoPoint(
+                                lat=float(telemetry["lat"]),
+                                lon=float(telemetry["lon"]),
+                            ),
+                            payload={
+                                "source": "motion_prefilter",
+                                "motion_meta": motion_meta,
+                            },
+                        )
+                        await self._emit_anomaly(
+                            anomaly=motion_anomaly,
+                            packet=packet,
+                            telemetry=telemetry,
+                            motion_meta=motion_meta,
+                        )
+                        self._last_motion_event_at = now
+
+                detections = []
+                tracks = []
+                if yolo_detection_enabled(self.active_ai_tasks):
+                    detections = await asyncio.to_thread(self.detector.detect, packet)
+                    tracks = self.tracker.update(detections, packet.ts)
 
                 gps_lookup: dict[int, Any] = {}
-                telemetry = self._get_latest_telemetry()
 
                 try:
                     await self.live_detections.capture(
@@ -291,42 +407,12 @@ class DroneAnomalyPipeline:
                 )
 
                 for anomaly in anomalies:
-                    if ml_settings.save_debug_frames:
-                        snapshot = self.evidence.save_frame(packet.image, prefix=anomaly.event_type)
-                        anomaly.payload["snapshot_path"] = snapshot
-
-                    anomaly.payload["frame_id"] = packet.frame_id
-                    anomaly.payload["motion_meta"] = motion_meta
-
-                    if self.persistence is not None:
-                        try:
-                            persisted = await self.persistence.persist_anomaly(
-                                anomaly=anomaly,
-                                packet=packet,
-                                telemetry=telemetry,
-                                motion_meta=motion_meta,
-                            )
-                            if persisted is not None:
-                                anomaly.payload["persistence"] = {
-                                    "flight_id": persisted.flight_id,
-                                    "detection_id": persisted.detection_id,
-                                    "incident_id": persisted.incident_id,
-                                    "incident_created": persisted.incident_created,
-                                    "alert_id": persisted.alert_id,
-                                    "mission_task_type": persisted.mission_task_type,
-                                    "ai_task": persisted.ai_task,
-                                }
-                        except Exception as e:
-                            log.exception("Failed to persist anomaly")
-                            self._last_error = str(e)
-
-                    try:
-                        await self.events.send(anomaly)
-                    except Exception as e:
-                        log.exception("Failed to dispatch anomaly")
-                        self._last_error = str(e)
-
-                    self._anomalies_emitted += 1
+                    await self._emit_anomaly(
+                        anomaly=anomaly,
+                        packet=packet,
+                        telemetry=telemetry,
+                        motion_meta=motion_meta,
+                    )
 
                 await asyncio.sleep(0)
 

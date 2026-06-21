@@ -23,6 +23,7 @@ import {
   PROVIDER_IDS,
 } from "../aiSettingsDefaults";
 import { AiSettingsPanel } from "../components/AiSettingsPanel";
+import { OrgApiKeysPanel } from "../components/OrgApiKeysPanel";
 import { useSettingsDirtyFlag } from "../hooks/useSettingsDirtyFlag";
 import type {
   AISettings,
@@ -307,6 +308,7 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
         email: user.email,
         full_name: fullName || user.email,
         created_at: undefined,
+        org_id: user.org_id ?? null,
       };
     },
   });
@@ -650,6 +652,10 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
                     <TextField variant="filled" fullWidth label="Admin Domains" value={doc.credentials?.admin_domains} onChange={e => update("credentials", "admin_domains", e.target.value)} />
                   </Stack>
                 </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="h6" gutterBottom>Organisation API Keys</Typography>
+                  <OrgApiKeysPanel token={token} hasOrg={Boolean(user?.org_id)} />
+                </Grid>
               </Grid>
             )}
 
@@ -959,8 +965,6 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
                 </Grid>
               </Grid>
             )}
-
-
 
             </Box>
 

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../../../modules/session";
 import {
+  createMission,
   fetchMissionRuntime,
+  runPreflight,
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../mission-runtime";
+import { formatPreflightFailureMessage } from "../../mission-runtime/preflight/preflightUtils";
 import { usePatrolPreview } from "../../mission-planning";
 import {
   CESIUM_MAX_SAFE_ZOOM,
@@ -69,7 +72,10 @@ export function usePrivatePatrolMission({
   const [altInput, setAltInput] = useState("30");
   const [name, setName] = useState("private-patrol-1");
   const [sending, setSending] = useState(false);
+  const [preflightBusy, setPreflightBusy] = useState(false);
   const [preflightRun, setPreflightRun] = useState<PreflightRunResponse | null>(null);
+  const preflightRunRef = useRef<PreflightRunResponse | null>(null);
+  preflightRunRef.current = preflightRun;
   const [gridParams, setGridParams] = useState<PatrolGridParams>(DEFAULT_PATROL_GRID_PARAMS);
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
   const [scheduledStartAt, setScheduledStartAt] = useState<number | null>(null);
@@ -78,47 +84,38 @@ export function usePrivatePatrolMission({
 
   const isWaypointPatrol = gridParams.task_type === "waypoint_patrol";
   const isGridSurveillance = gridParams.task_type === "grid_surveillance";
-  const isEventTriggeredPatrol = gridParams.task_type === "event_triggered_patrol";
+  const isEventTriggeredPatrol = gridParams.event_triggered_enabled;
   const hasPerimeterPolygon = Boolean(fieldBorder && fieldBorder.length >= 3);
   const hasWaypointKeyPoints = waypoints.length >= 2;
   const hasEventLocation = Boolean(eventLocation);
+  const hasEventTriggerGeometry = hasEventLocation || hasPerimeterPolygon;
   const hasRequiredTaskGeometry = isWaypointPatrol
     ? hasWaypointKeyPoints
-    : isEventTriggeredPatrol
-      ? gridParams.trigger_type === "night_schedule"
-        ? hasEventLocation || hasPerimeterPolygon
-        : hasEventLocation
-      : hasPerimeterPolygon;
+    : hasPerimeterPolygon;
 
   const patrolPreviewRequestBody = useMemo(() => {
     const keyPointsLonLat = waypoints.map((p) => [p.lon, p.lat]);
     const eventLocationLonLat = eventLocation
       ? [eventLocation.lon, eventLocation.lat]
       : undefined;
+    const previewTaskType = gridParams.event_triggered_enabled
+      ? "event_triggered_patrol"
+      : gridParams.task_type;
+
     if (
-      (gridParams.task_type === "waypoint_patrol" && keyPointsLonLat.length < 2) ||
-      (gridParams.task_type === "event_triggered_patrol" &&
-        ((gridParams.trigger_type === "night_schedule" &&
-          !eventLocationLonLat &&
-          (!fieldBorder || fieldBorder.length < 3)) ||
-          (gridParams.trigger_type !== "night_schedule" && !eventLocationLonLat))) ||
-      (gridParams.task_type !== "waypoint_patrol" &&
-        gridParams.task_type !== "event_triggered_patrol" &&
-        (!fieldBorder || fieldBorder.length < 3))
+      (previewTaskType === "waypoint_patrol" && keyPointsLonLat.length < 2) ||
+      (previewTaskType !== "waypoint_patrol" && (!fieldBorder || fieldBorder.length < 3))
     ) {
       return null;
     }
 
     return {
-      task_type: gridParams.task_type,
+      task_type: previewTaskType,
       property_polygon_lonlat:
-        gridParams.task_type !== "waypoint_patrol" ? fieldBorder : undefined,
+        previewTaskType !== "waypoint_patrol" ? fieldBorder : undefined,
       key_points_lonlat:
-        gridParams.task_type === "waypoint_patrol" ? keyPointsLonLat : undefined,
-      trigger_event_location_lonlat:
-        gridParams.task_type === "event_triggered_patrol"
-          ? eventLocationLonLat
-          : undefined,
+        previewTaskType === "waypoint_patrol" ? keyPointsLonLat : undefined,
+      trigger_event_location_lonlat: eventLocationLonLat,
       cruise_alt: alt,
       path_offset_m: gridParams.path_offset_m,
       direction: gridParams.direction,
@@ -142,12 +139,11 @@ export function usePrivatePatrolMission({
       grid_row_stride: gridParams.grid_row_stride,
       grid_row_phase_m: gridParams.grid_row_phase_m,
       safety_inset_m: gridParams.safety_inset_m,
-      trigger_type: gridParams.trigger_type,
       verification_loiter_s: gridParams.verification_loiter_s,
       verification_radius_m: gridParams.verification_radius_m,
       track_target: gridParams.track_target,
-      auto_stream_video: gridParams.auto_stream_video,
-      record_video_stream: gridParams.record_video_stream,
+      record_video_stream: true,
+      auto_stream_video: true,
       target_label:
         gridParams.target_label.trim().length > 0
           ? gridParams.target_label.trim()
@@ -155,6 +151,23 @@ export function usePrivatePatrolMission({
       ai_tasks: gridParams.ai_tasks,
     };
   }, [alt, eventLocation, fieldBorder, gridParams, waypoints]);
+
+  const preflightMissionKey = useMemo(
+    () =>
+      JSON.stringify({
+        name,
+        altInput,
+        fieldBorder,
+        waypoints,
+        eventLocation,
+        gridParams,
+      }),
+    [altInput, eventLocation, fieldBorder, gridParams, name, waypoints],
+  );
+
+  useEffect(() => {
+    setPreflightRun(null);
+  }, [preflightMissionKey]);
 
   const {
     waypoints: gridPreview,
@@ -264,18 +277,19 @@ export function usePrivatePatrolMission({
       keyPointsLonLat: number[][];
       eventLocationLonLat: number[] | undefined;
     }): StartMissionArgs => {
-      const taskType = gridParams.task_type;
-      const repeatIntervalMinutes =
-        taskType === "event_triggered_patrol"
-          ? 0
-          : Math.max(0, Math.min(1440, Math.round(gridParams.repeat_interval_minutes)));
+      const eventEnabled = gridParams.event_triggered_enabled;
+      const taskType = eventEnabled ? "event_triggered_patrol" : gridParams.task_type;
+      const repeatIntervalMinutes = Math.max(
+        0,
+        Math.min(1440, Math.round(gridParams.repeat_interval_minutes)),
+      );
       const missionLabel =
-        taskType === "waypoint_patrol"
-          ? "Waypoint Patrol"
-          : taskType === "grid_surveillance"
-            ? "Grid Surveillance"
-            : taskType === "event_triggered_patrol"
-              ? "Event-Triggered Patrol"
+        taskType === "event_triggered_patrol"
+          ? "Event Triggered Patrol"
+          : taskType === "waypoint_patrol"
+            ? "Waypoint Patrol"
+            : taskType === "grid_surveillance"
+              ? "Grid Surveillance"
               : "Perimeter Patrol";
       const payload: Record<string, unknown> = {
         name: name.trim(),
@@ -283,14 +297,14 @@ export function usePrivatePatrolMission({
         mission_type: "perimeter_patrol",
         private_patrol: {
           task_type: taskType,
+          event_triggered_enabled: eventEnabled,
           property_polygon_lonlat:
             taskType !== "waypoint_patrol" ? fieldBorder : undefined,
           key_points_lonlat:
             taskType === "waypoint_patrol" ? keyPointsLonLat : undefined,
-          trigger_event_location_lonlat:
-            taskType === "event_triggered_patrol"
-              ? eventLocationLonLat
-              : undefined,
+          trigger_event_location_lonlat: eventEnabled
+            ? eventLocationLonLat
+            : undefined,
           path_offset_m: gridParams.path_offset_m,
           direction: gridParams.direction,
           patrol_loops: gridParams.patrol_loops,
@@ -313,12 +327,15 @@ export function usePrivatePatrolMission({
           grid_row_stride: gridParams.grid_row_stride,
           grid_row_phase_m: gridParams.grid_row_phase_m,
           safety_inset_m: gridParams.safety_inset_m,
-          trigger_type: gridParams.trigger_type,
-          verification_loiter_s: gridParams.verification_loiter_s,
-          verification_radius_m: gridParams.verification_radius_m,
-          track_target: gridParams.track_target,
-          auto_stream_video: gridParams.auto_stream_video,
-          record_video_stream: gridParams.record_video_stream,
+          verification_loiter_s: eventEnabled
+            ? gridParams.verification_loiter_s
+            : undefined,
+          verification_radius_m: eventEnabled
+            ? gridParams.verification_radius_m
+            : undefined,
+          track_target: eventEnabled ? gridParams.track_target : undefined,
+          auto_stream_video: eventEnabled ? true : undefined,
+          record_video_stream: true,
           target_label:
             gridParams.target_label.trim().length > 0
               ? gridParams.target_label.trim()
@@ -352,7 +369,25 @@ export function usePrivatePatrolMission({
       clearErrors();
 
       try {
-        const { preflight, mission: data } = await startMissionWithPreflight(payload, token);
+        const existingPreflight = preflightRunRef.current;
+        let preflight: PreflightRunResponse;
+        let data;
+
+        if (
+          existingPreflight?.can_start_mission &&
+          existingPreflight.preflight_run_id
+        ) {
+          preflight = existingPreflight;
+          data = await createMission(
+            { ...payload, preflight_run_id: existingPreflight.preflight_run_id },
+            token,
+          );
+        } else {
+          const started = await startMissionWithPreflight(payload, token);
+          preflight = started.preflight;
+          data = started.mission;
+        }
+
         setPreflightRun(preflight);
         showUiNotice(
           `${missionLabel}: "${data.mission_name}" started. Tracking flight...${
@@ -535,75 +570,13 @@ export function usePrivatePatrolMission({
 
   const sendMission = async () => {
     if (missionLaunchInFlightRef.current) return;
-    const token = getToken();
-    if (!token) {
-      addError("Not authenticated");
-      return;
-    }
-    if (!name.trim()) {
-      addError("Please enter a mission name");
-      return;
-    }
+    const startArgs = buildValidatedStartArgs();
+    if (!startArgs) return;
 
-    const altToUse = altInput === "" ? NaN : Number(altInput);
-    if (!Number.isFinite(altToUse) || altToUse < 1 || altToUse > 500) {
-      addError("Altitude must be between 1 and 500 meters");
-      return;
-    }
-
-    const keyPointsLonLat = waypoints.map((p) => [p.lon, p.lat]);
-    const eventLocationLonLat = eventLocation
-      ? [eventLocation.lon, eventLocation.lat]
-      : undefined;
-    if (
-      gridParams.task_type !== "waypoint_patrol" &&
-      gridParams.task_type !== "event_triggered_patrol" &&
-      (!fieldBorder || fieldBorder.length < 3)
-    ) {
-      addError("Draw or select a property polygon before starting this mission");
-      return;
-    }
-    if (gridParams.task_type === "waypoint_patrol" && keyPointsLonLat.length < 2) {
-      addError("Add at least 2 key points before starting waypoint patrol");
-      return;
-    }
-    if (gridParams.task_type === "event_triggered_patrol") {
-      if (
-        gridParams.trigger_type === "night_schedule" &&
-        !eventLocationLonLat &&
-        (!fieldBorder || fieldBorder.length < 3)
-      ) {
-        addError(
-          "For night schedule trigger, set an event location point or draw/select a property polygon."
-        );
-        return;
-      }
-      if (gridParams.trigger_type !== "night_schedule" && !eventLocationLonLat) {
-        addError("Set an event location point before starting event-triggered patrol.");
-        return;
-      }
-    }
-    if (gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS) {
-      addError(
-        `Patrol preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase segment length, reduce patrol loops, or split the property.`
-      );
-      return;
-    }
-    if (gridPreviewError) {
-      addError(gridPreviewError);
-      return;
-    }
-
-    const startAfterMinutes =
-      gridParams.task_type === "event_triggered_patrol"
-        ? 0
-        : Math.max(0, Math.min(1440, Math.round(gridParams.start_after_minutes)));
-    const startArgs = buildStartArgs({
-      token,
-      altToUse,
-      keyPointsLonLat,
-      eventLocationLonLat,
-    });
+    const startAfterMinutes = Math.max(
+      0,
+      Math.min(1440, Math.round(gridParams.start_after_minutes)),
+    );
     if (repeatStartTimerRef.current != null) {
       window.clearTimeout(repeatStartTimerRef.current);
       repeatStartTimerRef.current = null;
@@ -631,22 +604,94 @@ export function usePrivatePatrolMission({
     await startMissionNow(startArgs);
   };
 
+  function buildValidatedStartArgs(): StartMissionArgs | null {
+    const token = getToken();
+    if (!token) {
+      addError("Not authenticated");
+      return null;
+    }
+    if (!name.trim()) {
+      addError("Please enter a mission name");
+      return null;
+    }
+
+    const altToUse = altInput === "" ? NaN : Number(altInput);
+    if (!Number.isFinite(altToUse) || altToUse < 1 || altToUse > 500) {
+      addError("Altitude must be between 1 and 500 meters");
+      return null;
+    }
+
+    const keyPointsLonLat = waypoints.map((p) => [p.lon, p.lat]);
+    const eventLocationLonLat = eventLocation
+      ? [eventLocation.lon, eventLocation.lat]
+      : undefined;
+    if (
+      gridParams.task_type !== "waypoint_patrol" &&
+      (!fieldBorder || fieldBorder.length < 3)
+    ) {
+      addError("Draw or select a property polygon before starting this mission");
+      return null;
+    }
+    if (gridParams.task_type === "waypoint_patrol" && keyPointsLonLat.length < 2) {
+      addError("Add at least 2 key points before starting waypoint patrol");
+      return null;
+    }
+    if (gridParams.event_triggered_enabled && !hasEventTriggerGeometry) {
+      addError(
+        "Event-triggered patrol is enabled. Set an event location on the map or draw/select a property polygon.",
+      );
+      return null;
+    }
+    if (gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS) {
+      addError(
+        `Patrol preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase segment length, reduce patrol loops, or split the property.`,
+      );
+      return null;
+    }
+    if (gridPreviewError) {
+      addError(gridPreviewError);
+      return null;
+    }
+
+    return buildStartArgs({
+      token,
+      altToUse,
+      keyPointsLonLat,
+      eventLocationLonLat,
+    });
+  }
+
+  const runPreflightCheck = async () => {
+    const startArgs = buildValidatedStartArgs();
+    if (!startArgs) return;
+
+    setPreflightBusy(true);
+    clearErrors();
+    try {
+      const preflight = await runPreflight(startArgs.payload, startArgs.token);
+      setPreflightRun(preflight);
+      if (!preflight.can_start_mission) {
+        addError(formatPreflightFailureMessage(preflight));
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Preflight check failed";
+      addError(message);
+    } finally {
+      setPreflightBusy(false);
+    }
+  };
+
   const handleCesiumPick = useCallback(
     (p: { lat: number; lng: number }) => {
       if (gridParams.task_type === "waypoint_patrol") {
         setWaypoints((prev) => [...prev, { lat: p.lat, lon: p.lng, alt }]);
         return;
       }
-      if (gridParams.task_type === "event_triggered_patrol") {
+      if (gridParams.event_triggered_enabled) {
         setEventLocation({ lat: p.lat, lon: p.lng, alt });
       }
     },
-    [alt, gridParams.task_type]
-  );
-
-  const cesiumZoomFor = useCallback(
-    (mapZoom: number) => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
-    []
+    [alt, gridParams.event_triggered_enabled, gridParams.task_type]
   );
 
   const mapHint = isWaypointPatrol
@@ -654,8 +699,13 @@ export function usePrivatePatrolMission({
     : isGridSurveillance
       ? "Draw a property polygon, configure coverage spacing, and preview the full-area surveillance grid before launch."
       : isEventTriggeredPatrol
-        ? "Select a trigger profile, set an event location, and preview rapid verification flow (takeoff, goto, verify/track, stream)."
+        ? "Save a property geofence, tune Event Triggered parameters, and connect sensors via the webhook URL."
         : "Draw a property polygon, tune perimeter parameters, and preview the generated patrol route before launch.";
+
+  const cesiumZoomFor = useCallback(
+    (mapZoom: number) => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
+    []
+  );
 
   return {
     waypoints,
@@ -667,7 +717,9 @@ export function usePrivatePatrolMission({
     name,
     setName,
     sending,
+    preflightBusy,
     preflightRun,
+    runPreflightCheck,
     gridParams,
     setGridParams,
     drawMode,
@@ -679,6 +731,7 @@ export function usePrivatePatrolMission({
     isWaypointPatrol,
     isGridSurveillance,
     isEventTriggeredPatrol,
+    hasEventTriggerGeometry,
     hasRequiredTaskGeometry,
     gridPreview,
     gridPreviewMask,
@@ -695,5 +748,7 @@ export function usePrivatePatrolMission({
     handleCesiumPick,
     cesiumZoomFor,
     mapHint,
+    setAlt,
+    setAltInput,
   };
 }

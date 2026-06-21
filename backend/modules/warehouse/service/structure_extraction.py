@@ -87,6 +87,8 @@ class StructureExtractionParams:
     shelf_min_spacing_m: float = 0.30
     max_shelf_levels: int = 6
     max_bins_per_rack_face: int = 24
+    min_target_spacing_m: float = 0.75
+    review_clearance_m: float = 0.10
     standoff_m: float = 1.2
     drone_radius_m: float = 0.35
     clearance_margin_m: float = 0.25
@@ -119,6 +121,8 @@ class StructureExtractionParams:
             shelf_min_spacing_m=_pos(self.shelf_min_spacing_m, 0.30),
             max_shelf_levels=max(1, min(12, int(self.max_shelf_levels or 6))),
             max_bins_per_rack_face=max(1, min(80, int(self.max_bins_per_rack_face or 24))),
+            min_target_spacing_m=_pos(self.min_target_spacing_m, 0.75),
+            review_clearance_m=_pos(self.review_clearance_m, 0.10, minimum=0.0),
             standoff_m=_pos(self.standoff_m, 1.2),
             drone_radius_m=_pos(self.drone_radius_m, 0.35),
             clearance_margin_m=_pos(self.clearance_margin_m, 0.25, minimum=0.0),
@@ -138,6 +142,9 @@ class GeneratedTarget:
     scan_pose: dict[str, Any]
     standoff_m: float
     priority: int
+    clearance_status: str = "needs_review"
+    clearance_m: float | None = None
+    clearance_source: str = "point_cloud_kdtree"
 
 
 @dataclass(slots=True)
@@ -147,6 +154,20 @@ class StructureResult:
     point_count: int = 0
     rejected_clearance: int = 0
     rejection_diagnostics: list[dict[str, Any]] = field(default_factory=list)
+
+
+def classify_clearance(
+    clearance_m: float,
+    *,
+    strict_clearance_m: float,
+    review_clearance_m: float,
+    reliable_evidence: bool,
+) -> str:
+    if clearance_m >= strict_clearance_m:
+        return "active" if reliable_evidence else "needs_review"
+    if clearance_m >= review_clearance_m:
+        return "needs_review"
+    return "rejected"
 
 
 # --------------------------------------------------------------------------- #
@@ -500,6 +521,7 @@ def extract_structure(
                     shelf_levels=shelf_levels,
                     uv_to_world=_uv_to_world,
                     clearance_tree=clearance_tree,
+                    occupancy_grid=occupancy_grid,
                     rack_code=rack_code,
                 )
 
@@ -515,8 +537,21 @@ def extract_structure(
     else:
         _assign_serpentine_priority(result.targets)
 
+    target_counts = {
+        "candidate": len(result.targets),
+        "active": sum(target.clearance_status == "active" for target in result.targets),
+        "needs_review": sum(
+            target.clearance_status == "needs_review" for target in result.targets
+        ),
+        "rejected": sum(target.clearance_status == "rejected" for target in result.targets),
+    }
     result.summary = {
-        "status": "degraded" if not result.targets else "ready",
+        "status": "ready" if target_counts["active"] > 0 else "degraded",
+        "coordinate_setup_status": (
+            "active" if target_counts["active"] > 0 else "draft"
+        ),
+        "manual_review_required": target_counts["needs_review"] > 0
+        or target_counts["active"] == 0,
         "frame_id": WAREHOUSE_MAP_FRAME_ID,
         "floor_z": round(floor_z, 3),
         "axis_deg": round(math.degrees(theta), 2),
@@ -527,16 +562,36 @@ def extract_structure(
             "aisles": len(aisle_summaries),
             "racks": len(rack_summaries),
             "targets": len(result.targets),
+            "active_targets": target_counts["active"],
+            "review_targets": target_counts["needs_review"],
+            "candidate_targets": target_counts["candidate"],
             "rejected_clearance": result.rejected_clearance,
         },
+        "target_counts": target_counts,
+        "candidate_targets": [_target_summary(target) for target in result.targets],
+        "active_targets": [
+            _target_summary(target)
+            for target in result.targets
+            if target.clearance_status == "active"
+        ],
+        "review_targets": [
+            _target_summary(target)
+            for target in result.targets
+            if target.clearance_status == "needs_review"
+        ],
+        "rejected_targets": [
+            _target_summary(target)
+            for target in result.targets
+            if target.clearance_status == "rejected"
+        ],
         "params": _params_to_dict(params),
         "clearance": {
-            "source": "point_cloud_kdtree",
+            "source": "occupancy_grid" if occupancy_grid is not None else "point_cloud_kdtree",
             "required_clearance_m": round(params.required_clearance_m, 3),
         },
         "warnings": (
             ["Structure detected but all scan targets failed the clearance gate."]
-            if not result.targets
+            if target_counts["active"] == 0
             else []
         ),
         "rejection_diagnostics": result.rejection_diagnostics,
@@ -634,6 +689,7 @@ def _emit_bay_targets(
     shelf_levels: list[float],
     uv_to_world,
     clearance_tree: cKDTree,
+    occupancy_grid: OccupancyGrid | None,
     rack_code: str,
 ) -> None:
     """Stage D: divide a bay face into bins x shelf levels -> scan targets."""
@@ -650,7 +706,7 @@ def _emit_bay_targets(
     normal_x /= nlen
     normal_y /= nlen
 
-    pitch = max(params.bin_pitch_m, params.grid_res_m * 2)
+    pitch = max(params.bin_pitch_m, params.min_target_spacing_m, params.grid_res_m * 2)
     n_bins = max(1, round(bay.width / pitch))
     n_bins = min(n_bins, params.max_bins_per_rack_face)
     for b_idx in range(n_bins):
@@ -672,18 +728,36 @@ def _emit_bay_targets(
             except ValueError:
                 continue
 
-            # Clearance gate: scan pose must be far enough from any structure.
-            dist, _ = clearance_tree.query(
-                np.array([scan_pose.x_m, scan_pose.y_m, scan_pose.z_m], dtype=np.float64)
+            if occupancy_grid is not None:
+                clearance = occupancy_grid.clearance_at(
+                    LocalPose(
+                        x_m=scan_pose.x_m,
+                        y_m=scan_pose.y_m,
+                        z_m=scan_pose.z_m,
+                        frame_id=scan_pose.frame_id,
+                    )
+                )
+                clearance_source = "occupancy_grid"
+            else:
+                clearance, _ = clearance_tree.query(
+                    np.array([scan_pose.x_m, scan_pose.y_m, scan_pose.z_m], dtype=np.float64)
+                )
+                clearance_source = "point_cloud_kdtree"
+            clearance = float(clearance)
+            clearance_status = classify_clearance(
+                clearance,
+                strict_clearance_m=params.required_clearance_m,
+                review_clearance_m=params.review_clearance_m,
+                reliable_evidence=occupancy_grid is not None,
             )
-            if float(dist) < params.required_clearance_m:
+            if clearance_status == "rejected":
                 result.rejected_clearance += 1
                 half = max(params.grid_res_m, 0.05) * 0.5
                 result.rejection_diagnostics.append(
                     {
                         "candidate_id": f"{rack_code}:{aisle_code}:B{b_idx + 1}:L{level_idx}",
                         "rejection_reason": "clearance_below_required",
-                        "clearance_m": round(float(dist), 3),
+                        "clearance_m": round(clearance, 3),
                         "required_clearance_m": round(params.required_clearance_m, 3),
                         "bbox": [
                             round(scan_pose.x_m - half, 3),
@@ -696,8 +770,6 @@ def _emit_bay_targets(
                         "frame_id": WAREHOUSE_MAP_FRAME_ID,
                     }
                 )
-                continue
-
             result.targets.append(
                 GeneratedTarget(
                     aisle_code=aisle_code,
@@ -709,8 +781,30 @@ def _emit_bay_targets(
                     scan_pose=scan_pose.model_dump(),
                     standoff_m=float(params.standoff_m),
                     priority=100,
+                    clearance_status=clearance_status,
+                    clearance_m=clearance,
+                    clearance_source=clearance_source,
                 )
             )
+
+
+def _target_summary(target: GeneratedTarget) -> dict[str, Any]:
+    return {
+        "candidate_id": (
+            f"{target.rack_code}:{target.aisle_code}:{target.bin_code}:L{target.shelf_level}"
+        ),
+        "aisle_code": target.aisle_code,
+        "rack_code": target.rack_code,
+        "shelf_level": target.shelf_level,
+        "bin_code": target.bin_code,
+        "status": target.clearance_status,
+        "clearance_m": (
+            round(target.clearance_m, 3) if target.clearance_m is not None else None
+        ),
+        "clearance_source": target.clearance_source,
+        "target_point": dict(target.target_point),
+        "scan_pose": dict(target.scan_pose),
+    }
 
 
 def _assign_serpentine_priority(targets: list[GeneratedTarget]) -> None:
@@ -807,6 +901,8 @@ def _params_to_dict(params: StructureExtractionParams) -> dict[str, Any]:
         "shelf_min_spacing_m": params.shelf_min_spacing_m,
         "max_shelf_levels": params.max_shelf_levels,
         "max_bins_per_rack_face": params.max_bins_per_rack_face,
+        "min_target_spacing_m": params.min_target_spacing_m,
+        "review_clearance_m": params.review_clearance_m,
         "standoff_m": params.standoff_m,
         "drone_radius_m": params.drone_radius_m,
         "clearance_margin_m": params.clearance_margin_m,
@@ -818,11 +914,12 @@ def extract_structure_from_flight(
     client_flight_id: str,
     *,
     params: StructureExtractionParams,
+    occupancy_grid: OccupancyGrid | None = None,
 ) -> StructureResult:
     """Convenience entry point: load the flight cloud then run extraction."""
     params = params.sanitized()
     cloud = load_flight_cloud(client_flight_id, params=params)
-    occupancy_grid = load_flight_occupancy_grid(client_flight_id)
+    occupancy_grid = occupancy_grid or load_flight_occupancy_grid(client_flight_id)
     logger.info(
         "structure_extraction loaded flight=%s points=%s voxel=%.3f occupancy=%s",
         client_flight_id,

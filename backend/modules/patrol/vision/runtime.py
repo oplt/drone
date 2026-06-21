@@ -16,11 +16,21 @@ class MLRuntimeManager:
         self._task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
 
-    async def start(self, *, stream_source: str | int | None = None) -> dict[str, Any]:
+    async def start(
+        self,
+        *,
+        stream_source: str | int | None = None,
+        ai_tasks: list[str] | None = None,
+    ) -> dict[str, Any]:
         async with self._lock:
             if self._task is not None and not self._task.done():
+                if ai_tasks is not None:
+                    self.set_active_ai_tasks(ai_tasks)
                 return self.status()
-            await self.pipeline.start(stream_source=stream_source)
+            await self.pipeline.start(
+                stream_source=stream_source,
+                ai_tasks=ai_tasks,
+            )
             self._task = self.pipeline._task
             return self.status()
 
@@ -43,7 +53,7 @@ class MLRuntimeManager:
             **self.pipeline.status(),
             "task_state": task_state,
             "config": {
-                "enabled": ml_settings.enabled,
+                "enabled": True,
                 "auto_start": ml_settings.auto_start,
                 "frame_stride": ml_settings.frame_stride,
                 "target_fps": ml_settings.target_fps,
@@ -53,6 +63,10 @@ class MLRuntimeManager:
 
     def set_zones(self, zones: list[dict[str, Any]]) -> dict[str, Any]:
         self.pipeline.set_zones(zones)
+        return self.status()
+
+    def set_active_ai_tasks(self, ai_tasks: list[str] | None) -> dict[str, Any]:
+        self.pipeline.set_active_ai_tasks(ai_tasks)
         return self.status()
 
 

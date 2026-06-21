@@ -1,6 +1,5 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Divider, Stack, Typography } from "@mui/material";
 import FlightTakeoffRoundedIcon from "@mui/icons-material/FlightTakeoffRounded";
-import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import {
   TaskPreflightCommandsDrawer,
   useTaskPreflightCommandsDrawer,
@@ -111,7 +110,7 @@ export function FieldSurveyFieldsBlock({
   );
 }
 
-export function FieldSurveySetupDrawer({
+export function FieldSurveySetupPanel({
   fields,
   selectedFieldId,
   selectedField,
@@ -164,20 +163,8 @@ export function FieldSurveySetupDrawer({
   gridPreviewError: string | null | undefined;
   previewLoading: boolean;
 }) {
-  const setupDrawer = useTaskPreflightCommandsDrawer();
-
   return (
-    <TaskPreflightCommandsDrawer
-      open={setupDrawer.open}
-      onOpenChange={setupDrawer.onOpenChange}
-      title="Set up"
-      subtitle="Field boundary, grid parameters, and route preview"
-      tabLabel="SET UP"
-      tabIcon={<TuneRoundedIcon fontSize="small" />}
-      edgeTabIndex={0}
-      edgeTabCount={3}
-      paperSx={{ width: { xs: "min(100vw, 440px)", sm: 480, md: 540 } }}
-    >
+    <>
       <FieldSurveyFieldsBlock
         compact
         fields={fields}
@@ -212,11 +199,46 @@ export function FieldSurveySetupDrawer({
       <Typography variant="body2" color="text.secondary">
         Click on the map to add waypoints.
       </Typography>
-    </TaskPreflightCommandsDrawer>
+    </>
+  );
+}
+
+export function FieldSurveyMissionControlsPanel({
+  apiBase,
+  preflightRun,
+  telemetry,
+  droneConnected,
+  missionStatus,
+  activeFlightId,
+}: {
+  apiBase: string;
+  preflightRun: PreflightRunResponse | null;
+  telemetry: TelemetrySnapshot | null;
+  droneConnected: boolean;
+  missionStatus: MissionStatus | null;
+  activeFlightId: string | null;
+}) {
+  return (
+    <Stack spacing={1.5}>
+      <MissionPreflightPanel
+        apiBase={apiBase}
+        missionType="grid"
+        preflightRun={preflightRun}
+        telemetry={telemetry}
+      />
+      <MissionCommandPanel
+        telemetry={telemetry}
+        droneConnected={droneConnected}
+        missionStatus={missionStatus}
+        activeFlightId={activeFlightId}
+        apiBase={apiBase}
+      />
+    </Stack>
   );
 }
 
 export function FieldSurveyFlightDrawer({
+  apiBase,
   fieldBorder,
   name,
   onNameChange,
@@ -230,7 +252,11 @@ export function FieldSurveyFlightDrawer({
   onSendMission,
   activeFlightId,
   missionStatus,
+  preflightRun,
+  telemetry,
+  droneConnected,
 }: {
+  apiBase: string;
   fieldBorder: LonLat[] | null;
   name: string;
   onNameChange: (value: string) => void;
@@ -244,6 +270,9 @@ export function FieldSurveyFlightDrawer({
   onSendMission: () => void;
   activeFlightId: string | null;
   missionStatus: MissionStatus | null;
+  preflightRun: PreflightRunResponse | null;
+  telemetry: TelemetrySnapshot | null;
+  droneConnected: boolean;
 }) {
   const flightDrawer = useTaskPreflightCommandsDrawer();
 
@@ -252,11 +281,10 @@ export function FieldSurveyFlightDrawer({
       open={flightDrawer.open}
       onOpenChange={flightDrawer.onOpenChange}
       title="Flight"
-      subtitle="Mission name, cruise altitude, and survey start"
+      subtitle="Mission launch, preflight checks, and live commands"
       tabLabel="FLIGHT"
       tabIcon={<FlightTakeoffRoundedIcon fontSize="small" />}
-      edgeTabIndex={1}
-      edgeTabCount={3}
+      edgeTabCount={1}
       paperSx={{ width: { xs: "min(100vw, 420px)", sm: 440, md: 460 } }}
     >
       <FieldSurveyFlightSection
@@ -275,47 +303,15 @@ export function FieldSurveyFlightDrawer({
         activeFlightId={activeFlightId}
         missionStatus={missionStatus}
       />
-    </TaskPreflightCommandsDrawer>
-  );
-}
-
-export function FieldSurveyMissionControls({
-  apiBase,
-  preflightRun,
-  telemetry,
-  droneConnected,
-  missionStatus,
-  activeFlightId,
-}: {
-  apiBase: string;
-  preflightRun: PreflightRunResponse | null;
-  telemetry: TelemetrySnapshot | null;
-  droneConnected: boolean;
-  missionStatus: MissionStatus | null;
-  activeFlightId: string | null;
-}) {
-  const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
-
-  return (
-    <TaskPreflightCommandsDrawer
-      open={preflightCommandsDrawer.open}
-      onOpenChange={preflightCommandsDrawer.onOpenChange}
-      edgeTabIndex={2}
-      edgeTabCount={3}
-    >
-        <MissionPreflightPanel
-          apiBase={apiBase}
-          missionType="grid"
-          preflightRun={preflightRun}
-          telemetry={telemetry}
-        />
-        <MissionCommandPanel
-          telemetry={telemetry}
-          droneConnected={droneConnected}
-          missionStatus={missionStatus}
-          activeFlightId={activeFlightId}
-          apiBase={apiBase}
-        />
+      <Divider />
+      <FieldSurveyMissionControlsPanel
+        apiBase={apiBase}
+        preflightRun={preflightRun}
+        telemetry={telemetry}
+        droneConnected={droneConnected}
+        missionStatus={missionStatus}
+        activeFlightId={activeFlightId}
+      />
     </TaskPreflightCommandsDrawer>
   );
 }

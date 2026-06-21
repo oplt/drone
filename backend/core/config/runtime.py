@@ -374,6 +374,26 @@ class RuntimeSettings(BaseSettings):
     TURN_PENALTY_S: float = 2.0
     WP_RADIUS_M: float = 2.0
 
+    # Outdoor weather preflight (Open-Meteo + optional KMI/RMI for Belgium)
+    weather_preflight_enabled: bool = True
+    weather_cache_ttl_s: float = 300.0
+    weather_api_fail_policy: str = "warn"  # warn | block | skip
+    WIND_MAX: float = 12.0
+    GUST_MAX: float = 15.0
+    weather_max_precip_mm: float = 0.5
+    weather_min_visibility_m: float = 3000.0
+    weather_max_cloud_cover_pct: float = 90.0
+    weather_min_temp_c: float = -10.0
+    weather_max_temp_c: float = 40.0
+    weather_blocked_codes: str = "45,48,56,57,65,67,75,77,82,85,86,95,96,99"
+    weather_warn_codes: str = "51,53,55,61,63,80,81"
+    kmi_rmi_validation_enabled: bool = True
+    kmi_rmi_max_obs_age_hours: float = 6.0
+    kmi_rmi_wind_delta_warn_mps: float = 4.0
+    kmi_rmi_wind_delta_block_mps: float = 8.0
+    open_meteo_base_url: str = "https://api.open-meteo.com/v1/forecast"
+    kmi_rmi_wfs_base_url: str = "https://opendata.meteo.be/service/aws/ows"
+
     # Video streaming configuration
     drone_video_source: str = "rtsp://192.168.4.1:8554/stream"
     drone_video_source_gazebo: str = Field(
@@ -631,7 +651,9 @@ class RuntimeSettings(BaseSettings):
     warehouse_structure_bin_pitch_m: float = 0.9
     warehouse_structure_shelf_min_spacing_m: float = 0.3
     warehouse_structure_max_shelf_levels: int = 6
-    warehouse_structure_max_bins_per_rack_face: int = 24
+    warehouse_structure_max_bins_per_rack_face: int = 8
+    warehouse_structure_min_target_spacing_m: float = 0.75
+    warehouse_structure_review_clearance_m: float = 0.10
     warehouse_structure_standoff_m: float = 1.2
     warehouse_structure_drone_radius_m: float = 0.35
     warehouse_structure_clearance_margin_m: float = 0.25

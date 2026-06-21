@@ -16,7 +16,6 @@ class MLRuntimeSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    enabled: bool = False
     auto_start: bool = False
     stream_source: str = ""
     detector_model_path: str = "yolo26n.pt"

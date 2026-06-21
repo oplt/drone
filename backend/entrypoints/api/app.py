@@ -37,7 +37,9 @@ from backend.modules.media.api import router as video_router
 from backend.modules.missions.api.routes import router as missions_router
 from backend.modules.observability.api import router as observability_router
 from backend.modules.patrol.api import router as patrol_debug_router
+from backend.modules.patrol.event_trigger_mqtt_service import patrol_event_trigger_mqtt
 from backend.modules.patrol.live_detection_api import router as live_detection_router
+from backend.modules.patrol.sensor_config_api import router as patrol_sensor_config_router
 from backend.modules.patrol.vision_api import router as ml_router
 from backend.modules.property_patrol.api import router as property_patrol_router
 from backend.modules.settings.api import router as settings_router
@@ -79,6 +81,8 @@ async def lifespan(app: FastAPI):
     await irrigation_monitor.start()
     logger.info("Irrigation monitor started")
 
+    await patrol_event_trigger_mqtt.start()
+
     yield
 
     # Shutdown
@@ -94,6 +98,9 @@ async def lifespan(app: FastAPI):
 
     await irrigation_monitor.stop()
     logger.info("Irrigation monitor stopped")
+
+    await patrol_event_trigger_mqtt.stop()
+    logger.info("Patrol event-trigger MQTT subscriber stopped")
 
     await close_db()
 
@@ -156,6 +163,7 @@ app.include_router(fields_router)
 app.include_router(irrigation_router)
 app.include_router(mapping_router)
 app.include_router(alerts_router)
+app.include_router(patrol_sensor_config_router)
 app.include_router(ml_router)
 app.include_router(patrol_debug_router)
 app.include_router(live_detection_router)

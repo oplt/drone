@@ -105,3 +105,41 @@ def decode_occupancy_grid(raw: bytes | str) -> OccupancyGrid | None:
         OccupancyState.OCCUPIED,
     )
     return grid
+
+
+def occupancy_grid_from_ros_yaml(payload: dict[str, object] | None) -> OccupancyGrid | None:
+    """Decode the mapping returned by `ros2 topic echo --once` for OccupancyGrid."""
+    if not isinstance(payload, dict):
+        return None
+    info = payload.get("info")
+    if not isinstance(info, dict):
+        return None
+    origin = info.get("origin")
+    origin = origin if isinstance(origin, dict) else {}
+    position = origin.get("position")
+    position = position if isinstance(position, dict) else {}
+    try:
+        width = int(info["width"])
+        height = int(info["height"])
+        resolution = float(info["resolution"])
+        values = np.asarray(payload.get("data") or [], dtype=np.int8)
+        origin_x = float(position.get("x") or 0.0)
+        origin_y = float(position.get("y") or 0.0)
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+    if width <= 0 or height <= 0 or resolution <= 0.0 or values.size < width * height:
+        return None
+    encoded = encode_occupancy_grid(
+        OccupancyGridPayload(
+            width=width,
+            height=height,
+            resolution_m=resolution,
+            origin_x_m=origin_x,
+            origin_y_m=origin_y,
+            frame_id=str((payload.get("header") or {}).get("frame_id") or "odom")
+            if isinstance(payload.get("header"), dict)
+            else "odom",
+            data=np.ascontiguousarray(values[: width * height]),
+        )
+    )
+    return decode_occupancy_grid(encoded)

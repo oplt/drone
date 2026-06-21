@@ -382,7 +382,7 @@ async def test_mapping_stack_status_includes_log_parser_health(monkeypatch) -> N
 
 @pytest.mark.asyncio
 async def test_mapping_stack_status_endpoint_returns_warning(monkeypatch) -> None:
-    from backend.modules.warehouse import api
+    from backend.modules.warehouse.routers import operations as api
     from backend.modules.warehouse.service import mapping_stack_lifecycle
 
     async def _fake_stack_status():
@@ -406,7 +406,7 @@ async def test_mapping_stack_status_endpoint_returns_warning(monkeypatch) -> Non
 
 @pytest.mark.asyncio
 async def test_mapping_stack_start_endpoint_uses_lifecycle_launcher(monkeypatch) -> None:
-    from backend.modules.warehouse import api
+    from backend.modules.warehouse.routers import operations as api
     from backend.modules.warehouse.service import mapping_stack_lifecycle
 
     async def _fake_start_stack():
@@ -508,3 +508,79 @@ async def test_mapping_stack_status_survives_probe_failure(monkeypatch) -> None:
     assert status.phase == "degraded"
     assert status.last_error == "perception probe unavailable"
     assert status.nvblox_health["log_parser"]["available"] is True
+
+
+@pytest.mark.asyncio
+async def test_structure_readiness_selects_valid_static_esdf_and_combined_occupancy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.modules.warehouse.service import live_map_readiness as readiness
+
+    topics = {
+        "/nvblox_node/static_esdf_pointcloud",
+        "/nvblox_node/combined_occupancy_grid",
+    }
+    esdf_yaml = (
+        "header:\n  frame_id: odom\n"
+        "fields:\n- name: x\n- name: y\n- name: z\n- name: intensity"
+    )
+    occupancy_yaml = (
+        "header:\n  frame_id: odom\n"
+        "info:\n  width: 2\n  height: 2\n  resolution: 1.0\n"
+        "  origin:\n    position:\n      x: 0.0\n      y: 0.0\n"
+        "data: [0, 0, 100, 0]"
+    )
+    monkeypatch.setattr(readiness, "list_ros2_topics", lambda _ws: sorted(topics))
+    monkeypatch.setattr(
+        readiness,
+        "_topic_info",
+        lambda topic, _ws: (
+            "sensor_msgs/msg/PointCloud2" if "esdf" in topic else "nav_msgs/msg/OccupancyGrid"
+        ),
+    )
+    monkeypatch.setattr(
+        readiness,
+        "_topic_message_text",
+        lambda topic, _ws, timeout_s: esdf_yaml if "esdf" in topic else occupancy_yaml,
+    )
+
+    result = await readiness.refresh_structure_input_readiness(timeout_s=1.0)
+
+    assert result.esdf_available is True
+    assert result.esdf_topic == "/nvblox_node/static_esdf_pointcloud"
+    assert result.occupancy_available is True
+    assert result.occupancy_topic == "/nvblox_node/combined_occupancy_grid"
+
+
+@pytest.mark.asyncio
+async def test_structure_readiness_uses_esdf_and_occupancy_fallbacks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.modules.warehouse.service import live_map_readiness as readiness
+
+    topics = {
+        "/nvblox_node/pessimistic_static_esdf_pointcloud",
+        "/nvblox_node/static_occupancy_grid",
+    }
+    monkeypatch.setattr(readiness, "list_ros2_topics", lambda _ws: sorted(topics))
+    monkeypatch.setattr(
+        readiness,
+        "_topic_info",
+        lambda topic, _ws: (
+            "sensor_msgs/msg/PointCloud2" if "esdf" in topic else "nav_msgs/msg/OccupancyGrid"
+        ),
+    )
+    monkeypatch.setattr(
+        readiness,
+        "_topic_message_text",
+        lambda topic, _ws, timeout_s: (
+            "header:\n  frame_id: odom\nfields:\n- name: x\n- name: y\n- name: z"
+            if "esdf" in topic
+            else "header:\n  frame_id: odom\ninfo:\n  width: 1\n  height: 1\ndata: [0]"
+        ),
+    )
+
+    result = await readiness.refresh_structure_input_readiness(timeout_s=1.0)
+
+    assert result.esdf_topic == "/nvblox_node/pessimistic_static_esdf_pointcloud"
+    assert result.occupancy_topic == "/nvblox_node/static_occupancy_grid"

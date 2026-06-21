@@ -41,6 +41,14 @@ class LiveMapFlightManifest:
     map_quality: str = "unknown"
     default_view_layer: str | None = None
     diagnostic_nvblox_layers: list[str] = field(default_factory=list)
+    esdf_available: bool = False
+    esdf_topic: str | None = None
+    esdf_pointcloud_path: str | None = None
+    occupancy_available: bool = False
+    occupancy_topic: str | None = None
+    occupancy_grid_path: str | None = None
+    frame_id: str = "odom"
+    coordinate_frame: str = "odom"
     source_quality: dict[str, dict[str, Any]] = field(default_factory=dict)
     tf_degraded: bool = False
     tf_jump_back_count: int = 0
@@ -69,6 +77,14 @@ class LiveMapFlightManifest:
             "map_quality": self.map_quality,
             "default_view_layer": self.default_view_layer,
             "diagnostic_nvblox_layers": list(self.diagnostic_nvblox_layers),
+            "esdf_available": self.esdf_available,
+            "esdf_topic": self.esdf_topic,
+            "esdf_pointcloud_path": self.esdf_pointcloud_path,
+            "occupancy_available": self.occupancy_available,
+            "occupancy_topic": self.occupancy_topic,
+            "occupancy_grid_path": self.occupancy_grid_path,
+            "frame_id": self.frame_id,
+            "coordinate_frame": self.coordinate_frame,
             "source_quality": dict(self.source_quality),
             "tf_degraded": bool(self.tf_degraded),
             "tf_jump_back_count": int(self.tf_jump_back_count),
@@ -183,6 +199,9 @@ def build_manifest_from_flight_dir(
     bbox_by_source: dict[str, list[float]] = {}
     seen_ids: set[str] = set()
     rgbd_has_rgb = False
+    source_topics: dict[str, str] = {}
+    source_paths: dict[str, str] = {}
+    frame_id = "odom"
 
     for stored in _iter_stored_chunks(safe_flight):
         chunk_id = str(getattr(stored, "chunk_id", "") or "")
@@ -201,6 +220,11 @@ def build_manifest_from_flight_dir(
             # Normalize legacy chunks whose source name claimed color despite XYZ-only data.
             source = "rgbd_xyz_uncolored"
         chunk_counts[source] = chunk_counts.get(source, 0) + 1
+        if sidecar.get("source_topic"):
+            source_topics[source] = str(sidecar["source_topic"])
+        source_paths.setdefault(source, str(getattr(stored, "path", "") or ""))
+        if sidecar.get("frame_id"):
+            frame_id = str(sidecar["frame_id"])
         points = _safe_int(sidecar.get("point_count"), 0)
         if points > 0:
             point_counts[source] = point_counts.get(source, 0) + points
@@ -342,6 +366,14 @@ def build_manifest_from_flight_dir(
         map_quality=quality,
         default_view_layer=default_view_layer,
         diagnostic_nvblox_layers=diagnostic_nvblox_layers,
+        esdf_available=chunk_counts.get("nvblox_esdf", 0) > 0,
+        esdf_topic=source_topics.get("nvblox_esdf"),
+        esdf_pointcloud_path=source_paths.get("nvblox_esdf"),
+        occupancy_available=chunk_counts.get("nvblox_occupancy", 0) > 0,
+        occupancy_topic=source_topics.get("nvblox_occupancy"),
+        occupancy_grid_path=source_paths.get("nvblox_occupancy"),
+        frame_id=frame_id,
+        coordinate_frame=frame_id,
         source_quality=source_quality,
         tf_degraded=tf_degraded,
         tf_jump_back_count=tf_jump_back_count,
@@ -394,6 +426,24 @@ def load_flight_manifest(flight_id: str) -> LiveMapFlightManifest | None:
             str(payload["default_view_layer"]) if payload.get("default_view_layer") else None
         ),
         diagnostic_nvblox_layers=_safe_str_list(payload.get("diagnostic_nvblox_layers")),
+        esdf_available=bool(payload.get("esdf_available")),
+        esdf_topic=str(payload["esdf_topic"]) if payload.get("esdf_topic") else None,
+        esdf_pointcloud_path=(
+            str(payload["esdf_pointcloud_path"])
+            if payload.get("esdf_pointcloud_path")
+            else None
+        ),
+        occupancy_available=bool(payload.get("occupancy_available")),
+        occupancy_topic=(
+            str(payload["occupancy_topic"]) if payload.get("occupancy_topic") else None
+        ),
+        occupancy_grid_path=(
+            str(payload["occupancy_grid_path"])
+            if payload.get("occupancy_grid_path")
+            else None
+        ),
+        frame_id=str(payload.get("frame_id") or "odom"),
+        coordinate_frame=str(payload.get("coordinate_frame") or "odom"),
         source_quality=_safe_nested_dict(payload.get("source_quality")),
         tf_degraded=bool(payload.get("tf_degraded", False)),
         tf_jump_back_count=max(0, _safe_int(payload.get("tf_jump_back_count"), 0)),

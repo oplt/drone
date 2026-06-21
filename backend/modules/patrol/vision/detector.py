@@ -33,6 +33,13 @@ class ObjectDetector:
         self.allowed = frozenset(allowed_labels or DEFAULT_ALLOWED_LABELS)
         self._model = None
 
+    def set_allowed_labels(self, allowed_labels: set[str] | frozenset[str] | None) -> None:
+        if allowed_labels is None:
+            self.allowed = DEFAULT_ALLOWED_LABELS
+            return
+        normalized = frozenset(str(label).strip().lower() for label in allowed_labels if str(label).strip())
+        self.allowed = normalized if normalized else frozenset()
+
     def _ensure_model(self):
         if self._model is not None:
             return self._model
@@ -51,6 +58,9 @@ class ObjectDetector:
         return self._model
 
     def detect(self, packet: FramePacket) -> list[Detection]:
+        if not self.allowed:
+            return []
+
         model = self._ensure_model()
         detections: list[Detection] = []
 

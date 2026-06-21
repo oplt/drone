@@ -155,6 +155,8 @@ class PreflightOrchestrator:
             distance_cache=self.preprocessor.distance_cache,
             terrain_provider=kwargs.get("terrain_provider"),
             wind_data=kwargs.get("wind_data"),
+            weather_data=kwargs.get("weather_data"),
+            weather_api_error=kwargs.get("weather_api_error"),
             no_fly_zones=kwargs.get("no_fly_zones"),
             obstacle_map=kwargs.get("obstacle_map"),
             geofence_polygon=kwargs.get("geofence_polygon"),
@@ -228,7 +230,49 @@ class PreflightOrchestrator:
             gps_timeout_s,
         )
 
-        context = await self._build_context(vehicle_state, mission, overrides=overrides, **kwargs)
+        weather_data = kwargs.get("weather_data")
+        wind_data = kwargs.get("wind_data")
+        weather_api_error = kwargs.get("weather_api_error")
+        if (
+            weather_data is None
+            and wind_data is None
+            and weather_api_error is None
+        ):
+            from backend.modules.preflight.weather.location import (
+                is_outdoor_preflight_mission,
+                resolve_preflight_coordinates,
+            )
+            from backend.modules.preflight.weather.service import fetch_weather_for_preflight
+
+            if is_outdoor_preflight_mission(mission_type):
+                coords = resolve_preflight_coordinates(
+                    vehicle_state,
+                    mission,
+                    geofence_polygon=kwargs.get("geofence_polygon"),
+                )
+                if coords is None:
+                    weather_api_error = "GPS coordinates unavailable for weather lookup"
+                else:
+                    snapshot, fetch_error = await fetch_weather_for_preflight(
+                        coords[0],
+                        coords[1],
+                        config=overrides,
+                    )
+                    if snapshot is not None:
+                        weather_data = snapshot.to_dict()
+                        wind_data = snapshot.wind_data_dict()
+                    else:
+                        weather_api_error = fetch_error or "Weather API unavailable"
+
+        context = await self._build_context(
+            vehicle_state,
+            mission,
+            overrides=overrides,
+            weather_data=weather_data,
+            wind_data=wind_data,
+            weather_api_error=weather_api_error,
+            **kwargs,
+        )
 
         waypoints = list(getattr(mission, "waypoints", []) or [])
         speed = float(getattr(mission, "speed", None) or 10.0)

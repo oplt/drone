@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import Cookie, Depends, Header, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
-from backend.core.database.session import get_db
+from backend.core.database.session import Session, get_db
 from backend.modules.identity.models import ApiKey, User, UserRole
 from backend.modules.identity.service import decode_token
 from backend.modules.organizations.models import Organization
@@ -22,6 +23,24 @@ logger = logging.getLogger(__name__)
 class OrgUser:
     user: User
     org_id: int | None
+
+
+async def _touch_api_key_last_used(key_id: int) -> None:
+    """Best-effort last_used_at update in its own transaction.
+
+    Avoids holding row locks on the request session when downstream handlers
+    block (e.g. orchestrator init bugs or long-running dispatch).
+    """
+    try:
+        async with Session() as db:
+            await db.execute(
+                update(ApiKey)
+                .where(ApiKey.id == key_id)
+                .values(last_used_at=datetime.now(UTC))
+            )
+            await db.commit()
+    except Exception:
+        logger.debug("Failed to update api_key.last_used_at for id=%s", key_id, exc_info=True)
 
 
 async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
@@ -77,9 +96,7 @@ async def _resolve_api_key(authorization: str, db: AsyncSession) -> User | None:
     if api_key.expires_at and api_key.expires_at < datetime.now(UTC):
         raise HTTPException(status_code=401, detail="API key expired")
 
-    # Update last_used_at in-band; cheap write, avoids a fire-and-forget task
-    api_key.last_used_at = datetime.now(UTC)
-    await db.flush()
+    asyncio.create_task(_touch_api_key_last_used(int(api_key.id)))
 
     # Resolve the org owner as the auth identity for this key
     if api_key.org_id is None:

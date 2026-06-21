@@ -1,12 +1,9 @@
 import { useMemo, useState } from "react";
-import { Alert, Box, Card, CardContent, Chip, Container, Grid, Stack, Typography } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
-import type { GridColDef } from "@mui/x-data-grid";
-import { AnalysisControls } from "./components/AnalysisControls";
-import { AnalysisStatus } from "./components/AnalysisStatus";
+import { Alert, Box, Container, Grid, Stack, Typography } from "@mui/material";
+import { AnalysisWorkflowTabs } from "./components/AnalysisWorkflowTabs";
+import { DetectionLogsTabs } from "./components/DetectionLogsTabs";
 import { DetectionMap } from "./components/DetectionMap";
 import { DetectionTimeline } from "./components/DetectionTimeline";
-import { LiveDetectionLog } from "./components/LiveDetectionLog";
 import { VideoOverlayPlayer } from "./components/VideoOverlayPlayer";
 import {
   useAnalysisJob,
@@ -17,14 +14,6 @@ import {
 } from "./hooks";
 import { DEFAULT_MODEL } from "./modelOptions";
 import type { AnalyzeVideoPayload, VideoAsset, VideoDetection } from "./types";
-
-const columns: GridColDef<VideoDetection>[] = [
-  { field: "timestamp_seconds", headerName: "Time", width: 90, valueFormatter: (value) => `${Number(value).toFixed(1)}s` },
-  { field: "label", headerName: "Class", flex: 1, minWidth: 140, renderCell: ({ value }) => <Chip size="small" label={value} /> },
-  { field: "confidence", headerName: "Confidence", width: 120, valueFormatter: (value) => `${(Number(value) * 100).toFixed(0)}%` },
-  { field: "frame_index", headerName: "Frame", width: 100 },
-  { field: "gps", headerName: "GPS", width: 190, valueGetter: (_value, row) => row.lat != null && row.lon != null ? `${row.lat.toFixed(6)}, ${row.lon.toFixed(6)}` : "No location" },
-];
 
 const DEFAULT_PAYLOAD: AnalyzeVideoPayload = {
   model_name: DEFAULT_MODEL,
@@ -85,10 +74,19 @@ export default function VideoAnalysisPage() {
         {error ? <Alert severity="error">{error}</Alert> : null}
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, lg: 3 }}>
-            <Stack spacing={2}>
-              <AnalysisControls file={file} video={video} payload={payload} uploading={upload.isPending} starting={start.isPending} onFile={chooseFile} onPayload={setPayload} onUpload={handleUpload} onAnalyze={handleAnalyze} />
-              <AnalysisStatus job={job.data} detectionCount={rows.length} />
-            </Stack>
+            <AnalysisWorkflowTabs
+              file={file}
+              video={video}
+              payload={payload}
+              uploading={upload.isPending}
+              starting={start.isPending}
+              onFile={chooseFile}
+              onPayload={setPayload}
+              onUpload={handleUpload}
+              onAnalyze={handleAnalyze}
+              job={job.data}
+              detectionCount={rows.length}
+            />
           </Grid>
           <Grid size={{ xs: 12, lg: 6 }}>
             <Stack spacing={2}>
@@ -101,18 +99,13 @@ export default function VideoAnalysisPage() {
             <DetectionMap detections={rows} selected={selected} onSelect={setSelected} />
           </Grid>
           <Grid size={{ xs: 12 }}>
-            <LiveDetectionLog
-              rows={liveDetections.data ?? []}
-              loading={liveDetections.isLoading}
+            <DetectionLogsTabs
+              liveRows={liveDetections.data ?? []}
+              liveLoading={liveDetections.isLoading}
+              jobRows={rows}
+              jobLoading={detections.isLoading}
+              onJobRowSelect={setSelected}
             />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>Detection log</Typography>
-                <DataGrid rows={rows} columns={columns} loading={detections.isLoading} density="compact" pageSizeOptions={[10, 25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} onRowClick={({ row }) => setSelected(row)} disableRowSelectionOnClick sx={{ minHeight: 320 }} />
-              </CardContent>
-            </Card>
           </Grid>
         </Grid>
       </Stack>

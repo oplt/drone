@@ -12,6 +12,7 @@ import {
 } from "../../../modules/maps/utils/drawingShapes";
 import droneIconUrl from "../../../assets/Drone.svg?url";
 import { useFlatMapDrawing } from "../hooks/useFlatMapDrawing";
+import { ringLatLngBounds } from "../../fields";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt?: number };
@@ -36,6 +37,8 @@ export type MapLibreMapProps = {
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   height?: number | string;
+  focusRing?: LonLat[] | null;
+  focusRequestToken?: number;
 };
 
 const routeSourceId = "mission-route";
@@ -103,6 +106,8 @@ export default function MapLibreMap({
   plannedRoute = null,
   exclusionZones = [],
   height = 400,
+  focusRing = null,
+  focusRequestToken,
 }: MapLibreMapProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMapInstance | null>(null);
@@ -270,6 +275,18 @@ export default function MapLibreMap({
   useEffect(() => {
     mapRef.current?.jumpTo({ center: [center.lng, center.lat], zoom });
   }, [center, zoom]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || focusRequestToken == null) return;
+    const bounds = focusRing ? ringLatLngBounds(focusRing) : null;
+    if (!bounds) return;
+    const fit = new maplibregl.LngLatBounds(
+      [bounds.west, bounds.south],
+      [bounds.east, bounds.north],
+    );
+    map.fitBounds(fit, { padding: 40, duration: 500 });
+  }, [focusRing, focusRequestToken]);
 
   const routeCoordinates = useMemo(
     () => waypoints.map((point) => [point.lon, point.lat]),

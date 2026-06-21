@@ -40,18 +40,22 @@ export function PrivatePatrolStatusSections({
         </Box>
       )}
 
-      {isEventTriggeredPatrol && eventLocation && (
+      {isEventTriggeredPatrol && (
         <Box sx={{ mt: 3 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            Trigger Event
+            Event Triggered Patrol
           </Typography>
+          {eventLocation ? (
+            <Typography variant="body2">
+              Location: {eventLocation.lat.toFixed(6)}, {eventLocation.lon.toFixed(6)}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Using property polygon as response area
+            </Typography>
+          )}
           <Typography variant="body2">
-            Location: {eventLocation.lat.toFixed(6)}, {eventLocation.lon.toFixed(6)}
-          </Typography>
-          <Typography variant="body2">
-            Trigger: {gridParams.trigger_type} | Track:{" "}
-            {gridParams.track_target ? "yes" : "no"} | Stream:{" "}
-            {gridParams.auto_stream_video ? "yes" : "no"}
+            Track: {gridParams.track_target ? "yes" : "no"}
           </Typography>
         </Box>
       )}

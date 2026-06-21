@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
@@ -20,6 +21,7 @@ from backend.modules.warehouse.service.structure_extraction import (
     StructureResult,
     _assign_astar_priority,
     _detect_shelf_levels,
+    classify_clearance,
 )
 from backend.modules.warehouse.service.structure_jobs import (
     _attach_quality_gate,
@@ -230,6 +232,80 @@ def test_structure_quality_gate_accepts_occupancy_backed_output() -> None:
     assert quality["reasons"] == []
 
 
+def test_structure_quality_trusts_live_esdf_occupancy_diagnostics() -> None:
+    """Regression: live ROS readiness must suppress false missing_* reasons.
+
+    The point cloud clearance fallback and a missing ``nvblox_occupancy`` chunk
+    used to force ``missing_occupancy_grid`` / ``missing_esdf_topic``. When the
+    fresh extraction-time readiness probe confirms the topics publish, those
+    reasons must not appear.
+    """
+    result = StructureResult(
+        targets=[],
+        summary={
+            "counts": {
+                "aisles": 2,
+                "racks": 6,
+                "candidate_targets": 64,
+                "active_targets": 0,
+                "rejected_clearance": 8,
+            },
+            "clearance": {"source": "point_cloud_kdtree"},
+            "diagnostics": {
+                "esdf_available": True,
+                "esdf_topic": "/nvblox_node/static_esdf_pointcloud",
+                "occupancy_available": True,
+                "occupancy_topic": "/nvblox_node/combined_occupancy_grid",
+            },
+            "map_quality": {
+                "chunk_counts": {"rgbd_colored": 64},
+                "missing_topics": ["/nvblox_node/static_esdf_pointcloud"],
+            },
+        },
+        rejected_clearance=8,
+    )
+
+    _attach_quality_gate(result)
+
+    reasons = result.summary["quality"]["reasons"]
+    assert "missing_esdf_topic" not in reasons
+    assert "missing_occupancy_grid" not in reasons
+
+
+def test_classify_clearance_status_thresholds() -> None:
+    strict = 0.25
+    review = 0.10
+
+    # Strict pass with reliable evidence -> active.
+    assert (
+        classify_clearance(
+            0.30, strict_clearance_m=strict, review_clearance_m=review, reliable_evidence=True
+        )
+        == "active"
+    )
+    # Strict pass but no reliable clearance evidence -> needs_review (soft).
+    assert (
+        classify_clearance(
+            0.30, strict_clearance_m=strict, review_clearance_m=review, reliable_evidence=False
+        )
+        == "needs_review"
+    )
+    # Between review and strict -> needs_review.
+    assert (
+        classify_clearance(
+            0.15, strict_clearance_m=strict, review_clearance_m=review, reliable_evidence=True
+        )
+        == "needs_review"
+    )
+    # Below review threshold -> rejected.
+    assert (
+        classify_clearance(
+            0.05, strict_clearance_m=strict, review_clearance_m=review, reliable_evidence=True
+        )
+        == "rejected"
+    )
+
+
 def test_structure_quality_backfills_legacy_summary() -> None:
     summary = {
         "counts": {
@@ -249,6 +325,60 @@ def test_structure_quality_backfills_legacy_summary() -> None:
 
     assert summary["quality"]["status"] == "needs_review"
     assert summary["quality"]["active_target_count"] == 0
+
+
+def _synthetic_two_rack_warehouse_cloud() -> np.ndarray:
+    """Build a deterministic two-rack / one-aisle point cloud for extraction."""
+    rng = np.random.default_rng(7)
+    parts: list[np.ndarray] = []
+
+    # Floor slab so floor detection has a clear z=0 plane.
+    fx = rng.uniform(0.0, 8.0, 6000)
+    fy = rng.uniform(-0.5, 4.0, 6000)
+    fz = np.zeros_like(fx)
+    parts.append(np.column_stack([fx, fy, fz]))
+
+    # Two dense rack rows (vertical mass) separated by a wide empty aisle.
+    for y_lo, y_hi in ((0.0, 0.4), (3.0, 3.4)):
+        rx = rng.uniform(0.0, 8.0, 9000)
+        ry = rng.uniform(y_lo, y_hi, 9000)
+        rz = rng.uniform(0.3, 3.0, 9000)
+        parts.append(np.column_stack([rx, ry, rz]))
+
+    return np.ascontiguousarray(np.vstack(parts).astype(np.float32))
+
+
+def test_extract_structure_creates_draft_setup_without_active_targets() -> None:
+    from backend.modules.warehouse.service.structure_extraction import (
+        StructureExtractionParams,
+        extract_structure,
+    )
+
+    cloud = _synthetic_two_rack_warehouse_cloud()
+
+    # No occupancy grid -> no reliable clearance evidence -> nothing is promoted
+    # to "active", so the run must still yield a reviewable draft setup instead of
+    # raising or silently returning nothing.
+    result = extract_structure(
+        cloud,
+        params=StructureExtractionParams(axis_deg=0.0).sanitized(),
+        occupancy_grid=None,
+    )
+
+    summary = result.summary
+    counts = summary["target_counts"]
+
+    assert counts["candidate"] > 0
+    assert counts["active"] == 0
+    assert counts["candidate"] == counts["active"] + counts["needs_review"] + counts["rejected"]
+    assert summary["coordinate_setup_status"] == "draft"
+    assert summary["manual_review_required"] is True
+    assert summary["counts"]["racks"] >= 1
+    assert {t.clearance_status for t in result.targets} <= {
+        "active",
+        "needs_review",
+        "rejected",
+    }
 
 
 def test_shelf_detection_caps_noisy_vertical_peaks() -> None:

@@ -16,7 +16,7 @@ import {
   type TerraDrawToolMode,
 } from "../../maps";
 import { useMissionCommandMetrics } from "../../mission-runtime";
-import { stripClosedRing, type LonLat } from "../../fields";
+import { stripClosedRing, computeRingMapViewport, type LonLat } from "../../fields";
 import type { Waypoint } from "../../mission-workflow";
 
 export function useFieldSurveyMap({
@@ -285,6 +285,43 @@ export function useFieldSurveyMap({
     setVideoError(null);
   }, []);
 
+  const [fieldFocusViewport, setFieldFocusViewport] = useState<{
+    center: LatLng;
+    zoom: number;
+    ring: LonLat[];
+    token: number;
+  } | null>(null);
+
+  const focusFieldRing = useCallback(
+    (ring: LonLat[]) => {
+      if (mapEngine === "google" && mapRef.current && window.google?.maps) {
+        const pts = stripClosedRing(ring);
+        if (pts.length >= 3) {
+          const bounds = new google.maps.LatLngBounds();
+          pts.forEach(([lon, lat]) => bounds.extend({ lat, lng: lon }));
+          if (!bounds.isEmpty()) {
+            mapRef.current.fitBounds(bounds);
+          }
+        }
+      }
+
+      const viewport = computeRingMapViewport(ring);
+      if (!viewport) return;
+
+      const token = Date.now();
+      lastSyncedCenterRef.current = viewport.center;
+      setCenter(viewport.center);
+      setMapZoom(viewport.zoom);
+      setFieldFocusViewport({
+        center: viewport.center,
+        zoom: viewport.zoom,
+        ring,
+        token,
+      });
+    },
+    [mapEngine],
+  );
+
   useEffect(() => {
     if (mapEngine !== "google") return;
 
@@ -373,16 +410,19 @@ export function useFieldSurveyMap({
   }, [isLoaded, mapReady, terraDrawMode, waypoints]);
 
   useEffect(() => {
-    if (mapEngine !== "google") return;
-    if (!mapReady || !selectedField) return;
-    loadRingIntoEditor(selectedField.ring);
-    focusRingOnMap(selectedField.ring);
-  }, [focusRingOnMap, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
+    if (!selectedField) return;
+    if (mapEngine === "google" && mapReady) {
+      loadRingIntoEditor(selectedField.ring);
+    }
+    focusFieldRing(selectedField.ring);
+  }, [focusFieldRing, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
 
   const mapCenter = useMemo(
-    () => droneCenter || userCenter || center,
-    [droneCenter, userCenter, center]
+    () => fieldFocusViewport?.center ?? droneCenter ?? userCenter ?? center,
+    [fieldFocusViewport, droneCenter, userCenter, center],
   );
+
+  const effectiveMapZoom = fieldFocusViewport?.zoom ?? mapZoom;
 
   const mapOptions = useMemo(
     () => ({
@@ -416,8 +456,11 @@ export function useFieldSurveyMap({
     handleMapEngineChange,
     cesiumViewMode,
     setCesiumViewMode,
-    mapZoom,
+    mapZoom: effectiveMapZoom,
     mapCenter,
+    fieldFocusRequest: fieldFocusViewport
+      ? { ring: fieldFocusViewport.ring, token: fieldFocusViewport.token }
+      : null,
     mapOptions,
     loadingLocation,
     isLoaded,
@@ -443,6 +486,7 @@ export function useFieldSurveyMap({
     handleVideoError,
     handleVideoLoad,
     handleVideoRetry,
+    focusFieldRing,
     cesiumFieldBoundary,
     userCenter,
     syncFieldBorderFromSnapshot,

@@ -273,9 +273,23 @@ async def get_warehouse_structure(
             )
             or 0
         ),
+        review_target_count=int(meta.get("review_target_count") or 0),
+        rejected_target_count=int(meta.get("rejected_target_count") or 0),
+        coordinate_setup_status=str(
+            meta.get("coordinate_setup_status")
+            or summary_dict.get("coordinate_setup_status")
+            or ("active" if quality_status == "ready" else "draft")
+        ),  # type: ignore[arg-type]
+        manual_review_required=bool(
+            meta.get("manual_review_required", quality_status != "ready")
+        ),
+        target_counts=(
+            dict(summary_dict.get("target_counts") or {})
+            if isinstance(summary_dict.get("target_counts"), dict)
+            else {}
+        ),
         quality_status=quality_status,  # type: ignore[arg-type]
         quality_reasons=list(meta.get("quality_reasons") or quality.get("reasons") or []),
         confidence=meta.get("confidence") if meta.get("confidence") is not None else quality.get("confidence"),
         summary=summary_dict,
     )
-

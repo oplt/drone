@@ -1,4 +1,5 @@
 import type { PreflightSettings } from "../api/preflightApi";
+import type { PreflightRunResponse } from "../types";
 import type { CategoryKey, RowStatus } from "./preflightTypes";
 
 export const DEFAULT_PREFLIGHT_SETTINGS: PreflightSettings = {
@@ -23,6 +24,11 @@ export const DEFAULT_PREFLIGHT_SETTINGS: PreflightSettings = {
   BANK_MAX_DEG: 30.0,
   TURN_PENALTY_S: 2.0,
   WP_RADIUS_M: 2.0,
+  WIND_MAX: 12.0,
+  GUST_MAX: 15.0,
+  WEATHER_MAX_PRECIP_MM: 0.5,
+  WEATHER_MIN_VISIBILITY_M: 3000.0,
+  WEATHER_MAX_CLOUD_COVER_PCT: 90.0,
 };
 
 export const CATEGORY_LABELS: Record<CategoryKey, string> = {
@@ -153,3 +159,50 @@ export const missionRangeFromTelemetry = (telemetry: unknown): number | null => 
   }
   return haversineMeters(homeLat, homeLon, lat, lon);
 };
+
+export function collectFailedPreflightChecks(
+  preflightRun: PreflightRunResponse | null | undefined,
+): Array<{ name: string; message?: string | null }> {
+  if (!preflightRun?.report) return [];
+  const checks = [
+    ...(preflightRun.report.base_checks ?? []),
+    ...(preflightRun.report.mission_checks ?? []),
+  ];
+  return checks
+    .filter((check) => normalizeStatus(check.status) === "FAIL")
+    .map((check) => ({ name: check.name, message: check.message }));
+}
+
+export function preflightAllowsMissionStart(
+  preflightRun: PreflightRunResponse | null | undefined,
+): boolean {
+  return preflightRun?.can_start_mission === true;
+}
+
+export function formatPreflightFailureMessage(
+  preflightRun: PreflightRunResponse,
+): string {
+  const status = preflightRun.overall_status || "FAIL";
+  const failed = preflightRun.report?.summary?.failed;
+  const failedChecks = collectFailedPreflightChecks(preflightRun);
+  const checkDetails =
+    failedChecks.length > 0
+      ? ` Failed: ${failedChecks.map((check) => check.name).join(", ")}.`
+      : "";
+  if (typeof failed === "number") {
+    return `Preflight ${status}. ${failed} check(s) failed.${checkDetails}`;
+  }
+  return `Preflight ${status}. Mission start blocked.${checkDetails}`;
+}
+
+export function describePreflightStartBlock(
+  preflightRun: PreflightRunResponse | null | undefined,
+): string | null {
+  if (!preflightRun) {
+    return "Run preflight checks before starting this patrol.";
+  }
+  if (!preflightAllowsMissionStart(preflightRun)) {
+    return formatPreflightFailureMessage(preflightRun);
+  }
+  return null;
+}

@@ -14,17 +14,17 @@ type SavedFieldOption = {
 };
 
 export function SavedFieldsPanel({
-  fields,
-  selectedFieldId,
-  selectedField,
-  loadingFields,
-  deletingField,
-  onSelectField,
-  onRefresh,
-  onFocusSelected,
-  onDeleteSelected,
-  labels,
-}: {
+                                   fields,
+                                   selectedFieldId,
+                                   selectedField,
+                                   loadingFields,
+                                   deletingField,
+                                   onSelectField,
+                                   onRefresh,
+                                   onFocusSelected,
+                                   onDeleteSelected,
+                                   labels,
+                                 }: {
   fields: SavedFieldOption[];
   selectedFieldId: number | null;
   selectedField: SavedFieldOption | null;
@@ -44,67 +44,94 @@ export function SavedFieldsPanel({
   };
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        <InfoLabel
-          label={labels?.panelTitle ?? "Saved Fields"}
-          info={labels?.panelInfo ?? "Select a saved field to load and focus it on the map."}
-        />
-      </Typography>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={0.25}
-        alignItems={{ xs: "stretch", sm: "flex-start" }}
-      >
-        <TextField
-          variant="filled"
-          select
-          size="small"
-          fullWidth
-          label={labels?.selectLabel ?? "Saved fields (database)"}
-          value={selectedFieldId == null ? "" : String(selectedFieldId)}
-          onChange={(e) => {
-            const raw = e.target.value;
-            onSelectField(raw ? Number(raw) : null);
+      <Paper
+          variant="outlined"
+          sx={{
+            p: 2,
+            borderRadius: 2,
+            minWidth: 0,
+            height: "100%",
           }}
-          helperText={
-            selectedField
-              ? `Selected: ${selectedField.name} (#${selectedField.id})`
-              : undefined
-          }
-          sx={{ flexGrow: 1, minWidth: 0 }}
-        >
-          <MenuItem value="">None</MenuItem>
-          {fields.map((field) => (
-            <MenuItem key={field.id} value={String(field.id)}>
-              {field.name} (#{field.id})
-            </MenuItem>
-          ))}
-        </TextField>
+      >
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          <InfoLabel
+              label={labels?.panelTitle ?? "Saved Fields"}
+              info={labels?.panelInfo ?? "Select a saved field to load and focus it on the map."}
+          />
+        </Typography>
 
-        <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
-          <ActionIconButton
-            variant="refresh"
-            title={labels?.refreshTitle ?? "Refresh saved fields"}
-            loading={loadingFields}
-            onClick={onRefresh}
-          />
-          <ActionIconButton
-            variant="focus"
-            title={labels?.focusTitle ?? "Focus selected field"}
-            disabled={!selectedField}
-            onClick={onFocusSelected}
-          />
-          <ActionIconButton
-            variant="delete"
-            title={labels?.deleteTitle ?? "Delete selected field"}
-            color="error"
-            loading={deletingField}
-            disabled={!selectedField}
-            onClick={onDeleteSelected}
-          />
+        <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={0.75}
+            alignItems={{ xs: "stretch", sm: "flex-start" }}
+            sx={{ minWidth: 0, width: "100%" }}
+        >
+          <TextField
+              variant="filled"
+              select
+              size="small"
+              fullWidth
+              label={labels?.selectLabel ?? "Saved fields (database)"}
+              value={selectedFieldId == null ? "" : String(selectedFieldId)}
+              onChange={(e) => {
+                const raw = e.target.value;
+                onSelectField(raw ? Number(raw) : null);
+              }}
+              helperText={
+                selectedField
+                    ? `Selected: ${selectedField.name} (#${selectedField.id})`
+                    : undefined
+              }
+              sx={{
+                flex: "1 1 0",
+                minWidth: 0,
+              }}
+          >
+            <MenuItem value="">None</MenuItem>
+            {fields.map((field) => (
+                <MenuItem key={field.id} value={String(field.id)}>
+                  {field.name} (#{field.id})
+                </MenuItem>
+            ))}
+          </TextField>
+
+          <Stack
+              direction="row"
+              spacing={0.25}
+              alignItems="center"
+              justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+              sx={{
+                flex: "0 0 auto",
+                pt: { xs: 0, sm: 0.5 },
+                "& .MuiIconButton-root": {
+                  width: 32,
+                  height: 32,
+                  p: 0.5,
+                },
+              }}
+          >
+            <ActionIconButton
+                variant="refresh"
+                title={labels?.refreshTitle ?? "Refresh saved fields"}
+                loading={loadingFields}
+                onClick={onRefresh}
+            />
+            <ActionIconButton
+                variant="focus"
+                title={labels?.focusTitle ?? "Focus selected field"}
+                disabled={!selectedField}
+                onClick={onFocusSelected}
+            />
+            <ActionIconButton
+                variant="delete"
+                title={labels?.deleteTitle ?? "Delete selected field"}
+                color="error"
+                loading={deletingField}
+                disabled={!selectedField}
+                onClick={onDeleteSelected}
+            />
+          </Stack>
         </Stack>
-      </Stack>
-    </Paper>
+      </Paper>
   );
 }

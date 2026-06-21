@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 _MODEL_MODULES = (
     "backend.modules.agents.models",
+    "backend.modules.alerts.models",
     "backend.modules.automation.models",
     "backend.modules.compliance.models",
     "backend.modules.deliverables.models",
@@ -25,6 +26,7 @@ _MODEL_MODULES = (
     "backend.modules.missions.flight_models",
     "backend.modules.missions.runtime_models",
     "backend.modules.organizations.models",
+    "backend.modules.patrol.config_models",
     "backend.modules.patrol.models",
     "backend.modules.property_patrol.models",
     "backend.modules.preflight.models",

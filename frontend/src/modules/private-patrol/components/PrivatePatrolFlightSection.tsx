@@ -1,6 +1,10 @@
-import { Alert, Button, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Button, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import type { PrivatePatrolMissionStatus } from "../types";
 import type { usePrivatePatrolMission } from "../hooks/usePrivatePatrolMission";
+import {
+  describePreflightStartBlock,
+  preflightAllowsMissionStart,
+} from "../../mission-runtime/preflight/preflightUtils";
 
 type MissionVm = ReturnType<typeof usePrivatePatrolMission>;
 
@@ -11,12 +15,10 @@ function startPatrolLabel(
   if (sending) {
     if (mission.isWaypointPatrol) return "Starting waypoint patrol…";
     if (mission.isGridSurveillance) return "Starting grid surveillance…";
-    if (mission.isEventTriggeredPatrol) return "Starting event-triggered patrol…";
     return "Starting perimeter patrol…";
   }
   if (mission.isWaypointPatrol) return "Start waypoint patrol";
   if (mission.isGridSurveillance) return "Start grid surveillance";
-  if (mission.isEventTriggeredPatrol) return "Start event-triggered patrol";
   return "Start perimeter patrol";
 }
 
@@ -30,6 +32,7 @@ function isStartDisabled(mission: MissionVm): boolean {
     gridPreviewError,
     hasRequiredTaskGeometry,
     isWaypointPatrol,
+    preflightRun,
   } = mission;
 
   return (
@@ -41,7 +44,8 @@ function isStartDisabled(mission: MissionVm): boolean {
     altInput === "" ||
     Number(altInput) < 1 ||
     Number(altInput) > 500 ||
-    !hasRequiredTaskGeometry
+    !hasRequiredTaskGeometry ||
+    !preflightAllowsMissionStart(preflightRun)
   );
 }
 
@@ -65,7 +69,11 @@ export function PrivatePatrolFlightSection({
     handleAltitudeInputChange,
     normalizeAltitude,
     sending,
+    preflightRun,
   } = mission;
+
+  const preflightStartBlockReason = describePreflightStartBlock(preflightRun);
+  const startDisabled = isStartDisabled(mission);
 
   const content = (
     <Stack spacing={2}>
@@ -100,15 +108,28 @@ export function PrivatePatrolFlightSection({
       />
 
       <Stack direction="row" justifyContent="flex-end">
-        <Button
-          variant="contained"
-          color="success"
-          disabled={isStartDisabled(mission)}
-          onClick={onSendMission}
+        <Tooltip
+          title={startDisabled && preflightStartBlockReason ? preflightStartBlockReason : ""}
+          disableHoverListener={!startDisabled || !preflightStartBlockReason}
         >
-          {startPatrolLabel(mission, sending)}
-        </Button>
+          <span>
+            <Button
+              variant="contained"
+              color="success"
+              disabled={startDisabled}
+              onClick={onSendMission}
+            >
+              {startPatrolLabel(mission, sending)}
+            </Button>
+          </span>
+        </Tooltip>
       </Stack>
+
+      {preflightStartBlockReason ? (
+        <Typography variant="caption" color="text.secondary">
+          {preflightStartBlockReason}
+        </Typography>
+      ) : null}
 
       {activeFlightId ? (
         <Alert severity="info">

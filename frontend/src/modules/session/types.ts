@@ -4,6 +4,7 @@ export type SessionUser = {
   first_name?: string | null;
   last_name?: string | null;
   role?: string | null;
+  org_id?: number | null;
 };
 
 export type LoginRequest = {

@@ -11,10 +11,12 @@ export function useMissionPreflightRows({
   missionType,
   preflightRun,
   telemetry,
+  droneConnected,
 }: {
   missionType: string;
   preflightRun: PreflightRunResponse | null;
   telemetry: TelemetrySnapshot | null;
+  droneConnected?: boolean;
 }) {
   const settingsQuery = useQuery({
     queryKey: missionKeys.preflightSettings(),
@@ -34,8 +36,9 @@ export function useMissionPreflightRows({
         params,
         telemetry,
         preflightRun,
+        droneConnected,
       }),
-    [missionType, params, preflightRun, telemetry],
+    [droneConnected, missionType, params, preflightRun, telemetry],
   );
 
   return {

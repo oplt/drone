@@ -12,6 +12,7 @@ from backend.modules.ai.service import AISettingsService
 from backend.modules.settings.repository import SettingsRepository
 from backend.modules.settings.schemas import SettingsDoc
 from backend.modules.settings.service import get_runtime_settings
+from backend.modules.vehicle_runtime.factory import reset_orchestrator
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -43,7 +44,12 @@ async def put_settings(payload: SettingsDoc, request: Request):
 
     # Refresh runtime settings for this process
     request.app.state.settings_doc = await svc.get_effective_settings_doc()
+    previous_conn = getattr(request.app.state, "settings", None)
+    previous_drone_conn = getattr(previous_conn, "drone_conn", None) if previous_conn else None
     request.app.state.settings = await get_runtime_settings(svc)
+    new_drone_conn = request.app.state.settings.drone_conn
+    if str(previous_drone_conn or "").strip() != str(new_drone_conn or "").strip():
+        await reset_orchestrator()
 
     return saved
 

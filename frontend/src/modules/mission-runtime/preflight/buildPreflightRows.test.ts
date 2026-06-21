@@ -24,6 +24,20 @@ describe("buildPreflightRows", () => {
     expect(hdop?.status).toBe("FAIL");
   });
 
+  it("does not infer pass from stale telemetry when drone is disconnected", () => {
+    const rows = buildPreflightRows({
+      missionType: "route",
+      params: DEFAULT_PREFLIGHT_SETTINGS,
+      telemetry: { gps: { hdop: 0.8, satellites_visible: 12 } },
+      preflightRun: null,
+      droneConnected: false,
+    });
+
+    const hdop = rows.SYSTEM_STATUS.find((row) => row.id === "hdop");
+    expect(hdop?.status).toBe("NOT_RUN");
+    expect(hdop?.statusDetail).toContain("Drone not connected");
+  });
+
   it("skips mission rows for unsupported mission types", () => {
     const rows = buildPreflightRows({
       missionType: "warehouse",

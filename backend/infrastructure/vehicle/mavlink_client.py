@@ -102,11 +102,26 @@ class MavlinkDrone(DroneClient):
         # to tune acceptance radii, lookahead, or attach a progress callback.
         self.follower_config: WaypointFollowerConfig = WaypointFollowerConfig()
 
+    def _resolved_connection_str(self) -> str:
+        """Use live runtime settings when the adapter was built with a stale/empty string."""
+        configured = (settings.drone_conn or "").strip()
+        stored = (self.connection_str or "").strip()
+        if configured:
+            return configured
+        return stored
+
     def connect(self, *, home_fallback_allowed: bool | None = None) -> None:
         with self._connect_lock:
             if self.vehicle is not None:
                 logger.info("MAVLink vehicle already connected endpoint=%s", self.connection_str)
                 return
+            conn = self._resolved_connection_str()
+            if not conn:
+                raise RuntimeError(
+                    "Drone connection string is not configured. "
+                    "Set DRONE_CONN in backend/.env or credentials.drone_conn in Settings."
+                )
+            self.connection_str = conn
             self.vehicle = connect(
                 self.connection_str,
                 wait_ready=True,

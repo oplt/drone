@@ -55,7 +55,8 @@ async def main() -> None:
         default=[],
         help="Allowed patrol AI task. Repeatable. Defaults to all standard patrol AI tasks.",
     )
-    parser.add_argument("--trigger-type", type=str, default="fence_alarm")
+    parser.add_argument("--trigger-id", type=str, default="sim-trigger-1")
+    parser.add_argument("--sensor-id", type=str, default="sim-sensor-1")
     parser.add_argument("--target-label", type=str, default="person")
     parser.add_argument("--event-type", type=str, default="restricted_zone_entry")
     parser.add_argument("--object-class", type=str, default="person")
@@ -89,7 +90,8 @@ async def main() -> None:
             "mission_type": "private_patrol",
             "mission_task_type": args.mission_task_type,
             "private_patrol_ai_tasks": allowed_ai_tasks,
-            "private_patrol_trigger_type": args.trigger_type,
+            "private_patrol_trigger_id": args.trigger_id,
+            "private_patrol_sensor_id": args.sensor_id,
             "private_patrol_target_label": args.target_label,
         }
 

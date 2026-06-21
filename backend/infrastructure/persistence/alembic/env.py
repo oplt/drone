@@ -48,6 +48,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
+        include_object=include_object,
         compare_type=True,
         compare_server_default=True,
     )

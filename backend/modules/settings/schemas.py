@@ -72,6 +72,22 @@ class PreflightSettings(BaseModel):
     BANK_MAX_DEG: float = 30.0
     TURN_PENALTY_S: float = 2.0
     WP_RADIUS_M: float = 2.0
+    weather_preflight_enabled: bool = True
+    weather_cache_ttl_s: float = 300.0
+    weather_api_fail_policy: str = "warn"
+    WIND_MAX: float = 12.0
+    GUST_MAX: float = 15.0
+    weather_max_precip_mm: float = 0.5
+    weather_min_visibility_m: float = 3000.0
+    weather_max_cloud_cover_pct: float = 90.0
+    weather_min_temp_c: float = -10.0
+    weather_max_temp_c: float = 40.0
+    weather_blocked_codes: str = "45,48,56,57,65,67,75,77,82,85,86,95,96,99"
+    weather_warn_codes: str = "51,53,55,61,63,80,81"
+    kmi_rmi_validation_enabled: bool = True
+    kmi_rmi_max_obs_age_hours: float = 6.0
+    kmi_rmi_wind_delta_warn_mps: float = 4.0
+    kmi_rmi_wind_delta_block_mps: float = 8.0
 
 
 class RaspberrySettings(BaseModel):

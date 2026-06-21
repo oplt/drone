@@ -12,9 +12,11 @@ from typing import Literal
 
 from backend.infrastructure.warehouse.bridge_config import list_ros2_topics, ros_command_env
 from backend.modules.warehouse.service.map_source_config import (
+    ESDF_TOPIC_CANDIDATES,
     NVBLOX_INTERNAL_LAYER_TOPICS,
     NVBLOX_OPTIONAL_ESDF_TOPICS,
     NVBLOX_REQUIRED_POINTCLOUD_TOPICS,
+    OCCUPANCY_TOPIC_CANDIDATES,
     ODOM_PREFLIGHT_TOPICS,
     RGBD_INPUT_TOPICS,
     RGBD_POINTCLOUD_CANDIDATE_PREFIXES,
@@ -101,6 +103,36 @@ class MappingReadinessResult:
             "readiness_flags": self.readiness_flags(),
             "timing_ms": dict(self.timing_ms),
         }
+
+
+@dataclass(frozen=True)
+class StructureInputReadiness:
+    esdf_topic: str | None = None
+    esdf_message_received: bool = False
+    occupancy_topic: str | None = None
+    occupancy_message_received: bool = False
+    occupancy_message: dict[str, object] | None = None
+
+    @property
+    def esdf_available(self) -> bool:
+        return bool(self.esdf_topic and self.esdf_message_received)
+
+    @property
+    def occupancy_available(self) -> bool:
+        return bool(self.occupancy_topic and self.occupancy_message_received)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "esdf_available": self.esdf_available,
+            "esdf_topic": self.esdf_topic,
+            "esdf_message_received": self.esdf_message_received,
+            "occupancy_available": self.occupancy_available,
+            "occupancy_topic": self.occupancy_topic,
+            "occupancy_message_received": self.occupancy_message_received,
+            "missing_esdf_topic": not self.esdf_available,
+            "missing_occupancy_grid": not self.occupancy_available,
+        }
+
 
 
 def _rgbd_readiness_cache_ttl_s() -> float:
@@ -193,7 +225,9 @@ def _note_mapping_startup(mark: str) -> None:
 
 def _active_mapping_startup_timing():
     try:
-        from backend.modules.warehouse.service.mapping_startup_timing import active_mapping_startup_timing
+        from backend.modules.warehouse.service.mapping_startup_timing import (
+            active_mapping_startup_timing,
+        )
 
         return active_mapping_startup_timing()
     except ModuleNotFoundError:
@@ -378,7 +412,7 @@ def _topic_info(topic: str, ws: Path) -> str | None:
     return None
 
 
-def _topic_has_message(topic: str, ws: Path, *, timeout_s: float = 3.0) -> bool:
+def _topic_message_text(topic: str, ws: Path, *, timeout_s: float = 3.0) -> str | None:
     """Check that at least one message arrives on topic (no hz averaging)."""
     bounded_timeout = max(0.5, float(timeout_s))
     result = _run_sourced_ros_command(
@@ -386,7 +420,94 @@ def _topic_has_message(topic: str, ws: Path, *, timeout_s: float = 3.0) -> bool:
         ws=ws,
         timeout_s=bounded_timeout + 1.0,
     )
-    return bool(result is not None and result.returncode == 0 and (result.stdout or "").strip())
+    if result is None or result.returncode != 0:
+        return None
+    output = (result.stdout or "").strip()
+    return output or None
+
+
+def _topic_has_message(topic: str, ws: Path, *, timeout_s: float = 3.0) -> bool:
+    return _topic_message_text(topic, ws, timeout_s=timeout_s) is not None
+
+
+def _valid_esdf_message(output: str) -> bool:
+    lowered = output.lower()
+    return bool(
+        "frame_id:" in lowered
+        and all(f"name: {field}" in lowered for field in ("x", "y", "z"))
+    )
+
+
+def _valid_occupancy_message(output: str) -> bool:
+    lowered = output.lower()
+    return bool("frame_id:" in lowered and "width:" in lowered and "height:" in lowered)
+
+
+async def refresh_structure_input_readiness(
+    *, timeout_s: float = 15.0
+) -> StructureInputReadiness:
+    """Perform an uncached ROS graph and first-message check for extraction inputs."""
+    ws = _ros2_workspace()
+    try:
+        topics = set(await asyncio.to_thread(list_ros2_topics, ws))
+    except RuntimeError:
+        topics = set()
+
+    async def _first_ready(
+        candidates: tuple[str, ...],
+        expected_type: str,
+        validator,
+    ) -> tuple[str | None, str | None]:
+        available = [topic for topic in candidates if topic in topics]
+        if not available:
+            return None, None
+        deadline = asyncio.get_running_loop().time() + max(0.5, timeout_s)
+        for topic in available:
+            message_type = await asyncio.to_thread(_topic_info, topic, ws)
+            if message_type != expected_type:
+                continue
+            remaining = max(0.5, deadline - asyncio.get_running_loop().time())
+            output = await asyncio.to_thread(
+                _topic_message_text,
+                topic,
+                ws,
+                timeout_s=min(3.0, remaining),
+            )
+            if output is not None and validator(output):
+                return topic, output
+        return None, None
+
+    esdf_result, occupancy_result = await asyncio.gather(
+        _first_ready(
+            ESDF_TOPIC_CANDIDATES,
+            "sensor_msgs/msg/PointCloud2",
+            _valid_esdf_message,
+        ),
+        _first_ready(
+            OCCUPANCY_TOPIC_CANDIDATES,
+            "nav_msgs/msg/OccupancyGrid",
+            _valid_occupancy_message,
+        ),
+    )
+    esdf_topic, esdf_output = esdf_result
+    occupancy_topic, occupancy_output = occupancy_result
+    occupancy_message: dict[str, object] | None = None
+    if occupancy_output is not None:
+        try:
+            import yaml
+
+            parsed = yaml.safe_load(occupancy_output)
+            if isinstance(parsed, dict):
+                occupancy_message = parsed
+        except Exception:
+            logger.debug("Could not parse live occupancy message", exc_info=True)
+    return StructureInputReadiness(
+        esdf_topic=esdf_topic,
+        esdf_message_received=esdf_output is not None,
+        occupancy_topic=occupancy_topic,
+        occupancy_message_received=occupancy_output is not None,
+        occupancy_message=occupancy_message,
+    )
 
 
 def _probe_specs_for_topics(topics: set[str]) -> list[tuple[str, bool, bool, bool]]:
@@ -400,6 +521,8 @@ def _probe_specs_for_topics(topics: set[str]) -> list[tuple[str, bool, bool, boo
         probe_specs.append((topic, True, False, False))
     for topic in NVBLOX_OPTIONAL_ESDF_TOPICS:
         probe_specs.append((topic, True, False, False))
+    for topic in OCCUPANCY_TOPIC_CANDIDATES:
+        probe_specs.append((topic, False, False, False))
     for topic in sorted(topics):
         if topic.startswith("/nvblox_node/back_projected_depth/"):
             probe_specs.append((topic, True, False, False))
@@ -718,7 +841,10 @@ def resolve_colored_bridge_sources(
     back_projected_topic: str | None = None
     for topic in nvblox_pc_topics:
         if topic.endswith("static_esdf_pointcloud"):
-            sources["nvblox_esdf"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_esdf"]
+            sources.setdefault(
+                "nvblox_esdf",
+                replace(WAREHOUSE_LIVE_MAP_SOURCES["nvblox_esdf"], topic=topic),
+            )
         elif topic.startswith("/nvblox_node/back_projected_depth/"):
             back_projected_topic = topic
 

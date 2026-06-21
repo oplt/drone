@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Box, IconButton, Paper, Stack, Tooltip } from "@mui/material";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
@@ -19,6 +19,7 @@ import {
   MissionMapViewport,
   type TerraDrawToolMode,
 } from "../../maps";
+import { MissionMapFrameFooter } from "../../mission-workflow";
 import { MissionVideoPanel } from "../../mission-runtime";
 import type { usePrivatePatrolPage } from "../hooks/usePrivatePatrolPage";
 
@@ -27,9 +28,11 @@ type PageVm = ReturnType<typeof usePrivatePatrolPage>;
 export function PrivatePatrolMapColumn({
   vm,
   onSelectField,
+  setupContent,
 }: {
   vm: PageVm;
   onSelectField: (field: FieldFeature) => void;
+  setupContent: ReactNode;
 }) {
   const { apiBase, map, mission, exclusionZones, fieldBorder } = vm;
   const savedFieldBoundaries = useMemo(
@@ -41,6 +44,10 @@ export function PrivatePatrolMapColumn({
       })),
     [vm.fields],
   );
+  const fieldFocusProps = {
+    focusRing: map.fieldFocusRequest?.ring ?? null,
+    focusRequestToken: map.fieldFocusRequest?.token,
+  };
 
   return (
     <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
@@ -58,7 +65,7 @@ export function PrivatePatrolMapColumn({
         droneConnected={vm.droneConnected}
         telemetry={vm.telemetry}
         missionLabel={vm.missionStatus?.mission_name ?? "Property Patrol Mission"}
-        recordingStatus={vm.mission.gridParams.record_video_stream ? "Recording during flight" : "Live"}
+        recordingStatus="Recording during flight"
         onVideoError={map.handleVideoError}
         onVideoLoad={map.handleVideoLoad}
         onRetry={map.handleVideoRetry}
@@ -102,6 +109,7 @@ export function PrivatePatrolMapColumn({
             onPickLatLng: mission.handleCesiumPick,
             drawMode: mission.drawMode,
             onDrawComplete: map.handleCesiumDrawComplete,
+            ...fieldFocusProps,
           }}
           leafletMapProps={{
             center: map.mapCenter,
@@ -119,6 +127,7 @@ export function PrivatePatrolMapColumn({
             drawMode: mission.drawMode,
             onDrawComplete: map.handleCesiumDrawComplete,
             height: 400,
+            ...fieldFocusProps,
           }}
           mapLibreMapProps={{
             center: map.mapCenter,
@@ -136,6 +145,7 @@ export function PrivatePatrolMapColumn({
             drawMode: mission.drawMode,
             onDrawComplete: map.handleCesiumDrawComplete,
             height: 400,
+            ...fieldFocusProps,
           }}
           googleWrapperSx={{ position: "relative" }}
           googleChildren={<GoogleMapOverlays vm={vm} onSelectField={onSelectField} />}
@@ -143,29 +153,23 @@ export function PrivatePatrolMapColumn({
         />
       </Box>
 
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 1.5,
-          borderRadius: 2,
-          flexShrink: 0,
-          alignSelf: { xs: "stretch", lg: "flex-start" },
-        }}
-      >
-        <Box sx={{ mb: 1, fontSize: 12, color: "text.secondary" }}>
-          Maps
-        </Box>
-        <CesiumViewControls
-          useCesium={map.useCesium}
-          onUseCesiumChange={(next) =>
-            map.handleMapEngineChange(next ? "cesium" : DEFAULT_MISSION_MAP_ENGINE)
-          }
-          mapEngine={map.mapEngine}
-          onMapEngineChange={map.handleMapEngineChange}
-          viewMode={map.cesiumViewMode}
-          onViewModeChange={map.setCesiumViewMode}
-        />
-      </Paper>
+      <MissionMapFrameFooter
+        setupTitle="Set up"
+        setupSubtitle="Property geofence and patrol parameters"
+        setupContent={setupContent}
+        mapSelection={
+          <CesiumViewControls
+            useCesium={map.useCesium}
+            onUseCesiumChange={(next) =>
+              map.handleMapEngineChange(next ? "cesium" : DEFAULT_MISSION_MAP_ENGINE)
+            }
+            mapEngine={map.mapEngine}
+            onMapEngineChange={map.handleMapEngineChange}
+            viewMode={map.cesiumViewMode}
+            onViewModeChange={map.setCesiumViewMode}
+          />
+        }
+      />
     </Stack>
   );
 }

@@ -33,16 +33,25 @@ export function buildPreflightRows({
   params,
   telemetry,
   preflightRun,
+  droneConnected,
 }: {
   missionType: string;
   params: PreflightSettings;
   telemetry: TelemetrySnapshot | null;
   preflightRun: PreflightRunResponse | null;
+  /** When false, ignore stale websocket telemetry for rows without a backend check result. */
+  droneConnected?: boolean;
 }): PreflightRowsByCategory {
+  const trustLiveTelemetry = droneConnected !== false;
   const normalizedMissionType = String(missionType).toLowerCase();
-  const showMissionRows = ["route", "grid", "photogrammetry", "orbit"].includes(
-    normalizedMissionType,
-  );
+  const showMissionRows = [
+    "route",
+    "grid",
+    "photogrammetry",
+    "orbit",
+    "perimeter_patrol",
+    "private_patrol",
+  ].includes(normalizedMissionType);
 
   const allChecks: PreflightCheck[] = [
     ...(preflightRun?.report?.base_checks ?? []),
@@ -111,7 +120,7 @@ export function buildPreflightRows({
     if (matchedCheck) {
       rowStatus = normalizeStatus(matchedCheck.status);
       statusDetail = matchedCheck.message || matchedCheck.status || "Preflight check result";
-    } else if (actualNum !== null && thresholdNum !== null) {
+    } else if (trustLiveTelemetry && actualNum !== null && thresholdNum !== null) {
       rowStatus =
         def.op === "max"
           ? actualNum <= thresholdNum
@@ -121,13 +130,21 @@ export function buildPreflightRows({
             ? "PASS"
             : "FAIL";
       statusDetail = "Live telemetry evaluation";
-    } else if (def.op === "required" && thresholdBool !== null && actualBool !== null) {
+    } else if (
+      trustLiveTelemetry &&
+      def.op === "required" &&
+      thresholdBool !== null &&
+      actualBool !== null
+    ) {
       if (thresholdBool) {
         rowStatus = actualBool ? "PASS" : "FAIL";
       } else {
         rowStatus = "PASS";
       }
       statusDetail = "Live telemetry evaluation";
+    } else if (!trustLiveTelemetry && !matchedCheck) {
+      rowStatus = "NOT_RUN";
+      statusDetail = "Drone not connected; waiting for live telemetry";
     } else if (preflightRun) {
       rowStatus = "SKIP";
       statusDetail = "No value available from telemetry/check result";

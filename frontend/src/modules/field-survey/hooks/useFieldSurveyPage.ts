@@ -167,10 +167,15 @@ export function useFieldSurveyPage() {
       setFieldName(f.name);
       setFieldBorder(f.ring);
       borderEditor.loadRingIntoEditor(f.ring);
-      borderEditor.focusRingOnMap(f.ring);
+      map.focusFieldRing(f.ring);
     },
-    [borderEditor],
+    [borderEditor, map],
   );
+
+  const focusSelectedField = useCallback(() => {
+    if (!selectedField) return;
+    map.focusFieldRing(selectedField.ring);
+  }, [map, selectedField]);
 
   const handleSavedFieldSelect = useCallback(
     (fieldId: number | null) => {
@@ -249,6 +254,7 @@ export function useFieldSurveyPage() {
     setFieldBorder,
     metrics,
     selectField,
+    focusSelectedField,
     loadingFields,
     refreshFields,
     savingField,

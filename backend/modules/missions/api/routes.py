@@ -44,7 +44,6 @@ from backend.modules.missions.schemas.mission_create import (
     MissionCreateIn,
     MissionCreateOut,
     PatrolTaskType,
-    PatrolTriggerType,
 )
 from backend.modules.missions.service.mission_builder import (
     _resolve_trigger_event_location,
@@ -64,10 +63,8 @@ from backend.modules.patrol.planning import (
     generate_waypoint_patrol_plan,
     normalize_ai_tasks,
     normalize_patrol_direction,
-    normalize_trigger_type,
     private_patrol_task_catalog,
     repeat_patrol_loops,
-    trigger_action_profile,
 )
 from backend.modules.preflight.checks.schemas import PreflightReport
 from backend.modules.vehicle_runtime.factory import get_orchestrator
@@ -1291,7 +1288,6 @@ class PrivatePatrolPreviewIn(BaseModel):
     grid_start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto"
     grid_row_stride: int = Field(default=1, ge=1, le=20)
     grid_row_phase_m: float = Field(default=0.0, ge=0.0, le=500.0)
-    trigger_type: PatrolTriggerType = "fence_alarm"
     trigger_event_location_lonlat: list[float] | None = Field(
         default=None, min_length=2, max_length=2
     )
@@ -1316,21 +1312,9 @@ class PrivatePatrolPreviewIn(BaseModel):
                     "task_type='waypoint_patrol' requires key_points_lonlat with at least 2 coordinate pairs."
                 )
         elif self.task_type == "event_triggered_patrol":
-            _ = normalize_trigger_type(self.trigger_type)
-            has_event_loc = bool(
-                self.trigger_event_location_lonlat and len(self.trigger_event_location_lonlat) == 2
-            )
-            if self.trigger_type == "night_schedule":
-                if not has_event_loc and not (
-                    self.property_polygon_lonlat and len(self.property_polygon_lonlat) >= 3
-                ):
-                    raise ValueError(
-                        "task_type='event_triggered_patrol' with trigger_type='night_schedule' "
-                        "requires trigger_event_location_lonlat or property_polygon_lonlat."
-                    )
-            elif not has_event_loc:
+            if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
                 raise ValueError(
-                    "task_type='event_triggered_patrol' requires trigger_event_location_lonlat=[lon, lat]."
+                    "task_type='event_triggered_patrol' requires property_polygon_lonlat geofence."
                 )
         return self
 
@@ -1364,16 +1348,31 @@ async def preview_private_patrol(
     try:
         ai_tasks = normalize_ai_tasks(payload.ai_tasks)
         if payload.task_type == "event_triggered_patrol":
-            event_lon, event_lat = _resolve_trigger_event_location(
-                trigger_type=payload.trigger_type,
+            resolved = _resolve_trigger_event_location(
                 trigger_event_location_lonlat=payload.trigger_event_location_lonlat,
                 property_polygon_lonlat=payload.property_polygon_lonlat,
             )
-            plan = generate_event_triggered_patrol_plan(
-                (event_lon, event_lat),
-                altitude_agl_m=float(payload.cruise_alt),
-                verification_radius_m=float(payload.verification_radius_m),
-            )
+            if resolved is not None:
+                plan = generate_event_triggered_patrol_plan(
+                    resolved,
+                    altitude_agl_m=float(payload.cruise_alt),
+                    verification_radius_m=float(payload.verification_radius_m),
+                )
+            else:
+                polygon = [tuple(pt) for pt in (payload.property_polygon_lonlat or [])]
+                plan = generate_grid_surveillance_plan(
+                    polygon,
+                    altitude_agl_m=float(payload.cruise_alt),
+                    grid_spacing_m=float(payload.grid_spacing_m),
+                    grid_angle_deg=float(payload.grid_angle_deg),
+                    safety_inset_m=float(payload.safety_inset_m),
+                    pattern_mode=payload.grid_pattern_mode,
+                    crosshatch_angle_offset_deg=float(payload.grid_crosshatch_angle_offset_deg),
+                    lane_strategy=payload.grid_lane_strategy,
+                    start_corner=payload.grid_start_corner,
+                    row_stride=int(payload.grid_row_stride),
+                    row_phase_m=float(payload.grid_row_phase_m),
+                )
             waypoints = plan.waypoints
         elif payload.task_type == "grid_surveillance":
             polygon = [tuple(pt) for pt in (payload.property_polygon_lonlat or [])]
@@ -1451,14 +1450,17 @@ async def preview_private_patrol(
         )
 
     if payload.task_type == "event_triggered_patrol":
+        response_mode = (
+            "incident_response"
+            if payload.trigger_event_location_lonlat and len(payload.trigger_event_location_lonlat) == 2
+            else "detection_search"
+        )
         travel_s = total_route_m / max(0.1, float(payload.speed_mps))
         est_duration_s = travel_s + float(payload.verification_loiter_s)
-        action = trigger_action_profile(payload.trigger_type, target_label=payload.target_label)
         stats = {
             **plan.stats,
             "task_type": payload.task_type,
-            "trigger_type": str(payload.trigger_type),
-            "trigger_action": action.get("action"),
+            "response_mode": response_mode,
             "waypoints": len(waypoints),
             "total_route_m": round(total_route_m, 1),
             "estimated_duration_s": round(est_duration_s, 1),

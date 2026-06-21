@@ -14,6 +14,7 @@ import numpy as np
 
 from backend.modules.warehouse.service.live_map_config import render_priority_for_source
 from backend.modules.warehouse.service.map_source_config import (
+    OCCUPANCY_TOPIC_CANDIDATES,
     WAREHOUSE_LIVE_MAP_SOURCES,
     LiveMapSourceConfig,
     chunk_id_for_source,
@@ -211,6 +212,7 @@ async def _store_and_publish_point_chunk(
             "content_type": content_type,
             "priority": priority,
             "stamp": stamp,
+            "source_topic": source.topic,
         },
     )
 
@@ -675,7 +677,7 @@ def resolve_nvblox_layer_bridge_sources(
         sources["nvblox_mesh"] = WAREHOUSE_LIVE_MAP_SOURCES["nvblox_mesh"]
 
     occupancy_candidates = (
-        WAREHOUSE_LIVE_MAP_SOURCES["nvblox_occupancy"].topic,
+        *OCCUPANCY_TOPIC_CANDIDATES,
         "/nvblox_node/static_map_slice",
         "/nvblox_node/occupancy_grid",
         "/nvblox_node/map_slice",

@@ -416,3 +416,5 @@ log/
 
 log
 
+.aider*
+.env

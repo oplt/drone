@@ -1,5 +1,6 @@
 import json
 import logging
+import socket
 import ssl
 import time
 
@@ -44,12 +45,17 @@ class MqttClient:
         self.client.on_disconnect = self._on_disconnect
         self.client.on_log = self._on_log
 
-        # Robust connect with retries
+        # Robust connect with retries (socket timeout bounds each TCP attempt).
         attempt, delay = 0, retry_backoff_s
         last_err = None
         while attempt < max_retries:
             try:
-                self.client.connect(host, port, keepalive=60)
+                previous_timeout = socket.getdefaulttimeout()
+                socket.setdefaulttimeout(connect_timeout)
+                try:
+                    self.client.connect(host, port, keepalive=60)
+                finally:
+                    socket.setdefaulttimeout(previous_timeout)
                 break
             except (OSError, ConnectionRefusedError, TimeoutError) as e:
                 last_err = e

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from backend.modules.patrol.vision.models import AnomalyEvent, GeoPoint, Track
+from backend.modules.patrol.ai_tasks import anomaly_allowed
 from backend.modules.patrol.vision.zones import ZoneEngine
 
 
@@ -46,6 +47,10 @@ class AnomalyScorer:
         self.vehicle_min_confidence = float(vehicle_min_confidence)
 
         self._track_state: dict[int, _TrackEventState] = {}
+        self._enabled_tasks: frozenset[str] = frozenset()
+
+    def set_enabled_tasks(self, enabled_tasks: frozenset[str] | Iterable[str]) -> None:
+        self._enabled_tasks = frozenset(enabled_tasks)
 
     def _cleanup_missing_tracks(self, active_track_ids: set[int]) -> None:
         stale_ids = [tid for tid in self._track_state.keys() if tid not in active_track_ids]
@@ -102,19 +107,24 @@ class AnomalyScorer:
 
                 if track.confidence >= min_conf:
                     entered_sorted = sorted(entered_restricted_zones)
-                    out.append(
-                        AnomalyEvent(
-                            event_type="restricted_zone_entry",
-                            confidence=min(0.99, max(0.50, track.confidence)),
-                            location=point,
-                            payload={
-                                "track_id": track.track_id,
-                                "label": track.label,
-                                "zones": entered_sorted,
-                                "bbox": track.bbox,
-                            },
+                    if anomaly_allowed(
+                        "restricted_zone_entry",
+                        track.label,
+                        self._enabled_tasks,
+                    ):
+                        out.append(
+                            AnomalyEvent(
+                                event_type="restricted_zone_entry",
+                                confidence=min(0.99, max(0.50, track.confidence)),
+                                location=point,
+                                payload={
+                                    "track_id": track.track_id,
+                                    "label": track.label,
+                                    "zones": entered_sorted,
+                                    "bbox": track.bbox,
+                                },
+                            )
                         )
-                    )
                     state.last_restricted_zone_entry_at = now
 
             # 2) intrusion_detected:
@@ -122,9 +132,10 @@ class AnomalyScorer:
             if (
                 track.label == "person"
                 and restricted_zone_names
-                and not state.loitering_emitted
+                and not state.intrusion_emitted
                 and track.first_seen is not None
                 and (now - track.first_seen).total_seconds() >= self.loitering_seconds
+                and anomaly_allowed("intrusion_detected", track.label, self._enabled_tasks)
             ):
                 out.append(
                     AnomalyEvent(
@@ -139,7 +150,7 @@ class AnomalyScorer:
                         },
                     )
                 )
-                state.loitering_emitted = True
+                state.intrusion_emitted = True
 
             # 3) loitering:
             # only once per track and only if the track is in a restricted zone
@@ -148,6 +159,7 @@ class AnomalyScorer:
                 and not state.loitering_emitted
                 and track.first_seen is not None
                 and (now - track.first_seen).total_seconds() >= self.loitering_seconds
+                and anomaly_allowed("loitering", track.label, self._enabled_tasks)
             ):
                 out.append(
                     AnomalyEvent(

@@ -39,6 +39,61 @@ export function computeCentroid(ring: LonLat[]): LatLng | null {
   return { lng: cx / area6, lat: cy / area6 };
 }
 
+export function computeRingMapViewport(
+  ring: LonLat[],
+): { center: LatLng; zoom: number } | null {
+  const pts = stripClosedRing(ring);
+  if (pts.length < 3) return null;
+
+  const center = computeCentroid(ring);
+  if (!center) return null;
+
+  let west = Infinity;
+  let east = -Infinity;
+  let south = Infinity;
+  let north = -Infinity;
+
+  for (const [lon, lat] of pts) {
+    west = Math.min(west, lon);
+    east = Math.max(east, lon);
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+  }
+
+  const latSpan = Math.max(0, north - south);
+  const lngScale = Math.max(0.2, Math.cos((center.lat * Math.PI) / 180));
+  const lngSpan = Math.max(0, east - west) * lngScale;
+  const maxSpan = Math.max(latSpan, lngSpan, 0.0005);
+  const zoom = Math.max(
+    3,
+    Math.min(20, Math.floor(Math.log2(360 / (maxSpan * 1.45)))),
+  );
+
+  return { center, zoom };
+}
+
+export function ringLatLngBounds(
+  ring: LonLat[],
+): { south: number; west: number; north: number; east: number } | null {
+  const pts = stripClosedRing(ring);
+  if (pts.length < 3) return null;
+
+  let west = Infinity;
+  let east = -Infinity;
+  let south = Infinity;
+  let north = -Infinity;
+
+  for (const [lon, lat] of pts) {
+    west = Math.min(west, lon);
+    east = Math.max(east, lon);
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+  }
+
+  if (!Number.isFinite(west) || !Number.isFinite(east)) return null;
+  return { south, west, north, east };
+}
+
 export function computeAreaHa(ring: LonLat[]): number | null {
   const pts = stripClosedRing(ring);
   if (pts.length < 3) return null;

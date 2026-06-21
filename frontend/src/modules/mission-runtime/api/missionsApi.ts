@@ -15,6 +15,13 @@ export async function runPreflight(
   missionPayload: Record<string, unknown>,
   token?: string | null,
 ): Promise<PreflightRunResponse> {
+  const missionType =
+    typeof missionPayload.mission_type === "string" ? missionPayload.mission_type : null;
+  const flightEnvironment =
+    typeof missionPayload.flight_environment === "string"
+      ? missionPayload.flight_environment
+      : null;
+  await ensureDroneConnectionForMissionStart(token, missionType, flightEnvironment);
   return httpRequest<PreflightRunResponse>("/tasks/preflight/run", {
     method: "POST",
     body: missionPayload,

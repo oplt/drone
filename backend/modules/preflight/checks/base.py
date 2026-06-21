@@ -469,6 +469,30 @@ class BasePreflightChecks:
 
         return results
 
+    async def check_weather_availability(self) -> list[CheckResult]:
+        from backend.modules.preflight.weather.evaluation import evaluate_weather_preflight
+        from backend.modules.preflight.weather.models import WeatherSnapshot
+        from backend.modules.preflight.weather.thresholds import weather_thresholds_from_config
+
+        thresholds = weather_thresholds_from_config(self.ctx.config_overrides)
+        if not thresholds.enabled:
+            return [self._skip("Weather Availability", "Weather preflight disabled")]
+
+        raw = self.ctx.weather_data
+        api_error = getattr(self.ctx, "weather_api_error", None)
+        snapshot: WeatherSnapshot | None = None
+        if isinstance(raw, dict) and raw.get("source") not in {None, "unavailable"}:
+            try:
+                snapshot = WeatherSnapshot.from_dict(raw)
+            except (KeyError, TypeError, ValueError):
+                api_error = api_error or "Invalid weather payload"
+
+        return evaluate_weather_preflight(
+            snapshot,
+            thresholds=thresholds,
+            api_error=api_error,
+        )
+
     async def check_battery(
         self,
         estimated_time_s: float | None = None,
@@ -935,7 +959,12 @@ class BasePreflightChecks:
                 True,
                 lambda: self.check_home_position(),
             ),
-            CheckSpec("Wind", Priority.SAFETY, False, lambda: self.check_wind()),
+            CheckSpec(
+                "Weather Availability",
+                Priority.SAFETY,
+                False,
+                lambda: self.check_weather_availability(),
+            ),
             CheckSpec("Geofence", Priority.SAFETY, True, lambda: self.check_geofence()),
             CheckSpec(
                 "Terrain Clearance",

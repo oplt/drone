@@ -137,6 +137,22 @@ def _flatten_for_env(doc: dict[str, Any]) -> dict[str, Any]:
         "BANK_MAX_DEG": p.get("BANK_MAX_DEG"),
         "TURN_PENALTY_S": p.get("TURN_PENALTY_S"),
         "WP_RADIUS_M": p.get("WP_RADIUS_M"),
+        "WEATHER_PREFLIGHT_ENABLED": p.get("weather_preflight_enabled"),
+        "WEATHER_CACHE_TTL_S": p.get("weather_cache_ttl_s"),
+        "WEATHER_API_FAIL_POLICY": p.get("weather_api_fail_policy"),
+        "WIND_MAX": p.get("WIND_MAX"),
+        "GUST_MAX": p.get("GUST_MAX"),
+        "WEATHER_MAX_PRECIP_MM": p.get("weather_max_precip_mm"),
+        "WEATHER_MIN_VISIBILITY_M": p.get("weather_min_visibility_m"),
+        "WEATHER_MAX_CLOUD_COVER_PCT": p.get("weather_max_cloud_cover_pct"),
+        "WEATHER_MIN_TEMP_C": p.get("weather_min_temp_c"),
+        "WEATHER_MAX_TEMP_C": p.get("weather_max_temp_c"),
+        "WEATHER_BLOCKED_CODES": p.get("weather_blocked_codes"),
+        "WEATHER_WARN_CODES": p.get("weather_warn_codes"),
+        "KMI_RMI_VALIDATION_ENABLED": p.get("kmi_rmi_validation_enabled"),
+        "KMI_RMI_MAX_OBS_AGE_HOURS": p.get("kmi_rmi_max_obs_age_hours"),
+        "KMI_RMI_WIND_DELTA_WARN_MPS": p.get("kmi_rmi_wind_delta_warn_mps"),
+        "KMI_RMI_WIND_DELTA_BLOCK_MPS": p.get("kmi_rmi_wind_delta_block_mps"),
         # Raspberry
         "raspberry_ip": r.get("raspberry_ip"),
         "raspberry_user": r.get("raspberry_user"),
@@ -175,8 +191,12 @@ def _flatten_for_env(doc: dict[str, Any]) -> dict[str, Any]:
         "PHOTOGRAMMETRY_ASSET_SIGNING_SECRET": photo.get("PHOTOGRAMMETRY_ASSET_SIGNING_SECRET"),
     }
 
-    # drop None so env defaults remain if DB lacks a value
-    return {k: v for k, v in flat.items() if v is not None}
+    # drop None/blank strings so env defaults remain when DB fields are unset
+    return {
+        k: v
+        for k, v in flat.items()
+        if v is not None and not (isinstance(v, str) and not v.strip())
+    }
 
 
 async def get_runtime_settings(repo: SettingsRepository) -> EnvSettings:

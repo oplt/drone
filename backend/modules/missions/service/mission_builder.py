@@ -27,8 +27,8 @@ from backend.modules.patrol.planning import (
     WaypointPatrolMission,
     normalize_ai_tasks,
     normalize_patrol_direction,
-    normalize_trigger_type,
 )
+from backend.modules.patrol.geo import normalize_polygon_lonlat
 from backend.modules.vehicle_runtime.types import Coordinate
 
 
@@ -53,27 +53,18 @@ def _polygon_centroid_lonlat(
 
 def _resolve_trigger_event_location(
     *,
-    trigger_type: str,
     trigger_event_location_lonlat: list[float] | None,
     property_polygon_lonlat: list[list[float]] | None,
-) -> tuple[float, float]:
-    normalized_trigger = normalize_trigger_type(trigger_type)
+) -> tuple[float, float] | None:
     if trigger_event_location_lonlat and len(trigger_event_location_lonlat) >= 2:
         lon = float(trigger_event_location_lonlat[0])
         lat = float(trigger_event_location_lonlat[1])
         if not (-180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0):
             raise ValueError("trigger_event_location_lonlat must be valid [lon, lat]")
         return lon, lat
+    return None
 
-    if normalized_trigger == "night_schedule":
-        polygon = [tuple(pt) for pt in (property_polygon_lonlat or [])]
-        if len(polygon) >= 3:
-            return _polygon_centroid_lonlat(polygon)
 
-    raise ValueError(
-        "Unable to resolve event location. Provide trigger_event_location_lonlat "
-        "or property_polygon_lonlat for night_schedule."
-    )
 def build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> Any:
     """Return the appropriate mission object for the given payload."""
     if payload.mission_type == MissionType.CONTROLLED:
@@ -225,14 +216,22 @@ def build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> A
         patrol = payload.private_patrol  # validated non-None by model_validator
         ai_tasks = normalize_ai_tasks(patrol.ai_tasks)
         if patrol.task_type == "event_triggered_patrol":
-            event_lon, event_lat = _resolve_trigger_event_location(
-                trigger_type=patrol.trigger_type,
+            geofence = normalize_polygon_lonlat(patrol.property_polygon_lonlat)
+            if len(geofence) < 3:
+                raise ValueError(
+                    "task_type='event_triggered_patrol' requires property_polygon_lonlat geofence."
+                )
+            resolved = _resolve_trigger_event_location(
                 trigger_event_location_lonlat=patrol.trigger_event_location_lonlat,
                 property_polygon_lonlat=patrol.property_polygon_lonlat,
             )
+            response_mode = "incident_response" if resolved is not None else "detection_search"
             mission = EventTriggeredPatrolMission(
-                trigger_type=normalize_trigger_type(patrol.trigger_type),
-                event_location_lonlat=(float(event_lon), float(event_lat)),
+                trigger_id="manual",
+                sensor_id="operator",
+                response_mode=response_mode,
+                event_location_lonlat=resolved,
+                geofence_polygon_lonlat=geofence,
                 altitude_agl=float(payload.cruise_alt),
                 speed_mps=float(patrol.speed_mps),
                 verification_loiter_s=float(patrol.verification_loiter_s),
@@ -241,6 +240,8 @@ def build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> A
                 auto_stream_video=bool(patrol.auto_stream_video),
                 record_video_stream=bool(patrol.record_video_stream),
                 target_label=patrol.target_label,
+                search_grid_spacing_m=float(patrol.grid_spacing_m),
+                search_grid_angle_deg=float(patrol.grid_angle_deg),
                 ai_tasks=ai_tasks,
             )
             return mission, len(mission.get_waypoints())

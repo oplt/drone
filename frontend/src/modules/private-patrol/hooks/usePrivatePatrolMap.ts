@@ -16,7 +16,7 @@ import {
   type TerraDrawToolMode,
 } from "../../maps";
 import { useMissionCommandMetrics } from "../../mission-runtime";
-import { stripClosedRing, type LonLat } from "../../fields";
+import { computeRingMapViewport, stripClosedRing, type LonLat } from "../../fields";
 import type { PatrolGridParams, Waypoint } from "../types";
 
 export function usePrivatePatrolMap({
@@ -229,11 +229,11 @@ export function usePrivatePatrolMap({
         setWaypoints((prev) => [...prev, { lat, lon: lng, alt }]);
         return;
       }
-      if (gridParams.task_type === "event_triggered_patrol") {
+      if (gridParams.event_triggered_enabled) {
         setEventLocation({ lat, lon: lng, alt });
       }
     },
-    [alt, gridParams.task_type, setEventLocation, setWaypoints, terraDrawMode]
+    [alt, gridParams.event_triggered_enabled, gridParams.task_type, setEventLocation, setWaypoints, terraDrawMode]
   );
 
   const handleDrawingToolSelection = useCallback(
@@ -272,7 +272,7 @@ export function usePrivatePatrolMap({
         if (gridParams.task_type === "waypoint_patrol") {
           const [lon, lat] = result.coordinates;
           setWaypoints((prev) => [...prev, { lat, lon, alt }]);
-        } else if (gridParams.task_type === "event_triggered_patrol") {
+        } else if (gridParams.event_triggered_enabled) {
           const [lon, lat] = result.coordinates;
           setEventLocation({ lat, lon, alt });
         }
@@ -280,7 +280,7 @@ export function usePrivatePatrolMap({
 
       setDrawMode("none");
     },
-    [alt, gridParams.task_type, setDrawMode, setEventLocation, setFieldBorder, setSelectedFieldId, setWaypoints]
+    [alt, gridParams.event_triggered_enabled, gridParams.task_type, setDrawMode, setEventLocation, setFieldBorder, setSelectedFieldId, setWaypoints]
   );
 
   const handleVideoError = useCallback(() => {
@@ -297,6 +297,43 @@ export function usePrivatePatrolMap({
     setManualStreamKey(Date.now());
     setVideoError(null);
   }, []);
+
+  const [fieldFocusViewport, setFieldFocusViewport] = useState<{
+    center: LatLng;
+    zoom: number;
+    ring: LonLat[];
+    token: number;
+  } | null>(null);
+
+  const focusFieldRing = useCallback(
+    (ring: LonLat[]) => {
+      if (mapEngine === "google" && mapRef.current && window.google?.maps) {
+        const pts = stripClosedRing(ring);
+        if (pts.length >= 3) {
+          const bounds = new google.maps.LatLngBounds();
+          pts.forEach(([lon, lat]) => bounds.extend({ lat, lng: lon }));
+          if (!bounds.isEmpty()) {
+            mapRef.current.fitBounds(bounds);
+          }
+        }
+      }
+
+      const viewport = computeRingMapViewport(ring);
+      if (!viewport) return;
+
+      const token = Date.now();
+      lastSyncedCenterRef.current = viewport.center;
+      setCenter(viewport.center);
+      setMapZoom(viewport.zoom);
+      setFieldFocusViewport({
+        center: viewport.center,
+        zoom: viewport.zoom,
+        ring,
+        token,
+      });
+    },
+    [mapEngine],
+  );
 
   useEffect(() => {
     if (mapEngine !== "google") return;
@@ -353,7 +390,7 @@ export function usePrivatePatrolMap({
       waypoints.forEach((p) =>
         markersToRender.push({ point: p, title: "Waypoint", color: "#1976d2" })
       );
-    } else if (gridParams.task_type === "event_triggered_patrol" && eventLocation) {
+    } else if (gridParams.event_triggered_enabled && eventLocation) {
       markersToRender.push({
         point: eventLocation,
         title: "Event Location",
@@ -401,6 +438,7 @@ export function usePrivatePatrolMap({
     };
   }, [
     eventLocation,
+    gridParams.event_triggered_enabled,
     gridParams.task_type,
     isLoaded,
     mapReady,
@@ -409,16 +447,19 @@ export function usePrivatePatrolMap({
   ]);
 
   useEffect(() => {
-    if (mapEngine !== "google") return;
-    if (!mapReady || !selectedField) return;
-    loadRingIntoEditor(selectedField.ring);
-    focusRingOnMap(selectedField.ring);
-  }, [focusRingOnMap, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
+    if (!selectedField) return;
+    if (mapEngine === "google" && mapReady) {
+      loadRingIntoEditor(selectedField.ring);
+    }
+    focusFieldRing(selectedField.ring);
+  }, [focusFieldRing, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
 
   const mapCenter = useMemo(
-    () => droneCenter || userCenter || center,
-    [droneCenter, userCenter, center]
+    () => fieldFocusViewport?.center ?? droneCenter ?? userCenter ?? center,
+    [fieldFocusViewport, droneCenter, userCenter, center],
   );
+
+  const effectiveMapZoom = fieldFocusViewport?.zoom ?? mapZoom;
 
   const mapOptions = useMemo(
     () => ({
@@ -452,8 +493,11 @@ export function usePrivatePatrolMap({
     handleMapEngineChange,
     cesiumViewMode,
     setCesiumViewMode,
-    mapZoom,
+    mapZoom: effectiveMapZoom,
     mapCenter,
+    fieldFocusRequest: fieldFocusViewport
+      ? { ring: fieldFocusViewport.ring, token: fieldFocusViewport.token }
+      : null,
     mapOptions,
     loadingLocation,
     isLoaded,
@@ -479,6 +523,7 @@ export function usePrivatePatrolMap({
     handleVideoError,
     handleVideoLoad,
     handleVideoRetry,
+    focusFieldRing,
     cesiumFieldBoundary,
     userCenter,
     syncFieldBorderFromSnapshot,

@@ -4,6 +4,7 @@ import {
   AccordionSummary,
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Stack,
@@ -25,6 +26,12 @@ export function MissionPreflightPanel({
   defaultExpanded = true,
   sx,
   apiBase,
+  onRunPreflight,
+  preflightBusy = false,
+  runDisabled = false,
+  runDisabledReason,
+  runHint,
+  droneConnected,
 }: {
   /** @deprecated Settings load no longer requires apiBase; kept for compatibility. */
   apiBase?: string;
@@ -34,6 +41,12 @@ export function MissionPreflightPanel({
   title?: string;
   defaultExpanded?: boolean;
   sx?: SxProps<Theme>;
+  onRunPreflight?: () => void;
+  preflightBusy?: boolean;
+  runDisabled?: boolean;
+  runDisabledReason?: string;
+  runHint?: string;
+  droneConnected?: boolean;
 }) {
   void apiBase;
 
@@ -41,13 +54,12 @@ export function MissionPreflightPanel({
     missionType,
     preflightRun,
     telemetry,
+    droneConnected,
   });
 
   const overallStatus = preflightRun?.overall_status ?? "NOT_RUN";
   const summary = preflightRun?.report?.summary;
-  const readyToArm =
-    preflightRun?.can_start_mission ??
-    (overallStatus === "PASS" || overallStatus === "WARN");
+  const readyToArm = preflightRun?.can_start_mission === true;
 
   return (
     <Accordion
@@ -91,6 +103,29 @@ export function MissionPreflightPanel({
             </Box>
           )}
           {paramsError && <Alert severity="warning">{paramsError}</Alert>}
+
+          {onRunPreflight ? (
+            <Stack spacing={0.75}>
+              <Button
+                variant="contained"
+                size="small"
+                disabled={preflightBusy || runDisabled}
+                onClick={onRunPreflight}
+              >
+                {preflightBusy ? "Running preflight…" : "Run preflight checks"}
+              </Button>
+              {runDisabled && runDisabledReason ? (
+                <Typography variant="caption" color="text.secondary">
+                  {runDisabledReason}
+                </Typography>
+              ) : null}
+              {!runDisabled && runHint ? (
+                <Typography variant="caption" color="text.secondary">
+                  {runHint}
+                </Typography>
+              ) : null}
+            </Stack>
+          ) : null}
 
           <PreflightCategoryTables rowsByCategory={rowsByCategory} />
 

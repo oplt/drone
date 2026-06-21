@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import threading
 from collections.abc import Coroutine
 from typing import Any
@@ -39,6 +40,15 @@ _TASK_NAME = EXTRACTION_TASK_NAME
 
 @worker_ready.connect
 def _verify_warehouse_mapping_tasks_registered(**_kwargs: Any) -> None:
+    logger.info(
+        "warehouse_mapping_worker_ros_env",
+        extra={
+            "ros_distro": os.getenv("ROS_DISTRO"),
+            "ros_domain_id": os.getenv("ROS_DOMAIN_ID"),
+            "ament_prefix_path_present": bool(os.getenv("AMENT_PREFIX_PATH")),
+            "ros_workspace_sourced": "ros2_ws/install" in os.getenv("AMENT_PREFIX_PATH", ""),
+        },
+    )
     if _TASK_NAME not in celery_app.tasks:
         logger.error(
             "warehouse_mapping worker boot: task %s is NOT registered; "
@@ -83,6 +93,8 @@ def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionP
         shelf_min_spacing_m=settings.warehouse_structure_shelf_min_spacing_m,
         max_shelf_levels=settings.warehouse_structure_max_shelf_levels,
         max_bins_per_rack_face=settings.warehouse_structure_max_bins_per_rack_face,
+        min_target_spacing_m=settings.warehouse_structure_min_target_spacing_m,
+        review_clearance_m=settings.warehouse_structure_review_clearance_m,
         standoff_m=settings.warehouse_structure_standoff_m,
         drone_radius_m=settings.warehouse_structure_drone_radius_m,
         clearance_margin_m=settings.warehouse_structure_clearance_margin_m,
@@ -109,6 +121,12 @@ def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionP
     defaults.max_shelf_levels = int(_override("max_shelf_levels", defaults.max_shelf_levels))
     defaults.max_bins_per_rack_face = int(
         _override("max_bins_per_rack_face", defaults.max_bins_per_rack_face)
+    )
+    defaults.min_target_spacing_m = _override(
+        "min_target_spacing_m", defaults.min_target_spacing_m
+    )
+    defaults.review_clearance_m = _override(
+        "review_clearance_m", defaults.review_clearance_m
     )
     axis = payload.get("axis_deg")
     defaults.axis_deg = None if axis is None else _override("axis_deg", 0.0)

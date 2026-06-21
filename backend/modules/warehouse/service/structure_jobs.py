@@ -24,8 +24,14 @@ from backend.modules.warehouse.models import (
     WarehouseModel,
     WarehouseScanTarget,
 )
+from backend.modules.warehouse.service.live_map_readiness import (
+    refresh_structure_input_readiness,
+)
 from backend.modules.warehouse.service.live_map_storage import (
     warehouse_live_map_chunk_storage,
+)
+from backend.modules.warehouse.service.occupancy_grid_parser import (
+    occupancy_grid_from_ros_yaml,
 )
 from backend.modules.warehouse.service.structure_extraction import (
     StructureExtractionParams,
@@ -218,7 +224,15 @@ async def _persist_result(
     quality = result.summary.get("quality") if isinstance(result.summary, dict) else {}
     quality = quality if isinstance(quality, dict) else {}
     quality_status = str(quality.get("status") or "ready")
-    persist_active_targets = quality_status == "ready"
+    active_target_count = sum(
+        target.clearance_status == "active" for target in result.targets
+    )
+    review_target_count = sum(
+        target.clearance_status == "needs_review" for target in result.targets
+    )
+    rejected_target_count = sum(
+        target.clearance_status == "rejected" for target in result.targets
+    )
     summary_path = await asyncio.to_thread(
         _write_summary_asset, client_flight_id, result.summary
     )
@@ -236,6 +250,10 @@ async def _persist_result(
             )
 
             for tgt in result.targets:
+                scan_pose = dict(tgt.scan_pose)
+                scan_pose["_clearance_status"] = tgt.clearance_status
+                scan_pose["_clearance_m"] = tgt.clearance_m
+                scan_pose["_clearance_source"] = tgt.clearance_source
                 db.add(
                     WarehouseScanTarget(
                         warehouse_map_id=int(warehouse_map_id),
@@ -245,11 +263,11 @@ async def _persist_result(
                         shelf_level=tgt.shelf_level,
                         bin_code=tgt.bin_code,
                         target_point_local_json=tgt.target_point,
-                        scan_pose_local_json=tgt.scan_pose,
+                        scan_pose_local_json=scan_pose,
                         shelf_normal_local_json=tgt.shelf_normal,
                         standoff_m=float(tgt.standoff_m),
                         priority=int(tgt.priority),
-                        active=persist_active_targets,
+                        active=tgt.clearance_status == "active",
                     )
                 )
 
@@ -271,7 +289,14 @@ async def _persist_result(
                         "generated_at": datetime.now(UTC).isoformat(),
                         "summary": result.summary,
                         "target_count": len(result.targets),
-                        "active_target_count": len(result.targets) if persist_active_targets else 0,
+                        "active_target_count": active_target_count,
+                        "review_target_count": review_target_count,
+                        "rejected_target_count": rejected_target_count,
+                        "coordinate_setup_status": (
+                            "active" if active_target_count > 0 else "draft"
+                        ),
+                        "manual_review_required": quality_status != "ready"
+                        or review_target_count > 0,
                         "quality_status": quality_status,
                         "quality_reasons": list(quality.get("reasons") or []),
                         "confidence": quality.get("confidence"),
@@ -289,7 +314,11 @@ async def _persist_result(
         "model_id": int(model_id),
         "client_flight_id": client_flight_id,
         "target_count": len(result.targets),
-        "active_target_count": len(result.targets) if persist_active_targets else 0,
+        "active_target_count": active_target_count,
+        "review_target_count": review_target_count,
+        "rejected_target_count": rejected_target_count,
+        "coordinate_setup_status": "active" if active_target_count > 0 else "draft",
+        "manual_review_required": quality_status != "ready" or review_target_count > 0,
         "rejected_clearance": result.rejected_clearance,
         "aisles": int(result.summary.get("counts", {}).get("aisles", 0)),
         "racks": int(result.summary.get("counts", {}).get("racks", 0)),
@@ -311,12 +340,28 @@ async def extract_and_persist_structure(
     record_extraction_running(warehouse_map_id=int(warehouse_map_id))
     effective = (params or StructureExtractionParams()).sanitized()
     try:
+        readiness = await refresh_structure_input_readiness(timeout_s=8.0)
+        live_occupancy = occupancy_grid_from_ros_yaml(readiness.occupancy_message)
+        logger.info(
+            "warehouse_structure_extract_readiness",
+            extra={"warehouse_map_id": int(warehouse_map_id), **readiness.to_dict()},
+        )
         result = await asyncio.to_thread(
             extract_structure_from_flight,
             client_flight_id,
             params=effective,
+            occupancy_grid=live_occupancy,
         )
         _attach_manifest_hints(result, client_flight_id)
+        result.summary["diagnostics"] = {
+            **readiness.to_dict(),
+            "occupancy_snapshot_source": (
+                "live_ros" if live_occupancy is not None else "saved_or_geometry_fallback"
+            ),
+            "worker_ros_env_ok": bool(
+                readiness.esdf_available or readiness.occupancy_available
+            ),
+        }
         _attach_quality_gate(result)
         persisted = await _persist_result(
             warehouse_map_id=warehouse_map_id,
@@ -327,6 +372,14 @@ async def extract_and_persist_structure(
         record_extraction_ready(
             warehouse_map_id=int(warehouse_map_id),
             target_count=int(persisted.get("target_count") or 0),
+        )
+        logger.info(
+            "warehouse_coordinate_setup_detection_completed",
+            extra={
+                "warehouse_map_id": int(warehouse_map_id),
+                **persisted,
+                "quality_reasons": persisted.get("quality_reasons", []),
+            },
         )
         return persisted
     except Exception as exc:
@@ -392,16 +445,29 @@ def ensure_structure_quality_summary(
     clearance = summary.get("clearance") if isinstance(summary, dict) else {}
     clearance = clearance if isinstance(clearance, dict) else {}
 
-    target_count = int(counts.get("targets") or 0)
+    candidate_count = int(counts.get("candidate_targets") or counts.get("targets") or 0)
+    # New summaries carry an explicit active-target count produced by the
+    # clearance classifier. Legacy summaries only have the total ``targets``
+    # field (a candidate count), so the active tally is derived from the gate
+    # status below instead of trusting that raw number.
+    has_explicit_active_count = "active_targets" in counts
+    target_count = int(
+        counts.get("active_targets")
+        if has_explicit_active_count
+        else counts.get("targets") or 0
+    )
     rack_count = int(counts.get("racks") or 0)
     aisle_count = int(counts.get("aisles") or 0)
     rejected = int(counts.get("rejected_clearance") or rejected_clearance or 0)
-    candidate_count = target_count + rejected
+    if candidate_count <= 0:
+        candidate_count = target_count + rejected
     rejection_ratio = (
         float(rejected) / float(candidate_count) if candidate_count > 0 else 0.0
     )
     targets_per_rack = (
-        float(target_count) / float(rack_count) if rack_count > 0 else float(target_count)
+        float(candidate_count) / float(rack_count)
+        if rack_count > 0
+        else float(candidate_count)
     )
     chunk_counts = (
         map_quality.get("chunk_counts")
@@ -421,15 +487,21 @@ def ensure_structure_quality_summary(
     clearance_source = str(clearance.get("source") or "unknown")
 
     reasons: list[str] = []
-    if target_count <= 0 or rack_count <= 0 or aisle_count <= 0:
+    if candidate_count <= 0 or rack_count <= 0 or aisle_count <= 0:
         reasons.append("insufficient_detected_structure")
     if rack_count > 0 and targets_per_rack > 24.0:
         reasons.append("too_many_targets_per_rack")
     if candidate_count >= 20 and rejection_ratio >= 0.40:
         reasons.append("clearance_rejection_ratio_high")
-    if clearance_source in {"point_cloud_kdtree", "point_cloud_fallback"}:
-        reasons.append("missing_occupancy_grid")
-    if int(chunk_counts.get("nvblox_occupancy") or 0) <= 0:
+    diagnostics = summary.get("diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    occupancy_available = bool(diagnostics.get("occupancy_available")) or int(
+        chunk_counts.get("nvblox_occupancy") or 0
+    ) > 0
+    esdf_available = bool(diagnostics.get("esdf_available")) or int(
+        chunk_counts.get("nvblox_esdf") or 0
+    ) > 0
+    if not occupancy_available:
         reasons.append("missing_occupancy_grid")
     if 0 < int(point_counts.get("nvblox_esdf") or 0) < 5_000:
         reasons.append("weak_esdf")
@@ -444,10 +516,9 @@ def ensure_structure_quality_summary(
     if bool(map_quality.get("tf_degraded")) or int(map_quality.get("tf_jump_back_count") or 0) >= 3:
         reasons.append("tf_instability")
     missing_topics = map_quality.get("missing_topics")
-    if (
-        isinstance(missing_topics, list)
-        and any("static_esdf" in str(topic) for topic in missing_topics)
-        and int(chunk_counts.get("nvblox_esdf") or 0) <= 0
+    if not esdf_available and (
+        not isinstance(missing_topics, list)
+        or any("esdf" in str(topic) for topic in missing_topics)
     ):
         reasons.append("missing_esdf_topic")
 
@@ -468,12 +539,19 @@ def ensure_structure_quality_summary(
     confidence = max(0.0, min(1.0, confidence))
     status = "needs_review" if unique_reasons else "ready"
 
+    if has_explicit_active_count:
+        active_target_count = target_count
+    else:
+        # Legacy summaries cannot distinguish active from candidate targets, so
+        # only trust them as active when the gate is clean.
+        active_target_count = target_count if status == "ready" else 0
+
     summary["quality"] = {
         "status": status,
         "confidence": round(confidence, 3),
         "reasons": unique_reasons,
         "target_count": target_count,
-        "active_target_count": target_count if status == "ready" else 0,
+        "active_target_count": active_target_count,
         "candidate_count": candidate_count,
         "rejected_clearance": rejected,
         "rejection_ratio": round(rejection_ratio, 3),

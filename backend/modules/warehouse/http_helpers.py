@@ -69,6 +69,12 @@ def dock_out(row: WarehouseDockStation) -> WarehouseDockOut:
 
 
 def scan_target_out(row: WarehouseScanTarget) -> WarehouseScanTargetRead:
+    raw_scan_pose = row.scan_pose_local_json if isinstance(row.scan_pose_local_json, dict) else {}
+    clearance_status = str(
+        raw_scan_pose.get("_clearance_status") or ("active" if row.active else "needs_review")
+    )
+    if clearance_status not in {"active", "needs_review", "rejected"}:
+        clearance_status = "needs_review"
     return WarehouseScanTargetRead.model_validate(
         {
             "id": int(row.id),
@@ -92,6 +98,9 @@ def scan_target_out(row: WarehouseScanTarget) -> WarehouseScanTargetRead:
             "active": row.active,
             "created_at": row.created_at,
             "updated_at": row.updated_at,
+            "clearance_status": clearance_status,
+            "clearance_m": raw_scan_pose.get("_clearance_m"),
+            "clearance_source": raw_scan_pose.get("_clearance_source"),
         }
     )
 

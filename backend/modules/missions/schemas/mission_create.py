@@ -6,10 +6,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from backend.modules.missions.flight_profile import FlightEnvironment
 from backend.modules.missions.schemas.mission_types import MissionType, Waypoint
-from backend.modules.patrol.planning import (
-    PATROL_AI_TASKS,
-    normalize_trigger_type,
-)
+from backend.modules.patrol.ai_tasks import PATROL_AI_TASKS
+from backend.modules.patrol.planning import normalize_ai_tasks
 
 
 class GridMissionParams(BaseModel):
@@ -38,13 +36,6 @@ PatrolTaskType = Literal[
     "vehicle_detection",
     "fence_breach_detection",
     "motion_detection",
-]
-PatrolTriggerType = Literal[
-    "motion_sensor",
-    "fence_alarm",
-    "camera_detection",
-    "night_schedule",
-    "unknown_vehicle",
 ]
 
 
@@ -89,7 +80,6 @@ class PrivatePatrolMissionParams(BaseModel):
     grid_start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto"
     grid_row_stride: int = Field(default=1, ge=1, le=20)
     grid_row_phase_m: float = Field(default=0.0, ge=0.0, le=500.0)
-    trigger_type: PatrolTriggerType = "fence_alarm"
     trigger_event_location_lonlat: list[float] | None = Field(
         default=None,
         min_length=2,
@@ -117,21 +107,9 @@ class PrivatePatrolMissionParams(BaseModel):
                     "task_type='waypoint_patrol' requires key_points_lonlat with at least 2 coordinate pairs."
                 )
         elif self.task_type == "event_triggered_patrol":
-            _ = normalize_trigger_type(self.trigger_type)
-            has_event_loc = bool(
-                self.trigger_event_location_lonlat and len(self.trigger_event_location_lonlat) == 2
-            )
-            if self.trigger_type == "night_schedule":
-                if not has_event_loc and not (
-                    self.property_polygon_lonlat and len(self.property_polygon_lonlat) >= 3
-                ):
-                    raise ValueError(
-                        "task_type='event_triggered_patrol' with trigger_type='night_schedule' "
-                        "requires trigger_event_location_lonlat or property_polygon_lonlat."
-                    )
-            elif not has_event_loc:
+            if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
                 raise ValueError(
-                    "task_type='event_triggered_patrol' requires trigger_event_location_lonlat=[lon, lat]."
+                    "task_type='event_triggered_patrol' requires property_polygon_lonlat geofence."
                 )
         return self
 

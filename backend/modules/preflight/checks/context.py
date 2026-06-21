@@ -20,6 +20,8 @@ class PreflightContext:
 
     terrain_provider: Any | None = None
     wind_data: dict[str, float] | None = None
+    weather_data: dict[str, object] | None = None
+    weather_api_error: str | None = None
     no_fly_zones: list[Any] | None = None
     obstacle_map: Any | None = None
     geofence_polygon: list[Waypoint] | None = None
@@ -174,6 +176,9 @@ class PreflightContext:
 
     def get_wind_direction(self) -> float | None:
         return None if not self.wind_data else self.wind_data.get("direction")
+
+    def get_weather_snapshot(self) -> dict[str, object] | None:
+        return self.weather_data
 
     def check_no_fly_zones(self, lat: float, lon: float, buffer: float = 0) -> bool:
         if not self.no_fly_zones:

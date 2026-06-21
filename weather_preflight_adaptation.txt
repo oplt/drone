@@ -1,0 +1,170 @@
+# Weather Preflight Adaptation
+
+This document summarizes the outdoor-only weather preflight integration added to the drone backend.
+
+## Overview
+
+Outdoor MAVLink preflight now fetches GPS-based weather from **Open-Meteo** and evaluates wind, precipitation, visibility, WMO weather codes, temperature, and cloud cover before mission start. For coordinates inside Belgium, an optional cross-check against **RMI/KMI Open Data** (official WFS at `opendata.meteo.be`) supplements the forecast.
+
+Indoor and warehouse missions (`warehouse_scan`, `indoor_exploration`, `warehouse_inspection`) **skip** weather fetch and checks entirely.
+
+## Architecture
+
+```
+POST /tasks/preflight/run  ─┐
+Mission execution          ├──> PreflightOrchestrator.run()
+Event trigger dispatch     ─┘         │
+                                      ├─ outdoor? resolve lat/lon
+                                      ├─ fetch_weather_for_preflight()  [cached]
+                                      └─ BasePreflightChecks.check_weather_availability()
+```
+
+### New module: `backend/modules/preflight/weather/`
+
+| File | Purpose |
+|------|---------|
+| `models.py` | `WeatherSnapshot` normalized payload |
+| `open_meteo.py` | Open-Meteo forecast/current client |
+| `kmi_rmi.py` | Nearest RMI AWS station lookup + observation cross-check |
+| `cache.py` | In-memory TTL cache (rounded lat/lon key) |
+| `thresholds.py` | Configurable limits from settings / overrides |
+| `evaluation.py` | PASS / WARN / BLOCK (`FAIL`) check results |
+| `location.py` | Outdoor mission gate, Belgium bbox, coordinate resolution |
+| `service.py` | `fetch_weather_for_preflight()` orchestration |
+
+### Modified files
+
+| File | Change |
+|------|--------|
+| `backend/modules/preflight/checks/service.py` | Fetch weather for outdoor missions before context build |
+| `backend/modules/preflight/checks/context.py` | `weather_data`, `weather_api_error` fields |
+| `backend/modules/preflight/checks/base.py` | `check_weather_availability()` replaces standalone Wind spec |
+| `backend/modules/vehicle_runtime/recovery_service.py` | Weather threshold overrides merged into preflight config |
+| `backend/core/config/runtime.py` | Weather env defaults |
+| `backend/modules/settings/schemas.py` | Settings UI / DB fields |
+| `backend/modules/settings/service.py` | Flatten weather keys to runtime overrides |
+| `backend/.env.example` | Documented weather variables |
+| `frontend/.../parameterDefinitions.ts` | Preflight UI rows for wind/precip/visibility/conditions |
+| `frontend/.../preflightUtils.ts` | Default weather threshold values |
+| `backend/tests/test_preflight_weather.py` | Unit tests |
+
+## Configuration
+
+Set in `.env` or Settings → Preflight (flattened to runtime overrides):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEATHER_PREFLIGHT_ENABLED` | `true` | Master switch |
+| `WEATHER_CACHE_TTL_S` | `300` | Cache TTL in seconds |
+| `WEATHER_API_FAIL_POLICY` | `warn` | `warn`, `block`, or `skip` when API fails |
+| `WIND_MAX` | `12.0` | Max sustained wind (m/s) |
+| `GUST_MAX` | `15.0` | Max gusts (m/s) |
+| `WEATHER_MAX_PRECIP_MM` | `0.5` | Max current precipitation (mm) |
+| `WEATHER_MIN_VISIBILITY_M` | `3000` | Min visibility (m) |
+| `WEATHER_MAX_CLOUD_COVER_PCT` | `90` | Cloud cover warn threshold (%) |
+| `WEATHER_MIN_TEMP_C` / `WEATHER_MAX_TEMP_C` | `-10` / `40` | Operating temperature envelope |
+| `WEATHER_BLOCKED_CODES` | see `.env.example` | Comma-separated WMO codes → BLOCK |
+| `WEATHER_WARN_CODES` | see `.env.example` | Marginal codes → WARN |
+| `KMI_RMI_VALIDATION_ENABLED` | `true` | Belgium supplemental check |
+| `KMI_RMI_MAX_OBS_AGE_HOURS` | `6` | Ignore stale RMI observations |
+| `KMI_RMI_WIND_DELTA_WARN_MPS` | `4.0` | Forecast vs station warn delta |
+| `KMI_RMI_WIND_DELTA_BLOCK_MPS` | `8.0` | Forecast vs station block delta |
+| `OPEN_METEO_BASE_URL` | Open-Meteo forecast API |
+| `KMI_RMI_WFS_BASE_URL` | RMI AWS WFS endpoint |
+
+## Preflight status mapping
+
+| User term | `CheckStatus` | When |
+|-----------|---------------|------|
+| PASS | `PASS` | Within limits |
+| WARN | `WARN` | Marginal weather or API unavailable (default) |
+| BLOCK | `FAIL` | Limits exceeded; messages prefixed `Blocked:` |
+
+Overall preflight `overall_status` follows existing logic: any `FAIL` → `FAIL`, else any `WARN` → `WARN`.
+
+## Coordinate resolution (outdoor only)
+
+Priority order for weather lookup:
+
+1. Vehicle telemetry `lat` / `lon`
+2. First mission waypoint / patrol polygon centroid
+3. Explicit `geofence_polygon` (e.g. event triggers)
+
+## Example API response excerpt
+
+`POST /tasks/preflight/run` returns `PreflightRunOut` with nested `report.base_checks`:
+
+```json
+{
+  "preflight_run_id": "pf_abc123",
+  "overall_status": "FAIL",
+  "can_start_mission": false,
+  "report": {
+    "mission_type": "private_patrol",
+    "overall_status": "FAIL",
+    "base_checks": [
+      {
+        "name": "Weather Availability",
+        "status": "FAIL",
+        "message": "Blocked: wind gusts 18.2 m/s > 15.0 m/s"
+      },
+      {
+        "name": "Wind Speed",
+        "status": "PASS",
+        "message": "8.4 m/s"
+      },
+      {
+        "name": "Wind Gust",
+        "status": "FAIL",
+        "message": "Blocked: wind gusts 18.2 m/s > 15.0 m/s"
+      },
+      {
+        "name": "Precipitation",
+        "status": "PASS",
+        "message": "0.0 mm"
+      },
+      {
+        "name": "Visibility",
+        "status": "PASS",
+        "message": "24100 m"
+      },
+      {
+        "name": "Weather Conditions",
+        "status": "PASS",
+        "message": "WMO code 1"
+      },
+      {
+        "name": "KMI/RMI Validation",
+        "status": "SKIP",
+        "message": "No recent KMI/RMI station observation available"
+      }
+    ],
+    "summary": {
+      "total_checks": 42,
+      "passed": 38,
+      "failed": 2,
+      "warned": 0,
+      "skipped": 2
+    }
+  }
+}
+```
+
+## UI integration
+
+The mission preflight panel (`MissionPreflightPanel` + `buildPreflightRows`) automatically displays weather checks from `report.base_checks` using new parameter definitions for wind, precipitation, visibility, and weather conditions. No separate UI endpoint was required.
+
+## Tests
+
+```bash
+cd backend
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest tests/test_preflight_weather.py -q
+```
+
+Covers: safe weather, high wind, rain, fog, API failure (warn/block), thunderstorm codes, KMI delta warn, indoor skip, Belgium detection, cache behavior.
+
+## Notes
+
+- Open-Meteo requires no API key for non-commercial use; respect fair-use limits. Caching reduces duplicate calls.
+- RMI WFS returns historical archives; only observations newer than `KMI_RMI_MAX_OBS_AGE_HOURS` are used. When no fresh station data exists, KMI validation is `SKIP` and Open-Meteo remains authoritative.
+- `check_wind()` remains in `base.py` for backward compatibility but is no longer registered in the outdoor check spec list.

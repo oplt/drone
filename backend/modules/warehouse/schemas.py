@@ -177,6 +177,9 @@ class WarehouseScanTargetRead(WarehouseScanTargetBase):
     warehouse_map_id: int
     created_at: datetime
     updated_at: datetime
+    clearance_status: Literal["active", "needs_review", "rejected"] = "active"
+    clearance_m: float | None = None
+    clearance_source: str | None = None
 
 
 class WarehouseScanTargetPage(BaseModel):
@@ -306,6 +309,8 @@ class WarehouseStructureExtractIn(BaseModel):
     shelf_min_spacing_m: float | None = Field(default=None, gt=0.0, le=10.0)
     max_shelf_levels: int | None = Field(default=None, ge=1, le=12)
     max_bins_per_rack_face: int | None = Field(default=None, ge=1, le=80)
+    min_target_spacing_m: float | None = Field(default=None, gt=0.0, le=20.0)
+    review_clearance_m: float | None = Field(default=None, ge=0.0, le=20.0)
     axis_deg: float | None = Field(default=None, ge=-180.0, le=180.0)
 
     def to_params_payload(self) -> dict[str, float]:
@@ -321,6 +326,8 @@ class WarehouseStructureExtractIn(BaseModel):
             "shelf_min_spacing_m",
             "max_shelf_levels",
             "max_bins_per_rack_face",
+            "min_target_spacing_m",
+            "review_clearance_m",
             "axis_deg",
         ):
             value = getattr(self, name)
@@ -374,6 +381,11 @@ class WarehouseStructureSummaryOut(BaseModel):
     generated_at: str | None = None
     target_count: int = 0
     active_target_count: int = 0
+    review_target_count: int = 0
+    rejected_target_count: int = 0
+    coordinate_setup_status: Literal["draft", "active"] | None = None
+    manual_review_required: bool = False
+    target_counts: dict[str, int] = Field(default_factory=dict)
     quality_status: Literal["ready", "needs_review", "failed"] | None = None
     quality_reasons: list[str] = Field(default_factory=list)
     confidence: float | None = None

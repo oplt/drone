@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TerraDraw } from "terra-draw";
 import { getToken } from "../../../modules/session";
 import { useErrors } from "../../../shared/hooks/useErrors";
@@ -20,8 +20,13 @@ import type {
   PrivatePatrolMissionStatus,
   UiNotice,
 } from "../types";
+import {
+  readPropertyPatrolFieldId,
+  writePropertyPatrolFieldId,
+} from "../propertyGeofencePreference";
 import { usePrivatePatrolMap } from "./usePrivatePatrolMap";
 import { usePrivatePatrolMission } from "./usePrivatePatrolMission";
+import { useEventTriggerConfigPersistence } from "./useEventTriggerConfigPersistence";
 
 export function usePrivatePatrolPage() {
   const [fieldName, setFieldName] = useState("Main Property");
@@ -127,6 +132,7 @@ export function usePrivatePatrolPage() {
       });
       showUiNotice(`Saved field "${data.name}" (#${data.id})`);
       setSelectedFieldId(data?.id ?? null);
+      if (data?.id != null) writePropertyPatrolFieldId(data.id);
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Failed to save field");
     }
@@ -152,6 +158,7 @@ export function usePrivatePatrolPage() {
         coordinates: fieldBorder,
       });
       showUiNotice(`Updated field "${data.name}" (#${data.id})`);
+      writePropertyPatrolFieldId(selectedFieldId);
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Failed to update field");
     }
@@ -178,6 +185,15 @@ export function usePrivatePatrolPage() {
     showUiNotice,
     missionStatus,
     activeFlightId,
+  });
+
+  const eventTriggerConfig = useEventTriggerConfigPersistence({
+    selectedFieldId,
+    gridParams: mission.gridParams,
+    setGridParams: mission.setGridParams,
+    cruiseAlt: mission.alt,
+    setCruiseAlt: mission.setAlt,
+    setCruiseAltInput: mission.setAltInput,
   });
 
   const map = usePrivatePatrolMap({
@@ -234,17 +250,32 @@ export function usePrivatePatrolPage() {
   const selectField = useCallback(
     (f: FieldFeature) => {
       setSelectedFieldId(f.id);
+      writePropertyPatrolFieldId(f.id);
       setFieldName(f.name);
       setFieldBorder(f.ring);
       borderEditor.loadRingIntoEditor(f.ring);
-      borderEditor.focusRingOnMap(f.ring);
+      map.focusFieldRing(f.ring);
     },
-    [borderEditor],
+    [borderEditor, map],
   );
+
+  useEffect(() => {
+    if (selectedFieldId != null || fields.length === 0) return;
+    const storedFieldId = readPropertyPatrolFieldId();
+    if (storedFieldId == null) return;
+    const field = fields.find((item) => item.id === storedFieldId);
+    if (field) selectField(field);
+  }, [fields, selectField, selectedFieldId]);
+
+  const focusSelectedField = useCallback(() => {
+    if (!selectedField) return;
+    map.focusFieldRing(selectedField.ring);
+  }, [map, selectedField]);
 
   const handleSavedFieldSelect = useCallback(
     (fieldId: number | null) => {
       if (fieldId == null) {
+        writePropertyPatrolFieldId(null);
         borderEditor.clearFieldBorder();
         return;
       }
@@ -256,6 +287,7 @@ export function usePrivatePatrolPage() {
 
   const handleNewField = useCallback(() => {
     setSelectedFieldId(null);
+    writePropertyPatrolFieldId(null);
     setFieldName("Main Property");
     borderEditor.clearFieldBorder();
   }, [borderEditor]);
@@ -324,6 +356,7 @@ export function usePrivatePatrolPage() {
     setFieldBorder,
     metrics,
     selectField,
+    focusSelectedField,
     loadingFields,
     refreshFields,
     savingField,
@@ -345,5 +378,8 @@ export function usePrivatePatrolPage() {
     setTerraDrawMode,
     uiNotice,
     handleUiNoticeClose,
+    eventTriggerIntegration: eventTriggerConfig.eventTriggerIntegration,
+    eventTriggerSaving: eventTriggerConfig.eventTriggerSaving,
+    eventTriggerSaveError: eventTriggerConfig.eventTriggerSaveError,
   };
 }

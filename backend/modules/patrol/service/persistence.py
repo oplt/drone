@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.core.database.session import Session
+from backend.modules.patrol.ai_tasks import (
+    frozenset_ai_tasks,
+    live_detection_ai_task,
+    map_anomaly_to_ai_task,
+)
 from backend.modules.patrol.repository import PatrolDetectionRepository
 from backend.modules.patrol.service.mission_runtime_store import ActiveMissionRuntimeContext
 from backend.modules.patrol.vision.models import Detection, FramePacket
@@ -48,45 +53,21 @@ class PatrolPersistenceService:
             return "event_triggered_patrol"
         return ""
 
-    def _normalize_ai_task(
+    def _allowed_ai_tasks(self, runtime_ctx: ActiveMissionRuntimeContext) -> frozenset[str]:
+        return frozenset_ai_tasks(runtime_ctx.ai_tasks or None)
+
+    def _ai_task_allowed(
         self,
         *,
-        anomaly_type: str,
-        object_class: str,
+        event_type: str,
         payload: dict[str, Any],
-        allowed_ai_tasks: list[str],
-    ) -> str:
-        explicit = str(payload.get("ai_task") or "").strip()
-        if explicit:
-            return explicit
-
-        event_type = anomaly_type.strip().lower()
-        obj = object_class.strip().lower()
-
-        if event_type in {"restricted_zone_entry", "intrusion_detected", "loitering"}:
-            guessed = (
-                "vehicle_detection"
-                if obj in {"car", "truck", "bus", "motorcycle", "bicycle"}
-                else "intruder_detection"
-            )
-        elif event_type in {
-            "fence_line_crossing",
-            "fence_breach",
-            "fence_breach_detected",
-        }:
-            guessed = "fence_breach_detection"
-        elif event_type in {"scene_motion", "motion_detected"}:
-            guessed = "motion_detection"
-        else:
-            guessed = (
-                "vehicle_detection"
-                if obj in {"car", "truck", "bus", "motorcycle", "bicycle"}
-                else "intruder_detection"
-            )
-
-        if allowed_ai_tasks and guessed not in allowed_ai_tasks:
-            return allowed_ai_tasks[0]
-        return guessed
+        allowed_ai_tasks: frozenset[str],
+    ) -> tuple[str, bool]:
+        label = str(payload.get("label") or "unknown")
+        ai_task = map_anomaly_to_ai_task(event_type, label)
+        if allowed_ai_tasks and ai_task not in allowed_ai_tasks:
+            return ai_task, False
+        return ai_task, True
 
     def _normalize_object_class(self, payload: dict[str, Any]) -> str:
         value = (
@@ -148,7 +129,14 @@ class PatrolPersistenceService:
         )
 
         payload = anomaly.payload or {}
-        ai_task = self._map_ai_task(anomaly.event_type, payload)
+        allowed = self._allowed_ai_tasks(runtime_ctx)
+        ai_task, allowed_task = self._ai_task_allowed(
+            event_type=anomaly.event_type,
+            payload=payload,
+            allowed_ai_tasks=allowed,
+        )
+        if not allowed_task:
+            return None
 
         async with Session() as db:
             (
@@ -216,15 +204,19 @@ class PatrolPersistenceService:
             return
 
         mission_task_type = runtime_ctx.mission_type or "live_camera"
+        allowed = self._allowed_ai_tasks(runtime_ctx)
         image_height, image_width = packet.image.shape[:2]
         async with Session() as db:
             for detection in detections:
+                ai_task = live_detection_ai_task(detection.label, allowed)
+                if ai_task is None:
+                    continue
                 x1, y1, x2, y2 = detection.bbox
                 await self._repo.add_patrol_detection(
                     db,
                     flight_id=int(runtime_ctx.db_flight_id),
                     mission_task_type=mission_task_type,
-                    ai_task="object_detection",
+                    ai_task=ai_task,
                     object_class=detection.label,
                     confidence=detection.confidence,
                     bbox_xyxy={"x1": x1, "y1": y1, "x2": x2, "y2": y2},
@@ -244,23 +236,6 @@ class PatrolPersistenceService:
                     },
                 )
             await db.commit()
-
-    def _map_ai_task(self, event_type: str, payload: dict) -> str:
-        label = str(payload.get("label") or "").lower()
-        if event_type in {"intrusion_detected", "loitering"}:
-            return "intruder_detection"
-        if event_type == "restricted_zone_entry" and label in {
-            "car",
-            "truck",
-            "motorcycle",
-            "bicycle",
-        }:
-            return "vehicle_detection"
-        if event_type == "restricted_zone_entry":
-            return "fence_breach_detection"
-        if event_type == "scene_motion":
-            return "motion_detection"
-        return "intruder_detection"
 
     def _extract_zone_name(self, payload: dict) -> str | None:
         zones = payload.get("zones")

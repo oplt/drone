@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Box,
   Drawer,
@@ -53,46 +54,45 @@ export function TaskPreflightCommandsDrawer({
   const theme = useTheme();
   const tabOffsetY = edgeTabVerticalOffset(edgeTabIndex, edgeTabCount);
 
-  return (
-    <>
-      {!open && (
-        <Tooltip title={title} placement="left">
-          <Box
-            component="button"
-            type="button"
-            aria-label={`Open ${title}`}
-            onClick={() => onOpenChange(true)}
-            sx={{
-              position: "fixed",
-              right: 0,
-              top: `calc(50% + ${tabOffsetY}px)`,
-              transform: "translateY(-50%)",
-              zIndex: theme.zIndex.drawer - 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 0.5,
-              py: 1.25,
-              px: 0.75,
-              border: "1px solid",
-              borderColor: "divider",
-              borderRight: "none",
-              borderTopLeftRadius: 12,
-              borderBottomLeftRadius: 12,
-              bgcolor: "background.paper",
-              color: "primary.main",
-              cursor: "pointer",
-              boxShadow: theme.shadows[4],
-              transition: "background-color 160ms ease, box-shadow 160ms ease",
-              "&:hover": {
-                bgcolor: "action.hover",
-                boxShadow: theme.shadows[8],
-              },
-              "&:focus-visible": {
-                outline: `2px solid ${theme.palette.primary.main}`,
-                outlineOffset: 2,
-              },
-            }}
+  const edgeTab =
+    !open ? (
+      <Tooltip title={title} placement="left">
+        <Box
+          component="button"
+          type="button"
+          aria-label={`Open ${title}`}
+          onClick={() => onOpenChange(true)}
+          sx={{
+            position: "fixed",
+            right: 0,
+            top: `calc(50% + ${tabOffsetY}px)`,
+            transform: "translateY(-50%)",
+            zIndex: theme.zIndex.drawer + 2,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0.5,
+            py: 1.25,
+            px: 0.75,
+            border: "1px solid",
+            borderColor: "divider",
+            borderRight: "none",
+            borderTopLeftRadius: 12,
+            borderBottomLeftRadius: 12,
+            bgcolor: "background.paper",
+            color: "primary.main",
+            cursor: "pointer",
+            boxShadow: theme.shadows[4],
+            transition: "background-color 160ms ease, box-shadow 160ms ease",
+            "&:hover": {
+              bgcolor: "action.hover",
+              boxShadow: theme.shadows[8],
+            },
+            "&:focus-visible": {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: 2,
+            },
+          }}
           >
             {tabIcon ?? <FlightTakeoffRoundedIcon fontSize="small" />}
             <Typography
@@ -110,7 +110,13 @@ export function TaskPreflightCommandsDrawer({
             </Typography>
           </Box>
         </Tooltip>
-      )}
+    ) : null;
+
+  return (
+    <>
+      {typeof document !== "undefined"
+        ? createPortal(edgeTab, document.body)
+        : edgeTab}
 
       <Drawer
         anchor="right"

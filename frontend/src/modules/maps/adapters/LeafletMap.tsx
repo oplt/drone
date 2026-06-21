@@ -11,6 +11,7 @@ import {
 } from "./../utils/drawingShapes";
 import droneIconUrl from "../../../assets/Drone.svg?url";
 import { useFlatMapDrawing } from "../hooks/useFlatMapDrawing";
+import { ringLatLngBounds } from "../../fields";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt?: number };
@@ -35,6 +36,8 @@ export type LeafletMapProps = {
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   height?: number | string;
+  focusRing?: LonLat[] | null;
+  focusRequestToken?: number;
 };
 
 function toLatLng(p: LatLng): LatLngExpression {
@@ -75,6 +78,8 @@ export default function LeafletMap({
   plannedRoute = null,
   exclusionZones = [],
   height = 400,
+  focusRing = null,
+  focusRequestToken,
 }: LeafletMapProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMapInstance | null>(null);
@@ -197,6 +202,20 @@ export default function LeafletMap({
   useEffect(() => {
     mapRef.current?.setView(toLatLng(center), zoom);
   }, [center, zoom]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || focusRequestToken == null) return;
+    const bounds = focusRing ? ringLatLngBounds(focusRing) : null;
+    if (!bounds) return;
+    map.fitBounds(
+      L.latLngBounds(
+        [bounds.south, bounds.west],
+        [bounds.north, bounds.east],
+      ),
+      { padding: [32, 32] },
+    );
+  }, [focusRing, focusRequestToken]);
 
   const route = useMemo(
     () => waypoints.map((p) => [p.lat, p.lon] as LatLngExpression),

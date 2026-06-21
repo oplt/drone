@@ -72,6 +72,7 @@ export function useWarehouseMapPlacement({
         const page = await listWarehouseScanTargets(warehouseMapId, token, {
           limit: pageSize,
           offset,
+          active: true,
         });
         total = page.total;
         all.push(...page.items);

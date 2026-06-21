@@ -120,6 +120,8 @@ export function WarehouseCoordinateSetupPanel({
   const readableQualityReasons = describeStructureQualityReasons(qualityReasons);
   const activeTargetCount =
     structure?.active_target_count ?? quality?.active_target_count ?? structure?.target_count ?? 0;
+  const targetCounts = structure?.summary.target_counts;
+  const candidateTargetCount = targetCounts?.candidate ?? structure?.target_count ?? 0;
 
   useEffect(() => {
     setSelectedIds((current) =>
@@ -392,7 +394,13 @@ export function WarehouseCoordinateSetupPanel({
           {!autoDetecting && qualityStatus === "needs_review" ? (
             <Alert severity="warning" sx={{ mt: 1, py: 0.25 }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                Generated targets stayed inactive.
+                Draft coordinate setup created — manual review required.
+              </Typography>
+              <Typography variant="body2">
+                Detected {structure?.summary.counts?.aisles ?? 0} aisles, {" "}
+                {structure?.summary.counts?.racks ?? 0} racks, and {candidateTargetCount}{" "}
+                candidate targets ({activeTargetCount} active, {targetCounts?.needs_review ?? 0}{" "}
+                needing review, {targetCounts?.rejected ?? 0} rejected).
               </Typography>
               <Typography variant="body2">
                 {structureNeedsReviewMessage(qualityReasons)}
@@ -580,13 +588,14 @@ export function WarehouseCoordinateSetupPanel({
             <TableCell>Product</TableCell>
             <TableCell>Target Point</TableCell>
             <TableCell>Scan Pose</TableCell>
+            <TableCell>Status</TableCell>
             <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {tableLoading ? (
             <TableRow>
-              <TableCell colSpan={6}>
+              <TableCell colSpan={7}>
                 <Typography variant="body2" color="text.secondary">
                   Loading scan targets…
                 </Typography>
@@ -594,7 +603,7 @@ export function WarehouseCoordinateSetupPanel({
             </TableRow>
           ) : tableRows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6}>
+              <TableCell colSpan={7}>
                 <Typography variant="body2" color="text.secondary">
                   No saved targets yet. Pick a location on the map and save.
                 </Typography>
@@ -635,6 +644,12 @@ export function WarehouseCoordinateSetupPanel({
                   {target.scan_pose_local_json.y_m.toFixed(1)},{" "}
                   {target.scan_pose_local_json.z_m.toFixed(1)} @{" "}
                   {target.scan_pose_local_json.yaw_deg ?? 0}°
+                </TableCell>
+                <TableCell sx={{ textTransform: "capitalize" }}>
+                  {target.clearance_status.replace("_", " ")}
+                  {target.clearance_m != null
+                    ? ` (${target.clearance_m.toFixed(2)} m)`
+                    : ""}
                 </TableCell>
                 <TableCell align="right">
                   <IconButton

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Box, IconButton, Paper, Stack, Tooltip } from "@mui/material";
 import SvgIcon from "@mui/material/SvgIcon";
 import RoomIcon from "@mui/icons-material/Room";
@@ -19,6 +19,7 @@ import {
   MissionMapViewport,
   type TerraDrawToolMode,
 } from "../../maps";
+import { MissionMapFrameFooter } from "../../mission-workflow";
 import { MissionVideoPanel } from "../../mission-runtime";
 import type { useFieldSurveyPage } from "../hooks/useFieldSurveyPage";
 import type { useFieldSurveyIrrigation } from "../hooks/useFieldSurveyIrrigation";
@@ -29,9 +30,11 @@ type IrrigationVm = ReturnType<typeof useFieldSurveyIrrigation>;
 export function FieldSurveyMapColumn({
   vm,
   onSelectField,
+  setupContent,
 }: {
   vm: PageVm;
   onSelectField: (field: FieldFeature) => void;
+  setupContent: ReactNode;
 }) {
   const { apiBase, map, mission, irrigation, toAbsoluteAssetUrl, exclusionZones, fieldBorder } =
     vm;
@@ -44,6 +47,10 @@ export function FieldSurveyMapColumn({
       })),
     [vm.fields],
   );
+  const fieldFocusProps = {
+    focusRing: map.fieldFocusRequest?.ring ?? null,
+    focusRequestToken: map.fieldFocusRequest?.token,
+  };
 
   return (
     <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
@@ -104,6 +111,7 @@ export function FieldSurveyMapColumn({
             onPickLatLng: mission.handleCesiumPick,
             drawMode: mission.drawMode,
             onDrawComplete: map.handleCesiumDrawComplete,
+            ...fieldFocusProps,
           }}
           leafletMapProps={{
             center: map.mapCenter,
@@ -121,6 +129,7 @@ export function FieldSurveyMapColumn({
             drawMode: mission.drawMode,
             onDrawComplete: map.handleCesiumDrawComplete,
             height: 400,
+            ...fieldFocusProps,
           }}
           mapLibreMapProps={{
             center: map.mapCenter,
@@ -138,6 +147,7 @@ export function FieldSurveyMapColumn({
             drawMode: mission.drawMode,
             onDrawComplete: map.handleCesiumDrawComplete,
             height: 400,
+            ...fieldFocusProps,
           }}
           googleWrapperSx={{ position: "relative" }}
           googleChildren={
@@ -154,26 +164,23 @@ export function FieldSurveyMapColumn({
         />
       </Box>
 
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 1.5,
-          borderRadius: 2,
-          flexShrink: 0,
-          alignSelf: { xs: "stretch", lg: "flex-start" },
-        }}
-      >
-        <CesiumViewControls
-          useCesium={map.useCesium}
-          onUseCesiumChange={(next) =>
-            map.handleMapEngineChange(next ? "cesium" : DEFAULT_MISSION_MAP_ENGINE)
-          }
-          mapEngine={map.mapEngine}
-          onMapEngineChange={map.handleMapEngineChange}
-          viewMode={map.cesiumViewMode}
-          onViewModeChange={map.setCesiumViewMode}
-        />
-      </Paper>
+      <MissionMapFrameFooter
+        setupTitle="Set up"
+        setupSubtitle="Field boundary, grid parameters, and route preview"
+        setupContent={setupContent}
+        mapSelection={
+          <CesiumViewControls
+            useCesium={map.useCesium}
+            onUseCesiumChange={(next) =>
+              map.handleMapEngineChange(next ? "cesium" : DEFAULT_MISSION_MAP_ENGINE)
+            }
+            mapEngine={map.mapEngine}
+            onMapEngineChange={map.handleMapEngineChange}
+            viewMode={map.cesiumViewMode}
+            onViewModeChange={map.setCesiumViewMode}
+          />
+        }
+      />
     </Stack>
   );
 }

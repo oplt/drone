@@ -85,6 +85,7 @@ async def store_and_publish_occupancy_chunk(
             "content_type": "application/vnd.live-map.occupancy-grid+json",
             "priority": priority,
             "stamp": stamp,
+            "source_topic": source.topic,
         },
     )
     update = normalize_live_map_payload(
