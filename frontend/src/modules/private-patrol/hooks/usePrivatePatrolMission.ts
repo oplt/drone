@@ -10,10 +10,10 @@ import {
 import { formatPreflightFailureMessage } from "../../mission-runtime/preflight/preflightUtils";
 import { usePatrolPreview } from "../../mission-planning";
 import {
-  CESIUM_MAX_SAFE_ZOOM,
   MAX_GRID_PREVIEW_WAYPOINTS,
   type DrawMode,
 } from "../../mission-workflow";
+import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
 import type { LonLat } from "../../fields";
 import type { TerraDrawEditorMode } from "../../maps";
 import type { MissionMapEngine } from "../../maps";
@@ -47,6 +47,7 @@ export function usePrivatePatrolMission({
   addError,
   clearErrors,
   setPendingFlightId,
+  setLastMissionId,
   showUiNotice,
   missionStatus,
   activeFlightId,
@@ -57,6 +58,7 @@ export function usePrivatePatrolMission({
   addError: (message: string) => void;
   clearErrors: () => void;
   setPendingFlightId: (id: string | null) => void;
+  setLastMissionId: (id: string | null) => void;
   showUiNotice: (message: string, severity?: "success" | "info" | "warning" | "error") => void;
   missionStatus: PrivatePatrolMissionStatus | null;
   activeFlightId: string | null;
@@ -398,6 +400,7 @@ export function usePrivatePatrolMission({
         );
 
         setPendingFlightId(data.flight_id ?? null);
+        setLastMissionId(data.flight_id ?? null);
         setAlt(altToUse);
         setAltInput(String(altToUse));
         setScheduledStartAt(null);
@@ -430,6 +433,7 @@ export function usePrivatePatrolMission({
       addError,
       clearErrors,
       setPendingFlightId,
+      setLastMissionId,
       showUiNotice,
     ]);
 
@@ -703,8 +707,8 @@ export function usePrivatePatrolMission({
         : "Draw a property polygon, tune perimeter parameters, and preview the generated patrol route before launch.";
 
   const cesiumZoomFor = useCallback(
-    (mapZoom: number) => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
-    []
+    (mapZoom: number) => cesiumZoomForMapZoom(mapZoom),
+    [],
   );
 
   return {

@@ -13,6 +13,7 @@ import {
 import droneIconUrl from "../../../assets/Drone.svg?url";
 import { useFlatMapDrawing } from "../hooks/useFlatMapDrawing";
 import { ringLatLngBounds } from "../../fields";
+import { isNearLonLat, isNearLonLatPixels } from "../utils/flatMapShapeGeometry";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt?: number };
@@ -30,10 +31,14 @@ export type MapLibreMapProps = {
   onPickLatLng?: (p: LatLng) => void;
   drawMode?: FlatDrawMode;
   onDrawComplete?: (result: FlatDrawResult) => void;
+  onBoundaryDrawStarted?: () => void;
+  onBoundaryDrawProgress?: (coords: LonLat[]) => void;
   fieldBoundary?: LonLat[] | null;
   savedFields?: SavedFieldBoundary[];
   selectedFieldId?: number | null;
   onSavedFieldClick?: (fieldId: number) => void;
+  onFieldBoundaryClick?: () => void;
+  drawnBoundarySelected?: boolean;
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   height?: number | string;
@@ -99,10 +104,14 @@ export default function MapLibreMap({
   onPickLatLng,
   drawMode = "none",
   onDrawComplete,
+  onBoundaryDrawStarted,
+  onBoundaryDrawProgress,
   fieldBoundary = null,
   savedFields = [],
   selectedFieldId = null,
   onSavedFieldClick,
+  onFieldBoundaryClick,
+  drawnBoundarySelected = false,
   plannedRoute = null,
   exclusionZones = [],
   height = 400,
@@ -118,10 +127,21 @@ export default function MapLibreMap({
   const onSavedFieldClickRef = useRef<MapLibreMapProps["onSavedFieldClick"]>(
     onSavedFieldClick,
   );
+  const onFieldBoundaryClickRef = useRef<MapLibreMapProps["onFieldBoundaryClick"]>(
+    onFieldBoundaryClick,
+  );
+  const drawModeRef = useRef(drawMode);
   const setDrawingModeState = useCallback((mode: FlatDrawMode) => {
     if (!mapRef.current) return;
     if (mode === "none") mapRef.current.doubleClickZoom.enable();
     else mapRef.current.doubleClickZoom.disable();
+  }, []);
+  const isNearCoord = useCallback((a: LonLat, b: LonLat) => {
+    const map = mapRef.current;
+    if (map) {
+      return isNearLonLatPixels(map, a, b) || isNearLonLat(a, b);
+    }
+    return isNearLonLat(a, b);
   }, []);
   const drawing = useFlatMapDrawing({
     drawMode,
@@ -129,9 +149,15 @@ export default function MapLibreMap({
     onPickLatLng,
     onPreview: updateDrawingPreview,
     onModeStateChange: setDrawingModeState,
+    onBoundaryDrawStarted,
+    onBoundaryDrawProgress,
+    isNearCoord,
   });
   drawingRef.current = drawing;
   onSavedFieldClickRef.current = onSavedFieldClick;
+  onFieldBoundaryClickRef.current = onFieldBoundaryClick;
+
+  drawModeRef.current = drawMode;
 
   function updateDrawingPreview(mode: FlatDrawMode, coords: LonLat[]) {
     const map = mapRef.current;
@@ -223,17 +249,34 @@ export default function MapLibreMap({
       updateDrawingPreview("none", []);
     });
     map.on("click", (event: maplibregl.MapMouseEvent) => {
+      if (drawModeRef.current !== "none") {
+        drawingRef.current?.handleClick([event.lngLat.lng, event.lngLat.lat]);
+        return;
+      }
+
       if (map.getLayer(overlayFillLayerId)) {
-        const feature = map
-          .queryRenderedFeatures(event.point, { layers: [overlayFillLayerId] })
-          .find((item) => item.properties?.kind === "saved-field");
-        const fieldId = feature?.properties?.fieldId;
-        if (typeof fieldId === "number") {
-          onSavedFieldClickRef.current?.(fieldId);
-          return;
+        const overlayFeatures = map.queryRenderedFeatures(event.point, {
+          layers: [overlayFillLayerId],
+        });
+        const savedField = overlayFeatures.find(
+          (item) => item.properties?.kind === "saved-field",
+        );
+        if (savedField) {
+          const fieldId = savedField.properties?.fieldId;
+          if (typeof fieldId === "number") {
+            onSavedFieldClickRef.current?.(fieldId);
+            return;
+          }
+          if (typeof fieldId === "string") {
+            onSavedFieldClickRef.current?.(Number(fieldId));
+            return;
+          }
         }
-        if (typeof fieldId === "string") {
-          onSavedFieldClickRef.current?.(Number(fieldId));
+        const drawnBoundary = overlayFeatures.find(
+          (item) => item.properties?.kind === "field",
+        );
+        if (drawnBoundary) {
+          onFieldBoundaryClickRef.current?.();
           return;
         }
       }
@@ -249,8 +292,18 @@ export default function MapLibreMap({
     map.on("mouseup", () => {
       if (drawingRef.current?.endFreehand()) map.dragPan.enable();
     });
-    map.on("dblclick", () => drawingRef.current?.finishDrawing());
-    map.on("contextmenu", () => drawingRef.current?.finishDrawing());
+    map.on("dblclick", (event) => {
+      event.preventDefault();
+      if (drawModeRef.current !== "none") {
+        drawingRef.current?.finishDrawing();
+      }
+    });
+    map.on("contextmenu", (event) => {
+      event.preventDefault();
+      if (drawModeRef.current !== "none") {
+        drawingRef.current?.finishDrawing();
+      }
+    });
     map.on("mousemove", (event: maplibregl.MapMouseEvent) => {
       if (!map.getLayer(overlayFillLayerId)) return;
       const hasSavedField = map
@@ -415,10 +468,10 @@ export default function MapLibreMap({
           },
         });
       });
-      if (fieldBoundary && fieldBoundary.length >= 3) {
+      if (drawMode === "none" && fieldBoundary && fieldBoundary.length >= 3) {
         features.push({
           type: "Feature",
-          properties: { kind: "field" },
+          properties: { kind: "field", selected: drawnBoundarySelected },
           geometry: {
             type: "Polygon",
             coordinates: [[...fieldBoundary, fieldBoundary[0]]],
@@ -494,6 +547,8 @@ export default function MapLibreMap({
             "case",
             ["==", ["get", "kind"], "planned"],
             4,
+            ["all", ["==", ["get", "kind"], "field"], ["==", ["get", "selected"], true]],
+            4,
             ["==", ["get", "selected"], true],
             4,
             2,
@@ -504,7 +559,7 @@ export default function MapLibreMap({
 
     if (map.loaded()) updateOverlays();
     else map.once("load", updateOverlays);
-  }, [exclusionZones, fieldBoundary, plannedRoute, savedFields, selectedFieldId]);
+  }, [drawMode, exclusionZones, fieldBoundary, plannedRoute, savedFields, selectedFieldId, drawnBoundarySelected]);
 
   if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) {
     return (

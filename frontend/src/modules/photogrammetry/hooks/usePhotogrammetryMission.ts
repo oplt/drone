@@ -4,13 +4,13 @@ import {
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../mission-runtime";
-import { useGridPreview, type GridParams } from "../../mission-planning";
+import { useGridPreview, createDefaultGridParams, type GridParams } from "../../mission-planning";
 import {
   MAX_GRID_PREVIEW_WAYPOINTS,
-  CESIUM_MAX_SAFE_ZOOM,
   type Waypoint,
   type DrawMode,
 } from "../../mission-workflow";
+import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
 import type { LonLat } from "../../fields";
 import type { TerraDrawEditorMode, MissionMapEngine } from "../../maps";
 
@@ -28,20 +28,7 @@ export type PhotogrammetryProfile = {
   positioning: "standard_gnss" | "rtk_ppk";
 };
 
-const DEFAULT_GRID_PARAMS: GridParams = {
-  row_spacing_m: 7.5,
-  grid_angle_deg: null,
-  slope_aware: false,
-  safety_inset_m: 1.5,
-  terrain_follow: false,
-  agl_m: 25,
-  pattern_mode: "boustrophedon",
-  crosshatch_angle_offset_deg: 90,
-  start_corner: "auto",
-  lane_strategy: "serpentine",
-  row_stride: 1,
-  row_phase_m: 0,
-};
+const DEFAULT_GRID_PARAMS = createDefaultGridParams({ agl_m: 25 });
 
 const DEFAULT_PROFILE: PhotogrammetryProfile = {
   front_overlap_pct: 80,
@@ -279,8 +266,8 @@ export function usePhotogrammetryMission({
   );
 
   const cesiumZoomFor = useCallback(
-    (mapZoom: number) => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
-    []
+    (mapZoom: number) => cesiumZoomForMapZoom(mapZoom),
+    [],
   );
 
   return {

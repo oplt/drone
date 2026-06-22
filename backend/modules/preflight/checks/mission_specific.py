@@ -288,6 +288,9 @@ class MissionPreflightBase:
                 message="No mission points",
             )
 
+        if bool(self.ctx.get_threshold("GEOFENCE_CONTAINMENT_ANCHOR_ONLY", False)):
+            pts = [pts[0]]
+
         for i, (lat, lon) in enumerate(pts):
             if not self._point_in_polygon(lat, lon, poly):
                 return CheckResult(

@@ -38,7 +38,11 @@ PatrolMissionTask = Literal[
 ]
 
 from backend.modules.patrol.ai_tasks import PATROL_AI_TASKS, coerce_ai_tasks
-from backend.modules.patrol.geo import point_in_polygon
+from backend.modules.patrol.geo import (
+    generate_orbit_offsets_m,
+    max_orbit_radius_inside_polygon,
+    point_in_polygon,
+)
 
 _PRIVATE_PATROL_TASK_CATALOG: tuple[dict[str, Any], ...] = (
     {
@@ -390,25 +394,36 @@ def generate_event_triggered_patrol_plan(
     *,
     altitude_agl_m: float,
     verification_radius_m: float,
+    geofence_polygon_lonlat: Sequence[tuple[float, float]] | None = None,
+    safety_margin_m: float = 2.0,
+    orbit_segments: int = 8,
 ) -> PrivatePatrolPlan:
-    """Build a short verification pattern centered on the trigger location."""
+    """Build a geofence-aware orbit verification pattern centered on the trigger."""
     lon = float(event_location_lonlat[0])
     lat = float(event_location_lonlat[1])
     if not (-180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0):
         raise ValueError("Invalid trigger event location coordinates")
 
-    radius_m = max(0.0, float(verification_radius_m))
-    offsets_m: list[tuple[float, float]] = [(0.0, 0.0)]
-    if radius_m > 0.0:
-        offsets_m.extend(
-            [
-                (radius_m, 0.0),
-                (0.0, radius_m),
-                (-radius_m, 0.0),
-                (0.0, -radius_m),
-                (0.0, 0.0),
-            ]
+    requested_radius_m = max(0.0, float(verification_radius_m))
+    radius_m = requested_radius_m
+    if geofence_polygon_lonlat and len(geofence_polygon_lonlat) >= 3:
+        radius_m = max_orbit_radius_inside_polygon(
+            lon,
+            lat,
+            geofence_polygon_lonlat,
+            requested_radius_m=requested_radius_m,
+            safety_margin_m=float(safety_margin_m),
         )
+
+    offsets_m: list[tuple[float, float]] = [(0.0, 0.0)]
+    orbit_offsets = generate_orbit_offsets_m(
+        radius_m,
+        segments=int(orbit_segments),
+        direction="clockwise",
+    )
+    if orbit_offsets:
+        offsets_m.extend(orbit_offsets)
+        offsets_m.append((0.0, 0.0))
 
     waypoints: list[Coordinate] = []
     for dx_m, dy_m in offsets_m:
@@ -424,7 +439,9 @@ def generate_event_triggered_patrol_plan(
         stats={
             "task_type": "event_triggered_patrol",
             "event_location_lonlat": [round(lon, 7), round(lat, 7)],
-            "verification_radius_m": round(radius_m, 2),
+            "verification_radius_m": round(requested_radius_m, 2),
+            "verification_radius_applied_m": round(radius_m, 2),
+            "orbit_segments": len(orbit_offsets),
             "waypoints": len(waypoints),
             "verification_route_m": round(route_m, 1),
         },
@@ -1138,6 +1155,7 @@ class EventTriggeredPatrolMission:
             self.event_location_lonlat,
             altitude_agl_m=float(altitude_agl),
             verification_radius_m=float(self.verification_radius_m),
+            geofence_polygon_lonlat=self.geofence_polygon_lonlat,
         )
 
     def _make_search_plan(self, *, altitude_agl: float) -> PrivatePatrolPlan:
@@ -1388,6 +1406,7 @@ class EventTriggeredPatrolMission:
                     (float(focused.lon), float(focused.lat)),
                     altitude_agl_m=float(cruise_alt_m),
                     verification_radius_m=float(self.verification_radius_m),
+                    geofence_polygon_lonlat=self.geofence_polygon_lonlat,
                 )
                 await self._fly_incident_verification(
                     orch,

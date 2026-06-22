@@ -1,16 +1,11 @@
-import { Box, Divider, Stack, Typography } from "@mui/material";
+import { Divider, Stack, Typography } from "@mui/material";
 import FlightTakeoffRoundedIcon from "@mui/icons-material/FlightTakeoffRounded";
 import {
   TaskPreflightCommandsDrawer,
   useTaskPreflightCommandsDrawer,
 } from "../../../modules/mission-workflow";
-import {
-  FieldBorderPanel,
-  SavedFieldsPanel,
-  type BorderMetrics,
-  type FieldFeature,
-  type LonLat,
-} from "../../fields";
+import { WorkflowFieldsBlock } from "../../fields/components/WorkflowFieldsBlock";
+import type { BorderMetrics, FieldFeature, LonLat } from "../../fields";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import {
   MissionCommandPanel,
@@ -62,51 +57,26 @@ export function FieldSurveyFieldsBlock({
   compact?: boolean;
 }) {
   return (
-    <Box
-      sx={{
-        mt: compact ? 0 : 1,
-        display: compact ? "flex" : "grid",
-        flexDirection: compact ? "column" : undefined,
-        gridTemplateColumns: compact
-          ? undefined
-          : {
-              xs: "1fr",
-              lg: "minmax(280px, 0.9fr) minmax(0, 1.6fr)",
-            },
-        gap: 2,
-      }}
-    >
-      <SavedFieldsPanel
-        fields={fields}
-        selectedFieldId={selectedFieldId}
-        selectedField={selectedField}
-        loadingFields={loadingFields}
-        deletingField={deletingField}
-        onSelectField={onSelectField}
-        onRefresh={onRefreshFields}
-        onFocusSelected={onFocusSelected}
-        onDeleteSelected={onDeleteSelected}
-      />
-
-      <Stack
-        direction={compact ? "column" : { xs: "column", lg: "row" }}
-        spacing={1}
-        alignItems={{ xs: "stretch", lg: "flex-start" }}
-      >
-        <FieldBorderPanel
-          fieldName={fieldName}
-          selectedFieldId={selectedFieldId}
-          fieldBorder={fieldBorder}
-          metrics={metrics}
-          selectedFieldDisplayId={selectedField?.id ?? null}
-          savingField={savingField}
-          onFieldNameChange={onFieldNameChange}
-          onSaveOrUpdate={onSaveOrUpdate}
-          onClearBorder={onClearBorder}
-          onNewField={onNewField}
-        />
-      </Stack>
-    </Box>
+    <WorkflowFieldsBlock
+      fields={fields}
+      selectedFieldId={selectedFieldId}
+      selectedField={selectedField}
+      loadingFields={loadingFields}
+      deletingField={deletingField}
+      onSelectField={onSelectField}
+      onRefreshFields={onRefreshFields}
+      onFocusSelected={onFocusSelected}
+      onDeleteSelected={onDeleteSelected}
+      fieldName={fieldName}
+      fieldBorder={fieldBorder}
+      metrics={metrics}
+      savingField={savingField}
+      onFieldNameChange={onFieldNameChange}
+      onSaveOrUpdate={onSaveOrUpdate}
+      onClearBorder={onClearBorder}
+      onNewField={onNewField}
+      compact={compact}
+    />
   );
 }
 

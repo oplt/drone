@@ -68,6 +68,7 @@ def _field_out(field: Field) -> FieldOut:
         owner_id=field.owner_id,
         name=field.name,
         area_ha=field.area_ha,
+        workflow_scope=field.workflow_scope,
         metadata={},
     )
 
@@ -93,13 +94,23 @@ async def create_field(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    field = await field_service.create(db, user=org_user.user, name=payload.name, polygon=poly)
+    field = await field_service.create(
+        db,
+        user=org_user.user,
+        name=payload.name,
+        polygon=poly,
+        workflow_scope=payload.workflow_scope,
+    )
     return _field_out(field)
 
 
 @router.get("", response_model=list[FieldOut])
 async def list_fields(
     q: str | None = Query(None, description="Name search (ILIKE)"),
+    workflow_scope: str | None = Query(
+        default=None,
+        description="Filter by dashboard workflow (field_survey, photogrammetry, property_patrol, animal_farm).",
+    ),
     limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
@@ -109,13 +120,23 @@ async def list_fields(
     NOTE: The frontend should prefer GET /fields/features which returns
     geometry in a single round-trip instead of N+1 calls.
     """
-    rows = await field_service.list_owned(db, user=org_user.user, query=q, limit=limit)
+    rows = await field_service.list_owned(
+        db,
+        user=org_user.user,
+        query=q,
+        limit=limit,
+        workflow_scope=workflow_scope,
+    )
     return [_field_out(f) for f in rows]
 
 
 @router.get("/features")
 async def list_fields_features(
     q: str | None = Query(None, description="Name search (ILIKE)"),
+    workflow_scope: str | None = Query(
+        default=None,
+        description="Filter by dashboard workflow (field_survey, photogrammetry, property_patrol, animal_farm).",
+    ),
     limit: int = Query(500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
@@ -125,7 +146,13 @@ async def list_fields_features(
     The frontend should call this endpoint instead of GET /fields + N x
     GET /fields/{id}/geojson to avoid N+1 network round-trips.
     """
-    rows = await field_service.list_owned(db, user=org_user.user, query=q, limit=limit)
+    rows = await field_service.list_owned(
+        db,
+        user=org_user.user,
+        query=q,
+        limit=limit,
+        workflow_scope=workflow_scope,
+    )
 
     features: list[dict[str, Any]] = []
     for f in rows:
@@ -140,6 +167,7 @@ async def list_fields_features(
                     "owner_id": f.owner_id,
                     "name": f.name,
                     "area_ha": f.area_ha,
+                    "workflow_scope": f.workflow_scope,
                 },
                 "geometry": mapping(poly),
             }
@@ -173,6 +201,7 @@ async def get_field_geojson(
             "owner_id": field.owner_id,
             "name": field.name,
             "area_ha": field.area_ha,
+            "workflow_scope": field.workflow_scope,
         },
         "geometry": mapping(poly),
     }

@@ -1,10 +1,13 @@
 // GeoJSON order ALWAYS: [lon, lat]
+import type { FieldWorkflowScope } from "./constants";
+
 export type LonLat = [number, number];
 
 export interface FieldCreateDTO {
   name: string;
   coordinates: LonLat[];
   owner_id?: number | null;
+  workflow_scope?: FieldWorkflowScope | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -13,6 +16,7 @@ export interface FieldOutDTO {
   owner_id?: number | null;
   name: string;
   area_ha?: number | null;
+  workflow_scope?: FieldWorkflowScope | null;
   metadata: Record<string, unknown>;
 }
 
@@ -31,6 +35,7 @@ export type FieldSummary = {
   owner_id?: number;
   name: string;
   area_ha?: number | null;
+  workflow_scope?: FieldWorkflowScope | null;
 };
 
 export type FieldFeature = FieldSummary & {

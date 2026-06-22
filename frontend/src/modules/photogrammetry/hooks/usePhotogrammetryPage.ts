@@ -1,16 +1,12 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import type { TerraDraw } from "terra-draw";
+import { useCallback, useState } from "react";
+import { getApiBaseUrl } from "../../../app/config/env";
 import { getToken } from "../../../modules/session";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import { useMissionWebsocketRuntime } from "../../../modules/mission-runtime";
 import {
-  computeAreaHa,
-  computeCentroid,
-  useFields,
   useFieldTileset,
   useGeofenceLayers,
-  type FieldFeature,
-  type LonLat,
+  FIELD_WORKFLOW_SCOPES,
 } from "../../fields";
 import {
   DEFAULT_MISSION_MAP_ENGINE,
@@ -18,7 +14,7 @@ import {
   type TerraDrawEditorMode,
 } from "../../maps";
 import {
-  useFieldBorderEditor,
+  useWorkflowFieldBoundary,
   type MissionStatus,
 } from "../../mission-workflow";
 import { usePhotogrammetryMap } from "./usePhotogrammetryMap";
@@ -26,42 +22,27 @@ import { usePhotogrammetryMapping } from "./usePhotogrammetryMapping";
 import { usePhotogrammetryMission } from "./usePhotogrammetryMission";
 
 export function usePhotogrammetryPage() {
-  const [fieldName, setFieldName] = useState("Field A");
-  const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [pendingDeleteField, setPendingDeleteField] =
-    useState<FieldFeature | null>(null);
   const [terraDrawMode, setTerraDrawMode] =
     useState<TerraDrawEditorMode>("static");
   const [mapEngine, setMapEngine] = useState<MissionMapEngine>(
     DEFAULT_MISSION_MAP_ENGINE,
   );
 
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const terraDrawRef = useRef<TerraDraw | null>(null);
-  const fieldPolygonRef = useRef<google.maps.Polygon | null>(null);
-
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
-  const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
-    /\/$/,
-    "",
-  );
+  const API_BASE_CLEAN = getApiBaseUrl();
 
-  const {
-    fields,
-    loading: loadingFields,
-    refresh: refreshFields,
-    createField: createFieldRecord,
-    updateField: updateFieldRecord,
-    deleteField: deleteFieldRecord,
-    saving: savingField,
-    deleting: deletingField,
-  } = useFields();
+  const fieldBoundary = useWorkflowFieldBoundary({
+    workflowScope: FIELD_WORKFLOW_SCOPES.photogrammetry,
+    defaultFieldName: "Field A",
+    terraDrawMode,
+    addError,
+  });
 
   const { exclusionZones } = useGeofenceLayers();
-  const { tilesetUrl: fieldTilesetUrl } = useFieldTileset(selectedFieldId);
+  const { tilesetUrl: fieldTilesetUrl } = useFieldTileset(
+    fieldBoundary.selectedFieldId,
+  );
 
   const {
     missionStatus,
@@ -77,27 +58,12 @@ export function usePhotogrammetryPage() {
     alwaysConnect: true,
   });
 
-  const borderEditor = useFieldBorderEditor({
-    setFieldBorder,
-    setSelectedFieldId,
-    fieldPolygonRef,
-    mapRef,
-    terraDrawRef,
-    fieldName,
-    selectedFieldId,
-    fieldBorder,
-    createFieldRecord,
-    updateFieldRecord,
-    refreshFields,
-    addError,
-  });
-
   const handleMapEngineChange = useCallback((next: MissionMapEngine) => {
     setMapEngine(next);
   }, []);
 
   const mission = usePhotogrammetryMission({
-    fieldBorder,
+    fieldBorder: fieldBoundary.fieldBorder,
     mapEngine,
     terraDrawMode,
     addError,
@@ -111,9 +77,9 @@ export function usePhotogrammetryPage() {
     droneConnected,
     telemetry,
     activeFlightId,
-    fieldBorder,
-    setFieldBorder,
-    setSelectedFieldId,
+    fieldBorder: fieldBoundary.fieldBorder,
+    setFieldBorder: fieldBoundary.setFieldBorder,
+    setSelectedFieldId: fieldBoundary.setSelectedFieldId,
     fieldTilesetUrl,
     waypoints: mission.waypoints,
     setWaypoints: mission.setWaypoints,
@@ -122,36 +88,35 @@ export function usePhotogrammetryPage() {
     setDrawMode: mission.setDrawMode,
     terraDrawMode,
     setTerraDrawMode,
-    loadRingIntoEditor: borderEditor.loadRingIntoEditor,
-    focusRingOnMap: borderEditor.focusRingOnMap,
-    selectedField:
-      selectedFieldId == null
-        ? null
-        : (fields.find((f) => f.id === selectedFieldId) ?? null),
+    loadRingIntoEditor: fieldBoundary.borderEditor.loadRingIntoEditor,
+    focusRingOnMap: fieldBoundary.borderEditor.focusRingOnMap,
+    selectedField: fieldBoundary.selectedField,
     mapEngine,
     addError,
     onMapEngineChange: handleMapEngineChange,
-    fieldPolygonRef,
-    terraDrawRef,
+    fieldPolygonRef: fieldBoundary.fieldPolygonRef,
+    terraDrawRef: fieldBoundary.terraDrawRef,
+    onBoundaryDrawStarted: fieldBoundary.shapePrompt.notifyBoundaryDrawStarted,
+    resetBoundaryDrawSession: fieldBoundary.shapePrompt.resetBoundaryDrawSession,
   });
 
   const ensureFieldForMapping = useCallback(
     async (options?: { announce?: boolean }) => {
-      if (!fieldBorder || fieldBorder.length < 3) {
+      if (!fieldBoundary.fieldBorder || fieldBoundary.fieldBorder.length < 3) {
         throw new Error(
           "Draw a field polygon (min 3 points) before continuing.",
         );
       }
-      if (!fieldName.trim()) {
+      if (!fieldBoundary.fieldName.trim()) {
         throw new Error("Please enter a field name before continuing.");
       }
 
-      const data = await createFieldRecord({
-        name: fieldName.trim(),
-        coordinates: fieldBorder,
+      const data = await fieldBoundary.createFieldRecord({
+        name: fieldBoundary.fieldName.trim(),
+        coordinates: fieldBoundary.fieldBorder,
         metadata: {},
       });
-      setSelectedFieldId(data?.id ?? null);
+      fieldBoundary.setSelectedFieldId(data?.id ?? null);
 
       if (options?.announce ?? true) {
         alert(`Saved field "${data.name}" (id=${data.id})`);
@@ -159,14 +124,14 @@ export function usePhotogrammetryPage() {
 
       return data;
     },
-    [createFieldRecord, fieldBorder, fieldName],
+    [fieldBoundary],
   );
 
   const mapping = usePhotogrammetryMapping({
-    selectedFieldId,
-    setSelectedFieldId,
-    fieldBorder,
-    fieldName,
+    selectedFieldId: fieldBoundary.selectedFieldId,
+    setSelectedFieldId: fieldBoundary.setSelectedFieldId,
+    fieldBorder: fieldBoundary.fieldBorder,
+    fieldName: fieldBoundary.fieldName,
     ensureFieldForMapping,
     onJobReady: () => {
       map.handleMapEngineChange("cesium");
@@ -174,81 +139,6 @@ export function usePhotogrammetryPage() {
     },
     addError,
   });
-
-  const selectedField = useMemo(
-    () =>
-      selectedFieldId == null
-        ? null
-        : (fields.find((f) => f.id === selectedFieldId) ?? null),
-    [fields, selectedFieldId],
-  );
-
-  const metrics = useMemo(() => {
-    if (!fieldBorder || fieldBorder.length < 3) return null;
-    return {
-      areaHa: computeAreaHa(fieldBorder),
-      centroid: computeCentroid(fieldBorder),
-    };
-  }, [fieldBorder]);
-
-  const selectField = useCallback(
-    (f: FieldFeature) => {
-      setSelectedFieldId(f.id);
-      setFieldName(f.name);
-      setFieldBorder(f.ring);
-      borderEditor.loadRingIntoEditor(f.ring);
-      borderEditor.focusRingOnMap(f.ring);
-    },
-    [borderEditor],
-  );
-
-  const handleSavedFieldSelect = useCallback(
-    (fieldId: number | null) => {
-      if (fieldId == null) {
-        borderEditor.clearFieldBorder();
-        return;
-      }
-      const field = fields.find((f) => f.id === fieldId);
-      if (field) selectField(field);
-    },
-    [borderEditor, fields, selectField],
-  );
-
-  const handleNewField = useCallback(() => {
-    setSelectedFieldId(null);
-    setFieldName("Field A");
-    borderEditor.clearFieldBorder();
-  }, [borderEditor]);
-
-  const requestDeleteSelectedField = useCallback(() => {
-    if (selectedFieldId == null) {
-      addError("Select a saved field to delete.");
-      return;
-    }
-    const targetField = fields.find((f) => f.id === selectedFieldId) ?? null;
-    if (!targetField) {
-      addError("Selected field could not be resolved.");
-      return;
-    }
-    setPendingDeleteField(targetField);
-  }, [addError, fields, selectedFieldId]);
-
-  const closeDeleteFieldDialog = useCallback(() => {
-    if (deletingField) return;
-    setPendingDeleteField(null);
-  }, [deletingField]);
-
-  const confirmDeleteSelectedField = useCallback(async () => {
-    if (!pendingDeleteField) return;
-    try {
-      await deleteFieldRecord(pendingDeleteField.id);
-      borderEditor.clearFieldBorder();
-      setFieldName("Field A");
-      setPendingDeleteField(null);
-    } catch (e: unknown) {
-      addError(e instanceof Error ? e.message : "Failed to delete field");
-    }
-  }, [addError, borderEditor, deleteFieldRecord, pendingDeleteField]);
 
   const googleMapsReady =
     map.mapEngine !== "google" || (Boolean(map.apiKey) && !map.loadError);
@@ -266,28 +156,8 @@ export function usePhotogrammetryPage() {
     missionStatus,
     activeFlightId,
     telemetry,
-    fields,
     fieldTilesetUrl,
     exclusionZones,
-    selectedFieldId,
-    selectedField,
-    fieldName,
-    setFieldName,
-    fieldBorder,
-    setFieldBorder,
-    metrics,
-    selectField,
-    loadingFields,
-    refreshFields,
-    savingField,
-    deletingField,
-    pendingDeleteField,
-    handleSavedFieldSelect,
-    handleNewField,
-    requestDeleteSelectedField,
-    closeDeleteFieldDialog,
-    confirmDeleteSelectedField,
-    borderEditor,
     mission,
     map,
     mapping,
@@ -295,5 +165,8 @@ export function usePhotogrammetryPage() {
     cesiumZoom,
     terraDrawMode,
     setTerraDrawMode,
+    fieldBoundary,
+    ...fieldBoundary,
+    shapePrompt: fieldBoundary.shapePrompt,
   };
 }

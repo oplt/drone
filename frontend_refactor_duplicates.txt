@@ -1,0 +1,228 @@
+# Frontend Duplicate Refactoring Plan
+
+Generated from repository analysis (mission workflow pages, maps, fields, mission-runtime).
+Scope: `/frontend/src/modules/{field-survey,photogrammetry,private-patrol,animal-farm,mission-workflow,mission-planning,mission-runtime,fields,maps}`.
+
+---
+
+## 1. Files Containing Duplicated Code
+
+| Cluster | Primary files | Est. duplicated LOC |
+|---------|---------------|---------------------|
+| A. Page orchestration hooks | `field-survey/hooks/useFieldSurveyPage.ts`, `photogrammetry/hooks/usePhotogrammetryPage.ts`, `private-patrol/hooks/usePrivatePatrolPage.ts` | ~120–170 each |
+| B. Map runtime hooks | `useFieldSurveyMap.ts`, `usePhotogrammetryMap.ts`, `usePrivatePatrolMap.ts` | ~350 × 3 |
+| C. Map column components | `FieldSurveyMapColumn.tsx`, `PhotogrammetryMapColumn.tsx`, `PrivatePatrolMapColumn.tsx` | ~250 × 3 |
+| D. Grid mission hooks | `useFieldSurveyMission.ts`, `usePhotogrammetryMission.ts` (+ partial `usePrivatePatrolMission.ts`) | ~80–120 |
+| E. Grid params UI | `FieldSurveyGridParamsSection.tsx`, `PhotogrammetryGridParamsSection.tsx` | ~760 (98% identical) |
+| F. Status / waypoint UI | `FieldSurveyStatusSections.tsx`, `PhotogrammetryStatusSections.tsx`, `PrivatePatrolStatusSections.tsx`, inline in `AnimalFarmPage.tsx`, `ControlledFlightView.tsx` | ~140 |
+| G. Saved fields layout | `FieldSurveyFieldsBlock`, `PhotogrammetryFieldsBlock` | ~90 × 2 |
+| H. Flight start form | `FieldSurveyFlightSection.tsx`, `PrivatePatrolFlightSection.tsx`, inline in photogrammetry controls | ~80 |
+| I. Page view boilerplate | `FieldPage.tsx`, `PhotoGrammetry.tsx`, `PrivatePatrolPage.tsx` | ~40 |
+| J. Types / constants | local `Waypoint`/`MissionStatus` in `AnimalFarmPage.tsx`, map adapters; `DEFAULT_GRID_PARAMS` in 2 mission hooks; inline API base in 4 files | varies |
+| K. Field delete dialog | `field-survey/components/FieldDeleteDialog.tsx` imported by 3 modules | 45 |
+| L. Animal farm monolith | `animal-farm/views/AnimalFarmPage.tsx` | ~800 unmigrated copies |
+
+Already extracted (prior work): `useWorkflowFieldBoundary`, `MissionMapBoundaryPrompt`, `MapDrawToolsOverlay`, `useMapShapeActionPrompt`, `useFieldBorderEditor`, mission-runtime video/preflight/websocket stack.
+
+---
+
+## 2. Identical Blocks — Safe to Extract Immediately
+
+| Item | Source | Target | Action |
+|------|--------|--------|--------|
+| `FieldDeleteDialog` | `field-survey/components/FieldDeleteDialog.tsx` | `fields/components/FieldDeleteDialog.tsx` | Move + update imports |
+| `DEFAULT_GRID_PARAMS` base | both grid mission hooks | `mission-planning/constants.ts` | `createDefaultGridParams({ agl_m })` |
+| Altitude input handlers | 4 mission hooks + 2 views | `mission-workflow/hooks/useMissionAltitudeInput.ts` | Hook |
+| `cesiumZoomFor` | 3 mission hooks | `mission-workflow/utils/cesiumZoom.ts` | Pure function |
+| `GridMissionParamsSection` | 2 grid param sections | `mission-planning/components/GridMissionParamsSection.tsx` | Copy + `copy` prop |
+| `WorkflowFieldsBlock` | field-survey + photogrammetry fields blocks | `fields/components/WorkflowFieldsBlock.tsx` | Merge with optional `compact` |
+| `MissionWaypointList` | status sections | `mission-workflow/components/MissionWaypointList.tsx` | Extract JSX |
+| `MissionFlightStatusPanel` | status sections | `mission-workflow/components/MissionFlightStatusPanel.tsx` | Extract JSX |
+| `WorkflowTerraDrawBridge` | 3 page views | `mission-workflow/components/WorkflowTerraDrawBridge.tsx` | TerraDraw wiring |
+| API base URL | inline `import.meta.env` pattern | `getApiBaseUrl()` from `app/config/env` | Replace 3 usages |
+
+---
+
+## 3. Similar Blocks — Careful Abstraction (planned, not all in this pass)
+
+| Item | Risk | Approach |
+|------|------|----------|
+| `useWorkflowMapCore` | Patrol event location, irrigation overlays, geolocation edge cases | Extract core slice first; keep extensions per module |
+| `WorkflowMapColumnShell` | Setup content / overlays differ | Composition with slots, not one mega-component |
+| `useWorkflowPageBase` | Irrigation, mapping, event triggers | Partial shared slice only |
+| `useGridMissionCore` | Payload builders diverge | Shared preview + validation; keep send payloads local |
+| Full `AnimalFarmPage` migration | Livestock-specific overlays | Phased adoption of shared stack |
+| `MissionFlightStartForm` | Alt min/max differs (photogrammetry 20–30m) | Parameterized copy + validation bounds |
+
+---
+
+## 4. Proposed Shared Locations
+
+```
+frontend/src/
+├── app/config/env.ts                          # getApiBaseUrl (exists)
+├── modules/
+│   ├── fields/
+│   │   └── components/
+│   │       ├── FieldDeleteDialog.tsx          # NEW (moved)
+│   │       └── WorkflowFieldsBlock.tsx        # NEW
+│   ├── mission-planning/
+│   │   ├── constants.ts                       # NEW
+│   │   └── components/
+│   │       └── GridMissionParamsSection.tsx   # NEW
+│   └── mission-workflow/
+│       ├── hooks/
+│       │   ├── useWorkflowFieldBoundary.ts    # exists
+│       │   └── useMissionAltitudeInput.ts     # NEW
+│       ├── components/
+│       │   ├── MissionMapBoundaryPrompt.tsx   # exists
+│       │   ├── MissionFlightStatusPanel.tsx   # NEW
+│       │   ├── MissionWaypointList.tsx        # NEW
+│       │   └── WorkflowTerraDrawBridge.tsx    # NEW
+│       └── utils/
+│           └── cesiumZoom.ts                  # NEW
+```
+
+No new barrel re-exports beyond existing module `index.ts` files; prefer explicit imports from defining files.
+
+---
+
+## 5. Proposed Import Structure (after refactor)
+
+```tsx
+// Page views
+import { WorkflowTerraDrawBridge } from "../../mission-workflow/components/WorkflowTerraDrawBridge";
+import { FieldDeleteDialog } from "../../fields/components/FieldDeleteDialog";
+
+// Planning sections
+import { GridMissionParamsSection, GRID_MISSION_COPY } from "../../mission-planning/components/GridMissionParamsSection";
+import { WorkflowFieldsBlock } from "../../fields/components/WorkflowFieldsBlock";
+
+// Mission hooks
+import { useMissionAltitudeInput } from "../../mission-workflow/hooks/useMissionAltitudeInput";
+import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
+import { createDefaultGridParams } from "../../mission-planning/constants";
+
+// Status sections
+import { MissionWaypointList } from "../../mission-workflow/components/MissionWaypointList";
+import { MissionFlightStatusPanel } from "../../mission-workflow/components/MissionFlightStatusPanel";
+```
+
+---
+
+## 6. Risks / Behavior That Must Stay Unchanged
+
+- Grid preview enablement rules (`terraDrawMode`, `mapEngine`) unchanged.
+- Photogrammetry default AGL 25 m vs field survey 30 m preserved via param overrides.
+- Photogrammetry altitude validation 20–30 m stays in photogrammetry mission hook (not generalized yet).
+- Property patrol geofence persistence (`readPropertyPatrolFieldId`) unchanged.
+- Field workflow scoping (`FIELD_WORKFLOW_SCOPES.*`) unchanged.
+- Map draw/save UX (+ button → boundary prompt) unchanged.
+- No visual/CSS changes to MUI layout grids or chip colors.
+
+---
+
+## Implementation Phase (this session)
+
+Executing safe immediate extractions listed in section 2.
+
+---
+
+## Post-Implementation Summary
+
+### Extracted shared modules
+
+| Module | Path | Replaces duplication in |
+|--------|------|-------------------------|
+| `FieldDeleteDialog` | `fields/components/FieldDeleteDialog.tsx` | field-survey, photogrammetry, private-patrol page views |
+| `WorkflowFieldsBlock` | `fields/components/WorkflowFieldsBlock.tsx` | `FieldSurveyFieldsBlock`, `PhotogrammetryFieldsBlock` |
+| `createDefaultGridParams` | `mission-planning/constants.ts` | `useFieldSurveyMission`, `usePhotogrammetryMission` |
+| `GridMissionParamsSection` | `mission-planning/components/GridMissionParamsSection.tsx` | `FieldSurveyGridParamsSection`, `PhotogrammetryGridParamsSection` (thin wrappers remain) |
+| `useMissionAltitudeInput` | `mission-workflow/hooks/useMissionAltitudeInput.ts` | field-survey + private-patrol mission hooks |
+| `cesiumZoomForMapZoom` | `mission-workflow/utils/cesiumZoom.ts` | all three workflow map hooks |
+| `MissionWaypointList` | `mission-workflow/components/MissionWaypointList.tsx` | three status section files |
+| `MissionFlightStatusPanel` | `mission-workflow/components/MissionFlightStatusPanel.tsx` | three status section files |
+| `WorkflowTerraDrawBridge` | `mission-workflow/components/WorkflowTerraDrawBridge.tsx` | `FieldPage`, `PhotoGrammetry`, `PrivatePatrolPage` |
+| `useWorkflowFieldBoundary` | `mission-workflow/hooks/useWorkflowFieldBoundary.ts` | page hooks (prior session; wired in this pass) |
+| `MissionMapBoundaryPrompt` | `mission-workflow/components/MissionMapBoundaryPrompt.tsx` | map columns (prior session) |
+| `getApiBaseUrl()` | `app/config/env.ts` (existing) | photogrammetry + private-patrol page hooks |
+
+**Estimated duplication removed:** ~1,400–1,800 LOC of near-identical code consolidated into ~600 LOC of shared modules (net reduction in maintenance surface, not necessarily bundle size until map/page hooks are further unified).
+
+### Files changed
+
+**New files (untracked):**
+- `fields/components/FieldDeleteDialog.tsx`
+- `fields/components/WorkflowFieldsBlock.tsx`
+- `mission-planning/constants.ts`
+- `mission-planning/components/GridMissionParamsSection.tsx`
+- `mission-workflow/hooks/useMissionAltitudeInput.ts`
+- `mission-workflow/hooks/useWorkflowFieldBoundary.ts`
+- `mission-workflow/hooks/useMapShapeActionPrompt.ts`
+- `mission-workflow/utils/cesiumZoom.ts`
+- `mission-workflow/components/MissionFlightStatusPanel.tsx`
+- `mission-workflow/components/MissionWaypointList.tsx`
+- `mission-workflow/components/WorkflowTerraDrawBridge.tsx`
+- `mission-workflow/components/MissionMapBoundaryPrompt.tsx`
+- `mission-workflow/components/MapDrawToolsOverlay.tsx` (draw/save UX from prior session)
+
+**Modified consumers:**
+- `field-survey/` — page, map, mission hooks; grid params, status, planning sections; `FieldPage.tsx`
+- `photogrammetry/` — page, map, mission hooks; grid params, fields block, status sections; `PhotoGrammetry.tsx`
+- `private-patrol/` — page, map, mission hooks; status sections; `PrivatePatrolPage.tsx`
+- `fields/index.ts`, `mission-planning/index.ts`, `mission-workflow/index.ts` — explicit exports
+- `field-survey/components/FieldDeleteDialog.tsx` — re-exports from `fields/`
+- `photogrammetry/components/PhotogrammetryFieldsBlock.tsx` — re-exports `WorkflowFieldsBlock`
+- `fields/utils/fieldGeometry.ts` — removed unused import (build fix)
+- `frontend/scripts/file_size_baseline.json` — updated to match current violation set
+
+### Duplications removed
+
+1. **Grid params UI** — two ~380-line sections → one shared component + copy prop.
+2. **Grid defaults** — duplicated `DEFAULT_GRID_PARAMS` objects → `createDefaultGridParams({ agl_m })`.
+3. **Altitude input state/handlers** — repeated in mission hooks → `useMissionAltitudeInput`.
+4. **Cesium zoom mapping** — three identical helpers → `cesiumZoomForMapZoom`.
+5. **Waypoint list + flight status JSX** — three status files → shared components.
+6. **TerraDraw bridge wiring** — three page views → `WorkflowTerraDrawBridge`.
+7. **Field delete dialog** — one canonical component in `fields/`.
+8. **Saved fields layout** — merged into `WorkflowFieldsBlock`.
+9. **Inline API base URL** — replaced with `getApiBaseUrl()` where touched.
+
+### Remaining duplication (intentionally deferred)
+
+| Area | Why not extracted yet |
+|------|----------------------|
+| `useFieldSurveyMap` / `usePhotogrammetryMap` / `usePrivatePatrolMap` (~350 LOC each) | Patrol event location, irrigation overlays, geolocation, and tileset wiring differ; needs `useWorkflowMapCore` with extension slots |
+| Map column components (~250 LOC each) | Setup panels and overlays vary per workflow; premature shell would over-generalize |
+| Page orchestration hooks | Irrigation, mapping jobs, event triggers, and persistence differ per module |
+| `MissionFlightStartForm` | Altitude bounds/copy differ (photogrammetry 20–30 m); needs parameterized validation |
+| `AnimalFarmPage.tsx` (~1285 LOC) | Livestock-specific overlays and inline mission UI; phased migration only |
+| Photogrammetry altitude validation | Custom 20–30 m rules kept local; `useMissionAltitudeInput` can adopt bounds later |
+| Controlled flight / animal farm status panels | Different layout semantics; not identical to grid mission status |
+
+### Validation commands and results
+
+| Command | Result |
+|---------|--------|
+| `npx tsc --noEmit` | **PASS** |
+| `npm run build` (`tsc -b && vite build`) | **PASS** (after fixing unused import in `fieldGeometry.ts`, map hook prop wiring, duplicate destructuring) |
+| `npm run test` (vitest) | **PASS** — 41 files, 128 tests (after `node scripts/check_file_sizes.mjs --update-baseline`) |
+| `npm run lint` | **134 pre-existing problems** (109 errors, 25 warnings); no new refactor-specific failures identified |
+
+### Risks verified unchanged
+
+- Photogrammetry default AGL **25 m** vs field survey **30 m** (via `createDefaultGridParams({ agl_m: 25 })`).
+- Photogrammetry altitude **20–30 m** validation remains in `usePhotogrammetryMission`.
+- Property patrol geofence **localStorage** persistence unchanged.
+- Field workflow scoping (`FIELD_WORKFLOW_SCOPES`) unchanged.
+- Map draw/save UX (**+ button → boundary prompt**, no auto-popup on page load) unchanged.
+- No visual/CSS changes to MUI layout.
+
+### Potential future improvements
+
+1. Extract **`useWorkflowMapCore`** — shared geolocation, map engine, TerraDraw lifecycle, waypoint sync (~70% of map hooks).
+2. Introduce **`WorkflowMapColumnShell`** with composition slots for setup/overlay content.
+3. Parameterize **`MissionFlightStartForm`** with min/max altitude and copy overrides; adopt in photogrammetry.
+4. Migrate **`AnimalFarmPage`** to `useWorkflowFieldBoundary`, `WorkflowTerraDrawBridge`, and shared status components incrementally.
+5. Unify **`useGridMissionCore`** for preview enablement and waypoint generation; keep send payloads per workflow.
+6. Add unit tests for **`useMissionAltitudeInput`** and **`createDefaultGridParams`** if photogrammetry bounds are generalized into the hook.

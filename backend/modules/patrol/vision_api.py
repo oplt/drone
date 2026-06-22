@@ -5,7 +5,10 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from backend.infrastructure.camera.runtime import shared_video_runtime
+from backend.infrastructure.camera.runtime import (
+    drone_video_link_connected,
+    shared_video_runtime,
+)
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import require_user
 from backend.modules.patrol.vision.runtime import ml_runtime
@@ -47,7 +50,18 @@ async def get_ml_status(user=Depends(require_user)) -> dict[str, Any]:
 async def start_ml(body: MLStartIn, user=Depends(require_user)) -> dict[str, Any]:
     stream_source = resolve_ml_stream_source(body.stream_source)
     if body.stream_source is None:
-        await shared_video_runtime.ensure_running()
+        if not drone_video_link_connected():
+            return {
+                "running": False,
+                "message": "Drone is not connected.",
+            }
+        try:
+            await shared_video_runtime.ensure_running()
+        except RuntimeError as exc:
+            return {
+                "running": False,
+                "message": str(exc),
+            }
     return await ml_runtime.start(stream_source=stream_source)
 
 

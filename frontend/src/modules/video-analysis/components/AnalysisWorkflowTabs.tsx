@@ -30,7 +30,7 @@ export function AnalysisWorkflowTabs(props: AnalysisWorkflowTabsProps) {
         {tab === "source" ? (
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Upload a flight recording to analyze offline.
+              Select a mission recording or upload footage to analyze offline.
             </Typography>
             <AnalysisSourceSection {...props} />
           </Box>

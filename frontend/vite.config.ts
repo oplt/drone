@@ -69,6 +69,10 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      "/video-analysis": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/video": {
         target: "http://localhost:8000",
         changeOrigin: true,

@@ -41,6 +41,7 @@ from backend.modules.patrol.event_trigger_mqtt_service import patrol_event_trigg
 from backend.modules.patrol.live_detection_api import router as live_detection_router
 from backend.modules.patrol.sensor_config_api import router as patrol_sensor_config_router
 from backend.modules.patrol.vision_api import router as ml_router
+from backend.modules.patrol.vision_events_api import router as ml_events_router
 from backend.modules.property_patrol.api import router as property_patrol_router
 from backend.modules.settings.api import router as settings_router
 from backend.modules.settings.repository import SettingsRepository
@@ -165,6 +166,7 @@ app.include_router(mapping_router)
 app.include_router(alerts_router)
 app.include_router(patrol_sensor_config_router)
 app.include_router(ml_router)
+app.include_router(ml_events_router)
 app.include_router(patrol_debug_router)
 app.include_router(live_detection_router)
 app.include_router(property_patrol_router)

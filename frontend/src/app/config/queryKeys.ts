@@ -25,7 +25,8 @@ export const missionKeys = {
 
 export const fieldsKeys = {
   all: ["fields"] as const,
-  features: () => [...fieldsKeys.all, "features"] as const,
+  features: (workflowScope?: string | null) =>
+    [...fieldsKeys.all, "features", workflowScope ?? "all"] as const,
   geofences: () => [...fieldsKeys.all, "geofences"] as const,
   tileset: (fieldId: number) => [...fieldsKeys.all, "tileset", fieldId] as const,
 };
@@ -49,6 +50,8 @@ export const warehouseKeys = {
 
 export const videoAnalysisKeys = {
   all: ["video-analysis"] as const,
+  videos: (missionId: string | null, fieldId: number | null) =>
+    [...videoAnalysisKeys.all, "videos", missionId, fieldId] as const,
   job: (jobId: string | null) => [...videoAnalysisKeys.all, "job", jobId] as const,
   detections: (jobId: string | null) => [...videoAnalysisKeys.all, "detections", jobId] as const,
   liveDetections: () => [...videoAnalysisKeys.all, "live-detections"] as const,

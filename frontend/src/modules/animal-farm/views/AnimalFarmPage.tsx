@@ -36,6 +36,7 @@ import {
   type TerraDrawEditorMode,
   type TerraDrawFeature,
 } from "../../maps";
+import { createFarmBorderDrawBridge } from "../../maps/utils/flatBoundaryDrawBridge";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import {
   MissionCommandPanel,
@@ -49,9 +50,15 @@ import {
   type PreflightRunResponse,
 } from "../../mission-runtime";
 import {
+  MapEngineSelectionOverlay,
+  MapShapeActionPopover,
+  MissionSurveyCameraSection,
   TaskPreflightCommandsDrawer,
+  useMapShapeActionPrompt,
   useTaskPreflightCommandsDrawer,
 } from "../../mission-workflow";
+import { stripClosedRing, useFields, FIELD_WORKFLOW_SCOPES, type LonLat } from "../../fields";
+import { VideoAnalysisPanel } from "../../video-analysis";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import { type LatLng } from "../../../shared/utils/extractLatLng";
 import type { TerraDraw } from "terra-draw";
@@ -95,9 +102,12 @@ const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 export default function AnimalFarmPage() {
   const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
   const mapRef = useRef<google.maps.Map | null>(null);
+  const terraDrawRef = useRef<TerraDraw | null>(null);
 
   const [userCenter, setUserCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [farmBorder, setFarmBorder] = useState<LonLat[] | null>(null);
+  const [farmBorderName, setFarmBorderName] = useState("Pasture A");
 
   // altitude: keep input string to avoid error spam while typing
   const [alt, setAlt] = useState<number>(30);
@@ -109,6 +119,47 @@ export default function AnimalFarmPage() {
   const [loadingLocation, setLoadingLocation] = useState(true);
 
   const { errors, addError, clearErrors, dismissError } = useErrors();
+  const { createField: createFarmBorderRecord, saving: savingFarmBorder } = useFields(
+    FIELD_WORKFLOW_SCOPES.animalFarm,
+  );
+
+  const syncFarmBorderFromSnapshot = useCallback((snapshot: TerraDrawFeature[]) => {
+    const boundary = [...snapshot]
+      .reverse()
+      .find((feature) => {
+        if (!feature.id || !feature.geometry) return false;
+        if (feature.geometry.type === "Polygon") return true;
+        if (feature.geometry.type === "LineString") {
+          const coords = feature.geometry.coordinates as [number, number][] | undefined;
+          return Array.isArray(coords) && coords.length >= 3;
+        }
+        return false;
+      });
+    if (!boundary?.geometry) {
+      setFarmBorder(null);
+      return;
+    }
+    if (boundary.geometry.type === "Polygon") {
+      const coords = (boundary.geometry.coordinates as [number, number][][])[0];
+      setFarmBorder(coords.map(([lon, lat]) => [lon, lat] as LonLat));
+      return;
+    }
+    const coords = boundary.geometry.coordinates as [number, number][];
+    setFarmBorder(coords.map(([lon, lat]) => [lon, lat] as LonLat));
+  }, []);
+
+  const shapePrompt = useMapShapeActionPrompt({
+    terraDrawRef,
+    syncSnapshot: syncFarmBorderFromSnapshot,
+  });
+  const farmBorderDraw = useMemo(
+    () =>
+      createFarmBorderDrawBridge({
+        setFarmBorder,
+        onBoundaryDrawStarted: shapePrompt.notifyBoundaryDrawStarted,
+      }),
+    [shapePrompt.notifyBoundaryDrawStarted],
+  );
 
   const [mapZoom, setMapZoom] = useState<number>(12);
   const [preflightRun, setPreflightRun] =
@@ -121,11 +172,9 @@ export default function AnimalFarmPage() {
   const [useCesium, setUseCesium] = useState(false);
   const [mapEngine, setMapEngine] = useState<MissionMapEngine>(DEFAULT_MISSION_MAP_ENGINE);
   const [drawMode, setDrawMode] = useState<RouteDrawMode>("point");
-  const terraDrawRef = useRef<TerraDraw | null>(null);
   const [terraDrawMode, setTerraDrawMode] = useState<TerraDrawEditorMode>("point");
   const [, setTerraDrawReady] = useState(false);
   const [terraDrawFeatureCount, setTerraDrawFeatureCount] = useState(0);
-  const [selectedTerraDrawFeatureId, setSelectedTerraDrawFeatureId] = useState<string | number | null>(null);
   const [drawWaypointHistory, setDrawWaypointHistory] = useState<number[]>([]);
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
 
@@ -157,22 +206,37 @@ export default function AnimalFarmPage() {
       type: "point" | "polyline" | "polygon";
       coordinates: [number, number] | [number, number][];
     }) => {
+      if (result.type === "polygon") {
+        const ring = stripClosedRing(
+          (result.coordinates as [number, number][]).map(([lon, lat]) => [lon, lat] as LonLat),
+        );
+        if (ring.length >= 3) {
+          setFarmBorder(ring);
+        }
+        setDrawMode("none");
+        return;
+      }
+
+      if (result.type === "polyline") {
+        const coordinates = result.coordinates as [number, number][];
+        setWaypoints(coordinates.map(([lon, lat]) => ({ lat, lon, alt })));
+        setDrawWaypointHistory([coordinates.length]);
+        setDrawMode("point");
+        return;
+      }
+
       if (result.type === "point") {
         const [lon, lat] = result.coordinates as [number, number];
         setWaypoints((prev) => [...prev, { lat, lon, alt }]);
         setDrawWaypointHistory((prev) => [...prev, 1]);
         return;
       }
-
-      const coordinates = result.coordinates as [number, number][];
-      setWaypoints(coordinates.map(([lon, lat]) => ({ lat, lon, alt })));
-      setDrawWaypointHistory([coordinates.length]);
-      setDrawMode("point");
     },
     [alt],
   );
   const handleRouteToolModeChange = useCallback(
     (toolMode: RouteDrawToolMode) => {
+      shapePrompt.resetBoundaryDrawSession();
       if (mapEngine === "google") {
         const googleModeMap: Record<RouteDrawToolMode, TerraDrawEditorMode> = {
           none: "select",
@@ -197,7 +261,7 @@ export default function AnimalFarmPage() {
       };
       setDrawMode(flatModeMap[toolMode]);
     },
-    [mapEngine],
+    [mapEngine, shapePrompt],
   );
   const syncRouteFromTerraDraw = useCallback(
     (snapshot: TerraDrawFeature[]) => {
@@ -219,6 +283,34 @@ export default function AnimalFarmPage() {
     },
     [alt],
   );
+
+  const handleTerraSnapshotChange = useCallback(
+    (snapshot: TerraDrawFeature[]) => {
+      syncRouteFromTerraDraw(snapshot);
+      shapePrompt.handleSnapshotChange(snapshot);
+    },
+    [shapePrompt, syncRouteFromTerraDraw],
+  );
+
+  const handleFarmBorderSave = useCallback(async () => {
+    if (!farmBorder || farmBorder.length < 3) {
+      addError("Draw a farm border polygon (min 3 points) before saving.");
+      return;
+    }
+    if (!farmBorderName.trim()) {
+      addError("Please enter a border name.");
+      return;
+    }
+    try {
+      await createFarmBorderRecord({
+        name: farmBorderName.trim(),
+        coordinates: farmBorder,
+      });
+      shapePrompt.closePrompt();
+    } catch (e: unknown) {
+      addError(e instanceof Error ? e.message : "Failed to save farm border");
+    }
+  }, [addError, createFarmBorderRecord, farmBorder, farmBorderName, shapePrompt]);
   const handleMapEngineChange = useCallback((next: MissionMapEngine) => {
     setMapEngine(next);
     setUseCesium(next === "cesium");
@@ -227,7 +319,7 @@ export default function AnimalFarmPage() {
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase: API_BASE_CLEAN,
     getToken,
-    enabled: droneReady,
+    enabled: Boolean(activeFlightId && droneReady),
     onError: addError,
     resetKey: activeFlightId ?? "none",
   });
@@ -456,15 +548,8 @@ useEffect(() => {
 
   const undo = () => {
     if (mapEngine === "google" && terraDrawRef.current) {
-      const snapshot = terraDrawRef.current.getSnapshot() as TerraDrawFeature[];
-      const selectedFeature = snapshot.find((feature) => feature.id === selectedTerraDrawFeatureId);
-      const targetFeature = selectedFeature ?? [...snapshot].reverse().find((feature) => feature.id != null);
-      if (targetFeature?.id != null) {
-        terraDrawRef.current.removeFeatures([targetFeature.id]);
-        setSelectedTerraDrawFeatureId(null);
-        syncRouteFromTerraDraw(terraDrawRef.current.getSnapshot() as TerraDrawFeature[]);
-        return;
-      }
+      shapePrompt.deleteSelectedDrawing(syncRouteFromTerraDraw);
+      return;
     }
     setWaypoints((prev) => {
       const removeCount = drawWaypointHistory.at(-1) ?? 1;
@@ -777,324 +862,341 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
           </Alert>
         ) : (
           <>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
-              {/* Left side: Camera & Map */}
-              <Stack sx={{ flex: 1, minHeight: 200 }} spacing={2}>
-                <MissionVideoPanel
-                  title="Survey Camera"
-                  imgAlt="Survey camera stream"
-                  disconnectedMessage="Connect the drone to view the survey stream."
-                  apiBase={API_BASE_CLEAN}
-                  streamKey={streamKey}
-                  videoToken={videoToken}
-                  startingVideo={startingVideo}
-                  videoError={videoError}
-                  videoRetryCount={videoRetryCount}
-                  droneConnected={droneConnected}
-                  telemetry={telemetry}
-                  onVideoError={handleVideoError}
-                  onVideoLoad={handleVideoLoad}
-                  onRetry={handleVideoRetry}
-                />
-
-                <Box
-                  sx={{
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    border: "1px solid",
-                    borderColor: "divider",
-                    backgroundColor: "background.paper",
-                  }}
-                >
-                  <TerraDrawController
-                    map={mapReady && mapEngine === "google" ? mapRef.current : null}
-                    enabled={mapEngine === "google"}
-                    mode={terraDrawMode}
-                    drawRef={terraDrawRef}
-                    onReadyChange={setTerraDrawReady}
-                    onSnapshotChange={syncRouteFromTerraDraw}
-                    onSelectionChange={setSelectedTerraDrawFeatureId}
-                    onError={addError}
+            <Box sx={{ mb: 3 }}>
+              <MissionSurveyCameraSection
+                setupSubtitle="Field plan, altitude, and route waypoints"
+                video={
+                  <MissionVideoPanel
+                    embedded
+                    title="Survey Camera"
+                    imgAlt="Survey camera stream"
+                    disconnectedMessage="Connect the drone to view the survey stream."
+                    frameHeight={360}
+                    apiBase={API_BASE_CLEAN}
+                    streamKey={streamKey}
+                    videoToken={videoToken}
+                    startingVideo={startingVideo}
+                    videoError={videoError}
+                    videoRetryCount={videoRetryCount}
+                    droneConnected={droneConnected}
+                    telemetry={telemetry}
+                    onVideoError={handleVideoError}
+                    onVideoLoad={handleVideoLoad}
+                    onRetry={handleVideoRetry}
                   />
-                  <MissionMapViewport
-                    loadingLocation={loadingLocation}
-                    isLoaded={isLoaded}
-                    useCesium={useCesium}
-                    mapEngine={mapEngine}
-                    googleMapProps={{
-                      mapContainerStyle: containerStyle,
-                      center: mapCenter,
-                      zoom: mapZoom,
-                      onClick: onMapClick,
-                      onLoad: onMapLoad,
-                      onZoomChanged: onMapZoomChanged,
-                      options: mapOptions,
+                }
+                map={
+                  <Box
+                    sx={{
+                      borderRadius: 2,
+                      overflow: "hidden",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      backgroundColor: "background.paper",
                     }}
-                    cesiumMapProps={{
-                      center: mapCenter,
-                      zoom: mapZoom,
-                      viewMode: cesiumViewMode,
-                      waypoints,
-                      droneCenter,
-                      headingDeg: typeof heading === "number" ? heading : null,
-                      drawMode,
-                      onDrawComplete: handleRouteDrawComplete,
-                    }}
-                    leafletMapProps={{
-                      center: mapCenter,
-                      zoom: mapZoom,
-                      waypoints,
-                      droneCenter,
-                      userCenter,
-                      drawMode,
-                      onDrawComplete: handleRouteDrawComplete,
-                      height: 400,
-                    }}
-                    mapLibreMapProps={{
-                      center: mapCenter,
-                      zoom: mapZoom,
-                      waypoints,
-                      droneCenter,
-                      userCenter,
-                      drawMode,
-                      onDrawComplete: handleRouteDrawComplete,
-                      height: 400,
-                    }}
-                    googleWrapperSx={{ position: "relative" }}
-                    googleOverlay={
-                      <RouteDrawControls
-                        mode={drawMode}
-                        activeToolMode={
-                          mapEngine === "google"
-                            ? terraDrawMode === "linestring"
-                              ? "polyline"
-                              : terraDrawMode === "select" || terraDrawMode === "static"
-                                ? "none"
-                                : terraDrawMode === "freehand"
-                                ? "polygon"
-                                : terraDrawMode
-                            : undefined
-                        }
-                        onModeChange={setDrawMode}
-                        onToolModeChange={handleRouteToolModeChange}
-                        onUndo={undo}
-                        hasWaypoints={waypoints.length > 0 || terraDrawFeatureCount > 0}
-                      />
-                    }
-                    googleChildren={
-                      <>
-                        {droneCenter && (
-                          <OverlayView
-                            position={droneCenter}
-                            mapPaneName={OverlayView.OVERLAY_LAYER}
-                          >
-                            <div
-                              style={{
-                                transform: `translate(-50%, -50%) rotate(${
-                                  typeof heading === "number" ? heading : 0
-                                }deg)`,
-                                transformOrigin: "center",
-                                color: armed ? "#1976d2" : "#9aa0a6",
-                                zIndex: 9999,
-                              }}
-                            >
-                              <SvgIcon
-                                component={DroneSvg}
-                                inheritViewBox
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
-                                }}
-                              />
-                              {activeFlightId && (
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    top: "-28px",
-                                    left: "50%",
-                                    transform: "translateX(-50%)",
-                                    background: "white",
-                                    padding: "2px 6px",
-                                    borderRadius: "3px",
-                                    fontSize: "10px",
-                                    whiteSpace: "nowrap",
-                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                                  }}
-                                >
-                                  Flight: {activeFlightId.substring(0, 8)}...
-                                </div>
-                              )}
-                            </div>
-                          </OverlayView>
-                        )}
-
-                        {userCenter && (
-                          <OverlayView
-                            position={userCenter}
-                            mapPaneName={OverlayView.OVERLAY_LAYER}
-                          >
-                            <div
-                              style={{
-                                transform: "translate(-50%, -50%)",
-                                color: "#4caf50",
-                              }}
-                            >
-                              <RoomIcon fontSize="large" />
-                            </div>
-                          </OverlayView>
-                        )}
-
-                        {waypoints.length >= 2 && (
-                          <Polyline
-                            path={polylinePath}
-                            options={{
-                              strokeColor: "#1976d2",
-                              strokeOpacity: 0.8,
-                              strokeWeight: 3,
-                            }}
+                  >
+                    <TerraDrawController
+                      map={mapReady && mapEngine === "google" ? mapRef.current : null}
+                      enabled={mapEngine === "google"}
+                      mode={terraDrawMode}
+                      drawRef={terraDrawRef}
+                      onReadyChange={setTerraDrawReady}
+                      onSnapshotChange={handleTerraSnapshotChange}
+                      onChangeEvent={shapePrompt.handleChangeEvent}
+                      onSelectionChange={shapePrompt.handleSelectionChange}
+                      onError={addError}
+                    />
+                    <MissionMapViewport
+                      loadingLocation={loadingLocation}
+                      isLoaded={isLoaded}
+                      useCesium={useCesium}
+                      mapEngine={mapEngine}
+                      googleMapProps={{
+                        mapContainerStyle: containerStyle,
+                        center: mapCenter,
+                        zoom: mapZoom,
+                        onClick: onMapClick,
+                        onLoad: onMapLoad,
+                        onZoomChanged: onMapZoomChanged,
+                        options: mapOptions,
+                      }}
+                      cesiumMapProps={{
+                        center: mapCenter,
+                        zoom: mapZoom,
+                        viewMode: cesiumViewMode,
+                        waypoints,
+                        fieldBoundary: farmBorder && farmBorder.length >= 3 ? farmBorder : null,
+                        droneCenter,
+                        headingDeg: typeof heading === "number" ? heading : null,
+                        drawMode,
+                        onDrawComplete: handleRouteDrawComplete,
+                        onBoundaryDrawStarted: farmBorderDraw.onBoundaryDrawStarted,
+                        onBoundaryDrawProgress: farmBorderDraw.onBoundaryDrawProgress,
+                      }}
+                      leafletMapProps={{
+                        center: mapCenter,
+                        zoom: mapZoom,
+                        waypoints,
+                        droneCenter,
+                        userCenter,
+                        drawMode,
+                        onDrawComplete: handleRouteDrawComplete,
+                        onBoundaryDrawStarted: farmBorderDraw.onBoundaryDrawStarted,
+                        onBoundaryDrawProgress: farmBorderDraw.onBoundaryDrawProgress,
+                        height: 400,
+                      }}
+                      mapLibreMapProps={{
+                        center: mapCenter,
+                        zoom: mapZoom,
+                        waypoints,
+                        droneCenter,
+                        userCenter,
+                        drawMode,
+                        onDrawComplete: handleRouteDrawComplete,
+                        onBoundaryDrawStarted: farmBorderDraw.onBoundaryDrawStarted,
+                        onBoundaryDrawProgress: farmBorderDraw.onBoundaryDrawProgress,
+                        height: 400,
+                      }}
+                      googleWrapperSx={{ position: "relative" }}
+                      googleOverlay={
+                        <>
+                          <MapShapeActionPopover
+                            open={shapePrompt.open}
+                            variant="farm-border"
+                            name={farmBorderName}
+                            saving={savingFarmBorder}
+                            onNameChange={setFarmBorderName}
+                            onSave={handleFarmBorderSave}
+                            onDismiss={shapePrompt.closePrompt}
                           />
-                        )}
-
-                        {latestPositions.map((p) => (
-                          <OverlayView
-                            key={p.animal_id}
-                            position={{ lat: p.lat, lng: p.lon }}
-                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                          >
-                            <Box
-                              sx={{
-                                transform: "translate(-50%, -100%)",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 0.5,
-                                background: "rgba(0,0,0,0.55)",
-                                color: "white",
-                                px: 1,
-                                py: 0.25,
-                                borderRadius: 1,
-                                fontSize: 12
-                              }}
-                            >
-                              <RoomIcon fontSize="small" />
-                              <span>{p.animal_name || p.collar_id}</span>
-                            </Box>
-                          </OverlayView>
-                        ))}
-                      </>
-                    }
-                  />
-                </Box>
-
-                <Box
-                  sx={{
-                    mt: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 2,
-                  }}
-                >
-                  <CesiumViewControls
-                    useCesium={useCesium}
-                    onUseCesiumChange={(next: boolean) =>
-                      handleMapEngineChange(next ? "cesium" : DEFAULT_MISSION_MAP_ENGINE)
-                    }
-                    mapEngine={mapEngine}
-                    onMapEngineChange={handleMapEngineChange}
-                    viewMode={cesiumViewMode}
-                    onViewModeChange={setCesiumViewMode}
-                  />
-                </Box>
-
-
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Click on the map to add waypoints. Markers are ordered (1..N).
-                </Typography>
-
-              </Stack>
-
-              {/* Right side: Controls */}
-              <Box
-                sx={{
-                  width: { xs: "100%", md: 360 },
-                }}
-              >
-                <Stack spacing={2}>
-                  <TextField variant="filled"
-                    label="Field plan name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    size="small"
-                    fullWidth
-                    required
-                    error={!name.trim()}
-                    helperText={!name.trim() ? "Field plan name is required" : ""}
-                  />
-
-                  <TextField variant="filled"
-                    label="Cruise altitude (m)"
-                    type="text"
-                    value={altInput}
-                    onChange={(e) => handleAltitudeInputChange(e.target.value)}
-                    onBlur={normalizeAltitude}
-                    size="small"
-                    fullWidth
-                    inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
-                    error={altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)}
-                    helperText={
-                      altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
-                        ? "Must be between 1–500m"
-                        : ""
-                    }
-                  />
-
-                  <Typography variant="subtitle2">Waypoints: {waypoints.length}</Typography>
-
-                  <Stack direction="row" spacing={0.25} sx={{ mt: 2 }}>
-                    <ActionIconButton
-                      variant="undo"
-                      title="Undo Last"
-                      disabled={waypoints.length === 0 || sending}
-                      onClick={undo}
-                    />
-                    <ActionIconButton
-                      variant="delete"
-                      title="Clear All"
-                      color="error"
-                      disabled={waypoints.length === 0 || sending}
-                      onClick={clear}
-                    />
-                  </Stack>
-
-                  <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
-                    <ActionIconButton
-                      variant="play"
-                      title={sending ? "Sending…" : "Start Flight Plan"}
-                      color="primary"
-                      size="medium"
-                      loading={sending}
-                      disabled={
-                        sending ||
-                        waypoints.length < 2 ||
-                        !name.trim() ||
-                        altInput === "" ||
-                        Number(altInput) < 1 ||
-                        Number(altInput) > 500
+                          <RouteDrawControls
+                            mode={drawMode}
+                            activeToolMode={
+                              mapEngine === "google"
+                                ? terraDrawMode === "linestring"
+                                  ? "polyline"
+                                  : terraDrawMode === "select" || terraDrawMode === "static"
+                                    ? "none"
+                                    : terraDrawMode === "freehand"
+                                      ? "polygon"
+                                      : terraDrawMode
+                                : undefined
+                            }
+                            onModeChange={setDrawMode}
+                            onToolModeChange={handleRouteToolModeChange}
+                            onUndo={undo}
+                            hasWaypoints={waypoints.length > 0 || terraDrawFeatureCount > 0}
+                          />
+                          <MapEngineSelectionOverlay>
+                            <CesiumViewControls
+                              useCesium={useCesium}
+                              onUseCesiumChange={(next: boolean) =>
+                                handleMapEngineChange(
+                                  next ? "cesium" : DEFAULT_MISSION_MAP_ENGINE,
+                                )
+                              }
+                              mapEngine={mapEngine}
+                              onMapEngineChange={handleMapEngineChange}
+                              viewMode={cesiumViewMode}
+                              onViewModeChange={setCesiumViewMode}
+                            />
+                          </MapEngineSelectionOverlay>
+                        </>
                       }
-                      onClick={sendMission}
-                    />
-                  </Stack>
+                      googleChildren={
+                        <>
+                          {droneCenter && (
+                            <OverlayView
+                              position={droneCenter}
+                              mapPaneName={OverlayView.OVERLAY_LAYER}
+                            >
+                              <div
+                                style={{
+                                  transform: `translate(-50%, -50%) rotate(${
+                                    typeof heading === "number" ? heading : 0
+                                  }deg)`,
+                                  transformOrigin: "center",
+                                  color: armed ? "#1976d2" : "#9aa0a6",
+                                  zIndex: 9999,
+                                }}
+                              >
+                                <SvgIcon
+                                  component={DroneSvg}
+                                  inheritViewBox
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
+                                  }}
+                                />
+                                {activeFlightId && (
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: "-28px",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      background: "white",
+                                      padding: "2px 6px",
+                                      borderRadius: "3px",
+                                      fontSize: "10px",
+                                      whiteSpace: "nowrap",
+                                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                    }}
+                                  >
+                                    Flight: {activeFlightId.substring(0, 8)}...
+                                  </div>
+                                )}
+                              </div>
+                            </OverlayView>
+                          )}
 
-                  {activeFlightId && (
-                    <Alert severity="info" sx={{ mt: 2 }}>
-                      Active flight: {missionStatus?.mission_name || "Loading..."}
-                    </Alert>
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
+                          {userCenter && (
+                            <OverlayView
+                              position={userCenter}
+                              mapPaneName={OverlayView.OVERLAY_LAYER}
+                            >
+                              <div
+                                style={{
+                                  transform: "translate(-50%, -50%)",
+                                  color: "#4caf50",
+                                }}
+                              >
+                                <RoomIcon fontSize="large" />
+                              </div>
+                            </OverlayView>
+                          )}
+
+                          {waypoints.length >= 2 && (
+                            <Polyline
+                              path={polylinePath}
+                              options={{
+                                strokeColor: "#1976d2",
+                                strokeOpacity: 0.8,
+                                strokeWeight: 3,
+                              }}
+                            />
+                          )}
+
+                          {latestPositions.map((p) => (
+                            <OverlayView
+                              key={p.animal_id}
+                              position={{ lat: p.lat, lng: p.lon }}
+                              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                            >
+                              <Box
+                                sx={{
+                                  transform: "translate(-50%, -100%)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                  background: "rgba(0,0,0,0.55)",
+                                  color: "white",
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  fontSize: 12,
+                                }}
+                              >
+                                <RoomIcon fontSize="small" />
+                                <span>{p.animal_name || p.collar_id}</span>
+                              </Box>
+                            </OverlayView>
+                          ))}
+                        </>
+                      }
+                    />
+                  </Box>
+                }
+                setup={
+                  <Stack spacing={2}>
+                    <Typography variant="body2" color="text.secondary">
+                      Click on the map to add waypoints. Markers are ordered (1..N).
+                    </Typography>
+
+                    <TextField
+                      variant="filled"
+                      label="Field plan name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      size="small"
+                      fullWidth
+                      required
+                      error={!name.trim()}
+                      helperText={!name.trim() ? "Field plan name is required" : ""}
+                    />
+
+                    <TextField
+                      variant="filled"
+                      label="Cruise altitude (m)"
+                      type="text"
+                      value={altInput}
+                      onChange={(e) => handleAltitudeInputChange(e.target.value)}
+                      onBlur={normalizeAltitude}
+                      size="small"
+                      fullWidth
+                      inputProps={{ inputMode: "numeric", pattern: "\\d*" }}
+                      error={altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)}
+                      helperText={
+                        altInput !== "" && (Number(altInput) < 1 || Number(altInput) > 500)
+                          ? "Must be between 1–500m"
+                          : ""
+                      }
+                    />
+
+                    <Typography variant="subtitle2">Waypoints: {waypoints.length}</Typography>
+
+                    <Stack direction="row" spacing={0.25}>
+                      <ActionIconButton
+                        variant="undo"
+                        title="Undo Last"
+                        disabled={waypoints.length === 0 || sending}
+                        onClick={undo}
+                      />
+                      <ActionIconButton
+                        variant="delete"
+                        title="Clear All"
+                        color="error"
+                        disabled={waypoints.length === 0 || sending}
+                        onClick={clear}
+                      />
+                    </Stack>
+
+                    <Stack direction="row" justifyContent="flex-end">
+                      <ActionIconButton
+                        variant="play"
+                        title={sending ? "Sending…" : "Start Flight Plan"}
+                        color="primary"
+                        size="medium"
+                        loading={sending}
+                        disabled={
+                          sending ||
+                          waypoints.length < 2 ||
+                          !name.trim() ||
+                          altInput === "" ||
+                          Number(altInput) < 1 ||
+                          Number(altInput) > 500
+                        }
+                        onClick={sendMission}
+                      />
+                    </Stack>
+
+                    {activeFlightId && (
+                      <Alert severity="info">
+                        Active flight: {missionStatus?.mission_name || "Loading..."}
+                      </Alert>
+                    )}
+                  </Stack>
+                }
+                videoAnalysis={
+                  <VideoAnalysisPanel
+                    embedded
+                    missionId={activeFlightId}
+                    flightActive={Boolean(activeFlightId)}
+                  />
+                }
+              />
+            </Box>
 
             <Divider sx={{ mb: 2 }} />
 

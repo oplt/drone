@@ -75,7 +75,6 @@ export function useEventTriggerConfigPersistence({
     void fetchEventTriggerConfig(selectedFieldId, token)
       .then((config: PatrolEventTriggerConfig) => {
         if (cancelled) return;
-        skipNextSaveRef.current = true;
         setIntegration(config.integration ?? null);
         setGridParams((prev) => ({
           ...prev,
@@ -91,6 +90,43 @@ export function useEventTriggerConfigPersistence({
         setCruiseAlt(config.cruise_alt);
         setCruiseAltInput(String(config.cruise_alt));
         setConfigReady(true);
+
+        if (config.id == null) {
+          setSaving(true);
+          setSaveError(null);
+          void saveEventTriggerConfig(
+            {
+              field_id: selectedFieldId,
+              enabled: true,
+              cruise_alt: config.cruise_alt,
+              speed_mps: config.speed_mps,
+              verification_loiter_s: config.verification_loiter_s,
+              verification_radius_m: config.verification_radius_m,
+              track_target: config.track_target,
+              target_label: config.target_label?.trim() || null,
+              search_grid_spacing_m: config.search_grid_spacing_m,
+              search_grid_angle_deg: config.search_grid_angle_deg,
+              ai_tasks: aiTasksFromConfig(config.ai_tasks),
+            },
+            token,
+          )
+            .then((saved) => {
+              if (cancelled) return;
+              setIntegration(saved.integration ?? null);
+            })
+            .catch((error: unknown) => {
+              if (cancelled) return;
+              setSaveError(
+                error instanceof Error ? error.message : "Failed to save event trigger setup",
+              );
+            })
+            .finally(() => {
+              if (!cancelled) setSaving(false);
+            });
+          return;
+        }
+
+        skipNextSaveRef.current = true;
       })
       .catch((error: unknown) => {
         if (cancelled) return;

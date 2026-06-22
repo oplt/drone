@@ -23,6 +23,7 @@ class VideoAnalysisRepository:
         field_id: int | None = None,
         org_id: int | None = None,
         uploaded_by_user_id: int | None = None,
+        status: str = "uploaded",
     ) -> VideoAsset:
         video = VideoAsset(
             original_filename=original_filename,
@@ -32,6 +33,7 @@ class VideoAnalysisRepository:
             field_id=field_id,
             org_id=org_id,
             uploaded_by_user_id=uploaded_by_user_id,
+            status=status,
         )
         self.db.add(video)
         await self.db.commit()
@@ -51,6 +53,44 @@ class VideoAnalysisRepository:
 
     async def get_video(self, video_id: str) -> VideoAsset | None:
         return await self.db.get(VideoAsset, video_id)
+
+    async def get_video_by_storage_path(self, storage_path: str) -> VideoAsset | None:
+        result = await self.db.execute(
+            select(VideoAsset).where(VideoAsset.storage_path == storage_path)
+        )
+        return result.scalar_one_or_none()
+
+    async def attach_video_to_mission(
+        self,
+        video: VideoAsset,
+        *,
+        mission_id: str,
+        field_id: int | None = None,
+    ) -> VideoAsset:
+        video.mission_id = mission_id
+        if field_id is not None:
+            video.field_id = field_id
+        if video.status == "uploaded":
+            video.status = "mission_recording"
+        await self.db.commit()
+        await self.db.refresh(video)
+        return video
+
+    async def list_videos_for_user(
+        self,
+        user: User,
+        *,
+        mission_id: str | None = None,
+        field_id: int | None = None,
+        limit: int = 20,
+    ) -> list[VideoAsset]:
+        stmt = select(VideoAsset).where(self._visible_video(user))
+        if mission_id:
+            stmt = stmt.where(VideoAsset.mission_id == mission_id)
+        if field_id is not None:
+            stmt = stmt.where(VideoAsset.field_id == field_id)
+        stmt = stmt.order_by(VideoAsset.created_at.desc()).limit(max(1, int(limit)))
+        return list((await self.db.scalars(stmt)).all())
 
     async def update_video_metadata(
         self,

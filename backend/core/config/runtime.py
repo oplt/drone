@@ -298,6 +298,8 @@ class RuntimeSettings(BaseSettings):
     telemetry_topic: str = "ardupilot/telemetry"
     mission_telemetry_startup_grace_s: float = Field(default=1.0, ge=0.0)
 
+    patrol_sensor_trigger_geofence_tolerance_m: float = Field(default=75.0, ge=0.0, le=500.0)
+
     drone_conn: str
     drone_conn_mavproxy: str
 

@@ -4,31 +4,19 @@ import {
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../mission-runtime";
-import { useGridPreview, type GridParams } from "../../mission-planning";
+import { useGridPreview, createDefaultGridParams, type GridParams } from "../../mission-planning";
 import {
   MAX_GRID_PREVIEW_WAYPOINTS,
-  CESIUM_MAX_SAFE_ZOOM,
+  useMissionAltitudeInput,
   type Waypoint,
   type DrawMode,
 } from "../../mission-workflow";
+import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
 import type { LonLat } from "../../fields";
 import type { TerraDrawEditorMode } from "../../maps";
 import type { MissionMapEngine } from "../../maps";
 
-const DEFAULT_GRID_PARAMS: GridParams = {
-  row_spacing_m: 7.5,
-  grid_angle_deg: null,
-  slope_aware: false,
-  safety_inset_m: 1.5,
-  terrain_follow: false,
-  agl_m: 30,
-  pattern_mode: "boustrophedon",
-  crosshatch_angle_offset_deg: 90,
-  start_corner: "auto",
-  lane_strategy: "serpentine",
-  row_stride: 1,
-  row_phase_m: 0,
-};
+const DEFAULT_GRID_PARAMS = createDefaultGridParams();
 
 export function useFieldSurveyMission({
   fieldBorder,
@@ -51,8 +39,14 @@ export function useFieldSurveyMission({
 }) {
   const missionLaunchInFlightRef = useRef(false);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [alt, setAlt] = useState(30);
-  const [altInput, setAltInput] = useState("30");
+  const {
+    alt,
+    altInput,
+    setAlt,
+    setAltInput,
+    handleAltitudeInputChange,
+    normalizeAltitude,
+  } = useMissionAltitudeInput({ initialAltitude: 30, addError });
   const [name, setName] = useState("field-plan-1");
   const [sending, setSending] = useState(false);
   const [preflightRun, setPreflightRun] =
@@ -99,32 +93,6 @@ export function useFieldSurveyMission({
     }
     return null;
   }, [gridPreview, waypoints]);
-
-  const handleAltitudeInputChange = (value: string) => {
-    if (value === "") {
-      setAltInput("");
-      return;
-    }
-    if (!/^\d+$/.test(value)) return;
-    setAltInput(value);
-  };
-
-  const normalizeAltitude = () => {
-    if (altInput === "") {
-      setAltInput(String(alt));
-      return;
-    }
-    const num = Number(altInput);
-    if (!Number.isFinite(num)) {
-      setAltInput(String(alt));
-      return;
-    }
-    if (num < 1 || num > 500) {
-      addError("Altitude must be between 1 and 500 meters");
-      return;
-    }
-    setAlt(num);
-  };
 
   const sendMission = async () => {
     if (missionLaunchInFlightRef.current) return;
@@ -213,8 +181,8 @@ export function useFieldSurveyMission({
   );
 
   const cesiumZoomFor = useCallback(
-    (mapZoom: number) => Math.min(mapZoom, CESIUM_MAX_SAFE_ZOOM),
-    []
+    (mapZoom: number) => cesiumZoomForMapZoom(mapZoom),
+    [],
   );
 
   return {

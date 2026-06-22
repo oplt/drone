@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./utils/fieldGeometry";
+export * from "./constants";
 export * from "./api/fieldsApi";
 export * from "./api/geofencesApi";
 export * from "./api/mappingApi";
@@ -8,3 +9,5 @@ export { useGeofenceLayers } from "./hooks/useGeofenceLayers";
 export { useFieldTileset } from "./hooks/useFieldTileset";
 export { FieldBorderPanel } from "./components/FieldBorderPanel";
 export { SavedFieldsPanel } from "./components/SavedFieldsPanel";
+export { FieldDeleteDialog } from "./components/FieldDeleteDialog";
+export { WorkflowFieldsBlock } from "./components/WorkflowFieldsBlock";

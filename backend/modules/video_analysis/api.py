@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 
 from backend.core.database.session import get_db
-from backend.modules.identity.dependencies import OrgUser, require_org_user
+from backend.modules.identity.dependencies import OrgUser, require_org_user, require_user_header_or_query
 from backend.modules.video_analysis.application import (
     VideoAnalysisApplication,
     VideoAnalysisConflict,
@@ -21,6 +22,42 @@ from backend.observability.instruments import observed_span
 
 router = APIRouter(prefix="/video-analysis", tags=["video-analysis"])
 application = VideoAnalysisApplication()
+
+
+@router.get("/videos", response_model=list[VideoAssetOut])
+async def list_videos(
+    mission_id: str | None = Query(default=None),
+    field_id: int | None = Query(default=None),
+    limit: int = Query(20, ge=1, le=100),
+    db=Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> list[VideoAssetOut]:
+    try:
+        return await application.list_videos(
+            db,
+            user=org_user.user,
+            mission_id=mission_id,
+            field_id=field_id,
+            limit=limit,
+        )
+    except VideoAnalysisNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/videos/{video_id}/stream")
+async def stream_video(
+    video_id: str,
+    db=Depends(get_db),
+    user=Depends(require_user_header_or_query),
+) -> FileResponse:
+    try:
+        path, content_type = await application.resolve_video_stream_path(
+            db, video_id=video_id, user=user
+        )
+    except VideoAnalysisNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    media_type = content_type or "video/mp4"
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 @router.post("/videos", response_model=VideoAssetOut)

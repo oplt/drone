@@ -26,9 +26,12 @@ from backend.modules.patrol.sensor_config_service import get_accessible_field, v
 
 @dataclass(frozen=True)
 class ResolvedEventTriggerContext:
-    config: PatrolEventTriggerConfig
+    config: PatrolEventTriggerConfig | None
     field: Field
     effective_payload: PatrolSensorTriggerIn
+
+
+PROPERTY_PATROL_SCOPE = "property_patrol"
 
 
 def _org_filters(*, org_id: int | None, owner_id: int) -> list[Any]:
@@ -173,6 +176,86 @@ async def field_geofence_lonlat(db: AsyncSession, field: Field) -> tuple[tuple[f
     return validate_geofence_polygon(ring)
 
 
+def _default_trigger_payload_fields() -> dict[str, Any]:
+    return {
+        "cruise_alt": 30.0,
+        "speed_mps": 6.0,
+        "verification_loiter_s": 45.0,
+        "verification_radius_m": 18.0,
+        "track_target": True,
+        "target_label": None,
+        "search_grid_spacing_m": 40.0,
+        "search_grid_angle_deg": 0.0,
+        "ai_tasks": list(PATROL_AI_TASKS),
+    }
+
+
+def _build_effective_trigger_payload(
+    payload: PatrolSensorTriggerIn,
+    *,
+    field_id: int,
+    geofence: list[list[float]],
+    fields: dict[str, Any],
+) -> PatrolSensorTriggerIn:
+    sensor_id = (payload.sensor_id or "webhook").strip() or "webhook"
+    return PatrolSensorTriggerIn(
+        trigger_id=payload.trigger_id,
+        sensor_id=sensor_id,
+        field_id=field_id,
+        coordinates=payload.coordinates,
+        mission_name=payload.mission_name,
+        geofence_polygon_lonlat=geofence,
+        cruise_alt=payload.cruise_alt if payload.cruise_alt is not None else fields["cruise_alt"],
+        speed_mps=payload.speed_mps if payload.speed_mps is not None else fields["speed_mps"],
+        verification_loiter_s=(
+            payload.verification_loiter_s
+            if payload.verification_loiter_s is not None
+            else fields["verification_loiter_s"]
+        ),
+        verification_radius_m=(
+            payload.verification_radius_m
+            if payload.verification_radius_m is not None
+            else fields["verification_radius_m"]
+        ),
+        track_target=(
+            payload.track_target if payload.track_target is not None else fields["track_target"]
+        ),
+        target_label=(
+            payload.target_label if payload.target_label is not None else fields["target_label"]
+        ),
+        search_grid_spacing_m=(
+            payload.search_grid_spacing_m
+            if payload.search_grid_spacing_m is not None
+            else fields["search_grid_spacing_m"]
+        ),
+        search_grid_angle_deg=(
+            payload.search_grid_angle_deg
+            if payload.search_grid_angle_deg is not None
+            else fields["search_grid_angle_deg"]
+        ),
+        ai_tasks=payload.ai_tasks if payload.ai_tasks is not None else fields["ai_tasks"],
+    )
+
+
+async def get_fallback_property_patrol_field(
+    db: AsyncSession,
+    *,
+    org_id: int | None,
+    owner_id: int,
+) -> Field | None:
+    """Use the newest saved property-patrol geofence when no event-trigger row exists yet."""
+    stmt = select(Field).where(
+        Field.workflow_scope == PROPERTY_PATROL_SCOPE,
+        Field.boundary.is_not(None),
+    )
+    if org_id is not None:
+        stmt = stmt.where(Field.org_id == org_id)
+    else:
+        stmt = stmt.where(Field.owner_id == owner_id)
+    stmt = stmt.order_by(Field.id.desc()).limit(1)
+    return await db.scalar(stmt)
+
+
 def _config_payload_fields(config: PatrolEventTriggerConfig) -> dict[str, Any]:
     return {
         "cruise_alt": float(config.cruise_alt),
@@ -209,55 +292,47 @@ async def resolve_event_trigger_payload(
             )
     if config is None:
         config = await get_active_event_trigger_config(db, org_id=org_id, owner_id=owner_id)
-    if config is None:
+
+    if config is not None:
+        field = config.field
+        if field is None:
+            field = await db.get(Field, config.field_id)
+        if field is None:
+            raise HTTPException(status_code=404, detail="Property geofence not found.")
+
+        geofence_tuple = await field_geofence_lonlat(db, field)
+        geofence = [list(pt) for pt in geofence_tuple]
+        effective = _build_effective_trigger_payload(
+            payload,
+            field_id=config.field_id,
+            geofence=geofence,
+            fields=_config_payload_fields(config),
+        )
+        return ResolvedEventTriggerContext(
+            config=config,
+            field=field,
+            effective_payload=effective,
+        )
+
+    fallback_field = await get_fallback_property_patrol_field(
+        db,
+        org_id=org_id,
+        owner_id=owner_id,
+    )
+    if fallback_field is None:
         return None
 
-    field = config.field
-    if field is None:
-        field = await db.get(Field, config.field_id)
-    if field is None:
-        raise HTTPException(status_code=404, detail="Property geofence not found.")
-
-    geofence_tuple = await field_geofence_lonlat(db, field)
+    geofence_tuple = await field_geofence_lonlat(db, fallback_field)
     geofence = [list(pt) for pt in geofence_tuple]
-    fields = _config_payload_fields(config)
-    sensor_id = (payload.sensor_id or "webhook").strip() or "webhook"
-    effective = PatrolSensorTriggerIn(
-        trigger_id=payload.trigger_id,
-        sensor_id=sensor_id,
-        field_id=config.field_id,
-        coordinates=payload.coordinates,
-        mission_name=payload.mission_name,
-        geofence_polygon_lonlat=geofence,
-        cruise_alt=payload.cruise_alt if payload.cruise_alt is not None else fields["cruise_alt"],
-        speed_mps=payload.speed_mps if payload.speed_mps is not None else fields["speed_mps"],
-        verification_loiter_s=(
-            payload.verification_loiter_s
-            if payload.verification_loiter_s is not None
-            else fields["verification_loiter_s"]
-        ),
-        verification_radius_m=(
-            payload.verification_radius_m
-            if payload.verification_radius_m is not None
-            else fields["verification_radius_m"]
-        ),
-        track_target=payload.track_target if payload.track_target is not None else fields["track_target"],
-        target_label=payload.target_label if payload.target_label is not None else fields["target_label"],
-        search_grid_spacing_m=(
-            payload.search_grid_spacing_m
-            if payload.search_grid_spacing_m is not None
-            else fields["search_grid_spacing_m"]
-        ),
-        search_grid_angle_deg=(
-            payload.search_grid_angle_deg
-            if payload.search_grid_angle_deg is not None
-            else fields["search_grid_angle_deg"]
-        ),
-        ai_tasks=payload.ai_tasks if payload.ai_tasks is not None else fields["ai_tasks"],
+    effective = _build_effective_trigger_payload(
+        payload,
+        field_id=int(fallback_field.id),
+        geofence=geofence,
+        fields=_default_trigger_payload_fields(),
     )
     return ResolvedEventTriggerContext(
-        config=config,
-        field=field,
+        config=None,
+        field=fallback_field,
         effective_payload=effective,
     )
 

@@ -4,16 +4,18 @@ import type { VideoDetection } from "../types";
 
 type Props = {
   file?: File | null;
+  playbackUrl?: string | null;
   detections: VideoDetection[];
   selected?: VideoDetection | null;
   onDurationChange: (duration: number) => void;
 };
 
-export function VideoOverlayPlayer({ file, detections, selected, onDurationChange }: Props) {
+export function VideoOverlayPlayer({ file, playbackUrl, detections, selected, onDurationChange }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoSize, setVideoSize] = useState({ width: 1, height: 1 });
   const [timeSeconds, setTimeSeconds] = useState(0);
   const objectUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  const videoSrc = objectUrl ?? playbackUrl ?? null;
 
   useEffect(() => () => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, [objectUrl]);
 
@@ -31,10 +33,10 @@ export function VideoOverlayPlayer({ file, detections, selected, onDurationChang
       <CardContent>
         <Typography variant="h6" sx={{ mb: 1 }}>Video review</Typography>
         <Box sx={{ position: 'relative', width: '100%', aspectRatio: '16/9', bgcolor: 'black', borderRadius: 1, overflow: 'hidden' }}>
-          {objectUrl ? (
+          {videoSrc ? (
             <video
               ref={videoRef}
-              src={objectUrl}
+              src={videoSrc}
               controls
               onTimeUpdate={(event) => setTimeSeconds(event.currentTarget.currentTime)}
               onLoadedMetadata={() => {
@@ -47,7 +49,7 @@ export function VideoOverlayPlayer({ file, detections, selected, onDurationChang
               style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
             />
           ) : (
-            <Box sx={{ height: '100%', display: 'grid', placeItems: 'center', color: 'text.secondary' }}>Upload a video to preview it here.</Box>
+            <Box sx={{ height: '100%', display: 'grid', placeItems: 'center', color: 'text.secondary' }}>Select a mission recording or upload a video to preview it here.</Box>
           )}
 
           {active.map((d) => (

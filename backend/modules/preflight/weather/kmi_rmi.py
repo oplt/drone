@@ -110,7 +110,8 @@ async def _fetch_latest_station_observation(
         "request": "GetFeature",
         "typenames": "aws:aws_10min",
         "outputFormat": "application/json",
-        "count": 200,
+        "count": 1,
+        "sortBy": "timestamp D",
         "CQL_FILTER": f"code={station_code}",
     }
     try:
@@ -126,22 +127,15 @@ async def _fetch_latest_station_observation(
     if not features:
         return None
 
-    latest_props: dict[str, Any] | None = None
-    latest_ts: datetime | None = None
-    for feature in features:
-        props = feature.get("properties") or {}
-        ts_raw = props.get("timestamp")
-        if not ts_raw:
-            continue
-        try:
-            ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        if latest_ts is None or ts > latest_ts:
-            latest_ts = ts
-            latest_props = props
-
-    if latest_props is None or latest_ts is None:
+    props = features[0].get("properties") or {}
+    ts_raw = props.get("timestamp")
+    if not ts_raw:
+        return None
+    try:
+        latest_ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+        if latest_ts.tzinfo is None:
+            latest_ts = latest_ts.replace(tzinfo=UTC)
+    except ValueError:
         return None
 
     age_hours = (datetime.now(UTC) - latest_ts).total_seconds() / 3600.0
@@ -156,8 +150,8 @@ async def _fetch_latest_station_observation(
 
     return {
         "timestamp": latest_ts.isoformat(),
-        "wind_speed_mps": _to_float(latest_props.get("wind_speed_10m")),
-        "wind_gust_mps": _to_float(latest_props.get("wind_gusts_speed")),
+        "wind_speed_mps": _to_float(props.get("wind_speed_10m")),
+        "wind_gust_mps": _to_float(props.get("wind_gusts_speed")),
     }
 
 

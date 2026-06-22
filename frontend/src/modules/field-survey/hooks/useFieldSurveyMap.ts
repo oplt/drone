@@ -17,6 +17,7 @@ import {
 } from "../../maps";
 import { useMissionCommandMetrics } from "../../mission-runtime";
 import { stripClosedRing, computeRingMapViewport, type LonLat } from "../../fields";
+import { createFlatBoundaryDrawBridge } from "../../maps/utils/flatBoundaryDrawBridge";
 import type { Waypoint } from "../../mission-workflow";
 
 export function useFieldSurveyMap({
@@ -39,13 +40,14 @@ export function useFieldSurveyMap({
   syncFieldBorderFromSnapshot,
   isRemovableUserDrawingFeature,
   loadRingIntoEditor,
-  focusRingOnMap,
   selectedField,
   mapEngine: controlledMapEngine,
   addError,
   onMapEngineChange,
   fieldPolygonRef,
   terraDrawRef,
+  onBoundaryDrawStarted,
+  resetBoundaryDrawSession,
 }: {
   apiBase: string;
   wsConnected: boolean;
@@ -68,14 +70,24 @@ export function useFieldSurveyMap({
     feature: import("../../mission-workflow").TerraFeature
   ) => boolean;
   loadRingIntoEditor: (ring: LonLat[]) => void;
-  focusRingOnMap: (ring: LonLat[]) => void;
   selectedField: { ring: LonLat[] } | null;
   mapEngine: MissionMapEngine;
   addError: (message: string) => void;
   onMapEngineChange: (engine: MissionMapEngine) => void;
   fieldPolygonRef: React.MutableRefObject<google.maps.Polygon | null>;
   terraDrawRef: React.MutableRefObject<TerraDraw | null>;
+  onBoundaryDrawStarted?: () => void;
+  resetBoundaryDrawSession?: () => void;
 }) {
+  const flatBoundaryDraw = useMemo(
+    () =>
+      createFlatBoundaryDrawBridge({
+        setFieldBorder,
+        setSelectedFieldId,
+        onBoundaryDrawStarted,
+      }),
+    [onBoundaryDrawStarted, setFieldBorder, setSelectedFieldId],
+  );
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -106,7 +118,7 @@ export function useFieldSurveyMap({
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase,
     getToken,
-    enabled: droneReady,
+    enabled: Boolean(activeFlightId && droneReady),
     onError: addError,
     resetKey: activeFlightId ?? "none",
   });
@@ -232,6 +244,7 @@ export function useFieldSurveyMap({
 
   const handleDrawingToolSelection = useCallback(
     (toolMode: TerraDrawToolMode) => {
+      resetBoundaryDrawSession?.();
       if (mapEngine !== "google") {
         setDrawMode(terraDrawToolToShapeMode(toolMode));
         return;
@@ -239,7 +252,7 @@ export function useFieldSurveyMap({
 
       setTerraDrawMode(toolMode);
     },
-    [mapEngine, setDrawMode, setTerraDrawMode]
+    [mapEngine, resetBoundaryDrawSession, setDrawMode, setTerraDrawMode]
   );
 
   const handleCesiumDrawComplete = useCallback(
@@ -253,13 +266,13 @@ export function useFieldSurveyMap({
           setSelectedFieldId(null);
         }
       } else if (result.type === "polyline") {
-        setWaypoints(
-          result.coordinates.map(([lon, lat]) => ({
-            lat,
-            lon,
-            alt,
-          }))
+        const ring = stripClosedRing(
+          result.coordinates.map(([lon, lat]) => [lon, lat] as LonLat),
         );
+        if (ring.length >= 3) {
+          setFieldBorder(ring);
+          setSelectedFieldId(null);
+        }
       } else if (result.type === "point") {
         const [lon, lat] = result.coordinates;
         setWaypoints((prev) => [...prev, { lat, lon, alt }]);
@@ -483,6 +496,8 @@ export function useFieldSurveyMap({
     onMapClick,
     handleDrawingToolSelection,
     handleCesiumDrawComplete,
+    onBoundaryDrawStarted: flatBoundaryDraw.onBoundaryDrawStarted,
+    onBoundaryDrawProgress: flatBoundaryDraw.onBoundaryDrawProgress,
     handleVideoError,
     handleVideoLoad,
     handleVideoRetry,

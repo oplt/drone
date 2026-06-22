@@ -17,8 +17,9 @@ from backend.modules.patrol.ai_tasks import (
     yolo_detection_enabled,
 )
 from backend.modules.patrol.vision.config import ml_settings
+from backend.modules.patrol.vision.evidence_policy import should_save_evidence_snapshot
 from backend.modules.patrol.vision.detector import ObjectDetector
-from backend.modules.patrol.vision.events import EventSink
+from backend.modules.patrol.vision.events import EventDispatcher, EventSink, PipelineEvent
 from backend.modules.patrol.vision.evidence import EvidenceRecorder
 from backend.modules.patrol.vision.geo import GeoProjector
 from backend.modules.patrol.vision.live_detections import LiveDetectionSampler
@@ -51,6 +52,11 @@ class DroneAnomalyPipeline:
         self.events = EventSink(
             mode=getattr(ml_settings, "event_sink_mode", "noop"),
             url=getattr(ml_settings, "event_sink_url", None),
+        )
+        self.event_dispatcher = EventDispatcher(
+            emit_websocket_events=ml_settings.emit_websocket_events,
+            duplicate_window_s=ml_settings.max_duplicate_event_s,
+            max_events_per_track=ml_settings.max_events_per_track,
         )
         self.evidence = EvidenceRecorder(ml_settings.evidence_dir)
 
@@ -260,7 +266,7 @@ class DroneAnomalyPipeline:
         telemetry: dict[str, Any],
         motion_meta: dict[str, Any],
     ) -> None:
-        if ml_settings.save_debug_frames:
+        if await should_save_evidence_snapshot(save_debug_frames=ml_settings.save_debug_frames):
             snapshot = self.evidence.save_frame(packet.image, prefix=anomaly.event_type)
             anomaly.payload["snapshot_path"] = snapshot
 
@@ -290,10 +296,28 @@ class DroneAnomalyPipeline:
                 self._last_error = str(e)
 
         try:
-            await self.events.send(anomaly)
+            await self.event_dispatcher.dispatch(
+                PipelineEvent(
+                    event_type=anomaly.event_type,
+                    confidence=float(anomaly.confidence),
+                    location=(
+                        {"lat": anomaly.location.lat, "lon": anomaly.location.lon}
+                        if anomaly.location is not None
+                        else None
+                    ),
+                    payload=dict(anomaly.payload or {}),
+                )
+            )
         except Exception as e:
-            log.exception("Failed to dispatch anomaly")
+            log.exception("Failed to broadcast anomaly event")
             self._last_error = str(e)
+
+        if self.events.mode == "http":
+            try:
+                await self.events.send(anomaly)
+            except Exception as e:
+                log.exception("Failed to dispatch anomaly to HTTP event sink")
+                self._last_error = str(e)
 
         self._anomalies_emitted += 1
 

@@ -13,7 +13,15 @@ class FieldService:
     def __init__(self, repository: FieldRepository | None = None) -> None:
         self.repository = repository or FieldRepository()
 
-    async def create(self, db: AsyncSession, *, user: User, name: str, polygon: Polygon) -> Field:
+    async def create(
+        self,
+        db: AsyncSession,
+        *,
+        user: User,
+        name: str,
+        polygon: Polygon,
+        workflow_scope: str | None = None,
+    ) -> Field:
         project = await get_default_project(db, org_id=int(user.org_id)) if user.org_id else None
         return await self.repository.create(
             db,
@@ -21,12 +29,25 @@ class FieldService:
             project_id=project.id if project else None,
             name=name,
             polygon=polygon,
+            workflow_scope=workflow_scope,
         )
 
     async def list_owned(
-        self, db: AsyncSession, *, user: User, query: str | None, limit: int
+        self,
+        db: AsyncSession,
+        *,
+        user: User,
+        query: str | None,
+        limit: int,
+        workflow_scope: str | None = None,
     ) -> list[Field]:
-        return await self.repository.list_owned(db, user=user, query=query, limit=limit)
+        return await self.repository.list_owned(
+            db,
+            user=user,
+            query=query,
+            limit=limit,
+            workflow_scope=workflow_scope,
+        )
 
     async def get_owned(self, db: AsyncSession, *, field_id: int, user: User) -> Field | None:
         return await self.repository.get_owned(db, field_id=field_id, user=user)

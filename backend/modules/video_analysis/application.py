@@ -144,3 +144,35 @@ class VideoAnalysisApplication:
         if await repo.get_job_for_user(job_id, user) is None:
             raise VideoAnalysisNotFound("Analysis job not found")
         return await repo.list_detections_for_user(job_id, user, limit=limit)
+
+    async def list_videos(
+        self,
+        db: AsyncSession,
+        *,
+        user: User,
+        mission_id: str | None = None,
+        field_id: int | None = None,
+        limit: int = 20,
+    ):
+        if (
+            field_id is not None
+            and await field_service.get_owned(db, field_id=field_id, user=user) is None
+        ):
+            raise VideoAnalysisNotFound("Field not found")
+        return await VideoAnalysisRepository(db).list_videos_for_user(
+            user,
+            mission_id=mission_id,
+            field_id=field_id,
+            limit=limit,
+        )
+
+    async def resolve_video_stream_path(
+        self, db: AsyncSession, *, video_id: str, user: User
+    ) -> tuple[Path, str | None]:
+        video = await VideoAnalysisRepository(db).get_video_for_user(video_id, user)
+        if video is None:
+            raise VideoAnalysisNotFound("Video not found")
+        path = Path(video.storage_path)
+        if not path.is_file():
+            raise VideoAnalysisNotFound("Video file is not available on disk")
+        return path, video.content_type

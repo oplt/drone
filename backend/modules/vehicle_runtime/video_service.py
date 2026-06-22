@@ -191,23 +191,56 @@ class RuntimeVideoServiceMixin:
         if self._shared_video is None:
             if self.video is not None:
                 try:
-                    await asyncio.to_thread(self.video.stop_recording)
+                    recording_path = self.video.recording_full_path()
+                    recording_file = await asyncio.to_thread(self.video.stop_recording)
+                    await self._register_mission_recording(
+                        source="drone_video",
+                        recording_file=recording_file,
+                        recording_path=recording_path,
+                    )
                 except Exception as exc:
                     logger.warning("Failed to stop video recording: %s", exc)
             return
         try:
             status = await self._shared_video.stop_recording()
-            if self._flight_id is not None:
-                await self.record_flight_event(
-                    "video_recording_stopped",
-                    {
-                        "source": "shared_runtime",
-                        "recording_file": status.get("recording_file"),
-                        "recording_path": status.get("recording_path"),
-                    },
-                    flight_id=self._flight_id,
-                    source="orchestrator.video",
-                    category="video",
-                )
+            await self._register_mission_recording(
+                source="shared_runtime",
+                recording_file=status.get("recording_file"),
+                recording_path=status.get("recording_path"),
+            )
         except Exception as exc:
             logger.warning("Failed to stop shared video recording: %s", exc)
+
+    async def _register_mission_recording(
+        self,
+        *,
+        source: str,
+        recording_file: str | None,
+        recording_path: str | None,
+    ) -> None:
+        if self._flight_id is not None:
+            await self.record_flight_event(
+                "video_recording_stopped",
+                {
+                    "source": source,
+                    "recording_file": recording_file,
+                    "recording_path": recording_path,
+                },
+                flight_id=self._flight_id,
+                source="orchestrator.video",
+                category="video",
+            )
+
+        client_flight_id = getattr(self, "current_client_flight_id", None)
+        if not client_flight_id:
+            return
+
+        from backend.modules.video_analysis.mission_recordings import (
+            register_mission_flight_recording,
+        )
+
+        await register_mission_flight_recording(
+            recording_path=recording_path,
+            recording_file=recording_file,
+            client_flight_id=client_flight_id,
+        )

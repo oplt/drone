@@ -1,11 +1,11 @@
 import { Divider, Stack, Typography } from "@mui/material";
-import { TerraDrawController } from "../../maps";
 import {
   GoogleMapEngineAlerts,
   MissionWorkflowShell,
+  WorkflowTerraDrawBridge,
 } from "../../mission-workflow";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
-import { FieldDeleteDialog } from "../../field-survey/components/FieldDeleteDialog";
+import { FieldDeleteDialog } from "../../fields/components/FieldDeleteDialog";
 import { PhotogrammetryArtifactsPanel } from "../components/PhotogrammetryArtifactsPanel";
 import { PhotogrammetryFieldsBlock } from "../components/PhotogrammetryFieldsBlock";
 import { PhotogrammetryGridParamsSection } from "../components/PhotogrammetryGridParamsSection";
@@ -45,72 +45,78 @@ export default function PhotoGrammetryPage() {
 
       {vm.googleMapsReady ? (
         <>
-          <TerraDrawController
-            map={map.mapReady ? map.mapRef.current : null}
-            enabled={map.mapEngine === "google"}
-            mode={vm.terraDrawMode}
-            drawRef={map.terraDrawRef}
-            onReadyChange={map.setTerraDrawReady}
-            onSnapshotChange={borderEditor.syncFieldBorderFromSnapshot}
+          <WorkflowTerraDrawBridge
+            mapReady={map.mapReady}
+            mapRef={map.mapRef}
+            mapEngine={map.mapEngine}
+            terraDrawMode={vm.terraDrawMode}
+            terraDrawRef={map.terraDrawRef}
+            setTerraDrawReady={map.setTerraDrawReady}
+            shapePrompt={vm.shapePrompt}
             onError={vm.addError}
           />
-          <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mb: 3 }}>
-            <Stack sx={{ flex: 1 }} spacing={2}>
-              <PhotogrammetryMapColumn vm={vm} onSelectField={vm.selectField} />
-              <PhotogrammetryFieldsBlock
-                fields={vm.fields}
-                selectedFieldId={vm.selectedFieldId}
-                selectedField={vm.selectedField}
-                loadingFields={vm.loadingFields}
-                deletingField={vm.deletingField}
-                onSelectField={vm.handleSavedFieldSelect}
-                onRefreshFields={vm.refreshFields}
-                onFocusSelected={() =>
-                  vm.selectedField &&
-                  borderEditor.focusRingOnMap(vm.selectedField.ring)
-                }
-                onDeleteSelected={vm.requestDeleteSelectedField}
-                fieldName={vm.fieldName}
-                fieldBorder={vm.fieldBorder}
-                metrics={vm.metrics}
-                savingField={vm.savingField}
-                onFieldNameChange={vm.setFieldName}
-                onSaveOrUpdate={
-                  vm.selectedFieldId
-                    ? borderEditor.updateFieldBorder
-                    : borderEditor.saveFieldBorder
-                }
-                onClearBorder={borderEditor.clearFieldBorder}
-                onNewField={vm.handleNewField}
-              />
-              <PhotogrammetryGridParamsSection
-                gridParams={mission.gridParams}
-                setGridParams={mission.setGridParams}
-                fieldBorder={vm.fieldBorder}
-                gridPreview={mission.gridPreview}
-                gridPreviewStats={mission.gridPreviewStats}
-                previewLegStats={mission.previewLegStats}
-                gridPreviewTooDense={mission.gridPreviewTooDense}
-                gridPreviewError={mission.gridPreviewError}
-                previewLoading={mission.previewLoading}
-              />
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Click on the map to add waypoints.
-              </Typography>
-            </Stack>
-
-            <PhotogrammetryMissionControls
-              apiBase={vm.apiBase}
-              fieldBorder={vm.fieldBorder}
-              preflightRun={mission.preflightRun}
-              telemetry={telemetry}
-              droneConnected={vm.droneConnected}
-              missionStatus={vm.missionStatus}
-              activeFlightId={vm.activeFlightId}
-              mission={mission}
-              mapping={mapping}
-              selectedFieldId={vm.selectedFieldId}
-              onOpen3DPlanning={open3DPlanning}
+          <Stack spacing={2} sx={{ mb: 3 }}>
+            <PhotogrammetryMapColumn
+              vm={vm}
+              onSelectField={vm.selectField}
+              setupContent={
+                <Stack spacing={2}>
+                  <PhotogrammetryFieldsBlock
+                    fields={vm.fields}
+                    selectedFieldId={vm.selectedFieldId}
+                    selectedField={vm.selectedField}
+                    loadingFields={vm.loadingFields}
+                    deletingField={vm.deletingField}
+                    onSelectField={vm.handleSavedFieldSelect}
+                    onRefreshFields={vm.refreshFields}
+                    onFocusSelected={() =>
+                      vm.selectedField &&
+                      borderEditor.focusRingOnMap(vm.selectedField.ring)
+                    }
+                    onDeleteSelected={vm.requestDeleteSelectedField}
+                    fieldName={vm.fieldName}
+                    fieldBorder={vm.fieldBorder}
+                    metrics={vm.metrics}
+                    savingField={vm.savingField}
+                    onFieldNameChange={vm.setFieldName}
+                    onSaveOrUpdate={
+                      vm.selectedFieldId
+                        ? borderEditor.updateFieldBorder
+                        : borderEditor.saveFieldBorder
+                    }
+                    onClearBorder={borderEditor.clearFieldBorder}
+                    onNewField={vm.handleNewField}
+                  />
+                  <PhotogrammetryGridParamsSection
+                    gridParams={mission.gridParams}
+                    setGridParams={mission.setGridParams}
+                    fieldBorder={vm.fieldBorder}
+                    gridPreview={mission.gridPreview}
+                    gridPreviewStats={mission.gridPreviewStats}
+                    previewLegStats={mission.previewLegStats}
+                    gridPreviewTooDense={mission.gridPreviewTooDense}
+                    gridPreviewError={mission.gridPreviewError}
+                    previewLoading={mission.previewLoading}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Click on the map to add waypoints.
+                  </Typography>
+                  <PhotogrammetryMissionControls
+                    embedded
+                    apiBase={vm.apiBase}
+                    fieldBorder={vm.fieldBorder}
+                    preflightRun={mission.preflightRun}
+                    telemetry={telemetry}
+                    droneConnected={vm.droneConnected}
+                    missionStatus={vm.missionStatus}
+                    activeFlightId={vm.activeFlightId}
+                    mission={mission}
+                    mapping={mapping}
+                    selectedFieldId={vm.selectedFieldId}
+                    onOpen3DPlanning={open3DPlanning}
+                  />
+                </Stack>
+              }
             />
           </Stack>
 

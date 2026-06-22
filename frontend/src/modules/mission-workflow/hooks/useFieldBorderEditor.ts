@@ -1,7 +1,12 @@
-import { useCallback, type MutableRefObject } from "react";
+import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import type { TerraDraw } from "terra-draw";
 import { stripClosedRing, type FieldOutDTO, type LonLat } from "../../fields";
+import type { TerraDrawEditorMode } from "../../maps";
 import type { TerraFeature } from "../types";
+
+function isDrawingTerraMode(mode: TerraDrawEditorMode): boolean {
+  return mode !== "static" && mode !== "select";
+}
 
 export function useFieldBorderEditor({
   setFieldBorder,
@@ -9,6 +14,8 @@ export function useFieldBorderEditor({
   fieldPolygonRef,
   mapRef,
   terraDrawRef,
+  terraDrawMode = "static",
+  onBoundaryClick,
   fieldName,
   selectedFieldId,
   fieldBorder,
@@ -16,12 +23,16 @@ export function useFieldBorderEditor({
   updateFieldRecord,
   refreshFields,
   addError,
+  onSaveSuccess,
+  onUpdateSuccess,
 }: {
   setFieldBorder: (border: LonLat[] | null) => void;
   setSelectedFieldId: (id: number | null) => void;
   fieldPolygonRef: MutableRefObject<google.maps.Polygon | null>;
   mapRef: MutableRefObject<google.maps.Map | null>;
   terraDrawRef: MutableRefObject<TerraDraw | null>;
+  terraDrawMode?: TerraDrawEditorMode;
+  onBoundaryClick?: () => void;
   fieldName: string;
   selectedFieldId: number | null;
   fieldBorder: LonLat[] | null;
@@ -37,7 +48,17 @@ export function useFieldBorderEditor({
   }) => Promise<FieldOutDTO>;
   refreshFields: () => void;
   addError: (message: string) => void;
+  onSaveSuccess?: (field: FieldOutDTO) => void;
+  onUpdateSuccess?: (field: FieldOutDTO) => void;
 }) {
+  const loadedRingRef = useRef<LonLat[] | null>(null);
+  const boundaryClickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+
+  const clearBoundaryClickListener = useCallback(() => {
+    boundaryClickListenerRef.current?.remove();
+    boundaryClickListenerRef.current = null;
+  }, []);
+
   const isTerraGuidanceFeature = useCallback((feature: TerraFeature): boolean => {
     const props = (feature?.properties ?? {}) as Record<string, unknown>;
     return Boolean(
@@ -129,6 +150,8 @@ export function useFieldBorderEditor({
   );
 
   const clearFieldBorder = useCallback(() => {
+    clearBoundaryClickListener();
+    loadedRingRef.current = null;
     if (fieldPolygonRef.current) {
       fieldPolygonRef.current.setMap(null);
       fieldPolygonRef.current = null;
@@ -149,6 +172,7 @@ export function useFieldBorderEditor({
     setFieldBorder(null);
     setSelectedFieldId(null);
   }, [
+    clearBoundaryClickListener,
     fieldPolygonRef,
     isRemovableUserDrawingFeature,
     setFieldBorder,
@@ -156,14 +180,14 @@ export function useFieldBorderEditor({
     terraDrawRef,
   ]);
 
-  const saveFieldBorder = useCallback(async () => {
+  const saveFieldBorder = useCallback(async (): Promise<FieldOutDTO | undefined> => {
     if (!fieldBorder || fieldBorder.length < 3) {
       addError("Draw a field polygon (min 3 points) before saving.");
-      return;
+      return undefined;
     }
     if (!fieldName.trim()) {
       addError("Please enter a field name.");
-      return;
+      return undefined;
     }
     try {
       const data = await createFieldRecord({
@@ -171,17 +195,24 @@ export function useFieldBorderEditor({
         coordinates: fieldBorder,
         metadata: {},
       });
-      alert(`Saved field "${data.name}" (id=${data.id})`);
+      if (onSaveSuccess) {
+        onSaveSuccess(data);
+      } else {
+        alert(`Saved field "${data.name}" (id=${data.id})`);
+      }
       refreshFields();
       setSelectedFieldId(data?.id ?? null);
+      return data;
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Failed to save field");
+      return undefined;
     }
   }, [
     addError,
     createFieldRecord,
     fieldBorder,
     fieldName,
+    onSaveSuccess,
     refreshFields,
     setSelectedFieldId,
   ]);
@@ -205,7 +236,11 @@ export function useFieldBorderEditor({
         name: fieldName.trim(),
         coordinates: fieldBorder,
       });
-      alert(`Updated field "${data.name}" (id=${data.id})`);
+      if (onUpdateSuccess) {
+        onUpdateSuccess(data);
+      } else {
+        alert(`Updated field "${data.name}" (id=${data.id})`);
+      }
       refreshFields();
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Failed to update field");
@@ -214,17 +249,20 @@ export function useFieldBorderEditor({
     addError,
     fieldBorder,
     fieldName,
+    onUpdateSuccess,
     refreshFields,
     selectedFieldId,
     updateFieldRecord,
   ]);
 
-  const loadRingIntoEditor = useCallback(
+  const mountEditablePolygon = useCallback(
     (ring: LonLat[]) => {
-      if (!mapRef.current || !(window as unknown as { google?: { maps?: unknown } }).google?.maps)
+      if (!mapRef.current || !(window as unknown as { google?: { maps?: unknown } }).google?.maps) {
         return;
+      }
 
       if (fieldPolygonRef.current) {
+        clearBoundaryClickListener();
         fieldPolygonRef.current.setMap(null);
         fieldPolygonRef.current = null;
       }
@@ -235,6 +273,7 @@ export function useFieldBorderEditor({
         paths: pts.map(([lon, lat]) => ({ lat, lng: lon })),
         editable: true,
         draggable: false,
+        clickable: true,
         fillColor: "#000000",
         fillOpacity: 0,
         strokeOpacity: 0.9,
@@ -246,8 +285,53 @@ export function useFieldBorderEditor({
       fieldPolygonRef.current = poly;
       wirePolygonEditListeners(poly);
     },
-    [fieldPolygonRef, mapRef, wirePolygonEditListeners]
+    [clearBoundaryClickListener, fieldPolygonRef, mapRef, wirePolygonEditListeners],
   );
+
+  const loadRingIntoEditor = useCallback(
+    (ring: LonLat[]) => {
+      loadedRingRef.current = ring;
+      if (isDrawingTerraMode(terraDrawMode)) return;
+      mountEditablePolygon(ring);
+    },
+    [mountEditablePolygon, terraDrawMode],
+  );
+
+  useEffect(() => {
+    if (!loadedRingRef.current) return;
+
+    if (isDrawingTerraMode(terraDrawMode)) {
+      if (fieldPolygonRef.current) {
+        clearBoundaryClickListener();
+        fieldPolygonRef.current.setMap(null);
+      }
+      return;
+    }
+
+    if (!fieldPolygonRef.current && mapRef.current) {
+      mountEditablePolygon(loadedRingRef.current);
+      return;
+    }
+
+    if (fieldPolygonRef.current && mapRef.current) {
+      fieldPolygonRef.current.setMap(mapRef.current);
+    }
+  }, [
+    clearBoundaryClickListener,
+    fieldPolygonRef,
+    mapRef,
+    mountEditablePolygon,
+    terraDrawMode,
+  ]);
+
+  useEffect(() => () => clearBoundaryClickListener(), [clearBoundaryClickListener]);
+
+  useEffect(() => {
+    const poly = fieldPolygonRef.current;
+    if (!poly || !onBoundaryClick) return;
+    clearBoundaryClickListener();
+    boundaryClickListenerRef.current = poly.addListener("click", onBoundaryClick);
+  }, [clearBoundaryClickListener, fieldPolygonRef, onBoundaryClick, terraDrawMode]);
 
   const focusRingOnMap = useCallback(
     (ring: LonLat[]) => {

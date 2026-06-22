@@ -1,11 +1,11 @@
 import { Divider, Stack } from "@mui/material";
-import { TerraDrawController } from "../../maps";
 import {
   GoogleMapEngineAlerts,
   MissionWorkflowShell,
+  WorkflowTerraDrawBridge,
 } from "../../mission-workflow";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
-import { FieldDeleteDialog } from "../../field-survey/components/FieldDeleteDialog";
+import { FieldDeleteDialog } from "../../fields/components/FieldDeleteDialog";
 import { PrivatePatrolMapColumn } from "../components/PrivatePatrolMapColumn";
 import {
   PrivatePatrolFlightDrawer,
@@ -17,7 +17,7 @@ import { usePrivatePatrolPage } from "../hooks/usePrivatePatrolPage";
 
 export default function PrivatePatrolPage() {
   const vm = usePrivatePatrolPage();
-  const { map, mission, borderEditor } = vm;
+  const { map, mission } = vm;
   const telemetry = vm.telemetry as TelemetrySnapshot | null;
 
   return (
@@ -39,13 +39,14 @@ export default function PrivatePatrolPage() {
 
       {vm.googleMapsReady ? (
         <>
-          <TerraDrawController
-            map={map.mapReady ? map.mapRef.current : null}
-            enabled={map.mapEngine === "google"}
-            mode={vm.terraDrawMode}
-            drawRef={map.terraDrawRef}
-            onReadyChange={map.setTerraDrawReady}
-            onSnapshotChange={borderEditor.syncFieldBorderFromSnapshot}
+          <WorkflowTerraDrawBridge
+            mapReady={map.mapReady}
+            mapRef={map.mapRef}
+            mapEngine={map.mapEngine}
+            terraDrawMode={vm.terraDrawMode}
+            terraDrawRef={map.terraDrawRef}
+            setTerraDrawReady={map.setTerraDrawReady}
+            shapePrompt={vm.shapePrompt}
             onError={vm.addError}
           />
           <Stack spacing={2} sx={{ mb: 3 }}>

@@ -1357,6 +1357,9 @@ async def preview_private_patrol(
                     resolved,
                     altitude_agl_m=float(payload.cruise_alt),
                     verification_radius_m=float(payload.verification_radius_m),
+                    geofence_polygon_lonlat=[
+                        tuple(pt) for pt in (payload.property_polygon_lonlat or [])
+                    ],
                 )
             else:
                 polygon = [tuple(pt) for pt in (payload.property_polygon_lonlat or [])]

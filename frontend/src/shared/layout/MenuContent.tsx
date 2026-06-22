@@ -19,12 +19,11 @@ import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
 import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
-import LocalFloristRoundedIcon from '@mui/icons-material/LocalFloristRounded';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import WarehouseRoundedIcon from '@mui/icons-material/WarehouseRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
-import SmartDisplayRoundedIcon from '@mui/icons-material/SmartDisplayRounded';
 import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -53,13 +52,12 @@ const mainListItems: MenuItem[] = [
     icon: <AssignmentRoundedIcon />,
     path: '/dashboard/controlled',
     children: [
-      { text: 'Field', icon: <LocalFloristRoundedIcon />, path: '/dashboard/field' },
+      { text: 'Agriculture', icon: <AgricultureIcon />, path: '/dashboard/field' },
       { text: 'Property Patrol Mission', icon: <VisibilityRoundedIcon />, path: '/dashboard/property-patrol' },
       { text: 'Warehouse', icon: <WarehouseRoundedIcon />, path: '/dashboard/warehouse' },
       { text: 'PhotoGrammetry', icon: <PhotoCameraRoundedIcon />, path: '/dashboard/photogrammetry' },
       { text: 'Animal Farm', icon: <EmojiNatureRoundedIcon />, path: '/dashboard/animalfarm' },
       { text: 'Controlled Flight', icon: <SportsEsportsRoundedIcon/>, path: '/dashboard/controlled' },
-      { text: 'Video Analysis', icon: <SmartDisplayRoundedIcon />, path: '/dashboard/video-analysis' },
     ],
   },
   { text: 'Insights', icon: <InsightsRoundedIcon />, path: '/dashboard/insights' },

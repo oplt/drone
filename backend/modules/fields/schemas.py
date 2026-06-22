@@ -18,6 +18,10 @@ class FieldCreateGeoJSON(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
     coordinates: list[LonLat]
     owner_id: int | None = None
+    workflow_scope: str | None = Field(
+        default=None,
+        description="Dashboard workflow that owns this boundary (field_survey, photogrammetry, property_patrol, animal_farm).",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -32,6 +36,7 @@ class FieldOut(BaseModel):
     owner_id: int | None = None
     name: str
     area_ha: float | None = None
+    workflow_scope: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     class Config:

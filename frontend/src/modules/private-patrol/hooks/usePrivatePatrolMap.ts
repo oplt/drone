@@ -17,6 +17,7 @@ import {
 } from "../../maps";
 import { useMissionCommandMetrics } from "../../mission-runtime";
 import { computeRingMapViewport, stripClosedRing, type LonLat } from "../../fields";
+import { createFlatBoundaryDrawBridge } from "../../maps/utils/flatBoundaryDrawBridge";
 import type { PatrolGridParams, Waypoint } from "../types";
 
 export function usePrivatePatrolMap({
@@ -42,13 +43,14 @@ export function usePrivatePatrolMap({
   syncFieldBorderFromSnapshot,
   isRemovableUserDrawingFeature,
   loadRingIntoEditor,
-  focusRingOnMap,
   selectedField,
   mapEngine: controlledMapEngine,
   addError,
   onMapEngineChange,
   fieldPolygonRef,
   terraDrawRef,
+  onBoundaryDrawStarted,
+  resetBoundaryDrawSession,
 }: {
   apiBase: string;
   wsConnected: boolean;
@@ -76,14 +78,24 @@ export function usePrivatePatrolMap({
     feature: import("../../mission-workflow").TerraFeature
   ) => boolean;
   loadRingIntoEditor: (ring: LonLat[]) => void;
-  focusRingOnMap: (ring: LonLat[]) => void;
   selectedField: { ring: LonLat[] } | null;
   mapEngine: MissionMapEngine;
   addError: (message: string) => void;
   onMapEngineChange: (engine: MissionMapEngine) => void;
   fieldPolygonRef: React.MutableRefObject<google.maps.Polygon | null>;
   terraDrawRef: React.MutableRefObject<TerraDraw | null>;
+  onBoundaryDrawStarted?: () => void;
+  resetBoundaryDrawSession?: () => void;
 }) {
+  const flatBoundaryDraw = useMemo(
+    () =>
+      createFlatBoundaryDrawBridge({
+        setFieldBorder,
+        setSelectedFieldId,
+        onBoundaryDrawStarted,
+      }),
+    [onBoundaryDrawStarted, setFieldBorder, setSelectedFieldId],
+  );
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -113,7 +125,7 @@ export function usePrivatePatrolMap({
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase,
     getToken,
-    enabled: droneReady,
+    enabled: Boolean(activeFlightId && droneReady),
     onError: addError,
     resetKey: activeFlightId ?? "none",
   });
@@ -238,6 +250,7 @@ export function usePrivatePatrolMap({
 
   const handleDrawingToolSelection = useCallback(
     (toolMode: TerraDrawToolMode) => {
+      resetBoundaryDrawSession?.();
       if (mapEngine !== "google") {
         setDrawMode(terraDrawToolToShapeMode(toolMode));
         return;
@@ -245,7 +258,7 @@ export function usePrivatePatrolMap({
 
       setTerraDrawMode(toolMode);
     },
-    [mapEngine, setDrawMode, setTerraDrawMode]
+    [mapEngine, resetBoundaryDrawSession, setDrawMode, setTerraDrawMode]
   );
 
   const handleCesiumDrawComplete = useCallback(
@@ -265,8 +278,16 @@ export function usePrivatePatrolMap({
               lat,
               lon,
               alt,
-            }))
+            })),
           );
+        } else {
+          const ring = stripClosedRing(
+            result.coordinates.map(([lon, lat]) => [lon, lat] as LonLat),
+          );
+          if (ring.length >= 3) {
+            setFieldBorder(ring);
+            setSelectedFieldId(null);
+          }
         }
       } else if (result.type === "point") {
         if (gridParams.task_type === "waypoint_patrol") {
@@ -520,6 +541,8 @@ export function usePrivatePatrolMap({
     onMapClick,
     handleDrawingToolSelection,
     handleCesiumDrawComplete,
+    onBoundaryDrawStarted: flatBoundaryDraw.onBoundaryDrawStarted,
+    onBoundaryDrawProgress: flatBoundaryDraw.onBoundaryDrawProgress,
     handleVideoError,
     handleVideoLoad,
     handleVideoRetry,

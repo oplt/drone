@@ -1,11 +1,11 @@
 import { Divider, Stack } from "@mui/material";
-import { TerraDrawController } from "../../maps";
 import {
   GoogleMapEngineAlerts,
   MissionWorkflowShell,
+  WorkflowTerraDrawBridge,
 } from "../../mission-workflow";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
-import { FieldDeleteDialog } from "../components/FieldDeleteDialog";
+import { FieldDeleteDialog } from "../../fields/components/FieldDeleteDialog";
 import { FieldSurveyMapColumn } from "../components/FieldSurveyMapColumn";
 import {
   FieldSurveyFlightDrawer,
@@ -38,13 +38,14 @@ export default function FieldPage() {
 
       {vm.googleMapsReady ? (
         <>
-          <TerraDrawController
-            map={map.mapReady ? map.mapRef.current : null}
-            enabled={map.mapEngine === "google"}
-            mode={map.terraDrawMode}
-            drawRef={map.terraDrawRef}
-            onReadyChange={map.setTerraDrawReady}
-            onSnapshotChange={borderEditor.syncFieldBorderFromSnapshot}
+          <WorkflowTerraDrawBridge
+            mapReady={map.mapReady}
+            mapRef={map.mapRef}
+            mapEngine={map.mapEngine}
+            terraDrawMode={vm.terraDrawMode}
+            terraDrawRef={map.terraDrawRef}
+            setTerraDrawReady={map.setTerraDrawReady}
+            shapePrompt={vm.shapePrompt}
             onError={vm.addError}
           />
           <Stack spacing={2} sx={{ mb: 3 }}>

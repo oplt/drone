@@ -3,10 +3,12 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import * as Cesium from "cesium";
 import {
   completeShape,
+  isFlatBoundaryDrawMode,
   shapePreview,
   type ShapeDrawMode,
   type ShapeDrawResult,
 } from "../../../modules/maps/utils/drawingShapes";
+import { isNearLonLat } from "../utils/flatMapShapeGeometry";
 import droneIconUrl from "../../../assets/Drone.svg?url";
 
 type LatLng = { lat: number; lng: number };
@@ -26,7 +28,11 @@ type Props = {
   onPickLatLng?: (p: LatLng) => void;
   drawMode?: DrawMode;
   onDrawComplete?: (res: DrawResult) => void;
+  onBoundaryDrawStarted?: () => void;
+  onBoundaryDrawProgress?: (coords: LonLat[]) => void;
   fieldBoundary?: LonLat[] | null;
+  onFieldBoundaryClick?: () => void;
+  drawnBoundarySelected?: boolean;
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   fieldTilesetUrl?: string | null;
@@ -145,7 +151,11 @@ export default function CesiumMap({
   onPickLatLng,
   drawMode = "none",
   onDrawComplete,
+  onBoundaryDrawStarted,
+  onBoundaryDrawProgress,
   fieldBoundary = null,
+  onFieldBoundaryClick,
+  drawnBoundarySelected = false,
   plannedRoute = null,
   exclusionZones = EMPTY_ZONES,
   fieldTilesetUrl = null,
@@ -157,10 +167,15 @@ export default function CesiumMap({
 }: Props) {
   const drawModeRef = useRef<DrawMode>("none");
   const onDrawCompleteRef = useRef<Props["onDrawComplete"]>(onDrawComplete);
+  const onBoundaryDrawStartedRef = useRef<Props["onBoundaryDrawStarted"]>(
+    onBoundaryDrawStarted,
+  );
+  const onBoundaryDrawProgressRef = useRef<Props["onBoundaryDrawProgress"]>(
+    onBoundaryDrawProgress,
+  );
   const drawHandlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
   const drawAnchorsRef = useRef<Cesium.Entity[]>([]);
   const drawTempEntityRef = useRef<Cesium.Entity | null>(null);
-  const completedDrawEntityRef = useRef<Cesium.Entity | null>(null);
   const drawFloatingPointRef = useRef<Cesium.Entity | null>(null);
   const drawPositionsRef = useRef<Cesium.Cartesian3[]>([]);
   const drawFreehandActiveRef = useRef(false);
@@ -182,6 +197,9 @@ export default function CesiumMap({
   const fieldTilesetUrlRef = useRef<string | null>(fieldTilesetUrl);
   const tilesetLoadSeqRef = useRef(0);
   const onPickLatLngRef = useRef<Props["onPickLatLng"]>(onPickLatLng);
+  const onFieldBoundaryClickRef = useRef<Props["onFieldBoundaryClick"]>(
+    onFieldBoundaryClick,
+  );
   const lastCameraSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -193,8 +211,20 @@ export default function CesiumMap({
   }, [onDrawComplete]);
 
   useEffect(() => {
+    onBoundaryDrawStartedRef.current = onBoundaryDrawStarted;
+  }, [onBoundaryDrawStarted]);
+
+  useEffect(() => {
+    onBoundaryDrawProgressRef.current = onBoundaryDrawProgress;
+  }, [onBoundaryDrawProgress]);
+
+  useEffect(() => {
     onPickLatLngRef.current = onPickLatLng;
   }, [onPickLatLng]);
+
+  useEffect(() => {
+    onFieldBoundaryClickRef.current = onFieldBoundaryClick;
+  }, [onFieldBoundaryClick]);
 
   useEffect(() => {
     fieldTilesetUrlRef.current = fieldTilesetUrl;
@@ -209,8 +239,9 @@ export default function CesiumMap({
   }, [headingDeg]);
 
   const fieldCameraView = useMemo(
-    () => computeFieldCameraView(fieldBoundary),
-    [fieldBoundary],
+    () =>
+      drawMode !== "none" ? null : computeFieldCameraView(fieldBoundary),
+    [fieldBoundary, drawMode],
   );
   const hasDroneCenter = Boolean(droneCenter);
   const cameraCenterKey = hasDroneCenter
@@ -409,6 +440,16 @@ export default function CesiumMap({
       );
       handler.setInputAction((movement: any) => {
         if (drawModeRef.current !== "none") return;
+
+        const picked = viewer.scene.pick(movement.position);
+        if (
+          picked?.id &&
+          picked.id === fieldBoundaryEntityRef.current
+        ) {
+          onFieldBoundaryClickRef.current?.();
+          return;
+        }
+
         if (!onPickLatLngRef.current) return;
         const scene = viewer.scene;
         let cartesian: Cesium.Cartesian3 | null =
@@ -550,9 +591,6 @@ export default function CesiumMap({
 
     if (polylineEntityRef.current)
       viewer.entities.remove(polylineEntityRef.current);
-    if (completedDrawEntityRef.current)
-      viewer.entities.remove(completedDrawEntityRef.current);
-    completedDrawEntityRef.current = null;
     if (waypointPolygonEntityRef.current)
       viewer.entities.remove(waypointPolygonEntityRef.current);
     if (plannedRouteEntityRef.current)
@@ -569,17 +607,19 @@ export default function CesiumMap({
       .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
     const boundaryRing = normalizeLonLatRing(fieldBoundary);
-    if (boundaryRing.length >= 3) {
+    if (drawMode === "none" && boundaryRing.length >= 3) {
+      const boundaryColor = drawnBoundarySelected ? "#1976d2" : "#1565c0";
       const boundaryPositions = CesiumModule.Cartesian3.fromDegreesArray(
         boundaryRing.flatMap(([lng, lat]) => [lng, lat]),
       );
       fieldBoundaryEntityRef.current = viewer.entities.add({
         polygon: {
           hierarchy: new CesiumModule.PolygonHierarchy(boundaryPositions),
-          material:
-            CesiumModule.Color.fromCssColorString("#1565c0").withAlpha(0.15),
+          material: CesiumModule.Color.fromCssColorString(boundaryColor).withAlpha(
+            drawnBoundarySelected ? 0.22 : 0.15,
+          ),
           outline: true,
-          outlineColor: CesiumModule.Color.fromCssColorString("#1565c0"),
+          outlineColor: CesiumModule.Color.fromCssColorString(boundaryColor),
           perPositionHeight: false,
         },
       });
@@ -667,7 +707,7 @@ export default function CesiumMap({
 
   useEffect(() => {
     drawEntities();
-  }, [waypoints, fieldBoundary, plannedRoute, exclusionZones]);
+  }, [drawMode, waypoints, fieldBoundary, plannedRoute, exclusionZones, drawnBoundarySelected]);
 
   useEffect(() => {
     updateDroneEntity();
@@ -734,52 +774,29 @@ export default function CesiumMap({
     if (!CesiumModule || !viewer) return;
 
     const floating = drawFloatingCartesianRef.current;
-    let pos = drawPositionsRef.current.slice();
-    if (floating) pos = pos.filter((p) => p !== floating);
+    let coords: [number, number][];
 
-    const coords = pos.map((p) => cartesianToLngLat(CesiumModule, p));
+    if (
+      (mode === "rectangle" || mode === "circle" || mode === "triangle") &&
+      drawPositionsRef.current.length >= 1
+    ) {
+      const anchor = drawPositionsRef.current[0];
+      const corner = floating ?? drawPositionsRef.current[1];
+      if (!anchor || !corner) return;
+      coords = [
+        cartesianToLngLat(CesiumModule, anchor),
+        cartesianToLngLat(CesiumModule, corner),
+      ];
+    } else {
+      let pos = drawPositionsRef.current.slice();
+      if (floating) pos = pos.filter((p) => p !== floating);
+      coords = pos.map((p) => cartesianToLngLat(CesiumModule, p));
+    }
+
     const result = completeShape(mode, coords);
     if (result) onDrawCompleteRef.current?.(result);
 
     clearDrawEntities();
-
-    if (result?.type === "polygon" && result.coordinates.length >= 3) {
-      const positions = CesiumModule.Cartesian3.fromDegreesArray(
-        result.coordinates.flatMap(([lng, lat]) => [lng, lat]),
-      );
-      completedDrawEntityRef.current = viewer.entities.add({
-        polygon: {
-          hierarchy: new CesiumModule.PolygonHierarchy(positions),
-          material:
-            CesiumModule.Color.fromCssColorString("#1976d2").withAlpha(0.18),
-          outline: true,
-          outlineColor: CesiumModule.Color.fromCssColorString("#1976d2"),
-          perPositionHeight: false,
-        },
-      });
-    } else if (result?.type === "polyline" && result.coordinates.length >= 2) {
-      completedDrawEntityRef.current = viewer.entities.add({
-        polyline: {
-          positions: CesiumModule.Cartesian3.fromDegreesArray(
-            result.coordinates.flatMap(([lng, lat]) => [lng, lat]),
-          ),
-          width: 3,
-          material: CesiumModule.Color.fromCssColorString("#1976d2"),
-          clampToGround: true,
-        },
-      });
-    } else if (result?.type === "point") {
-      const [lng, lat] = result.coordinates;
-      completedDrawEntityRef.current = viewer.entities.add({
-        position: CesiumModule.Cartesian3.fromDegrees(lng, lat),
-        point: {
-          pixelSize: 10,
-          color: CesiumModule.Color.fromCssColorString("#1976d2"),
-          outlineColor: CesiumModule.Color.WHITE,
-          outlineWidth: 2,
-        },
-      });
-    }
   }
 
   useEffect(() => {
@@ -865,6 +882,20 @@ export default function CesiumMap({
       drawAnchorsRef.current.push(ent);
     };
 
+    const committedDrawCoords = (): LonLat[] => {
+      const floating = drawFloatingCartesianRef.current;
+      let pos = drawPositionsRef.current.slice();
+      if (floating) pos = pos.filter((p) => p !== floating);
+      return pos.map((p) => cartesianToLngLat(CesiumModule, p));
+    };
+
+    const syncBoundaryDraw = (startedNew: boolean) => {
+      if (!isFlatBoundaryDrawMode(drawMode)) return;
+      if (startedNew) onBoundaryDrawStartedRef.current?.();
+      const coords = committedDrawCoords();
+      if (coords.length > 0) onBoundaryDrawProgressRef.current?.(coords);
+    };
+
     handler.setInputAction((movement: any) => {
       const c = pickCartesianOnGlobe(viewer, CesiumModule, movement.position);
       if (!c) return;
@@ -897,6 +928,7 @@ export default function CesiumMap({
             position: floating,
             point: { pixelSize: 8, color: CesiumModule.Color.YELLOW },
           });
+          syncBoundaryDraw(true);
           return;
         }
         const floating = drawFloatingCartesianRef.current;
@@ -923,6 +955,7 @@ export default function CesiumMap({
           position: floating,
           point: { pixelSize: 8, color: CesiumModule.Color.YELLOW },
         });
+        syncBoundaryDraw(true);
         return;
       }
 
@@ -931,6 +964,19 @@ export default function CesiumMap({
         drawPositionsRef.current = drawPositionsRef.current.filter(
           (p) => p !== floating,
         );
+      }
+
+      const committed = drawPositionsRef.current.map((p) =>
+        cartesianToLngLat(CesiumModule, p),
+      );
+      const clickCoord = cartesianToLngLat(CesiumModule, c);
+      if (
+        (drawMode === "polygon" || drawMode === "polyline") &&
+        committed.length >= 3 &&
+        isNearLonLat(committed[0], clickCoord)
+      ) {
+        finishDraw(drawMode);
+        return;
       }
 
       drawPositionsRef.current.push(c);
@@ -944,6 +990,7 @@ export default function CesiumMap({
         drawFloatingPointRef.current.position =
           new CesiumModule.ConstantPositionProperty(newFloating);
       }
+      syncBoundaryDraw(false);
     }, CesiumModule.ScreenSpaceEventType.LEFT_CLICK);
 
     handler.setInputAction((movement: any) => {
@@ -955,6 +1002,7 @@ export default function CesiumMap({
       drawIsActiveRef.current = true;
       drawPositionsRef.current = [c];
       ensureTempEntity();
+      syncBoundaryDraw(true);
     }, CesiumModule.ScreenSpaceEventType.LEFT_DOWN);
 
     handler.setInputAction((movement: any) => {

@@ -35,6 +35,7 @@ class Field(Base):
         ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
     )
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    workflow_scope: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     # exact field border polygon (WGS84)
     boundary: Mapped[Geometry] = mapped_column(

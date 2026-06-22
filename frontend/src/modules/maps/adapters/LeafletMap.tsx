@@ -29,10 +29,14 @@ export type LeafletMapProps = {
   onPickLatLng?: (p: LatLng) => void;
   drawMode?: FlatDrawMode;
   onDrawComplete?: (result: FlatDrawResult) => void;
+  onBoundaryDrawStarted?: () => void;
+  onBoundaryDrawProgress?: (coords: LonLat[]) => void;
   fieldBoundary?: LonLat[] | null;
   savedFields?: SavedFieldBoundary[];
   selectedFieldId?: number | null;
   onSavedFieldClick?: (fieldId: number) => void;
+  onFieldBoundaryClick?: () => void;
+  drawnBoundarySelected?: boolean;
   plannedRoute?: LonLat[] | null;
   exclusionZones?: LonLat[][];
   height?: number | string;
@@ -71,10 +75,14 @@ export default function LeafletMap({
   onPickLatLng,
   drawMode = "none",
   onDrawComplete,
+  onBoundaryDrawStarted,
+  onBoundaryDrawProgress,
   fieldBoundary = null,
   savedFields = [],
   selectedFieldId = null,
   onSavedFieldClick,
+  onFieldBoundaryClick,
+  drawnBoundarySelected = false,
   plannedRoute = null,
   exclusionZones = [],
   height = 400,
@@ -87,6 +95,7 @@ export default function LeafletMap({
   const liveLayerRef = useRef<L.LayerGroup | null>(null);
   const drawLayerRef = useRef<L.LayerGroup | null>(null);
   const drawingRef = useRef<ReturnType<typeof useFlatMapDrawing> | null>(null);
+  const drawModeRef = useRef(drawMode);
   const setDrawingModeState = useCallback((mode: FlatDrawMode) => {
     if (!mapRef.current) return;
     if (mode === "none") mapRef.current.doubleClickZoom.enable();
@@ -143,8 +152,14 @@ export default function LeafletMap({
     onPickLatLng,
     onPreview: updateDrawingPreview,
     onModeStateChange: setDrawingModeState,
+    onBoundaryDrawStarted,
+    onBoundaryDrawProgress,
   });
   drawingRef.current = drawing;
+
+  useEffect(() => {
+    drawModeRef.current = drawMode;
+  }, [drawMode]);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
@@ -242,22 +257,29 @@ export default function LeafletMap({
       )
         .bindTooltip(field.name ?? `Field #${field.id}`, { permanent: false })
         .on("click", (event) => {
+          if (drawMode !== "none") return;
           event.originalEvent.stopPropagation();
           onSavedFieldClick?.(field.id);
         })
         .addTo(layers);
     });
 
-    if (boundary.length >= 3) {
+    if (drawMode === "none" && boundary.length >= 3) {
       L.polygon(
         boundary.map(([lng, lat]) => [lat, lng] as LatLngExpression),
         {
-          color: "#1565c0",
-          weight: 2,
+          color: drawnBoundarySelected ? "#1976d2" : "#1565c0",
+          weight: drawnBoundarySelected ? 4 : 2,
           fillColor: "#1565c0",
-          fillOpacity: 0.12,
+          fillOpacity: drawnBoundarySelected ? 0.18 : 0.12,
         },
-      ).addTo(layers);
+      )
+        .on("click", (event) => {
+          if (drawMode !== "none") return;
+          event.originalEvent.stopPropagation();
+          onFieldBoundaryClick?.();
+        })
+        .addTo(layers);
     }
 
     exclusionZones.forEach((zone) => {
@@ -302,6 +324,9 @@ export default function LeafletMap({
     selectedFieldId,
     waypoints,
     onSavedFieldClick,
+    onFieldBoundaryClick,
+    drawnBoundarySelected,
+    drawMode,
   ]);
 
   useEffect(() => {

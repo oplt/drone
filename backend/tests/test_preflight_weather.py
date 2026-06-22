@@ -204,3 +204,51 @@ def test_fetch_skips_kmi_outside_belgium() -> None:
         mock_kmi.assert_not_called()
 
     asyncio.run(_run())
+
+
+def test_kmi_fetch_requests_latest_sorted_observation() -> None:
+    import asyncio
+    from datetime import UTC, datetime, timedelta
+    from unittest.mock import MagicMock
+
+    from backend.modules.preflight.weather.kmi_rmi import _fetch_latest_station_observation
+
+    recent = (datetime.now(UTC) - timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = {
+        "features": [
+            {
+                "properties": {
+                    "timestamp": recent,
+                    "wind_speed_10m": 3.1,
+                    "wind_gusts_speed": 5.2,
+                }
+            }
+        ]
+    }
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = payload
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    async def _run() -> None:
+        with patch(
+            "backend.modules.preflight.weather.kmi_rmi.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            obs = await _fetch_latest_station_observation(
+                6477,
+                wfs_base_url="http://wfs",
+                timeout_s=5,
+                max_obs_age_hours=6,
+            )
+
+        assert obs is not None
+        assert obs["wind_speed_mps"] == 3.1
+        call_params = mock_client.get.call_args.kwargs["params"]
+        assert call_params["sortBy"] == "timestamp D"
+        assert call_params["count"] == 1
+
+    asyncio.run(_run())

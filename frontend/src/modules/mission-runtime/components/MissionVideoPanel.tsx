@@ -7,6 +7,7 @@ import {
   Typography,
 } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { useEffect, useRef } from "react";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
 import { useDetectionFps } from "../hooks/useDetectionFps";
 import { useLiveObjectDetection } from "../hooks/useLiveObjectDetection";
@@ -33,6 +34,10 @@ type MissionVideoPanelProps = {
   onRetry: () => void;
   frameHeight?: number;
   frameSx?: SxProps<Theme>;
+  /** When true, renders without the outer Paper (for MissionSurveyCameraSection). */
+  embedded?: boolean;
+  /** Auto-start YOLO detection when the drone is connected and detection is off. */
+  autoEnableDetection?: boolean;
 };
 
 export function MissionVideoPanel({
@@ -54,6 +59,8 @@ export function MissionVideoPanel({
   onRetry,
   frameHeight = 240,
   frameSx,
+  embedded = false,
+  autoEnableDetection = false,
 }: MissionVideoPanelProps) {
   const shouldRenderStream = droneConnected && streamKey > 0 && !videoError;
   const streamStatus = startingVideo
@@ -68,51 +75,68 @@ export function MissionVideoPanel({
     objectDetection.status?.frames_processed,
     objectDetection.enabled,
   );
+  const autoStartAttemptedRef = useRef(false);
 
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2,
-        borderRadius: 3,
-        borderColor: "divider",
-        width: "100%",
-        alignSelf: "stretch",
-        flexShrink: 0,
-      }}
+  useEffect(() => {
+    if (!autoEnableDetection) {
+      autoStartAttemptedRef.current = false;
+      return;
+    }
+    if (
+      !shouldRenderStream ||
+      objectDetection.enabled ||
+      objectDetection.toggling
+    ) {
+      return;
+    }
+    if (autoStartAttemptedRef.current) {
+      return;
+    }
+    autoStartAttemptedRef.current = true;
+    objectDetection.toggle();
+  }, [
+    autoEnableDetection,
+    shouldRenderStream,
+    objectDetection.enabled,
+    objectDetection.toggling,
+    objectDetection.toggle,
+  ]);
+
+  const header = (
+    <Stack
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
+      sx={{ mb: 1 }}
     >
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 1 }}
-      >
-        <Typography variant="subtitle1">{title}</Typography>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Chip
-            size="small"
-            label={streamStatus}
-            color={
-              videoError ? "error" : shouldRenderStream ? "success" : "warning"
-            }
-            variant={shouldRenderStream || videoError ? "filled" : "outlined"}
-          />
-          <ActionIconButton
-            variant={objectDetection.enabled ? "visibility" : "visibility-off"}
-            title={
-              objectDetection.enabled ? "Detection On" : "Enable Detection"
-            }
-            color={objectDetection.enabled ? "success" : "primary"}
-            disabled={!droneConnected || objectDetection.toggling}
-            onClick={objectDetection.toggle}
-          />
-          {startingVideo && <CircularProgress size={16} />}
-        </Stack>
+      <Typography variant="subtitle1">{title}</Typography>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Chip
+          size="small"
+          label={streamStatus}
+          color={
+            videoError ? "error" : shouldRenderStream ? "success" : "warning"
+          }
+          variant={shouldRenderStream || videoError ? "filled" : "outlined"}
+        />
+        <ActionIconButton
+          variant={objectDetection.enabled ? "visibility" : "visibility-off"}
+          title={
+            objectDetection.enabled ? "Detection On" : "Enable Detection"
+          }
+          color={objectDetection.enabled ? "success" : "primary"}
+          disabled={!droneConnected || objectDetection.toggling}
+          onClick={objectDetection.toggle}
+        />
+        {startingVideo && <CircularProgress size={16} />}
       </Stack>
+    </Stack>
+  );
 
-      <Box
-        className="mission-video-frame"
-        sx={[
+  const frame = (
+    <Box
+      className="mission-video-frame"
+      sx={[
           {
             width: "100%",
             minHeight: frameHeight,
@@ -223,15 +247,43 @@ export function MissionVideoPanel({
           </Box>
         )}
       </Box>
-      {objectDetection.error ? (
-        <Typography
-          variant="caption"
-          color="error"
-          sx={{ mt: 1, display: "block" }}
-        >
-          Object detection: {objectDetection.error}
-        </Typography>
-      ) : null}
+  );
+
+  const errorCaption = objectDetection.error ? (
+    <Typography
+      variant="caption"
+      color="error"
+      sx={{ mt: 1, display: "block" }}
+    >
+      Object detection: {objectDetection.error}
+    </Typography>
+  ) : null;
+
+  if (embedded) {
+    return (
+      <>
+        {header}
+        {frame}
+        {errorCaption}
+      </>
+    );
+  }
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        borderColor: "divider",
+        width: "100%",
+        alignSelf: "stretch",
+        flexShrink: 0,
+      }}
+    >
+      {header}
+      {frame}
+      {errorCaption}
     </Paper>
   );
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   completeShape,
+  isFlatBoundaryDrawMode,
   moveTwoCornerShapePreview,
   type LonLat,
   type ShapeDrawMode,
@@ -18,6 +19,9 @@ type UseFlatMapDrawingOptions = {
   onPickLatLng?: (point: LatLng) => void;
   onPreview: (mode: ShapeDrawMode, coords: LonLat[]) => void;
   onModeStateChange?: (mode: ShapeDrawMode) => void;
+  onBoundaryDrawStarted?: () => void;
+  onBoundaryDrawProgress?: (coords: LonLat[]) => void;
+  isNearCoord?: (a: LonLat, b: LonLat) => boolean;
 };
 
 function shouldAppendFreehandPoint(points: LonLat[], next: LonLat) {
@@ -35,6 +39,9 @@ export function useFlatMapDrawing({
   onPickLatLng,
   onPreview,
   onModeStateChange,
+  onBoundaryDrawStarted,
+  onBoundaryDrawProgress,
+  isNearCoord,
 }: UseFlatMapDrawingOptions) {
   const drawingRef = useRef<LonLat[]>([]);
   const freehandDrawingRef = useRef(false);
@@ -42,7 +49,13 @@ export function useFlatMapDrawing({
   const onDrawCompleteRef = useRef(onDrawComplete);
   const onPickRef = useRef(onPickLatLng);
   const onPreviewRef = useRef(onPreview);
+  const onBoundaryDrawStartedRef = useRef(onBoundaryDrawStarted);
+  const onBoundaryDrawProgressRef = useRef(onBoundaryDrawProgress);
+  const isNearCoordRef = useRef(isNearCoord);
   const rafRef = useRef<number | null>(null);
+  const previousDrawModeRef = useRef(drawMode);
+
+  drawModeRef.current = drawMode;
 
   const flushPreview = useCallback(() => {
     rafRef.current = null;
@@ -62,6 +75,16 @@ export function useFlatMapDrawing({
     onPreviewRef.current(mode, coords);
   }, []);
 
+  const syncBoundaryDrawState = useCallback((mode: ShapeDrawMode, coords: LonLat[]) => {
+    if (!isFlatBoundaryDrawMode(mode) || coords.length === 0) return;
+    onBoundaryDrawProgressRef.current?.(coords);
+  }, []);
+
+  const maybeStartBoundaryDraw = useCallback((mode: ShapeDrawMode, wasEmpty: boolean) => {
+    if (!wasEmpty || !isFlatBoundaryDrawMode(mode)) return;
+    onBoundaryDrawStartedRef.current?.();
+  }, []);
+
   useEffect(() => {
     onPickRef.current = onPickLatLng;
   }, [onPickLatLng]);
@@ -75,7 +98,20 @@ export function useFlatMapDrawing({
   }, [onPreview]);
 
   useEffect(() => {
-    drawModeRef.current = drawMode;
+    onBoundaryDrawStartedRef.current = onBoundaryDrawStarted;
+  }, [onBoundaryDrawStarted]);
+
+  useEffect(() => {
+    onBoundaryDrawProgressRef.current = onBoundaryDrawProgress;
+  }, [onBoundaryDrawProgress]);
+
+  useEffect(() => {
+    isNearCoordRef.current = isNearCoord;
+  }, [isNearCoord]);
+
+  useEffect(() => {
+    if (previousDrawModeRef.current === drawMode) return;
+    previousDrawModeRef.current = drawMode;
     drawingRef.current = [];
     freehandDrawingRef.current = false;
     previewNow(drawMode, []);
@@ -89,14 +125,18 @@ export function useFlatMapDrawing({
     [],
   );
 
-  const finishDrawing = useCallback(() => {
-    const mode = drawModeRef.current;
-    const result = completeShape(mode, drawingRef.current);
-    if (result) onDrawCompleteRef.current?.(result);
-    drawingRef.current = [];
-    freehandDrawingRef.current = false;
-    previewNow(mode, []);
-  }, [previewNow]);
+  const finishDrawing = useCallback(
+    (coordsOverride?: LonLat[]) => {
+      const mode = drawModeRef.current;
+      const coords = coordsOverride ?? drawingRef.current;
+      const result = completeShape(mode, coords);
+      if (result) onDrawCompleteRef.current?.(result);
+      drawingRef.current = [];
+      freehandDrawingRef.current = false;
+      previewNow(mode, []);
+    },
+    [previewNow],
+  );
 
   const handleClick = useCallback(
     (coord: LonLat) => {
@@ -113,26 +153,33 @@ export function useFlatMapDrawing({
 
       if (mode === "freehand") return;
 
+      const wasEmpty = drawingRef.current.length === 0;
       drawingRef.current = handleFlatMapShapeClick(
         mode,
         coord,
         drawingRef.current,
         (coords) => previewNow(mode, coords),
-        finishDrawing,
+        (coords) => finishDrawing(coords),
+        isNearCoordRef.current,
       );
+      maybeStartBoundaryDraw(mode, wasEmpty);
+      syncBoundaryDrawState(mode, drawingRef.current);
     },
-    [finishDrawing, previewNow],
+    [finishDrawing, maybeStartBoundaryDraw, previewNow, syncBoundaryDrawState],
   );
 
   const startFreehand = useCallback(
     (coord: LonLat) => {
       if (drawModeRef.current !== "freehand") return false;
+      const wasEmpty = drawingRef.current.length === 0;
       freehandDrawingRef.current = true;
       drawingRef.current = [coord];
       previewNow("freehand", drawingRef.current);
+      maybeStartBoundaryDraw("freehand", wasEmpty);
+      syncBoundaryDrawState("freehand", drawingRef.current);
       return true;
     },
-    [previewNow],
+    [maybeStartBoundaryDraw, previewNow, syncBoundaryDrawState],
   );
 
   const movePointer = useCallback(
@@ -146,6 +193,7 @@ export function useFlatMapDrawing({
       if (twoCornerPreview) {
         drawingRef.current = twoCornerPreview;
         schedulePreview();
+        syncBoundaryDrawState(mode, drawingRef.current);
         return;
       }
 
@@ -153,8 +201,9 @@ export function useFlatMapDrawing({
       if (!shouldAppendFreehandPoint(drawingRef.current, coord)) return;
       drawingRef.current.push(coord);
       schedulePreview();
+      syncBoundaryDrawState(mode, drawingRef.current);
     },
-    [schedulePreview],
+    [schedulePreview, syncBoundaryDrawState],
   );
 
   const endFreehand = useCallback(() => {

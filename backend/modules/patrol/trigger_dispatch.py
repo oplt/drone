@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config.runtime import settings
 from backend.modules.missions.application import mission_application
 from backend.modules.missions.service.mission_builder import flight_profile_for_payload
 from backend.modules.missions.launch_service import mission_launch_service
@@ -20,7 +21,11 @@ from backend.modules.missions.service.mission_start import (
     preflight_allows_start,
 )
 from backend.modules.patrol.ai_tasks import PATROL_AI_TASKS
-from backend.modules.patrol.geo import point_in_polygon
+from backend.modules.patrol.geo import (
+    distance_point_to_polygon_m,
+    point_in_geofence_within_m,
+    snap_point_inside_geofence,
+)
 from backend.modules.patrol.planning import EventTriggeredPatrolMission, normalize_ai_tasks
 from backend.modules.patrol.event_trigger_config_service import resolve_event_trigger_payload
 from backend.modules.patrol.sensor_config_schemas import (
@@ -40,11 +45,45 @@ from backend.modules.patrol.sensor_config_service import (
 )
 from backend.modules.vehicle_runtime.types import Coordinate
 from backend.modules.vehicle_runtime.factory import get_orchestrator
+from backend.modules.preflight.checks.schemas import CheckStatus
 
 logger = logging.getLogger(__name__)
 
 # Webhook/MQTT triggers must not block callers indefinitely while MAVLink connects.
 TRIGGER_DISPATCH_READY_TIMEOUT_S = 45.0
+
+
+def _failed_preflight_checks(preflight: Any) -> list[dict[str, str]]:
+    failed: list[dict[str, str]] = []
+    for check in getattr(preflight, "base_checks", []) + getattr(preflight, "mission_checks", []):
+        status = getattr(check, "status", None)
+        if status != CheckStatus.FAIL and str(status).upper() != "FAIL":
+            continue
+        failed.append(
+            {
+                "name": str(getattr(check, "name", "Unknown")),
+                "message": str(getattr(check, "message", "") or ""),
+            }
+        )
+    return failed
+
+
+def _preflight_block_http_detail(preflight: Any) -> dict[str, Any]:
+    overall = str(getattr(preflight, "overall_status", "") or "")
+    summary = getattr(preflight, "summary", None) or {}
+    failed_count = summary.get("failed") if isinstance(summary, dict) else None
+    failed_checks = _failed_preflight_checks(preflight)
+    message = f"Preflight checks failed for sensor trigger (status={overall})."
+    if isinstance(failed_count, int):
+        message = f"{message} {failed_count} check(s) failed."
+    if failed_checks:
+        names = ", ".join(check["name"] for check in failed_checks)
+        message = f"{message} Failed: {names}."
+    return {
+        "message": message,
+        "overall_status": overall,
+        "failed_checks": failed_checks,
+    }
 
 
 def register_sensor_location(sensor_id: str, lon: float, lat: float) -> None:
@@ -84,8 +123,10 @@ def validate_location_in_geofence(
     lon: float,
     lat: float,
     geofence: tuple[tuple[float, float], ...],
+    *,
+    tolerance_m: float = 0.0,
 ) -> bool:
-    return point_in_polygon(lat, lon, geofence)
+    return point_in_geofence_within_m(lat, lon, geofence, tolerance_m=tolerance_m)
 
 
 async def _ensure_drone_available(orch: Any) -> None:
@@ -280,10 +321,23 @@ async def dispatch_sensor_trigger(
 
     if resolved is not None:
         lon, lat = resolved
-        if not validate_location_in_geofence(lon, lat, geofence):
+        tolerance_m = float(settings.patrol_sensor_trigger_geofence_tolerance_m)
+        distance_m = distance_point_to_polygon_m(lat, lon, geofence)
+        if distance_m > tolerance_m:
             raise HTTPException(
                 status_code=422,
-                detail="Resolved trigger location is outside the configured geofence.",
+                detail=(
+                    "Resolved trigger location is outside the configured geofence "
+                    f"({distance_m:.1f} m beyond boundary; allowed tolerance is {tolerance_m:.0f} m). "
+                    "If the point looks inside on the map, update the saved property geofence "
+                    "on Property Patrol → Setup."
+                ),
+            )
+        if distance_m > 0:
+            lat, lon = snap_point_inside_geofence(lat, lon, geofence)
+            resolved = (lon, lat)
+            effective_payload = effective_payload.model_copy(
+                update={"coordinates": [lon, lat]},
             )
 
     mission = build_event_triggered_mission(
@@ -310,12 +364,26 @@ async def dispatch_sensor_trigger(
 
     async def _prepare_trigger_dispatch() -> Any:
         await _ensure_drone_ready_for_preflight(orch, profile=profile)
+        waypoints = mission.get_waypoints()
+        mission_data = {
+            "type": "route",
+            "waypoints": [
+                {"lat": wp.lat, "lon": wp.lon, "alt": getattr(wp, "alt", None) or cruise_alt}
+                for wp in waypoints
+            ],
+            "speed": float(getattr(mission, "speed_mps", 6.0)),
+            "altitude_agl": cruise_alt,
+        }
         return await orch._run_preflight_checks(
-            mission.get_waypoints(),
+            waypoints,
             cruise_alt,
             raise_on_fail=False,
-            mission_data=None,
-            config_overrides={"FLIGHT_ENVIRONMENT": profile.environment.value},
+            mission_data=mission_data,
+            config_overrides={
+                "FLIGHT_ENVIRONMENT": profile.environment.value,
+                # Drones often launch from a dock outside the saved property polygon.
+                "ALLOW_DRONE_OUTSIDE_GEOFENCE": True,
+            },
             geofence_polygon=geofence_waypoints,
         )
 
@@ -348,18 +416,15 @@ async def dispatch_sensor_trigger(
 
     overall = str(getattr(preflight, "overall_status", "") or "")
     if not preflight_allows_start(overall):
-        summary = getattr(preflight, "summary", None) or {}
-        failed = summary.get("failed") if isinstance(summary, dict) else None
-        detail = f"Preflight checks failed for sensor trigger (status={overall})."
-        if failed:
-            detail = f"{detail} {failed} check(s) failed."
+        block_detail = _preflight_block_http_detail(preflight)
         logger.warning(
-            "Sensor trigger %s rejected: preflight status=%s summary=%s",
+            "Sensor trigger %s rejected: preflight status=%s summary=%s failed=%s",
             trigger_id,
             overall,
             getattr(preflight, "summary", None),
+            block_detail.get("failed_checks"),
         )
-        raise HTTPException(status_code=412, detail=detail)
+        raise HTTPException(status_code=412, detail=block_detail)
     if overall == "WARN" and not ALLOW_WARN_PREFLIGHT_START:
         logger.warning(
             "Sensor trigger %s proceeding with preflight WARN (allow_warn disabled)",

@@ -1,4 +1,4 @@
-import { httpRequest } from "../../shared/api/httpClient";
+import { httpRequest, resolveApiUrl } from "../../shared/api/httpClient";
 import type {
   AnalyzeVideoPayload,
   LiveSavedDetection,
@@ -7,9 +7,38 @@ import type {
   VideoDetection,
 } from "./types";
 
-export async function uploadVideo(file: File): Promise<VideoAsset> {
+export type ListMissionVideosParams = {
+  missionId?: string | null;
+  fieldId?: number | null;
+  limit?: number;
+};
+
+export async function listMissionVideos(
+  params: ListMissionVideosParams = {},
+): Promise<VideoAsset[]> {
+  const search = new URLSearchParams();
+  if (params.missionId) search.set("mission_id", params.missionId);
+  if (params.fieldId != null) search.set("field_id", String(params.fieldId));
+  if (params.limit != null) search.set("limit", String(params.limit));
+  const query = search.toString();
+  return httpRequest<VideoAsset[]>(`/video-analysis/videos${query ? `?${query}` : ""}`);
+}
+
+export function buildMissionVideoStreamUrl(videoId: string, token?: string | null): string {
+  const base = resolveApiUrl(`/video-analysis/videos/${videoId}/stream`);
+  if (!token?.trim()) return base;
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}token=${encodeURIComponent(token.trim())}`;
+}
+
+export async function uploadVideo(
+  file: File,
+  options?: { missionId?: string | null; fieldId?: number | null },
+): Promise<VideoAsset> {
   const form = new FormData();
   form.append("file", file);
+  if (options?.missionId) form.append("mission_id", options.missionId);
+  if (options?.fieldId != null) form.append("field_id", String(options.fieldId));
   return httpRequest<VideoAsset>("/video-analysis/videos", { method: "POST", body: form });
 }
 

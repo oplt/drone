@@ -626,6 +626,13 @@ class BasePreflightChecks:
 
         if self._point_in_polygon(float(lat), float(lon), poly):
             return [self._ok("Geofence", "Current position inside")]
+        if bool(self.ctx.get_threshold("ALLOW_DRONE_OUTSIDE_GEOFENCE", False)):
+            return [
+                self._warn(
+                    "Geofence",
+                    "Current position outside geofence (launch-from-dock allowed)",
+                )
+            ]
         return [self._fail("Geofence", "Current position outside geofence")]
 
     async def check_terrain_clearance(self) -> list[CheckResult]:

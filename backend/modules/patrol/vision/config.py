@@ -33,8 +33,8 @@ class MLRuntimeSettings(BaseSettings):
     max_duplicate_event_s: float = 10.0
     max_events_per_track: int = Field(default=8, ge=1)
     live_detection_persist_interval_s: float = Field(default=0.5, ge=0.1)
-    event_sink_mode: str = "http"  # "http" | "noop"
-    event_sink_url: str = "http://127.0.0.1:8000/api/events"
+    event_sink_mode: str = "noop"  # "http" | "noop"
+    event_sink_url: str = ""
 
 
 ml_settings = MLRuntimeSettings()

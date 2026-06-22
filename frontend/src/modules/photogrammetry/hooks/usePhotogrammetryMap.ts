@@ -17,6 +17,7 @@ import {
 } from "../../maps";
 import { useMissionCommandMetrics } from "../../mission-runtime";
 import { stripClosedRing, type LonLat } from "../../fields";
+import { createFlatBoundaryDrawBridge } from "../../maps/utils/flatBoundaryDrawBridge";
 import type { Waypoint } from "../../mission-workflow";
 
 export function usePhotogrammetryMap({
@@ -44,6 +45,8 @@ export function usePhotogrammetryMap({
   onMapEngineChange,
   fieldPolygonRef,
   terraDrawRef,
+  onBoundaryDrawStarted,
+  resetBoundaryDrawSession,
 }: {
   apiBase: string;
   wsConnected: boolean;
@@ -69,7 +72,18 @@ export function usePhotogrammetryMap({
   onMapEngineChange: (engine: MissionMapEngine) => void;
   fieldPolygonRef: React.MutableRefObject<google.maps.Polygon | null>;
   terraDrawRef: React.MutableRefObject<TerraDraw | null>;
+  onBoundaryDrawStarted?: () => void;
+  resetBoundaryDrawSession?: () => void;
 }) {
+  const flatBoundaryDraw = useMemo(
+    () =>
+      createFlatBoundaryDrawBridge({
+        setFieldBorder,
+        setSelectedFieldId,
+        onBoundaryDrawStarted,
+      }),
+    [onBoundaryDrawStarted, setFieldBorder, setSelectedFieldId],
+  );
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -99,7 +113,7 @@ export function usePhotogrammetryMap({
   const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
     apiBase,
     getToken,
-    enabled: droneReady,
+    enabled: Boolean(activeFlightId && droneReady),
     onError: addError,
     resetKey: activeFlightId ?? "none",
   });
@@ -216,6 +230,7 @@ export function usePhotogrammetryMap({
 
   const handleDrawingToolSelection = useCallback(
     (toolMode: TerraDrawToolMode) => {
+      resetBoundaryDrawSession?.();
       if (mapEngine !== "google") {
         setDrawMode(terraDrawToolToShapeMode(toolMode));
         return;
@@ -223,7 +238,7 @@ export function usePhotogrammetryMap({
 
       setTerraDrawMode(toolMode);
     },
-    [mapEngine, setDrawMode, setTerraDrawMode]
+    [mapEngine, resetBoundaryDrawSession, setDrawMode, setTerraDrawMode]
   );
 
   const handleCesiumDrawComplete = useCallback(
@@ -237,13 +252,13 @@ export function usePhotogrammetryMap({
           setSelectedFieldId(null);
         }
       } else if (result.type === "polyline") {
-        setWaypoints(
-          result.coordinates.map(([lon, lat]) => ({
-            lat,
-            lon,
-            alt,
-          }))
+        const ring = stripClosedRing(
+          result.coordinates.map(([lon, lat]) => [lon, lat] as LonLat),
         );
+        if (ring.length >= 3) {
+          setFieldBorder(ring);
+          setSelectedFieldId(null);
+        }
       } else if (result.type === "point") {
         const [lon, lat] = result.coordinates;
         setWaypoints((prev) => [...prev, { lat, lon, alt }]);
@@ -425,6 +440,8 @@ export function usePhotogrammetryMap({
     onMapClick,
     handleDrawingToolSelection,
     handleCesiumDrawComplete,
+    onBoundaryDrawStarted: flatBoundaryDraw.onBoundaryDrawStarted,
+    onBoundaryDrawProgress: flatBoundaryDraw.onBoundaryDrawProgress,
     handleVideoError,
     handleVideoLoad,
     handleVideoRetry,

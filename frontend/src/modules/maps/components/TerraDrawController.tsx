@@ -38,6 +38,7 @@ type TerraDrawControllerProps = {
   drawRef: MutableRefObject<TerraDraw | null>;
   onReadyChange: (ready: boolean) => void;
   onSnapshotChange: (snapshot: TerraDrawFeature[]) => void;
+  onChangeEvent?: (event: string, snapshot: TerraDrawFeature[]) => void;
   onSelectionChange?: (selectedFeatureId: string | number | null) => void;
   onError?: (message: string) => void;
 };
@@ -68,6 +69,7 @@ export function TerraDrawController({
   drawRef,
   onReadyChange,
   onSnapshotChange,
+  onChangeEvent,
   onSelectionChange,
   onError,
 }: TerraDrawControllerProps) {
@@ -107,6 +109,16 @@ export function TerraDrawController({
                   feature: {
                     draggable: true,
                     coordinates: { draggable: true, deletable: true, midpoints: true },
+                  },
+                },
+                rectangle: {
+                  feature: {
+                    draggable: true,
+                  },
+                },
+                circle: {
+                  feature: {
+                    draggable: true,
                   },
                 },
                 point: { feature: { draggable: true } },
@@ -154,7 +166,9 @@ export function TerraDrawController({
 
         draw.on("change", (_ids: Array<string | number>, event: string) => {
           if (!SNAPSHOT_CHANGE_EVENTS.has(event)) return;
-          onSnapshotChange(draw.getSnapshot() as TerraDrawFeature[]);
+          const snapshot = draw.getSnapshot() as TerraDrawFeature[];
+          onSnapshotChange(snapshot);
+          onChangeEvent?.(event, snapshot);
         });
         draw.on("select", (id: string | number) => {
           onSelectionChange?.(id);
@@ -182,7 +196,7 @@ export function TerraDrawController({
       projectionListener?.remove();
       projectionListener = null;
     };
-  }, [drawRef, enabled, map, mode, onError, onReadyChange, onSelectionChange, onSnapshotChange]);
+  }, [drawRef, enabled, map, mode, onChangeEvent, onError, onReadyChange, onSelectionChange, onSnapshotChange]);
 
   useEffect(() => {
     if (!enabled || !drawRef.current) return;

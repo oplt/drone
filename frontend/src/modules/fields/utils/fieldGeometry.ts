@@ -122,6 +122,10 @@ export function parseFieldFeatures(fc: {
       owner_id: props.owner_id != null ? Number(props.owner_id) : undefined,
       name: String(props.name ?? ""),
       area_ha: props.area_ha != null ? Number(props.area_ha) : null,
+      workflow_scope:
+        typeof props.workflow_scope === "string"
+          ? (props.workflow_scope as FieldFeature["workflow_scope"])
+          : null,
       ring,
       path: lonLatRingToPath(ring),
     });

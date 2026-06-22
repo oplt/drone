@@ -2,22 +2,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { fieldsKeys } from "../../../app/config/queryKeys";
 import { createField, deleteField, fetchFieldFeatures, updateField } from "../api/fieldsApi";
+import type { FieldWorkflowScope } from "../constants";
 import type { FieldCreateDTO, LonLat } from "../types";
 
-export function useFields() {
+export function useFields(workflowScope: FieldWorkflowScope) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: fieldsKeys.features(),
-    queryFn: () => fetchFieldFeatures(),
+    queryKey: fieldsKeys.features(workflowScope),
+    queryFn: () => fetchFieldFeatures({ workflowScope }),
   });
 
   const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: fieldsKeys.features() });
-  }, [queryClient]);
+    void queryClient.invalidateQueries({ queryKey: fieldsKeys.features(workflowScope) });
+  }, [queryClient, workflowScope]);
 
   const createMutation = useMutation({
-    mutationFn: (payload: FieldCreateDTO) => createField(payload),
+    mutationFn: (payload: FieldCreateDTO) =>
+      createField({
+        ...payload,
+        workflow_scope: payload.workflow_scope ?? workflowScope,
+      }),
     onSuccess: invalidate,
   });
 
@@ -49,5 +54,6 @@ export function useFields() {
     deleteField: deleteMutation.mutateAsync,
     saving: createMutation.isPending || updateMutation.isPending,
     deleting: deleteMutation.isPending,
+    workflowScope,
   };
 }

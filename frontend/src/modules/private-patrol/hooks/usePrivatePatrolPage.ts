@@ -1,20 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TerraDraw } from "terra-draw";
+import { useCallback, useEffect, useState } from "react";
+import { getApiBaseUrl } from "../../../app/config/env";
 import { getToken } from "../../../modules/session";
 import { useErrors } from "../../../shared/hooks/useErrors";
 import { useMissionWebsocketRuntime } from "../../../modules/mission-runtime";
 import {
-  computeAreaHa,
-  computeCentroid,
-  useFields,
   useFieldTileset,
   useGeofenceLayers,
-  type FieldFeature,
-  type LonLat,
+  FIELD_WORKFLOW_SCOPES,
+  type FieldOutDTO,
 } from "../../fields";
 import { DEFAULT_MISSION_MAP_ENGINE, type MissionMapEngine } from "../../maps";
 import type { TerraDrawEditorMode } from "../../maps";
-import { useFieldBorderEditor } from "../../mission-workflow";
+import { useWorkflowFieldBoundary } from "../../mission-workflow";
 import type {
   NoticeSeverity,
   PrivatePatrolMissionStatus,
@@ -29,11 +26,7 @@ import { usePrivatePatrolMission } from "./usePrivatePatrolMission";
 import { useEventTriggerConfigPersistence } from "./useEventTriggerConfigPersistence";
 
 export function usePrivatePatrolPage() {
-  const [fieldName, setFieldName] = useState("Main Property");
-  const [fieldBorder, setFieldBorder] = useState<LonLat[] | null>(null);
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [pendingDeleteField, setPendingDeleteField] =
-    useState<FieldFeature | null>(null);
+  const [lastMissionId, setLastMissionId] = useState<string | null>(null);
   const [terraDrawMode, setTerraDrawMode] =
     useState<TerraDrawEditorMode>("static");
   const [mapEngine, setMapEngine] = useState<MissionMapEngine>(
@@ -45,17 +38,9 @@ export function usePrivatePatrolPage() {
     message: "",
   });
 
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const terraDrawRef = useRef<TerraDraw | null>(null);
-  const fieldPolygonRef = useRef<google.maps.Polygon | null>(null);
-
   const { errors, addError, clearErrors, dismissError } = useErrors();
 
-  const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL ?? "";
-  const API_BASE_CLEAN = (API_BASE_RAW || "http://localhost:8000").replace(
-    /\/$/,
-    "",
-  );
+  const API_BASE_CLEAN = getApiBaseUrl();
 
   const showUiNotice = useCallback(
     (message: string, severity: NoticeSeverity = "success") => {
@@ -72,19 +57,30 @@ export function usePrivatePatrolPage() {
     [],
   );
 
-  const {
-    fields,
-    loading: loadingFields,
-    refresh: refreshFields,
-    createField: createFieldRecord,
-    updateField: updateFieldRecord,
-    deleteField: deleteFieldRecord,
-    saving: savingField,
-    deleting: deletingField,
-  } = useFields();
+  const fieldBoundary = useWorkflowFieldBoundary({
+    workflowScope: FIELD_WORKFLOW_SCOPES.propertyPatrol,
+    defaultFieldName: "Main Property",
+    terraDrawMode,
+    addError,
+    persistFieldId: {
+      read: readPropertyPatrolFieldId,
+      write: writePropertyPatrolFieldId,
+    },
+    onSaveSuccess: (field: FieldOutDTO) => {
+      showUiNotice(`Saved field "${field.name}" (#${field.id})`);
+    },
+    onUpdateSuccess: (field: FieldOutDTO) => {
+      showUiNotice(`Updated field "${field.name}" (#${field.id})`);
+    },
+    onDeleteSuccess: (fieldName) => {
+      showUiNotice(`Deleted field "${fieldName}"`);
+    },
+  });
 
   const { exclusionZones } = useGeofenceLayers();
-  const { tilesetUrl: fieldTilesetUrl } = useFieldTileset(selectedFieldId);
+  const { tilesetUrl: fieldTilesetUrl } = useFieldTileset(
+    fieldBoundary.selectedFieldId,
+  );
 
   const {
     missionStatus,
@@ -100,95 +96,27 @@ export function usePrivatePatrolPage() {
     alwaysConnect: true,
   });
 
-  const borderEditor = useFieldBorderEditor({
-    setFieldBorder,
-    setSelectedFieldId,
-    fieldPolygonRef,
-    mapRef,
-    terraDrawRef,
-    fieldName,
-    selectedFieldId,
-    fieldBorder,
-    createFieldRecord,
-    updateFieldRecord,
-    refreshFields,
-    addError,
-  });
-
-  const saveFieldBorder = useCallback(async () => {
-    if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw a field polygon (min 3 points) before saving.");
-      return;
-    }
-    if (!fieldName.trim()) {
-      addError("Please enter a field name.");
-      return;
-    }
-    try {
-      const data = await createFieldRecord({
-        name: fieldName.trim(),
-        coordinates: fieldBorder,
-        metadata: {},
-      });
-      showUiNotice(`Saved field "${data.name}" (#${data.id})`);
-      setSelectedFieldId(data?.id ?? null);
-      if (data?.id != null) writePropertyPatrolFieldId(data.id);
-    } catch (e: unknown) {
-      addError(e instanceof Error ? e.message : "Failed to save field");
-    }
-  }, [addError, createFieldRecord, fieldBorder, fieldName, showUiNotice]);
-
-  const updateFieldBorder = useCallback(async () => {
-    if (selectedFieldId == null) {
-      addError("Select a field to update.");
-      return;
-    }
-    if (!fieldBorder || fieldBorder.length < 3) {
-      addError("Draw/edit a field polygon (min 3 points) before updating.");
-      return;
-    }
-    if (!fieldName.trim()) {
-      addError("Please enter a field name.");
-      return;
-    }
-    try {
-      const data = await updateFieldRecord({
-        fieldId: selectedFieldId,
-        name: fieldName.trim(),
-        coordinates: fieldBorder,
-      });
-      showUiNotice(`Updated field "${data.name}" (#${data.id})`);
-      writePropertyPatrolFieldId(selectedFieldId);
-    } catch (e: unknown) {
-      addError(e instanceof Error ? e.message : "Failed to update field");
-    }
-  }, [
-    addError,
-    fieldBorder,
-    fieldName,
-    selectedFieldId,
-    showUiNotice,
-    updateFieldRecord,
-  ]);
+  const trackedMissionId = activeFlightId ?? lastMissionId;
 
   const handleMapEngineChange = useCallback((next: MissionMapEngine) => {
     setMapEngine(next);
   }, []);
 
   const mission = usePrivatePatrolMission({
-    fieldBorder,
+    fieldBorder: fieldBoundary.fieldBorder,
     mapEngine,
     terraDrawMode,
     addError,
     clearErrors,
     setPendingFlightId,
+    setLastMissionId,
     showUiNotice,
     missionStatus,
     activeFlightId,
   });
 
   const eventTriggerConfig = useEventTriggerConfigPersistence({
-    selectedFieldId,
+    selectedFieldId: fieldBoundary.selectedFieldId,
     gridParams: mission.gridParams,
     setGridParams: mission.setGridParams,
     cruiseAlt: mission.alt,
@@ -202,9 +130,9 @@ export function usePrivatePatrolPage() {
     droneConnected,
     telemetry,
     activeFlightId,
-    fieldBorder,
-    setFieldBorder,
-    setSelectedFieldId,
+    fieldBorder: fieldBoundary.fieldBorder,
+    setFieldBorder: fieldBoundary.setFieldBorder,
+    setSelectedFieldId: fieldBoundary.setSelectedFieldId,
     fieldTilesetUrl,
     waypoints: mission.waypoints,
     setWaypoints: mission.setWaypoints,
@@ -216,118 +144,49 @@ export function usePrivatePatrolPage() {
     setDrawMode: mission.setDrawMode,
     terraDrawMode,
     setTerraDrawMode,
-    syncFieldBorderFromSnapshot: borderEditor.syncFieldBorderFromSnapshot,
-    isRemovableUserDrawingFeature: borderEditor.isRemovableUserDrawingFeature,
-    loadRingIntoEditor: borderEditor.loadRingIntoEditor,
-    focusRingOnMap: borderEditor.focusRingOnMap,
-    selectedField:
-      selectedFieldId == null
-        ? null
-        : (fields.find((f) => f.id === selectedFieldId) ?? null),
+    syncFieldBorderFromSnapshot: fieldBoundary.borderEditor.syncFieldBorderFromSnapshot,
+    isRemovableUserDrawingFeature:
+      fieldBoundary.borderEditor.isRemovableUserDrawingFeature,
+    loadRingIntoEditor: fieldBoundary.borderEditor.loadRingIntoEditor,
+    selectedField: fieldBoundary.selectedField,
     mapEngine,
     addError,
     onMapEngineChange: handleMapEngineChange,
-    fieldPolygonRef,
-    terraDrawRef,
+    fieldPolygonRef: fieldBoundary.fieldPolygonRef,
+    terraDrawRef: fieldBoundary.terraDrawRef,
+    onBoundaryDrawStarted: fieldBoundary.shapePrompt.notifyBoundaryDrawStarted,
+    resetBoundaryDrawSession: fieldBoundary.shapePrompt.resetBoundaryDrawSession,
   });
 
-  const selectedField = useMemo(
-    () =>
-      selectedFieldId == null
-        ? null
-        : (fields.find((f) => f.id === selectedFieldId) ?? null),
-    [fields, selectedFieldId],
-  );
-
-  const metrics = useMemo(() => {
-    if (!fieldBorder || fieldBorder.length < 3) return null;
-    return {
-      areaHa: computeAreaHa(fieldBorder),
-      centroid: computeCentroid(fieldBorder),
-    };
-  }, [fieldBorder]);
-
   const selectField = useCallback(
-    (f: FieldFeature) => {
-      setSelectedFieldId(f.id);
-      writePropertyPatrolFieldId(f.id);
-      setFieldName(f.name);
-      setFieldBorder(f.ring);
-      borderEditor.loadRingIntoEditor(f.ring);
-      map.focusFieldRing(f.ring);
+    (field: Parameters<typeof fieldBoundary.selectField>[0]) => {
+      fieldBoundary.selectField(field);
+      map.focusFieldRing(field.ring);
     },
-    [borderEditor, map],
+    [fieldBoundary, map],
   );
 
   useEffect(() => {
-    if (selectedFieldId != null || fields.length === 0) return;
+    if (fieldBoundary.selectedFieldId != null || fieldBoundary.fields.length === 0) {
+      return;
+    }
+    if (fieldBoundary.fieldBorder && fieldBoundary.fieldBorder.length >= 3) {
+      return;
+    }
     const storedFieldId = readPropertyPatrolFieldId();
     if (storedFieldId == null) return;
-    const field = fields.find((item) => item.id === storedFieldId);
+    const field = fieldBoundary.fields.find((item) => item.id === storedFieldId);
     if (field) selectField(field);
-  }, [fields, selectField, selectedFieldId]);
+  }, [
+    fieldBoundary.fields,
+    fieldBoundary.selectedFieldId,
+    selectField,
+  ]);
 
   const focusSelectedField = useCallback(() => {
-    if (!selectedField) return;
-    map.focusFieldRing(selectedField.ring);
-  }, [map, selectedField]);
-
-  const handleSavedFieldSelect = useCallback(
-    (fieldId: number | null) => {
-      if (fieldId == null) {
-        writePropertyPatrolFieldId(null);
-        borderEditor.clearFieldBorder();
-        return;
-      }
-      const field = fields.find((f) => f.id === fieldId);
-      if (field) selectField(field);
-    },
-    [borderEditor, fields, selectField],
-  );
-
-  const handleNewField = useCallback(() => {
-    setSelectedFieldId(null);
-    writePropertyPatrolFieldId(null);
-    setFieldName("Main Property");
-    borderEditor.clearFieldBorder();
-  }, [borderEditor]);
-
-  const requestDeleteSelectedField = useCallback(() => {
-    if (selectedFieldId == null) {
-      addError("Select a saved field to delete.");
-      return;
-    }
-    const targetField = fields.find((f) => f.id === selectedFieldId) ?? null;
-    if (!targetField) {
-      addError("Selected field could not be resolved.");
-      return;
-    }
-    setPendingDeleteField(targetField);
-  }, [addError, fields, selectedFieldId]);
-
-  const closeDeleteFieldDialog = useCallback(() => {
-    if (deletingField) return;
-    setPendingDeleteField(null);
-  }, [deletingField]);
-
-  const confirmDeleteSelectedField = useCallback(async () => {
-    if (!pendingDeleteField) return;
-    try {
-      await deleteFieldRecord(pendingDeleteField.id);
-      borderEditor.clearFieldBorder();
-      setFieldName("Main Property");
-      setPendingDeleteField(null);
-      showUiNotice(`Deleted field "${pendingDeleteField.name}"`);
-    } catch (e: unknown) {
-      addError(e instanceof Error ? e.message : "Failed to delete field");
-    }
-  }, [
-    addError,
-    borderEditor,
-    deleteFieldRecord,
-    pendingDeleteField,
-    showUiNotice,
-  ]);
+    if (!fieldBoundary.selectedField) return;
+    map.focusFieldRing(fieldBoundary.selectedField.ring);
+  }, [fieldBoundary.selectedField, map]);
 
   const googleMapsReady =
     map.mapEngine !== "google" || (Boolean(map.apiKey) && !map.loadError);
@@ -344,32 +203,10 @@ export function usePrivatePatrolPage() {
     wsConnected,
     missionStatus,
     activeFlightId,
+    trackedMissionId,
     telemetry,
-    fields,
     fieldTilesetUrl,
     exclusionZones,
-    selectedFieldId,
-    selectedField,
-    fieldName,
-    setFieldName,
-    fieldBorder,
-    setFieldBorder,
-    metrics,
-    selectField,
-    focusSelectedField,
-    loadingFields,
-    refreshFields,
-    savingField,
-    deletingField,
-    pendingDeleteField,
-    handleSavedFieldSelect,
-    handleNewField,
-    requestDeleteSelectedField,
-    closeDeleteFieldDialog,
-    confirmDeleteSelectedField,
-    saveFieldBorder,
-    updateFieldBorder,
-    borderEditor,
     mission,
     map,
     googleMapsReady,
@@ -381,5 +218,10 @@ export function usePrivatePatrolPage() {
     eventTriggerIntegration: eventTriggerConfig.eventTriggerIntegration,
     eventTriggerSaving: eventTriggerConfig.eventTriggerSaving,
     eventTriggerSaveError: eventTriggerConfig.eventTriggerSaveError,
+    fieldBoundary,
+    ...fieldBoundary,
+    selectField,
+    focusSelectedField,
+    shapePrompt: fieldBoundary.shapePrompt,
   };
 }

@@ -14,6 +14,19 @@ export type ShapeDrawResult =
   | { type: "polyline"; coordinates: LonLat[] }
   | { type: "polygon"; coordinates: LonLat[] };
 
+const FLAT_BOUNDARY_DRAW_MODES = new Set<ShapeDrawMode>([
+  "polygon",
+  "polyline",
+  "rectangle",
+  "circle",
+  "triangle",
+  "freehand",
+]);
+
+export function isFlatBoundaryDrawMode(mode: ShapeDrawMode): boolean {
+  return FLAT_BOUNDARY_DRAW_MODES.has(mode);
+}
+
 export function rectangleRing(start: LonLat, end: LonLat): LonLat[] {
   return [
     start,

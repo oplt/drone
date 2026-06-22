@@ -19,12 +19,14 @@ class FieldRepository:
         project_id: int | None,
         name: str,
         polygon: Polygon,
+        workflow_scope: str | None = None,
     ) -> Field:
         field = Field(
             owner_id=user.id,
             org_id=user.org_id,
             project_id=project_id,
             name=name,
+            workflow_scope=workflow_scope or "field_survey",
             boundary=from_shape(polygon, srid=4326),
             area_ha=None,
             centroid=from_shape(polygon.centroid, srid=4326),
@@ -37,7 +39,13 @@ class FieldRepository:
         return field
 
     async def list_owned(
-        self, db: AsyncSession, *, user: User, query: str | None, limit: int
+        self,
+        db: AsyncSession,
+        *,
+        user: User,
+        query: str | None,
+        limit: int,
+        workflow_scope: str | None = None,
     ) -> list[Field]:
         stmt = (
             select(Field)
@@ -45,6 +53,8 @@ class FieldRepository:
             .order_by(Field.id.desc())
             .limit(limit)
         )
+        if workflow_scope:
+            stmt = stmt.where(Field.workflow_scope == workflow_scope)
         if query:
             stmt = stmt.where(Field.name.ilike(f"%{query}%"))
         return list((await db.execute(stmt)).scalars().all())
