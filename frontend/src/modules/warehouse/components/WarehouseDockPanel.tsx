@@ -41,7 +41,16 @@ type Props = {
   embedded?: boolean;
 };
 
-const ZERO_POSE = { x_m: 0, y_m: 0, z_m: 0, yaw_deg: 0 };
+const ZERO_POSE = {
+  frame_id: "warehouse_map" as const,
+  x_m: 0,
+  y_m: 0,
+  z_m: 0,
+  orientation: { x: 0, y: 0, z: 0, w: 1 },
+  roll_deg: 0,
+  pitch_deg: 0,
+  yaw_deg: 0,
+};
 
 function markerStatus(dock: WarehouseDockStation | undefined): {
   label: string;

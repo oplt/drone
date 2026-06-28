@@ -92,6 +92,12 @@ def _instruments() -> dict[str, Any]:
         "api_websocket_messages": meter.create_counter("drone.api.websocket_messages"),
         "api_websocket_disconnects": meter.create_counter("drone.api.websocket_disconnects"),
         "api_request_failures": meter.create_counter("drone.api.request_failures"),
+        "warehouse_coordinate_audit_events": meter.create_counter(
+            "drone.warehouse.coordinate_audit_events"
+        ),
+        "warehouse_transform_jump_alarms": meter.create_counter(
+            "drone.warehouse.transform_jump_alarms"
+        ),
     }
 
 

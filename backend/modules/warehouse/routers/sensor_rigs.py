@@ -117,6 +117,7 @@ from fastapi import APIRouter
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
+
 @router.get("/sensor-rigs", response_model=list[WarehouseSensorRigOut])
 async def list_sensor_rigs(
     limit: int = Query(default=100, ge=1, le=500),
@@ -153,6 +154,7 @@ async def create_sensor_rig(
             stereo_baseline_m=payload.stereo_baseline_m,
             intrinsics_url=payload.intrinsics_url,
             extrinsics_url=payload.extrinsics_url,
+            extrinsics_json=payload.extrinsics_json,
             imu_transform_json=payload.imu_transform_json,
             firmware_version=payload.firmware_version,
             isaac_ros_version=payload.isaac_ros_version,
@@ -188,6 +190,7 @@ async def update_sensor_rig_calibration(
             calibration_hash=payload.calibration_hash,
             intrinsics_url=payload.intrinsics_url,
             extrinsics_url=payload.extrinsics_url,
+            extrinsics_json=payload.extrinsics_json,
             imu_transform_json=payload.imu_transform_json,
             calibration_meta=payload.calibration_meta,
         )
@@ -235,8 +238,19 @@ async def get_sensor_rig_health(
     blockers: list[str] = []
     if rig.calibration_status != "valid":
         blockers.append("Sensor rig calibration is not valid.")
-    if not rig.intrinsics_url or not rig.extrinsics_url:
+    if not rig.intrinsics_url or not rig.extrinsics_json:
         blockers.append("Sensor rig calibration files are incomplete.")
+    try:
+        from backend.modules.warehouse.service.sensor_calibration import (
+            sensor_calibration_checksum,
+        )
+
+        if not rig.extrinsics_json or rig.calibration_hash != sensor_calibration_checksum(
+            rig.extrinsics_json
+        ):
+            blockers.append("Sensor rig extrinsics checksum does not match canonical data.")
+    except ValueError:
+        blockers.append("Sensor rig extrinsics frame tree is invalid.")
     return WarehouseSensorRigHealthOut(
         sensor_rig=sensor_rig_out(rig),
         perception=WarehousePerceptionOut(
@@ -250,5 +264,3 @@ async def get_sensor_rig_health(
         ready=not blockers,
         blockers=blockers,
     )
-
-

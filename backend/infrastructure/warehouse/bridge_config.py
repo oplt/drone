@@ -95,6 +95,25 @@ def ros_command_env() -> dict[str, str]:
     return env
 
 
+def configure_embedded_ros_environment() -> None:
+    """Apply transport settings before the API process creates an rclpy context.
+
+    CLI probes and launched ROS processes already use ``ros_command_env``. The
+    in-process live-map subscribers must use the same DDS domain and transport;
+    otherwise FastDDS may select stale shared-memory ports and receive no data.
+    """
+    env = ros_command_env()
+    for name in (
+        "ROS_DOMAIN_ID",
+        "ROS_AUTOMATIC_DISCOVERY_RANGE",
+        "RMW_IMPLEMENTATION",
+        "FASTDDS_BUILTIN_TRANSPORTS",
+    ):
+        value = env.get(name)
+        if value:
+            os.environ[name] = value
+
+
 def ros_domain_id() -> str:
     return settings.ros_domain_id
 

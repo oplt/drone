@@ -142,14 +142,17 @@ def _check_tf_pair(ws: Path, source: str, target: str) -> bool:
 
 def _check_tf_chain(ws: Path) -> tuple[bool, str]:
     frames = [
-        ("odom", "iris_with_standoffs/base_link"),
-        ("iris_with_standoffs/base_link", "front_rgbd_camera_link"),
-        ("odom", "front_rgbd_camera_link"),
+        ("odom", "base_link"),
+        ("base_link", "lidar_link"),
+        ("base_link", "camera_link"),
+        ("camera_link", "camera_optical_frame"),
+        ("base_link", "imu_link"),
+        ("odom", "camera_optical_frame"),
     ]
     missing = [f"{source}->{target}" for source, target in frames if not _check_tf_pair(ws, source, target)]
     if missing:
         return False, f"Missing TF: {', '.join(missing)}"
-    return True, "TF chain odom/base_link/RGB-D available"
+    return True, "Stable odom/base_link/sensor TF tree available"
 
 
 def _check_rgbd_color_fields(ws: Path) -> tuple[bool | None, str]:

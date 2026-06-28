@@ -117,6 +117,7 @@ from fastapi import APIRouter
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
+
 @router.get("/scanned-maps", response_model=list[WarehouseScannedMapOut])
 async def list_scanned_maps(
     warehouse_map_id: int | None = Query(default=None, ge=1),
@@ -143,6 +144,7 @@ async def list_scanned_maps(
             job_id=int(job.id),
             model_id=int(model.id),
             model_version=int(model.version),
+            coordinate_frame_id=model.coordinate_frame_id,
             warehouse_map_id=int(warehouse_map.id),
             warehouse_name=warehouse_map.name,
             status=job.status,
@@ -182,11 +184,7 @@ async def get_scanned_map_live_map_snapshot(
             detail="No live-map flight id found for this scan result.",
         )
 
-    source_filter = (
-        {item.strip() for item in source.split(",") if item.strip()}
-        if source
-        else None
-    )
+    source_filter = {item.strip() for item in source.split(",") if item.strip()} if source else None
     disk_snapshot = await asyncio.to_thread(
         build_disk_live_map_snapshot,
         client_flight_id,
@@ -200,9 +198,7 @@ async def get_scanned_map_live_map_snapshot(
             layer = str(chunk.layer or chunk.source or "unknown")
             chunk_counts[layer] = chunk_counts.get(layer, 0) + 1
             if chunk.point_count:
-                point_counts[layer] = point_counts.get(layer, 0) + int(
-                    chunk.point_count
-                )
+                point_counts[layer] = point_counts.get(layer, 0) + int(chunk.point_count)
     if disk_snapshot.manifest is not None:
         point_counts = dict(disk_snapshot.manifest.point_counts or point_counts)
         chunk_counts = dict(disk_snapshot.manifest.chunk_counts or chunk_counts)
@@ -287,5 +283,3 @@ async def delete_scanned_map(
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse scanned map not found")
     await db.commit()
-
-

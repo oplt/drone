@@ -283,7 +283,7 @@ def _build_nvblox_launch_command() -> list[str]:
                 "use_topic_transforms:=false "
                 "input_qos:=SENSOR_DATA "
                 "global_frame:=odom "
-                "pose_frame:=iris_with_standoffs/base_link "
+                "pose_frame:=base_link "
                 "use_lidar:=false "
                 "use_rgbd:=true"
             )
@@ -469,6 +469,16 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
             logger.warning(
                 "TF not stable before nvblox start (continuing degraded): %s",
                 tf.to_dict(),
+            )
+        from backend.modules.warehouse.service.sim_time_tf_readiness import (
+            wait_for_warehouse_map_tf_stable,
+        )
+
+        map_tf = await wait_for_warehouse_map_tf_stable(timeout_s=3.0)
+        if not map_tf.ok:
+            logger.warning(
+                "warehouse_map->odom TF not stable before nvblox start: %s",
+                map_tf.to_dict(),
             )
 
     async with _mapping_stack_lock:

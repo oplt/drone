@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import io
 import logging
-import math
 import threading
 import time
 from dataclasses import dataclass, field, replace
@@ -12,7 +11,9 @@ from typing import Any
 
 import numpy as np
 
+from backend.modules.warehouse.service.drift_guard import warehouse_transform_drift_monitor
 from backend.modules.warehouse.service.live_map_config import render_priority_for_source
+from backend.modules.warehouse.service.live_map_stream import canonical_live_map_publish_frame
 from backend.modules.warehouse.service.map_source_config import (
     OCCUPANCY_TOPIC_CANDIDATES,
     WAREHOUSE_LIVE_MAP_SOURCES,
@@ -32,6 +33,11 @@ from backend.modules.warehouse.service.occupancy_live_map_chunk import (
     store_and_publish_occupancy_chunk,
 )
 from backend.modules.warehouse.service.pointcloud2_parser import encode_xyz32, encode_xyzrgb32
+from backend.modules.warehouse.service.ros_message_tf import (
+    resolve_pointcloud_transform,
+    stamp_string_from_msg,
+    transform_xyz_points,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,38 +51,6 @@ class _MemoryUpload:
 
     async def read(self, size: int = -1) -> bytes:
         return self._buffer.read(size)
-
-
-def _rotation_matrix_from_quaternion_xyzw(
-    x: float,
-    y: float,
-    z: float,
-    w: float,
-) -> np.ndarray:
-    norm = math.sqrt(x * x + y * y + z * z + w * w)
-    if norm <= 1e-12:
-        return np.eye(3, dtype=np.float32)
-    x /= norm
-    y /= norm
-    z /= norm
-    w /= norm
-    xx = x * x
-    yy = y * y
-    zz = z * z
-    xy = x * y
-    xz = x * z
-    yz = y * z
-    wx = w * x
-    wy = w * y
-    wz = w * z
-    return np.asarray(
-        [
-            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy)],
-            [2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
-            [2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy)],
-        ],
-        dtype=np.float32,
-    )
 
 
 def _bbox_from_xyz(xyz: np.ndarray) -> list[float]:
@@ -111,18 +85,6 @@ def _preview_points_from_xyz(xyz: np.ndarray, *, limit: int = 500) -> list[list[
     stride = max(1, int(np.ceil(arr.shape[0] / limit)))
     preview = np.round(arr[::stride][:limit], 3)
     return preview.astype(float, copy=False).tolist()
-
-
-def _stamp_from_msg(msg: Any) -> str | None:
-    header = getattr(msg, "header", None)
-    stamp = getattr(header, "stamp", None) if header is not None else None
-    if stamp is None:
-        return None
-    sec = getattr(stamp, "sec", None)
-    nanosec = getattr(stamp, "nanosec", None)
-    if sec is None or nanosec is None:
-        return None
-    return f"{int(sec)}.{int(nanosec):09d}"
 
 
 @dataclass
@@ -160,6 +122,8 @@ async def _store_and_publish_point_chunk(
     has_rgb: bool,
     frame_id: str,
     stamp: str | None = None,
+    cloud_age_ms: float | None = None,
+    transform_age_ms: float | None = None,
 ) -> None:
     from backend.modules.warehouse.service.live_map_storage import (
         warehouse_live_map_chunk_storage,
@@ -188,6 +152,7 @@ async def _store_and_publish_point_chunk(
     stored = await warehouse_live_map_chunk_storage.save_upload(
         flight_id=flight_id,
         chunk_id=chunk_id,
+        frame_id=frame_id,
         kind=storage_kind,
         upload=_MemoryUpload(payload, content_type=content_type),
         max_bytes=48 * 1024 * 1024,
@@ -213,6 +178,8 @@ async def _store_and_publish_point_chunk(
             "priority": priority,
             "stamp": stamp,
             "source_topic": source.topic,
+            "cloud_age_ms": cloud_age_ms,
+            "transform_age_ms": transform_age_ms,
         },
     )
 
@@ -241,6 +208,8 @@ async def _store_and_publish_point_chunk(
                     "frame_id": frame_id,
                     "stamp": stamp,
                     "priority": priority,
+                    "cloud_age_ms": cloud_age_ms,
+                    "transform_age_ms": transform_age_ms,
                 }
             ],
             "health": {
@@ -282,6 +251,7 @@ async def _store_and_publish_mesh_chunk(
     stored = await warehouse_live_map_chunk_storage.save_upload(
         flight_id=flight_id,
         chunk_id=chunk_id,
+        frame_id=frame_id,
         kind="mesh",
         upload=_MemoryUpload(glb_bytes, content_type="model/gltf-binary"),
         max_bytes=64 * 1024 * 1024,
@@ -352,12 +322,16 @@ class _NvbloxLayersLiveMapNode:
     ) -> None:
         import tf2_ros
         from rclpy.node import Node
+        from rclpy.parameter import Parameter
         from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 
         class NodeImpl(Node):
             pass
 
-        self.node = NodeImpl("warehouse_nvblox_layers_live_map_bridge")
+        self.node = NodeImpl(
+            "warehouse_nvblox_layers_live_map_bridge",
+            parameter_overrides=[Parameter("use_sim_time", value=True)],
+        )
         self.flight_id = flight_id
         self.event_loop = event_loop
         self.source_runtimes = {
@@ -424,47 +398,6 @@ class _NvbloxLayersLiveMapNode:
 
         return _callback
 
-    def _lookup_transform(self, msg: Any, global_frame: str) -> Any | None:
-        import rclpy
-        from rclpy.duration import Duration
-        from rclpy.time import Time
-
-        header = getattr(msg, "header", None)
-        source_frame = (getattr(header, "frame_id", None) or "").strip()
-        if not source_frame or source_frame == global_frame:
-            return None
-        try:
-            return self.tf_buffer.lookup_transform(
-                global_frame,
-                source_frame,
-                Time.from_msg(header.stamp),
-                timeout=Duration(seconds=0.05),
-            )
-        except Exception:
-            try:
-                return self.tf_buffer.lookup_transform(
-                    global_frame,
-                    source_frame,
-                    rclpy.time.Time(),
-                    timeout=Duration(seconds=0.05),
-                )
-            except Exception:
-                return None
-
-    def _transform_xyz(self, xyz: np.ndarray, transform: Any | None) -> np.ndarray:
-        if transform is None:
-            return xyz
-        t = transform.transform.translation
-        q = transform.transform.rotation
-        rotation = _rotation_matrix_from_quaternion_xyzw(
-            float(q.x),
-            float(q.y),
-            float(q.z),
-            float(q.w),
-        )
-        translation = np.asarray([float(t.x), float(t.y), float(t.z)], dtype=np.float32)
-        return np.ascontiguousarray((xyz @ rotation.T) + translation, dtype=np.float32)
-
     def _on_message(self, source_id: str, msg: Any) -> None:
         runtime = self.source_runtimes.get(source_id)
         if runtime is None:
@@ -511,7 +444,7 @@ class _NvbloxLayersLiveMapNode:
                     return
                 await self._publish_source_message(source_id, msg)
         except Exception:
-            self.node.get_logger().exception(
+            logger.exception(
                 "Failed to publish nvblox layer chunk source=%s",
                 source_id,
             )
@@ -555,7 +488,7 @@ class _NvbloxLayersLiveMapNode:
                 sequence=sequence,
                 glb_bytes=glb_bytes,
                 frame_id=config.global_frame,
-                stamp=_stamp_from_msg(msg),
+                stamp=stamp_string_from_msg(msg),
             )
             return
 
@@ -579,10 +512,12 @@ class _NvbloxLayersLiveMapNode:
                 width=parsed_grid.width,
                 height=parsed_grid.height,
                 resolution_m=parsed_grid.resolution_m,
-                origin_x_m=parsed_grid.origin_x_m,
-                origin_y_m=parsed_grid.origin_y_m,
-                frame_id=parsed_grid.frame_id or config.global_frame,
-                stamp=_stamp_from_msg(msg),
+                origin=parsed_grid.origin,
+                frame_id=canonical_live_map_publish_frame(
+                    parsed_grid.frame_id,
+                    fallback=config.global_frame,
+                ),
+                stamp=stamp_string_from_msg(msg),
             )
             return
 
@@ -598,18 +533,33 @@ class _NvbloxLayersLiveMapNode:
             return
 
         xyz = parsed.xyz
-        header = getattr(msg, "header", None)
-        source_frame = (getattr(header, "frame_id", None) or "").strip()
-        transform = self._lookup_transform(msg, config.global_frame)
-        if source_frame and source_frame != config.global_frame and transform is None:
+        now_ns = int(self.node.get_clock().now().nanoseconds)
+        resolved = resolve_pointcloud_transform(
+            self.tf_buffer,
+            msg=msg,
+            global_frame=config.global_frame,
+            now_ns=now_ns,
+        )
+        if resolved is None:
+            nvblox_status_tracker.note_tf_lookup_failed()
+            try:
+                from backend.modules.warehouse.observability.warehouse_coordinate_metrics import (
+                    record_tf_lookup_failure,
+                )
+
+                record_tf_lookup_failure(source=source_id)
+            except Exception:
+                pass
+            header = getattr(msg, "header", None)
+            source_frame = (getattr(header, "frame_id", None) or "").strip()
             self.node.get_logger().warning(
-                "Skipping nvblox layer chunk source=%s: TF %s <- %s unavailable",
-                source_id,
-                config.global_frame,
-                source_frame,
+                f"Skipping nvblox layer chunk source={source_id}: message-stamp TF "
+                f"{config.global_frame} <- {source_frame} unavailable or stale"
             )
             return
-        xyz = self._transform_xyz(xyz, transform)
+        if resolved.needs_transform:
+            warehouse_transform_drift_monitor.observe(source_id, resolved.transform)
+        xyz = transform_xyz_points(xyz, resolved.transform)
 
         digest = hashlib.sha1()
         digest.update(config.source_id.encode("utf-8"))
@@ -632,7 +582,9 @@ class _NvbloxLayersLiveMapNode:
             rgb=parsed.rgb,
             has_rgb=parsed.has_rgb,
             frame_id=config.global_frame,
-            stamp=_stamp_from_msg(msg),
+            stamp=stamp_string_from_msg(msg),
+            cloud_age_ms=resolved.message_age_ms,
+            transform_age_ms=resolved.transform_age_ms,
         )
         total_ms = (time.monotonic() - parse_started) * 1000.0
         publish_ms = (time.monotonic() - publish_started) * 1000.0
@@ -712,6 +664,11 @@ async def start_nvblox_layers_live_map_bridge(flight_id: str) -> None:
             )
             return
 
+        from backend.infrastructure.warehouse.bridge_config import (
+            configure_embedded_ros_environment,
+        )
+
+        configure_embedded_ros_environment()
         import rclpy
         from rclpy.executors import SingleThreadedExecutor
 

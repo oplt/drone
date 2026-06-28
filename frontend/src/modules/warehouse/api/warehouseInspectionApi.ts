@@ -1,5 +1,167 @@
 import { httpRequest } from "../../../shared/api/httpClient";
 
+export type WarehouseCoordinateFrame = {
+  id: number;
+  warehouse_map_id: number;
+  version: number;
+  parent_frame_id: "warehouse_map";
+  child_frame_id: string;
+  units: "m";
+  axis_convention: "ENU";
+  handedness: "right";
+  transform: {
+    translation: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number; w: number };
+  };
+  source: string;
+  status: "locked";
+  confidence: number | null;
+  covariance: number[];
+  created_at: string;
+  locked_at: string;
+  superseded_at: null;
+};
+
+export async function fetchActiveWarehouseCoordinateFrame(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<WarehouseCoordinateFrame> {
+  return httpRequest<WarehouseCoordinateFrame>(
+    `/warehouse/maps/${warehouseMapId}/coordinate-frames/active`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export type WarehouseFrameDefinition = {
+  frame_id: string;
+  parent_frame_id: string | null;
+  role: "world" | "motion" | "body" | "sensor" | "semantic";
+  publisher:
+    | "localization"
+    | "odometry"
+    | "calibration"
+    | "joint_state"
+    | "optional";
+  required: boolean;
+  persistent_geometry: boolean;
+  units: "m";
+  axis_convention: string;
+  handedness: "right";
+};
+
+export type WarehouseFrameContract = {
+  schema_version: 1;
+  checksum_sha256: string;
+  frames: WarehouseFrameDefinition[];
+  active_revision: Pick<
+    WarehouseCoordinateFrame,
+    | "id"
+    | "version"
+    | "parent_frame_id"
+    | "child_frame_id"
+    | "status"
+    | "transform"
+  > | null;
+};
+
+export async function fetchWarehouseFrameContract(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<WarehouseFrameContract> {
+  return httpRequest<WarehouseFrameContract>(
+    `/warehouse/maps/${warehouseMapId}/frame-contract`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export type WarehouseCoordinateDiagnostics = {
+  warehouse_map_id: number;
+  generated_at: string;
+  mission_ready: boolean;
+  coordinate_frame: {
+    id: number;
+    version: number;
+    status: string;
+    parent_frame_id: string;
+    child_frame_id: string;
+    confidence: number | null;
+    localization_method: string;
+    transform_checksum: string;
+    locked_at: string | null;
+    transform_age_ms: number | null;
+  } | null;
+  latest_coordinate_frame: WarehouseCoordinateDiagnostics["coordinate_frame"];
+  layout_version: {
+    id: number;
+    version: number;
+    revision: number;
+    status: string;
+    coordinate_frame_id: number;
+    provenance_status: string;
+    locked_at: string | null;
+  } | null;
+  latest_layout_version: WarehouseCoordinateDiagnostics["layout_version"];
+  localization_evidence: {
+    age_s: number;
+    max_position_std_m: number;
+    confidence: number;
+    checksum_sha256: string;
+  } | null;
+  entity_counts: Record<string, number>;
+  frame_contract_checksum: string | null;
+  ros_map_odom_tf?: {
+    tf_ok?: boolean;
+    parent_frame?: string;
+    child_frame?: string;
+    detail?: string | null;
+  } | null;
+  ros_tf_tree?: {
+    tf_ok?: boolean;
+    edge_count?: number;
+    ok_count?: number;
+    missing_edges?: string[];
+    edges?: Array<{
+      parent_frame: string;
+      child_frame: string;
+      tf_ok: boolean;
+      detail?: string | null;
+    }>;
+  } | null;
+  slam_localization?: {
+    healthy?: boolean;
+    confidence?: number;
+    age_ms?: number;
+  } | null;
+  provisional_epoch?: {
+    epoch_id?: string;
+    revision?: number;
+    stale?: boolean;
+    confidence?: number;
+  } | null;
+  blocking_issues: Array<{ code: string; message: string; severity: string }>;
+  warnings: Array<{ code: string; message: string; severity: string }>;
+};
+
+export async function fetchWarehouseCoordinateDiagnostics(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<WarehouseCoordinateDiagnostics> {
+  return httpRequest<WarehouseCoordinateDiagnostics>(
+    `/warehouse/maps/${warehouseMapId}/coordinate-diagnostics`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export async function syncWarehouseCoordinateFrameToRos(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<{ synced: boolean; detail: string }> {
+  return httpRequest<{ synced: boolean; detail: string }>(
+    `/warehouse/maps/${warehouseMapId}/coordinate-frames/sync-ros`,
+    { method: "POST", token, skipUnauthorizedRedirect: true },
+  );
+}
+
 export type WarehouseLocalPoint = {
   frame_id?: string;
   x_m: number;
@@ -8,7 +170,28 @@ export type WarehouseLocalPoint = {
 };
 
 export type WarehouseLocalPose = WarehouseLocalPoint & {
-  yaw_deg?: number | null;
+  // Optional while editing legacy yaw-only drafts; API responses always include these.
+  orientation?: WarehouseQuaternion;
+  roll_deg?: number;
+  pitch_deg?: number;
+  yaw_deg: number;
+};
+
+export type WarehouseQuaternion = {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+};
+
+export type WarehouseSensorAim = {
+  frame_id: "warehouse_map";
+  sensor_frame_id: string;
+  aim_point_local_json: WarehouseLocalPoint;
+  orientation: WarehouseQuaternion;
+  roll_deg: number;
+  pitch_deg: number;
+  yaw_deg: number;
 };
 
 export type WarehouseShelfNormal = {
@@ -21,6 +204,9 @@ export type WarehouseShelfNormal = {
 export type WarehouseScanTarget = {
   id: number;
   warehouse_map_id: number;
+  layout_version_id: number | null;
+  provenance_status: "auto" | "manual" | "confirmed";
+  bin_id: number | null;
   reference_model_id: number | null;
   dock_station_id: number | null;
   aisle_code: string;
@@ -32,6 +218,7 @@ export type WarehouseScanTarget = {
   product_name: string | null;
   target_point_local_json: WarehouseLocalPoint;
   scan_pose_local_json: WarehouseLocalPose;
+  sensor_aim_json?: WarehouseSensorAim | null;
   shelf_normal_local_json: WarehouseShelfNormal | null;
   standoff_m: number;
   hover_time_s: number;
@@ -46,6 +233,8 @@ export type WarehouseScanTarget = {
 };
 
 export type WarehouseScanTargetPayload = {
+  bin_id?: number;
+  coordinate_frame_id?: number;
   aisle_code: string;
   rack_code?: string | null;
   shelf_level?: number | null;
@@ -55,6 +244,7 @@ export type WarehouseScanTargetPayload = {
   product_name?: string | null;
   target_point_local_json: WarehouseLocalPoint;
   scan_pose_local_json: WarehouseLocalPose;
+  sensor_aim_json?: WarehouseSensorAim | null;
   shelf_normal_local_json?: WarehouseShelfNormal | null;
   standoff_m?: number;
   hover_time_s?: number;
@@ -62,6 +252,50 @@ export type WarehouseScanTargetPayload = {
   priority?: number;
   active?: boolean;
 };
+
+export type WarehouseLayoutBin = {
+  id: number;
+  aisle_code: string;
+  rack_code: string;
+  shelf_level: number;
+  bin_code: string;
+  geometry: Record<string, unknown>;
+};
+
+export type WarehouseLayout = {
+  id: number;
+  warehouse_map_id: number;
+  coordinate_frame_id: number;
+  version: number;
+  status: string;
+  source: string;
+  provenance_status: "auto" | "manual" | "confirmed";
+  artifact_set_id: number | null;
+  input_checksum: string | null;
+  algorithm_version: string | null;
+  created_at: string;
+  locked_at: string | null;
+  bins: WarehouseLayoutBin[];
+  safety_zones: Array<{
+    id: number;
+    code: string;
+    kind: string;
+    geometry: Record<string, unknown>;
+    min_z_m: number | null;
+    max_z_m: number | null;
+    active: boolean;
+  }>;
+};
+
+export async function fetchActiveWarehouseLayout(
+  warehouseMapId: number,
+  token?: string | null,
+): Promise<WarehouseLayout> {
+  return httpRequest<WarehouseLayout>(
+    `/warehouse/maps/${warehouseMapId}/layouts/active`,
+    { token, skipUnauthorizedRedirect: true },
+  );
+}
 
 export type WarehouseInspectionMission = {
   id: number;
@@ -71,6 +305,10 @@ export type WarehouseInspectionMission = {
   scan_mode: "barcode" | "product_photo" | "visual_check" | "mixed" | string;
   return_to_dock: boolean;
   target_ids: number[];
+  plan_checksum: string | null;
+  approval_status: "pending" | "approved" | "rejected";
+  approved_at: string | null;
+  runtime_policy: Record<string, unknown>;
   waypoints: Array<{
     target_id: number;
     purpose: string;
@@ -332,12 +570,15 @@ export async function createWarehouseInspectionMission(
   },
   token?: string | null,
 ): Promise<WarehouseInspectionMission> {
-  return httpRequest<WarehouseInspectionMission>("/warehouse/inspection-missions", {
-    method: "POST",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseInspectionMission>(
+    "/warehouse/inspection-missions",
+    {
+      method: "POST",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function runWarehouseInspectionMissionMock(
@@ -347,6 +588,24 @@ export async function runWarehouseInspectionMissionMock(
   return httpRequest<WarehouseInspectionResult[]>(
     `/warehouse/inspection-missions/${missionId}/run-mock`,
     { method: "POST", token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export async function approveWarehouseInspectionMission(
+  mission: WarehouseInspectionMission,
+  token?: string | null,
+): Promise<WarehouseInspectionMission> {
+  if (!mission.plan_checksum)
+    throw new Error("Mission preview has no checksum.");
+  return httpRequest<WarehouseInspectionMission>(
+    `/warehouse/inspection-missions/${mission.id}/approval`,
+    {
+      method: "POST",
+      body: { approved: true },
+      headers: { "If-Match": `"${mission.plan_checksum}"` },
+      token,
+      skipUnauthorizedRedirect: true,
+    },
   );
 }
 

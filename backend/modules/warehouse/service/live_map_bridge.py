@@ -101,9 +101,7 @@ def _esdf_topic() -> str:
         return configured
     flow = resolve_warehouse_bridge_flow()
     return (
-        "/nvblox_node/static_esdf_pointcloud"
-        if flow.gazebo_sim
-        else "/warehouse/contract/map/esdf"
+        "/nvblox_node/static_esdf_pointcloud" if flow.gazebo_sim else "/warehouse/contract/map/esdf"
     )
 
 
@@ -184,7 +182,9 @@ def _run_ros2_command(
         logger.debug("ROS command timed out: ros2 %s", " ".join(map(str, ros_args)))
         return None
     except OSError:
-        logger.debug("ROS command failed to start: ros2 %s", " ".join(map(str, ros_args)), exc_info=True)
+        logger.debug(
+            "ROS command failed to start: ros2 %s", " ".join(map(str, ros_args)), exc_info=True
+        )
         return None
 
 
@@ -403,9 +403,12 @@ def _pointcloud2_to_chunk(
         return None
 
     header = payload.get("header") if isinstance(payload.get("header"), dict) else {}
+    frame_id = str(header.get("frame_id") or "").strip()
+    if not frame_id:
+        return None
     chunk_payload = {
         "format": "xyz_preview_v1",
-        "frame_id": str(header.get("frame_id") or "odom"),
+        "frame_id": frame_id,
         "source_topic": source_topic,
         "sampled_point_count": len(sampled),
         "source_point_count": total_points,
@@ -528,6 +531,19 @@ async def _publish_loop(flight_id: str, stop: asyncio.Event) -> None:
                         "health": health.model_dump(mode="python"),
                         "changed_chunks": changed_chunks,
                     }
+                    frames = {
+                        str(chunk.get("frame_id") or "").strip()
+                        for chunk in changed_chunks
+                        if isinstance(chunk, dict)
+                    }
+                    if pose is not None:
+                        frames.add(pose.frame_id)
+                    frames.discard("")
+                    if len(frames) != 1:
+                        raise ValueError(
+                            f"Live-map bridge produced missing or mixed frames: {sorted(frames)}"
+                        )
+                    payload["frame_id"] = frames.pop()
                     if pose_payload is not None:
                         payload["pose"] = pose_payload
                         payload["scan_path_sample"] = [pose_payload]

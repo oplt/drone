@@ -215,6 +215,11 @@ class OccupancyGrid:
     height: int
     origin_x_m: float = 0.0
     origin_y_m: float = 0.0
+    origin_z_m: float = 0.0
+    origin_qx: float = 0.0
+    origin_qy: float = 0.0
+    origin_qz: float = 0.0
+    origin_qw: float = 1.0
     default_state: OccupancyState | str = OccupancyState.UNKNOWN
     cells: dict[tuple[int, int], OccupancyState | str] = field(default_factory=dict)
 
@@ -224,6 +229,13 @@ class OccupancyGrid:
         self.height = max(0, int(self.height))
         self.origin_x_m = float(self.origin_x_m)
         self.origin_y_m = float(self.origin_y_m)
+        self.origin_z_m = float(self.origin_z_m)
+        self.origin_qx = float(self.origin_qx)
+        self.origin_qy = float(self.origin_qy)
+        self.origin_qz = float(self.origin_qz)
+        self.origin_qw = float(self.origin_qw)
+        if abs(self.origin_qw) < 1e-9 and abs(self.origin_qx) < 1e-9 and abs(self.origin_qy) < 1e-9 and abs(self.origin_qz) < 1e-9:
+            self.origin_qw = 1.0
         self.default_state = _coerce_occupancy_state(self.default_state)
 
         # Normalize user-provided cells once. This prevents invalid strings or
@@ -248,9 +260,29 @@ class OccupancyGrid:
             height=int(self.height),
             origin_x_m=float(self.origin_x_m),
             origin_y_m=float(self.origin_y_m),
+            origin_z_m=float(self.origin_z_m),
+            origin_qx=float(self.origin_qx),
+            origin_qy=float(self.origin_qy),
+            origin_qz=float(self.origin_qz),
+            origin_qw=float(self.origin_qw),
             default_state=self.default_state,
             cells=dict(self.cells),
         )
+
+    def origin_yaw_rad(self) -> float:
+        qx = float(self.origin_qx)
+        qy = float(self.origin_qy)
+        qz = float(self.origin_qz)
+        qw = float(self.origin_qw)
+        siny_cosp = 2.0 * (qw * qz + qx * qy)
+        cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+        return math.atan2(siny_cosp, cosy_cosp)
+
+    @staticmethod
+    def _rotate_xy(x: float, y: float, yaw_rad: float) -> tuple[float, float]:
+        c = math.cos(yaw_rad)
+        s = math.sin(yaw_rad)
+        return x * c - y * s, x * s + y * c
 
     def in_bounds(self, x_idx: int, y_idx: int) -> bool:
         return 0 <= int(x_idx) < int(self.width) and 0 <= int(y_idx) < int(self.height)
@@ -296,8 +328,11 @@ class OccupancyGrid:
 
     def world_to_cell(self, pose: LocalPose) -> tuple[int, int]:
         resolution = float(self.resolution_m)
-        x_idx = int(math.floor((float(pose.x_m) - float(self.origin_x_m)) / resolution))
-        y_idx = int(math.floor((float(pose.y_m) - float(self.origin_y_m)) / resolution))
+        dx = float(pose.x_m) - float(self.origin_x_m)
+        dy = float(pose.y_m) - float(self.origin_y_m)
+        local_x, local_y = self._rotate_xy(dx, dy, -self.origin_yaw_rad())
+        x_idx = int(math.floor(local_x / resolution))
+        y_idx = int(math.floor(local_y / resolution))
         return x_idx, y_idx
 
     def cell_to_pose(
@@ -309,10 +344,13 @@ class OccupancyGrid:
         frame_id: str = IndoorFrame.MAP.value,
     ) -> LocalPose:
         resolution = float(self.resolution_m)
+        local_x = (float(x_idx) + 0.5) * resolution
+        local_y = (float(y_idx) + 0.5) * resolution
+        world_x, world_y = self._rotate_xy(local_x, local_y, self.origin_yaw_rad())
         return LocalPose(
-            x_m=float(self.origin_x_m) + ((float(x_idx) + 0.5) * resolution),
-            y_m=float(self.origin_y_m) + ((float(y_idx) + 0.5) * resolution),
-            z_m=float(z_m),
+            x_m=float(self.origin_x_m) + world_x,
+            y_m=float(self.origin_y_m) + world_y,
+            z_m=float(self.origin_z_m) + float(z_m),
             frame_id=frame_id,
         )
 
@@ -612,6 +650,11 @@ class OccupancyGrid:
             math.isclose(float(self.resolution_m), float(other.resolution_m))
             and math.isclose(float(self.origin_x_m), float(other.origin_x_m))
             and math.isclose(float(self.origin_y_m), float(other.origin_y_m))
+            and math.isclose(float(self.origin_z_m), float(other.origin_z_m))
+            and math.isclose(float(self.origin_qx), float(other.origin_qx))
+            and math.isclose(float(self.origin_qy), float(other.origin_qy))
+            and math.isclose(float(self.origin_qz), float(other.origin_qz))
+            and math.isclose(float(self.origin_qw), float(other.origin_qw))
         )
 
         for y_idx in range(min_y, max_y + 1):
@@ -670,6 +713,11 @@ class OccupancyGrid:
             "height": int(self.height),
             "origin_x_m": float(self.origin_x_m),
             "origin_y_m": float(self.origin_y_m),
+            "origin_z_m": float(self.origin_z_m),
+            "origin_qx": float(self.origin_qx),
+            "origin_qy": float(self.origin_qy),
+            "origin_qz": float(self.origin_qz),
+            "origin_qw": float(self.origin_qw),
             "default_state": self.default_state.value,
             "cells": [
                 {"x_idx": x_idx, "y_idx": y_idx, "state": state.value}

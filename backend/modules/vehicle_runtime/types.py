@@ -15,7 +15,16 @@ class LocalCoordinate:
     north_m: float
     east_m: float
     down_m: float
-    yaw_deg: float | None = None
+    yaw_rad: float | None = None
+
+
+@dataclass
+class EnuCoordinate:
+    x_m: float
+    y_m: float
+    z_m: float
+    yaw_rad: float | None = None
+    frame_id: str = "odom"
 
 
 @dataclass

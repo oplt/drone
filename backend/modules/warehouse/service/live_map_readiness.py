@@ -109,6 +109,7 @@ class MappingReadinessResult:
 class StructureInputReadiness:
     esdf_topic: str | None = None
     esdf_message_received: bool = False
+    esdf_message_text: str | None = None
     occupancy_topic: str | None = None
     occupancy_message_received: bool = False
     occupancy_message: dict[str, object] | None = None
@@ -504,6 +505,7 @@ async def refresh_structure_input_readiness(
     return StructureInputReadiness(
         esdf_topic=esdf_topic,
         esdf_message_received=esdf_output is not None,
+        esdf_message_text=esdf_output,
         occupancy_topic=occupancy_topic,
         occupancy_message_received=occupancy_output is not None,
         occupancy_message=occupancy_message,
@@ -762,7 +764,7 @@ async def wait_for_rgbd_mapping_topics(
 async def probe_mapping_tf_degraded(
     *,
     parent_frame: str = "odom",
-    child_frame: str = "iris_with_standoffs/base_link",
+    child_frame: str = "base_link",
 ) -> dict[str, object]:
     """Best-effort TF probe for diagnostics; never gates takeoff."""
     from backend.modules.warehouse.service.sim_time_tf_readiness import _sourced_ros_cmd

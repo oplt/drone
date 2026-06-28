@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 
+from backend.modules.warehouse.service.drift_guard import warehouse_transform_drift_monitor
 from backend.modules.warehouse.service.live_map_config import (
     raw_lidar_max_points,
     raw_lidar_min_publish_interval_s,
@@ -25,15 +26,18 @@ from backend.modules.warehouse.service.map_source_config import (
 from backend.observability.instruments import observed_span, structured_error
 from backend.observability.metrics import add as metric_add
 from backend.observability.metrics import record as metric_record
+from backend.modules.warehouse.service.ros_message_tf import (
+    resolve_pointcloud_transform,
+    stamp_string_from_msg,
+    transform_xyz_points,
+)
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_POINTCLOUD_TOPIC = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].topic
 DEFAULT_GLOBAL_FRAME = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].global_frame
 DEFAULT_MAX_POINTS = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].max_points
-DEFAULT_MIN_PUBLISH_INTERVAL_S = WAREHOUSE_LIVE_MAP_SOURCES[
-    "mid360_raw"
-].min_publish_interval_s
+DEFAULT_MIN_PUBLISH_INTERVAL_S = WAREHOUSE_LIVE_MAP_SOURCES["mid360_raw"].min_publish_interval_s
 
 
 class _MemoryUpload:
@@ -54,56 +58,6 @@ def _voxel_downsample(xyz: np.ndarray, voxel_size: float) -> np.ndarray:
     voxels = np.floor(xyz / voxel_size).astype(np.int64, copy=False)
     _, unique_indices = np.unique(voxels, axis=0, return_index=True)
     return np.ascontiguousarray(xyz[np.sort(unique_indices)], dtype=np.float32)
-
-
-def _rotation_matrix_from_quaternion_xyzw(
-    x: float,
-    y: float,
-    z: float,
-    w: float,
-) -> np.ndarray:
-    norm = math.sqrt(x * x + y * y + z * z + w * w)
-    if norm <= 1e-12:
-        return np.eye(3, dtype=np.float32)
-
-    x /= norm
-    y /= norm
-    z /= norm
-    w /= norm
-
-    xx = x * x
-    yy = y * y
-    zz = z * z
-    xy = x * y
-    xz = x * z
-    yz = y * z
-    wx = w * x
-    wy = w * y
-    wz = w * z
-
-    return np.asarray(
-        [
-            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy)],
-            [2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
-            [2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy)],
-        ],
-        dtype=np.float32,
-    )
-
-
-def _stamp_from_msg(msg: Any) -> str | None:
-    header = getattr(msg, "header", None)
-    stamp = getattr(header, "stamp", None) if header is not None else None
-    if stamp is None:
-        return None
-    sec = getattr(stamp, "sec", None)
-    nanosec = getattr(stamp, "nanosec", None)
-    if sec is None or nanosec is None:
-        return None
-    try:
-        return f"{int(sec)}.{int(nanosec):09d}"
-    except (TypeError, ValueError, OverflowError):
-        return None
 
 
 def _finite_xyz(xyz: np.ndarray) -> np.ndarray:
@@ -189,6 +143,8 @@ async def _store_and_publish_pointcloud_chunk(
     xyz: np.ndarray,
     persist_to_disk: bool,
     stamp: str | None = None,
+    cloud_age_ms: float | None = None,
+    transform_age_ms: float | None = None,
 ) -> None:
     from backend.modules.warehouse.service.live_map_storage import (
         warehouse_live_map_chunk_storage,
@@ -228,6 +184,7 @@ async def _store_and_publish_pointcloud_chunk(
                 stored = await warehouse_live_map_chunk_storage.save_upload(
                     flight_id=flight_id,
                     chunk_id=chunk_id,
+                    frame_id=mid360_source.global_frame,
                     kind="point_cloud",
                     upload=_MemoryUpload(payload),
                     max_bytes=32 * 1024 * 1024,
@@ -281,6 +238,8 @@ async def _store_and_publish_pointcloud_chunk(
                 "content_type": stored.content_type,
                 "priority": priority,
                 "stamp": stamp,
+                "cloud_age_ms": cloud_age_ms,
+                "transform_age_ms": transform_age_ms,
             },
         )
 
@@ -299,6 +258,8 @@ async def _store_and_publish_pointcloud_chunk(
         "frame_id": mid360_source.global_frame,
         "stamp": stamp,
         "priority": priority,
+        "cloud_age_ms": cloud_age_ms,
+        "transform_age_ms": transform_age_ms,
     }
     if stored is not None:
         chunk_payload.update(
@@ -313,6 +274,7 @@ async def _store_and_publish_pointcloud_chunk(
     update = normalize_live_map_payload(
         {
             "flight_id": flight_id,
+            "frame_id": mid360_source.global_frame,
             "changed_chunks": [chunk_payload],
             "health": {
                 "missing_point_cloud": False,
@@ -352,13 +314,17 @@ class _RawPointCloudLiveMapNode:
     ) -> None:
         import tf2_ros
         from rclpy.node import Node
+        from rclpy.parameter import Parameter
         from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
         from sensor_msgs.msg import PointCloud2
 
         class NodeImpl(Node):
             pass
 
-        self.node = NodeImpl("warehouse_raw_pointcloud_live_map_bridge")
+        self.node = NodeImpl(
+            "warehouse_raw_pointcloud_live_map_bridge",
+            parameter_overrides=[Parameter("use_sim_time", value=True)],
+        )
         self.flight_id = flight_id
         self.event_loop = event_loop
         self.topic = str(topic).strip() or DEFAULT_POINTCLOUD_TOPIC
@@ -374,6 +340,7 @@ class _RawPointCloudLiveMapNode:
         self._processing = False
         self._dropped_frames = 0
         self._last_backpressure_log_monotonic = 0.0
+        self._messages_received = 0
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
@@ -395,51 +362,6 @@ class _RawPointCloudLiveMapNode:
             f"Raw point-cloud live-map bridge subscribed topic={self.topic} "
             f"flight_id={flight_id} global_frame={self.global_frame}"
         )
-
-    def _lookup_transform(self, msg: Any) -> Any | None:
-        import rclpy
-        from rclpy.duration import Duration
-        from rclpy.time import Time
-
-        header = getattr(msg, "header", None)
-        source_frame = (getattr(header, "frame_id", None) or "").strip()
-        if not source_frame or source_frame == self.global_frame:
-            return None
-
-        try:
-            return self.tf_buffer.lookup_transform(
-                self.global_frame,
-                source_frame,
-                Time.from_msg(header.stamp),
-                timeout=Duration(seconds=0.05),
-            )
-        except Exception:
-            try:
-                return self.tf_buffer.lookup_transform(
-                    self.global_frame,
-                    source_frame,
-                    rclpy.time.Time(),
-                    timeout=Duration(seconds=0.05),
-                )
-            except Exception as exc:
-                self.node.get_logger().debug(
-                    f"Point-cloud TF lookup failed {self.global_frame} <- {source_frame}: {exc}"
-                )
-                return None
-
-    def _transform_xyz(self, xyz: np.ndarray, transform: Any | None) -> np.ndarray:
-        if transform is None:
-            return xyz
-        t = transform.transform.translation
-        q = transform.transform.rotation
-        rotation = _rotation_matrix_from_quaternion_xyzw(
-            float(q.x),
-            float(q.y),
-            float(q.z),
-            float(q.w),
-        )
-        translation = np.asarray([float(t.x), float(t.y), float(t.z)], dtype=np.float32)
-        return _finite_xyz((xyz @ rotation.T) + translation)
 
     def _decode_pointcloud(self, msg: Any) -> np.ndarray:
         from sensor_msgs_py import point_cloud2
@@ -484,8 +406,28 @@ class _RawPointCloudLiveMapNode:
             xyz = self._decode_pointcloud(msg)
             if xyz.shape[0] <= 0:
                 return None
-            transform = self._lookup_transform(msg)
-            xyz = self._transform_xyz(xyz, transform)
+            source_frame = (
+                getattr(getattr(msg, "header", None), "frame_id", None) or ""
+            ).strip()
+            if not source_frame:
+                self.node.get_logger().warning("Skipping point cloud with empty source frame")
+                return None
+            now_ns = int(self.node.get_clock().now().nanoseconds)
+            resolved = resolve_pointcloud_transform(
+                self.tf_buffer,
+                msg=msg,
+                global_frame=self.global_frame,
+                now_ns=now_ns,
+            )
+            if resolved is None:
+                self.node.get_logger().warning(
+                    f"Skipping point cloud: message-stamp TF {self.global_frame} <- "
+                    f"{source_frame} unavailable or stale"
+                )
+                return None
+            if resolved.needs_transform:
+                warehouse_transform_drift_monitor.observe("mid360_raw", resolved.transform)
+            xyz = _finite_xyz(transform_xyz_points(xyz, resolved.transform))
             if xyz.shape[0] <= 0:
                 return None
             with self._state_lock:
@@ -494,7 +436,9 @@ class _RawPointCloudLiveMapNode:
 
         metric_add("ros_messages", attrs={"topic": self.topic, "message_type": type(msg).__name__})
         metric_add("mapping_pointclouds", attrs={"source": "mid360_raw", "layer": "mid360_lidar"})
-        metric_add("mapping_chunks_generated", attrs={"source": "mid360_raw", "layer": "mid360_lidar"})
+        metric_add(
+            "mapping_chunks_generated", attrs={"source": "mid360_raw", "layer": "mid360_lidar"}
+        )
         metric_record(
             "ros_callback_latency",
             (time.monotonic() - started) * 1000.0,
@@ -505,7 +449,9 @@ class _RawPointCloudLiveMapNode:
             "sequence": sequence,
             "xyz": xyz,
             "persist_to_disk": self.persist_to_disk,
-            "stamp": _stamp_from_msg(msg),
+            "stamp": stamp_string_from_msg(msg),
+            "cloud_age_ms": resolved.message_age_ms,
+            "transform_age_ms": resolved.transform_age_ms,
         }
 
     def _schedule_drain(self) -> None:
@@ -521,6 +467,14 @@ class _RawPointCloudLiveMapNode:
         future.add_done_callback(_done)
 
     def _on_pointcloud(self, msg: Any) -> None:
+        self._messages_received += 1
+        if self._messages_received == 1:
+            logger.info(
+                "Raw live-map subscriber received first message flight_id=%s topic=%s frame_id=%s",
+                self.flight_id,
+                self.topic,
+                getattr(getattr(msg, "header", None), "frame_id", None),
+            )
         now = time.monotonic()
         if now - self.last_publish_monotonic < self.min_publish_interval_s:
             return
@@ -567,7 +521,7 @@ class _RawPointCloudLiveMapNode:
                     if chunk is not None:
                         await _store_and_publish_pointcloud_chunk(**chunk)
                 except Exception:
-                    self.node.get_logger().exception("Failed to publish raw point-cloud chunk")
+                    logger.exception("Failed to publish raw point-cloud chunk")
         finally:
             restart = False
             with self._state_lock:
@@ -593,8 +547,12 @@ async def start_raw_pointcloud_live_map_bridge(
     async with _runtime_lock:
         await stop_raw_pointcloud_live_map_bridge()
 
-        resolved_persist = should_persist_raw_lidar_chunks() if persist_to_disk is None else bool(persist_to_disk)
-        resolved_max_points = max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
+        resolved_persist = (
+            should_persist_raw_lidar_chunks() if persist_to_disk is None else bool(persist_to_disk)
+        )
+        resolved_max_points = (
+            max_points if max_points != DEFAULT_MAX_POINTS else raw_lidar_max_points()
+        )
         resolved_interval = (
             min_publish_interval_s
             if min_publish_interval_s != DEFAULT_MIN_PUBLISH_INTERVAL_S
@@ -602,6 +560,11 @@ async def start_raw_pointcloud_live_map_bridge(
         )
         resolved_voxel = raw_lidar_voxel_size_m()
 
+        from backend.infrastructure.warehouse.bridge_config import (
+            configure_embedded_ros_environment,
+        )
+
+        configure_embedded_ros_environment()
         import rclpy
         from rclpy.executors import SingleThreadedExecutor
 

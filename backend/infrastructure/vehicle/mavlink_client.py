@@ -16,11 +16,17 @@ from dronekit import LocationGlobalRelative, VehicleMode, connect
 from pymavlink import mavutil
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.vehicle.frame_conversion import enu_to_local_ned
 from backend.observability.instruments import observed_span, structured_error
 from backend.observability.metrics import add as metric_add
 from backend.observability.metrics import record as metric_record
 from backend.modules.missions.flight_profile import explicit_sim_home_fallback_enabled
-from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate, Telemetry
+from backend.modules.vehicle_runtime.types import (
+    Coordinate,
+    EnuCoordinate,
+    LocalCoordinate,
+    Telemetry,
+)
 from backend.modules.vehicle_runtime.vehicle_port import DroneClient, MissionAbortRequested
 
 
@@ -1025,10 +1031,10 @@ class MavlinkDrone(DroneClient):
             | mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_RATE_IGNORE
         )
         yaw_rad = 0.0
-        if coord.yaw_deg is None:
+        if coord.yaw_rad is None:
             type_mask |= mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
         else:
-            yaw_rad = math.radians(float(coord.yaw_deg))
+            yaw_rad = float(coord.yaw_rad)
 
         msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
             0,
@@ -1178,6 +1184,11 @@ class MavlinkDrone(DroneClient):
 
                 self._mission_control_changed.wait(timeout=0.2)
                 self._mission_control_changed.clear()
+
+    def follow_enu_setpoints(self, path: list[EnuCoordinate], timeout_s: float | None = None):
+        """Only warehouse-facing local control API; conversion occurs at MAVLink boundary."""
+        del timeout_s
+        self.follow_local_setpoints([enu_to_local_ned(coord) for coord in path])
 
     def _distance_to_target(self, current_loc, target_coord):
         """Calculate distance to target coordinate"""

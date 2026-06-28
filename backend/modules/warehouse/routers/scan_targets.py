@@ -1,14 +1,21 @@
 from __future__ import annotations
 
-import asyncio
+import hashlib
+import json
 import logging
-import time
 from datetime import UTC, datetime
-from typing import Any, Literal
-from uuid import uuid4
 
-from fastapi import Depends, File, HTTPException, Query, Response, UploadFile, status
-from sqlalchemy import func, or_, select
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    Response,
+    status,
+)
+from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
@@ -18,37 +25,26 @@ from backend.modules.identity.dependencies import (
     require_org_user,
     require_org_write,
 )
-from backend.modules.organizations.service import can_access_org_scope, get_default_project
 from backend.modules.warehouse.http_access import (
-    EXPLORATION_PROFILE_KEY,
-    MISSION_DEFAULTS_KEY,
     get_map_or_404,
-    read_warehouse_settings,
-    repo,
-    settings_repo,
-    write_warehouse_setting,
 )
 from backend.modules.warehouse.http_helpers import (
-    asset_out,
-    dock_out,
     get_scan_target_or_404,
-    get_scanned_map_row_or_404,
     inspection_mission_out,
     inspection_result_out,
-    map_out,
-    pose,
-    quality,
     scan_target_out,
-    sensor_rig_out,
-    source,
 )
 from backend.modules.warehouse.http_models import *
+from backend.modules.warehouse.models import (
+    WarehouseInspectionMission,
+    WarehouseInspectionResult,
+    WarehouseScanTarget,
+)
 from backend.modules.warehouse.schemas import (
     WarehouseInspectionMissionCreate,
     WarehouseInspectionMissionRead,
     WarehouseInspectionResultPage,
     WarehouseInspectionResultRead,
-    WarehouseMissionDefaultsOut,
     WarehouseScanPoseComputeIn,
     WarehouseScanPoseComputeOut,
     WarehouseScanTargetCreate,
@@ -56,64 +52,37 @@ from backend.modules.warehouse.schemas import (
     WarehouseScanTargetPage,
     WarehouseScanTargetRead,
     WarehouseScanTargetUpdate,
-    WarehouseStructureExtractIn,
-    WarehouseStructureExtractOut,
-    WarehouseStructureSummaryOut,
 )
-
-from backend.modules.warehouse.models import (
-    WarehouseAsset,
-    WarehouseDockStation,
-    WarehouseInspectionMission,
-    WarehouseInspectionResult,
-    WarehouseMappingJob,
-    WarehouseModel,
-    WarehouseScanTarget,
-    WarehouseSensorRig,
+from backend.modules.warehouse.service.coordinate_audit import (
+    emit_coordinate_audit,
+    transform_age_ms,
 )
+from backend.modules.warehouse.service.coordinate_frames import (
+    get_locked_coordinate_frame,
+    require_warehouse_map_frames,
+)
+from backend.modules.warehouse.service.frame_imports import normalize_scan_target_import
 from backend.modules.warehouse.service.inspection import (
     MockWarehouseScanner,
     build_inspection_waypoints,
     compute_scan_pose,
     order_targets,
 )
-from backend.modules.warehouse.service.live_map_replay import (
-    build_disk_live_map_snapshot,
-    resolve_client_flight_id_for_scan_job,
+from backend.modules.warehouse.service.layout import resolve_bin_context
+from backend.modules.warehouse.service.mission_revisions import (
+    create_mission_revision_pins,
+    is_legacy_mission,
+    require_legacy_same_origin_confirmation,
+    verify_mission_revision_pins,
 )
-from backend.modules.warehouse.service.live_map_stream import WarehouseLiveMapSnapshot
-from backend.modules.warehouse.service.mission_launch import start_warehouse_scan_mission
-from backend.modules.warehouse.service.preflight_background import (
-    get_preflight_run as get_stored_preflight_run,
-    remember_preflight_run,
+from backend.modules.warehouse.observability.warehouse_coordinate_metrics import (
+    record_mission_rejection,
 )
-from backend.modules.warehouse.service.preflight_cache import (
-    clear_preflight_snapshot_cache,
-    get_cached_preflight_snapshot,
-    store_preflight_snapshot_cache,
+from backend.modules.warehouse.service.provisional_mapping import block_executable_mission
+from backend.modules.warehouse.service.slam_localization_monitor import (
+    validate_slam_localization_for_execution,
 )
-from backend.modules.warehouse.service.preflight_snapshot import (
-    build_preflight_snapshot,
-    connect_drone_for_preflight,
-)
-from backend.modules.warehouse.service.structure_jobs import (
-    STRUCTURE_ASSET_TYPE,
-    ensure_structure_quality_summary,
-    get_extraction_state,
-    record_extraction_queued,
-    resolve_latest_model_flight,
-    warehouse_mapping_worker_ready,
-)
-from backend.observability.instruments import observed_span
 from backend.observability.metrics import add as metric_add
-from backend.observability.metrics import record as metric_record
-from backend.observability.prometheus_metrics import (
-    preflight_runs_total,
-    warehouse_preflight_refresh_duration_seconds,
-    warehouse_preflight_refresh_total,
-)
-
-from fastapi import APIRouter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
@@ -124,6 +93,7 @@ def _set_scan_target_cache_headers(response: Response, *, offset: int) -> None:
         "private, max-age=10" if offset == 0 else "private, no-store"
     )
     response.headers["Vary"] = "Authorization"
+
 
 @router.get("/maps/{warehouse_map_id}/scan-targets", response_model=WarehouseScanTargetPage)
 async def list_warehouse_scan_targets(
@@ -142,11 +112,7 @@ async def list_warehouse_scan_targets(
         clauses.append(WarehouseScanTarget.active.is_(active))
     total = int(
         (
-            await db.execute(
-                select(func.count())
-                .select_from(WarehouseScanTarget)
-                .where(*clauses)
-            )
+            await db.execute(select(func.count()).select_from(WarehouseScanTarget).where(*clauses))
         ).scalar_one()
         or 0
     )
@@ -189,19 +155,45 @@ async def create_warehouse_scan_target(
     org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseScanTargetRead:
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    frame = await get_locked_coordinate_frame(db, warehouse_map_id)
+    if payload.coordinate_frame_id is not None and payload.coordinate_frame_id != int(frame.id):
+        raise HTTPException(
+            status_code=409,
+            detail="Displayed coordinate revision is stale; reload the warehouse map",
+        )
+    require_warehouse_map_frames(
+        [payload.target_point_local_json.model_dump(), payload.scan_pose_local_json.model_dump()]
+    )
+    location = await resolve_bin_context(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        bin_id=payload.bin_id,
+        aisle_code=payload.aisle_code,
+        rack_code=payload.rack_code,
+        shelf_level=payload.shelf_level,
+        bin_code=payload.bin_code,
+    )
+    if location.coordinate_frame_id != int(frame.id):
+        raise HTTPException(409, "Locked layout uses a different coordinate revision")
     row = WarehouseScanTarget(
         warehouse_map_id=warehouse_map_id,
         reference_model_id=payload.reference_model_id,
         dock_station_id=payload.dock_station_id,
-        aisle_code=payload.aisle_code.strip(),
-        rack_code=payload.rack_code,
-        shelf_level=payload.shelf_level,
-        bin_code=payload.bin_code,
+        layout_version_id=location.layout_version_id,
+        bin_id=location.bin_id,
+        aisle_code=location.aisle_code,
+        rack_code=location.rack_code,
+        shelf_level=location.shelf_level,
+        bin_code=location.bin_code,
         sku=payload.sku,
         barcode=payload.barcode,
         product_name=payload.product_name,
         target_point_local_json=payload.target_point_local_json.model_dump(),
-        scanpose_local_json=payload.scanpose_local_json.model_dump(),
+        coordinate_frame_id=int(frame.id),
+        scan_pose_local_json=payload.scan_pose_local_json.model_dump(),
+        sensor_aim_json=(
+            payload.sensor_aim_json.model_dump() if payload.sensor_aim_json is not None else None
+        ),
         shelf_normal_local_json=(
             payload.shelf_normal_local_json.model_dump()
             if payload.shelf_normal_local_json is not None
@@ -239,22 +231,59 @@ async def import_warehouse_scan_targets(
     org_user: OrgUser = Depends(require_org_write),
 ) -> list[WarehouseScanTargetRead]:
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    frame = await get_locked_coordinate_frame(db, warehouse_map_id)
+    if payload.coordinate_frame_id is not None and payload.coordinate_frame_id != int(frame.id):
+        raise HTTPException(409, "Import coordinate revision is stale")
     rows: list[WarehouseScanTarget] = []
     try:
-        for target in payload.targets:
-            row = WarehouseScanTarget(
+        for raw_target in payload.targets:
+            try:
+                target = normalize_scan_target_import(
+                    raw_target,
+                    source_frame_id=payload.source_frame_id,
+                    odom_to_warehouse_map_transform=frame.transform_json,
+                )
+            except ValueError as exc:
+                raise HTTPException(422, f"Invalid scan target import: {exc}") from exc
+            if target.coordinate_frame_id is not None and target.coordinate_frame_id != int(
+                frame.id
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Imported target coordinate revision is stale",
+                )
+            location = await resolve_bin_context(
+                db,
                 warehouse_map_id=warehouse_map_id,
-                reference_model_id=target.reference_model_id,
-                dock_station_id=target.dock_station_id,
-                aisle_code=target.aisle_code.strip(),
+                bin_id=target.bin_id,
+                aisle_code=target.aisle_code,
                 rack_code=target.rack_code,
                 shelf_level=target.shelf_level,
                 bin_code=target.bin_code,
+            )
+            if location.coordinate_frame_id != int(frame.id):
+                raise HTTPException(409, "Locked layout uses a different coordinate revision")
+            row = WarehouseScanTarget(
+                warehouse_map_id=warehouse_map_id,
+                coordinate_frame_id=int(frame.id),
+                layout_version_id=location.layout_version_id,
+                bin_id=location.bin_id,
+                reference_model_id=target.reference_model_id,
+                dock_station_id=target.dock_station_id,
+                aisle_code=location.aisle_code,
+                rack_code=location.rack_code,
+                shelf_level=location.shelf_level,
+                bin_code=location.bin_code,
                 sku=target.sku,
                 barcode=target.barcode,
                 product_name=target.product_name,
                 target_point_local_json=target.target_point_local_json.model_dump(),
                 scan_pose_local_json=target.scan_pose_local_json.model_dump(),
+                sensor_aim_json=(
+                    target.sensor_aim_json.model_dump()
+                    if target.sensor_aim_json is not None
+                    else None
+                ),
                 shelf_normal_local_json=(
                     target.shelf_normal_local_json.model_dump()
                     if target.shelf_normal_local_json is not None
@@ -292,6 +321,26 @@ async def import_warehouse_scan_targets(
     logger.info(
         "warehouse_scan_targets_imported",
         extra={"warehouse_map_id": warehouse_map_id, "count": len(rows)},
+    )
+    emit_coordinate_audit(
+        event_name="warehouse_scan_targets_imported",
+        action="transform_import" if payload.source_frame_id == "odom" else "import_layout",
+        resource_type="warehouse_scan_target_batch",
+        resource_id=f"map:{warehouse_map_id}:frame:{frame.id}",
+        warehouse_map_id=warehouse_map_id,
+        org_user=org_user,
+        reason=f"operator_import_from_{payload.source_frame_id}",
+        coordinate_frame_id=int(frame.id),
+        coordinate_frame_version=int(frame.version),
+        covariance=list(getattr(frame, "covariance_json", None) or []),
+        transform_age_ms_value=transform_age_ms(getattr(frame, "locked_at", None)),
+        validation_result="pass",
+        extra={
+            "source_frame_id": payload.source_frame_id,
+            "target_frame_id": "warehouse_map",
+            "target_count": len(rows),
+            "transform_applied": payload.source_frame_id == "odom",
+        },
     )
     return [scan_target_out(row) for row in rows]
 
@@ -333,12 +382,30 @@ async def update_warehouse_scan_target(
         target_id=target_id,
     )
     fields_set = getattr(payload, "model_fields_set", set())
+    location_fields = {"bin_id", "aisle_code", "rack_code", "shelf_level", "bin_code"}
+    if fields_set & location_fields:
+        location = await resolve_bin_context(
+            db,
+            warehouse_map_id=warehouse_map_id,
+            bin_id=payload.bin_id if "bin_id" in fields_set else row.bin_id,
+            aisle_code=(
+                payload.aisle_code
+                if "aisle_code" in fields_set and payload.aisle_code is not None
+                else row.aisle_code
+            ),
+            rack_code=payload.rack_code if "rack_code" in fields_set else row.rack_code,
+            shelf_level=(payload.shelf_level if "shelf_level" in fields_set else row.shelf_level),
+            bin_code=payload.bin_code if "bin_code" in fields_set else row.bin_code,
+        )
+        row.layout_version_id = location.layout_version_id
+        row.bin_id = location.bin_id
+        row.aisle_code = location.aisle_code
+        row.rack_code = location.rack_code
+        row.shelf_level = location.shelf_level
+        row.bin_code = location.bin_code
     for field_name in (
         "reference_model_id",
         "dock_station_id",
-        "rack_code",
-        "shelf_level",
-        "bin_code",
         "sku",
         "barcode",
         "product_name",
@@ -350,12 +417,14 @@ async def update_warehouse_scan_target(
     ):
         if field_name in fields_set:
             setattr(row, field_name, getattr(payload, field_name))
-    if "aisle_code" in fields_set and payload.aisle_code is not None:
-        row.aisle_code = payload.aisle_code.strip()
     if "target_point_local_json" in fields_set and payload.target_point_local_json is not None:
         row.target_point_local_json = payload.target_point_local_json.model_dump()
-    if "scanpose_local_json" in fields_set and payload.scanpose_local_json is not None:
-        row.scanpose_local_json = payload.scanpose_local_json.model_dump()
+    if "scan_pose_local_json" in fields_set and payload.scan_pose_local_json is not None:
+        row.scan_pose_local_json = payload.scan_pose_local_json.model_dump()
+    if "sensor_aim_json" in fields_set:
+        row.sensor_aim_json = (
+            payload.sensor_aim_json.model_dump() if payload.sensor_aim_json is not None else None
+        )
     if "shelf_normal_local_json" in fields_set:
         row.shelf_normal_local_json = (
             payload.shelf_normal_local_json.model_dump()
@@ -374,7 +443,8 @@ async def update_warehouse_scan_target(
             "barcode": row.barcode,
             "product_name": row.product_name,
             "target_point_local_json": row.target_point_local_json,
-            "scanpose_local_json": row.scanpose_local_json,
+            "scan_pose_local_json": row.scan_pose_local_json,
+            "sensor_aim_json": row.sensor_aim_json,
             "shelf_normal_local_json": row.shelf_normal_local_json,
             "standoff_m": row.standoff_m,
             "hover_time_s": row.hover_time_s,
@@ -384,7 +454,10 @@ async def update_warehouse_scan_target(
         }
     )
     row.target_point_local_json = validated.target_point_local_json.model_dump()
-    row.scanpose_local_json = validated.scanpose_local_json.model_dump()
+    row.scan_pose_local_json = validated.scan_pose_local_json.model_dump()
+    row.sensor_aim_json = (
+        validated.sensor_aim_json.model_dump() if validated.sensor_aim_json is not None else None
+    )
     row.shelf_normal_local_json = (
         validated.shelf_normal_local_json.model_dump()
         if validated.shelf_normal_local_json is not None
@@ -420,12 +493,12 @@ async def delete_warehouse_scan_target(
 
 
 @router.post("/scan-targets/compute-scan-pose", response_model=WarehouseScanPoseComputeOut)
-async def compute_warehouse_scanpose(
+async def compute_warehouse_scan_pose(
     payload: WarehouseScanPoseComputeIn,
     _org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseScanPoseComputeOut:
     return WarehouseScanPoseComputeOut(
-        scanpose=compute_scanpose(
+        scan_pose=compute_scan_pose(
             target_point=payload.target_point,
             shelf_normal=payload.shelf_normal,
             standoff_m=payload.standoff_m,
@@ -446,6 +519,7 @@ async def create_warehouse_inspection_mission(
 ) -> WarehouseInspectionMissionRead:
     warehouse_map_id = int(payload.warehouse_map_id)
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    coordinate_frame = await get_locked_coordinate_frame(db, warehouse_map_id)
     rows = (
         (
             await db.execute(
@@ -468,6 +542,25 @@ async def create_warehouse_inspection_mission(
     inactive = [int(row.id) for row in rows if not row.active]
     if inactive:
         raise HTTPException(status_code=400, detail=f"Scan targets are inactive: {inactive}")
+    wrong_revision = [
+        int(row.id) for row in rows if row.coordinate_frame_id != int(coordinate_frame.id)
+    ]
+    if wrong_revision:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Scan targets do not use locked coordinate revision "
+                f"{coordinate_frame.version}: {wrong_revision}"
+            ),
+        )
+    pins = await create_mission_revision_pins(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        coordinate_frame_id=int(coordinate_frame.id),
+        targets=[by_id[int(target_id)] for target_id in payload.target_ids],
+        return_to_dock=bool(payload.return_to_dock),
+        battery_pct=float(payload.available_battery_pct),
+    )
     ordered_targets = order_targets(
         [by_id[int(target_id)] for target_id in payload.target_ids],
         optimize_order=payload.optimize_order,
@@ -477,21 +570,42 @@ async def create_warehouse_inspection_mission(
         default_hover_time_s=payload.default_hover_time_s,
         default_scan_timeout_s=payload.default_scan_timeout_s,
     )
+    plan = {
+        "frame_id": "warehouse_map",
+        "coordinate_frame_id": int(coordinate_frame.id),
+        "coordinate_frame_version": int(coordinate_frame.version),
+        "layout_version_id": pins.layout_version_id,
+        "layout_version": pins.layout_version,
+        "map_model_id": pins.map_model_id,
+        "map_model_version": pins.map_model_version,
+        "validation_result_id": pins.validation_result_id,
+        "artifact_checksums": pins.artifact_checksums,
+        "warehouse_map_to_odom_transform": coordinate_frame.transform_json,
+        "waypoints": [waypoint.model_dump() for waypoint in waypoints],
+        "warnings": [],
+    }
+    plan_checksum = hashlib.sha256(
+        json.dumps(plan, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
     row = WarehouseInspectionMission(
         warehouse_map_id=warehouse_map_id,
+        coordinate_frame_id=int(coordinate_frame.id),
+        layout_version_id=pins.layout_version_id,
+        map_model_id=pins.map_model_id,
+        validation_result_id=pins.validation_result_id,
+        artifact_checksums_json=pins.artifact_checksums,
         name=payload.name.strip(),
         status="planned",
         scan_mode=payload.scan_mode,
         return_to_dock=bool(payload.return_to_dock),
         target_ids_json=[int(target.id) for target in ordered_targets],
-        plan_json={
-            "frame_id": "warehouse_map",
-            "warehouse_map_to_odom_transform": None,
-            "waypoints": [waypoint.model_dump() for waypoint in waypoints],
-            "warnings": [
-                "ESDF clearance validation not wired in MVP.",
-                "warehouse_map == odom assumed until persistent localization is added.",
-            ],
+        plan_json=plan,
+        plan_checksum=plan_checksum,
+        approval_status="pending",
+        runtime_policy_json={
+            "max_replans_per_leg": 2,
+            "abort_on_version_change": True,
+            "abort_on_tf_loss": True,
         },
     )
     try:
@@ -505,8 +619,62 @@ async def create_warehouse_inspection_mission(
         "warehouse_inspection_mission_planned",
         extra={"mission_id": int(row.id), "target_count": len(ordered_targets)},
     )
+    emit_coordinate_audit(
+        event_name="warehouse_mission_transform_pinned",
+        action="pin_mission_transform",
+        resource_type="warehouse_inspection_mission",
+        resource_id=row.id,
+        warehouse_map_id=warehouse_map_id,
+        org_user=org_user,
+        reason="mission_plan_validated_against_locked_revisions",
+        coordinate_frame_id=int(coordinate_frame.id),
+        coordinate_frame_version=int(coordinate_frame.version),
+        new_value=coordinate_frame.transform_json,
+        covariance=list(getattr(coordinate_frame, "covariance_json", None) or []),
+        transform_age_ms_value=transform_age_ms(getattr(coordinate_frame, "locked_at", None)),
+        validation_result="pass",
+        extra={
+            "validation_result_id": pins.validation_result_id,
+            "layout_version_id": pins.layout_version_id,
+            "map_model_id": pins.map_model_id,
+            "target_count": len(ordered_targets),
+            "artifact_checksums": pins.artifact_checksums,
+        },
+    )
     metric_add("warehouse_inspection_missions_planned_total", 1)
     return inspection_mission_out(row)
+
+
+class InspectionMissionApprovalIn(BaseModel):
+    approved: bool
+
+
+@router.post(
+    "/inspection-missions/{mission_id}/approval",
+    response_model=WarehouseInspectionMissionRead,
+)
+async def approve_warehouse_inspection_mission(
+    mission_id: int,
+    payload: InspectionMissionApprovalIn,
+    if_match: str | None = Header(None, alias="If-Match"),
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_mission_exec),
+) -> WarehouseInspectionMissionRead:
+    mission = await db.get(WarehouseInspectionMission, mission_id)
+    if mission is None:
+        raise HTTPException(404, "Warehouse inspection mission not found")
+    await get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    expected = str(if_match or "").strip().removeprefix("W/").strip('"')
+    if not expected or expected != str(mission.plan_checksum or ""):
+        raise HTTPException(412, "Mission preview checksum mismatch")
+    if mission.status != "planned":
+        raise HTTPException(409, "Only planned missions can be approved")
+    mission.approval_status = "approved" if payload.approved else "rejected"
+    mission.approved_at = datetime.now(UTC) if payload.approved else None
+    mission.approved_by_id = getattr(org_user.user, "id", None) if payload.approved else None
+    await db.commit()
+    await db.refresh(mission)
+    return inspection_mission_out(mission)
 
 
 @router.get(
@@ -535,6 +703,7 @@ async def get_warehouse_inspection_mission(
 )
 async def run_warehouse_inspection_mission_mock(
     mission_id: int,
+    same_origin_confirmed: bool = Header(False, alias="X-Confirm-Same-Origin"),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_mission_exec),
 ) -> list[WarehouseInspectionResultRead]:
@@ -546,6 +715,54 @@ async def run_warehouse_inspection_mission_mock(
     if mission is None:
         raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
     await get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    if mission.approval_status != "approved":
+        raise HTTPException(409, "Mission preview must be approved before execution")
+    checksum = hashlib.sha256(
+        json.dumps(
+            mission.plan_json or {}, sort_keys=True, separators=(",", ":"), default=str
+        ).encode()
+    ).hexdigest()
+    if not mission.plan_checksum or checksum != mission.plan_checksum:
+        raise HTTPException(409, "Mission plan changed after approval")
+    legacy = is_legacy_mission(mission)
+    require_legacy_same_origin_confirmation(
+        mission, same_origin_confirmed=same_origin_confirmed is True
+    )
+    coordinate_frame = await get_locked_coordinate_frame(db, int(mission.warehouse_map_id))
+    if block_executable_mission(
+        coordinate_frame_status=str(coordinate_frame.status),
+        localization_method=str(coordinate_frame.localization_method or ""),
+    ):
+        record_mission_rejection(reason="provisional_coordinates")
+        raise HTTPException(
+            status_code=409,
+            detail="Executable missions are blocked while coordinates are provisional",
+        )
+    try:
+        if str(coordinate_frame.localization_method or "").lower() in {
+            "live_slam",
+            "provisional_slam",
+            "scan_provisional",
+            "vslam",
+        }:
+            validate_slam_localization_for_execution()
+    except ValueError as exc:
+        record_mission_rejection(reason="slam_localization_stale")
+        raise HTTPException(status_code=412, detail=str(exc)) from exc
+    if not legacy and mission.coordinate_frame_id != int(coordinate_frame.id):
+        raise HTTPException(
+            status_code=409,
+            detail="Mission coordinate revision is stale; create a new mission after localization",
+        )
+    if legacy:
+        logger.warning(
+            "legacy_warehouse_mission_same_origin_override mission_id=%s map_id=%s",
+            mission.id,
+            mission.warehouse_map_id,
+        )
+        metric_add("warehouse_legacy_mission_same_origin_overrides_total", 1)
+    else:
+        await verify_mission_revision_pins(db, mission)
     target_ids = [int(value) for value in (mission.target_ids_json or [])]
     targets = (
         (
@@ -577,7 +794,7 @@ async def run_warehouse_inspection_mission_mock(
                 confidence=scan.confidence,
                 image_asset_id=scan.image_asset_id,
                 video_asset_id=scan.video_asset_id,
-                dronepose_local_json=target.scanpose_local_json,
+                drone_pose_local_json=target.scan_pose_local_json,
                 error_message=scan.error_message,
             )
             db.add(result)

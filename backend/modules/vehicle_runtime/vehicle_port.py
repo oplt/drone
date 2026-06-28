@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
-from .types import Coordinate, LocalCoordinate, Telemetry
+from .types import Coordinate, EnuCoordinate, LocalCoordinate, Telemetry
 
 
 class MissionAbortRequested(RuntimeError):
@@ -25,6 +25,8 @@ class DroneClient(ABC):
     @abstractmethod
     def follow_waypoints(self, path: Iterable[Coordinate]) -> None: ...
     def follow_local_setpoints(self, path: Iterable[LocalCoordinate]) -> None:
+        raise NotImplementedError
+    def follow_enu_setpoints(self, path: Iterable[EnuCoordinate]) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -129,6 +129,7 @@ class WarehouseLiveMapChunkStorage:
         *,
         flight_id: str,
         chunk_id: str,
+        frame_id: str,
         kind: str,
         upload: UploadFile,
         max_bytes: int = 32 * 1024 * 1024,
@@ -272,7 +273,11 @@ class WarehouseLiveMapChunkStorage:
         safe_chunk = _clean_id(chunk_id)
         if not preview_points_m:
             raise LiveMapStorageError("Live-map preview chunk is empty.")
+        safe_frame = str(frame_id or "").strip()
+        if not safe_frame:
+            raise LiveMapStorageError("Live-map preview frame_id is required.")
         payload: dict[str, Any] = {
+            "frame_id": safe_frame,
             "preview_points_m": preview_points_m,
             "point_count": point_count,
             "bbox_local_m": bbox_local_m,

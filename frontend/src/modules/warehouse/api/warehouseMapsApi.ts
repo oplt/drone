@@ -7,12 +7,54 @@ import type {
   WarehouseDockStation,
   WarehouseDockUpdatePayload,
   WarehouseMapOut,
+  WarehouseMapSetup,
+  WarehouseMapSetupPreview,
+  WarehouseRigidTransform,
   WarehouseSensorRig,
   WarehouseSensorRigHealth,
 } from "../types";
 
 export async function listWarehouseMaps(token?: string | null): Promise<WarehouseMapOut[]> {
   return httpRequest<WarehouseMapOut[]>("/warehouse/maps", { token });
+}
+
+export async function createWarehouseMapSetup(
+  warehouseMapId: number,
+  payload: {
+    polygon_local_m: [number, number][];
+    origin_transform: WarehouseRigidTransform;
+    alignment_deg: number;
+    alignment_reference: "north" | "aisle";
+    source: string;
+    confidence: number;
+    transform_timestamp: string;
+    max_transform_age_s: number;
+    covariance: number[];
+    localization_method: string;
+    map_resolution_m?: number | null;
+    scale: 1;
+    known_distance_expected_m?: number | null;
+    known_distance_measured_m?: number | null;
+  },
+  token?: string | null,
+): Promise<WarehouseMapSetup> {
+  return httpRequest(`/warehouse/maps/${warehouseMapId}/setups`, {
+    method: "POST", body: payload, token,
+  });
+}
+
+export async function previewWarehouseMapSetup(
+  warehouseMapId: number, setupId: number, token?: string | null,
+): Promise<WarehouseMapSetupPreview> {
+  return httpRequest(`/warehouse/maps/${warehouseMapId}/setups/${setupId}/preview`, { token });
+}
+
+export async function lockWarehouseMapSetup(
+  warehouseMapId: number, setupId: number, token?: string | null,
+): Promise<WarehouseMapSetup> {
+  return httpRequest(`/warehouse/maps/${warehouseMapId}/setups/${setupId}/lock`, {
+    method: "POST", token,
+  });
 }
 
 export async function createWarehouseMap(

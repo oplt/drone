@@ -26,9 +26,15 @@ from backend.modules.warehouse.http_models import (
     WarehouseSensorRigHealthOut,
     WarehouseSensorRigOut,
 )
+from backend.modules.warehouse.ros_bridge_runtime import ensure_ros_bridge_running, ros2_workspace
 from backend.modules.warehouse.routers import (
+    coordinate_frames_router,
+    coordinate_setup_tools_router,
     docks_router,
+    layout_candidates_router,
+    layouts_router,
     live_map_router,
+    map_setups_router,
     maps_router,
     operations_router,
     preflight_router,
@@ -44,10 +50,14 @@ from backend.modules.warehouse.routers.live_map import (
     WarehouseLiveMapChunkUploadOut,
     WarehouseLiveMapPublishOut,
 )
-from backend.modules.warehouse.ros_bridge_runtime import ensure_ros_bridge_running, ros2_workspace
 
 router = APIRouter(prefix="/warehouse", tags=["warehouse"])
 router.include_router(maps_router)
+router.include_router(map_setups_router)
+router.include_router(coordinate_frames_router)
+router.include_router(coordinate_setup_tools_router)
+router.include_router(layouts_router)
+router.include_router(layout_candidates_router)
 router.include_router(structure_router)
 router.include_router(scan_targets_router)
 router.include_router(docks_router)
@@ -60,14 +70,14 @@ router.include_router(live_map_router)
 router.include_router(warehouse_flight_router)
 
 __all__ = [
-    "router",
+    "WAREHOUSE_LIVE_MAP_BATCH_MAX_CHUNKS",
     "WarehouseCommandOut",
     "WarehouseExplorationProfileOut",
     "WarehouseExplorationStartIn",
-    "WarehouseLocalPose",
     "WarehouseLiveMapChunkBatchIn",
     "WarehouseLiveMapChunkUploadOut",
     "WarehouseLiveMapPublishOut",
+    "WarehouseLocalPose",
     "WarehouseMapCreateIn",
     "WarehouseMapOut",
     "WarehouseMappingStackStatusOut",
@@ -83,7 +93,7 @@ __all__ = [
     "WarehouseSensorRigCreateIn",
     "WarehouseSensorRigHealthOut",
     "WarehouseSensorRigOut",
-    "WAREHOUSE_LIVE_MAP_BATCH_MAX_CHUNKS",
     "ensure_ros_bridge_running",
     "ros2_workspace",
+    "router",
 ]

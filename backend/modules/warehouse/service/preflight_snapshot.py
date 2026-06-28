@@ -31,6 +31,7 @@ from backend.modules.warehouse.service.warehouse_preflight import (
 logger = logging.getLogger(__name__)
 _preflight_drone_lock = asyncio.Lock()
 
+
 def _status(ok: bool | None, *, required: bool = True) -> str:
     if ok is True:
         return "OK"
@@ -106,6 +107,7 @@ async def _probe_bridge(bridge_url: str, *, enabled: bool) -> tuple[bool | None,
     except Exception as exc:
         return False, f"Bridge health unreachable at {url}: {exc}"
 
+
 async def build_preflight_snapshot(
     db: AsyncSession,
     *,
@@ -119,9 +121,7 @@ async def build_preflight_snapshot(
     bridge_flow = str(getattr(settings, "WAREHOUSE_BRIDGE_FLOW", "") or "").strip().lower()
     ws = ros2_workspace()
     bridge_configured = (
-        ws.exists()
-        or bool(bridge_url)
-        or bridge_flow not in {"", "disabled", "off", "none"}
+        ws.exists() or bool(bridge_url) or bridge_flow not in {"", "disabled", "off", "none"}
     )
     auto_start_bridge = bridge_flow not in {"", "disabled", "off", "none"}
     should_start_bridge = bool(start_bridge and auto_start_bridge)
@@ -129,17 +129,13 @@ async def build_preflight_snapshot(
     http_ok: bool | None = None
     http_detail: str | None = None
     if not ws.exists():
-        http_ok, http_detail = await _probe_bridge(
-            bridge_url, enabled=bool(bridge_url and deep)
-        )
+        http_ok, http_detail = await _probe_bridge(bridge_url, enabled=bool(bridge_url and deep))
     bridge_ok = (
         True
         if ros_ok is True or http_ok is True
         else (False if ros_ok is False and http_ok is False else None)
     )
-    bridge_detail = "; ".join(
-        detail for detail in (ros_detail, http_detail) if detail
-    ) or None
+    bridge_detail = "; ".join(detail for detail in (ros_detail, http_detail) if detail) or None
 
     telemetry = telemetry_manager.runtime_snapshot()
     telemetry_running = bool(telemetry.get("running"))
@@ -156,9 +152,7 @@ async def build_preflight_snapshot(
     if topic_overlay.get("preflight_core_ready") is True:
         overlay_error = None
     probe_flags = (
-        overlay.get("components")
-        if isinstance(overlay.get("components"), dict)
-        else overlay
+        overlay.get("components") if isinstance(overlay.get("components"), dict) else overlay
     )
     local_position_ok = probe_flags.get("local_position_ok") is True
     slam_ready = probe_flags.get("slam_ready") is True
@@ -172,9 +166,7 @@ async def build_preflight_snapshot(
     lidar_flag = probe_flags.get("lidar_ok")
     lidar_ok = lidar_flag if isinstance(lidar_flag, bool) else None
     source_transport_flag = probe_flags.get("source_transport_ok")
-    source_transport_ok = (
-        source_transport_flag if isinstance(source_transport_flag, bool) else None
-    )
+    source_transport_ok = source_transport_flag if isinstance(source_transport_flag, bool) else None
     stable_ms = int(_float_from(overlay, "perception_stable_for_ms", "stable_for_ms") or 0)
     required_stable_ms = int(
         _float_from(overlay, "perception_required_stable_ms", "required_stable_ms") or 8_000
@@ -204,7 +196,10 @@ async def build_preflight_snapshot(
     valid_rig_count = sum(
         1
         for rig in rigs
-        if rig.calibration_status == "valid" and rig.intrinsics_url and rig.extrinsics_url
+        if rig.calibration_status == "valid"
+        and rig.intrinsics_url
+        and rig.extrinsics_json
+        and rig.calibration_hash
     )
 
     categories = {
@@ -285,9 +280,7 @@ async def build_preflight_snapshot(
         tf_ok = False
 
     ready_to_fly = (
-        ros_can_start
-        and not blockers
-        and all(categories[key] == "OK" for key in required_keys)
+        ros_can_start and not blockers and all(categories[key] == "OK" for key in required_keys)
     )
     checks = [{"id": key, "status": value} for key, value in categories.items()]
     topic_diag = {
@@ -355,9 +348,7 @@ async def build_preflight_snapshot(
         perception_required_stable_ms=required_stable_ms,
         ros_topic_count=int(_float_from(overlay, "ros_topic_count") or 0) or None,
         warehouse_bridge_state=(
-            "ready"
-            if bridge_ok is True
-            else ("configured" if bridge_configured else "disabled")
+            "ready" if bridge_ok is True else ("configured" if bridge_configured else "disabled")
         ),
         bridge_url=bridge_url or None,
         last_error=bridge_detail if bridge_ok is False else overlay_error,
@@ -379,11 +370,9 @@ async def build_preflight_snapshot(
             },
             "bridge_topic_compatibility": {
                 "configured_ros_topics": overlay.get("configured_ros_topics") or [],
-                "missing_configured_ros_topics": overlay.get("missing_configured_ros_topics")
-                or [],
+                "missing_configured_ros_topics": overlay.get("missing_configured_ros_topics") or [],
                 "configured_gz_topics": overlay.get("configured_gz_topics") or [],
-                "missing_configured_gz_topics": overlay.get("missing_configured_gz_topics")
-                or [],
+                "missing_configured_gz_topics": overlay.get("missing_configured_gz_topics") or [],
                 "gz_probe_error": overlay.get("gz_probe_error"),
                 "probe_error": topic_probe_error,
             },

@@ -17,7 +17,7 @@
 #   source install/setup.bash
 #
 # Backend env example:
-#   WAREHOUSE_NVBLOX_LAUNCH_ARGS="use_sim_time:=true run_rviz:=false start_odom_to_tf:=false start_sensor_static_tfs:=false use_tf_transforms:=true use_topic_transforms:=false input_qos:=SENSOR_DATA global_frame:=odom pose_frame:=iris_with_standoffs/base_link"
+#   WAREHOUSE_NVBLOX_LAUNCH_ARGS="use_sim_time:=true run_rviz:=false start_odom_to_tf:=false start_sensor_static_tfs:=false use_tf_transforms:=true use_topic_transforms:=false input_qos:=SENSOR_DATA global_frame:=odom pose_frame:=base_link"
 #
 # When warehouse_bridge.launch.py is already running (normal flight path), keep
 # start_odom_to_tf and start_sensor_static_tfs false so TF is published once from
@@ -25,8 +25,11 @@
 
 from __future__ import annotations
 
+import math
+from pathlib import Path
 from textwrap import dedent
 
+import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess
@@ -125,9 +128,9 @@ _ODOM_TO_POSE_INLINE = dedent(
     """
 ).strip()
 
-BASE_FRAME = "iris_with_standoffs/base_link"
-MID360_FRAME = "iris_rplidar_rgbd/mid360_lidar_link/mid360_lidar"
-RGBD_FRAME = "iris_rplidar_rgbd/front_rgbd_camera_link/front_rgbd_camera"
+BASE_FRAME = "base_link"
+MID360_FRAME = "lidar_link"
+RGBD_FRAME = "camera_link"
 IMU_FRAME = "imu_link"
 
 
@@ -160,6 +163,10 @@ def generate_launch_description() -> LaunchDescription:
     nvblox_examples_share = get_package_share_directory('nvblox_examples_bringup')
     nvblox_base_config = f'{nvblox_examples_share}/config/nvblox/nvblox_base.yaml'
     nvblox_sim_config = f'{nvblox_examples_share}/config/nvblox/specializations/nvblox_sim.yaml'
+    bridge_share = Path(get_package_share_directory('drone_gz_bridge'))
+    calibration = yaml.safe_load(
+        (bridge_share / 'config' / 'sensor_extrinsics.yaml').read_text(encoding='utf-8')
+    )
 
     use_sim_time = LaunchConfiguration('use_sim_time')
     run_rviz = LaunchConfiguration('run_rviz')
@@ -179,6 +186,25 @@ def generate_launch_description() -> LaunchDescription:
     color_image_topic = LaunchConfiguration('color_image_topic')
     color_camera_info_topic = LaunchConfiguration('color_camera_info_topic')
     lidar_pointcloud_topic = LaunchConfiguration('lidar_pointcloud_topic')
+
+    sensor_tf_nodes = []
+    for item in calibration['transforms']:
+        q = item['rotation']
+        sinr = 2.0 * (q['w'] * q['x'] + q['y'] * q['z'])
+        cosr = 1.0 - 2.0 * (q['x'] ** 2 + q['y'] ** 2)
+        roll = math.atan2(sinr, cosr)
+        pitch = math.asin(max(-1.0, min(1.0, 2.0 * (q['w'] * q['y'] - q['z'] * q['x']))))
+        yaw = math.atan2(
+            2.0 * (q['w'] * q['z'] + q['x'] * q['y']),
+            1.0 - 2.0 * (q['y'] ** 2 + q['z'] ** 2),
+        )
+        t = item['translation']
+        sensor_tf_nodes.append(static_tf_node(
+            name=f"nvblox_calibration_{item['child_frame']}_tf",
+            x=t['x'], y=t['y'], z=t['z'], roll=roll, pitch=pitch, yaw=yaw,
+            parent=item['parent_frame'], child=item['child_frame'], use_sim_time=use_sim_time,
+            condition=IfCondition(LaunchConfiguration('start_sensor_static_tfs')),
+        ))
 
     nvblox_node = ComposableNode(
         package='nvblox_ros',
@@ -254,7 +280,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument('use_topic_transforms', default_value='false'),
             DeclareLaunchArgument('input_qos', default_value='SENSOR_DATA'),
             DeclareLaunchArgument('global_frame', default_value='odom'),
-            DeclareLaunchArgument('pose_frame', default_value='iris_with_standoffs/base_link'),
+            DeclareLaunchArgument('pose_frame', default_value='base_link'),
 
             DeclareLaunchArgument('mesh_update_rate_hz', default_value='1.0'),
             DeclareLaunchArgument('esdf_update_rate_hz', default_value='2.0'),
@@ -263,7 +289,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument('odom_topic', default_value='/warehouse/drone/odometry'),
             DeclareLaunchArgument('pose_topic', default_value='/warehouse/drone/pose'),
             DeclareLaunchArgument('parent_frame', default_value='odom'),
-            DeclareLaunchArgument('child_frame', default_value='iris_with_standoffs/base_link'),
+            DeclareLaunchArgument('child_frame', default_value='base_link'),
 
             DeclareLaunchArgument(
                 'depth_image_topic',
@@ -310,45 +336,7 @@ def generate_launch_description() -> LaunchDescription:
                 condition=IfCondition(LaunchConfiguration('start_odom_to_tf')),
             ),
 
-            static_tf_node(
-                name='nvblox_base_to_mid360_tf',
-                x=0.15,
-                y=0.0,
-                z=0.08,
-                roll=0.0,
-                pitch=0.0,
-                yaw=0.0,
-                parent=BASE_FRAME,
-                child=MID360_FRAME,
-                use_sim_time=use_sim_time,
-                condition=IfCondition(LaunchConfiguration('start_sensor_static_tfs')),
-            ),
-            static_tf_node(
-                name='nvblox_base_to_rgbd_tf',
-                x=0.20,
-                y=0.0,
-                z=0.05,
-                roll=0.0,
-                pitch=0.0,
-                yaw=0.0,
-                parent=BASE_FRAME,
-                child=RGBD_FRAME,
-                use_sim_time=use_sim_time,
-                condition=IfCondition(LaunchConfiguration('start_sensor_static_tfs')),
-            ),
-            static_tf_node(
-                name='nvblox_base_to_imu_tf',
-                x=0.0,
-                y=0.0,
-                z=0.0,
-                roll=0.0,
-                pitch=0.0,
-                yaw=0.0,
-                parent=BASE_FRAME,
-                child=IMU_FRAME,
-                use_sim_time=use_sim_time,
-                condition=IfCondition(LaunchConfiguration('start_sensor_static_tfs')),
-            ),
+            *sensor_tf_nodes,
 
             ExecuteProcess(
                 cmd=[

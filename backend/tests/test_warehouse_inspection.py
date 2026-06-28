@@ -9,7 +9,11 @@ from backend.modules.missions.schemas.mission_types import MissionType
 from backend.modules.warehouse.models import WarehouseScanTarget
 from backend.modules.warehouse.planning.indoor.enums import OccupancyState
 from backend.modules.warehouse.planning.indoor.models import OccupancyGrid
-from backend.modules.warehouse.schemas import WarehouseLocalPoint, WarehouseScanTargetCreate
+from backend.modules.warehouse.schemas import (
+    WarehouseLocalPoint,
+    WarehouseLocalPose,
+    WarehouseScanTargetCreate,
+)
 from backend.modules.warehouse.service.inspection import (
     MockWarehouseScanner,
     build_inspection_waypoints,
@@ -93,6 +97,27 @@ def test_scan_target_requires_matching_frames() -> None:
         )
 
 
+def test_scan_target_rejects_arbitrary_matching_frames() -> None:
+    with pytest.raises(ValidationError, match="warehouse_map"):
+        WarehouseScanTargetCreate.model_validate(
+            {
+                "aisle_code": "A-01",
+                "target_point_local_json": {
+                    "frame_id": "foo",
+                    "x_m": 1,
+                    "y_m": 2,
+                    "z_m": 1.5,
+                },
+                "scan_pose_local_json": {
+                    "frame_id": "foo",
+                    "x_m": 0,
+                    "y_m": 2,
+                    "z_m": 1.5,
+                },
+            }
+        )
+
+
 def test_scan_pose_computed_from_shelf_normal() -> None:
     pose = compute_scan_pose(
         target_point=WarehouseLocalPoint(x_m=12.8, y_m=4.2, z_m=1.7),
@@ -106,19 +131,51 @@ def test_scan_pose_computed_from_shelf_normal() -> None:
     assert pose.yaw_deg == 90.0
 
 
+def test_pose_canonicalizes_legacy_yaw_to_quaternion_and_derived_euler() -> None:
+    pose = WarehouseLocalPose(x_m=1, y_m=2, z_m=3, yaw_deg=90)
+
+    assert pose.frame_id == "warehouse_map"
+    assert pose.orientation.z == pytest.approx(2**-0.5)
+    assert pose.orientation.w == pytest.approx(2**-0.5)
+    assert pose.roll_deg == pytest.approx(0)
+    assert pose.pitch_deg == pytest.approx(0)
+    assert pose.yaw_deg == pytest.approx(90)
+
+
+def test_scan_target_keeps_sensor_aim_separate_from_vehicle_pose() -> None:
+    target = WarehouseScanTargetCreate.model_validate(
+        {
+            "aisle_code": "A-01",
+            "target_point_local_json": {"x_m": 2, "y_m": 0, "z_m": 1},
+            "scan_pose_local_json": {"x_m": 1, "y_m": 0, "z_m": 1, "yaw_deg": 0},
+            "sensor_aim_json": {
+                "sensor_frame_id": "gimbal_camera_optical_frame",
+                "aim_point_local_json": {"x_m": 2, "y_m": 0, "z_m": 0.5},
+                "pitch_deg": -25,
+                "roll_deg": 5,
+            },
+        }
+    )
+
+    assert target.scan_pose_local_json.pitch_deg == 0
+    assert target.sensor_aim_json is not None
+    assert target.sensor_aim_json.pitch_deg == pytest.approx(-25)
+    assert target.sensor_aim_json.roll_deg == pytest.approx(5)
+
+
 def test_mission_waypoints_use_scan_pose_not_target_point() -> None:
     target = _target(1, x_m=11.6)
 
     waypoints = build_inspection_waypoints([target])
 
     assert [waypoint.purpose for waypoint in waypoints] == [
-        "navigate_to_scan_pose",
+        "approach_target",
         "hover_for_scan",
-        "trigger_barcode_scan",
-        "record_result",
+        "trigger_scan",
+        "exit_target",
     ]
-    assert waypoints[0].pose.x_m == 11.6
-    assert waypoints[0].pose.x_m != target.target_point_local_json["x_m"]
+    assert waypoints[1].pose.x_m == 11.6
+    assert waypoints[1].pose.x_m != target.target_point_local_json["x_m"]
 
 
 def test_nearest_neighbor_ordering_after_priority_sort() -> None:
@@ -186,7 +243,11 @@ def test_structure_quality_gate_drafts_noisy_pointcloud_fallback() -> None:
             "clearance": {"source": "point_cloud_fallback"},
             "map_quality": {
                 "chunk_counts": {"rgbd_colored": 127, "mid360_raw": 48, "nvblox_esdf": 40},
-                "point_counts": {"rgbd_colored": 2_626_723, "mid360_raw": 301_863, "nvblox_esdf": 2_103},
+                "point_counts": {
+                    "rgbd_colored": 2_626_723,
+                    "mid360_raw": 301_863,
+                    "nvblox_esdf": 2_103,
+                },
                 "missing_topics": [],
             },
         },

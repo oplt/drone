@@ -60,6 +60,11 @@ import {
   type LiveMapColorMode,
   type LiveMapLayerKey,
 } from "../utils/liveMapLayerUtils";
+import {
+  createWarehouseSceneTransform,
+  resolveDisplayedFrame,
+  WAREHOUSE_MAP_FRAME,
+} from "../utils/warehouseSceneCoordinates";
 
 export function WarehouseLiveVoxelMapViewer({
   state,
@@ -237,6 +242,36 @@ export function WarehouseLiveVoxelMapViewer({
     [colorMode, layerPointBudget, pointSize],
   );
 
+  const scenePickBlockReason = useMemo(() => {
+    if (!mapPlacement) return null;
+    if (mapPlacement.pickBlockReason) return mapPlacement.pickBlockReason;
+    const frameIds = [
+      ...state.chunks.map((chunk) => chunk.frame_id),
+      state.latestUpdate?.frame_id,
+      ...state.scanPath.map((pose) => pose.frame_id),
+    ];
+    const populated = frameIds.filter((frame) => Boolean(frame?.trim()));
+    const displayFrame = populated.length
+      ? resolveDisplayedFrame(frameIds)
+      : WAREHOUSE_MAP_FRAME;
+    if (!displayFrame) return "Visible map layers use incompatible coordinate frames.";
+    if (
+      !mapPlacement.coordinateFrame ||
+      !createWarehouseSceneTransform(displayFrame, mapPlacement.coordinateFrame)
+    ) {
+      return `No transform from displayed ${displayFrame} frame to warehouse_map.`;
+    }
+    return null;
+  }, [mapPlacement, state.chunks, state.latestUpdate?.frame_id, state.scanPath]);
+
+  const effectiveMapPlacement = useMemo(
+    () =>
+      mapPlacement
+        ? { ...mapPlacement, pickBlockReason: scenePickBlockReason }
+        : null,
+    [mapPlacement, scenePickBlockReason],
+  );
+
   const updateLayer = (key: LiveMapLayerKey) => {
     setLayers((current) => ({ ...current, [key]: !current[key] }));
   };
@@ -347,7 +382,10 @@ export function WarehouseLiveVoxelMapViewer({
           border: "1px solid",
           borderColor: "divider",
           position: "relative",
-          cursor: mapPlacement?.pickMode ? "crosshair" : "default",
+          cursor:
+            mapPlacement?.pickMode && !scenePickBlockReason
+              ? "crosshair"
+              : "default",
         }}
       >
           {!hidden && (
@@ -356,7 +394,7 @@ export function WarehouseLiveVoxelMapViewer({
                   layers={layers}
                   cachedChunks={cachedChunks}
                   renderOptions={renderOptions}
-                  mapPlacement={mapPlacement}
+                  mapPlacement={effectiveMapPlacement}
                   structure={
                     structure.structure?.status === "ready"
                       ? structure.structure.summary
@@ -375,9 +413,9 @@ export function WarehouseLiveVoxelMapViewer({
               pointerEvents: "none",
             }}
           >
-            <Alert severity="info" sx={{ py: 0.25 }}>
-              Click the map to place a bin target at Z={mapPlacement.placementZ.toFixed(2)} m.
-              Orange = saved targets, yellow = draft.
+            <Alert severity={scenePickBlockReason ? "warning" : "info"} sx={{ py: 0.25 }}>
+              {scenePickBlockReason ??
+                `Click the map to place a bin target at warehouse Z=${mapPlacement.placementZ.toFixed(2)} m. Orange = saved targets, yellow = draft.`}
             </Alert>
           </Box>
         ) : null}

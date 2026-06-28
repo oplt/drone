@@ -66,6 +66,7 @@ from backend.modules.warehouse.models import (
     WarehouseInspectionMission,
     WarehouseInspectionResult,
     WarehouseMappingJob,
+    WarehouseMapSetupVersion,
     WarehouseModel,
     WarehouseScanTarget,
     WarehouseSensorRig,
@@ -117,6 +118,7 @@ from fastapi import APIRouter
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
+
 @router.get("/maps", response_model=list[WarehouseMapOut])
 async def list_warehouse_maps(
     limit: int = Query(default=100, ge=1, le=500),
@@ -139,12 +141,17 @@ async def create_warehouse_map(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseMapOut:
-    polygon = [
-        (0.0, 0.0),
-        (float(payload.width_m), 0.0),
-        (float(payload.width_m), float(payload.length_m)),
-        (0.0, float(payload.length_m)),
-    ]
+    if payload.polygon_local_m is not None:
+        polygon = [tuple(point[:2]) for point in payload.polygon_local_m]
+    elif payload.width_m is not None and payload.length_m is not None:
+        polygon = [
+            (0.0, 0.0),
+            (float(payload.width_m), 0.0),
+            (float(payload.width_m), float(payload.length_m)),
+            (0.0, float(payload.length_m)),
+        ]
+    else:
+        raise HTTPException(422, "Provide polygon_local_m or both width_m and length_m")
     try:
         project = (
             await get_default_project(db, org_id=int(org_user.user.org_id))
@@ -159,6 +166,28 @@ async def create_warehouse_map(
             warehouse_name=payload.name,
             polygon_local_m=polygon,
         )
+        db.add(
+            WarehouseMapSetupVersion(
+                warehouse_map_id=row.id,
+                version=1,
+                status="draft",
+                polygon_local_json=[list(point) for point in polygon],
+                origin_transform_json={
+                    "translation": {"x": 0.0, "y": 0.0, "z": 0.0},
+                    "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                },
+                alignment_deg=0.0,
+                alignment_reference="aisle",
+                source="map_create",
+                confidence=1.0,
+                transform_timestamp=datetime.now(UTC),
+                max_transform_age_s=300.0,
+                covariance_json=[],
+                localization_method="unlocalized_draft",
+                scale=1.0,
+                scale_calibration_json={},
+            )
+        )
         await db.commit()
     except Exception:
         await db.rollback()
@@ -172,9 +201,7 @@ async def get_warehouse_map(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseMapOut:
-    warehouse_map = await get_map_or_404(
-        db, warehouse_map_id=warehouse_map_id, user=org_user.user
-    )
+    warehouse_map = await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     return map_out(warehouse_map)
 
 
@@ -194,4 +221,3 @@ async def delete_warehouse_map(
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse map not found")
     await db.commit()
-

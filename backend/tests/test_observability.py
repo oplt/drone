@@ -377,8 +377,18 @@ def test_audit_event_emits_structured_fields(caplog):
             result="success",
             actor_type="user",
             actor_id="42",
+            reason="operator update",
+            extra={
+                "old_value": {"translation": {"x": 0}},
+                "new_value": {"translation": {"x": 1}, "access_token": "do-not-log"},
+                "covariance": [0.1, 0.2],
+            },
         )
-    assert any("test_event" in record.message for record in caplog.records)
+    record = next(record for record in caplog.records if "test_event" in record.message)
+    assert record.reason == "operator update"
+    assert record.old_value == {"translation": {"x": 0}}
+    assert record.new_value["access_token"] == "[redacted]"
+    assert record.covariance == [0.1, 0.2]
 
 
 def test_normalize_error_type_maps_db_errors():

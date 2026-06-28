@@ -157,6 +157,7 @@ async def publish_live_map_update(
 async def upload_live_map_chunk(
     flight_id: str,
     chunk_id: str,
+    frame_id: Literal["odom", "warehouse_map"] = Query("odom"),
     kind: Literal["mesh", "point_cloud", "occupancy", "esdf", "costmap"] = Query("mesh"),
     sequence: int = Query(0, ge=0),
     bbox_local_m: list[float] | None = Query(default=None),
@@ -178,6 +179,7 @@ async def upload_live_map_chunk(
             stored = await warehouse_live_map_chunk_storage.save_upload(
                 flight_id=flight_id,
                 chunk_id=chunk_id,
+                frame_id=frame_id,
                 kind=kind,
                 upload=file,
             )

@@ -3,19 +3,21 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
 try:
-    from backend.modules.vehicle_runtime.types import LocalCoordinate
+    from backend.modules.vehicle_runtime.types import EnuCoordinate
 except ImportError:  # pragma: no cover - production app should provide this type.
     @dataclass(frozen=True)
-    class LocalCoordinate:  # type: ignore[no-redef]
-        north_m: float
-        east_m: float
-        down_m: float
-        yaw_deg: float | None = None
+    class EnuCoordinate:  # type: ignore[no-redef]
+        x_m: float
+        y_m: float
+        z_m: float
+        yaw_rad: float | None = None
+        frame_id: str = "odom"
 
 from .enums import IndoorFrame
 from .models import DockingTarget, LocalPose
@@ -116,24 +118,28 @@ class DroneLocalNavigationAdapter:
                 raise RuntimeError("Drone exposes speed setters, but all failed") from last_error
             logger.debug("Drone exposes no speed setter; continuing with autopilot default speed")
 
-    async def _to_local_coordinate(self, pose: LocalPose) -> LocalCoordinate:
+    async def _to_enu_coordinate(self, pose: LocalPose) -> EnuCoordinate:
         resolved = await self.slam_provider.to_control_frame(
             pose,
             frame_id=IndoorFrame.ODOM.value,
         )
-        return LocalCoordinate(
-            north_m=float(resolved.y_m),
-            east_m=float(resolved.x_m),
-            down_m=-float(resolved.z_m),
-            yaw_deg=resolved.yaw_deg,
+        return EnuCoordinate(
+            x_m=float(resolved.x_m),
+            y_m=float(resolved.y_m),
+            z_m=float(resolved.z_m),
+            yaw_rad=(
+                math.radians(float(resolved.yaw_deg))
+                if resolved.yaw_deg is not None
+                else None
+            ),
         )
 
-    async def _to_local_coordinates_bounded(self, path: Sequence[LocalPose]) -> list[LocalCoordinate]:
+    async def _to_enu_coordinates_bounded(self, path: Sequence[LocalPose]) -> list[EnuCoordinate]:
         concurrency = max(1, int(self.max_transform_concurrency))
-        result: list[LocalCoordinate] = []
+        result: list[EnuCoordinate] = []
         for index in range(0, len(path), concurrency):
             batch = path[index : index + concurrency]
-            result.extend(await asyncio.gather(*(self._to_local_coordinate(pose) for pose in batch)))
+            result.extend(await asyncio.gather(*(self._to_enu_coordinate(pose) for pose in batch)))
         return result
 
     async def follow_local_path(
@@ -147,11 +153,11 @@ class DroneLocalNavigationAdapter:
         if not poses:
             return
         await self._set_speed_if_needed(speed_mps)
-        control_path = await self._to_local_coordinates_bounded(poses)
+        control_path = await self._to_enu_coordinates_bounded(poses)
 
-        follow_fn = getattr(self.drone, "follow_local_setpoints", None)
+        follow_fn = getattr(self.drone, "follow_enu_setpoints", None)
         if not callable(follow_fn):
-            raise RuntimeError("Drone does not expose follow_local_setpoints for indoor navigation")
+            raise RuntimeError("Drone does not expose follow_enu_setpoints for indoor navigation")
 
         def _call_follow() -> None:
             if timeout_s is not None:
@@ -164,7 +170,10 @@ class DroneLocalNavigationAdapter:
                         follow_fn(control_path, timeout_s=float(timeout_s))
                         return
                     except TypeError:
-                        logger.debug("follow_local_setpoints rejected timeout_s; retrying without it", exc_info=True)
+                        logger.debug(
+                            "follow_enu_setpoints rejected timeout_s; retrying without it",
+                            exc_info=True,
+                        )
             follow_fn(control_path)
 
         follow_task = asyncio.to_thread(_call_follow)

@@ -264,13 +264,13 @@ async def wait_for_tf_stable(
     *,
     timeout_s: float,
     parent_frame: str = "odom",
-    child_frame: str = "iris_with_standoffs/base_link",
+    child_frame: str = "base_link",
 ) -> SimTimeStatus:
     timeout_s = _safe_float(timeout_s, 1.5, min_value=0.1)
     deadline = time.monotonic() + timeout_s
     last_detail = "tf lookup failed"
     parent = shlex.quote(_safe_str(parent_frame, "odom"))
-    child = shlex.quote(_safe_str(child_frame, "iris_with_standoffs/base_link"))
+    child = shlex.quote(_safe_str(child_frame, "base_link"))
 
     while time.monotonic() < deadline:
         remaining = max(0.1, deadline - time.monotonic())
@@ -295,6 +295,19 @@ async def wait_for_tf_stable(
             last_detail = str(exc)[:240]
         await asyncio.sleep(min(0.2, max(0.0, deadline - time.monotonic())))
     return SimTimeStatus(False, last_detail)
+
+
+async def wait_for_warehouse_map_tf_stable(
+    *,
+    timeout_s: float = 3.0,
+    parent_frame: str = "warehouse_map",
+    child_frame: str = "odom",
+) -> SimTimeStatus:
+    return await wait_for_tf_stable(
+        timeout_s=timeout_s,
+        parent_frame=parent_frame,
+        child_frame=child_frame,
+    )
 
 
 def _is_target_nvblox_process(command: str) -> bool:

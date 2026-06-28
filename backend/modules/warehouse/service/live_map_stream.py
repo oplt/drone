@@ -7,12 +7,36 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import WebSocket
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from backend.modules.warehouse.service.frame_contract import ODOM_FRAME, WAREHOUSE_MAP_FRAME
 from backend.observability.instruments import observed_span
 from backend.observability.metrics import add as metric_add
 
 logger = logging.getLogger(__name__)
+LIVE_MAP_FRAMES = {ODOM_FRAME, WAREHOUSE_MAP_FRAME}
+
+
+def _canonical_live_frame(value: str) -> str:
+    value = value.strip()
+    if value not in LIVE_MAP_FRAMES:
+        raise ValueError(f"live-map frame_id must be one of {sorted(LIVE_MAP_FRAMES)}")
+    return value
+
+
+def canonical_live_map_publish_frame(
+    raw_frame: str | None,
+    *,
+    fallback: str = ODOM_FRAME,
+) -> str:
+    """Map ROS layer frames onto the live-map contract (odom / warehouse_map)."""
+    cleaned = str(raw_frame or "").strip()
+    if cleaned in LIVE_MAP_FRAMES:
+        return cleaned
+    fallback_clean = str(fallback or ODOM_FRAME).strip()
+    if fallback_clean in LIVE_MAP_FRAMES:
+        return fallback_clean
+    return ODOM_FRAME
 
 
 class WarehouseLivePose(BaseModel):
@@ -20,7 +44,12 @@ class WarehouseLivePose(BaseModel):
     y_m: float = 0.0
     z_m: float = 0.0
     yaw_deg: float | None = None
-    frame_id: str = "map"
+    frame_id: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("frame_id")
+    @classmethod
+    def clean_frame_id(cls, value: str) -> str:
+        return _canonical_live_frame(value)
 
 
 LiveMapLayer = Literal[
@@ -69,7 +98,13 @@ class WarehouseLiveVoxelChunk(BaseModel):
     cloud_age_ms: float | None = Field(default=None, ge=0)
     transform_age_ms: float | None = Field(default=None, ge=0)
     encoding: str | None = Field(default=None, max_length=64)
-    frame_id: str | None = Field(default=None, max_length=128)
+    frame_id: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("frame_id")
+    @classmethod
+    def clean_frame_id(cls, value: str) -> str:
+        return _canonical_live_frame(value)
+
     stamp: str | None = Field(default=None, max_length=64)
     priority: int | None = Field(default=None, ge=0, le=100)
 
@@ -92,13 +127,53 @@ class WarehouseLiveMapUpdate(BaseModel):
     type: Literal["live_map_update"] = "live_map_update"
     flight_id: str = Field(..., min_length=1, max_length=128)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    frame_id: str = Field(default="map", min_length=1, max_length=128)
-    pose: WarehouseLivePose = Field(default_factory=WarehouseLivePose)
+    frame_id: str = Field(..., min_length=1, max_length=128)
+    pose: WarehouseLivePose | None = None
     changed_chunks: list[WarehouseLiveVoxelChunk] = Field(default_factory=list)
     removed_chunk_ids: list[str] = Field(default_factory=list)
     scan_path_sample: list[WarehouseLivePose] = Field(default_factory=list)
     health: WarehouseLiveHealthFlags = Field(default_factory=WarehouseLiveHealthFlags)
     finalized_scan_job_id: int | None = None
+
+    @field_validator("frame_id")
+    @classmethod
+    def clean_frame_id(cls, value: str) -> str:
+        return _canonical_live_frame(value)
+
+    @model_validator(mode="after")
+    def consistent_frames(self) -> WarehouseLiveMapUpdate:
+        nested = []
+        if self.pose is not None:
+            nested.append(("pose", self.pose.frame_id))
+        nested.extend(
+            (f"changed_chunks[{index}]", chunk.frame_id)
+            for index, chunk in enumerate(self.changed_chunks)
+        )
+        nested.extend(
+            (f"scan_path_sample[{index}]", pose.frame_id)
+            for index, pose in enumerate(self.scan_path_sample)
+        )
+        mismatched = [name for name, frame_id in nested if frame_id != self.frame_id]
+        if mismatched:
+            logger.warning(
+                "warehouse_live_map_frame_mismatch flight_id=%s frame_id=%s fields=%s",
+                self.flight_id,
+                self.frame_id,
+                mismatched,
+            )
+            metric_add("warehouse_live_map_frame_mismatch_total", 1)
+            try:
+                from backend.modules.warehouse.observability.warehouse_coordinate_metrics import (
+                    record_frame_mismatch,
+                )
+
+                record_frame_mismatch(layer="live_map_stream")
+            except Exception:
+                pass
+            raise ValueError(
+                f"live-map update frame_id={self.frame_id!r} conflicts with: {mismatched}"
+            )
+        return self
 
 
 class WarehouseLiveMapManifestSummary(BaseModel):
@@ -182,7 +257,7 @@ class WarehouseLiveMapStream:
             return None
         except asyncio.CancelledError:
             raise
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Transient backpressure (client busy fetching chunks), not a
             # disconnect. Keep the client subscribed so it keeps receiving
             # chunk metadata live; only evict after repeated stalls.
@@ -208,6 +283,11 @@ class WarehouseLiveMapStream:
                 update.flight_id,
                 deque(maxlen=self._max_updates_per_flight),
             )
+            if flight_updates and flight_updates[-1].frame_id != update.frame_id:
+                raise ValueError(
+                    "live-map flight frame changed without an explicit transform: "
+                    f"{flight_updates[-1].frame_id!r} -> {update.frame_id!r}"
+                )
             flight_updates.append(update)
             if update.finalized_scan_job_id is not None:
                 self._finalized_jobs[update.flight_id] = int(update.finalized_scan_job_id)

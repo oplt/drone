@@ -68,9 +68,7 @@ class WarehouseApplication:
             limit=limit,
         )
 
-    async def delete_scanned_map(
-        self, db: AsyncSession, *, job_id: int, user: User
-    ) -> bool:
+    async def delete_scanned_map(self, db: AsyncSession, *, job_id: int, user: User) -> bool:
         try:
             deleted = await self.maps.delete_scanned_map_by_job_id(
                 db,
@@ -326,6 +324,7 @@ class WarehouseApplication:
                 stereo_baseline_m=payload.stereo_baseline_m,
                 intrinsics_url=payload.intrinsics_url,
                 extrinsics_url=payload.extrinsics_url,
+                extrinsics_json=payload.extrinsics_json,
                 imu_transform_json=payload.imu_transform_json,
                 firmware_version=payload.firmware_version,
                 isaac_ros_version=payload.isaac_ros_version,
@@ -351,6 +350,7 @@ class WarehouseApplication:
                 calibration_hash=payload.calibration_hash,
                 intrinsics_url=payload.intrinsics_url,
                 extrinsics_url=payload.extrinsics_url,
+                extrinsics_json=payload.extrinsics_json,
                 imu_transform_json=payload.imu_transform_json,
                 calibration_meta=payload.calibration_meta,
             )
@@ -360,9 +360,7 @@ class WarehouseApplication:
             await db.rollback()
             raise
 
-    async def delete_sensor_rig(
-        self, db: AsyncSession, *, rig: WarehouseSensorRig
-    ) -> None:
+    async def delete_sensor_rig(self, db: AsyncSession, *, rig: WarehouseSensorRig) -> None:
         try:
             await self.maps.delete_sensor_rig(db, rig=rig)
             await db.commit()

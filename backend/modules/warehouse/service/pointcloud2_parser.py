@@ -75,9 +75,9 @@ def _safe_float(value: Any, *, default: float | None = None) -> float | None:
     return number if math.isfinite(number) else default
 
 
-def _normalise_frame_id(value: Any) -> str:
-    text = str(value or "map").strip()
-    return text[:128] or "map"
+def _normalise_frame_id(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text[:128] or None
 
 
 def _unpack_field(
@@ -314,6 +314,8 @@ def parse_pointcloud2_msg(
 
     header = getattr(msg, "header", None)
     frame_id = _normalise_frame_id(getattr(header, "frame_id", None))
+    if frame_id is None:
+        return None
     field_map = _field_map_from_msg(msg)
     return _parse_pointcloud2_binary(
         raw=raw,
@@ -351,6 +353,8 @@ def parse_pointcloud2_yaml(
     field_map = _field_map_from_yaml(payload)
     header = payload.get("header") if isinstance(payload.get("header"), dict) else {}
     frame_id = _normalise_frame_id((header or {}).get("frame_id"))
+    if frame_id is None:
+        return None
 
     return _parse_pointcloud2_binary(
         raw=raw,
@@ -489,11 +493,7 @@ def _parse_pointcloud2_binary_vectorized(
         mask &= distances <= max_range_m
     if not mask.any():
         return None
-    chosen = (
-        np.flatnonzero(mask)[:max_points]
-        if mask.sum() > max_points
-        else np.flatnonzero(mask)
-    )
+    chosen = np.flatnonzero(mask)[:max_points] if mask.sum() > max_points else np.flatnonzero(mask)
     xyz = np.ascontiguousarray(xyz[chosen], dtype=np.float32)
     original_indices = sampled_indices[chosen]
 

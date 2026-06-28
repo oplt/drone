@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import hashlib
 from typing import Any, cast
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.warehouse.models import WarehouseSensorRig
+from backend.modules.warehouse.service.sensor_calibration import (
+    normalize_sensor_extrinsics,
+    sensor_calibration_checksum,
+)
 
 
 class WarehouseRepositoryError(RuntimeError):
@@ -35,10 +38,6 @@ def _optional_str(value: object) -> str | None:
     return str(value).strip() if value is not None and str(value).strip() else None
 
 
-def _calibration_hash(intrinsics_url: str, extrinsics_url: str) -> str:
-    return hashlib.sha256(f"{intrinsics_url}|{extrinsics_url}".encode()).hexdigest()[:32]
-
-
 class WarehouseSensorRigMixin:
     @staticmethod
     def _resolve_calibration_urls(
@@ -61,20 +60,26 @@ class WarehouseSensorRigMixin:
         stereo_baseline_m: float | None,
         intrinsics_url: str | None,
         extrinsics_url: str | None,
+        extrinsics_json: dict[str, Any],
         imu_transform_json: dict[str, Any],
         firmware_version: str | None,
         isaac_ros_version: str | None,
         active: bool = True,
     ) -> WarehouseSensorRig:
-        resolved_intrinsics, resolved_extrinsics, calibration_complete = (
-            WarehouseSensorRigMixin._resolve_calibration_urls(
-                intrinsics_url, extrinsics_url
-            )
+        resolved_intrinsics, resolved_extrinsics, _ = (
+            WarehouseSensorRigMixin._resolve_calibration_urls(intrinsics_url, extrinsics_url)
         )
         if stereo_baseline_m is not None and float(stereo_baseline_m) <= 0:
             raise WarehouseRepositoryError("stereo_baseline_m must be positive when provided.")
         if not isinstance(imu_transform_json, dict):
             raise WarehouseRepositoryError("imu_transform_json must be a JSON object.")
+        try:
+            normalized_extrinsics = normalize_sensor_extrinsics(extrinsics_json)
+        except ValueError as exc:
+            normalized_extrinsics = {}
+            if extrinsics_json:
+                raise WarehouseRepositoryError(str(exc)) from exc
+        calibration_complete = bool(resolved_intrinsics and normalized_extrinsics)
 
         rig.owner_id = int(owner_id)
         rig.org_id = org_id
@@ -83,14 +88,13 @@ class WarehouseSensorRigMixin:
         rig.stereo_baseline_m = None if stereo_baseline_m is None else float(stereo_baseline_m)
         rig.intrinsics_url = resolved_intrinsics
         rig.extrinsics_url = resolved_extrinsics
+        rig.extrinsics_json = normalized_extrinsics
         rig.imu_transform_json = dict(imu_transform_json)
         rig.firmware_version = _optional_str(firmware_version)
         rig.isaac_ros_version = _optional_str(isaac_ros_version)
         rig.calibration_status = "valid" if calibration_complete else "missing"
         rig.calibration_hash = (
-            _calibration_hash(cast(str, resolved_intrinsics), cast(str, resolved_extrinsics))
-            if calibration_complete
-            else None
+            sensor_calibration_checksum(normalized_extrinsics) if calibration_complete else None
         )
         rig.calibration_meta = (
             {"source": "create", "auto_validated": True} if calibration_complete else {}
@@ -132,7 +136,10 @@ class WarehouseSensorRigMixin:
         allow_org_access: bool,
     ) -> Any:
         return (
-            or_(WarehouseSensorRig.owner_id == int(owner_id), WarehouseSensorRig.org_id == int(org_id))
+            or_(
+                WarehouseSensorRig.owner_id == int(owner_id),
+                WarehouseSensorRig.org_id == int(org_id),
+            )
             if allow_org_access and org_id is not None
             else WarehouseSensorRig.owner_id == int(owner_id)
         )
@@ -200,6 +207,7 @@ class WarehouseSensorRigMixin:
         stereo_baseline_m: float | None,
         intrinsics_url: str | None,
         extrinsics_url: str | None,
+        extrinsics_json: dict[str, Any],
         imu_transform_json: dict[str, Any],
         firmware_version: str | None,
         isaac_ros_version: str | None,
@@ -221,6 +229,7 @@ class WarehouseSensorRigMixin:
                 stereo_baseline_m=stereo_baseline_m,
                 intrinsics_url=intrinsics_url,
                 extrinsics_url=extrinsics_url,
+                extrinsics_json=extrinsics_json,
                 imu_transform_json=imu_transform_json,
                 firmware_version=firmware_version,
                 isaac_ros_version=isaac_ros_version,
@@ -240,6 +249,7 @@ class WarehouseSensorRigMixin:
             stereo_baseline_m=stereo_baseline_m,
             intrinsics_url=intrinsics_url,
             extrinsics_url=extrinsics_url,
+            extrinsics_json=extrinsics_json,
             imu_transform_json=imu_transform_json,
             firmware_version=firmware_version,
             isaac_ros_version=isaac_ros_version,
@@ -259,6 +269,7 @@ class WarehouseSensorRigMixin:
         calibration_hash: str | None,
         intrinsics_url: str | None,
         extrinsics_url: str | None,
+        extrinsics_json: dict[str, Any] | None,
         imu_transform_json: dict[str, Any] | None,
         calibration_meta: dict[str, Any],
     ) -> WarehouseSensorRig:
@@ -268,6 +279,11 @@ class WarehouseSensorRigMixin:
             rig.intrinsics_url = _optional_str(intrinsics_url)
         if extrinsics_url is not None:
             rig.extrinsics_url = _optional_str(extrinsics_url)
+        if extrinsics_json is not None:
+            try:
+                rig.extrinsics_json = normalize_sensor_extrinsics(extrinsics_json)
+            except ValueError as exc:
+                raise WarehouseRepositoryError(str(exc)) from exc
         if imu_transform_json is not None:
             if not isinstance(imu_transform_json, dict):
                 raise WarehouseRepositoryError("imu_transform_json must be a JSON object.")
@@ -276,9 +292,16 @@ class WarehouseSensorRigMixin:
             raise WarehouseRepositoryError("calibration_meta must be a JSON object.")
         rig.calibration_meta = dict(calibration_meta)
 
+        computed_hash = (
+            sensor_calibration_checksum(rig.extrinsics_json) if rig.extrinsics_json else None
+        )
         cleaned_hash = _optional_str(calibration_hash)
-        if cleaned_hash is None and rig.intrinsics_url and rig.extrinsics_url:
-            cleaned_hash = _calibration_hash(str(rig.intrinsics_url), str(rig.extrinsics_url))
+        if cleaned_hash is not None and cleaned_hash != computed_hash:
+            raise WarehouseRepositoryError("calibration_hash does not match extrinsics_json")
+        cleaned_hash = computed_hash
+        rig.calibration_status = (
+            status if status != "valid" or (rig.intrinsics_url and cleaned_hash) else "failed"
+        )
         rig.calibration_hash = cleaned_hash
         await db.flush()
         await db.refresh(rig)

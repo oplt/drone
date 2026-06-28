@@ -18,6 +18,7 @@ import {
 import InfoLabel from "../../../shared/ui/InfoLabel";
 import { INFO_INPUT_LABEL_PROPS, MAX_GRID_PREVIEW_WAYPOINTS } from "../../mission-workflow";
 import type { PatrolGridParams, PrivatePatrolMissionTaskType } from "../types";
+import { effectivePatrolRepeatIntervalMinutes } from "../types";
 import type { usePrivatePatrolMission } from "../hooks/usePrivatePatrolMission";
 import type { PatrolSensorIntegration } from "../api/eventTriggerConfigApi";
 import { EventTriggerConnectionPanel } from "./EventTriggerConnectionPanel";
@@ -187,7 +188,7 @@ export function PrivatePatrolParamsSection({
                 label={
                     <InfoLabel
                         label="Start delay"
-                        info="0 starts immediately. Any positive value schedules dispatch after this many minutes while this page remains open."
+                        info="0 starts immediately. A positive value delays the first launch by this many minutes (page must stay open). When Repeat is 0, the same interval is used between subsequent flights."
                     />
                 }
                 InputLabelProps={INFO_INPUT_LABEL_PROPS}
@@ -211,7 +212,7 @@ export function PrivatePatrolParamsSection({
                 label={
                     <InfoLabel
                         label="Repeat"
-                        info="0 disables repeat. Any positive value schedules the next dispatch after each successful start while this page remains open."
+                        info="Minutes between flights after each successful landing. 0 uses Start delay for repeats when Start delay is set, otherwise repeat is off. Page must stay open."
                     />
                 }
                 InputLabelProps={INFO_INPUT_LABEL_PROPS}
@@ -977,8 +978,8 @@ export function PrivatePatrolParamsSection({
                                 {scheduledStartAt != null ? (
                                     <>
                                         Mission scheduled for {new Date(scheduledStartAt).toLocaleTimeString()}.
-                                        {gridParams.repeat_interval_minutes > 0
-                                            ? ` Repeats every ${gridParams.repeat_interval_minutes} minute(s).`
+                                        {effectivePatrolRepeatIntervalMinutes(gridParams) > 0
+                                            ? ` Repeats every ${effectivePatrolRepeatIntervalMinutes(gridParams)} minute(s).`
                                             : ""}
                                     </>
                                 ) : repeatWaitingForCompletion ? (

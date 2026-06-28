@@ -62,6 +62,11 @@ class SimulatedSLAMProvider:
             height=int(self.world_grid.height),
             origin_x_m=float(self.world_grid.origin_x_m),
             origin_y_m=float(self.world_grid.origin_y_m),
+            origin_z_m=float(self.world_grid.origin_z_m),
+            origin_qx=float(self.world_grid.origin_qx),
+            origin_qy=float(self.world_grid.origin_qy),
+            origin_qz=float(self.world_grid.origin_qz),
+            origin_qw=float(self.world_grid.origin_qw),
             default_state=OccupancyState.UNKNOWN,
         )
         self.reveal_around(self.current_pose, radius_m=self.reveal_radius_m)

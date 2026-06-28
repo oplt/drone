@@ -137,3 +137,13 @@ export const DEFAULT_PATROL_GRID_PARAMS: PatrolGridParams = {
     "motion_detection",
   ],
 };
+
+/** Repeat interval when armed; falls back to start delay when Repeat is 0. */
+export function effectivePatrolRepeatIntervalMinutes(
+  params: Pick<PatrolGridParams, "repeat_interval_minutes" | "start_after_minutes">,
+): number {
+  const repeat = Math.max(0, Math.min(1440, Math.round(params.repeat_interval_minutes)));
+  if (repeat > 0) return repeat;
+  const startDelay = Math.max(0, Math.min(1440, Math.round(params.start_after_minutes)));
+  return startDelay > 0 ? startDelay : 0;
+}

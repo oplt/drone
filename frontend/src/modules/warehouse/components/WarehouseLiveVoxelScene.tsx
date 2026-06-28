@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useEffect, useCallback } from "react";
+import { Suspense, useMemo, useEffect, useCallback, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import * as THREE from "three";
 import { Canvas, useLoader, useThree, type ThreeEvent } from "@react-three/fiber";
@@ -26,6 +26,13 @@ import {
   type LiveMapLayerKey,
 } from "../utils/liveMapLayerUtils";
 import { chunkStateKey } from "../utils/liveMapChunkRetention";
+import {
+  createWarehouseSceneTransform,
+  resolveDisplayedFrame,
+  sceneToWarehouseMap,
+  WAREHOUSE_MAP_FRAME,
+  type WarehouseSceneTransform,
+} from "../utils/warehouseSceneCoordinates";
 
 export type LiveVoxelLayers = Record<LiveMapLayerKey, boolean>;
 
@@ -35,18 +42,43 @@ export type LiveVoxelRenderOptions = {
   layerPointBudget: Record<LiveMapLayerKey, number>;
 };
 
-function CameraControls({ pickMode }: { pickMode: boolean }) {
+function CameraControls({
+  pickMode,
+  focus,
+  distance,
+  fitKey,
+  fitReady,
+}: {
+  pickMode: boolean;
+  focus: [number, number, number];
+  distance: number;
+  fitKey: string;
+  fitReady: boolean;
+}) {
   const { camera } = useThree();
+  const fittedKeyRef = useRef<string | null>(null);
+  const [target, setTarget] = useState<[number, number, number]>(focus);
 
   useEffect(() => {
+    if (!fitReady || fittedKeyRef.current === fitKey) return;
+
+    fittedKeyRef.current = fitKey;
+    const nextTarget: [number, number, number] = [...focus];
+    setTarget(nextTarget);
     camera.up.set(0, 0, 1);
-    camera.lookAt(0, 0, 1.5);
-  }, [camera]);
+    camera.position.set(
+      focus[0] + distance,
+      focus[1] - distance,
+      focus[2] + distance * 0.7,
+    );
+    camera.lookAt(focus[0], focus[1], focus[2]);
+    camera.updateProjectionMatrix();
+  }, [camera, distance, fitKey, fitReady, focus]);
 
   return (
       <OrbitControls
           makeDefault
-          target={[0, 0, 1.5]}
+          target={target}
           enableDamping
           dampingFactor={0.08}
           enableRotate={!pickMode}
@@ -60,34 +92,35 @@ function MapPickPlane({
   enabled,
   placementZ,
   onPick,
+  transform,
 }: {
   enabled: boolean;
   placementZ: number;
   onPick: (point: MapPlacementPoint) => void;
+  transform: WarehouseSceneTransform;
 }) {
   const handlePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       if (!enabled) return;
       event.stopPropagation();
-      onPick({
+      onPick(sceneToWarehouseMap({
         x_m: event.point.x,
         y_m: event.point.y,
-        z_m: placementZ,
-      });
+        z_m: event.point.z,
+      }, transform));
     },
-    [enabled, onPick, placementZ],
+    [enabled, onPick, transform],
   );
 
   if (!enabled) return null;
 
   return (
-      <mesh
-          position={[0, 0, placementZ]}
-          onPointerDown={handlePointerDown}
-      >
-        <planeGeometry args={[240, 240]} />
-        <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
-      </mesh>
+      <group matrix={transform.warehouseToScene} matrixAutoUpdate={false}>
+        <mesh position={[0, 0, placementZ]} onPointerDown={handlePointerDown}>
+          <planeGeometry args={[240, 240]} />
+          <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+        </mesh>
+      </group>
   );
 }
 
@@ -542,6 +575,56 @@ function LiveMapContent({
     state.chunks,
   ]);
 
+  const displayFrameId = useMemo(() => {
+    const frames = [
+      ...state.chunks.map((chunk) => chunk.frame_id),
+      state.latestUpdate?.frame_id,
+      ...state.scanPath.map((pose) => pose.frame_id),
+    ];
+    const hasFrame = frames.some((frame) => Boolean(frame?.trim()));
+    return hasFrame ? resolveDisplayedFrame(frames) : WAREHOUSE_MAP_FRAME;
+  }, [state.chunks, state.latestUpdate?.frame_id, state.scanPath]);
+
+  const sceneTransform = useMemo(
+    () =>
+      displayFrameId && mapPlacement?.coordinateFrame
+        ? createWarehouseSceneTransform(displayFrameId, mapPlacement.coordinateFrame)
+        : null,
+    [displayFrameId, mapPlacement?.coordinateFrame],
+  );
+
+  const cameraFrame = useMemo(() => {
+    const boxes = state.chunks
+      .filter((chunk) => layerVisible(inferLayerKey(chunk), layers))
+      .map((chunk) => chunk.bbox_local_m)
+      .filter(
+        (bbox): bbox is [number, number, number, number, number, number] =>
+          Array.isArray(bbox) && bbox.length === 6 && bbox.every(Number.isFinite),
+      );
+    if (boxes.length === 0) {
+      return {
+        focus: [0, 0, 1.5] as [number, number, number],
+        distance: 10,
+        ready: false,
+      };
+    }
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (const bbox of boxes) {
+      for (let axis = 0; axis < 3; axis += 1) {
+        min[axis] = Math.min(min[axis], bbox[axis]);
+        max[axis] = Math.max(max[axis], bbox[axis + 3]);
+      }
+    }
+    const focus: [number, number, number] = [
+      (min[0] + max[0]) / 2,
+      (min[1] + max[1]) / 2,
+      (min[2] + max[2]) / 2,
+    ];
+    const extent = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+    return { focus, distance: Math.max(2.5, extent * 2.5), ready: true };
+  }, [layers, state.chunks]);
+
   return (
       <>
         <ambientLight intensity={0.7} />
@@ -567,6 +650,7 @@ function LiveMapContent({
 
           const pointLayerVisible =
             (layer === "rgbdColored" && layerVisible("rgbdColored", layers)) ||
+            (layer === "rgbdDepth" && layerVisible("rgbdDepth", layers)) ||
             (layer === "mid360LiDAR" && layerVisible("mid360LiDAR", layers)) ||
             (layer === "nvbloxColor" && layerVisible("nvbloxColor", layers)) ||
             (layer === "nvbloxEsdf" && layerVisible("nvbloxEsdf", layers)) ||
@@ -610,18 +694,29 @@ function LiveMapContent({
           return null;
         })}
 
-        <StructureOverlay structure={structure} />
+        {sceneTransform ? (
+          <group matrix={sceneTransform.warehouseToScene} matrixAutoUpdate={false}>
+            <StructureOverlay structure={structure} />
+            {mapPlacement ? <ScanTargetMarkers mapPlacement={mapPlacement} /> : null}
+          </group>
+        ) : null}
 
-        {mapPlacement ? <ScanTargetMarkers mapPlacement={mapPlacement} /> : null}
-        {mapPlacement ? (
+        {mapPlacement && sceneTransform ? (
             <MapPickPlane
-                enabled={mapPlacement.pickMode}
+                enabled={mapPlacement.pickMode && !mapPlacement.pickBlockReason}
                 placementZ={mapPlacement.placementZ}
                 onPick={mapPlacement.onPick}
+                transform={sceneTransform}
             />
         ) : null}
 
-        <CameraControls pickMode={mapPlacement?.pickMode ?? false} />
+        <CameraControls
+            pickMode={mapPlacement?.pickMode ?? false}
+            focus={cameraFrame.focus}
+            distance={cameraFrame.distance}
+            fitKey={state.latestUpdate?.flight_id ?? "current-map"}
+            fitReady={cameraFrame.ready}
+        />
       </>
   );
 }

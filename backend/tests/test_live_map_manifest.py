@@ -360,6 +360,7 @@ async def test_live_map_storage_skips_duplicate_chunk_rewrite(tmp_path: Path) ->
     first = await storage.save_upload(
         flight_id="flight",
         chunk_id="rgbd_000001",
+        frame_id="odom",
         kind="point_cloud",
         upload=_MemoryUpload(payload),
     )
@@ -368,6 +369,7 @@ async def test_live_map_storage_skips_duplicate_chunk_rewrite(tmp_path: Path) ->
     second = await storage.save_upload(
         flight_id="flight",
         chunk_id="rgbd_000001",
+        frame_id="odom",
         kind="point_cloud",
         upload=_MemoryUpload(payload),
     )

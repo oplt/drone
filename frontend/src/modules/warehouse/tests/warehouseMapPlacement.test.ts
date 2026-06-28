@@ -22,6 +22,9 @@ describe("warehouseMapPlacement", () => {
       {
         id: 7,
         warehouse_map_id: 1,
+        layout_version_id: 4,
+        provenance_status: "confirmed",
+        bin_id: 9,
         reference_model_id: null,
         dock_station_id: null,
         aisle_code: "A-1",

@@ -13,9 +13,10 @@ from typing import TYPE_CHECKING
 
 from backend.core.config.runtime import settings
 from backend.infrastructure.camera.runtime import shared_video_runtime
+from backend.infrastructure.vehicle.frame_conversion import local_ned_position_to_enu
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.missions.schemas.mission_types import SIM_WAREHOUSE_LOCAL_ORIGIN
-from backend.modules.vehicle_runtime.types import Coordinate, LocalCoordinate
+from backend.modules.vehicle_runtime.types import Coordinate, EnuCoordinate
 from backend.modules.warehouse.exceptions import WarehouseMissionFailure
 from backend.modules.warehouse.planning.local_planner import (
     WarehouseDockConfig,
@@ -135,13 +136,12 @@ def _active_mapping_startup_timing():
 @dataclass(frozen=True)
 class WarehouseExecutionFrame:
     """
-    Offset between the planner's local origin (dock/polygon origin) and the
-    drone's live NED frame measured at takeoff.  All values in metres.
+    ENU offset between the planner origin and live odom measured at takeoff.
     """
 
-    north_offset_m: float
-    east_offset_m: float
-    down_offset_m: float
+    x_offset_m: float
+    y_offset_m: float
+    z_offset_m: float
 
 
 @dataclass
@@ -149,10 +149,10 @@ class WarehouseScanMission:
     """
     Indoor warehouse scan mission.
 
-    Uses local NED setpoints throughout — no GPS, no lon/lat, no altitude AGL.
+    Uses local ENU setpoints until the MAVLink adapter boundary.
     polygon_local_m defines the warehouse footprint in metres relative to the
     dock/takeoff origin.  The planner works entirely in that metric frame and
-    produces LocalCoordinate setpoints that are sent directly to the drone.
+    produces EnuCoordinate setpoints converted only by the vehicle adapter.
     """
 
     # Local metric footprint — [[x_m, y_m], ...] from dock origin
@@ -993,10 +993,10 @@ class WarehouseScanMission:
         )
 
         try:
-            await asyncio.to_thread(orch.drone.follow_local_setpoints, local_segment)
+            await asyncio.to_thread(orch.drone.follow_enu_setpoints, local_segment)
         except NotImplementedError as exc:
             raise RuntimeError(
-                "The active drone adapter does not support local setpoint control "
+                "The active drone adapter does not support ENU local setpoint control "
                 "required for warehouse scans."
             ) from exc
 
@@ -1044,10 +1044,13 @@ class WarehouseScanMission:
                 raise RuntimeError("Warehouse plan is empty; no dock anchor is available.")
             dock_point = plan.segments[0].local_start
 
+        vehicle_enu = local_ned_position_to_enu(
+            north_m=float(north), east_m=float(east), down_m=float(down)
+        )
         frame = WarehouseExecutionFrame(
-            north_offset_m=float(north) - float(dock_point.y_m),
-            east_offset_m=float(east) - float(dock_point.x_m),
-            down_offset_m=float(down) + float(dock_point.z_m),
+            x_offset_m=vehicle_enu.x_m - float(dock_point.x_m),
+            y_offset_m=vehicle_enu.y_m - float(dock_point.y_m),
+            z_offset_m=vehicle_enu.z_m - float(dock_point.z_m),
         )
         await self._add_event_safe(
             orch,
@@ -1064,9 +1067,10 @@ class WarehouseScanMission:
                     "down_m": float(down),
                 },
                 "offset": {
-                    "north_m": float(frame.north_offset_m),
-                    "east_m": float(frame.east_offset_m),
-                    "down_m": float(frame.down_offset_m),
+                    "x_m": float(frame.x_offset_m),
+                    "y_m": float(frame.y_offset_m),
+                    "z_m": float(frame.z_offset_m),
+                    "frame_id": "odom",
                 },
             },
         )
@@ -1078,34 +1082,44 @@ class WarehouseScanMission:
         *,
         execution_frame: WarehouseExecutionFrame,
         yaw_deg: float | None,
-    ) -> LocalCoordinate:
-        return LocalCoordinate(
-            north_m=float(point.y_m) + float(execution_frame.north_offset_m),
-            east_m=float(point.x_m) + float(execution_frame.east_offset_m),
-            down_m=(-float(point.z_m)) + float(execution_frame.down_offset_m),
-            yaw_deg=yaw_deg,
+    ) -> EnuCoordinate:
+        return EnuCoordinate(
+            x_m=float(point.x_m) + float(execution_frame.x_offset_m),
+            y_m=float(point.y_m) + float(execution_frame.y_offset_m),
+            z_m=float(point.z_m) + float(execution_frame.z_offset_m),
+            yaw_rad=math.radians(float(yaw_deg)) if yaw_deg is not None else None,
         )
 
     def _interpolate_local_segment(
         self,
-        a: LocalCoordinate,
-        b: LocalCoordinate,
+        a: EnuCoordinate,
+        b: EnuCoordinate,
         *,
         steps: int,
-    ) -> list[LocalCoordinate]:
+    ) -> list[EnuCoordinate]:
         if steps <= 0:
             return [a, b]
 
-        pts: list[LocalCoordinate] = []
+        pts: list[EnuCoordinate] = []
         for i in range(steps + 2):
             t = i / (steps + 1)
-            yaw_deg = _interpolate_yaw_deg(a.yaw_deg, b.yaw_deg, t)
+            yaw_rad = (
+                math.radians(
+                    _interpolate_yaw_deg(
+                        math.degrees(a.yaw_rad) if a.yaw_rad is not None else None,
+                        math.degrees(b.yaw_rad) if b.yaw_rad is not None else None,
+                        t,
+                    )
+                )
+                if a.yaw_rad is not None or b.yaw_rad is not None
+                else None
+            )
             pts.append(
-                LocalCoordinate(
-                    north_m=(a.north_m + (b.north_m - a.north_m) * t),
-                    east_m=(a.east_m + (b.east_m - a.east_m) * t),
-                    down_m=(a.down_m + (b.down_m - a.down_m) * t),
-                    yaw_deg=yaw_deg,
+                EnuCoordinate(
+                    x_m=(a.x_m + (b.x_m - a.x_m) * t),
+                    y_m=(a.y_m + (b.y_m - a.y_m) * t),
+                    z_m=(a.z_m + (b.z_m - a.z_m) * t),
+                    yaw_rad=yaw_rad,
                 )
             )
         return pts
@@ -1172,7 +1186,12 @@ class WarehouseScanMission:
             or "unknown"
         )
 
-    async def _restart_live_map_publisher(self, flight_id: str) -> None:
+    async def _restart_live_map_publisher(
+        self,
+        flight_id: str,
+        *,
+        include_main_bridge: bool = True,
+    ) -> None:
         """Stream odometry + RGB-D/nvblox colored layers; raw Mid360 is optional.
 
         The bridges are independent, so they are started concurrently instead of
@@ -1191,9 +1210,6 @@ class WarehouseScanMission:
         )
         from backend.modules.warehouse.service.map_source_config import (
             WAREHOUSE_LIVE_MAP_SOURCES,
-        )
-        from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
-            start_nvblox_layers_live_map_bridge,
         )
         from backend.modules.warehouse.service.raw_pointcloud_live_map_bridge import (
             start_raw_pointcloud_live_map_bridge,
@@ -1218,6 +1234,10 @@ class WarehouseScanMission:
 
         async def _start_nvblox_bridge() -> None:
             try:
+                from backend.modules.warehouse.service.nvblox_layers_live_map_bridge import (
+                    start_nvblox_layers_live_map_bridge,
+                )
+
                 await start_nvblox_layers_live_map_bridge(flight_id)
                 logger.info(
                     "Started nvblox layers live-map bridge for flight_id=%s",
@@ -1245,7 +1265,9 @@ class WarehouseScanMission:
             except Exception as exc:
                 logger.warning("Could not start raw point-cloud live map bridge: %s", exc)
 
-        starters = [_start_main_bridge(), _start_colored_bridge(), _start_nvblox_bridge()]
+        starters = [_start_colored_bridge(), _start_nvblox_bridge()]
+        if include_main_bridge:
+            starters.insert(0, _start_main_bridge())
 
         if raw_lidar_enabled() or persist_raw_lidar_layer():
             starters.append(_start_raw_bridge())
@@ -1467,10 +1489,21 @@ class WarehouseScanMission:
             probe_mapping_tf_degraded,
             wait_for_rgbd_mapping_topics,
         )
+        from backend.modules.warehouse.service.live_map_bridge import (
+            start_warehouse_live_map_bridge,
+        )
         warmup_timeout = settings.warehouse_mapping_warmup_rgbd_timeout_s
         t_wait = time.monotonic()
         try:
+            await start_warehouse_live_map_bridge(flight_id)
+            tf_deadline = time.monotonic() + max(
+                1.0,
+                float(settings.warehouse_preflight_tf_wait_s),
+            )
             tf_status = await probe_mapping_tf_degraded()
+            while tf_status.get("degraded") and time.monotonic() < tf_deadline:
+                await asyncio.sleep(0.5)
+                tf_status = await probe_mapping_tf_degraded()
             if tf_status.get("degraded"):
                 logger.warning(
                     "Mapping TF degraded before bridge attach flight_id=%s detail=%s",
@@ -1478,7 +1511,10 @@ class WarehouseScanMission:
                     tf_status.get("detail"),
                 )
 
-            await self._restart_live_map_publisher(flight_id)
+            await self._restart_live_map_publisher(
+                flight_id,
+                include_main_bridge=False,
+            )
             _note_mapping_startup("bridges_started_monotonic")
 
             rgbd_readiness = await wait_for_rgbd_mapping_topics(timeout_s=warmup_timeout)

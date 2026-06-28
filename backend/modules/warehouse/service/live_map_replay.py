@@ -174,6 +174,10 @@ def _load_preview_chunk(
     source = metadata.get("source")
     if sources is not None and str(source or "unknown") not in sources:
         return None
+    frame_id = str(payload.get("frame_id") or "").strip()
+    if not frame_id:
+        logger.warning("Skipping replay preview without frame_id path=%s", path)
+        return None
     return WarehouseLiveVoxelChunk(
         id=chunk_id,
         kind="point_cloud",
@@ -192,6 +196,7 @@ def _load_preview_chunk(
         cloud_age_ms=metadata.get("cloud_age_ms"),
         transform_age_ms=metadata.get("transform_age_ms"),
         encoding=metadata.get("encoding"),
+        frame_id=frame_id,
     )
 
 
@@ -200,10 +205,14 @@ def _chunk_from_metadata(
     stored,
     metadata: dict[str, Any],
     fallback_sequence: int,
-) -> WarehouseLiveVoxelChunk:
+) -> WarehouseLiveVoxelChunk | None:
     raw_kind = str(metadata.get("kind") or "point_cloud")
     allowed = {"mesh", "point_cloud", "occupancy", "esdf", "costmap"}
     kind = raw_kind if raw_kind in allowed else "point_cloud"
+    frame_id = str(metadata.get("frame_id") or "").strip()
+    if not frame_id:
+        logger.warning("Skipping replay chunk without frame_id chunk_id=%s", stored.chunk_id)
+        return None
     return WarehouseLiveVoxelChunk(
         id=stored.chunk_id,
         kind=kind,  # type: ignore[arg-type]
@@ -221,7 +230,7 @@ def _chunk_from_metadata(
         layer_type=metadata.get("layer_type") or metadata.get("layer"),
         has_rgb=metadata.get("has_rgb"),
         encoding=metadata.get("encoding"),
-        frame_id=metadata.get("frame_id"),
+        frame_id=frame_id,
         stamp=metadata.get("stamp"),
         priority=metadata.get("priority"),
     )
@@ -322,6 +331,8 @@ def _build_disk_live_map_snapshot_uncached(
             fallback_sequence=sequence,
         )
         sequence += 1
+        if chunk is None:
+            continue
         changed_chunks.append(chunk)
         seen_chunk_ids.add(chunk_id)
 
@@ -370,6 +381,7 @@ def _build_disk_live_map_snapshot_uncached(
     update = WarehouseLiveMapUpdate(
         flight_id=client_flight_id,
         timestamp=timestamp,
+        frame_id=changed_chunks[0].frame_id,
         changed_chunks=changed_chunks,
         health=WarehouseLiveHealthFlags(
             missing_mesh=True,

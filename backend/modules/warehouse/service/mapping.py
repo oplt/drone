@@ -1,15 +1,25 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from backend.core.database.session import Session
 from backend.modules.warehouse.models import WarehouseAsset
 from backend.modules.warehouse.repository import WarehouseMappingRepository
 
 logger = logging.getLogger(__name__)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class WarehouseScanMappingError(RuntimeError):
@@ -106,12 +116,15 @@ class WarehouseScanMappingService:
                     except ValueError:
                         relative_path = file_path.name
                     stat = await asyncio.to_thread(file_path.stat)
+                    checksum = await asyncio.to_thread(_sha256_file, file_path)
                     db.add(
                         WarehouseAsset(
                             model_id=model.id,
+                            frame_id="odom",
                             type=_asset_type(file_path),
                             url=str(file_path),
                             size_bytes=stat.st_size,
+                            checksum=checksum,
                             meta_data={
                                 "job_id": job.id,
                                 "artifact_key": file_path.suffix.lower().lstrip(".") or "file",
@@ -170,7 +183,6 @@ def _maybe_enqueue_structure_extraction(
         from backend.entrypoints.workers.warehouse_mapping_tasks import (
             extract_warehouse_structure,
         )
-
         from backend.modules.warehouse.service.structure_jobs import (
             record_extraction_queued,
             warehouse_mapping_worker_ready,
@@ -179,7 +191,8 @@ def _maybe_enqueue_structure_extraction(
         worker_ok, worker_detail = warehouse_mapping_worker_ready()
         if not worker_ok:
             logger.warning(
-                "warehouse_structure_extraction_skipped reason=worker_unavailable map_id=%s detail=%s",
+                "warehouse_structure_extraction_skipped "
+                "reason=worker_unavailable map_id=%s detail=%s",
                 warehouse_map_id,
                 worker_detail,
             )

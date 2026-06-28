@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from backend.modules.missions.schemas.mission_create import MissionCreateOut
-
-class WarehouseLocalPose(BaseModel):
-    x_m: float
-    y_m: float
-    z_m: float = 0.0
-    yaw_deg: float | None = None
+from backend.modules.warehouse.schemas import WarehouseLocalPose
 
 
 class WarehouseMapOut(BaseModel):
@@ -20,12 +15,18 @@ class WarehouseMapOut(BaseModel):
     area_m2: float | None = None
     created_at: datetime
     polygon_local_m: list[list[float]]
+    setup_status: str = "draft"
+    setup_version: int | None = None
+    origin_transform: dict[str, Any] | None = None
+    alignment_deg: float = 0.0
+    alignment_reference: Literal["north", "aisle"] = "aisle"
 
 
 class WarehouseMapCreateIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
-    width_m: float = Field(..., gt=0.1, le=10_000)
-    length_m: float = Field(..., gt=0.1, le=10_000)
+    width_m: float | None = Field(default=None, gt=0.1, le=10_000)
+    length_m: float | None = Field(default=None, gt=0.1, le=10_000)
+    polygon_local_m: list[list[float]] | None = Field(default=None, min_length=3)
 
 
 class WarehouseDockOut(BaseModel):
@@ -78,6 +79,7 @@ class WarehouseSensorRigOut(BaseModel):
     stereo_baseline_m: float | None = None
     intrinsics_url: str | None = None
     extrinsics_url: str | None = None
+    extrinsics_json: dict[str, Any]
     imu_transform_json: dict[str, Any]
     firmware_version: str | None = None
     isaac_ros_version: str | None = None
@@ -95,6 +97,7 @@ class WarehouseSensorRigCreateIn(BaseModel):
     stereo_baseline_m: float | None = Field(default=None, gt=0.0, le=10.0)
     intrinsics_url: str | None = Field(default=None, max_length=2048)
     extrinsics_url: str | None = Field(default=None, max_length=2048)
+    extrinsics_json: dict[str, Any] = Field(default_factory=dict)
     imu_transform_json: dict[str, Any] = Field(default_factory=dict)
     firmware_version: str | None = Field(default=None, max_length=128)
     isaac_ros_version: str | None = Field(default=None, max_length=128)
@@ -105,6 +108,7 @@ class WarehouseSensorRigCalibrationIn(BaseModel):
     calibration_hash: str | None = Field(default=None, max_length=128)
     intrinsics_url: str | None = Field(default=None, max_length=2048)
     extrinsics_url: str | None = Field(default=None, max_length=2048)
+    extrinsics_json: dict[str, Any] | None = None
     imu_transform_json: dict[str, Any] | None = None
     calibration_meta: dict[str, Any] = Field(default_factory=dict)
 
@@ -131,6 +135,8 @@ class WarehouseScannedMapAssetOut(BaseModel):
     id: int
     type: str
     url: str
+    frame_id: str
+    coordinate_frame_id: int | None = None
     created_at: datetime
     meta_data: dict[str, Any] = Field(default_factory=dict)
 
@@ -139,6 +145,7 @@ class WarehouseScannedMapOut(BaseModel):
     job_id: int
     model_id: int
     model_version: int
+    coordinate_frame_id: int | None = None
     warehouse_map_id: int
     warehouse_name: str
     status: str

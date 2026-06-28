@@ -1,0 +1,24 @@
+# Canonical Gazebo model link names mapped to warehouse frame contract IDs.
+# Launch files should use these aliases when spawning static TF publishers.
+
+aliases:
+  warehouse_map: warehouse_map
+  odom: odom
+  base_link: base_link
+  lidar_link: lidar_link
+  camera_link: camera_link
+  camera_optical_frame: camera_optical_frame
+  rgbd_link: rgbd_link
+  imu_link: imu_link
+  gimbal_link: gimbal_link
+  dock: dock
+
+gazebo_model_links:
+  x500_depth_0::base_link: base_link
+  x500_depth_0::lidar_link: lidar_link
+  x500_depth_0::camera_link: camera_link
+  x500_depth_0::imu_link: imu_link
+
+checksum_gate:
+  source: sensor_extrinsics.yaml
+  required: true

@@ -27,8 +27,10 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import {
   createWarehouseScanTarget,
   deleteWarehouseScanTarget,
+  fetchActiveWarehouseLayout,
   listWarehouseScanTargets,
   type WarehouseScanTarget,
+  type WarehouseLayout,
   type WarehouseStructureExtractParams,
   type WarehouseStructureResponse,
 } from "../api/warehouseInspectionApi";
@@ -44,6 +46,7 @@ import {
   structureNeedsReviewMessage,
 } from "../utils/structureQualityCopy";
 import { AskAgentPanel } from "../../agents/components/AskAgentPanel";
+import { WarehouseCoordinateDiagnosticsPanel } from "./WarehouseCoordinateDiagnosticsPanel";
 
 type TargetDraft = {
   aisle_code: string;
@@ -110,6 +113,8 @@ export function WarehouseCoordinateSetupPanel({
   const [tableRows, setTableRows] = useState<WarehouseScanTarget[]>([]);
   const [tableTotal, setTableTotal] = useState(0);
   const [tableLoading, setTableLoading] = useState(false);
+  const [layout, setLayout] = useState<WarehouseLayout | null>(null);
+  const [selectedBinId, setSelectedBinId] = useState<number | "">("");
 
   const { targetsLoading, refreshTargets } = mapPlacement;
   const quality = structure?.summary.quality;
@@ -128,6 +133,24 @@ export function WarehouseCoordinateSetupPanel({
       current.filter((id) => tableRows.some((row) => row.id === id)),
     );
   }, [tableRows]);
+
+  const loadLayout = useCallback(async () => {
+    if (warehouseMapId == null) {
+      setLayout(null);
+      setSelectedBinId("");
+      return;
+    }
+    try {
+      setLayout(await fetchActiveWarehouseLayout(warehouseMapId, token));
+    } catch {
+      setLayout(null);
+      setSelectedBinId("");
+    }
+  }, [token, warehouseMapId]);
+
+  useEffect(() => {
+    void loadLayout();
+  }, [loadLayout]);
 
   const loadTablePage = useCallback(async () => {
     if (warehouseMapId == null) {
@@ -174,6 +197,7 @@ export function WarehouseCoordinateSetupPanel({
         Number.isFinite(pitch) && pitch > 0 ? { bin_pitch_m: pitch } : {},
       );
       setMessage("Structure detected. Auto-generated targets loaded below.");
+      await loadLayout();
       await refreshTargets();
       await loadTablePage();
     } catch (error) {
@@ -183,7 +207,7 @@ export function WarehouseCoordinateSetupPanel({
           : "Automatic structure detection failed.",
       );
     }
-  }, [binPitch, loadTablePage, onAutoDetect, onError, refreshTargets, warehouseMapId]);
+  }, [binPitch, loadLayout, loadTablePage, onAutoDetect, onError, refreshTargets, warehouseMapId]);
 
   useEffect(() => {
     if (!mapPlacement.draftTarget) return;
@@ -213,8 +237,8 @@ export function WarehouseCoordinateSetupPanel({
       onError("Pick a bin location on the 3D map first.");
       return;
     }
-    if (!draft.aisle_code.trim()) {
-      onError("Aisle code is required.");
+    if (selectedBinId === "") {
+      onError("Select a bin from the locked warehouse layout.");
       return;
     }
 
@@ -226,6 +250,8 @@ export function WarehouseCoordinateSetupPanel({
       await createWarehouseScanTarget(
         warehouseMapId,
         {
+          bin_id: selectedBinId,
+          coordinate_frame_id: mapPlacement.coordinateFrame?.id,
           aisle_code: draft.aisle_code.trim(),
           rack_code: draft.rack_code.trim() || null,
           shelf_level: Number.isFinite(shelfLevel) ? shelfLevel : null,
@@ -253,6 +279,7 @@ export function WarehouseCoordinateSetupPanel({
         token,
       );
       setDraft(emptyDraft);
+      setSelectedBinId("");
       mapPlacement.clearDraft();
       setMessage("Scan target saved. Markers updated on the 3D map.");
       await refreshTargets();
@@ -443,6 +470,7 @@ export function WarehouseCoordinateSetupPanel({
           control={
             <Switch
               checked={mapPlacement.pickMode}
+              disabled={Boolean(mapPlacement.pickBlockReason)}
               onChange={(event) => mapPlacement.setPickMode(event.target.checked)}
             />
           }
@@ -482,6 +510,12 @@ export function WarehouseCoordinateSetupPanel({
         />
       </Stack>
 
+      {mapPlacement.pickBlockReason ? (
+        <Alert severity="warning">{mapPlacement.pickBlockReason}</Alert>
+      ) : null}
+
+      <WarehouseCoordinateDiagnosticsPanel warehouseMapId={warehouseMapId} token={token} />
+
       {pickedSummary ? (
         <Alert severity="info" icon={<PlaceRoundedIcon fontSize="inherit" />}>
           Target: {pickedSummary.targetText} · Scan pose: {pickedSummary.scanText}
@@ -497,12 +531,36 @@ export function WarehouseCoordinateSetupPanel({
           gap: 1,
         }}
       >
+        <TextField
+          select
+          size="small"
+          label="Warehouse bin"
+          value={selectedBinId}
+          disabled={!layout?.bins.length}
+          helperText={layout ? `Layout v${layout.version}` : "No locked layout available"}
+          onChange={(event) => {
+            const id = Number(event.target.value);
+            const bin = layout?.bins.find((candidate) => candidate.id === id);
+            setSelectedBinId(bin ? id : "");
+            if (bin) {
+              setDraft((current) => ({
+                ...current,
+                aisle_code: bin.aisle_code,
+                rack_code: bin.rack_code,
+                shelf_level: String(bin.shelf_level),
+                bin_code: bin.bin_code,
+              }));
+            }
+          }}
+        >
+          {layout?.bins.map((bin) => (
+            <MenuItem key={bin.id} value={bin.id}>
+              {bin.aisle_code} / {bin.rack_code} / shelf {bin.shelf_level} / {bin.bin_code}
+            </MenuItem>
+          ))}
+        </TextField>
         {(
           [
-            ["aisle_code", "Aisle *"],
-            ["rack_code", "Rack"],
-            ["shelf_level", "Shelf level"],
-            ["bin_code", "Bin"],
             ["sku", "SKU"],
             ["barcode", "Barcode"],
             ["product_name", "Product"],
@@ -528,6 +586,7 @@ export function WarehouseCoordinateSetupPanel({
           onClick={() => void handleCreate()}
           disabled={
             saving ||
+            selectedBinId === "" ||
             !mapPlacement.draftTarget ||
             !mapPlacement.draftScanPose
           }

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 from fastapi import HTTPException
@@ -8,6 +7,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.organizations.service import can_access_org_scope
+from backend.modules.warehouse.http_access import repo
 from backend.modules.warehouse.http_models import (
     WarehouseDockOut,
     WarehouseLocalPose,
@@ -16,7 +16,6 @@ from backend.modules.warehouse.http_models import (
     WarehouseScannedMapQualityOut,
     WarehouseSensorRigOut,
 )
-from backend.modules.warehouse.http_access import repo
 from backend.modules.warehouse.models import (
     WarehouseAsset,
     WarehouseDockStation,
@@ -34,13 +33,20 @@ from backend.modules.warehouse.schemas import (
     WarehouseScanTargetRead,
 )
 
+
 def map_out(row: WarehouseMap) -> WarehouseMapOut:
+    meta = row.meta_data if isinstance(row.meta_data, dict) else {}
     return WarehouseMapOut(
         id=int(row.id),
         name=row.name,
         area_m2=row.area_m2,
         created_at=row.created_at,
         polygon_local_m=repo.polygon_from_local(row),
+        setup_status=str(meta.get("setup_status") or "draft"),
+        setup_version=meta.get("setup_version"),
+        origin_transform=meta.get("origin_transform"),
+        alignment_deg=float(meta.get("alignment_deg") or 0.0),
+        alignment_reference=str(meta.get("alignment_reference") or "aisle"),
     )
 
 
@@ -60,9 +66,9 @@ def dock_out(row: WarehouseDockStation) -> WarehouseDockOut:
         marker_visible=meta.get("marker_visible"),
         last_observed_at=meta.get("last_observed_at"),
         charger_type=row.charger_type,
-        pose=_pose(row.pose_local_json),
-        entry_pose=_pose(row.entry_pose_local_json),
-        exit_pose=_pose(row.exit_pose_local_json),
+        pose=pose(row.pose_local_json),
+        entry_pose=pose(row.entry_pose_local_json),
+        exit_pose=pose(row.exit_pose_local_json),
         active=bool(row.active),
         created_at=row.created_at,
     )
@@ -79,6 +85,11 @@ def scan_target_out(row: WarehouseScanTarget) -> WarehouseScanTargetRead:
         {
             "id": int(row.id),
             "warehouse_map_id": int(row.warehouse_map_id),
+            "coordinate_frame_id": row.coordinate_frame_id,
+            "layout_version_id": row.layout_version_id,
+            "provenance_status": row.provenance_status
+            or ("auto" if row.reference_model_id is not None else "manual"),
+            "bin_id": row.bin_id,
             "reference_model_id": row.reference_model_id,
             "dock_station_id": row.dock_station_id,
             "aisle_code": row.aisle_code,
@@ -90,6 +101,7 @@ def scan_target_out(row: WarehouseScanTarget) -> WarehouseScanTargetRead:
             "product_name": row.product_name,
             "target_point_local_json": row.target_point_local_json,
             "scan_pose_local_json": row.scan_pose_local_json,
+            "sensor_aim_json": row.sensor_aim_json,
             "shelf_normal_local_json": row.shelf_normal_local_json,
             "standoff_m": row.standoff_m,
             "hover_time_s": row.hover_time_s,
@@ -111,6 +123,24 @@ def inspection_mission_out(row: WarehouseInspectionMission) -> WarehouseInspecti
         {
             "id": int(row.id),
             "warehouse_map_id": int(row.warehouse_map_id),
+            "coordinate_frame_id": (
+                int(row.coordinate_frame_id) if row.coordinate_frame_id is not None else None
+            ),
+            "coordinate_frame_version": (
+                int(plan["coordinate_frame_version"])
+                if plan.get("coordinate_frame_version") is not None
+                else None
+            ),
+            "layout_version_id": row.layout_version_id,
+            "layout_version": plan.get("layout_version"),
+            "map_model_id": row.map_model_id,
+            "map_model_version": plan.get("map_model_version"),
+            "validation_result_id": row.validation_result_id,
+            "artifact_checksums": dict(row.artifact_checksums_json or {}),
+            "plan_checksum": row.plan_checksum,
+            "approval_status": row.approval_status,
+            "approved_at": row.approved_at,
+            "runtime_policy": dict(row.runtime_policy_json or {}),
             "name": row.name,
             "status": row.status,
             "scan_mode": row.scan_mode,
@@ -170,6 +200,7 @@ def sensor_rig_out(row: WarehouseSensorRig) -> WarehouseSensorRigOut:
             "stereo_baseline_m": row.stereo_baseline_m,
             "intrinsics_url": row.intrinsics_url,
             "extrinsics_url": row.extrinsics_url,
+            "extrinsics_json": dict(row.extrinsics_json or {}),
             "imu_transform_json": row.imu_transform_json or {},
             "firmware_version": row.firmware_version,
             "isaac_ros_version": row.isaac_ros_version,
@@ -188,6 +219,8 @@ def asset_out(row: WarehouseAsset) -> WarehouseScannedMapAssetOut:
         id=int(row.id),
         type=row.type,
         url=row.url,
+        frame_id=row.frame_id,
+        coordinate_frame_id=row.coordinate_frame_id,
         created_at=row.created_at,
         meta_data=row.meta_data or {},
     )
@@ -217,7 +250,7 @@ def quality(
         quality_score=float(quality) if isinstance(quality, int | float) else None,
         coverage_percent=float(coverage) if isinstance(coverage, int | float) else None,
         drift_estimate_m=float(drift) if isinstance(drift, int | float) else None,
-        source=_source(job, warehouse_map),
+        source=source(job, warehouse_map),
         report=report,
     )
 

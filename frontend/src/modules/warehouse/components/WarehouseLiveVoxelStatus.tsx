@@ -149,7 +149,7 @@ export function WarehouseLiveVoxelMetrics({
   pointsByLayer?: Record<LiveMapLayerKey, number>;
   cachedBytes?: number;
 }) {
-  const pose = state.latestUpdate?.pose;
+  const pose = state.latestUpdate?.pose ?? null;
   const lastChunk = state.chunks.at(-1);
   const stackPhase = mappingStackStatus?.phase ?? "stopped";
   const nvbloxStatus = resolveNvbloxStatus(state);

@@ -322,6 +322,43 @@ patrol_preflight_failures_total = Counter(
     "Total Property Patrol preflight failures",
 )
 
+# --- Warehouse coordinate / localization ---
+
+warehouse_tf_lookup_failures_total = Counter(
+    "warehouse_tf_lookup_failures_total",
+    "Total warehouse live-map TF lookup failures at message timestamp",
+    ["source"],
+)
+
+warehouse_frame_mismatch_total = Counter(
+    "warehouse_frame_mismatch_total",
+    "Total warehouse live-map frame mismatches",
+    ["layer"],
+)
+
+warehouse_inspection_validation_duration_seconds = Histogram(
+    "warehouse_inspection_validation_duration_seconds",
+    "Warehouse inspection path validation duration in seconds",
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
+)
+
+warehouse_mission_rejection_total = Counter(
+    "warehouse_mission_rejection_total",
+    "Total warehouse mission plan/execute rejections",
+    ["reason"],
+)
+
+warehouse_slam_localization_stale_total = Counter(
+    "warehouse_slam_localization_stale_total",
+    "Total SLAM localization staleness events during warehouse missions",
+)
+
+warehouse_transform_jump_total = Counter(
+    "warehouse_transform_jump_total",
+    "Total warehouse map-to-odom transform jump detections",
+    ["source"],
+)
+
 KNOWN_QUEUES = (
     "default",
     "photogrammetry",

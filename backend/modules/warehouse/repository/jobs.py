@@ -212,9 +212,13 @@ class WarehouseJobMixin:
             assets.append(
                 WarehouseAsset(
                     model_id=int(model_id),
+                    frame_id=str(metadata.get("frame_id") or "odom"),
                     type=_ASSET_TYPE_MAP.get(artifact_key, artifact_key.upper()),
                     url=artifact_url,
                     size_bytes=metadata.get("size_bytes"),
+                    checksum=(
+                        metadata.get("checksum_sha256") or metadata.get("checksum")
+                    ),
                     meta_data={
                         "job_id": int(job_id),
                         "artifact_key": artifact_key,

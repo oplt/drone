@@ -11,7 +11,12 @@ Targets store two local metric poses:
 
 The drone must navigate to `scan_pose_local_json`, then hover and trigger the scanner. It must not fly to `target_point_local_json`.
 
-All v1 poses use `frame_id: "warehouse_map"`. The mission plan persists a placeholder `warehouse_map_to_odom_transform: null`; v1 assumes `warehouse_map == odom` when the drone starts from the same dock/takeoff origin. A future localization layer can fill this transform without changing target APIs.
+All poses use `frame_id: "warehouse_map"`. Before targets can be created or a
+mission planned, create and lock a coordinate-frame revision with the measured
+`warehouse_map -> odom` TF. Targets and missions pin that immutable revision;
+missions using stale/unlocalized targets are rejected with HTTP 409. Mapping
+chunks remain honest `odom` data and structure extraction applies the locked
+transform before emitting `warehouse_map` targets.
 
 MVP extension points:
 

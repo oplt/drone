@@ -9,6 +9,7 @@ auto-generated ``WarehouseScanTarget`` rows for a model and writes a
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import time
@@ -16,14 +17,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, select
 
 from backend.core.database.session import Session
 from backend.modules.warehouse.models import (
     WarehouseAsset,
+    WarehouseCoordinateFrame,
+    WarehouseMap,
     WarehouseModel,
+    WarehouseScanArtifactSet,
     WarehouseScanTarget,
+    WarehouseSensorRig,
 )
+from backend.modules.warehouse.schemas import WarehouseLocalPose, WarehouseSensorAim
+from backend.modules.warehouse.service.layout import create_extracted_layout
+from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
 from backend.modules.warehouse.service.live_map_readiness import (
     refresh_structure_input_readiness,
 )
@@ -33,6 +41,7 @@ from backend.modules.warehouse.service.live_map_storage import (
 from backend.modules.warehouse.service.occupancy_grid_parser import (
     occupancy_grid_from_ros_yaml,
 )
+from backend.modules.warehouse.service.scan_to_layout import CandidateInput, persist_candidates
 from backend.modules.warehouse.service.structure_extraction import (
     StructureExtractionParams,
     StructureResult,
@@ -40,6 +49,8 @@ from backend.modules.warehouse.service.structure_extraction import (
 )
 
 logger = logging.getLogger(__name__)
+STRUCTURE_EXTRACTION_ALGORITHM_VERSION = "warehouse-structure-v1"
+_HASH_CHUNK_SIZE_BYTES = 1024 * 1024
 
 STRUCTURE_ASSET_TYPE = "STRUCTURE_MAP"
 EXTRACTION_TASK_NAME = "warehouse_mapping.extract_structure"
@@ -201,17 +212,70 @@ def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | 
     return _finish(True, None)
 
 
-def _write_summary_asset(client_flight_id: str, summary: dict[str, Any]) -> Path | None:
+def _write_summary_asset(
+    client_flight_id: str, summary: dict[str, Any], lineage_checksum: str
+) -> Path | None:
     """Persist the structure summary JSON next to the flight chunks."""
     try:
         flight_dir = warehouse_live_map_chunk_storage.flight_dir(client_flight_id)
         flight_dir.mkdir(parents=True, exist_ok=True)
-        path = flight_dir / "structure_map.json"
+        path = flight_dir / f"structure_map-{lineage_checksum[:16]}.json"
         path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
         return path
     except OSError:
         logger.warning("structure_extraction: failed to write summary asset", exc_info=True)
         return None
+
+
+def _hash_input_file(path: Path) -> tuple[int, str]:
+    """Hash a potentially large scan input without loading it into memory."""
+    before = path.stat()
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(_HASH_CHUNK_SIZE_BYTES):
+            digest.update(chunk)
+    after = path.stat()
+    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+        raise RuntimeError(f"Scan input changed while lineage was captured: {path}")
+    return after.st_size, digest.hexdigest()
+
+
+def _scan_artifact_lineage(
+    client_flight_id: str,
+    *,
+    model_id: int,
+    coordinate_frame_id: int,
+    extraction_params: dict[str, Any],
+) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+    flight_dir = warehouse_live_map_chunk_storage.flight_dir(client_flight_id)
+    inputs: list[dict[str, Any]] = []
+    if flight_dir.exists():
+        for path in sorted(item for item in flight_dir.rglob("*") if item.is_file()):
+            if path.name.startswith("structure_map"):
+                continue
+            size_bytes, digest = _hash_input_file(path)
+            inputs.append(
+                {
+                    "path": str(path.relative_to(flight_dir)),
+                    "size_bytes": size_bytes,
+                    "checksum_sha256": digest,
+                }
+            )
+    manifest = load_flight_manifest(client_flight_id)
+    manifest_json = manifest.as_dict() if manifest is not None else {}
+    lineage = {
+        "client_flight_id": client_flight_id,
+        "map_model_id": model_id,
+        "coordinate_frame_id": coordinate_frame_id,
+        "algorithm_version": STRUCTURE_EXTRACTION_ALGORITHM_VERSION,
+        "extraction_params": extraction_params,
+        "manifest": manifest_json,
+        "inputs": inputs,
+    }
+    checksum = hashlib.sha256(
+        json.dumps(lineage, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return checksum, manifest_json, inputs
 
 
 async def _persist_result(
@@ -220,25 +284,116 @@ async def _persist_result(
     model_id: int,
     client_flight_id: str,
     result: StructureResult,
+    coordinate_frame_id: int,
 ) -> dict[str, Any]:
     quality = result.summary.get("quality") if isinstance(result.summary, dict) else {}
     quality = quality if isinstance(quality, dict) else {}
     quality_status = str(quality.get("status") or "ready")
-    active_target_count = sum(
-        target.clearance_status == "active" for target in result.targets
-    )
+    active_target_count = sum(target.clearance_status == "active" for target in result.targets)
     review_target_count = sum(
         target.clearance_status == "needs_review" for target in result.targets
     )
-    rejected_target_count = sum(
-        target.clearance_status == "rejected" for target in result.targets
+    rejected_target_count = sum(target.clearance_status == "rejected" for target in result.targets)
+    extraction_params = dict(result.summary.get("params") or {})
+    lineage_checksum, manifest_json, inputs_json = await asyncio.to_thread(
+        _scan_artifact_lineage,
+        client_flight_id,
+        model_id=int(model_id),
+        coordinate_frame_id=int(coordinate_frame_id),
+        extraction_params=extraction_params,
     )
     summary_path = await asyncio.to_thread(
-        _write_summary_asset, client_flight_id, result.summary
+        _write_summary_asset, client_flight_id, result.summary, lineage_checksum
     )
 
     async with Session() as db:
         try:
+            model = await db.get(WarehouseModel, int(model_id))
+            if model is None:
+                raise RuntimeError(f"Warehouse model {model_id} was not found")
+            model.coordinate_frame_id = int(coordinate_frame_id)
+            warehouse_map = await db.get(WarehouseMap, int(warehouse_map_id))
+            if warehouse_map is None:
+                raise RuntimeError(f"Warehouse map {warehouse_map_id} was not found")
+            rig_scope = (
+                WarehouseSensorRig.org_id == warehouse_map.org_id
+                if warehouse_map.org_id is not None
+                else and_(
+                    WarehouseSensorRig.org_id.is_(None),
+                    WarehouseSensorRig.owner_id == warehouse_map.owner_id,
+                )
+            )
+            sensor_rig = (
+                await db.execute(
+                    select(WarehouseSensorRig)
+                    .where(
+                        WarehouseSensorRig.active.is_(True),
+                        WarehouseSensorRig.calibration_status == "valid",
+                        WarehouseSensorRig.calibration_hash.is_not(None),
+                        rig_scope,
+                    )
+                    .order_by(WarehouseSensorRig.updated_at.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            artifact_set = (
+                await db.execute(
+                    select(WarehouseScanArtifactSet).where(
+                        WarehouseScanArtifactSet.checksum_sha256 == lineage_checksum
+                    )
+                )
+            ).scalar_one_or_none()
+            if artifact_set is None:
+                artifact_set = WarehouseScanArtifactSet(
+                    warehouse_map_id=int(warehouse_map_id),
+                    map_model_id=int(model_id),
+                    coordinate_frame_id=int(coordinate_frame_id),
+                    sensor_rig_id=int(sensor_rig.id) if sensor_rig is not None else None,
+                    calibration_hash=(
+                        sensor_rig.calibration_hash if sensor_rig is not None else None
+                    ),
+                    client_flight_id=client_flight_id,
+                    checksum_sha256=lineage_checksum,
+                    manifest_json=manifest_json,
+                    inputs_json=inputs_json,
+                    extraction_params_json=extraction_params,
+                    algorithm_version=STRUCTURE_EXTRACTION_ALGORITHM_VERSION,
+                )
+                db.add(artifact_set)
+                await db.flush()
+            layout, bin_ids, published = await create_extracted_layout(
+                db,
+                warehouse_map_id=int(warehouse_map_id),
+                coordinate_frame_id=int(coordinate_frame_id),
+                map_model_id=int(model_id),
+                artifact_set_id=int(artifact_set.id),
+                input_checksum=lineage_checksum,
+                algorithm_version=STRUCTURE_EXTRACTION_ALGORITHM_VERSION,
+                targets=result.targets,
+            )
+            await persist_candidates(
+                db,
+                warehouse_map_id=int(warehouse_map_id),
+                layout_version_id=int(layout.id),
+                candidates=[
+                    CandidateInput(
+                        entity_kind="bin",
+                        identity_key=(
+                            f"{target.aisle_code}/{target.rack_code}/"
+                            f"{target.shelf_level}/{target.bin_code}"
+                        ),
+                        geometry={"target_point": target.target_point},
+                        confidence=float(
+                            0.9
+                            if target.clearance_status == "active"
+                            else 0.55
+                            if target.clearance_status == "needs_review"
+                            else 0.25
+                        ),
+                    )
+                    for target in result.targets
+                ],
+            )
             # Idempotent re-run: drop the previous auto-generated targets for this
             # model (identified by reference_model_id) while leaving operator-made
             # targets (reference_model_id NULL or other models) untouched.
@@ -246,11 +401,12 @@ async def _persist_result(
                 delete(WarehouseScanTarget).where(
                     WarehouseScanTarget.warehouse_map_id == int(warehouse_map_id),
                     WarehouseScanTarget.reference_model_id == int(model_id),
+                    WarehouseScanTarget.provenance_status == "auto",
                 )
             )
 
             for tgt in result.targets:
-                scan_pose = dict(tgt.scan_pose)
+                scan_pose = WarehouseLocalPose.model_validate(tgt.scan_pose).model_dump()
                 scan_pose["_clearance_status"] = tgt.clearance_status
                 scan_pose["_clearance_m"] = tgt.clearance_m
                 scan_pose["_clearance_source"] = tgt.clearance_source
@@ -258,33 +414,52 @@ async def _persist_result(
                     WarehouseScanTarget(
                         warehouse_map_id=int(warehouse_map_id),
                         reference_model_id=int(model_id),
+                        coordinate_frame_id=int(coordinate_frame_id),
+                        layout_version_id=int(layout.id),
+                        bin_id=bin_ids[
+                            (
+                                str(tgt.aisle_code),
+                                str(tgt.rack_code),
+                                int(tgt.shelf_level),
+                                str(tgt.bin_code),
+                            )
+                        ],
                         aisle_code=tgt.aisle_code,
                         rack_code=tgt.rack_code,
                         shelf_level=tgt.shelf_level,
                         bin_code=tgt.bin_code,
                         target_point_local_json=tgt.target_point,
                         scan_pose_local_json=scan_pose,
+                        sensor_aim_json=WarehouseSensorAim(
+                            aim_point_local_json=tgt.target_point,
+                            orientation=scan_pose["orientation"],
+                        ).model_dump(),
                         shelf_normal_local_json=tgt.shelf_normal,
                         standoff_m=float(tgt.standoff_m),
                         priority=int(tgt.priority),
-                        active=tgt.clearance_status == "active",
+                        active=published and tgt.clearance_status == "active",
+                        provenance_status="auto",
                     )
                 )
 
-            # Replace any prior structure asset for this model, then add the new one.
-            await db.execute(
-                delete(WarehouseAsset).where(
-                    WarehouseAsset.model_id == int(model_id),
-                    WarehouseAsset.type == STRUCTURE_ASSET_TYPE,
-                )
-            )
             db.add(
                 WarehouseAsset(
                     model_id=int(model_id),
+                    coordinate_frame_id=int(coordinate_frame_id),
+                    frame_id="warehouse_map",
                     type=STRUCTURE_ASSET_TYPE,
                     url=str(summary_path) if summary_path else f"memory://structure/{model_id}",
+                    checksum=hashlib.sha256(
+                        json.dumps(result.summary, sort_keys=True, separators=(",", ":")).encode()
+                    ).hexdigest(),
                     meta_data={
                         "warehouse_map_id": int(warehouse_map_id),
+                        "coordinate_frame_id": int(coordinate_frame_id),
+                        "artifact_set_id": int(artifact_set.id),
+                        "input_checksum": lineage_checksum,
+                        "algorithm_version": STRUCTURE_EXTRACTION_ALGORITHM_VERSION,
+                        "layout_version_id": int(layout.id),
+                        "layout_published": published,
                         "client_flight_id": client_flight_id,
                         "generated_at": datetime.now(UTC).isoformat(),
                         "summary": result.summary,
@@ -323,6 +498,9 @@ async def _persist_result(
         "aisles": int(result.summary.get("counts", {}).get("aisles", 0)),
         "racks": int(result.summary.get("counts", {}).get("racks", 0)),
         "status": quality_status,
+        "artifact_set_checksum": lineage_checksum,
+        "layout_version_id": int(layout.id),
+        "layout_published": published,
         "quality_status": quality_status,
         "quality_reasons": list(quality.get("reasons") or []),
         "confidence": quality.get("confidence"),
@@ -340,6 +518,20 @@ async def extract_and_persist_structure(
     record_extraction_running(warehouse_map_id=int(warehouse_map_id))
     effective = (params or StructureExtractionParams()).sanitized()
     try:
+        async with Session() as db:
+            coordinate_frame = (
+                await db.execute(
+                    select(WarehouseCoordinateFrame)
+                    .where(
+                        WarehouseCoordinateFrame.warehouse_map_id == int(warehouse_map_id),
+                        WarehouseCoordinateFrame.status == "locked",
+                    )
+                    .order_by(WarehouseCoordinateFrame.version.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+        if coordinate_frame is None:
+            raise RuntimeError("Structure extraction requires a locked warehouse coordinate frame")
         readiness = await refresh_structure_input_readiness(timeout_s=8.0)
         live_occupancy = occupancy_grid_from_ros_yaml(readiness.occupancy_message)
         logger.info(
@@ -351,6 +543,7 @@ async def extract_and_persist_structure(
             client_flight_id,
             params=effective,
             occupancy_grid=live_occupancy,
+            odom_to_warehouse_map_transform=coordinate_frame.transform_json,
         )
         _attach_manifest_hints(result, client_flight_id)
         result.summary["diagnostics"] = {
@@ -358,9 +551,7 @@ async def extract_and_persist_structure(
             "occupancy_snapshot_source": (
                 "live_ros" if live_occupancy is not None else "saved_or_geometry_fallback"
             ),
-            "worker_ros_env_ok": bool(
-                readiness.esdf_available or readiness.occupancy_available
-            ),
+            "worker_ros_env_ok": bool(readiness.esdf_available or readiness.occupancy_available),
         }
         _attach_quality_gate(result)
         persisted = await _persist_result(
@@ -368,6 +559,7 @@ async def extract_and_persist_structure(
             model_id=model_id,
             client_flight_id=client_flight_id,
             result=result,
+            coordinate_frame_id=int(coordinate_frame.id),
         )
         record_extraction_ready(
             warehouse_map_id=int(warehouse_map_id),
@@ -452,32 +644,22 @@ def ensure_structure_quality_summary(
     # status below instead of trusting that raw number.
     has_explicit_active_count = "active_targets" in counts
     target_count = int(
-        counts.get("active_targets")
-        if has_explicit_active_count
-        else counts.get("targets") or 0
+        counts.get("active_targets") if has_explicit_active_count else counts.get("targets") or 0
     )
     rack_count = int(counts.get("racks") or 0)
     aisle_count = int(counts.get("aisles") or 0)
     rejected = int(counts.get("rejected_clearance") or rejected_clearance or 0)
     if candidate_count <= 0:
         candidate_count = target_count + rejected
-    rejection_ratio = (
-        float(rejected) / float(candidate_count) if candidate_count > 0 else 0.0
-    )
+    rejection_ratio = float(rejected) / float(candidate_count) if candidate_count > 0 else 0.0
     targets_per_rack = (
-        float(candidate_count) / float(rack_count)
-        if rack_count > 0
-        else float(candidate_count)
+        float(candidate_count) / float(rack_count) if rack_count > 0 else float(candidate_count)
     )
     chunk_counts = (
-        map_quality.get("chunk_counts")
-        if isinstance(map_quality.get("chunk_counts"), dict)
-        else {}
+        map_quality.get("chunk_counts") if isinstance(map_quality.get("chunk_counts"), dict) else {}
     )
     point_counts = (
-        map_quality.get("point_counts")
-        if isinstance(map_quality.get("point_counts"), dict)
-        else {}
+        map_quality.get("point_counts") if isinstance(map_quality.get("point_counts"), dict) else {}
     )
     source_quality = (
         map_quality.get("source_quality")
@@ -495,12 +677,13 @@ def ensure_structure_quality_summary(
         reasons.append("clearance_rejection_ratio_high")
     diagnostics = summary.get("diagnostics")
     diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
-    occupancy_available = bool(diagnostics.get("occupancy_available")) or int(
-        chunk_counts.get("nvblox_occupancy") or 0
-    ) > 0
-    esdf_available = bool(diagnostics.get("esdf_available")) or int(
-        chunk_counts.get("nvblox_esdf") or 0
-    ) > 0
+    occupancy_available = (
+        bool(diagnostics.get("occupancy_available"))
+        or int(chunk_counts.get("nvblox_occupancy") or 0) > 0
+    )
+    esdf_available = (
+        bool(diagnostics.get("esdf_available")) or int(chunk_counts.get("nvblox_esdf") or 0) > 0
+    )
     if not occupancy_available:
         reasons.append("missing_occupancy_grid")
     if 0 < int(point_counts.get("nvblox_esdf") or 0) < 5_000:
@@ -576,20 +759,17 @@ async def resolve_latest_model_flight(
     from backend.modules.warehouse.models import WarehouseMappingJob
 
     rows = (
-        (
-            await db.execute(
-                select(WarehouseMappingJob, WarehouseModel)
-                .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)
-                .where(
-                    WarehouseMappingJob.warehouse_map_id == int(warehouse_map_id),
-                    WarehouseModel.status == "ready",
-                )
-                .order_by(WarehouseMappingJob.id.desc())
-                .limit(10)
+        await db.execute(
+            select(WarehouseMappingJob, WarehouseModel)
+            .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)
+            .where(
+                WarehouseMappingJob.warehouse_map_id == int(warehouse_map_id),
+                WarehouseModel.status == "ready",
             )
+            .order_by(WarehouseMappingJob.id.desc())
+            .limit(10)
         )
-        .all()
-    )
+    ).all()
     for job, model in rows:
         params = job.params if isinstance(job.params, dict) else {}
         capture = params.get("capture_result")

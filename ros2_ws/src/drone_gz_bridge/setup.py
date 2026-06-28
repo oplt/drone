@@ -21,9 +21,13 @@ setup(
     description="Gazebo to ROS 2 bridge configuration for warehouse drone mapping.",
     license="MIT",
     tests_require=["pytest"],
-    entry_points={
+        entry_points={
         "console_scripts": [
             "odom_to_tf = drone_gz_bridge.odom_to_tf:main",
+            "map_to_odom_tf = drone_gz_bridge.map_to_odom_tf:main",
+            "slam_localization_bridge = drone_gz_bridge.slam_localization_bridge:main",
+            "calibration_guard = drone_gz_bridge.calibration_guard:main",
+            "gimbal_to_tf = drone_gz_bridge.gimbal_to_tf:main",
         ],
     },
 )

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listWarehouseScanTargets,
+  fetchActiveWarehouseCoordinateFrame,
+  type WarehouseCoordinateFrame,
   type WarehouseLocalPose,
   type WarehouseScanTarget,
 } from "../api/warehouseInspectionApi";
@@ -14,6 +16,8 @@ export type WarehouseMapPlacementViewerProps = {
   draftTarget: MapPlacementPoint | null;
   draftScanPose: WarehouseLocalPose | null;
   onPick: (point: MapPlacementPoint) => void;
+  coordinateFrame: WarehouseCoordinateFrame | null;
+  pickBlockReason: string | null;
 };
 
 export type WarehouseMapPlacementPanelProps = {
@@ -31,6 +35,8 @@ export type WarehouseMapPlacementPanelProps = {
   setStandoffM: (value: number) => void;
   refreshTargets: () => Promise<void>;
   clearDraft: () => void;
+  pickBlockReason: string | null;
+  coordinateFrame: WarehouseCoordinateFrame | null;
 };
 
 export function useWarehouseMapPlacement({
@@ -46,6 +52,8 @@ export function useWarehouseMapPlacement({
   const [placementZ, setPlacementZ] = useState(1.6);
   const [targets, setTargets] = useState<WarehouseScanTarget[]>([]);
   const [targetsLoading, setTargetsLoading] = useState(false);
+  const [coordinateFrame, setCoordinateFrame] = useState<WarehouseCoordinateFrame | null>(null);
+  const [coordinateFrameLoading, setCoordinateFrameLoading] = useState(false);
   const {
     shelfFacing,
     standoffM,
@@ -93,6 +101,53 @@ export function useWarehouseMapPlacement({
   }, [refreshTargets]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (warehouseMapId == null) {
+      setCoordinateFrame(null);
+      return;
+    }
+    setCoordinateFrameLoading(true);
+    void fetchActiveWarehouseCoordinateFrame(warehouseMapId, token)
+      .then((frame) => {
+        if (!cancelled) setCoordinateFrame(frame);
+      })
+      .catch(() => {
+        if (!cancelled) setCoordinateFrame(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCoordinateFrameLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, warehouseMapId]);
+
+  const pickBlockReason = coordinateFrameLoading
+    ? "Loading coordinate-frame revision."
+    : coordinateFrame == null
+      ? "Lock warehouse localization before placing targets."
+      : null;
+
+  const updatePickMode = useCallback(
+    (enabled: boolean) => {
+      if (enabled && pickBlockReason) {
+        setPickMode(false);
+        onError(pickBlockReason);
+        return;
+      }
+      setPickMode(enabled);
+    },
+    [onError, pickBlockReason],
+  );
+
+  useEffect(() => {
+    if (pickBlockReason) {
+      setPickMode(false);
+      clearDraft();
+    }
+  }, [clearDraft, pickBlockReason]);
+
+  useEffect(() => {
     clearDraft();
     setPickMode(false);
   }, [clearDraft, warehouseMapId]);
@@ -109,6 +164,8 @@ export function useWarehouseMapPlacement({
       draftTarget,
       draftScanPose,
       onPick: handlePick,
+      coordinateFrame,
+      pickBlockReason,
     }),
     [
       draftScanPose,
@@ -117,6 +174,8 @@ export function useWarehouseMapPlacement({
       pickMode,
       placementZ,
       targets,
+      coordinateFrame,
+      pickBlockReason,
     ],
   );
 
@@ -130,12 +189,14 @@ export function useWarehouseMapPlacement({
       draftScanPose,
       targets,
       targetsLoading,
-      setPickMode,
+      setPickMode: updatePickMode,
       setPlacementZ,
       setShelfFacing,
       setStandoffM,
       refreshTargets,
       clearDraft,
+      pickBlockReason,
+      coordinateFrame,
     }),
     [
       clearDraft,
@@ -150,6 +211,9 @@ export function useWarehouseMapPlacement({
       standoffM,
       targets,
       targetsLoading,
+      pickBlockReason,
+      coordinateFrame,
+      updatePickMode,
     ],
   );
 

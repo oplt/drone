@@ -13,7 +13,7 @@ ros2 topic hz /warehouse/front/rgbd/points
 ros2 topic hz /nvblox_node/color_layer
 ros2 topic hz /nvblox_node/static_esdf_pointcloud
 ros2 topic hz /nvblox_node/mesh
-ros2 run tf2_ros tf2_echo odom iris_with_standoffs/base_link
+ros2 run tf2_ros tf2_echo odom base_link
 ros2 run tf2_tools view_frames
 ```
 

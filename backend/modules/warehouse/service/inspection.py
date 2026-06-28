@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import math
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -64,7 +67,9 @@ def _target_id(target: WarehouseScanTarget) -> int:
 
 
 def _target_scan_timeout_s(target: WarehouseScanTarget) -> float:
-    return _safe_float(getattr(target, "scan_timeout_s", 10.0), default=10.0, minimum=_MIN_TIMEOUT_S)
+    return _safe_float(
+        getattr(target, "scan_timeout_s", 10.0), default=10.0, minimum=_MIN_TIMEOUT_S
+    )
 
 
 def _target_hover_time_s(target: WarehouseScanTarget) -> float:
@@ -214,27 +219,24 @@ def build_inspection_waypoints(
     )
 
     for target in targets:
-        pose = _pose_from_json(target.scan_pose_local_json)
         hover_time_s = default_hover if default_hover is not None else _target_hover_time_s(target)
-        scan_timeout_s = default_timeout if default_timeout is not None else _target_scan_timeout_s(target)
+        scan_timeout_s = (
+            default_timeout if default_timeout is not None else _target_scan_timeout_s(target)
+        )
         base_metadata = _metadata_for_target(target)
 
-        for purpose, hover in (
-            ("navigate_to_scan_pose", 0.0),
-            ("hover_for_scan", hover_time_s),
-            ("trigger_barcode_scan", 0.0),
-            ("record_result", 0.0),
-        ):
-            waypoints.append(
-                WarehouseInspectionWaypoint(
-                    target_id=_target_id(target),
-                    purpose=purpose,
-                    pose=pose,
-                    hover_time_s=hover,
-                    scan_timeout_s=scan_timeout_s,
-                    metadata=dict(base_metadata),
-                )
+        from backend.modules.warehouse.service.inspection_planner import (
+            semantic_target_waypoints,
+        )
+
+        waypoints.extend(
+            semantic_target_waypoints(
+                target,
+                hover_time_s=hover_time_s,
+                scan_timeout_s=scan_timeout_s,
+                metadata=base_metadata,
             )
+        )
     return waypoints
 
 
@@ -287,12 +289,62 @@ async def execute_inspection_mission(
     navigator: LocalNavigationAdapter,
     scanner: WarehouseScanner | None = None,
     speed_mps: float | None = None,
+    runtime_gate: Callable[[], Awaitable[str | None]] | None = None,
+    localization_method: str | None = None,
+    replanner: Callable[[WarehouseScanTarget, int], Awaitable[LocalPose | None]] | None = None,
 ) -> None:
+    from backend.modules.warehouse.service.inspection_execution_gate import localization_runtime_gate
+    from backend.modules.warehouse.service.inspection_execution_policy import (
+        InspectionExecutionPolicy,
+        execution_action,
+    )
+
+    policy = InspectionExecutionPolicy(**dict(mission.runtime_policy_json or {}))
+    if mission.approval_status != "approved":
+        raise RuntimeError("Inspection mission preview is not approved")
+    checksum = hashlib.sha256(
+        json.dumps(
+            mission.plan_json or {}, sort_keys=True, separators=(",", ":"), default=str
+        ).encode()
+    ).hexdigest()
+    if not mission.plan_checksum or checksum != mission.plan_checksum:
+        raise RuntimeError("Inspection mission plan changed after approval")
+    from backend.modules.warehouse.service.mission_revisions import verify_mission_revision_pins
+
+    await verify_mission_revision_pins(db, mission)
+    frame_id = getattr(mission, "coordinate_frame_id", None)
+    if frame_id is None:
+        raise RuntimeError("Inspection mission has no locked coordinate-frame revision")
+    mismatched = [
+        _target_id(target)
+        for target in targets
+        if getattr(target, "coordinate_frame_id", None) != frame_id
+    ]
+    if mismatched:
+        raise RuntimeError(f"Inspection targets use a different coordinate revision: {mismatched}")
+    layout_id = getattr(mission, "layout_version_id", None)
+    if layout_id is None:
+        raise RuntimeError("Inspection mission has no locked layout revision")
+    wrong_layout = [
+        _target_id(target)
+        for target in targets
+        if getattr(target, "layout_version_id", None) != layout_id
+    ]
+    if wrong_layout:
+        raise RuntimeError(f"Inspection targets use a different layout revision: {wrong_layout}")
     scanner = scanner or MockWarehouseScanner()
     mission_id = _safe_int(getattr(mission, "id", 0), default=0)
     mission.status = "running"
     await db.flush()
     logger.info("warehouse_inspection_mission_started", extra={"mission_id": mission_id})
+
+    async def _runtime_gate() -> str | None:
+        reason = await localization_runtime_gate(localization_method)
+        if reason:
+            return reason
+        if runtime_gate is None:
+            return None
+        return await runtime_gate()
 
     critical_failure = False
     try:
@@ -300,6 +352,19 @@ async def execute_inspection_mission(
             target_id = _target_id(target)
             pose_schema: WarehouseLocalPose | None = None
             try:
+                reason = await _runtime_gate()
+                if reason:
+                    action = execution_action(reason=reason, replan_attempts=0, policy=policy)
+                    if action == "abort_land":
+                        mission.status = "aborted"
+                        await navigator.safe_land()
+                        await db.flush()
+                        return
+                    if action == "return_to_dock":
+                        mission.status = "aborted"
+                        await navigator.land_on_dock(None)
+                        await db.flush()
+                        return
                 pose_schema = _pose_from_json(target.scan_pose_local_json)
                 pose = _local_pose_from_schema(pose_schema)
                 scan_timeout_s = _target_scan_timeout_s(target)
@@ -309,11 +374,26 @@ async def execute_inspection_mission(
                     "warehouse_inspection_target_navigation_started",
                     extra={"mission_id": mission_id, "target_id": target_id},
                 )
-                await navigator.goto_local_pose(
-                    pose,
-                    speed_mps=speed_mps,
-                    timeout_s=max(10.0, scan_timeout_s),
-                )
+                attempts = 0
+                while True:
+                    try:
+                        await navigator.goto_local_pose(
+                            pose,
+                            speed_mps=speed_mps,
+                            timeout_s=max(10.0, scan_timeout_s),
+                        )
+                        break
+                    except Exception:
+                        action = execution_action(
+                            reason="path_blocked", replan_attempts=attempts, policy=policy
+                        )
+                        if action != "replan" or replanner is None:
+                            raise
+                        attempts += 1
+                        replacement = await replanner(target, attempts)
+                        if replacement is None:
+                            raise RuntimeError("Inspection replanner found no safe path") from None
+                        pose = replacement
                 logger.info(
                     "warehouse_inspection_target_reached",
                     extra={"mission_id": mission_id, "target_id": target_id},

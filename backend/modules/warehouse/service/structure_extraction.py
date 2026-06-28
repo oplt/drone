@@ -11,9 +11,8 @@ Design goals
 * Synchronous + side-effect free: this module only computes. Persistence and
   enqueueing live in the Celery task / API layer so it stays re-runnable and unit
   testable.
-* Coordinates stay in the ``warehouse_map`` frame (== ``odom`` from the same
-  dock), which is exactly the frame the inspection waypoint builder consumes, so
-  detected points are directly flyable.
+* Source chunks are ``odom`` data. A locked localization transform is required
+  and applied before extraction; outputs are stable ``warehouse_map`` data.
 
 Pipeline (see prompt.txt sections 2 & 5):
     P0  load + merge + voxel-downsample flight chunks
@@ -43,6 +42,7 @@ from backend.modules.warehouse.schemas import (
     WarehouseLocalPoint,
     WarehouseShelfNormal,
 )
+from backend.modules.warehouse.service.coordinate_frames import transform_odom_points
 from backend.modules.warehouse.service.inspection import compute_scan_pose
 from backend.modules.warehouse.service.live_map_storage import (
     warehouse_live_map_chunk_storage,
@@ -540,18 +540,13 @@ def extract_structure(
     target_counts = {
         "candidate": len(result.targets),
         "active": sum(target.clearance_status == "active" for target in result.targets),
-        "needs_review": sum(
-            target.clearance_status == "needs_review" for target in result.targets
-        ),
+        "needs_review": sum(target.clearance_status == "needs_review" for target in result.targets),
         "rejected": sum(target.clearance_status == "rejected" for target in result.targets),
     }
     result.summary = {
         "status": "ready" if target_counts["active"] > 0 else "degraded",
-        "coordinate_setup_status": (
-            "active" if target_counts["active"] > 0 else "draft"
-        ),
-        "manual_review_required": target_counts["needs_review"] > 0
-        or target_counts["active"] == 0,
+        "coordinate_setup_status": ("active" if target_counts["active"] > 0 else "draft"),
+        "manual_review_required": target_counts["needs_review"] > 0 or target_counts["active"] == 0,
         "frame_id": WAREHOUSE_MAP_FRAME_ID,
         "floor_z": round(floor_z, 3),
         "axis_deg": round(math.degrees(theta), 2),
@@ -798,9 +793,7 @@ def _target_summary(target: GeneratedTarget) -> dict[str, Any]:
         "shelf_level": target.shelf_level,
         "bin_code": target.bin_code,
         "status": target.clearance_status,
-        "clearance_m": (
-            round(target.clearance_m, 3) if target.clearance_m is not None else None
-        ),
+        "clearance_m": (round(target.clearance_m, 3) if target.clearance_m is not None else None),
         "clearance_source": target.clearance_source,
         "target_point": dict(target.target_point),
         "scan_pose": dict(target.scan_pose),
@@ -915,11 +908,18 @@ def extract_structure_from_flight(
     *,
     params: StructureExtractionParams,
     occupancy_grid: OccupancyGrid | None = None,
+    odom_to_warehouse_map_transform: dict[str, Any] | None = None,
 ) -> StructureResult:
     """Convenience entry point: load the flight cloud then run extraction."""
     params = params.sanitized()
     cloud = load_flight_cloud(client_flight_id, params=params)
-    occupancy_grid = occupancy_grid or load_flight_occupancy_grid(client_flight_id)
+    if odom_to_warehouse_map_transform is None:
+        raise StructureExtractionError("Locked warehouse_map -> odom localization is required")
+    cloud = transform_odom_points(cloud, odom_to_warehouse_map_transform).astype(np.float32)
+    # OccupancyGrid currently has axis-aligned origin only (no origin yaw). It
+    # cannot be safely carried across an arbitrary localization rotation. Use
+    # transformed point-cloud clearance until the grid contract supports SE(2).
+    occupancy_grid = None
     logger.info(
         "structure_extraction loaded flight=%s points=%s voxel=%.3f occupancy=%s",
         client_flight_id,
@@ -928,6 +928,8 @@ def extract_structure_from_flight(
         occupancy_grid is not None,
     )
     result = extract_structure(cloud, params=params, occupancy_grid=occupancy_grid)
+    result.summary["source_frame_id"] = "odom"
+    result.summary["localization_applied"] = True
     clearance = result.summary.get("clearance")
     if isinstance(clearance, dict):
         if occupancy_grid is not None:

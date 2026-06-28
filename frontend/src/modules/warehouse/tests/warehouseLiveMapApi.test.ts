@@ -21,7 +21,7 @@ describe("warehouse live map API", () => {
       timestamp: "2026-06-01T12:00:00Z",
       frame_id: "odom",
       pose: { x_m: 1, y_m: 2, z_m: 1, frame_id: "odom" },
-      changed_chunks: [{ id: "chunk-1", kind: "mesh", sequence: 1 }],
+      changed_chunks: [{ id: "chunk-1", kind: "mesh", sequence: 1, frame_id: "odom" }],
       removed_chunk_ids: [],
       scan_path_sample: [],
       health: {
@@ -37,6 +37,33 @@ describe("warehouse live map API", () => {
     expect(isWarehouseLiveMapUpdate(update)).toBe(true);
   });
 
+  it("rejects missing and mixed frame provenance", () => {
+    const base = {
+      type: "live_map_update" as const,
+      flight_id: "flight-1",
+      timestamp: "2026-06-01T12:00:00Z",
+      frame_id: "odom",
+      pose: null,
+      removed_chunk_ids: [],
+      scan_path_sample: [],
+      health: {},
+    };
+    expect(
+      isWarehouseLiveMapUpdate({
+        ...base,
+        changed_chunks: [{ id: "missing", kind: "mesh", sequence: 1 }],
+      }),
+    ).toBe(false);
+    expect(
+      isWarehouseLiveMapUpdate({
+        ...base,
+        changed_chunks: [
+          { id: "mixed", kind: "mesh", sequence: 1, frame_id: "map" },
+        ],
+      }),
+    ).toBe(false);
+  });
+
   it("applies snapshots and removes stale chunks", () => {
     const snapshot: WarehouseLiveMapSnapshot = {
       type: "live_map_snapshot",
@@ -49,7 +76,7 @@ describe("warehouse live map API", () => {
           timestamp: "2026-06-01T12:00:00Z",
           frame_id: "odom",
           pose: { x_m: 0, y_m: 0, z_m: 0, frame_id: "odom" },
-          changed_chunks: [{ id: "a", kind: "mesh", sequence: 1 }],
+          changed_chunks: [{ id: "a", kind: "mesh", sequence: 1, frame_id: "odom" }],
           removed_chunk_ids: [],
           scan_path_sample: [],
           health: {
@@ -67,7 +94,9 @@ describe("warehouse live map API", () => {
           timestamp: "2026-06-01T12:00:01Z",
           frame_id: "odom",
           pose: { x_m: 1, y_m: 0, z_m: 0, frame_id: "odom" },
-          changed_chunks: [{ id: "b", kind: "point_cloud", sequence: 2 }],
+          changed_chunks: [
+            { id: "b", kind: "point_cloud", sequence: 2, frame_id: "odom" },
+          ],
           removed_chunk_ids: ["a"],
           scan_path_sample: [{ x_m: 1, y_m: 0, z_m: 0, frame_id: "odom" }],
           health: {

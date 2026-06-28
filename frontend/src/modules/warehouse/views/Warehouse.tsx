@@ -70,6 +70,7 @@ import type {
   WarehouseSensorRig,
   WarehouseSensorRigHealth,
 } from "../types";
+import { DEFAULT_WAREHOUSE_SENSOR_EXTRINSICS } from "../types";
 import { WarehouseDrawerSection } from "../components/WarehouseDrawerSection";
 import { WarehouseDockPanel } from "../components/WarehouseDockPanel";
 import { WarehouseFlightReadinessRibbon } from "../components/WarehouseFlightReadinessRibbon";
@@ -281,13 +282,7 @@ export default function WarehousePage() {
   );
 
   const liveVoxelMap = useWarehouseLiveVoxelMap(activeFlightId, {
-    enabled: Boolean(
-      activeFlightId &&
-      !viewingScanReplay &&
-      !warehouseSetupDrawer.open &&
-      !warehouseChecksDrawer.open &&
-      !warehouseMissionDrawer.open,
-    ),
+    enabled: Boolean(activeFlightId && !viewingScanReplay),
     token: authToken,
   });
 
@@ -585,6 +580,7 @@ export default function WarehousePage() {
             stereo_baseline_m: baseline,
             intrinsics_url: sensorRigForm.intrinsics_url.trim() || null,
             extrinsics_url: sensorRigForm.extrinsics_url.trim() || null,
+            extrinsics_json: DEFAULT_WAREHOUSE_SENSOR_EXTRINSICS,
             firmware_version: sensorRigForm.firmware_version.trim() || null,
             imu_transform_json: {},
           },
@@ -592,26 +588,6 @@ export default function WarehousePage() {
         );
         await loadSensorRigs();
         setSelectedSensorRigId(created.id);
-        if (created.calibration_status !== "valid") {
-          await updateWarehouseSensorRigCalibration(
-            created.id,
-            {
-              calibration_status: "valid",
-              calibration_hash:
-                created.calibration_hash ?? `manual-${Date.now()}`,
-              intrinsics_url: created.intrinsics_url,
-              extrinsics_url: created.extrinsics_url,
-              imu_transform_json: created.imu_transform_json,
-              calibration_meta: {
-                ...created.calibration_meta,
-                source: "operator_create",
-                updated_at: new Date().toISOString(),
-              },
-            },
-            token,
-          );
-          await loadSensorRigs();
-        }
         await loadSensorRigHealth(created.id);
         return true;
       } catch (error) {
@@ -660,9 +636,9 @@ export default function WarehousePage() {
         selectedSensorRigId,
         {
           calibration_status: "valid",
-          calibration_hash: rig.calibration_hash ?? `manual-${Date.now()}`,
           intrinsics_url: rig.intrinsics_url,
           extrinsics_url: rig.extrinsics_url,
+          extrinsics_json: rig.extrinsics_json,
           imu_transform_json: rig.imu_transform_json,
           calibration_meta: {
             ...rig.calibration_meta,
@@ -1269,6 +1245,7 @@ export default function WarehousePage() {
                     onConfirm: () => void handleDeleteWarehouseMap(),
                   })
                 }
+                getToken={getToken}
               />
             </WarehouseDrawerSection>
           )}

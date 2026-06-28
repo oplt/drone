@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   computeWarehouseScanPose,
+  fetchActiveWarehouseCoordinateFrame,
   listWarehouseScanTargets,
 } from "../api/warehouseInspectionApi";
 import { useWarehouseMapPlacement } from "../hooks/useWarehouseMapPlacement";
 
 vi.mock("../api/warehouseInspectionApi", () => ({
   computeWarehouseScanPose: vi.fn(),
+  fetchActiveWarehouseCoordinateFrame: vi.fn(),
   listWarehouseScanTargets: vi.fn(),
 }));
 
@@ -29,6 +31,27 @@ describe("useWarehouseMapPlacement", () => {
         z_m: 3,
         yaw_deg: 0,
       },
+    });
+    vi.mocked(fetchActiveWarehouseCoordinateFrame).mockResolvedValue({
+      id: 42,
+      warehouse_map_id: 1,
+      version: 3,
+      parent_frame_id: "warehouse_map",
+      child_frame_id: "odom",
+      units: "m",
+      axis_convention: "ENU",
+      handedness: "right",
+      transform: {
+        translation: { x: 10, y: 20, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      },
+      source: "test",
+      status: "locked",
+      confidence: 1,
+      covariance: [],
+      created_at: "2026-01-01T00:00:00Z",
+      locked_at: "2026-01-01T00:00:00Z",
+      superseded_at: null,
     });
   });
 

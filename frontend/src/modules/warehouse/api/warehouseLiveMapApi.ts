@@ -99,7 +99,7 @@ export type WarehouseLiveMapUpdate = {
   flight_id: string;
   timestamp: string;
   frame_id: string;
-  pose: WarehouseLivePose;
+  pose?: WarehouseLivePose | null;
   changed_chunks: WarehouseLiveVoxelChunk[];
   removed_chunk_ids: string[];
   scan_path_sample: WarehouseLivePose[];
@@ -134,13 +134,24 @@ export function isWarehouseLiveMapUpdate(
 ): value is WarehouseLiveMapUpdate {
   if (!value || typeof value !== "object") return false;
   const update = value as Partial<WarehouseLiveMapUpdate>;
+  const frameId = update.frame_id;
+  if (typeof frameId !== "string" || frameId.trim().length === 0) return false;
+  const poseMatches =
+    update.pose == null || update.pose.frame_id === frameId;
+  const chunksMatch =
+    Array.isArray(update.changed_chunks) &&
+    update.changed_chunks.every((chunk) => chunk.frame_id === frameId);
+  const pathMatches =
+    Array.isArray(update.scan_path_sample) &&
+    update.scan_path_sample.every((pose) => pose.frame_id === frameId);
   return (
     update.type === "live_map_update" &&
     typeof update.flight_id === "string" &&
     typeof update.timestamp === "string" &&
-    Array.isArray(update.changed_chunks) &&
+    chunksMatch &&
     Array.isArray(update.removed_chunk_ids) &&
-    Array.isArray(update.scan_path_sample)
+    pathMatches &&
+    poseMatches
   );
 }
 
@@ -149,10 +160,15 @@ export function isWarehouseLiveMapSnapshot(
 ): value is WarehouseLiveMapSnapshot {
   if (!value || typeof value !== "object") return false;
   const snapshot = value as Partial<WarehouseLiveMapSnapshot>;
+  const updatesValid =
+    Array.isArray(snapshot.updates) &&
+    snapshot.updates.every(isWarehouseLiveMapUpdate);
+  const frames = new Set(snapshot.updates?.map((update) => update.frame_id) ?? []);
   return (
     snapshot.type === "live_map_snapshot" &&
     typeof snapshot.flight_id === "string" &&
-    Array.isArray(snapshot.updates)
+    updatesValid &&
+    frames.size <= 1
   );
 }
 

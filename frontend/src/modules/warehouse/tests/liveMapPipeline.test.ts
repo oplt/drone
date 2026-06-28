@@ -17,8 +17,9 @@ import {
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
 import { filterChunksForDownload } from "../config/liveMapConfig";
-import { DEFAULT_LAYER_VISIBILITY } from "../utils/liveMapLayerUtils";
 import {
+  DEFAULT_LAYER_VISIBILITY,
+  MAP_INSPECTION_LAYER_KEYS,
   defaultLayerVisibilityForChunks,
   hasColoredMapLayers,
   inferLayerKey,
@@ -548,6 +549,10 @@ describe("filterChunksForDownload", () => {
 });
 
 describe("defaultLayerVisibilityForChunks", () => {
+  it("keeps diagnostic ESDF out of the primary capture controls", () => {
+    expect(MAP_INSPECTION_LAYER_KEYS).not.toContain("nvbloxEsdf");
+  });
+
   it("prefers colored layers when rgbd chunks exist", () => {
     const chunks: WarehouseLiveVoxelChunk[] = [
       {

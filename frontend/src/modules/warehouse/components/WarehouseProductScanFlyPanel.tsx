@@ -19,7 +19,9 @@ import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import {
   createWarehouseInspectionMission,
+  approveWarehouseInspectionMission,
   runWarehouseInspectionMissionMock,
+  type WarehouseInspectionMission,
   type WarehouseInspectionResult,
   type WarehouseScanTarget,
 } from "../api/warehouseInspectionApi";
@@ -43,6 +45,9 @@ export function WarehouseProductScanFlyPanel({
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [results, setResults] = useState<WarehouseInspectionResult[]>([]);
+  const [preview, setPreview] = useState<WarehouseInspectionMission | null>(
+    null,
+  );
   const [scanMode, setScanMode] = useState<
     "barcode" | "product_photo" | "visual_check" | "mixed"
   >("barcode");
@@ -73,13 +78,10 @@ export function WarehouseProductScanFlyPanel({
         },
         token,
       );
-      const missionResults = await runWarehouseInspectionMissionMock(
-        mission.id,
-        token,
-      );
-      setResults(missionResults);
+      setPreview(mission);
+      setResults([]);
       setMessage(
-        `Mission #${mission.id} planned with ${mission.waypoints.length} local waypoints.`,
+        `Mission #${mission.id} preview ready with ${mission.waypoints.length} semantic stages.`,
       );
     } catch (error) {
       onError(
@@ -91,6 +93,23 @@ export function WarehouseProductScanFlyPanel({
       setRunning(false);
     }
   }, [onError, scanMode, selectedIds, token, warehouseMapId]);
+
+  const handleApproveAndRun = useCallback(async () => {
+    if (!preview) return;
+    setRunning(true);
+    try {
+      const approved = await approveWarehouseInspectionMission(preview, token);
+      setPreview(approved);
+      setResults(await runWarehouseInspectionMissionMock(approved.id, token));
+      setMessage(`Mission #${approved.id} approved and executed.`);
+    } catch (error) {
+      onError(
+        error instanceof Error ? error.message : "Mission execution failed.",
+      );
+    } finally {
+      setRunning(false);
+    }
+  }, [onError, preview, token]);
 
   if (warehouseMapId == null) {
     return (
@@ -104,8 +123,8 @@ export function WarehouseProductScanFlyPanel({
     <Stack spacing={2}>
       {message ? <Alert severity="success">{message}</Alert> : null}
       <Typography variant="body2" color="text.secondary">
-        Choose saved bin targets, set scan mode, then create a warehouse product scan
-        mission. Targets are defined under Coordinate Setup on the 3D map.
+        Choose saved bin targets, set scan mode, then create a warehouse product
+        scan mission. Targets are defined under Coordinate Setup on the 3D map.
       </Typography>
 
       <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -134,7 +153,8 @@ export function WarehouseProductScanFlyPanel({
             <TableRow>
               <TableCell colSpan={4}>
                 <Typography variant="body2" color="text.secondary">
-                  No targets saved. Add coordinates on the 3D map Coordinate Setup tab.
+                  No targets saved. Add coordinates on the 3D map Coordinate
+                  Setup tab.
                 </Typography>
               </TableCell>
             </TableRow>
@@ -206,9 +226,28 @@ export function WarehouseProductScanFlyPanel({
           onClick={() => void handleRunMission()}
           disabled={running || selectedIds.length === 0}
         >
-          Create Warehouse Product Scan
+          Create Mission Preview
         </Button>
       </Stack>
+
+      {preview && preview.approval_status === "pending" ? (
+        <Alert
+          severity="warning"
+          action={
+            <Button
+              color="inherit"
+              disabled={running}
+              onClick={() => void handleApproveAndRun()}
+            >
+              Approve and execute
+            </Button>
+          }
+        >
+          Review mission #{preview.id}: {preview.target_ids.length} targets,{" "}
+          {preview.waypoints.length} approach/hover/scan/exit stages. Execution
+          revalidates frame, layout, map artifacts, TF, and runtime policy.
+        </Alert>
+      ) : null}
 
       {results.length > 0 ? (
         <Box

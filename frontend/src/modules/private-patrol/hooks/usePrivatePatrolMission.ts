@@ -19,6 +19,7 @@ import type { TerraDrawEditorMode } from "../../maps";
 import type { MissionMapEngine } from "../../maps";
 import {
   DEFAULT_PATROL_GRID_PARAMS,
+  effectivePatrolRepeatIntervalMinutes,
   type PatrolGridParams,
   type PrivatePatrolMissionStatus,
   type PatrolPreviewStats,
@@ -281,10 +282,7 @@ export function usePrivatePatrolMission({
     }): StartMissionArgs => {
       const eventEnabled = gridParams.event_triggered_enabled;
       const taskType = eventEnabled ? "event_triggered_patrol" : gridParams.task_type;
-      const repeatIntervalMinutes = Math.max(
-        0,
-        Math.min(1440, Math.round(gridParams.repeat_interval_minutes)),
-      );
+      const repeatIntervalMinutes = effectivePatrolRepeatIntervalMinutes(gridParams);
       const missionLabel =
         taskType === "event_triggered_patrol"
           ? "Event Triggered Patrol"
@@ -413,7 +411,7 @@ export function usePrivatePatrolMission({
           repeatMonitorRef.current = {
             args: { token, payload, missionLabel, altToUse, repeatIntervalMinutes },
             flightId: data.flight_id,
-            observedActive: false,
+            observedActive: true,
             finalStateChecked: false,
           };
           setRepeatWaitingForCompletion(true);
@@ -469,16 +467,17 @@ export function usePrivatePatrolMission({
     if (!monitor || repeatStartTimerRef.current != null) return;
 
     const lifecycle = missionStatus?.mission_lifecycle ?? null;
-    const statusFlightId = lifecycle?.flight_id ?? missionStatus?.flight_id ?? null;
+    const lifecycleFlightId = lifecycle?.flight_id ?? null;
+    const statusFlightId = lifecycleFlightId ?? missionStatus?.flight_id ?? null;
     const lifecycleState = lifecycle?.state ?? null;
 
-    if (statusFlightId === monitor.flightId) {
+    if (statusFlightId === monitor.flightId || lifecycleFlightId === monitor.flightId) {
       monitor.observedActive = true;
     }
 
     if (
       monitor.observedActive &&
-      statusFlightId === monitor.flightId &&
+      (statusFlightId === monitor.flightId || lifecycleFlightId === monitor.flightId) &&
       lifecycleState === "completed"
     ) {
       scheduleRepeatAfterCompletion(monitor);
@@ -487,7 +486,7 @@ export function usePrivatePatrolMission({
 
     if (
       monitor.observedActive &&
-      statusFlightId === monitor.flightId &&
+      (statusFlightId === monitor.flightId || lifecycleFlightId === monitor.flightId) &&
       (lifecycleState === "aborted" || lifecycleState === "failed")
     ) {
       repeatMonitorRef.current = null;
@@ -500,8 +499,11 @@ export function usePrivatePatrolMission({
       return;
     }
 
-    const activeMissionGone = monitor.observedActive && !statusFlightId && !lifecycle;
-    if (!activeMissionGone || monitor.finalStateChecked) return;
+    const missionNoLongerActive =
+      monitor.observedActive &&
+      statusFlightId !== monitor.flightId &&
+      lifecycleFlightId !== monitor.flightId;
+    if (!missionNoLongerActive || monitor.finalStateChecked) return;
 
     monitor.finalStateChecked = true;
     let cancelled = false;
@@ -581,6 +583,7 @@ export function usePrivatePatrolMission({
       0,
       Math.min(1440, Math.round(gridParams.start_after_minutes)),
     );
+    const effectiveRepeatMinutes = effectivePatrolRepeatIntervalMinutes(gridParams);
     if (repeatStartTimerRef.current != null) {
       window.clearTimeout(repeatStartTimerRef.current);
       repeatStartTimerRef.current = null;
@@ -599,7 +602,11 @@ export function usePrivatePatrolMission({
       }, startAfterMinutes * 60_000);
       setScheduledStartAt(dueAt);
       showUiNotice(
-        `Property Patrol Mission scheduled to start in ${startAfterMinutes} minute(s).`,
+        `Property Patrol Mission scheduled to start in ${startAfterMinutes} minute(s).${
+          effectiveRepeatMinutes > 0
+            ? ` Repeats every ${effectiveRepeatMinutes} minute(s) after each flight.`
+            : ""
+        }`,
         "info",
       );
       return;

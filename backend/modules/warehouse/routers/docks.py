@@ -146,15 +146,15 @@ async def create_warehouse_dock(
             warehouse_map_id=warehouse_map_id,
             name=payload.name,
             pose_local_json=payload.pose.model_dump(),
-            entrypose_local_json=payload.entrypose.model_dump(),
-            exitpose_local_json=payload.exitpose.model_dump(),
+            entry_pose_local_json=payload.entry_pose.model_dump(),
+            exit_pose_local_json=payload.exit_pose.model_dump(),
             marker_id=payload.marker_id,
             charger_type=payload.charger_type,
             meta_data={
                 "precision_required": payload.precision_required,
                 "marker_family": payload.marker_family,
                 "marker_size_m": payload.marker_size_m,
-                "markerpose_covariance": list(payload.markerpose_covariance or []),
+                "marker_pose_covariance": list(payload.marker_pose_covariance or []),
                 "marker_visible": False,
                 "last_observed_at": None,
             },
@@ -181,8 +181,8 @@ async def update_warehouse_dock(
         values["name"] = payload.name.strip()
     for field_name, column_name in (
         ("pose", "pose_local_json"),
-        ("entrypose", "entrypose_local_json"),
-        ("exitpose", "exitpose_local_json"),
+        ("entry_pose", "entry_pose_local_json"),
+        ("exit_pose", "exit_pose_local_json"),
     ):
         pose = getattr(payload, field_name)
         if field_name in fields_set and pose is not None:
@@ -196,7 +196,7 @@ async def update_warehouse_dock(
             "precision_required": payload.precision_required,
             "marker_family": payload.marker_family,
             "marker_size_m": payload.marker_size_m,
-            "markerpose_covariance": payload.markerpose_covariance,
+            "marker_pose_covariance": payload.marker_pose_covariance,
         }.items()
         if key in fields_set
     }
@@ -237,5 +237,4 @@ async def delete_warehouse_dock(
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse dock not found")
     await db.commit()
-
 

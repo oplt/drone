@@ -1,0 +1,22 @@
+schema_version: 1
+transforms:
+  - parent_frame: base_link
+    child_frame: lidar_link
+    translation: {x: 0.15, y: 0.0, z: 0.08}
+    rotation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+  - parent_frame: base_link
+    child_frame: camera_link
+    translation: {x: 0.20, y: 0.0, z: 0.05}
+    rotation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+  - parent_frame: camera_link
+    child_frame: camera_optical_frame
+    translation: {x: 0.0, y: 0.0, z: 0.0}
+    rotation: {x: -0.5, y: 0.5, z: -0.5, w: 0.5}
+  - parent_frame: base_link
+    child_frame: imu_link
+    translation: {x: 0.0, y: 0.0, z: 0.0}
+    rotation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+  - parent_frame: base_link
+    child_frame: rgbd_link
+    translation: {x: 0.20, y: 0.0, z: 0.05}
+    rotation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
