@@ -1,25 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createTestQueryWrapper } from "../../../test/renderWithProviders";
 import { fetchWarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
 import { useWarehouseMappingStack } from "../hooks/useWarehouseMappingStack";
 
 vi.mock("../api/warehouseMissionsApi", () => ({
   fetchWarehouseMappingStackStatus: vi.fn(),
 }));
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-}
 
 describe("useWarehouseMappingStack", () => {
   beforeEach(() => {
@@ -35,7 +23,7 @@ describe("useWarehouseMappingStack", () => {
   });
 
   it("shares one request between observers", async () => {
-    const wrapper = createWrapper();
+    const wrapper = createTestQueryWrapper();
     const first = renderHook(
       () => useWarehouseMappingStack({ getToken: () => "token" }),
       { wrapper },
@@ -57,7 +45,7 @@ describe("useWarehouseMappingStack", () => {
           enabled: false,
           getToken: () => "token",
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createTestQueryWrapper() },
     );
 
     expect(result.current.mappingStackStatus).toBeNull();

@@ -10,6 +10,7 @@ import httpx
 from backend.core.config.runtime import settings
 from backend.core.database.session import Session
 
+from .recipient_parsing import parse_delimited_tokens
 from .repository import AlertRepository
 
 
@@ -44,7 +45,7 @@ class AlertNotificationJob:
             await db.commit()
 
     async def _send_email(self, payload: dict) -> list[dict]:
-        recipients = _parse_csv(settings.alerts_email_recipients)
+        recipients = parse_delimited_tokens(settings.alerts_email_recipients)
         sender = (settings.alerts_smtp_from or "").strip()
         if not recipients or not settings.alerts_smtp_host or not sender:
             return [_skipped("email", ",".join(recipients) or None, "smtp_not_configured")]
@@ -88,7 +89,7 @@ class AlertNotificationJob:
             smtp.send_message(message)
 
     async def _send_sms(self, payload: dict) -> list[dict]:
-        recipients = _parse_csv(settings.alerts_sms_recipients)
+        recipients = parse_delimited_tokens(settings.alerts_sms_recipients)
         sid = (settings.alerts_twilio_account_sid or "").strip()
         token = settings.alerts_twilio_auth_token or ""
         sender = (settings.alerts_twilio_from_number or "").strip()
@@ -121,11 +122,6 @@ class AlertNotificationJob:
                 except Exception as exc:
                     deliveries.append(_failed("sms", recipient, str(exc)))
         return deliveries
-
-
-def _parse_csv(value: str) -> list[str]:
-    tokens = value.replace(";", ",").replace(" ", ",").split(",") if value else []
-    return list(dict.fromkeys(token.strip() for token in tokens if token.strip()))
 
 
 def _skipped(channel: str, destination: str | None, reason: str) -> dict:

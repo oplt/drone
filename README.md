@@ -460,17 +460,21 @@ See `backend/entrypoints/workers/README.md` for worker topology and required pro
 ### Backend Tests
 
 ```bash
+python -m pip install -r backend/requirements-dev.txt
 make backend-tests
+make backend-test-env-up
 make backend-integration-tests
 ```
 
 Direct pytest command:
 
 ```bash
-python -m pytest backend/tests -m "not integration"
+python backend/scripts/run_backend_tests.py --skip-migrations
+python backend/scripts/run_backend_tests.py --integration --wait-db
 ```
 
 Backend tests are written with pytest and include coverage for flight profiles, warehouse live maps, observability, local runtime setup, point-cloud parsing, property patrol, and worker tasks.
+The test runner loads `backend/test.env.example`, disables third-party pytest plugin autoload, and explicitly loads `pytest-asyncio` from `backend/tests/conftest.py`. This keeps ROS pytest plugins from affecting normal backend runs while still supporting async tests. Integration tests expect PostgreSQL/PostGIS and Redis; `make backend-test-env-up` starts those dependencies with `docker-compose.test.yml`.
 
 ### Frontend Tests
 
@@ -508,6 +512,8 @@ Useful commands:
 | `make fix` | Run Ruff fixes/formatting and Biome fixes. |
 | `make check` | Run backend quality checks, frontend Biome check, and TypeScript check. |
 | `make backend-quality` | Run backend lint, typecheck, guardrails, and non-integration tests. |
+| `make backend-test-env-up` | Start PostgreSQL/PostGIS, Redis, and MinIO for backend integration tests. |
+| `make backend-test-env-down` | Stop and remove backend integration-test service state. |
 | `make backend-guardrails` | Run backend file-size, boundary, mypy, and test checks. |
 | `make frontend-quality` | Run frontend lint baseline, architecture check, and production build. |
 | `make frontend-tests` | Run Vitest. |

@@ -4,11 +4,13 @@ export function useMissionAltitudeInput({
   initialAltitude = 30,
   minAltitude = 1,
   maxAltitude = 500,
+  validationMessage,
   addError,
 }: {
   initialAltitude?: number;
   minAltitude?: number;
   maxAltitude?: number;
+  validationMessage?: string;
   addError: (message: string) => void;
 }) {
   const [alt, setAlt] = useState(initialAltitude);
@@ -34,11 +36,14 @@ export function useMissionAltitudeInput({
       return;
     }
     if (num < minAltitude || num > maxAltitude) {
-      addError(`Altitude must be between ${minAltitude} and ${maxAltitude} meters`);
+      addError(
+        validationMessage ??
+          `Altitude must be between ${minAltitude} and ${maxAltitude} meters`
+      );
       return;
     }
     setAlt(num);
-  }, [addError, alt, altInput, maxAltitude, minAltitude]);
+  }, [addError, alt, altInput, maxAltitude, minAltitude, validationMessage]);
 
   return {
     alt,

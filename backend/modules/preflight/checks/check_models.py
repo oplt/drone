@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import inspect
 import json
 import math
 from dataclasses import dataclass, field
 from typing import Any
 
+from .async_invocation import call_maybe_async
 from .cache import DistanceCache, TerrainCache, optimized_distance
 
 
@@ -153,18 +153,6 @@ class MissionDataPreprocessor:
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     @staticmethod
-    async def _call_maybe_async(fn: Any, *args: Any) -> Any:
-        if inspect.iscoroutinefunction(fn):
-            return await fn(*args)
-
-        result = await asyncio.to_thread(fn, *args)
-
-        if inspect.isawaitable(result):
-            return await result
-
-        return result
-
-    @staticmethod
     def _value_from_batch_result(
             result: Any,
             coord: tuple[float, float],
@@ -226,7 +214,7 @@ class MissionDataPreprocessor:
             for start in range(0, len(missing), chunk_size):
                 chunk = missing[start : start + chunk_size]
                 coords = [coord for _, coord in chunk]
-                result = await self._call_maybe_async(batch_fn, coords)
+                result = await call_maybe_async(batch_fn, coords)
 
                 for offset, (idx, coord) in enumerate(chunk):
                     elevation = self._value_from_batch_result(result, coord, offset)
@@ -244,7 +232,7 @@ class MissionDataPreprocessor:
             return
 
         async def fetch_one(idx: int, coord: tuple[float, float]) -> None:
-            elevation = await self._call_maybe_async(single_fn, coord[0], coord[1])
+            elevation = await call_maybe_async(single_fn, coord[0], coord[1])
 
             if elevation is not None:
                 elevation_f = float(elevation)

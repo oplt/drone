@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,11 +13,11 @@ from backend.modules.warehouse.models import (
     WarehouseMappingJob,
     WarehouseModel,
 )
-
-
-class WarehouseRepositoryError(RuntimeError):
-    pass
-
+from backend.modules.warehouse.repository.contracts import (
+    WarehouseModelVersionEntry,
+    WarehouseRepositoryError,
+)
+from backend.modules.warehouse.repository.query_values import clamp_list_limit, require_json_object
 
 WAREHOUSE_SCANNED_MAP_PROCESSORS = (
     "warehouse_scan",
@@ -36,25 +35,8 @@ _ASSET_TYPE_MAP = {
     "rosbag": "ROSBAG",
     "quality_report": "QUALITY_REPORT",
 }
-_MAX_LIST_LIMIT = 500
 _IN_CHUNK_SIZE = 1_000
 _MAX_ERROR_LENGTH = 2_000
-
-
-@dataclass(slots=True)
-class WarehouseModelVersionEntry:
-    id: int
-    version: int
-    status: str
-    created_at: datetime
-
-
-def _clamp_limit(limit: int, *, default: int = 50, max_limit: int = _MAX_LIST_LIMIT) -> int:
-    try:
-        value = int(limit)
-    except (TypeError, ValueError):
-        value = default
-    return max(1, min(max_limit, value))
 
 
 def _clean_processor(value: str | None) -> str:
@@ -62,14 +44,6 @@ def _clean_processor(value: str | None) -> str:
     if processor not in WAREHOUSE_SCANNED_MAP_PROCESSORS:
         raise WarehouseRepositoryError(f"Unsupported warehouse map processor: {processor}")
     return processor
-
-
-def _json_object(value: dict[str, Any] | None, *, field_name: str) -> dict[str, Any]:
-    if value is None:
-        return {}
-    if not isinstance(value, dict):
-        raise WarehouseRepositoryError(f"{field_name} must be a JSON object.")
-    return dict(value)
 
 
 def _chunks(values: list[int], size: int = _IN_CHUNK_SIZE) -> Iterable[list[int]]:
@@ -99,7 +73,7 @@ class WarehouseJobMixin:
         input_source: str = "warehouse_scan",
     ) -> tuple[WarehouseModel, WarehouseMappingJob]:
         processor = _clean_processor(input_source)
-        capture_payload = _json_object(capture_result, field_name="capture_result")
+        capture_payload = require_json_object(capture_result, field_name="capture_result")
 
         # Serialize version allocation per warehouse map. Without this lock two
         # concurrent persistence jobs can both see the same max(version) and trip
@@ -198,14 +172,14 @@ class WarehouseJobMixin:
     ) -> None:
         if not uploaded:
             return
-        capture_payload = _json_object(capture_result, field_name="capture_result")
+        capture_payload = require_json_object(capture_result, field_name="capture_result")
         assets: list[WarehouseAsset] = []
         for key, url in uploaded.items():
             artifact_key = str(key)
             artifact_url = str(url or "").strip()
             if not artifact_url:
                 continue
-            metadata = _json_object(
+            metadata = require_json_object(
                 artifact_meta.get(artifact_key, {}),
                 field_name=f"artifact_meta[{artifact_key}]",
             )
@@ -286,7 +260,7 @@ class WarehouseJobMixin:
                 WarehouseModel.status.in_(["processing", "ready", "failed"]),
             )
             .order_by(WarehouseMappingJob.id.desc())
-            .limit(_clamp_limit(limit))
+            .limit(clamp_list_limit(limit, default=50))
         )
         if warehouse_map_id is not None:
             stmt = stmt.where(WarehouseMap.id == int(warehouse_map_id))

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import shlex
 import shutil
 import subprocess
@@ -13,9 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from backend.core.config.runtime import settings
+from backend.core.tokens import safe_token
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
-_UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 logger = logging.getLogger(__name__)
 
 
@@ -64,8 +63,7 @@ class FlightCaptureSessionService:
 
     @staticmethod
     def _sanitize_flight_id(raw: Any) -> str:
-        token = _UNSAFE_TOKEN_CHARS.sub("_", str(raw or "")).strip("._-")
-        return token or "unknown"
+        return safe_token(raw)
 
     def _manifest_path(self, session: FlightCaptureSession) -> Path:
         return session.session_dir / "capture_session.json"

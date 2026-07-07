@@ -1,0 +1,689 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/shared/layout/MenuButton.tsx",
+      "type": "file",
+      "name": "MenuButton.tsx",
+      "filePath": "frontend/src/shared/layout/MenuButton.tsx",
+      "summary": "MenuButton.tsx is a frontend typescript module in frontend/src/shared/layout with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/MenuButton.tsx:MenuButton",
+      "type": "function",
+      "name": "MenuButton",
+      "filePath": "frontend/src/shared/layout/MenuButton.tsx",
+      "summary": "MenuButton implements logic in MenuButton.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/MenuContent.tsx",
+      "type": "file",
+      "name": "MenuContent.tsx",
+      "filePath": "frontend/src/shared/layout/MenuContent.tsx",
+      "summary": "MenuContent.tsx is a frontend typescript module in frontend/src/shared/layout with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/MenuContent.tsx:MenuContent",
+      "type": "function",
+      "name": "MenuContent",
+      "filePath": "frontend/src/shared/layout/MenuContent.tsx",
+      "summary": "MenuContent implements logic in MenuContent.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "type": "file",
+      "name": "OperationsShell.tsx",
+      "filePath": "frontend/src/shared/layout/OperationsShell.tsx",
+      "summary": "OperationsShell.tsx is a frontend typescript module in frontend/src/shared/layout with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/OperationsShell.tsx:OperationsShell",
+      "type": "function",
+      "name": "OperationsShell",
+      "filePath": "frontend/src/shared/layout/OperationsShell.tsx",
+      "summary": "OperationsShell implements logic in OperationsShell.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "type": "file",
+      "name": "SideMenu.tsx",
+      "filePath": "frontend/src/shared/layout/SideMenu.tsx",
+      "summary": "SideMenu.tsx is a frontend typescript module in frontend/src/shared/layout with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/SideMenu.tsx:SideMenu",
+      "type": "function",
+      "name": "SideMenu",
+      "filePath": "frontend/src/shared/layout/SideMenu.tsx",
+      "summary": "SideMenu implements logic in SideMenu.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "type": "file",
+      "name": "SideMenuMobile.tsx",
+      "filePath": "frontend/src/shared/layout/SideMenuMobile.tsx",
+      "summary": "SideMenuMobile.tsx is a frontend typescript module in frontend/src/shared/layout with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/SideMenuMobile.tsx:SideMenuMobile",
+      "type": "function",
+      "name": "SideMenuMobile",
+      "filePath": "frontend/src/shared/layout/SideMenuMobile.tsx",
+      "summary": "SideMenuMobile implements logic in SideMenuMobile.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/shared/layout/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/shared/layout with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/shared/layout/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/shared/layout with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "type": "file",
+      "name": "AppTheme.tsx",
+      "filePath": "frontend/src/shared/theme/AppTheme.tsx",
+      "summary": "AppTheme.tsx is a frontend typescript module in frontend/src/shared/theme with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/theme/AppTheme.tsx:AppTheme",
+      "type": "function",
+      "name": "AppTheme",
+      "filePath": "frontend/src/shared/theme/AppTheme.tsx",
+      "summary": "AppTheme implements logic in AppTheme.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "type": "file",
+      "name": "ColorModeIconDropdown.tsx",
+      "filePath": "frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "summary": "ColorModeIconDropdown.tsx is a frontend typescript module in frontend/src/shared/theme with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/theme/ColorModeIconDropdown.tsx:ColorModeIconDropdown",
+      "type": "function",
+      "name": "ColorModeIconDropdown",
+      "filePath": "frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "summary": "ColorModeIconDropdown implements logic in ColorModeIconDropdown.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/ColorModeSelect.tsx",
+      "type": "file",
+      "name": "ColorModeSelect.tsx",
+      "filePath": "frontend/src/shared/theme/ColorModeSelect.tsx",
+      "summary": "ColorModeSelect.tsx is a frontend typescript module in frontend/src/shared/theme with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/theme/ColorModeSelect.tsx:ColorModeSelect",
+      "type": "function",
+      "name": "ColorModeSelect",
+      "filePath": "frontend/src/shared/theme/ColorModeSelect.tsx",
+      "summary": "ColorModeSelect implements logic in ColorModeSelect.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/charts.ts",
+      "type": "file",
+      "name": "charts.ts",
+      "filePath": "frontend/src/shared/theme/customizations/charts.ts",
+      "summary": "charts.ts is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/dataDisplay.tsx",
+      "type": "file",
+      "name": "dataDisplay.tsx",
+      "filePath": "frontend/src/shared/theme/customizations/dataDisplay.tsx",
+      "summary": "dataDisplay.tsx is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/dataGrid.js",
+      "type": "file",
+      "name": "dataGrid.js",
+      "filePath": "frontend/src/shared/theme/customizations/dataGrid.js",
+      "summary": "dataGrid.js is a frontend javascript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/datePickers.ts",
+      "type": "file",
+      "name": "datePickers.ts",
+      "filePath": "frontend/src/shared/theme/customizations/datePickers.ts",
+      "summary": "datePickers.ts is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/feedback.tsx",
+      "type": "file",
+      "name": "feedback.tsx",
+      "filePath": "frontend/src/shared/theme/customizations/feedback.tsx",
+      "summary": "feedback.tsx is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/shared/theme/customizations/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/inputs.tsx",
+      "type": "file",
+      "name": "inputs.tsx",
+      "filePath": "frontend/src/shared/theme/customizations/inputs.tsx",
+      "summary": "inputs.tsx is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/navigation.tsx",
+      "type": "file",
+      "name": "navigation.tsx",
+      "filePath": "frontend/src/shared/theme/customizations/navigation.tsx",
+      "summary": "navigation.tsx is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/surfaces.ts",
+      "type": "file",
+      "name": "surfaces.ts",
+      "filePath": "frontend/src/shared/theme/customizations/surfaces.ts",
+      "summary": "surfaces.ts is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/customizations/treeView.ts",
+      "type": "file",
+      "name": "treeView.ts",
+      "filePath": "frontend/src/shared/theme/customizations/treeView.ts",
+      "summary": "treeView.ts is a frontend typescript module in frontend/src/shared/theme with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "file",
+      "name": "themePrimitives.ts",
+      "filePath": "frontend/src/shared/theme/themePrimitives.ts",
+      "summary": "themePrimitives.ts is a frontend typescript module in frontend/src/shared/theme with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/theme/themePrimitives.ts:getDesignTokens",
+      "type": "function",
+      "name": "getDesignTokens",
+      "filePath": "frontend/src/shared/theme/themePrimitives.ts",
+      "summary": "getDesignTokens implements logic in themePrimitives.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/shared/ui/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/shared/ui with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/shared/layout/MenuButton.tsx",
+      "target": "function:frontend/src/shared/layout/MenuButton.tsx:MenuButton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/MenuButton.tsx",
+      "target": "function:frontend/src/shared/layout/MenuButton.tsx:MenuButton",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/MenuContent.tsx",
+      "target": "function:frontend/src/shared/layout/MenuContent.tsx:MenuContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/MenuContent.tsx",
+      "target": "function:frontend/src/shared/layout/MenuContent.tsx:MenuContent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "target": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "target": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "target": "file:frontend/src/shared/layout/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "target": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "target": "function:frontend/src/shared/layout/OperationsShell.tsx:OperationsShell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/OperationsShell.tsx",
+      "target": "function:frontend/src/shared/layout/OperationsShell.tsx:OperationsShell",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "target": "file:frontend/src/shared/layout/MenuContent.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "target": "file:frontend/src/shared/layout/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "target": "function:frontend/src/shared/layout/SideMenu.tsx:SideMenu",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenu.tsx",
+      "target": "function:frontend/src/shared/layout/SideMenu.tsx:SideMenu",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "target": "file:frontend/src/shared/layout/MenuContent.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "target": "file:frontend/src/shared/layout/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "target": "file:frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "target": "function:frontend/src/shared/layout/SideMenuMobile.tsx:SideMenuMobile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "target": "function:frontend/src/shared/layout/SideMenuMobile.tsx:SideMenuMobile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "file:frontend/src/shared/theme/customizations/dataDisplay.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "file:frontend/src/shared/theme/customizations/feedback.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "file:frontend/src/shared/theme/customizations/inputs.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "file:frontend/src/shared/theme/customizations/navigation.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "file:frontend/src/shared/theme/customizations/surfaces.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "function:frontend/src/shared/theme/AppTheme.tsx:AppTheme",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "target": "function:frontend/src/shared/theme/AppTheme.tsx:AppTheme",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "target": "function:frontend/src/shared/theme/ColorModeIconDropdown.tsx:ColorModeIconDropdown",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "target": "function:frontend/src/shared/theme/ColorModeIconDropdown.tsx:ColorModeIconDropdown",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/theme/ColorModeSelect.tsx",
+      "target": "function:frontend/src/shared/theme/ColorModeSelect.tsx:ColorModeSelect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/theme/ColorModeSelect.tsx",
+      "target": "function:frontend/src/shared/theme/ColorModeSelect.tsx:ColorModeSelect",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/charts.ts",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/dataDisplay.tsx",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/dataGrid.js",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/datePickers.ts",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/feedback.tsx",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/inputs.tsx",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/navigation.tsx",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/surfaces.ts",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/customizations/treeView.ts",
+      "target": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "target": "function:frontend/src/shared/theme/themePrimitives.ts:getDesignTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/theme/themePrimitives.ts",
+      "target": "function:frontend/src/shared/theme/themePrimitives.ts:getDesignTokens",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

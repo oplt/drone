@@ -1,26 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.warehouse.models import WarehouseDockStation
-
-
-class WarehouseRepositoryError(RuntimeError):
-    pass
-
-
-@dataclass(slots=True)
-class WarehouseModelVersionEntry:
-    id: int
-    version: int
-    status: str
-    created_at: datetime
-
+from backend.modules.warehouse.repository.contracts import WarehouseRepositoryError
+from backend.modules.warehouse.repository.query_values import require_json_object
 
 _DOCK_UPDATE_FIELDS = frozenset(
     {
@@ -56,14 +43,6 @@ def _clean_optional_str(value: object) -> str | None:
     return str(value).strip() if value is not None and str(value).strip() else None
 
 
-def _json_object(value: dict[str, Any] | None, *, field_name: str) -> dict[str, Any]:
-    if value is None:
-        return {}
-    if not isinstance(value, dict):
-        raise WarehouseRepositoryError(f"{field_name} must be a JSON object.")
-    return dict(value)
-
-
 def _normalize_dock_update_values(values: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(values, dict):
         raise WarehouseRepositoryError("Dock update values must be a dictionary.")
@@ -81,7 +60,7 @@ def _normalize_dock_update_values(values: dict[str, Any]) -> dict[str, Any]:
         elif key in _OPTIONAL_STR_FIELDS:
             normalized[key] = _clean_optional_str(value)
         elif key in _JSON_OBJECT_FIELDS:
-            normalized[key] = _json_object(value, field_name=key)
+            normalized[key] = require_json_object(value, field_name=key)
         elif key == "active":
             normalized[key] = bool(value)
         else:
@@ -124,14 +103,14 @@ class WarehouseDockMixin:
             name=_clean_name(name),
             marker_id=_clean_optional_str(marker_id),
             charger_type=_clean_optional_str(charger_type),
-            pose_local_json=_json_object(pose_local_json, field_name="pose_local_json"),
-            entry_pose_local_json=_json_object(
+            pose_local_json=require_json_object(pose_local_json, field_name="pose_local_json"),
+            entry_pose_local_json=require_json_object(
                 entry_pose_local_json, field_name="entry_pose_local_json"
             ),
-            exit_pose_local_json=_json_object(
+            exit_pose_local_json=require_json_object(
                 exit_pose_local_json, field_name="exit_pose_local_json"
             ),
-            meta_data=_json_object(meta_data, field_name="meta_data"),
+            meta_data=require_json_object(meta_data, field_name="meta_data"),
             active=True,
         )
         db.add(dock)

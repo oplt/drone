@@ -12,9 +12,9 @@ import {
 import { PropertyGeofencesPanel } from "./PropertyGeofencesPanel";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import {
-  MissionCommandPanel,
   MissionPreflightPanel,
 } from "../../mission-runtime";
+import { MissionCommandPanel } from "../../mission-runtime/components/MissionCommandPanel";
 import type { PreflightRunResponse } from "../../mission-runtime";
 import type { PrivatePatrolMissionStatus } from "../types";
 import type { PatrolSensorIntegration } from "../api/eventTriggerConfigApi";

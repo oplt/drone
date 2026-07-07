@@ -1,0 +1,1097 @@
+{
+  "nodes": [
+    {
+      "id": "file:.understand-anything/.understandignore",
+      "type": "file",
+      "name": ".understandignore",
+      "filePath": ".understand-anything/.understandignore",
+      "summary": ".understandignore is a unknown project file with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "unknown"
+      ]
+    },
+    {
+      "id": "config:.understand-anything/config.json",
+      "type": "config",
+      "name": "config.json",
+      "filePath": ".understand-anything/config.json",
+      "summary": "config.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "file:backend/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/__init__.py with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/core/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/core/__init__.py with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/database/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/core/database/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/core/database with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "document:backend/entrypoints/workers/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "backend/entrypoints/workers/README.md",
+      "summary": "README.md documents backend workflows, architecture, or setup details.",
+      "complexity": "moderate",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/infrastructure/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/infrastructure/__init__.py with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/maps/terrain_client.py",
+      "type": "file",
+      "name": "terrain_client.py",
+      "filePath": "backend/infrastructure/maps/terrain_client.py",
+      "summary": "terrain_client.py is a backend python module in backend/infrastructure/maps with 0 functions and 2 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/maps/terrain_client.py:TerrainProfile",
+      "type": "class",
+      "name": "TerrainProfile",
+      "filePath": "backend/infrastructure/maps/terrain_client.py",
+      "summary": "TerrainProfile groups related behavior and state in terrain_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/maps/terrain_client.py:TerrainService",
+      "type": "class",
+      "name": "TerrainService",
+      "filePath": "backend/infrastructure/maps/terrain_client.py",
+      "summary": "TerrainService groups related behavior and state in terrain_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/script.py.mako",
+      "type": "file",
+      "name": "script.py.mako",
+      "filePath": "backend/infrastructure/persistence/alembic/script.py.mako",
+      "summary": "script.py.mako is a backend mako module in backend/infrastructure/persistence with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "mako"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "type": "file",
+      "name": "93c855aeb073_create_users_table.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "summary": "93c855aeb073_create_users_table.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "summary": "upgrade implements logic in 93c855aeb073_create_users_table.py.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "summary": "downgrade implements logic in 93c855aeb073_create_users_table.py.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "type": "file",
+      "name": "a4f8c2e91b03_add_field_workflow_scope.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "summary": "a4f8c2e91b03_add_field_workflow_scope.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "summary": "upgrade implements logic in a4f8c2e91b03_add_field_workflow_scope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "summary": "downgrade implements logic in a4f8c2e91b03_add_field_workflow_scope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "type": "file",
+      "name": "b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "summary": "b7c4d9e2f601_add_warehouse_coordinate_frames.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "summary": "upgrade implements logic in b7c4d9e2f601_add_warehouse_coordinate_frames.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "summary": "downgrade implements logic in b7c4d9e2f601_add_warehouse_coordinate_frames.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "type": "file",
+      "name": "c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "summary": "c8d5e0f3a712_add_warehouse_layout_hierarchy.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "summary": "upgrade implements logic in c8d5e0f3a712_add_warehouse_layout_hierarchy.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "summary": "downgrade implements logic in c8d5e0f3a712_add_warehouse_layout_hierarchy.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "type": "file",
+      "name": "d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "summary": "d9e6f1a4b823_pin_warehouse_mission_revisions.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "summary": "upgrade implements logic in d9e6f1a4b823_pin_warehouse_mission_revisions.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "summary": "downgrade implements logic in d9e6f1a4b823_pin_warehouse_mission_revisions.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "type": "file",
+      "name": "e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "summary": "e1f7a2b5c934_add_sensor_rig_extrinsics.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "summary": "upgrade implements logic in e1f7a2b5c934_add_sensor_rig_extrinsics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "summary": "downgrade implements logic in e1f7a2b5c934_add_sensor_rig_extrinsics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "type": "file",
+      "name": "f2a8b3c6d045_add_warehouse_map_setups.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "summary": "f2a8b3c6d045_add_warehouse_map_setups.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "summary": "upgrade implements logic in f2a8b3c6d045_add_warehouse_map_setups.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "summary": "downgrade implements logic in f2a8b3c6d045_add_warehouse_map_setups.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "type": "file",
+      "name": "g3b9c4d7e156_add_extraction_lineage.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "summary": "g3b9c4d7e156_add_extraction_lineage.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "summary": "upgrade implements logic in g3b9c4d7e156_add_extraction_lineage.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "summary": "downgrade implements logic in g3b9c4d7e156_add_extraction_lineage.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "type": "file",
+      "name": "h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "summary": "h4c0d5e8f267_add_scan_target_sensor_aim.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "summary": "upgrade implements logic in h4c0d5e8f267_add_scan_target_sensor_aim.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "summary": "downgrade implements logic in h4c0d5e8f267_add_scan_target_sensor_aim.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "type": "file",
+      "name": "i5d1e6f9a378_add_drift_prevention_contract.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "summary": "i5d1e6f9a378_add_drift_prevention_contract.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "summary": "upgrade implements logic in i5d1e6f9a378_add_drift_prevention_contract.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "summary": "downgrade implements logic in i5d1e6f9a378_add_drift_prevention_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "type": "file",
+      "name": "j6e2f7a0b489_add_layout_revision.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "summary": "j6e2f7a0b489_add_layout_revision.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "summary": "upgrade implements logic in j6e2f7a0b489_add_layout_revision.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "summary": "downgrade implements logic in j6e2f7a0b489_add_layout_revision.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "type": "file",
+      "name": "k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "summary": "k7f3a8b1c590_backfill_legacy_coordinate_frames.py is a backend python module in backend/infrastructure/persistence with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:_checksum",
+      "type": "function",
+      "name": "_checksum",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "summary": "_checksum implements logic in k7f3a8b1c590_backfill_legacy_coordinate_frames.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "summary": "upgrade implements logic in k7f3a8b1c590_backfill_legacy_coordinate_frames.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "summary": "downgrade implements logic in k7f3a8b1c590_backfill_legacy_coordinate_frames.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "type": "file",
+      "name": "l8g4b9c2d601_add_scan_layout_candidates.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "summary": "l8g4b9c2d601_add_scan_layout_candidates.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "summary": "upgrade implements logic in l8g4b9c2d601_add_scan_layout_candidates.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "summary": "downgrade implements logic in l8g4b9c2d601_add_scan_layout_candidates.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "type": "file",
+      "name": "m9h5c0d3e712_add_mission_approval_policy.py",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "summary": "m9h5c0d3e712_add_mission_approval_policy.py is a backend python module in backend/infrastructure/persistence with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "summary": "upgrade implements logic in m9h5c0d3e712_add_mission_approval_policy.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "summary": "downgrade implements logic in m9h5c0d3e712_add_mission_approval_policy.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/ai/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/ai/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/ai with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/alerts/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/alerts/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/alerts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/infrastructure/maps/terrain_client.py",
+      "target": "class:backend/infrastructure/maps/terrain_client.py:TerrainProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/maps/terrain_client.py",
+      "target": "class:backend/infrastructure/maps/terrain_client.py:TerrainProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/maps/terrain_client.py",
+      "target": "class:backend/infrastructure/maps/terrain_client.py:TerrainService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/maps/terrain_client.py",
+      "target": "class:backend/infrastructure/maps/terrain_client.py:TerrainService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/a4f8c2e91b03_add_field_workflow_scope.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/b7c4d9e2f601_add_warehouse_coordinate_frames.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/c8d5e0f3a712_add_warehouse_layout_hierarchy.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/d9e6f1a4b823_pin_warehouse_mission_revisions.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/e1f7a2b5c934_add_sensor_rig_extrinsics.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/f2a8b3c6d045_add_warehouse_map_setups.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/g3b9c4d7e156_add_extraction_lineage.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/h4c0d5e8f267_add_scan_target_sensor_aim.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/i5d1e6f9a378_add_drift_prevention_contract.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/j6e2f7a0b489_add_layout_revision.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:_checksum",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:_checksum",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/k7f3a8b1c590_backfill_legacy_coordinate_frames.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/l8g4b9c2d601_add_scan_layout_candidates.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py:upgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py",
+      "target": "function:backend/infrastructure/persistence/alembic/versions/m9h5c0d3e712_add_mission_approval_policy.py:downgrade",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

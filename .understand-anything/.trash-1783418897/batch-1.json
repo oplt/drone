@@ -1,0 +1,4474 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/core/config/runtime.py",
+      "type": "file",
+      "name": "runtime.py",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "runtime.py is a backend python module in backend/core/config with 6 functions and 5 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/config/runtime.py:env_truthy",
+      "type": "function",
+      "name": "env_truthy",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "env_truthy implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/config/runtime.py:env_falsey",
+      "type": "function",
+      "name": "env_falsey",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "env_falsey implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/config/runtime.py:_normalize_log_level",
+      "type": "function",
+      "name": "_normalize_log_level",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "_normalize_log_level implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/config/runtime.py:_ensure_filter",
+      "type": "function",
+      "name": "_ensure_filter",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "_ensure_filter implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/config/runtime.py:_make_formatter",
+      "type": "function",
+      "name": "_make_formatter",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "_make_formatter implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/config/runtime.py:setup_logging",
+      "type": "function",
+      "name": "setup_logging",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "setup_logging implements logic in runtime.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/config/runtime.py:DailyDateFileHandler",
+      "type": "class",
+      "name": "DailyDateFileHandler",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "DailyDateFileHandler groups related behavior and state in runtime.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/config/runtime.py:RepeatedAutopilotLogFilter",
+      "type": "class",
+      "name": "RepeatedAutopilotLogFilter",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "RepeatedAutopilotLogFilter groups related behavior and state in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/config/runtime.py:DefaultLogRecordFieldsFilter",
+      "type": "class",
+      "name": "DefaultLogRecordFieldsFilter",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "DefaultLogRecordFieldsFilter groups related behavior and state in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/config/runtime.py:BootstrapSettings",
+      "type": "class",
+      "name": "BootstrapSettings",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "BootstrapSettings groups related behavior and state in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/config/runtime.py:RuntimeSettings",
+      "type": "class",
+      "name": "RuntimeSettings",
+      "filePath": "backend/core/config/runtime.py",
+      "summary": "RuntimeSettings groups related behavior and state in runtime.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/events/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/core/events/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/core/events with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/events/envelope.py",
+      "type": "file",
+      "name": "envelope.py",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "envelope.py is a backend python module in backend/core/events with 10 functions and 27 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:utc_now",
+      "type": "function",
+      "name": "utc_now",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "utc_now implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:next_runtime_sequence",
+      "type": "function",
+      "name": "next_runtime_sequence",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "next_runtime_sequence implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:reset_runtime_sequences",
+      "type": "function",
+      "name": "reset_runtime_sequences",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "reset_runtime_sequences implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:_event_id",
+      "type": "function",
+      "name": "_event_id",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "_event_id implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:_float_or_none",
+      "type": "function",
+      "name": "_float_or_none",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "_float_or_none implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:_int_or_none",
+      "type": "function",
+      "name": "_int_or_none",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "_int_or_none implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:_bool_flag",
+      "type": "function",
+      "name": "_bool_flag",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "_bool_flag implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:_first_present",
+      "type": "function",
+      "name": "_first_present",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "_first_present implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:_value_or_zero",
+      "type": "function",
+      "name": "_value_or_zero",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "_value_or_zero implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/envelope.py:mission_context_from_runtime",
+      "type": "function",
+      "name": "mission_context_from_runtime",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "mission_context_from_runtime implements logic in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:MissionContextV1",
+      "type": "class",
+      "name": "MissionContextV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "MissionContextV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:RuntimeEnvelopeBaseV1",
+      "type": "class",
+      "name": "RuntimeEnvelopeBaseV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "RuntimeEnvelopeBaseV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryPositionV1",
+      "type": "class",
+      "name": "TelemetryPositionV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryPositionV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryAttitudeV1",
+      "type": "class",
+      "name": "TelemetryAttitudeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryAttitudeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryBatteryV1",
+      "type": "class",
+      "name": "TelemetryBatteryV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryBatteryV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryGpsV1",
+      "type": "class",
+      "name": "TelemetryGpsV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryGpsV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryLinkV1",
+      "type": "class",
+      "name": "TelemetryLinkV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryLinkV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryWindV1",
+      "type": "class",
+      "name": "TelemetryWindV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryWindV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryMotionV1",
+      "type": "class",
+      "name": "TelemetryMotionV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryMotionV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetrySystemV1",
+      "type": "class",
+      "name": "TelemetrySystemV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetrySystemV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryFailsafeV1",
+      "type": "class",
+      "name": "TelemetryFailsafeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryFailsafeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryHeartbeatV1",
+      "type": "class",
+      "name": "TelemetryHeartbeatV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryHeartbeatV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryEkfV1",
+      "type": "class",
+      "name": "TelemetryEkfV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryEkfV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryCompassV1",
+      "type": "class",
+      "name": "TelemetryCompassV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryCompassV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryCameraV1",
+      "type": "class",
+      "name": "TelemetryCameraV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryCameraV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryPayloadV1",
+      "type": "class",
+      "name": "TelemetryPayloadV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryPayloadV1 groups related behavior and state in envelope.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:TelemetryEnvelopeV1",
+      "type": "class",
+      "name": "TelemetryEnvelopeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "TelemetryEnvelopeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:FlightEventSeverityV1",
+      "type": "class",
+      "name": "FlightEventSeverityV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "FlightEventSeverityV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:FlightEventPayloadV1",
+      "type": "class",
+      "name": "FlightEventPayloadV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "FlightEventPayloadV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:FlightEventEnvelopeV1",
+      "type": "class",
+      "name": "FlightEventEnvelopeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "FlightEventEnvelopeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:VideoHealthPayloadV1",
+      "type": "class",
+      "name": "VideoHealthPayloadV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "VideoHealthPayloadV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:VideoHealthEnvelopeV1",
+      "type": "class",
+      "name": "VideoHealthEnvelopeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "VideoHealthEnvelopeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:AlertSnapshotV1",
+      "type": "class",
+      "name": "AlertSnapshotV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "AlertSnapshotV1 groups related behavior and state in envelope.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:AlertEventPayloadV1",
+      "type": "class",
+      "name": "AlertEventPayloadV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "AlertEventPayloadV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:AlertEventEnvelopeV1",
+      "type": "class",
+      "name": "AlertEventEnvelopeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "AlertEventEnvelopeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:MissionLifecyclePayloadV1",
+      "type": "class",
+      "name": "MissionLifecyclePayloadV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "MissionLifecyclePayloadV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/events/envelope.py:MissionLifecycleEnvelopeV1",
+      "type": "class",
+      "name": "MissionLifecycleEnvelopeV1",
+      "filePath": "backend/core/events/envelope.py",
+      "summary": "MissionLifecycleEnvelopeV1 groups related behavior and state in envelope.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/events/mavlink.py",
+      "type": "file",
+      "name": "mavlink.py",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "mavlink.py is a backend python module in backend/core/events with 9 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:_float_or_none",
+      "type": "function",
+      "name": "_float_or_none",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "_float_or_none implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:_int_or_none",
+      "type": "function",
+      "name": "_int_or_none",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "_int_or_none implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:_bounded_percent",
+      "type": "function",
+      "name": "_bounded_percent",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "_bounded_percent implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:_compact",
+      "type": "function",
+      "name": "_compact",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "_compact implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:_valid_lat_lon",
+      "type": "function",
+      "name": "_valid_lat_lon",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "_valid_lat_lon implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:_mavlink_position",
+      "type": "function",
+      "name": "_mavlink_position",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "_mavlink_position implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:check_mavlink_connection",
+      "type": "function",
+      "name": "check_mavlink_connection",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "check_mavlink_connection implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:process_mavlink_message",
+      "type": "function",
+      "name": "process_mavlink_message",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "process_mavlink_message implements logic in mavlink.py.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/events/mavlink.py:raw_event_from_mavlink_message",
+      "type": "function",
+      "name": "raw_event_from_mavlink_message",
+      "filePath": "backend/core/events/mavlink.py",
+      "summary": "raw_event_from_mavlink_message implements logic in mavlink.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/geometry/projection.py",
+      "type": "file",
+      "name": "projection.py",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "projection.py is a backend python module in backend/core/geometry with 7 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:meters_per_deg_lat",
+      "type": "function",
+      "name": "meters_per_deg_lat",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "meters_per_deg_lat implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:meters_per_deg_lon",
+      "type": "function",
+      "name": "meters_per_deg_lon",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "meters_per_deg_lon implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:lonlat_to_xy_m",
+      "type": "function",
+      "name": "lonlat_to_xy_m",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "lonlat_to_xy_m implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:xy_m_to_lonlat",
+      "type": "function",
+      "name": "xy_m_to_lonlat",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "xy_m_to_lonlat implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:strip_closed_ring",
+      "type": "function",
+      "name": "strip_closed_ring",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "strip_closed_ring implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:close_lonlat_ring",
+      "type": "function",
+      "name": "close_lonlat_ring",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "close_lonlat_ring implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/projection.py:polygon_centroid_lonlat",
+      "type": "function",
+      "name": "polygon_centroid_lonlat",
+      "filePath": "backend/core/geometry/projection.py",
+      "summary": "polygon_centroid_lonlat implements logic in projection.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/tokens.py",
+      "type": "file",
+      "name": "tokens.py",
+      "filePath": "backend/core/tokens.py",
+      "summary": "tokens.py is a backend python module in backend/core/tokens.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/tokens.py:safe_token",
+      "type": "function",
+      "name": "safe_token",
+      "filePath": "backend/core/tokens.py",
+      "summary": "safe_token implements logic in tokens.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/types/geo.py",
+      "type": "file",
+      "name": "geo.py",
+      "filePath": "backend/core/types/geo.py",
+      "summary": "geo.py is a backend python module in backend/core/types with 5 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/types/geo.py:_finite_float",
+      "type": "function",
+      "name": "_finite_float",
+      "filePath": "backend/core/types/geo.py",
+      "summary": "_finite_float implements logic in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/types/geo.py:_validate_lat_lon",
+      "type": "function",
+      "name": "_validate_lat_lon",
+      "filePath": "backend/core/types/geo.py",
+      "summary": "_validate_lat_lon implements logic in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/types/geo.py:haversine_km",
+      "type": "function",
+      "name": "haversine_km",
+      "filePath": "backend/core/types/geo.py",
+      "summary": "haversine_km implements logic in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/types/geo.py:coord_from_home",
+      "type": "function",
+      "name": "coord_from_home",
+      "filePath": "backend/core/types/geo.py",
+      "summary": "coord_from_home implements logic in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/types/geo.py:_total_mission_distance_km",
+      "type": "function",
+      "name": "_total_mission_distance_km",
+      "filePath": "backend/core/types/geo.py",
+      "summary": "_total_mission_distance_km implements logic in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/entrypoints/workers/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/entrypoints/workers with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/async_loop.py",
+      "type": "file",
+      "name": "async_loop.py",
+      "filePath": "backend/entrypoints/workers/async_loop.py",
+      "summary": "async_loop.py is a backend python module in backend/entrypoints/workers with 0 functions and 2 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/entrypoints/workers/async_loop.py:_WorkerThreadLocal",
+      "type": "class",
+      "name": "_WorkerThreadLocal",
+      "filePath": "backend/entrypoints/workers/async_loop.py",
+      "summary": "_WorkerThreadLocal groups related behavior and state in async_loop.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/entrypoints/workers/async_loop.py:WorkerLoopState",
+      "type": "class",
+      "name": "WorkerLoopState",
+      "filePath": "backend/entrypoints/workers/async_loop.py",
+      "summary": "WorkerLoopState groups related behavior and state in async_loop.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "file",
+      "name": "celery_app.py",
+      "filePath": "backend/entrypoints/workers/celery_app.py",
+      "summary": "celery_app.py is a backend python module in backend/entrypoints/workers with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "type": "file",
+      "name": "deliverable_tasks.py",
+      "filePath": "backend/entrypoints/workers/deliverable_tasks.py",
+      "summary": "deliverable_tasks.py is a backend python module in backend/entrypoints/workers with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/deliverable_tasks.py:generate_field_deliverable",
+      "type": "function",
+      "name": "generate_field_deliverable",
+      "filePath": "backend/entrypoints/workers/deliverable_tasks.py",
+      "summary": "generate_field_deliverable implements logic in deliverable_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/export_tasks.py",
+      "type": "file",
+      "name": "export_tasks.py",
+      "filePath": "backend/entrypoints/workers/export_tasks.py",
+      "summary": "export_tasks.py is a backend python module in backend/entrypoints/workers with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/export_tasks.py:generate_mission_export",
+      "type": "function",
+      "name": "generate_mission_export",
+      "filePath": "backend/entrypoints/workers/export_tasks.py",
+      "summary": "generate_mission_export implements logic in export_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "type": "file",
+      "name": "outbox_tasks.py",
+      "filePath": "backend/entrypoints/workers/outbox_tasks.py",
+      "summary": "outbox_tasks.py is a backend python module in backend/entrypoints/workers with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/outbox_tasks.py:publish_outbox_event",
+      "type": "function",
+      "name": "publish_outbox_event",
+      "filePath": "backend/entrypoints/workers/outbox_tasks.py",
+      "summary": "publish_outbox_event implements logic in outbox_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/outbox_tasks.py:publish_pending_outbox",
+      "type": "function",
+      "name": "publish_pending_outbox",
+      "filePath": "backend/entrypoints/workers/outbox_tasks.py",
+      "summary": "publish_pending_outbox implements logic in outbox_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "type": "file",
+      "name": "photogrammetry_tasks.py",
+      "filePath": "backend/entrypoints/workers/photogrammetry_tasks.py",
+      "summary": "photogrammetry_tasks.py is a backend python module in backend/entrypoints/workers with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_get_worker_loop",
+      "type": "function",
+      "name": "_get_worker_loop",
+      "filePath": "backend/entrypoints/workers/photogrammetry_tasks.py",
+      "summary": "_get_worker_loop implements logic in photogrammetry_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_run_on_worker_loop",
+      "type": "function",
+      "name": "_run_on_worker_loop",
+      "filePath": "backend/entrypoints/workers/photogrammetry_tasks.py",
+      "summary": "_run_on_worker_loop implements logic in photogrammetry_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_run_photogrammetry_pipeline",
+      "type": "function",
+      "name": "_run_photogrammetry_pipeline",
+      "filePath": "backend/entrypoints/workers/photogrammetry_tasks.py",
+      "summary": "_run_photogrammetry_pipeline implements logic in photogrammetry_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "type": "file",
+      "name": "scheduling_tasks.py",
+      "filePath": "backend/entrypoints/workers/scheduling_tasks.py",
+      "summary": "scheduling_tasks.py is a backend python module in backend/entrypoints/workers with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/scheduling_tasks.py:run_template_mission",
+      "type": "function",
+      "name": "run_template_mission",
+      "filePath": "backend/entrypoints/workers/scheduling_tasks.py",
+      "summary": "run_template_mission implements logic in scheduling_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/scheduling_tasks.py:check_due_templates",
+      "type": "function",
+      "name": "check_due_templates",
+      "filePath": "backend/entrypoints/workers/scheduling_tasks.py",
+      "summary": "check_due_templates implements logic in scheduling_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "type": "file",
+      "name": "video_analysis_tasks.py",
+      "filePath": "backend/entrypoints/workers/video_analysis_tasks.py",
+      "summary": "video_analysis_tasks.py is a backend python module in backend/entrypoints/workers with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/video_analysis_tasks.py:_get_worker_loop",
+      "type": "function",
+      "name": "_get_worker_loop",
+      "filePath": "backend/entrypoints/workers/video_analysis_tasks.py",
+      "summary": "_get_worker_loop implements logic in video_analysis_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/video_analysis_tasks.py:_run_on_worker_loop",
+      "type": "function",
+      "name": "_run_on_worker_loop",
+      "filePath": "backend/entrypoints/workers/video_analysis_tasks.py",
+      "summary": "_run_on_worker_loop implements logic in video_analysis_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/video_analysis_tasks.py:process_video_analysis_job",
+      "type": "function",
+      "name": "process_video_analysis_job",
+      "filePath": "backend/entrypoints/workers/video_analysis_tasks.py",
+      "summary": "process_video_analysis_job implements logic in video_analysis_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "type": "file",
+      "name": "warehouse_mapping_tasks.py",
+      "filePath": "backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "summary": "warehouse_mapping_tasks.py is a backend python module in backend/entrypoints/workers with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_verify_warehouse_mapping_tasks_registered",
+      "type": "function",
+      "name": "_verify_warehouse_mapping_tasks_registered",
+      "filePath": "backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "summary": "_verify_warehouse_mapping_tasks_registered implements logic in warehouse_mapping_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_get_worker_loop",
+      "type": "function",
+      "name": "_get_worker_loop",
+      "filePath": "backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "summary": "_get_worker_loop implements logic in warehouse_mapping_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_run_on_worker_loop",
+      "type": "function",
+      "name": "_run_on_worker_loop",
+      "filePath": "backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "summary": "_run_on_worker_loop implements logic in warehouse_mapping_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_params_from_payload",
+      "type": "function",
+      "name": "_params_from_payload",
+      "filePath": "backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "summary": "_params_from_payload implements logic in warehouse_mapping_tasks.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:extract_warehouse_structure",
+      "type": "function",
+      "name": "extract_warehouse_structure",
+      "filePath": "backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "summary": "extract_warehouse_structure implements logic in warehouse_mapping_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "type": "file",
+      "name": "webhook_tasks.py",
+      "filePath": "backend/entrypoints/workers/webhook_tasks.py",
+      "summary": "webhook_tasks.py is a backend python module in backend/entrypoints/workers with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/webhook_tasks.py:deliver_webhook",
+      "type": "function",
+      "name": "deliver_webhook",
+      "filePath": "backend/entrypoints/workers/webhook_tasks.py",
+      "summary": "deliver_webhook implements logic in webhook_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/webhook_tasks.py:deliver_pending_webhooks",
+      "type": "function",
+      "name": "deliver_pending_webhooks",
+      "filePath": "backend/entrypoints/workers/webhook_tasks.py",
+      "summary": "deliver_pending_webhooks implements logic in webhook_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/camera/recording.py",
+      "type": "file",
+      "name": "recording.py",
+      "filePath": "backend/infrastructure/camera/recording.py",
+      "summary": "recording.py is a backend python module in backend/infrastructure/camera with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/recording.py:start_streaming_server_via_ssh",
+      "type": "function",
+      "name": "start_streaming_server_via_ssh",
+      "filePath": "backend/infrastructure/camera/recording.py",
+      "summary": "start_streaming_server_via_ssh implements logic in recording.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/recording.py:wait_for_stream",
+      "type": "function",
+      "name": "wait_for_stream",
+      "filePath": "backend/infrastructure/camera/recording.py",
+      "summary": "wait_for_stream implements logic in recording.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/recording.py:mjpeg_stream",
+      "type": "function",
+      "name": "mjpeg_stream",
+      "filePath": "backend/infrastructure/camera/recording.py",
+      "summary": "mjpeg_stream implements logic in recording.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/camera/runtime.py",
+      "type": "file",
+      "name": "runtime.py",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "runtime.py is a backend python module in backend/infrastructure/camera with 12 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_is_benign_shutdown_exit_code",
+      "type": "function",
+      "name": "_is_benign_shutdown_exit_code",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_is_benign_shutdown_exit_code implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_is_benign_shutdown_error",
+      "type": "function",
+      "name": "_is_benign_shutdown_error",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_is_benign_shutdown_error implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:gazebo_subprocess_fallback_required",
+      "type": "function",
+      "name": "gazebo_subprocess_fallback_required",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "gazebo_subprocess_fallback_required implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_get_gazebo_udp_port",
+      "type": "function",
+      "name": "_get_gazebo_udp_port",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_get_gazebo_udp_port implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_discover_gazebo_enable_topics",
+      "type": "function",
+      "name": "_discover_gazebo_enable_topics",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_discover_gazebo_enable_topics implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_ensure_gazebo_streaming_enabled",
+      "type": "function",
+      "name": "_ensure_gazebo_streaming_enabled",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_ensure_gazebo_streaming_enabled implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_gazebo_gst_mjpeg_command",
+      "type": "function",
+      "name": "_gazebo_gst_mjpeg_command",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_gazebo_gst_mjpeg_command implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_start_streaming_server_via_ssh",
+      "type": "function",
+      "name": "_start_streaming_server_via_ssh",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_start_streaming_server_via_ssh implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_wait_for_stream",
+      "type": "function",
+      "name": "_wait_for_stream",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_wait_for_stream implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_recording_root_from_path",
+      "type": "function",
+      "name": "_recording_root_from_path",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_recording_root_from_path implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:_recording_filename",
+      "type": "function",
+      "name": "_recording_filename",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "_recording_filename implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/runtime.py:drone_video_link_connected",
+      "type": "function",
+      "name": "drone_video_link_connected",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "drone_video_link_connected implements logic in runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/camera/runtime.py:SharedVideoRuntime",
+      "type": "class",
+      "name": "SharedVideoRuntime",
+      "filePath": "backend/infrastructure/camera/runtime.py",
+      "summary": "SharedVideoRuntime groups related behavior and state in runtime.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/camera/stream_client.py",
+      "type": "file",
+      "name": "stream_client.py",
+      "filePath": "backend/infrastructure/camera/stream_client.py",
+      "summary": "stream_client.py is a backend python module in backend/infrastructure/camera with 4 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/stream_client.py:_is_rtsp",
+      "type": "function",
+      "name": "_is_rtsp",
+      "filePath": "backend/infrastructure/camera/stream_client.py",
+      "summary": "_is_rtsp implements logic in stream_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/stream_client.py:_get_udp_port",
+      "type": "function",
+      "name": "_get_udp_port",
+      "filePath": "backend/infrastructure/camera/stream_client.py",
+      "summary": "_get_udp_port implements logic in stream_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/stream_client.py:open_video_capture",
+      "type": "function",
+      "name": "open_video_capture",
+      "filePath": "backend/infrastructure/camera/stream_client.py",
+      "summary": "open_video_capture implements logic in stream_client.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/camera/stream_client.py:opencv_has_gstreamer",
+      "type": "function",
+      "name": "opencv_has_gstreamer",
+      "filePath": "backend/infrastructure/camera/stream_client.py",
+      "summary": "opencv_has_gstreamer implements logic in stream_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/camera/stream_client.py:DroneVideoStream",
+      "type": "class",
+      "name": "DroneVideoStream",
+      "filePath": "backend/infrastructure/camera/stream_client.py",
+      "summary": "DroneVideoStream groups related behavior and state in stream_client.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/mapping/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/infrastructure/mapping/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/infrastructure/mapping with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/mapping/adapters.py",
+      "type": "file",
+      "name": "adapters.py",
+      "filePath": "backend/infrastructure/mapping/adapters.py",
+      "summary": "adapters.py is a backend python module in backend/infrastructure/mapping with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/mapping/adapters.py:build_photogrammetry_service",
+      "type": "function",
+      "name": "build_photogrammetry_service",
+      "filePath": "backend/infrastructure/mapping/adapters.py",
+      "summary": "build_photogrammetry_service implements logic in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/mapping/adapters.py:build_mapping_job",
+      "type": "function",
+      "name": "build_mapping_job",
+      "filePath": "backend/infrastructure/mapping/adapters.py",
+      "summary": "build_mapping_job implements logic in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/maps/google_maps_client.py",
+      "type": "file",
+      "name": "google_maps_client.py",
+      "filePath": "backend/infrastructure/maps/google_maps_client.py",
+      "summary": "google_maps_client.py is a backend python module in backend/infrastructure/maps with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/maps/google_maps_client.py:GoogleMapsClient",
+      "type": "class",
+      "name": "GoogleMapsClient",
+      "filePath": "backend/infrastructure/maps/google_maps_client.py",
+      "summary": "GoogleMapsClient groups related behavior and state in google_maps_client.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/messaging/mqtt_client.py",
+      "type": "file",
+      "name": "mqtt_client.py",
+      "filePath": "backend/infrastructure/messaging/mqtt_client.py",
+      "summary": "mqtt_client.py is a backend python module in backend/infrastructure/messaging with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/messaging/mqtt_client.py:MqttClient",
+      "type": "class",
+      "name": "MqttClient",
+      "filePath": "backend/infrastructure/messaging/mqtt_client.py",
+      "summary": "MqttClient groups related behavior and state in mqtt_client.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/messaging/mqtt_subscriber.py",
+      "type": "file",
+      "name": "mqtt_subscriber.py",
+      "filePath": "backend/infrastructure/messaging/mqtt_subscriber.py",
+      "summary": "mqtt_subscriber.py is a backend python module in backend/infrastructure/messaging with 1 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/messaging/mqtt_subscriber.py:decode_json_payload",
+      "type": "function",
+      "name": "decode_json_payload",
+      "filePath": "backend/infrastructure/messaging/mqtt_subscriber.py",
+      "summary": "decode_json_payload implements logic in mqtt_subscriber.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/messaging/mqtt_subscriber.py:MqttSubscriber",
+      "type": "class",
+      "name": "MqttSubscriber",
+      "filePath": "backend/infrastructure/messaging/mqtt_subscriber.py",
+      "summary": "MqttSubscriber groups related behavior and state in mqtt_subscriber.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/messaging/opcua_server.py",
+      "type": "file",
+      "name": "opcua_server.py",
+      "filePath": "backend/infrastructure/messaging/opcua_server.py",
+      "summary": "opcua_server.py is a backend python module in backend/infrastructure/messaging with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/messaging/opcua_server.py:DroneOpcUaServer",
+      "type": "class",
+      "name": "DroneOpcUaServer",
+      "filePath": "backend/infrastructure/messaging/opcua_server.py",
+      "summary": "DroneOpcUaServer groups related behavior and state in opcua_server.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/photogrammetry/ingest.py",
+      "type": "file",
+      "name": "ingest.py",
+      "filePath": "backend/infrastructure/photogrammetry/ingest.py",
+      "summary": "ingest.py is a backend python module in backend/infrastructure/photogrammetry with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/photogrammetry/ingest.py:DroneSyncIngestService",
+      "type": "class",
+      "name": "DroneSyncIngestService",
+      "filePath": "backend/infrastructure/photogrammetry/ingest.py",
+      "summary": "DroneSyncIngestService groups related behavior and state in ingest.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/photogrammetry/storage.py",
+      "type": "file",
+      "name": "storage.py",
+      "filePath": "backend/infrastructure/photogrammetry/storage.py",
+      "summary": "storage.py is a backend python module in backend/infrastructure/photogrammetry with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/photogrammetry/storage.py:StorageService",
+      "type": "class",
+      "name": "StorageService",
+      "filePath": "backend/infrastructure/photogrammetry/storage.py",
+      "summary": "StorageService groups related behavior and state in storage.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "type": "file",
+      "name": "webodm_client.py",
+      "filePath": "backend/infrastructure/photogrammetry/webodm_client.py",
+      "summary": "webodm_client.py is a backend python module in backend/infrastructure/photogrammetry with 1 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/webodm_client.py:_ensure_dir",
+      "type": "function",
+      "name": "_ensure_dir",
+      "filePath": "backend/infrastructure/photogrammetry/webodm_client.py",
+      "summary": "_ensure_dir implements logic in webodm_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/photogrammetry/webodm_client.py:WebODMClient",
+      "type": "class",
+      "name": "WebODMClient",
+      "filePath": "backend/infrastructure/photogrammetry/webodm_client.py",
+      "summary": "WebODMClient groups related behavior and state in webodm_client.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/runtime/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/infrastructure/runtime/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/infrastructure/runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/runtime/adapters.py",
+      "type": "file",
+      "name": "adapters.py",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "adapters.py is a backend python module in backend/infrastructure/runtime with 0 functions and 6 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/runtime/adapters.py:MavlinkVehicleAdapter",
+      "type": "class",
+      "name": "MavlinkVehicleAdapter",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "MavlinkVehicleAdapter groups related behavior and state in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/runtime/adapters.py:MapAdapter",
+      "type": "class",
+      "name": "MapAdapter",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "MapAdapter groups related behavior and state in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/runtime/adapters.py:MqttPublisherAdapter",
+      "type": "class",
+      "name": "MqttPublisherAdapter",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "MqttPublisherAdapter groups related behavior and state in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/runtime/adapters.py:MavlinkTelemetryConnectionFactory",
+      "type": "class",
+      "name": "MavlinkTelemetryConnectionFactory",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "MavlinkTelemetryConnectionFactory groups related behavior and state in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/runtime/adapters.py:VideoStreamFactory",
+      "type": "class",
+      "name": "VideoStreamFactory",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "VideoStreamFactory groups related behavior and state in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/runtime/adapters.py:RuntimeAdapterBundle",
+      "type": "class",
+      "name": "RuntimeAdapterBundle",
+      "filePath": "backend/infrastructure/runtime/adapters.py",
+      "summary": "RuntimeAdapterBundle groups related behavior and state in adapters.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "type": "file",
+      "name": "frame_conversion.py",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "frame_conversion.py is a backend python module in backend/infrastructure/vehicle with 8 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:normalize_angle_rad",
+      "type": "function",
+      "name": "normalize_angle_rad",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "normalize_angle_rad implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:enu_yaw_to_ned",
+      "type": "function",
+      "name": "enu_yaw_to_ned",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "enu_yaw_to_ned implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:ned_yaw_to_enu",
+      "type": "function",
+      "name": "ned_yaw_to_enu",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "ned_yaw_to_enu implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:enu_to_local_ned",
+      "type": "function",
+      "name": "enu_to_local_ned",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "enu_to_local_ned implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:local_ned_to_enu",
+      "type": "function",
+      "name": "local_ned_to_enu",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "local_ned_to_enu implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:local_ned_position_to_enu",
+      "type": "function",
+      "name": "local_ned_position_to_enu",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "local_ned_position_to_enu implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:_rotate",
+      "type": "function",
+      "name": "_rotate",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "_rotate implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/vehicle/frame_conversion.py:warehouse_map_to_odom_enu",
+      "type": "function",
+      "name": "warehouse_map_to_odom_enu",
+      "filePath": "backend/infrastructure/vehicle/frame_conversion.py",
+      "summary": "warehouse_map_to_odom_enu implements logic in frame_conversion.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:env_truthy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:env_truthy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:env_falsey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:env_falsey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:_normalize_log_level",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:_normalize_log_level",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:_ensure_filter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:_ensure_filter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:_make_formatter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:_make_formatter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:setup_logging",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "function:backend/core/config/runtime.py:setup_logging",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:DailyDateFileHandler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:DailyDateFileHandler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:RepeatedAutopilotLogFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:RepeatedAutopilotLogFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:DefaultLogRecordFieldsFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:DefaultLogRecordFieldsFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:BootstrapSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:BootstrapSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:RuntimeSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/config/runtime.py",
+      "target": "class:backend/core/config/runtime.py:RuntimeSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/__init__.py",
+      "target": "file:backend/core/events/envelope.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:utc_now",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:utc_now",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:next_runtime_sequence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:next_runtime_sequence",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:reset_runtime_sequences",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:reset_runtime_sequences",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_event_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_event_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_float_or_none",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_float_or_none",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_int_or_none",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_int_or_none",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_bool_flag",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_bool_flag",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_first_present",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_first_present",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_value_or_zero",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:_value_or_zero",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:mission_context_from_runtime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "function:backend/core/events/envelope.py:mission_context_from_runtime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:MissionContextV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:MissionContextV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:RuntimeEnvelopeBaseV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:RuntimeEnvelopeBaseV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryPositionV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryPositionV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryAttitudeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryAttitudeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryBatteryV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryBatteryV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryGpsV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryGpsV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryLinkV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryLinkV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryWindV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryWindV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryMotionV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryMotionV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetrySystemV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetrySystemV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryFailsafeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryFailsafeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryHeartbeatV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryHeartbeatV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryEkfV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryEkfV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryCompassV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryCompassV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryCameraV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryCameraV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryPayloadV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryPayloadV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryEnvelopeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:TelemetryEnvelopeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:FlightEventSeverityV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:FlightEventSeverityV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:FlightEventPayloadV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:FlightEventPayloadV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:FlightEventEnvelopeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:FlightEventEnvelopeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:VideoHealthPayloadV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:VideoHealthPayloadV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:VideoHealthEnvelopeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:VideoHealthEnvelopeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:AlertSnapshotV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:AlertSnapshotV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:AlertEventPayloadV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:AlertEventPayloadV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:AlertEventEnvelopeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:AlertEventEnvelopeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:MissionLifecyclePayloadV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:MissionLifecyclePayloadV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:MissionLifecycleEnvelopeV1",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/envelope.py",
+      "target": "class:backend/core/events/envelope.py:MissionLifecycleEnvelopeV1",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_float_or_none",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_float_or_none",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_int_or_none",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_int_or_none",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_bounded_percent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_bounded_percent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_compact",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_compact",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_valid_lat_lon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_valid_lat_lon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_mavlink_position",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:_mavlink_position",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:check_mavlink_connection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:check_mavlink_connection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:process_mavlink_message",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:process_mavlink_message",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:raw_event_from_mavlink_message",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/events/mavlink.py",
+      "target": "function:backend/core/events/mavlink.py:raw_event_from_mavlink_message",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:meters_per_deg_lat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:meters_per_deg_lat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:meters_per_deg_lon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:meters_per_deg_lon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:lonlat_to_xy_m",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:lonlat_to_xy_m",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:xy_m_to_lonlat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:xy_m_to_lonlat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:strip_closed_ring",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:strip_closed_ring",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:close_lonlat_ring",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:close_lonlat_ring",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:polygon_centroid_lonlat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/projection.py",
+      "target": "function:backend/core/geometry/projection.py:polygon_centroid_lonlat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/tokens.py",
+      "target": "function:backend/core/tokens.py:safe_token",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/tokens.py",
+      "target": "function:backend/core/tokens.py:safe_token",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:_finite_float",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:_finite_float",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:_validate_lat_lon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:_validate_lat_lon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:haversine_km",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:haversine_km",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:coord_from_home",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:coord_from_home",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:_total_mission_distance_km",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/types/geo.py",
+      "target": "function:backend/core/types/geo.py:_total_mission_distance_km",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/agents_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/export_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/__init__.py",
+      "target": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/async_loop.py",
+      "target": "class:backend/entrypoints/workers/async_loop.py:_WorkerThreadLocal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/async_loop.py",
+      "target": "class:backend/entrypoints/workers/async_loop.py:_WorkerThreadLocal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/async_loop.py",
+      "target": "class:backend/entrypoints/workers/async_loop.py:WorkerLoopState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/async_loop.py",
+      "target": "class:backend/entrypoints/workers/async_loop.py:WorkerLoopState",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/agents_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/export_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/celery_app.py",
+      "target": "file:backend/observability/celery_instrumentation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "target": "file:backend/modules/deliverables/job.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "target": "function:backend/entrypoints/workers/deliverable_tasks.py:generate_field_deliverable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/deliverable_tasks.py",
+      "target": "function:backend/entrypoints/workers/deliverable_tasks.py:generate_field_deliverable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/export_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/export_tasks.py",
+      "target": "file:backend/modules/deliverables/export_job.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/export_tasks.py",
+      "target": "function:backend/entrypoints/workers/export_tasks.py:generate_mission_export",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/export_tasks.py",
+      "target": "function:backend/entrypoints/workers/export_tasks.py:generate_mission_export",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "file:backend/modules/automation/outbox_job.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "function:backend/entrypoints/workers/outbox_tasks.py:publish_outbox_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "function:backend/entrypoints/workers/outbox_tasks.py:publish_outbox_event",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "function:backend/entrypoints/workers/outbox_tasks.py:publish_pending_outbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/outbox_tasks.py",
+      "target": "function:backend/entrypoints/workers/outbox_tasks.py:publish_pending_outbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "file:backend/entrypoints/workers/async_loop.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "file:backend/infrastructure/mapping/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_get_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_get_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_run_on_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_run_on_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_run_photogrammetry_pipeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/photogrammetry_tasks.py",
+      "target": "function:backend/entrypoints/workers/photogrammetry_tasks.py:_run_photogrammetry_pipeline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "target": "file:backend/modules/automation/scheduling_job.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "target": "function:backend/entrypoints/workers/scheduling_tasks.py:run_template_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "target": "function:backend/entrypoints/workers/scheduling_tasks.py:run_template_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "target": "function:backend/entrypoints/workers/scheduling_tasks.py:check_due_templates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/scheduling_tasks.py",
+      "target": "function:backend/entrypoints/workers/scheduling_tasks.py:check_due_templates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "file:backend/entrypoints/workers/async_loop.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "file:backend/modules/video_analysis/service/pipeline.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "function:backend/entrypoints/workers/video_analysis_tasks.py:_get_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "function:backend/entrypoints/workers/video_analysis_tasks.py:_get_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "function:backend/entrypoints/workers/video_analysis_tasks.py:_run_on_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "function:backend/entrypoints/workers/video_analysis_tasks.py:_run_on_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "function:backend/entrypoints/workers/video_analysis_tasks.py:process_video_analysis_job",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/video_analysis_tasks.py",
+      "target": "function:backend/entrypoints/workers/video_analysis_tasks.py:process_video_analysis_job",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "file:backend/entrypoints/workers/async_loop.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "file:backend/modules/warehouse/service/structure_extraction.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "file:backend/modules/warehouse/service/structure_jobs.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_verify_warehouse_mapping_tasks_registered",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_verify_warehouse_mapping_tasks_registered",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_get_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_get_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_run_on_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_run_on_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_params_from_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:_params_from_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:extract_warehouse_structure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/warehouse_mapping_tasks.py",
+      "target": "function:backend/entrypoints/workers/warehouse_mapping_tasks.py:extract_warehouse_structure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "target": "file:backend/modules/integrations/webhooks/jobs.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "target": "function:backend/entrypoints/workers/webhook_tasks.py:deliver_webhook",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "target": "function:backend/entrypoints/workers/webhook_tasks.py:deliver_webhook",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "target": "function:backend/entrypoints/workers/webhook_tasks.py:deliver_pending_webhooks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/webhook_tasks.py",
+      "target": "function:backend/entrypoints/workers/webhook_tasks.py:deliver_pending_webhooks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "function:backend/infrastructure/camera/recording.py:start_streaming_server_via_ssh",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "function:backend/infrastructure/camera/recording.py:start_streaming_server_via_ssh",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "function:backend/infrastructure/camera/recording.py:wait_for_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "function:backend/infrastructure/camera/recording.py:wait_for_stream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "function:backend/infrastructure/camera/recording.py:mjpeg_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/recording.py",
+      "target": "function:backend/infrastructure/camera/recording.py:mjpeg_stream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "file:backend/infrastructure/camera/stream_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "file:backend/infrastructure/messaging/websocket_publisher.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_is_benign_shutdown_exit_code",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_is_benign_shutdown_exit_code",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_is_benign_shutdown_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_is_benign_shutdown_error",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:gazebo_subprocess_fallback_required",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:gazebo_subprocess_fallback_required",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_get_gazebo_udp_port",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_get_gazebo_udp_port",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_discover_gazebo_enable_topics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_discover_gazebo_enable_topics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_ensure_gazebo_streaming_enabled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_ensure_gazebo_streaming_enabled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_gazebo_gst_mjpeg_command",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_gazebo_gst_mjpeg_command",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_start_streaming_server_via_ssh",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_start_streaming_server_via_ssh",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_wait_for_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_wait_for_stream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_recording_root_from_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_recording_root_from_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_recording_filename",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:_recording_filename",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:drone_video_link_connected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "function:backend/infrastructure/camera/runtime.py:drone_video_link_connected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "class:backend/infrastructure/camera/runtime.py:SharedVideoRuntime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/runtime.py",
+      "target": "class:backend/infrastructure/camera/runtime.py:SharedVideoRuntime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:_is_rtsp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:_is_rtsp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:_get_udp_port",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:_get_udp_port",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:open_video_capture",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:open_video_capture",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:opencv_has_gstreamer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "function:backend/infrastructure/camera/stream_client.py:opencv_has_gstreamer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "class:backend/infrastructure/camera/stream_client.py:DroneVideoStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/camera/stream_client.py",
+      "target": "class:backend/infrastructure/camera/stream_client.py:DroneVideoStream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/__init__.py",
+      "target": "file:backend/infrastructure/mapping/adapters.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/infrastructure/photogrammetry/ingest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/infrastructure/photogrammetry/storage.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/modules/mapping/job.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/modules/mapping/service/workflow.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "file:backend/modules/settings/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "function:backend/infrastructure/mapping/adapters.py:build_photogrammetry_service",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "function:backend/infrastructure/mapping/adapters.py:build_photogrammetry_service",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "function:backend/infrastructure/mapping/adapters.py:build_mapping_job",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/mapping/adapters.py",
+      "target": "function:backend/infrastructure/mapping/adapters.py:build_mapping_job",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/maps/google_maps_client.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/maps/google_maps_client.py",
+      "target": "class:backend/infrastructure/maps/google_maps_client.py:GoogleMapsClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/maps/google_maps_client.py",
+      "target": "class:backend/infrastructure/maps/google_maps_client.py:GoogleMapsClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/mqtt_client.py",
+      "target": "class:backend/infrastructure/messaging/mqtt_client.py:MqttClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/mqtt_client.py",
+      "target": "class:backend/infrastructure/messaging/mqtt_client.py:MqttClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/mqtt_subscriber.py",
+      "target": "function:backend/infrastructure/messaging/mqtt_subscriber.py:decode_json_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/mqtt_subscriber.py",
+      "target": "function:backend/infrastructure/messaging/mqtt_subscriber.py:decode_json_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/mqtt_subscriber.py",
+      "target": "class:backend/infrastructure/messaging/mqtt_subscriber.py:MqttSubscriber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/mqtt_subscriber.py",
+      "target": "class:backend/infrastructure/messaging/mqtt_subscriber.py:MqttSubscriber",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/opcua_server.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/opcua_server.py",
+      "target": "class:backend/infrastructure/messaging/opcua_server.py:DroneOpcUaServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/messaging/opcua_server.py",
+      "target": "class:backend/infrastructure/messaging/opcua_server.py:DroneOpcUaServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/ingest.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/ingest.py",
+      "target": "class:backend/infrastructure/photogrammetry/ingest.py:DroneSyncIngestService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/ingest.py",
+      "target": "class:backend/infrastructure/photogrammetry/ingest.py:DroneSyncIngestService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/storage.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/storage.py",
+      "target": "class:backend/infrastructure/photogrammetry/storage.py:StorageService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/storage.py",
+      "target": "class:backend/infrastructure/photogrammetry/storage.py:StorageService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "target": "function:backend/infrastructure/photogrammetry/webodm_client.py:_ensure_dir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "target": "function:backend/infrastructure/photogrammetry/webodm_client.py:_ensure_dir",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "target": "class:backend/infrastructure/photogrammetry/webodm_client.py:WebODMClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/webodm_client.py",
+      "target": "class:backend/infrastructure/photogrammetry/webodm_client.py:WebODMClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/__init__.py",
+      "target": "file:backend/infrastructure/runtime/adapters.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/infrastructure/camera/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/infrastructure/camera/stream_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/infrastructure/maps/google_maps_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/infrastructure/messaging/mqtt_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/infrastructure/messaging/websocket_publisher.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "file:backend/infrastructure/vehicle/mavlink_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MavlinkVehicleAdapter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MavlinkVehicleAdapter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MapAdapter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MapAdapter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MqttPublisherAdapter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MqttPublisherAdapter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MavlinkTelemetryConnectionFactory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:MavlinkTelemetryConnectionFactory",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:VideoStreamFactory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:VideoStreamFactory",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:RuntimeAdapterBundle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/runtime/adapters.py",
+      "target": "class:backend/infrastructure/runtime/adapters.py:RuntimeAdapterBundle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:normalize_angle_rad",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:normalize_angle_rad",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:enu_yaw_to_ned",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:enu_yaw_to_ned",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:ned_yaw_to_enu",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:ned_yaw_to_enu",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:enu_to_local_ned",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:enu_to_local_ned",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:local_ned_to_enu",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:local_ned_to_enu",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:local_ned_position_to_enu",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:local_ned_position_to_enu",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:_rotate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:_rotate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:warehouse_map_to_odom_enu",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "target": "function:backend/infrastructure/vehicle/frame_conversion.py:warehouse_map_to_odom_enu",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import asyncio
-import inspect
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
 from backend.modules.missions.schemas.mission_types import Mission, Waypoint
 
+from .async_invocation import call_maybe_async
 from .cache import DistanceCache, TerrainCache, optimized_distance
 from .check_models import PrecomputedMissionData
 
@@ -100,18 +99,6 @@ class PreflightContext:
 
         return self._computed_total_distance
 
-    @staticmethod
-    async def _call_maybe_async(fn: Any, *args: Any) -> Any:
-        if inspect.iscoroutinefunction(fn):
-            return await fn(*args)
-
-        result = await asyncio.to_thread(fn, *args)
-
-        if inspect.isawaitable(result):
-            return await result
-
-        return result
-
     async def get_terrain_elevation(self, lat: float, lon: float) -> float | None:
         cached = self._terrain_cache.get(lat, lon)
 
@@ -126,7 +113,7 @@ class PreflightContext:
         if fetcher is None:
             return None
 
-        elevation = await self._call_maybe_async(fetcher, lat, lon)
+        elevation = await call_maybe_async(fetcher, lat, lon)
 
         if elevation is not None:
             elevation = float(elevation)

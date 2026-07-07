@@ -1,0 +1,38 @@
+{
+  "nodes": [
+    {
+      "id": "service:backend/Dockerfile",
+      "type": "service",
+      "name": "Dockerfile",
+      "filePath": "backend/Dockerfile",
+      "summary": "Dockerfile defines container, process, or deployment infrastructure for the platform.",
+      "complexity": "simple",
+      "tags": [
+        "infrastructure",
+        "deployment",
+        "dockerfile"
+      ]
+    },
+    {
+      "id": "service:backend/Dockerfile:python",
+      "type": "service",
+      "name": "python",
+      "filePath": "backend/Dockerfile",
+      "summary": "python service is defined by Dockerfile.",
+      "complexity": "moderate",
+      "tags": [
+        "service",
+        "infrastructure"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "service:backend/Dockerfile:python",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

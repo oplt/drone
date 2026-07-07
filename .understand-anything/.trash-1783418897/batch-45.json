@@ -1,0 +1,53 @@
+{
+  "nodes": [
+    {
+      "id": "document:frontend/docs/architecture-baseline.md",
+      "type": "document",
+      "name": "architecture-baseline.md",
+      "filePath": "frontend/docs/architecture-baseline.md",
+      "summary": "architecture-baseline.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "moderate",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "document:frontend/docs/frontend-quality-debt.md",
+      "type": "document",
+      "name": "frontend-quality-debt.md",
+      "filePath": "frontend/docs/frontend-quality-debt.md",
+      "summary": "frontend-quality-debt.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "document:frontend/docs/oversized-map-warehouse-modules.md",
+      "type": "document",
+      "name": "oversized-map-warehouse-modules.md",
+      "filePath": "frontend/docs/oversized-map-warehouse-modules.md",
+      "summary": "oversized-map-warehouse-modules.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "document:frontend/docs/smoke-paths.md",
+      "type": "document",
+      "name": "smoke-paths.md",
+      "filePath": "frontend/docs/smoke-paths.md",
+      "summary": "smoke-paths.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    }
+  ],
+  "edges": []
+}

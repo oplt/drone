@@ -1,0 +1,3815 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 30,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 181,
+      "nonEmptyLines": 177,
+      "functions": [
+        {
+          "name": "WarehouseSensorRigSetupPanel",
+          "startLine": 34,
+          "endLine": 181,
+          "params": [
+            "{\n  rigs,\n  selectedId,\n  health,\n  loading,\n  saving,\n  deleting,\n  onSelect,\n  onRefresh,\n  onCalibrate,\n  onCreate,\n  onDelete,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WarehouseSensorRigSetupPanel",
+          "line": 34,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "useState",
+          "lineNumber": 47
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "useState",
+          "lineNumber": 48
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "rigs.find",
+          "lineNumber": 49
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "String",
+          "lineNumber": 66
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "onSelect",
+          "lineNumber": 68
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "Number",
+          "lineNumber": 68
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "rigs.map",
+          "lineNumber": 76
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "String",
+          "lineNumber": 77
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "setShowCreate",
+          "lineNumber": 100
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "onDelete",
+          "lineNumber": 108
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "SENSOR_RIG_CREATE_FIELDS.map",
+          "lineNumber": 130
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "setForm",
+          "lineNumber": 157
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "onCreate(form).then",
+          "lineNumber": 169
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "onCreate",
+          "lineNumber": 169
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "setForm",
+          "lineNumber": 171
+        },
+        {
+          "caller": "WarehouseSensorRigSetupPanel",
+          "callee": "setShowCreate",
+          "lineNumber": 172
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 60,
+      "nonEmptyLines": 56,
+      "functions": [
+        {
+          "name": "WarehouseStatusBadge",
+          "startLine": 36,
+          "endLine": 60,
+          "params": [
+            "{\n  status,\n  children,\n  size = \"sm\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WarehouseStatusBadge",
+          "line": 36,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 72,
+      "nonEmptyLines": 68,
+      "functions": [
+        {
+          "name": "WarehouseViewerSection",
+          "startLine": 24,
+          "endLine": 72,
+          "params": [
+            "{\n  sectionRef,\n  selectorProps,\n  showViewer,\n  replayMode,\n  viewerProps,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WarehouseViewerSection",
+          "line": 24,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 136,
+      "nonEmptyLines": 126,
+      "functions": [
+        {
+          "name": "normalizeWarehouseStatus",
+          "startLine": 39,
+          "endLine": 58,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "detailFor",
+          "startLine": 60,
+          "endLine": 77,
+          "params": [
+            "key",
+            "preflight"
+          ]
+        },
+        {
+          "name": "buildPreflightGroups",
+          "startLine": 79,
+          "endLine": 96,
+          "params": [
+            "preflight"
+          ]
+        },
+        {
+          "name": "preflightProgress",
+          "startLine": 98,
+          "endLine": 103,
+          "params": [
+            "preflight"
+          ]
+        },
+        {
+          "name": "strongestPreflightBlocker",
+          "startLine": 105,
+          "endLine": 119,
+          "params": [
+            "preflight",
+            "running"
+          ]
+        },
+        {
+          "name": "readinessStatus",
+          "startLine": 121,
+          "endLine": 136,
+          "params": [
+            "preflight",
+            "running"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "normalizeWarehouseStatus",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "buildPreflightGroups",
+          "line": 79,
+          "isDefault": false
+        },
+        {
+          "name": "preflightProgress",
+          "line": 98,
+          "isDefault": false
+        },
+        {
+          "name": "strongestPreflightBlocker",
+          "line": 105,
+          "isDefault": false
+        },
+        {
+          "name": "readinessStatus",
+          "line": 121,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "String(value ?? \"\").toLowerCase",
+          "lineNumber": 40
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "String",
+          "lineNumber": 40
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "[\"ok\", \"pass\", \"ready\", \"true\", \"healthy\", \"live\"].includes",
+          "lineNumber": 41
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "[\"fail\", \"failed\", \"blocked\", \"false\", \"missing\", \"error\", \"down\"].includes",
+          "lineNumber": 44
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "[\"warn\", \"warning\", \"stale\", \"degraded\"].includes",
+          "lineNumber": 50
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "[\"waiting\", \"warming\", \"pending\", \"not_run\"].includes",
+          "lineNumber": 52
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "[\"running\", \"refreshing\", \"starting\"].includes",
+          "lineNumber": 54
+        },
+        {
+          "caller": "normalizeWarehouseStatus",
+          "callee": "[\"skip\", \"skipped\", \"deferred\"].includes",
+          "lineNumber": 56
+        },
+        {
+          "caller": "buildPreflightGroups",
+          "callee": "GROUPS.map",
+          "lineNumber": 83
+        },
+        {
+          "caller": "buildPreflightGroups",
+          "callee": "keys.map",
+          "lineNumber": 85
+        },
+        {
+          "caller": "buildPreflightGroups",
+          "callee": "normalizeWarehouseStatus",
+          "lineNumber": 90
+        },
+        {
+          "caller": "buildPreflightGroups",
+          "callee": "detailFor",
+          "lineNumber": 92
+        },
+        {
+          "caller": "preflightProgress",
+          "callee": "buildPreflightGroups",
+          "lineNumber": 99
+        },
+        {
+          "caller": "preflightProgress",
+          "callee": "groups.flatMap",
+          "lineNumber": 100
+        },
+        {
+          "caller": "preflightProgress",
+          "callee": "checks.filter",
+          "lineNumber": 101
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 5,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 97,
+      "nonEmptyLines": 88,
+      "functions": [
+        {
+          "name": "layerKeyToSource",
+          "startLine": 53,
+          "endLine": 55,
+          "params": [
+            "layer"
+          ]
+        },
+        {
+          "name": "isChunkLayerVisible",
+          "startLine": 57,
+          "endLine": 66,
+          "params": [
+            "chunk",
+            "visibleLayers"
+          ]
+        },
+        {
+          "name": "filterChunksForDownload",
+          "startLine": 68,
+          "endLine": 77,
+          "params": [
+            "chunks",
+            "visibleLayers",
+            "_preferredLayer"
+          ]
+        },
+        {
+          "name": "mergeLiveMapConfig",
+          "startLine": 79,
+          "endLine": 97,
+          "params": [
+            "partial"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_LIVE_MAP_CONFIG",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "layerKeyToSource",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "isChunkLayerVisible",
+          "line": 57,
+          "isDefault": false
+        },
+        {
+          "name": "filterChunksForDownload",
+          "line": 68,
+          "isDefault": false
+        },
+        {
+          "name": "mergeLiveMapConfig",
+          "line": 79,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "isChunkLayerVisible",
+          "callee": "inferLayerKey",
+          "lineNumber": 61
+        },
+        {
+          "caller": "isChunkLayerVisible",
+          "callee": "Boolean",
+          "lineNumber": 65
+        },
+        {
+          "caller": "filterChunksForDownload",
+          "callee": "chunks.filter",
+          "lineNumber": 74
+        },
+        {
+          "caller": "filterChunksForDownload",
+          "callee": "Boolean",
+          "lineNumber": 75
+        },
+        {
+          "caller": "filterChunksForDownload",
+          "callee": "isChunkLayerVisible",
+          "lineNumber": 75
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 5,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 24,
+      "nonEmptyLines": 22,
+      "functions": [
+        {
+          "name": "preflightRunPollIntervalMs",
+          "startLine": 8,
+          "endLine": 14,
+          "params": [
+            "elapsedMs"
+          ]
+        },
+        {
+          "name": "preflightRunElapsedMs",
+          "startLine": 16,
+          "endLine": 24,
+          "params": [
+            "startedAt",
+            "now"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PREFLIGHT_RUN_POLL_MS",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "PREFLIGHT_RUN_POLL_SLOW_MS",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "PREFLIGHT_RUN_POLL_BACKOFF_AFTER_MS",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "FLIGHT_READINESS_POLL_MS",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "PREFLIGHT_SNAPSHOT_POLL_MS",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "PREFLIGHT_SNAPSHOT_STALE_MS",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "preflightRunPollIntervalMs",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "preflightRunElapsedMs",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "preflightRunElapsedMs",
+          "callee": "Date.now",
+          "lineNumber": 18
+        },
+        {
+          "caller": "preflightRunElapsedMs",
+          "callee": "Date.parse",
+          "lineNumber": 21
+        },
+        {
+          "caller": "preflightRunElapsedMs",
+          "callee": "Number.isFinite",
+          "lineNumber": 22
+        },
+        {
+          "caller": "preflightRunElapsedMs",
+          "callee": "Math.max",
+          "lineNumber": 23
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 8,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 554,
+      "nonEmptyLines": 498,
+      "functions": [
+        {
+          "name": "emptyFrameBatch",
+          "startLine": 42,
+          "endLine": 49,
+          "params": []
+        },
+        {
+          "name": "normalizeKind",
+          "startLine": 84,
+          "endLine": 95,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "toBbox",
+          "startLine": 97,
+          "endLine": 104,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "shouldCreateObjectUrl",
+          "startLine": 106,
+          "endLine": 108,
+          "params": [
+            "kind"
+          ]
+        },
+        {
+          "name": "chunkVersion",
+          "startLine": 112,
+          "endLine": 118,
+          "params": [
+            "chunk"
+          ]
+        },
+        {
+          "name": "shouldBatchChunkDownloads",
+          "startLine": 120,
+          "endLine": 126,
+          "params": [
+            "mode",
+            "pendingCount"
+          ]
+        },
+        {
+          "name": "fetchChunkOnce",
+          "startLine": 128,
+          "endLine": 149,
+          "params": [
+            "key",
+            "url",
+            "token",
+            "signal",
+            "flightId",
+            "chunkId"
+          ]
+        },
+        {
+          "name": "selectDownloadableChunks",
+          "startLine": 151,
+          "endLine": 160,
+          "params": [
+            "chunks",
+            "mode"
+          ]
+        },
+        {
+          "name": "runWithConcurrency",
+          "startLine": 162,
+          "endLine": 181,
+          "params": [
+            "items",
+            "limit",
+            "worker"
+          ]
+        },
+        {
+          "name": "resetCacheState",
+          "startLine": 183,
+          "endLine": 200,
+          "params": [
+            "entriesRef",
+            "setEntries",
+            "setDownloadedChunkIds",
+            "setInFlightChunkIds",
+            "downloadedRef",
+            "inFlightRef"
+          ]
+        },
+        {
+          "name": "useLiveMapChunkCache",
+          "startLine": 202,
+          "endLine": 554,
+          "params": [
+            "flightId",
+            "chunks",
+            "token",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "chunkCacheKey",
+          "line": 110,
+          "isDefault": false
+        },
+        {
+          "name": "useLiveMapChunkCache",
+          "line": 202,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "toBbox",
+          "callee": "Array.isArray",
+          "lineNumber": 100
+        },
+        {
+          "caller": "toBbox",
+          "callee": "value.map",
+          "lineNumber": 101
+        },
+        {
+          "caller": "toBbox",
+          "callee": "parsed.some",
+          "lineNumber": 102
+        },
+        {
+          "caller": "toBbox",
+          "callee": "Number.isFinite",
+          "lineNumber": 102
+        },
+        {
+          "caller": "chunkVersion",
+          "callee": "[\n    chunk.url ?? \"\",\n    chunk.checksum_sha256 ?? \"\",\n    chunk.byte_size ?? \"\",\n  ].join",
+          "lineNumber": 113
+        },
+        {
+          "caller": "fetchChunkOnce",
+          "callee": "inFlightChunkFetches.get",
+          "lineNumber": 136
+        },
+        {
+          "caller": "fetchChunkOnce",
+          "callee": "(\n    flightId && chunkId\n      ? fetchWarehouseLiveChunkBatched(flightId, chunkId, key, url, token, signal)\n      : fetchWarehouseLiveChunk(url, token, signal, key)\n  ).finally",
+          "lineNumber": 140
+        },
+        {
+          "caller": "fetchChunkOnce",
+          "callee": "fetchWarehouseLiveChunkBatched",
+          "lineNumber": 142
+        },
+        {
+          "caller": "fetchChunkOnce",
+          "callee": "fetchWarehouseLiveChunk",
+          "lineNumber": 143
+        },
+        {
+          "caller": "fetchChunkOnce",
+          "callee": "inFlightChunkFetches.delete",
+          "lineNumber": 145
+        },
+        {
+          "caller": "fetchChunkOnce",
+          "callee": "inFlightChunkFetches.set",
+          "lineNumber": 147
+        },
+        {
+          "caller": "selectDownloadableChunks",
+          "callee": "selectDownloadableChunksPerLayer",
+          "lineNumber": 155
+        },
+        {
+          "caller": "runWithConcurrency",
+          "callee": "Array.from",
+          "lineNumber": 170
+        },
+        {
+          "caller": "runWithConcurrency",
+          "callee": "Math.min",
+          "lineNumber": 171
+        },
+        {
+          "caller": "runWithConcurrency",
+          "callee": "worker",
+          "lineNumber": 176
+        },
+        {
+          "caller": "runWithConcurrency",
+          "callee": "Promise.all",
+          "lineNumber": 180
+        },
+        {
+          "caller": "resetCacheState",
+          "callee": "entriesRef.current.values",
+          "lineNumber": 191
+        },
+        {
+          "caller": "resetCacheState",
+          "callee": "URL.revokeObjectURL",
+          "lineNumber": 192
+        },
+        {
+          "caller": "resetCacheState",
+          "callee": "setEntries",
+          "lineNumber": 197
+        },
+        {
+          "caller": "resetCacheState",
+          "callee": "setDownloadedChunkIds",
+          "lineNumber": 198
+        },
+        {
+          "caller": "resetCacheState",
+          "callee": "setInFlightChunkIds",
+          "lineNumber": 199
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useState",
+          "lineNumber": 216
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useState",
+          "lineNumber": 217
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useState",
+          "lineNumber": 220
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 224
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 225
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 226
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 227
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 228
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 229
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 230
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "emptyFrameBatch",
+          "lineNumber": 230
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useRef",
+          "lineNumber": 231
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useCallback",
+          "lineNumber": 233
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "emptyFrameBatch",
+          "lineNumber": 236
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "next.get",
+          "lineNumber": 241
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "URL.revokeObjectURL",
+          "lineNumber": 243
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "next.set",
+          "lineNumber": 245
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "setEntries",
+          "lineNumber": 248
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "next.add",
+          "lineNumber": 253
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "setDownloadedChunkIds",
+          "lineNumber": 255
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "next.add",
+          "lineNumber": 260
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "next.delete",
+          "lineNumber": 261
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "setInFlightChunkIds",
+          "lineNumber": 263
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useCallback",
+          "lineNumber": 267
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "window.requestAnimationFrame",
+          "lineNumber": 269
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useCallback",
+          "lineNumber": 272
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "batch.inFlightRemoves.delete",
+          "lineNumber": 276
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "batch.inFlightAdds.add",
+          "lineNumber": 277
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "batch.inFlightAdds.delete",
+          "lineNumber": 279
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "batch.inFlightRemoves.add",
+          "lineNumber": 280
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "scheduleFrameFlush",
+          "lineNumber": 282
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useCallback",
+          "lineNumber": 287
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "frameBatchRef.current.entries.set",
+          "lineNumber": 289
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "frameBatchRef.current.downloadedKeys.add",
+          "lineNumber": 290
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "scheduleFrameFlush",
+          "lineNumber": 291
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useCallback",
+          "lineNumber": 296
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "window.cancelAnimationFrame",
+          "lineNumber": 298
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "frameBatchRef.current.entries.values",
+          "lineNumber": 301
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "URL.revokeObjectURL",
+          "lineNumber": 302
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "emptyFrameBatch",
+          "lineNumber": 304
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useMemo",
+          "lineNumber": 307
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunks.filter",
+          "lineNumber": 308
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "Boolean",
+          "lineNumber": 308
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "filterChunksForDownload",
+          "lineNumber": 310
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "selectDownloadableChunks",
+          "lineNumber": 312
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useMemo",
+          "lineNumber": 315
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "candidates.map",
+          "lineNumber": 318
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkCacheKey",
+          "lineNumber": 318
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useMemo",
+          "lineNumber": 322
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "candidates.filter",
+          "lineNumber": 324
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkCacheKey",
+          "lineNumber": 325
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "entries.get",
+          "lineNumber": 326
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useMemo",
+          "lineNumber": 346
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "pendingDownloads.filter",
+          "lineNumber": 349
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkCacheKey",
+          "lineNumber": 350
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "seen.has",
+          "lineNumber": 351
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "seen.add",
+          "lineNumber": 352
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useMemo",
+          "lineNumber": 357
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "uniquePendingDownloads\n      .map((chunk) => `${chunkCacheKey(flightId, chunk)}:${chunkVersion(chunk)}`)\n      .sort()\n      .join",
+          "lineNumber": 359
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "uniquePendingDownloads\n      .map((chunk) => `${chunkCacheKey(flightId, chunk)}:${chunkVersion(chunk)}`)\n      .sort",
+          "lineNumber": 359
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "uniquePendingDownloads\n      .map",
+          "lineNumber": 359
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkCacheKey",
+          "lineNumber": 360
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkVersion",
+          "lineNumber": 360
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 365
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 369
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 373
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 377
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "discardFrameBatch",
+          "lineNumber": 379
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "clearLiveMapChunkFetchCache",
+          "lineNumber": 381
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "abortControllersRef.current.values",
+          "lineNumber": 383
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "controller.abort",
+          "lineNumber": 384
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "abortControllersRef.current.clear",
+          "lineNumber": 386
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "resetCacheState",
+          "lineNumber": 387
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "discardFrameBatch",
+          "lineNumber": 401
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "clearLiveMapChunkFetchCache",
+          "lineNumber": 402
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "abortControllersRef.current.values",
+          "lineNumber": 403
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "controller.abort",
+          "lineNumber": 404
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "abortControllersRef.current.clear",
+          "lineNumber": 406
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "resetCacheState",
+          "lineNumber": 407
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 419
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "discardFrameBatch",
+          "lineNumber": 419
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 421
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "liveMapDebugLog",
+          "lineNumber": 422
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useEffect",
+          "lineNumber": 430
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "shouldBatchChunkDownloads",
+          "lineNumber": 433
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "Math.min",
+          "lineNumber": 438
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "runWithConcurrency",
+          "lineNumber": 442
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkCacheKey",
+          "lineNumber": 446
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "entriesRef.current.has",
+          "lineNumber": 447
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "abortControllersRef.current.set",
+          "lineNumber": 452
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "queueInFlightChange",
+          "lineNumber": 454
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "fetchChunkOnce",
+          "lineNumber": 458
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "candidateByKey.get",
+          "lineNumber": 477
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "normalizeKind",
+          "lineNumber": 480
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "shouldCreateObjectUrl",
+          "lineNumber": 481
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "URL.createObjectURL",
+          "lineNumber": 482
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "toBbox",
+          "lineNumber": 495
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "queueCompletedChunk",
+          "lineNumber": 503
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "liveMapDebugLog",
+          "lineNumber": 504
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "abortControllersRef.current.delete",
+          "lineNumber": 512
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "queueInFlightChange",
+          "lineNumber": 513
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "useMemo",
+          "lineNumber": 534
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "chunkCacheKey",
+          "lineNumber": 539
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "seen.has",
+          "lineNumber": 540
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "entries.get",
+          "lineNumber": 541
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "seen.add",
+          "lineNumber": 543
+        },
+        {
+          "caller": "useLiveMapChunkCache",
+          "callee": "loaded.push",
+          "lineNumber": 544
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 2,
+        "functionCount": 11,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 315,
+      "nonEmptyLines": 280,
+      "functions": [
+        {
+          "name": "warehousePreflightPassed",
+          "startLine": 18,
+          "endLine": 33,
+          "params": [
+            "preflight"
+          ]
+        },
+        {
+          "name": "hasProbeInProgress",
+          "startLine": 35,
+          "endLine": 39,
+          "params": [
+            "preflight"
+          ]
+        },
+        {
+          "name": "refreshInProgress",
+          "startLine": 41,
+          "endLine": 48,
+          "params": [
+            "preflight"
+          ]
+        },
+        {
+          "name": "isTerminalPreflightFailure",
+          "startLine": 50,
+          "endLine": 62,
+          "params": [
+            "preflight",
+            "run"
+          ]
+        },
+        {
+          "name": "warehousePreflightPollIntervalMs",
+          "startLine": 65,
+          "endLine": 67,
+          "params": [
+            "elapsedMs"
+          ]
+        },
+        {
+          "name": "blockedMessage",
+          "startLine": 69,
+          "endLine": 84,
+          "params": [
+            "preflight",
+            "connectWarning"
+          ]
+        },
+        {
+          "name": "timeoutMessage",
+          "startLine": 86,
+          "endLine": 115,
+          "params": [
+            "preflight",
+            "connectWarning"
+          ]
+        },
+        {
+          "name": "isRunTerminal",
+          "startLine": 117,
+          "endLine": 119,
+          "params": [
+            "run"
+          ]
+        },
+        {
+          "name": "useRunWarehousePreflight",
+          "startLine": 121,
+          "endLine": 315,
+          "params": [
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "warehousePreflightPassed",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "warehousePreflightPollIntervalMs",
+          "line": 65,
+          "isDefault": false
+        },
+        {
+          "name": "useRunWarehousePreflight",
+          "line": 121,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "hasProbeInProgress",
+          "callee": "preflight.blocking_reasons.some",
+          "lineNumber": 36
+        },
+        {
+          "caller": "hasProbeInProgress",
+          "callee": "reason.toLowerCase().includes",
+          "lineNumber": 37
+        },
+        {
+          "caller": "hasProbeInProgress",
+          "callee": "reason.toLowerCase",
+          "lineNumber": 37
+        },
+        {
+          "caller": "refreshInProgress",
+          "callee": "Boolean",
+          "lineNumber": 42
+        },
+        {
+          "caller": "refreshInProgress",
+          "callee": "hasProbeInProgress",
+          "lineNumber": 46
+        },
+        {
+          "caller": "isTerminalPreflightFailure",
+          "callee": "warehousePreflightPassed",
+          "lineNumber": 54
+        },
+        {
+          "caller": "isTerminalPreflightFailure",
+          "callee": "refreshInProgress",
+          "lineNumber": 54
+        },
+        {
+          "caller": "isTerminalPreflightFailure",
+          "callee": "Object.entries(preflight.categories ?? {}).some",
+          "lineNumber": 57
+        },
+        {
+          "caller": "isTerminalPreflightFailure",
+          "callee": "Object.entries",
+          "lineNumber": 57
+        },
+        {
+          "caller": "isTerminalPreflightFailure",
+          "callee": "TRANSIENT_FAILURE_KEYS.has",
+          "lineNumber": 58
+        },
+        {
+          "caller": "isTerminalPreflightFailure",
+          "callee": "TRANSIENT_STATUSES.has",
+          "lineNumber": 59
+        },
+        {
+          "caller": "warehousePreflightPollIntervalMs",
+          "callee": "preflightRunPollIntervalMs",
+          "lineNumber": 66
+        },
+        {
+          "caller": "timeoutMessage",
+          "callee": "Math.max",
+          "lineNumber": 98
+        },
+        {
+          "caller": "timeoutMessage",
+          "callee": "Math.ceil",
+          "lineNumber": 106
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useQueryClient",
+          "lineNumber": 122
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useState",
+          "lineNumber": 123
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useState",
+          "lineNumber": 124
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useState",
+          "lineNumber": 125
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useState",
+          "lineNumber": 126
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useRef",
+          "lineNumber": 127
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useRef",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useRef",
+          "lineNumber": 129
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useRef",
+          "lineNumber": 130
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useRef",
+          "lineNumber": 131
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useRef",
+          "lineNumber": 134
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useStartWarehousePreflightRefresh",
+          "lineNumber": 136
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useWarehousePreflightRun",
+          "lineNumber": 137
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "Boolean",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useCallback",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setRunning",
+          "lineNumber": 143
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setActiveRunId",
+          "lineNumber": 144
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setError",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "resolveRunRef.current",
+          "lineNumber": 147
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useEffect",
+          "lineNumber": 154
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setResult",
+          "lineNumber": 159
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "(async () => {\n      let snapshot = run.snapshot ?? null;\n      if (!snapshot && token) {\n        snapshot = await fetchWarehousePreflight(token, {\n          missionLoaded: run.mission_loaded,\n        }).catch(() => null);\n      }\n      if (snapshot) {\n        setResult(snapshot);\n        void queryClient.invalidateQueries({\n          queryKey: [\"warehouse-preflight\", token],\n        });\n      }\n\n      if (run.status === \"failed\") {\n        finishRun(\n          snapshot,\n          run.error ??\n            (snapshot\n              ? blockedMessage(snapshot, connectWarningRef.current)\n              : \"Preflight refresh failed.\"),\n        );\n        return;\n      }\n\n      if (snapshot && warehousePreflightPassed(snapshot)) {\n        finishRun(snapshot, null);\n        return;\n      }\n\n      if (snapshot && isTerminalPreflightFailure(snapshot, run)) {\n        finishRun(snapshot, blockedMessage(snapshot, connectWarningRef.current));\n        return;\n      }\n\n      finishRun(snapshot, null);\n    })",
+          "lineNumber": 165
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "fetchWarehousePreflight(token, {\n          missionLoaded: run.mission_loaded,\n        }).catch",
+          "lineNumber": 168
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "fetchWarehousePreflight",
+          "lineNumber": 168
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setResult",
+          "lineNumber": 173
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 174
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 180
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "blockedMessage",
+          "lineNumber": 184
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "warehousePreflightPassed",
+          "lineNumber": 190
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 191
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "isTerminalPreflightFailure",
+          "lineNumber": 195
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 196
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "blockedMessage",
+          "lineNumber": 196
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 200
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useEffect",
+          "lineNumber": 204
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "Math.max",
+          "lineNumber": 207
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "Date.now",
+          "lineNumber": 207
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "window.setTimeout",
+          "lineNumber": 208
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setError",
+          "lineNumber": 211
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "timeoutMessage",
+          "lineNumber": 211
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 212
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "window.clearTimeout",
+          "lineNumber": 215
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useCallback",
+          "lineNumber": 218
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 220
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setResult",
+          "lineNumber": 221
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setError",
+          "lineNumber": 222
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "useCallback",
+          "lineNumber": 225
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setError",
+          "lineNumber": 234
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setRunning",
+          "lineNumber": 240
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setError",
+          "lineNumber": 241
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "Date.now",
+          "lineNumber": 243
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "connectDroneTelemetry(token, \"warehouse_scan\", \"indoor_local\").catch",
+          "lineNumber": 245
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "connectDroneTelemetry",
+          "lineNumber": 245
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "(async () => {\n        try {\n          const run = await startRefresh.mutateAsync({\n            missionLoaded: options?.missionLoaded,\n            deep: true,\n            force: false,\n          });\n          if (!run.run_id || abortRef.current) {\n            finishRun(null, \"Preflight refresh did not return a run id.\");\n            return null;\n          }\n\n          setActiveRunId(run.run_id);\n\n          return await new Promise<WarehouseGoPreflight | null>((resolve) => {\n            resolveRunRef.current = resolve;\n            if (isRunTerminal(run)) {\n              void (async () => {\n                handledRunIdRef.current = run.run_id;\n                let snapshot = run.snapshot ?? null;\n                if (!snapshot) {\n                  snapshot = await fetchWarehousePreflight(token, {\n                    missionLoaded: options?.missionLoaded,\n                  }).catch(() => null);\n                }\n                if (snapshot) setResult(snapshot);\n                const terminalError =\n                  run.status === \"failed\"\n                    ? run.error ??\n                      (snapshot\n                        ? blockedMessage(snapshot, connectWarningRef.current)\n                        : \"Preflight refresh failed.\")\n                    : snapshot && isTerminalPreflightFailure(snapshot, run)\n                      ? blockedMessage(snapshot, connectWarningRef.current)\n                      : null;\n                finishRun(snapshot, terminalError);\n                resolve(snapshot);\n              })();\n            }\n          });\n        } catch (err) {\n          const message =\n            err instanceof Error ? err.message : \"Preflight refresh failed.\";\n          finishRun(null, message);\n          return null;\n        }\n      })",
+          "lineNumber": 252
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "startRefresh.mutateAsync",
+          "lineNumber": 254
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 260
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setActiveRunId",
+          "lineNumber": 264
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "isRunTerminal",
+          "lineNumber": 268
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "(async () => {\n                handledRunIdRef.current = run.run_id;\n                let snapshot = run.snapshot ?? null;\n                if (!snapshot) {\n                  snapshot = await fetchWarehousePreflight(token, {\n                    missionLoaded: options?.missionLoaded,\n                  }).catch(() => null);\n                }\n                if (snapshot) setResult(snapshot);\n                const terminalError =\n                  run.status === \"failed\"\n                    ? run.error ??\n                      (snapshot\n                        ? blockedMessage(snapshot, connectWarningRef.current)\n                        : \"Preflight refresh failed.\")\n                    : snapshot && isTerminalPreflightFailure(snapshot, run)\n                      ? blockedMessage(snapshot, connectWarningRef.current)\n                      : null;\n                finishRun(snapshot, terminalError);\n                resolve(snapshot);\n              })",
+          "lineNumber": 269
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "fetchWarehousePreflight(token, {\n                    missionLoaded: options?.missionLoaded,\n                  }).catch",
+          "lineNumber": 273
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "fetchWarehousePreflight",
+          "lineNumber": 273
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "setResult",
+          "lineNumber": 277
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "blockedMessage",
+          "lineNumber": 282
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "isTerminalPreflightFailure",
+          "lineNumber": 284
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "blockedMessage",
+          "lineNumber": 285
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 287
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "resolve",
+          "lineNumber": 288
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "finishRun",
+          "lineNumber": 295
+        },
+        {
+          "caller": "useRunWarehousePreflight",
+          "callee": "warehousePreflightPassed",
+          "lineNumber": 312
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 3,
+        "functionCount": 9,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 23,
+      "functions": [
+        {
+          "name": "useStartWarehousePreflightRefresh",
+          "startLine": 7,
+          "endLine": 25,
+          "params": [
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useStartWarehousePreflightRefresh",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useStartWarehousePreflightRefresh",
+          "callee": "useQueryClient",
+          "lineNumber": 8
+        },
+        {
+          "caller": "useStartWarehousePreflightRefresh",
+          "callee": "useMutation",
+          "lineNumber": 10
+        },
+        {
+          "caller": "useStartWarehousePreflightRefresh",
+          "callee": "refreshWarehousePreflight",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useStartWarehousePreflightRefresh",
+          "callee": "queryClient.setQueryData",
+          "lineNumber": 22
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 38,
+      "nonEmptyLines": 37,
+      "functions": [
+        {
+          "name": "useWarehouseFlightReadiness",
+          "startLine": 5,
+          "endLine": 38,
+          "params": [
+            "token",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseFlightReadiness",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehouseFlightReadiness",
+          "callee": "Boolean",
+          "lineNumber": 15
+        },
+        {
+          "caller": "useWarehouseFlightReadiness",
+          "callee": "useQuery",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useWarehouseFlightReadiness",
+          "callee": "fetchWarehouseFlightReadiness",
+          "lineNumber": 34
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 396,
+      "nonEmptyLines": 357,
+      "functions": [
+        {
+          "name": "warehouseLiveMapReconnectDelayMs",
+          "startLine": 32,
+          "endLine": 43,
+          "params": [
+            "attempt",
+            "random"
+          ]
+        },
+        {
+          "name": "warehouseLiveMapSnapshotPollDelayMs",
+          "startLine": 45,
+          "endLine": 50,
+          "params": [
+            "attempt",
+            "random"
+          ]
+        },
+        {
+          "name": "useWarehouseLiveVoxelMap",
+          "startLine": 83,
+          "endLine": 396,
+          "params": [
+            "flightId",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "warehouseLiveMapReconnectDelayMs",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "warehouseLiveMapSnapshotPollDelayMs",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "useWarehouseLiveVoxelMap",
+          "line": 83,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "Math.max",
+          "lineNumber": 36
+        },
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "Math.floor",
+          "lineNumber": 36
+        },
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "Math.min",
+          "lineNumber": 37
+        },
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "Math.min",
+          "lineNumber": 41
+        },
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "Math.max",
+          "lineNumber": 41
+        },
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "random",
+          "lineNumber": 41
+        },
+        {
+          "caller": "warehouseLiveMapReconnectDelayMs",
+          "callee": "Math.round",
+          "lineNumber": 42
+        },
+        {
+          "caller": "warehouseLiveMapSnapshotPollDelayMs",
+          "callee": "warehouseLiveMapReconnectDelayMs",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 92
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 94
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 95
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 98
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 102
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 103
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 104
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 105
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useState",
+          "lineNumber": 109
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 113
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 114
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 119
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 120
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 121
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 122
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useRef",
+          "lineNumber": 123
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useEffect",
+          "lineNumber": 125
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useEffect",
+          "lineNumber": 129
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useEffect",
+          "lineNumber": 133
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "window.setTimeout",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setConnectionState",
+          "lineNumber": 139
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setChunksById",
+          "lineNumber": 140
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setScanPath",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setLatestUpdate",
+          "lineNumber": 142
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setHealth",
+          "lineNumber": 143
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setError",
+          "lineNumber": 144
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setFinalizedScanJobId",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setLastUpdateAt",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setManifest",
+          "lineNumber": 147
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "window.clearTimeout",
+          "lineNumber": 149
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "disconnectWarehouseLiveMap",
+          "lineNumber": 152
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "window.setTimeout",
+          "lineNumber": 155
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "setConnectionState",
+          "lineNumber": 156
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "window.clearTimeout",
+          "lineNumber": 158
+        },
+        {
+          "caller": "clearTimers",
+          "callee": "window.clearTimeout",
+          "lineNumber": 169
+        },
+        {
+          "caller": "clearTimers",
+          "callee": "window.clearTimeout",
+          "lineNumber": 171
+        },
+        {
+          "caller": "clearTimers",
+          "callee": "window.clearTimeout",
+          "lineNumber": 173
+        },
+        {
+          "caller": "clearTimers",
+          "callee": "window.cancelAnimationFrame",
+          "lineNumber": 174
+        },
+        {
+          "caller": "scheduleStaleCheck",
+          "callee": "window.clearTimeout",
+          "lineNumber": 183
+        },
+        {
+          "caller": "scheduleStaleCheck",
+          "callee": "window.setTimeout",
+          "lineNumber": 184
+        },
+        {
+          "caller": "scheduleStaleCheck",
+          "callee": "setConnectionState",
+          "lineNumber": 185
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "queuedMessageRef.current.push",
+          "lineNumber": 195
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "window.requestAnimationFrame",
+          "lineNumber": 199
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "isWarehouseLiveMapSnapshot",
+          "lineNumber": 215
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "applyWarehouseLiveMapMessage",
+          "lineNumber": 216
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "queued.updates.at",
+          "lineNumber": 217
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "isWarehouseLiveMapUpdate",
+          "lineNumber": 230
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "mergeUpdate",
+          "lineNumber": 231
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setChunksById",
+          "lineNumber": 246
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setScanPath",
+          "lineNumber": 247
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setLatestUpdate",
+          "lineNumber": 250
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setHealth",
+          "lineNumber": 251
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setLastUpdateAt",
+          "lineNumber": 255
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setFinalizedScanJobId",
+          "lineNumber": 259
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setConnectionState",
+          "lineNumber": 263
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "setManifest",
+          "lineNumber": 267
+        },
+        {
+          "caller": "applyMessage",
+          "callee": "scheduleStaleCheck",
+          "lineNumber": 270
+        },
+        {
+          "caller": "scheduleSnapshotPoll",
+          "callee": "window.clearTimeout",
+          "lineNumber": 280
+        },
+        {
+          "caller": "scheduleSnapshotPoll",
+          "callee": "window.setTimeout",
+          "lineNumber": 282
+        },
+        {
+          "caller": "scheduleSnapshotPoll",
+          "callee": "pollSnapshot",
+          "lineNumber": 284
+        },
+        {
+          "caller": "scheduleSnapshotPoll",
+          "callee": "warehouseLiveMapSnapshotPollDelayMs",
+          "lineNumber": 285
+        },
+        {
+          "caller": "pollSnapshot",
+          "callee": "fetchWarehouseLiveMapSnapshot(activeFlightId, options.token)\n        .then((snapshot) => {\n          if (!cancelled && !wsConnectedRef.current) applyMessage(snapshot);\n        })\n        .catch(() => {\n          /* websocket remains primary transport */\n        })\n        .finally",
+          "lineNumber": 293
+        },
+        {
+          "caller": "pollSnapshot",
+          "callee": "fetchWarehouseLiveMapSnapshot(activeFlightId, options.token)\n        .then((snapshot) => {\n          if (!cancelled && !wsConnectedRef.current) applyMessage(snapshot);\n        })\n        .catch",
+          "lineNumber": 293
+        },
+        {
+          "caller": "pollSnapshot",
+          "callee": "fetchWarehouseLiveMapSnapshot(activeFlightId, options.token)\n        .then",
+          "lineNumber": 293
+        },
+        {
+          "caller": "pollSnapshot",
+          "callee": "fetchWarehouseLiveMapSnapshot",
+          "lineNumber": 293
+        },
+        {
+          "caller": "pollSnapshot",
+          "callee": "applyMessage",
+          "lineNumber": 295
+        },
+        {
+          "caller": "pollSnapshot",
+          "callee": "scheduleSnapshotPoll",
+          "lineNumber": 302
+        },
+        {
+          "caller": "openSocket",
+          "callee": "setConnectionState",
+          "lineNumber": 308
+        },
+        {
+          "caller": "openSocket",
+          "callee": "connectWarehouseLiveMap",
+          "lineNumber": 309
+        },
+        {
+          "caller": "openSocket",
+          "callee": "window.clearTimeout",
+          "lineNumber": 317
+        },
+        {
+          "caller": "openSocket",
+          "callee": "setError",
+          "lineNumber": 320
+        },
+        {
+          "caller": "openSocket",
+          "callee": "setConnectionState",
+          "lineNumber": 321
+        },
+        {
+          "caller": "openSocket",
+          "callee": "scheduleStaleCheck",
+          "lineNumber": 322
+        },
+        {
+          "caller": "openSocket",
+          "callee": "socketRef.current.send",
+          "lineNumber": 324
+        },
+        {
+          "caller": "openSocket",
+          "callee": "JSON.stringify",
+          "lineNumber": 324
+        },
+        {
+          "caller": "openSocket",
+          "callee": "setError",
+          "lineNumber": 329
+        },
+        {
+          "caller": "openSocket",
+          "callee": "setConnectionState",
+          "lineNumber": 335
+        },
+        {
+          "caller": "openSocket",
+          "callee": "pollSnapshot",
+          "lineNumber": 338
+        },
+        {
+          "caller": "openSocket",
+          "callee": "window.setTimeout",
+          "lineNumber": 339
+        },
+        {
+          "caller": "openSocket",
+          "callee": "warehouseLiveMapReconnectDelayMs",
+          "lineNumber": 341
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "pollSnapshot",
+          "lineNumber": 349
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "openSocket",
+          "lineNumber": 350
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "clearTimers",
+          "lineNumber": 355
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "disconnectWarehouseLiveMap",
+          "lineNumber": 356
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "useMemo",
+          "lineNumber": 361
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "Array.from",
+          "lineNumber": 361
+        },
+        {
+          "caller": "useWarehouseLiveVoxelMap",
+          "callee": "chunksById.values",
+          "lineNumber": 361
+        },
+        {
+          "caller": "clearMap",
+          "callee": "setChunksById",
+          "lineNumber": 370
+        },
+        {
+          "caller": "clearMap",
+          "callee": "setScanPath",
+          "lineNumber": 371
+        },
+        {
+          "caller": "clearMap",
+          "callee": "setLatestUpdate",
+          "lineNumber": 372
+        },
+        {
+          "caller": "clearMap",
+          "callee": "setManifest",
+          "lineNumber": 373
+        },
+        {
+          "caller": "toggleStreamPaused",
+          "callee": "setStreamPaused",
+          "lineNumber": 377
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 221,
+      "nonEmptyLines": 207,
+      "functions": [
+        {
+          "name": "useWarehouseMapPlacement",
+          "startLine": 42,
+          "endLine": 221,
+          "params": [
+            "{\n  warehouseMapId,\n  token,\n  onError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseMapPlacement",
+          "line": 42,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useState",
+          "lineNumber": 51
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useState",
+          "lineNumber": 52
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useState",
+          "lineNumber": 53
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useState",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useState",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useState",
+          "lineNumber": 56
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useWarehouseScanPoseDraft",
+          "lineNumber": 66
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useCallback",
+          "lineNumber": 68
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setTargets",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setTargetsLoading",
+          "lineNumber": 73
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "listWarehouseScanTargets",
+          "lineNumber": 80
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "all.push",
+          "lineNumber": 86
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setTargets",
+          "lineNumber": 89
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "onError",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setTargetsLoading",
+          "lineNumber": 95
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useEffect",
+          "lineNumber": 99
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "refreshTargets",
+          "lineNumber": 100
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useEffect",
+          "lineNumber": 103
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setCoordinateFrame",
+          "lineNumber": 106
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setCoordinateFrameLoading",
+          "lineNumber": 109
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "fetchActiveWarehouseCoordinateFrame(warehouseMapId, token)\n      .then((frame) => {\n        if (!cancelled) setCoordinateFrame(frame);\n      })\n      .catch(() => {\n        if (!cancelled) setCoordinateFrame(null);\n      })\n      .finally",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "fetchActiveWarehouseCoordinateFrame(warehouseMapId, token)\n      .then((frame) => {\n        if (!cancelled) setCoordinateFrame(frame);\n      })\n      .catch",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "fetchActiveWarehouseCoordinateFrame(warehouseMapId, token)\n      .then",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "fetchActiveWarehouseCoordinateFrame",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setCoordinateFrame",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setCoordinateFrame",
+          "lineNumber": 115
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setCoordinateFrameLoading",
+          "lineNumber": 118
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useCallback",
+          "lineNumber": 131
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setPickMode",
+          "lineNumber": 134
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "onError",
+          "lineNumber": 135
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setPickMode",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useEffect",
+          "lineNumber": 143
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setPickMode",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "clearDraft",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useEffect",
+          "lineNumber": 150
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "clearDraft",
+          "lineNumber": 151
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setPickMode",
+          "lineNumber": 152
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useCallback",
+          "lineNumber": 155
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "setDraftTarget",
+          "lineNumber": 156
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useMemo",
+          "lineNumber": 159
+        },
+        {
+          "caller": "useWarehouseMapPlacement",
+          "callee": "useMemo",
+          "lineNumber": 182
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 32,
+      "functions": [
+        {
+          "name": "useWarehouseMappingStack",
+          "startLine": 14,
+          "endLine": 36,
+          "params": [
+            "{\n  enabled = true,\n  pollIntervalMs = 5000,\n  getToken,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseMappingStack",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehouseMappingStack",
+          "callee": "getToken",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useWarehouseMappingStack",
+          "callee": "useQuery",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useWarehouseMappingStack",
+          "callee": "Boolean",
+          "lineNumber": 22
+        },
+        {
+          "caller": "useWarehouseMappingStack",
+          "callee": "fetchWarehouseMappingStackStatus",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useWarehouseMappingStack",
+          "callee": "Math.min",
+          "lineNumber": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 79,
+      "nonEmptyLines": 71,
+      "functions": [
+        {
+          "name": "useWarehouseMissionRuntimeController",
+          "startLine": 14,
+          "endLine": 79,
+          "params": [
+            "{\n  apiBase,\n  onError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseMissionRuntimeController",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useMissionWebsocketRuntime",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useAutoStartVideo",
+          "lineNumber": 25
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "Boolean",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useState",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useState",
+          "lineNumber": 36
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useState",
+          "lineNumber": 37
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useState",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useCallback",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoErrorMessage",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoErrorStreamKey",
+          "lineNumber": 51
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoRetryCount",
+          "lineNumber": 52
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useCallback",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoErrorMessage",
+          "lineNumber": 56
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoErrorStreamKey",
+          "lineNumber": 57
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoRetryCount",
+          "lineNumber": 58
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useCallback",
+          "lineNumber": 61
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setManualStreamKey",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "Date.now",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoErrorMessage",
+          "lineNumber": 63
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "setVideoErrorStreamKey",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useWarehouseMissionRuntimeController",
+          "callee": "useEffect",
+          "lineNumber": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 31,
+      "nonEmptyLines": 29,
+      "functions": [
+        {
+          "name": "useWarehousePreflightRun",
+          "startLine": 8,
+          "endLine": 31,
+          "params": [
+            "token",
+            "runId",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehousePreflightRun",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehousePreflightRun",
+          "callee": "Boolean",
+          "lineNumber": 13
+        },
+        {
+          "caller": "useWarehousePreflightRun",
+          "callee": "useQuery",
+          "lineNumber": 15
+        },
+        {
+          "caller": "useWarehousePreflightRun",
+          "callee": "fetchWarehousePreflightRun",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useWarehousePreflightRun",
+          "callee": "preflightRunElapsedMs",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useWarehousePreflightRun",
+          "callee": "preflightRunPollIntervalMs",
+          "lineNumber": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 40,
+      "nonEmptyLines": 38,
+      "functions": [
+        {
+          "name": "useWarehousePreflightSnapshot",
+          "startLine": 8,
+          "endLine": 40,
+          "params": [
+            "token",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehousePreflightSnapshot",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehousePreflightSnapshot",
+          "callee": "Boolean",
+          "lineNumber": 21
+        },
+        {
+          "caller": "useWarehousePreflightSnapshot",
+          "callee": "useQuery",
+          "lineNumber": 25
+        },
+        {
+          "caller": "useWarehousePreflightSnapshot",
+          "callee": "fetchWarehousePreflight",
+          "lineNumber": 36
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 83,
+      "nonEmptyLines": 76,
+      "functions": [
+        {
+          "name": "isAbortError",
+          "startLine": 15,
+          "endLine": 17,
+          "params": [
+            "error"
+          ]
+        },
+        {
+          "name": "useWarehouseScanPoseDraft",
+          "startLine": 19,
+          "endLine": 83,
+          "params": [
+            "{\n  token,\n  onError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseScanPoseDraft",
+          "line": 19,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "useState",
+          "lineNumber": 26
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "useState",
+          "lineNumber": 27
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "useState",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "useState",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "useCallback",
+          "lineNumber": 31
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "setDraftTarget",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "setDraftScanPose",
+          "lineNumber": 33
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "useEffect",
+          "lineNumber": 36
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "window.setTimeout",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "computeWarehouseScanPose(\n        {\n          target_point: {\n            frame_id: WAREHOUSE_MAP_FRAME_ID,\n            x_m: draftTarget.x_m,\n            y_m: draftTarget.y_m,\n            z_m: draftTarget.z_m,\n          },\n          shelf_normal: shelfNormalFromFacing(shelfFacing),\n          standoff_m: standoffM,\n        },\n        token,\n        controller.signal,\n      )\n        .then((response) => {\n          if (!controller.signal.aborted) setDraftScanPose(response.scan_pose);\n        })\n        .catch",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "computeWarehouseScanPose(\n        {\n          target_point: {\n            frame_id: WAREHOUSE_MAP_FRAME_ID,\n            x_m: draftTarget.x_m,\n            y_m: draftTarget.y_m,\n            z_m: draftTarget.z_m,\n          },\n          shelf_normal: shelfNormalFromFacing(shelfFacing),\n          standoff_m: standoffM,\n        },\n        token,\n        controller.signal,\n      )\n        .then",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "computeWarehouseScanPose",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "shelfNormalFromFacing",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "setDraftScanPose",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "isAbortError",
+          "lineNumber": 58
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "onError",
+          "lineNumber": 59
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "setDraftScanPose",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "window.clearTimeout",
+          "lineNumber": 68
+        },
+        {
+          "caller": "useWarehouseScanPoseDraft",
+          "callee": "controller.abort",
+          "lineNumber": 69
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 143,
+      "nonEmptyLines": 133,
+      "functions": [
+        {
+          "name": "useWarehouseScannedMapReplay",
+          "startLine": 31,
+          "endLine": 143,
+          "params": [
+            "map",
+            "token",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseScannedMapReplay",
+          "line": 31,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useState",
+          "lineNumber": 36
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useState",
+          "lineNumber": 37
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useState",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useRef",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useRef",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "Boolean",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useCallback",
+          "lineNumber": 45
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "clearLiveMapChunkFetchCache",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setReloadToken",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useEffect",
+          "lineNumber": 52
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setState",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setLoading",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setLoading",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setState",
+          "lineNumber": 63
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "fetchWarehouseScannedMapLiveSnapshot(mapJobId, token, { mode: \"full\" })\n      .then((snapshot) => {\n        if (cancelled || generation !== loadGenerationRef.current) return;\n        replayFlightIdRef.current = snapshot.flight_id;\n        const merged = mergeReplaySnapshot(snapshot);\n        const latestUpdate = merged.latestUpdate;\n        const hasChunks = merged.chunks.length > 0;\n        liveMapDebugLog(\"replay_snapshot_received\", {\n          scanned_map_id: mapJobId,\n          flight_id: snapshot.flight_id,\n          manifest_source: \"disk_manifest\",\n          chunk_count: merged.chunks.length,\n          point_count: merged.chunks.reduce(\n            (sum, chunk) => sum + (chunk.point_count ?? 0),\n            0,\n          ),\n        });\n        setState({\n          connectionState: hasChunks\n            ? snapshot.status === \"empty\"\n              ? \"empty\"\n              : \"finalized\"\n            : \"empty\",\n          chunks: merged.chunks,\n          latestUpdate,\n          health: latestUpdate?.health ?? EMPTY_REPLAY_STATE.health,\n          scanPath: merged.scanPath,\n          error: hasChunks\n            ? null\n            : \"No stored live-map point cloud for this scan result.\",\n          finalizedScanJobId: mapJobId,\n          lastUpdateAt: snapshot.last_update_at ?? latestUpdate?.timestamp ?? null,\n          manifest: snapshot.manifest ?? null,\n          token: token ?? null,\n        });\n      })\n      .catch((error: unknown) => {\n        if (cancelled || generation !== loadGenerationRef.current) return;\n        setState({\n          ...EMPTY_REPLAY_STATE,\n          connectionState: \"failed\",\n          error:\n            error instanceof Error\n              ? error.message\n              : \"Could not load stored live-map replay.\",\n          finalizedScanJobId: mapJobId,\n          token: token ?? null,\n        });\n      })\n      .finally",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "fetchWarehouseScannedMapLiveSnapshot(mapJobId, token, { mode: \"full\" })\n      .then((snapshot) => {\n        if (cancelled || generation !== loadGenerationRef.current) return;\n        replayFlightIdRef.current = snapshot.flight_id;\n        const merged = mergeReplaySnapshot(snapshot);\n        const latestUpdate = merged.latestUpdate;\n        const hasChunks = merged.chunks.length > 0;\n        liveMapDebugLog(\"replay_snapshot_received\", {\n          scanned_map_id: mapJobId,\n          flight_id: snapshot.flight_id,\n          manifest_source: \"disk_manifest\",\n          chunk_count: merged.chunks.length,\n          point_count: merged.chunks.reduce(\n            (sum, chunk) => sum + (chunk.point_count ?? 0),\n            0,\n          ),\n        });\n        setState({\n          connectionState: hasChunks\n            ? snapshot.status === \"empty\"\n              ? \"empty\"\n              : \"finalized\"\n            : \"empty\",\n          chunks: merged.chunks,\n          latestUpdate,\n          health: latestUpdate?.health ?? EMPTY_REPLAY_STATE.health,\n          scanPath: merged.scanPath,\n          error: hasChunks\n            ? null\n            : \"No stored live-map point cloud for this scan result.\",\n          finalizedScanJobId: mapJobId,\n          lastUpdateAt: snapshot.last_update_at ?? latestUpdate?.timestamp ?? null,\n          manifest: snapshot.manifest ?? null,\n          token: token ?? null,\n        });\n      })\n      .catch",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "fetchWarehouseScannedMapLiveSnapshot(mapJobId, token, { mode: \"full\" })\n      .then",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "fetchWarehouseScannedMapLiveSnapshot",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "mergeReplaySnapshot",
+          "lineNumber": 74
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "liveMapDebugLog",
+          "lineNumber": 77
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "merged.chunks.reduce",
+          "lineNumber": 82
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setState",
+          "lineNumber": 87
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setState",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "setLoading",
+          "lineNumber": 120
+        },
+        {
+          "caller": "useWarehouseScannedMapReplay",
+          "callee": "useMemo",
+          "lineNumber": 128
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 187,
+      "nonEmptyLines": 178,
+      "functions": [
+        {
+          "name": "delay",
+          "startLine": 32,
+          "endLine": 32,
+          "params": [
+            "ms"
+          ]
+        },
+        {
+          "name": "useWarehouseStructure",
+          "startLine": 40,
+          "endLine": 187,
+          "params": [
+            "warehouseMapId",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWarehouseStructure",
+          "line": 40,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "delay",
+          "callee": "setTimeout",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useState",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useState",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useState",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useState",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useState",
+          "lineNumber": 51
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useRef",
+          "lineNumber": 52
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useCallback",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "fetchWarehouseStructure",
+          "lineNumber": 58
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setExtractionStatus",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setStructure",
+          "lineNumber": 61
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setError",
+          "lineNumber": 66
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "structureNeedsReviewMessage",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setStructure",
+          "lineNumber": 79
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setExtractionStatus",
+          "lineNumber": 80
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setError",
+          "lineNumber": 81
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "toMessage",
+          "lineNumber": 81
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useCallback",
+          "lineNumber": 86
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setLoading",
+          "lineNumber": 87
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "fetchOnce",
+          "lineNumber": 89
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setLoading",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useEffect",
+          "lineNumber": 95
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setStructure",
+          "lineNumber": 97
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setExtractionStatus",
+          "lineNumber": 98
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "refresh",
+          "lineNumber": 106
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "window.setInterval",
+          "lineNumber": 113
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "fetchOnce",
+          "lineNumber": 114
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "window.clearInterval",
+          "lineNumber": 118
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "useCallback",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setExtracting",
+          "lineNumber": 131
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setError",
+          "lineNumber": 132
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setExtractionStatus",
+          "lineNumber": 133
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "extractWarehouseStructure",
+          "lineNumber": 136
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "Date.now",
+          "lineNumber": 137
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "Date.now",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "delay",
+          "lineNumber": 139
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "fetchOnce",
+          "lineNumber": 140
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setError",
+          "lineNumber": 161
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setError",
+          "lineNumber": 165
+        },
+        {
+          "caller": "useWarehouseStructure",
+          "callee": "setExtracting",
+          "lineNumber": 172
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 17,
+      "nonEmptyLines": 14,
+      "functions": [
+        {
+          "name": "getWarehouseMapId",
+          "startLine": 3,
+          "endLine": 5,
+          "params": [
+            "map"
+          ]
+        },
+        {
+          "name": "getWarehouseName",
+          "startLine": 7,
+          "endLine": 9,
+          "params": [
+            "map"
+          ]
+        },
+        {
+          "name": "selectScannedMap",
+          "startLine": 11,
+          "endLine": 17,
+          "params": [
+            "maps",
+            "selectedJobId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "getWarehouseMapId",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "getWarehouseName",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "selectScannedMap",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getWarehouseName",
+          "callee": "map.warehouse_name.trim",
+          "lineNumber": 8
+        },
+        {
+          "caller": "selectScannedMap",
+          "callee": "maps.find",
+          "lineNumber": 16
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/WarehouseLayerBudgetSlider.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 35,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/WarehousePreflightChecksPanel.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 81,
+      "nonEmptyLines": 76,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/WarehouseScanResultsSelector.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 35,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/liveMapChunkDecoders.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 58,
+      "nonEmptyLines": 53,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 73,
+      "nonEmptyLines": 63,
+      "functions": [
+        {
+          "name": "chunk",
+          "startLine": 8,
+          "endLine": 21,
+          "params": [
+            "id",
+            "sequence",
+            "layer"
+          ]
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 726,
+      "nonEmptyLines": 661,
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/liveMapRenderModel.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 57,
+      "nonEmptyLines": 51,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/mergeReplaySnapshot.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 41,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 49,
+      "nonEmptyLines": 44,
+      "functions": [
+        {
+          "name": "makeScannedMap",
+          "startLine": 9,
+          "endLine": 27,
+          "params": [
+            "overrides"
+          ]
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/useRunWarehousePreflight.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 299,
+      "nonEmptyLines": 284,
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

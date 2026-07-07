@@ -46,8 +46,9 @@ def _clock_stability_window_s() -> float:
 
 
 def _ros_workspace() -> Path:
-    raw = _safe_str(getattr(settings, "warehouse_ros2_ws", ""), "").strip() or "ros2_ws"
-    return Path(raw).expanduser().resolve()
+    from backend.modules.warehouse.service.runtime_settings import ros2_workspace
+
+    return ros2_workspace()
 
 
 def _ros_distro_setup_path() -> str:

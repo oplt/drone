@@ -1,0 +1,1801 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "type": "file",
+      "name": "CesiumMap.tsx",
+      "filePath": "frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "summary": "CesiumMap.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/adapters/CesiumMap.tsx:CesiumMap",
+      "type": "function",
+      "name": "CesiumMap",
+      "filePath": "frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "summary": "CesiumMap implements logic in CesiumMap.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "type": "file",
+      "name": "CesiumMapLazy.tsx",
+      "filePath": "frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "summary": "CesiumMapLazy.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx:CesiumMapLazy",
+      "type": "function",
+      "name": "CesiumMapLazy",
+      "filePath": "frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "summary": "CesiumMapLazy implements logic in CesiumMapLazy.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "type": "file",
+      "name": "LeafletMap.tsx",
+      "filePath": "frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "summary": "LeafletMap.tsx is a frontend typescript module in frontend/src/modules/maps with 4 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/adapters/LeafletMap.tsx:LeafletMap",
+      "type": "function",
+      "name": "LeafletMap",
+      "filePath": "frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "summary": "LeafletMap implements logic in LeafletMap.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "type": "file",
+      "name": "MapLibreMap.tsx",
+      "filePath": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "summary": "MapLibreMap.tsx is a frontend typescript module in frontend/src/modules/maps with 3 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:makeMarkerElement",
+      "type": "function",
+      "name": "makeMarkerElement",
+      "filePath": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "summary": "makeMarkerElement implements logic in MapLibreMap.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:makeDroneMarkerElement",
+      "type": "function",
+      "name": "makeDroneMarkerElement",
+      "filePath": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "summary": "makeDroneMarkerElement implements logic in MapLibreMap.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:MapLibreMap",
+      "type": "function",
+      "name": "MapLibreMap",
+      "filePath": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "summary": "MapLibreMap implements logic in MapLibreMap.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "type": "file",
+      "name": "CesiumViewControls.tsx",
+      "filePath": "frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "summary": "CesiumViewControls.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/components/CesiumViewControls.tsx:CesiumViewControls",
+      "type": "function",
+      "name": "CesiumViewControls",
+      "filePath": "frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "summary": "CesiumViewControls implements logic in CesiumViewControls.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "type": "file",
+      "name": "MissionMapViewport.tsx",
+      "filePath": "frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "summary": "MissionMapViewport.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/components/MissionMapViewport.tsx:MissionMapViewport",
+      "type": "function",
+      "name": "MissionMapViewport",
+      "filePath": "frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "summary": "MissionMapViewport implements logic in MissionMapViewport.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "type": "file",
+      "name": "TerraDrawController.tsx",
+      "filePath": "frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "summary": "TerraDrawController.tsx is a frontend typescript module in frontend/src/modules/maps with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/components/TerraDrawController.tsx:TerraDrawController",
+      "type": "function",
+      "name": "TerraDrawController",
+      "filePath": "frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "summary": "TerraDrawController implements logic in TerraDrawController.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "type": "file",
+      "name": "useFlatMapDrawing.ts",
+      "filePath": "frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "summary": "useFlatMapDrawing.ts is a frontend typescript module in frontend/src/modules/maps with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts:useFlatMapDrawing",
+      "type": "function",
+      "name": "useFlatMapDrawing",
+      "filePath": "frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "summary": "useFlatMapDrawing implements logic in useFlatMapDrawing.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "type": "file",
+      "name": "useMapEngine.ts",
+      "filePath": "frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "summary": "useMapEngine.ts is a frontend typescript module in frontend/src/modules/maps with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/hooks/useMapEngine.ts:dispatchMapEngineChange",
+      "type": "function",
+      "name": "dispatchMapEngineChange",
+      "filePath": "frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "summary": "dispatchMapEngineChange implements logic in useMapEngine.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/hooks/useMapEngine.ts:useMapEngine",
+      "type": "function",
+      "name": "useMapEngine",
+      "filePath": "frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "summary": "useMapEngine implements logic in useMapEngine.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/tests/cesiumCameraGeometry.test.ts",
+      "type": "file",
+      "name": "cesiumCameraGeometry.test.ts",
+      "filePath": "frontend/src/modules/maps/tests/cesiumCameraGeometry.test.ts",
+      "summary": "cesiumCameraGeometry.test.ts is a frontend typescript module in frontend/src/modules/maps with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/tests/drawingShapes.test.ts",
+      "type": "file",
+      "name": "drawingShapes.test.ts",
+      "filePath": "frontend/src/modules/maps/tests/drawingShapes.test.ts",
+      "summary": "drawingShapes.test.ts is a frontend typescript module in frontend/src/modules/maps with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/tests/flatMapShapeClick.test.ts",
+      "type": "file",
+      "name": "flatMapShapeClick.test.ts",
+      "filePath": "frontend/src/modules/maps/tests/flatMapShapeClick.test.ts",
+      "summary": "flatMapShapeClick.test.ts is a frontend typescript module in frontend/src/modules/maps with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/tests/useMapEngine.test.ts",
+      "type": "file",
+      "name": "useMapEngine.test.ts",
+      "filePath": "frontend/src/modules/maps/tests/useMapEngine.test.ts",
+      "summary": "useMapEngine.test.ts is a frontend typescript module in frontend/src/modules/maps with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "type": "file",
+      "name": "cesiumCameraGeometry.ts",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "cesiumCameraGeometry.ts is a frontend typescript module in frontend/src/modules/maps with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:clamp",
+      "type": "function",
+      "name": "clamp",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "clamp implements logic in cesiumCameraGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:zoomToHeightMeters",
+      "type": "function",
+      "name": "zoomToHeightMeters",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "zoomToHeightMeters implements logic in cesiumCameraGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:normalizeLonLatLine",
+      "type": "function",
+      "name": "normalizeLonLatLine",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "normalizeLonLatLine implements logic in cesiumCameraGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:normalizeLonLatRing",
+      "type": "function",
+      "name": "normalizeLonLatRing",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "normalizeLonLatRing implements logic in cesiumCameraGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:computeRingCentroid",
+      "type": "function",
+      "name": "computeRingCentroid",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "computeRingCentroid implements logic in cesiumCameraGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:computeFieldCameraView",
+      "type": "function",
+      "name": "computeFieldCameraView",
+      "filePath": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "summary": "computeFieldCameraView implements logic in cesiumCameraGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "file",
+      "name": "drawingShapes.ts",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "drawingShapes.ts is a frontend typescript module in frontend/src/modules/maps with 8 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:isFlatBoundaryDrawMode",
+      "type": "function",
+      "name": "isFlatBoundaryDrawMode",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "isFlatBoundaryDrawMode implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:rectangleRing",
+      "type": "function",
+      "name": "rectangleRing",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "rectangleRing implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:triangleRing",
+      "type": "function",
+      "name": "triangleRing",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "triangleRing implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:circleRing",
+      "type": "function",
+      "name": "circleRing",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "circleRing implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:closeRing",
+      "type": "function",
+      "name": "closeRing",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "closeRing implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:shapePreview",
+      "type": "function",
+      "name": "shapePreview",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "shapePreview implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:moveTwoCornerShapePreview",
+      "type": "function",
+      "name": "moveTwoCornerShapePreview",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "moveTwoCornerShapePreview implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingShapes.ts:completeShape",
+      "type": "function",
+      "name": "completeShape",
+      "filePath": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "summary": "completeShape implements logic in drawingShapes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "type": "file",
+      "name": "drawingToolModes.ts",
+      "filePath": "frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "summary": "drawingToolModes.ts is a frontend typescript module in frontend/src/modules/maps with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingToolModes.ts:terraDrawToolToShapeMode",
+      "type": "function",
+      "name": "terraDrawToolToShapeMode",
+      "filePath": "frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "summary": "terraDrawToolToShapeMode implements logic in drawingToolModes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/drawingToolModes.ts:isFlatDrawToolSelected",
+      "type": "function",
+      "name": "isFlatDrawToolSelected",
+      "filePath": "frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "summary": "isFlatDrawToolSelected implements logic in drawingToolModes.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "type": "file",
+      "name": "flatMapDrawResult.ts",
+      "filePath": "frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "summary": "flatMapDrawResult.ts is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatMapDrawResult.ts:ringFromFlatDrawResult",
+      "type": "function",
+      "name": "ringFromFlatDrawResult",
+      "filePath": "frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "summary": "ringFromFlatDrawResult implements logic in flatMapDrawResult.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "type": "file",
+      "name": "flatMapShapeClick.ts",
+      "filePath": "frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "summary": "flatMapShapeClick.ts is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatMapShapeClick.ts:handleFlatMapShapeClick",
+      "type": "function",
+      "name": "handleFlatMapShapeClick",
+      "filePath": "frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "summary": "handleFlatMapShapeClick implements logic in flatMapShapeClick.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "type": "file",
+      "name": "flatMapShapeGeometry.ts",
+      "filePath": "frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "summary": "flatMapShapeGeometry.ts is a frontend typescript module in frontend/src/modules/maps with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:isNearLonLat",
+      "type": "function",
+      "name": "isNearLonLat",
+      "filePath": "frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "summary": "isNearLonLat implements logic in flatMapShapeGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:isNearLonLatPixels",
+      "type": "function",
+      "name": "isNearLonLatPixels",
+      "filePath": "frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "summary": "isNearLonLatPixels implements logic in flatMapShapeGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:shouldCloseShapeOnClick",
+      "type": "function",
+      "name": "shouldCloseShapeOnClick",
+      "filePath": "frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "summary": "shouldCloseShapeOnClick implements logic in flatMapShapeGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "type": "file",
+      "name": "WorkflowTerraDrawBridge.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "summary": "WorkflowTerraDrawBridge.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx:WorkflowTerraDrawBridge",
+      "type": "function",
+      "name": "WorkflowTerraDrawBridge",
+      "filePath": "frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "summary": "WorkflowTerraDrawBridge implements logic in WorkflowTerraDrawBridge.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "type": "file",
+      "name": "useMapShapeActionPrompt.ts",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "summary": "useMapShapeActionPrompt.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts:useMapShapeActionPrompt",
+      "type": "function",
+      "name": "useMapShapeActionPrompt",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "summary": "useMapShapeActionPrompt implements logic in useMapShapeActionPrompt.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "type": "file",
+      "name": "mapShapePromptUtils.ts",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "mapShapePromptUtils.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 13 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isGuidanceFeature",
+      "type": "function",
+      "name": "isGuidanceFeature",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "isGuidanceFeature implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isUserDrawnBoundaryShape",
+      "type": "function",
+      "name": "isUserDrawnBoundaryShape",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "isUserDrawnBoundaryShape implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:hasUserDrawnBoundaryShape",
+      "type": "function",
+      "name": "hasUserDrawnBoundaryShape",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "hasUserDrawnBoundaryShape implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isActiveBoundaryDrawFeature",
+      "type": "function",
+      "name": "isActiveBoundaryDrawFeature",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "isActiveBoundaryDrawFeature implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isBoundaryDrawMode",
+      "type": "function",
+      "name": "isBoundaryDrawMode",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "isBoundaryDrawMode implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:shouldOpenShapePromptOnSelection",
+      "type": "function",
+      "name": "shouldOpenShapePromptOnSelection",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "shouldOpenShapePromptOnSelection implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:shouldOpenShapePromptOnCreate",
+      "type": "function",
+      "name": "shouldOpenShapePromptOnCreate",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "shouldOpenShapePromptOnCreate implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isRemovableTerraDrawFeature",
+      "type": "function",
+      "name": "isRemovableTerraDrawFeature",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "isRemovableTerraDrawFeature implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isMainDrawnShapeFeature",
+      "type": "function",
+      "name": "isMainDrawnShapeFeature",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "isMainDrawnShapeFeature implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:resolveParentShapeFeatureId",
+      "type": "function",
+      "name": "resolveParentShapeFeatureId",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "resolveParentShapeFeatureId implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:resolveMainDrawnShapeFeatureId",
+      "type": "function",
+      "name": "resolveMainDrawnShapeFeatureId",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "resolveMainDrawnShapeFeatureId implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:findTerraDrawFeature",
+      "type": "function",
+      "name": "findTerraDrawFeature",
+      "filePath": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "summary": "findTerraDrawFeature implements logic in mapShapePromptUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "type": "file",
+      "name": "terraDrawDrawingActions.ts",
+      "filePath": "frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "summary": "terraDrawDrawingActions.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:resolveTerraDrawDeleteTarget",
+      "type": "function",
+      "name": "resolveTerraDrawDeleteTarget",
+      "filePath": "frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "summary": "resolveTerraDrawDeleteTarget implements logic in terraDrawDrawingActions.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:deleteMainDrawnShape",
+      "type": "function",
+      "name": "deleteMainDrawnShape",
+      "filePath": "frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "summary": "deleteMainDrawnShape implements logic in terraDrawDrawingActions.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:deleteSelectedOrLatestTerraDrawFeature",
+      "type": "function",
+      "name": "deleteSelectedOrLatestTerraDrawFeature",
+      "filePath": "frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "summary": "deleteSelectedOrLatestTerraDrawFeature implements logic in terraDrawDrawingActions.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "target": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "target": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/CesiumMap.tsx:CesiumMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/CesiumMap.tsx:CesiumMap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx:CesiumMapLazy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx:CesiumMapLazy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "target": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/LeafletMap.tsx:LeafletMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/LeafletMap.tsx:LeafletMap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:makeMarkerElement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:makeDroneMarkerElement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:MapLibreMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "target": "function:frontend/src/modules/maps/adapters/MapLibreMap.tsx:MapLibreMap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "target": "file:frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "target": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "target": "function:frontend/src/modules/maps/components/CesiumViewControls.tsx:CesiumViewControls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "target": "function:frontend/src/modules/maps/components/CesiumViewControls.tsx:CesiumViewControls",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "target": "file:frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "target": "file:frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "target": "file:frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "target": "function:frontend/src/modules/maps/components/MissionMapViewport.tsx:MissionMapViewport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "target": "function:frontend/src/modules/maps/components/MissionMapViewport.tsx:MissionMapViewport",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "target": "function:frontend/src/modules/maps/components/TerraDrawController.tsx:TerraDrawController",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "target": "function:frontend/src/modules/maps/components/TerraDrawController.tsx:TerraDrawController",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "target": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts:useFlatMapDrawing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useFlatMapDrawing.ts:useFlatMapDrawing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "target": "file:frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useMapEngine.ts:dispatchMapEngineChange",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useMapEngine.ts:dispatchMapEngineChange",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useMapEngine.ts:useMapEngine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useMapEngine.ts:useMapEngine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/tests/cesiumCameraGeometry.test.ts",
+      "target": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/tests/drawingShapes.test.ts",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/tests/flatMapShapeClick.test.ts",
+      "target": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/tests/useMapEngine.test.ts",
+      "target": "file:frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:clamp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:clamp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:zoomToHeightMeters",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:zoomToHeightMeters",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:normalizeLonLatLine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:normalizeLonLatLine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:normalizeLonLatRing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:normalizeLonLatRing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:computeRingCentroid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:computeRingCentroid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:computeFieldCameraView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/cesiumCameraGeometry.ts:computeFieldCameraView",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:isFlatBoundaryDrawMode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:isFlatBoundaryDrawMode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:rectangleRing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:rectangleRing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:triangleRing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:triangleRing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:circleRing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:circleRing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:closeRing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:closeRing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:shapePreview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:shapePreview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:moveTwoCornerShapePreview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:moveTwoCornerShapePreview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:completeShape",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingShapes.ts:completeShape",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "target": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingToolModes.ts:terraDrawToolToShapeMode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingToolModes.ts:terraDrawToolToShapeMode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingToolModes.ts:isFlatDrawToolSelected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "target": "function:frontend/src/modules/maps/utils/drawingToolModes.ts:isFlatDrawToolSelected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapDrawResult.ts:ringFromFlatDrawResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapDrawResult.ts:ringFromFlatDrawResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "target": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeClick.ts:handleFlatMapShapeClick",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeClick.ts:handleFlatMapShapeClick",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "file:frontend/src/modules/maps/utils/drawingShapes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:isNearLonLat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:isNearLonLat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:isNearLonLatPixels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:isNearLonLatPixels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:shouldCloseShapeOnClick",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatMapShapeGeometry.ts:shouldCloseShapeOnClick",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx:WorkflowTerraDrawBridge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx:WorkflowTerraDrawBridge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "target": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "target": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "target": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts:useMapShapeActionPrompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts:useMapShapeActionPrompt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isGuidanceFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isUserDrawnBoundaryShape",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isUserDrawnBoundaryShape",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:hasUserDrawnBoundaryShape",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:hasUserDrawnBoundaryShape",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isActiveBoundaryDrawFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isActiveBoundaryDrawFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isBoundaryDrawMode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isBoundaryDrawMode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:shouldOpenShapePromptOnSelection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:shouldOpenShapePromptOnSelection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:shouldOpenShapePromptOnCreate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:shouldOpenShapePromptOnCreate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isRemovableTerraDrawFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isRemovableTerraDrawFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isMainDrawnShapeFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:isMainDrawnShapeFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:resolveParentShapeFeatureId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:resolveMainDrawnShapeFeatureId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:resolveMainDrawnShapeFeatureId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:findTerraDrawFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts:findTerraDrawFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "file:frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "file:frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:resolveTerraDrawDeleteTarget",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:resolveTerraDrawDeleteTarget",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:deleteMainDrawnShape",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:deleteMainDrawnShape",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:deleteSelectedOrLatestTerraDrawFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "target": "function:frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts:deleteSelectedOrLatestTerraDrawFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

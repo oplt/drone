@@ -13,6 +13,7 @@ import {
   MAX_GRID_PREVIEW_WAYPOINTS,
   type DrawMode,
 } from "../../mission-workflow";
+import { useMissionAltitudeInput } from "../../mission-workflow/hooks/useMissionAltitudeInput";
 import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
 import type { LonLat } from "../../fields";
 import type { TerraDrawEditorMode } from "../../maps";
@@ -71,8 +72,14 @@ export function usePrivatePatrolMission({
   const repeatMonitorRef = useRef<RepeatMonitor | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [eventLocation, setEventLocation] = useState<Waypoint | null>(null);
-  const [alt, setAlt] = useState(30);
-  const [altInput, setAltInput] = useState("30");
+  const {
+    alt,
+    setAlt,
+    altInput,
+    setAltInput,
+    handleAltitudeInputChange,
+    normalizeAltitude,
+  } = useMissionAltitudeInput({ initialAltitude: 30, addError });
   const [name, setName] = useState("private-patrol-1");
   const [sending, setSending] = useState(false);
   const [preflightBusy, setPreflightBusy] = useState(false);
@@ -242,32 +249,6 @@ export function usePrivatePatrolMission({
     return null;
   }, [gridPreview, isWaypointPatrol, waypoints]);
 
-  const handleAltitudeInputChange = (value: string) => {
-    if (value === "") {
-      setAltInput("");
-      return;
-    }
-    if (!/^\d+$/.test(value)) return;
-    setAltInput(value);
-  };
-
-  const normalizeAltitude = () => {
-    if (altInput === "") {
-      setAltInput(String(alt));
-      return;
-    }
-    const num = Number(altInput);
-    if (!Number.isFinite(num)) {
-      setAltInput(String(alt));
-      return;
-    }
-    if (num < 1 || num > 500) {
-      addError("Altitude must be between 1 and 500 meters");
-      return;
-    }
-    setAlt(num);
-  };
-
   const buildStartArgs = useCallback(
     ({
       token,
@@ -432,6 +413,8 @@ export function usePrivatePatrolMission({
       clearErrors,
       setPendingFlightId,
       setLastMissionId,
+      setAlt,
+      setAltInput,
       showUiNotice,
     ]);
 

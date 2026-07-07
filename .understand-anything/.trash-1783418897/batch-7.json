@@ -1,0 +1,3831 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/modules/patrol/trigger_dispatch.py",
+      "type": "file",
+      "name": "trigger_dispatch.py",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "trigger_dispatch.py is a backend python module in backend/modules/patrol with 12 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:_failed_preflight_checks",
+      "type": "function",
+      "name": "_failed_preflight_checks",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "_failed_preflight_checks implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:_preflight_block_http_detail",
+      "type": "function",
+      "name": "_preflight_block_http_detail",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "_preflight_block_http_detail implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:register_sensor_location",
+      "type": "function",
+      "name": "register_sensor_location",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "register_sensor_location implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:_registry_from_payload",
+      "type": "function",
+      "name": "_registry_from_payload",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "_registry_from_payload implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:resolve_trigger_location",
+      "type": "function",
+      "name": "resolve_trigger_location",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "resolve_trigger_location implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:choose_response_mode",
+      "type": "function",
+      "name": "choose_response_mode",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "choose_response_mode implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:validate_location_in_geofence",
+      "type": "function",
+      "name": "validate_location_in_geofence",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "validate_location_in_geofence implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:_ensure_drone_available",
+      "type": "function",
+      "name": "_ensure_drone_available",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "_ensure_drone_available implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:build_event_triggered_mission",
+      "type": "function",
+      "name": "build_event_triggered_mission",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "build_event_triggered_mission implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:_mission_create_payload",
+      "type": "function",
+      "name": "_mission_create_payload",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "_mission_create_payload implements logic in trigger_dispatch.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:_resolve_effective_payload",
+      "type": "function",
+      "name": "_resolve_effective_payload",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "_resolve_effective_payload implements logic in trigger_dispatch.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/trigger_dispatch.py:dispatch_sensor_trigger",
+      "type": "function",
+      "name": "dispatch_sensor_trigger",
+      "filePath": "backend/modules/patrol/trigger_dispatch.py",
+      "summary": "dispatch_sensor_trigger implements logic in trigger_dispatch.py.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/async_invocation.py",
+      "type": "file",
+      "name": "async_invocation.py",
+      "filePath": "backend/modules/preflight/checks/async_invocation.py",
+      "summary": "async_invocation.py is a backend python module in backend/modules/preflight with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/async_invocation.py:call_maybe_async",
+      "type": "function",
+      "name": "call_maybe_async",
+      "filePath": "backend/modules/preflight/checks/async_invocation.py",
+      "summary": "call_maybe_async implements logic in async_invocation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/base.py",
+      "type": "file",
+      "name": "base.py",
+      "filePath": "backend/modules/preflight/checks/base.py",
+      "summary": "base.py is a backend python module in backend/modules/preflight with 0 functions and 3 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/base.py:Priority",
+      "type": "class",
+      "name": "Priority",
+      "filePath": "backend/modules/preflight/checks/base.py",
+      "summary": "Priority groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/base.py:CheckSpec",
+      "type": "class",
+      "name": "CheckSpec",
+      "filePath": "backend/modules/preflight/checks/base.py",
+      "summary": "CheckSpec groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/base.py:BasePreflightChecks",
+      "type": "class",
+      "name": "BasePreflightChecks",
+      "filePath": "backend/modules/preflight/checks/base.py",
+      "summary": "BasePreflightChecks groups related behavior and state in base.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/cache.py",
+      "type": "file",
+      "name": "cache.py",
+      "filePath": "backend/modules/preflight/checks/cache.py",
+      "summary": "cache.py is a backend python module in backend/modules/preflight with 2 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/cache.py:fast_local_distance",
+      "type": "function",
+      "name": "fast_local_distance",
+      "filePath": "backend/modules/preflight/checks/cache.py",
+      "summary": "fast_local_distance implements logic in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/cache.py:optimized_distance",
+      "type": "function",
+      "name": "optimized_distance",
+      "filePath": "backend/modules/preflight/checks/cache.py",
+      "summary": "optimized_distance implements logic in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/cache.py:TerrainCache",
+      "type": "class",
+      "name": "TerrainCache",
+      "filePath": "backend/modules/preflight/checks/cache.py",
+      "summary": "TerrainCache groups related behavior and state in cache.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/cache.py:DistanceCache",
+      "type": "class",
+      "name": "DistanceCache",
+      "filePath": "backend/modules/preflight/checks/cache.py",
+      "summary": "DistanceCache groups related behavior and state in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/check_models.py",
+      "type": "file",
+      "name": "check_models.py",
+      "filePath": "backend/modules/preflight/checks/check_models.py",
+      "summary": "check_models.py is a backend python module in backend/modules/preflight with 3 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/check_models.py:_lat_lon",
+      "type": "function",
+      "name": "_lat_lon",
+      "filePath": "backend/modules/preflight/checks/check_models.py",
+      "summary": "_lat_lon implements logic in check_models.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/check_models.py:_xy",
+      "type": "function",
+      "name": "_xy",
+      "filePath": "backend/modules/preflight/checks/check_models.py",
+      "summary": "_xy implements logic in check_models.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/check_models.py:_segment_distance_m",
+      "type": "function",
+      "name": "_segment_distance_m",
+      "filePath": "backend/modules/preflight/checks/check_models.py",
+      "summary": "_segment_distance_m implements logic in check_models.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/check_models.py:PrecomputedMissionData",
+      "type": "class",
+      "name": "PrecomputedMissionData",
+      "filePath": "backend/modules/preflight/checks/check_models.py",
+      "summary": "PrecomputedMissionData groups related behavior and state in check_models.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/check_models.py:MissionDataPreprocessor",
+      "type": "class",
+      "name": "MissionDataPreprocessor",
+      "filePath": "backend/modules/preflight/checks/check_models.py",
+      "summary": "MissionDataPreprocessor groups related behavior and state in check_models.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/context.py",
+      "type": "file",
+      "name": "context.py",
+      "filePath": "backend/modules/preflight/checks/context.py",
+      "summary": "context.py is a backend python module in backend/modules/preflight with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/context.py:PreflightContext",
+      "type": "class",
+      "name": "PreflightContext",
+      "filePath": "backend/modules/preflight/checks/context.py",
+      "summary": "PreflightContext groups related behavior and state in context.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/indoor_warehouse.py",
+      "type": "file",
+      "name": "indoor_warehouse.py",
+      "filePath": "backend/modules/preflight/checks/indoor_warehouse.py",
+      "summary": "indoor_warehouse.py is a backend python module in backend/modules/preflight with 0 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/indoor_warehouse.py:IndoorWarehouseBasePreflightChecks",
+      "type": "class",
+      "name": "IndoorWarehouseBasePreflightChecks",
+      "filePath": "backend/modules/preflight/checks/indoor_warehouse.py",
+      "summary": "IndoorWarehouseBasePreflightChecks groups related behavior and state in indoor_warehouse.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/mission_specific.py",
+      "type": "file",
+      "name": "mission_specific.py",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "mission_specific.py is a backend python module in backend/modules/preflight with 2 functions and 9 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/mission_specific.py:_warehouse_sim_mode",
+      "type": "function",
+      "name": "_warehouse_sim_mode",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "_warehouse_sim_mode implements logic in mission_specific.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/mission_specific.py:create_mission_preflight",
+      "type": "function",
+      "name": "create_mission_preflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "create_mission_preflight implements logic in mission_specific.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:MissionPreflightBase",
+      "type": "class",
+      "name": "MissionPreflightBase",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "MissionPreflightBase groups related behavior and state in mission_specific.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:WaypointMissionPreflight",
+      "type": "class",
+      "name": "WaypointMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "WaypointMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:GridMissionPreflight",
+      "type": "class",
+      "name": "GridMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "GridMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:TerrainFollowMissionPreflight",
+      "type": "class",
+      "name": "TerrainFollowMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "TerrainFollowMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:OrbitMissionPreflight",
+      "type": "class",
+      "name": "OrbitMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "OrbitMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:PerimeterPatrolMissionPreflight",
+      "type": "class",
+      "name": "PerimeterPatrolMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "PerimeterPatrolMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:AdaptiveAltitudeMissionPreflight",
+      "type": "class",
+      "name": "AdaptiveAltitudeMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "AdaptiveAltitudeMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:WarehouseScanMissionPreflight",
+      "type": "class",
+      "name": "WarehouseScanMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "WarehouseScanMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/mission_specific.py:IndoorExplorationMissionPreflight",
+      "type": "class",
+      "name": "IndoorExplorationMissionPreflight",
+      "filePath": "backend/modules/preflight/checks/mission_specific.py",
+      "summary": "IndoorExplorationMissionPreflight groups related behavior and state in mission_specific.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/profiles/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/preflight/checks/profiles/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/preflight with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/profiles/indoor_warehouse.py",
+      "type": "file",
+      "name": "indoor_warehouse.py",
+      "filePath": "backend/modules/preflight/checks/profiles/indoor_warehouse.py",
+      "summary": "indoor_warehouse.py is a backend python module in backend/modules/preflight with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/profiles/indoor_warehouse.py:indoor_warehouse_overrides",
+      "type": "function",
+      "name": "indoor_warehouse_overrides",
+      "filePath": "backend/modules/preflight/checks/profiles/indoor_warehouse.py",
+      "summary": "indoor_warehouse_overrides implements logic in indoor_warehouse.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/profiles/warehouse_scan.py",
+      "type": "file",
+      "name": "warehouse_scan.py",
+      "filePath": "backend/modules/preflight/checks/profiles/warehouse_scan.py",
+      "summary": "warehouse_scan.py is a backend python module in backend/modules/preflight with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/profiles/warehouse_scan.py:warehouse_scan_preflight_overrides",
+      "type": "function",
+      "name": "warehouse_scan_preflight_overrides",
+      "filePath": "backend/modules/preflight/checks/profiles/warehouse_scan.py",
+      "summary": "warehouse_scan_preflight_overrides implements logic in warehouse_scan.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "file",
+      "name": "schemas.py",
+      "filePath": "backend/modules/preflight/checks/schemas.py",
+      "summary": "schemas.py is a backend python module in backend/modules/preflight with 0 functions and 3 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/schemas.py:CheckStatus",
+      "type": "class",
+      "name": "CheckStatus",
+      "filePath": "backend/modules/preflight/checks/schemas.py",
+      "summary": "CheckStatus groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/schemas.py:CheckResult",
+      "type": "class",
+      "name": "CheckResult",
+      "filePath": "backend/modules/preflight/checks/schemas.py",
+      "summary": "CheckResult groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/schemas.py:PreflightReport",
+      "type": "class",
+      "name": "PreflightReport",
+      "filePath": "backend/modules/preflight/checks/schemas.py",
+      "summary": "PreflightReport groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/service.py",
+      "type": "file",
+      "name": "service.py",
+      "filePath": "backend/modules/preflight/checks/service.py",
+      "summary": "service.py is a backend python module in backend/modules/preflight with 1 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/preflight/checks/service.py:_unique",
+      "type": "function",
+      "name": "_unique",
+      "filePath": "backend/modules/preflight/checks/service.py",
+      "summary": "_unique implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/service.py:PreflightOrchestrator",
+      "type": "class",
+      "name": "PreflightOrchestrator",
+      "filePath": "backend/modules/preflight/checks/service.py",
+      "summary": "PreflightOrchestrator groups related behavior and state in service.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/checks/warehouse_scan_base.py",
+      "type": "file",
+      "name": "warehouse_scan_base.py",
+      "filePath": "backend/modules/preflight/checks/warehouse_scan_base.py",
+      "summary": "warehouse_scan_base.py is a backend python module in backend/modules/preflight with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/checks/warehouse_scan_base.py:WarehouseRosBasePreflightChecks",
+      "type": "class",
+      "name": "WarehouseRosBasePreflightChecks",
+      "filePath": "backend/modules/preflight/checks/warehouse_scan_base.py",
+      "summary": "WarehouseRosBasePreflightChecks groups related behavior and state in warehouse_scan_base.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/range_estimator.py",
+      "type": "file",
+      "name": "range_estimator.py",
+      "filePath": "backend/modules/preflight/range_estimator.py",
+      "summary": "range_estimator.py is a backend python module in backend/modules/preflight with 0 functions and 3 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/range_estimator.py:RangeEstimateResult",
+      "type": "class",
+      "name": "RangeEstimateResult",
+      "filePath": "backend/modules/preflight/range_estimator.py",
+      "summary": "RangeEstimateResult groups related behavior and state in range_estimator.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/range_estimator.py:BatteryRangeModel",
+      "type": "class",
+      "name": "BatteryRangeModel",
+      "filePath": "backend/modules/preflight/range_estimator.py",
+      "summary": "BatteryRangeModel groups related behavior and state in range_estimator.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/range_estimator.py:SimpleWhPerKmModel",
+      "type": "class",
+      "name": "SimpleWhPerKmModel",
+      "filePath": "backend/modules/preflight/range_estimator.py",
+      "summary": "SimpleWhPerKmModel groups related behavior and state in range_estimator.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "api.py is a backend python module in backend/modules/telemetry with 11 functions and 2 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:_track_background_task",
+      "type": "function",
+      "name": "_track_background_task",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "_track_background_task implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:_expected_drone_connect_failure",
+      "type": "function",
+      "name": "_expected_drone_connect_failure",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "_expected_drone_connect_failure implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:connect_drone_and_telemetry",
+      "type": "function",
+      "name": "connect_drone_and_telemetry",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "connect_drone_and_telemetry implements logic in api.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:start_telemetry_stream",
+      "type": "function",
+      "name": "start_telemetry_stream",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "start_telemetry_stream implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:stop_telemetry_stream",
+      "type": "function",
+      "name": "stop_telemetry_stream",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "stop_telemetry_stream implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:get_telemetry_status",
+      "type": "function",
+      "name": "get_telemetry_status",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "get_telemetry_status implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:get_runtime_metrics",
+      "type": "function",
+      "name": "get_runtime_metrics",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "get_runtime_metrics implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:get_runtime_status",
+      "type": "function",
+      "name": "get_runtime_status",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "get_runtime_status implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:get_shadow_report",
+      "type": "function",
+      "name": "get_shadow_report",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "get_shadow_report implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:get_ops_health",
+      "type": "function",
+      "name": "get_ops_health",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "get_ops_health implements logic in api.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/api.py:send_manual_control",
+      "type": "function",
+      "name": "send_manual_control",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "send_manual_control implements logic in api.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/api.py:TelemetryConnectIn",
+      "type": "class",
+      "name": "TelemetryConnectIn",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "TelemetryConnectIn groups related behavior and state in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/api.py:ManualControlIn",
+      "type": "class",
+      "name": "ManualControlIn",
+      "filePath": "backend/modules/telemetry/api.py",
+      "summary": "ManualControlIn groups related behavior and state in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/telemetry/models.py",
+      "summary": "models.py is a backend python module in backend/modules/telemetry with 0 functions and 3 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/models.py:TelemetryRecord",
+      "type": "class",
+      "name": "TelemetryRecord",
+      "filePath": "backend/modules/telemetry/models.py",
+      "summary": "TelemetryRecord groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/models.py:MavlinkEvent",
+      "type": "class",
+      "name": "MavlinkEvent",
+      "filePath": "backend/modules/telemetry/models.py",
+      "summary": "MavlinkEvent groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/models.py:TelemetrySummary",
+      "type": "class",
+      "name": "TelemetrySummary",
+      "filePath": "backend/modules/telemetry/models.py",
+      "summary": "TelemetrySummary groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/repository/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/telemetry/repository/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/telemetry with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/repository/__init__.py:TelemetryRepository",
+      "type": "class",
+      "name": "TelemetryRepository",
+      "filePath": "backend/modules/telemetry/repository/__init__.py",
+      "summary": "TelemetryRepository groups related behavior and state in __init__.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/repository/batcher.py",
+      "type": "file",
+      "name": "batcher.py",
+      "filePath": "backend/modules/telemetry/repository/batcher.py",
+      "summary": "batcher.py is a backend python module in backend/modules/telemetry with 2 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/batcher.py:_normalized_status_value",
+      "type": "function",
+      "name": "_normalized_status_value",
+      "filePath": "backend/modules/telemetry/repository/batcher.py",
+      "summary": "_normalized_status_value implements logic in batcher.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/batcher.py:_status_is_terminal",
+      "type": "function",
+      "name": "_status_is_terminal",
+      "filePath": "backend/modules/telemetry/repository/batcher.py",
+      "summary": "_status_is_terminal implements logic in batcher.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/repository/batcher.py:TelemetryBatcher",
+      "type": "class",
+      "name": "TelemetryBatcher",
+      "filePath": "backend/modules/telemetry/repository/batcher.py",
+      "summary": "TelemetryBatcher groups related behavior and state in batcher.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/repository/ingest.py",
+      "type": "file",
+      "name": "ingest.py",
+      "filePath": "backend/modules/telemetry/repository/ingest.py",
+      "summary": "ingest.py is a backend python module in backend/modules/telemetry with 3 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/ingest.py:_normalized_status_value",
+      "type": "function",
+      "name": "_normalized_status_value",
+      "filePath": "backend/modules/telemetry/repository/ingest.py",
+      "summary": "_normalized_status_value implements logic in ingest.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/ingest.py:_status_is_terminal",
+      "type": "function",
+      "name": "_status_is_terminal",
+      "filePath": "backend/modules/telemetry/repository/ingest.py",
+      "summary": "_status_is_terminal implements logic in ingest.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/ingest.py:_log_mavlink_insert_summary",
+      "type": "function",
+      "name": "_log_mavlink_insert_summary",
+      "filePath": "backend/modules/telemetry/repository/ingest.py",
+      "summary": "_log_mavlink_insert_summary implements logic in ingest.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/repository/ingest.py:TelemetryIngestMixin",
+      "type": "class",
+      "name": "TelemetryIngestMixin",
+      "filePath": "backend/modules/telemetry/repository/ingest.py",
+      "summary": "TelemetryIngestMixin groups related behavior and state in ingest.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "type": "file",
+      "name": "lifecycle.py",
+      "filePath": "backend/modules/telemetry/repository/lifecycle.py",
+      "summary": "lifecycle.py is a backend python module in backend/modules/telemetry with 2 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/lifecycle.py:_normalized_status_value",
+      "type": "function",
+      "name": "_normalized_status_value",
+      "filePath": "backend/modules/telemetry/repository/lifecycle.py",
+      "summary": "_normalized_status_value implements logic in lifecycle.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/lifecycle.py:_status_is_terminal",
+      "type": "function",
+      "name": "_status_is_terminal",
+      "filePath": "backend/modules/telemetry/repository/lifecycle.py",
+      "summary": "_status_is_terminal implements logic in lifecycle.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/repository/lifecycle.py:TelemetryLifecycleMixin",
+      "type": "class",
+      "name": "TelemetryLifecycleMixin",
+      "filePath": "backend/modules/telemetry/repository/lifecycle.py",
+      "summary": "TelemetryLifecycleMixin groups related behavior and state in lifecycle.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/repository/summaries.py",
+      "type": "file",
+      "name": "summaries.py",
+      "filePath": "backend/modules/telemetry/repository/summaries.py",
+      "summary": "summaries.py is a backend python module in backend/modules/telemetry with 2 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/summaries.py:_normalized_status_value",
+      "type": "function",
+      "name": "_normalized_status_value",
+      "filePath": "backend/modules/telemetry/repository/summaries.py",
+      "summary": "_normalized_status_value implements logic in summaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/telemetry/repository/summaries.py:_status_is_terminal",
+      "type": "function",
+      "name": "_status_is_terminal",
+      "filePath": "backend/modules/telemetry/repository/summaries.py",
+      "summary": "_status_is_terminal implements logic in summaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/telemetry/repository/summaries.py:TelemetrySummaryMixin",
+      "type": "class",
+      "name": "TelemetrySummaryMixin",
+      "filePath": "backend/modules/telemetry/repository/summaries.py",
+      "summary": "TelemetrySummaryMixin groups related behavior and state in summaries.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/vehicle_runtime/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/vehicle_runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/__init__.py:__getattr__",
+      "type": "function",
+      "name": "__getattr__",
+      "filePath": "backend/modules/vehicle_runtime/__init__.py",
+      "summary": "__getattr__ implements logic in __init__.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/completion_service.py",
+      "type": "file",
+      "name": "completion_service.py",
+      "filePath": "backend/modules/vehicle_runtime/completion_service.py",
+      "summary": "completion_service.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/completion_service.py:RuntimeCompletionServiceMixin",
+      "type": "class",
+      "name": "RuntimeCompletionServiceMixin",
+      "filePath": "backend/modules/vehicle_runtime/completion_service.py",
+      "summary": "RuntimeCompletionServiceMixin groups related behavior and state in completion_service.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/coordination.py",
+      "type": "file",
+      "name": "coordination.py",
+      "filePath": "backend/modules/vehicle_runtime/coordination.py",
+      "summary": "coordination.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/coordination.py:_OrchestratorRepositoryAdapter",
+      "type": "class",
+      "name": "_OrchestratorRepositoryAdapter",
+      "filePath": "backend/modules/vehicle_runtime/coordination.py",
+      "summary": "_OrchestratorRepositoryAdapter groups related behavior and state in coordination.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/coordination.py:RuntimeCoordinationMixin",
+      "type": "class",
+      "name": "RuntimeCoordinationMixin",
+      "filePath": "backend/modules/vehicle_runtime/coordination.py",
+      "summary": "RuntimeCoordinationMixin groups related behavior and state in coordination.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/event_service.py",
+      "type": "file",
+      "name": "event_service.py",
+      "filePath": "backend/modules/vehicle_runtime/event_service.py",
+      "summary": "event_service.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/event_service.py:RuntimeEventServiceMixin",
+      "type": "class",
+      "name": "RuntimeEventServiceMixin",
+      "filePath": "backend/modules/vehicle_runtime/event_service.py",
+      "summary": "RuntimeEventServiceMixin groups related behavior and state in event_service.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "type": "file",
+      "name": "execution_service.py",
+      "filePath": "backend/modules/vehicle_runtime/execution_service.py",
+      "summary": "execution_service.py is a backend python module in backend/modules/vehicle_runtime with 1 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/execution_service.py:_wait_for_telemetry_startup",
+      "type": "function",
+      "name": "_wait_for_telemetry_startup",
+      "filePath": "backend/modules/vehicle_runtime/execution_service.py",
+      "summary": "_wait_for_telemetry_startup implements logic in execution_service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/execution_service.py:RuntimeExecutionServiceMixin",
+      "type": "class",
+      "name": "RuntimeExecutionServiceMixin",
+      "filePath": "backend/modules/vehicle_runtime/execution_service.py",
+      "summary": "RuntimeExecutionServiceMixin groups related behavior and state in execution_service.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/factory.py",
+      "type": "file",
+      "name": "factory.py",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "factory.py is a backend python module in backend/modules/vehicle_runtime with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/factory.py:_mqtt_broker_reachable",
+      "type": "function",
+      "name": "_mqtt_broker_reachable",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "_mqtt_broker_reachable implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/factory.py:_create_mqtt_publisher",
+      "type": "function",
+      "name": "_create_mqtt_publisher",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "_create_mqtt_publisher implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/factory.py:_build_orchestrator_unlocked",
+      "type": "function",
+      "name": "_build_orchestrator_unlocked",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "_build_orchestrator_unlocked implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/factory.py:reset_orchestrator",
+      "type": "function",
+      "name": "reset_orchestrator",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "reset_orchestrator implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/factory.py:build_orchestrator",
+      "type": "function",
+      "name": "build_orchestrator",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "build_orchestrator implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/factory.py:get_orchestrator",
+      "type": "function",
+      "name": "get_orchestrator",
+      "filePath": "backend/modules/vehicle_runtime/factory.py",
+      "summary": "get_orchestrator implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "type": "file",
+      "name": "local_position_adapter.py",
+      "filePath": "backend/modules/vehicle_runtime/local_position_adapter.py",
+      "summary": "local_position_adapter.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 2 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/local_position_adapter.py:LocalPositionSample",
+      "type": "class",
+      "name": "LocalPositionSample",
+      "filePath": "backend/modules/vehicle_runtime/local_position_adapter.py",
+      "summary": "LocalPositionSample groups related behavior and state in local_position_adapter.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/local_position_adapter.py:MavlinkLocalPositionAdapter",
+      "type": "class",
+      "name": "MavlinkLocalPositionAdapter",
+      "filePath": "backend/modules/vehicle_runtime/local_position_adapter.py",
+      "summary": "MavlinkLocalPositionAdapter groups related behavior and state in local_position_adapter.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "type": "file",
+      "name": "orchestrator.py",
+      "filePath": "backend/modules/vehicle_runtime/orchestrator.py",
+      "summary": "orchestrator.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/orchestrator.py:Orchestrator",
+      "type": "class",
+      "name": "Orchestrator",
+      "filePath": "backend/modules/vehicle_runtime/orchestrator.py",
+      "summary": "Orchestrator groups related behavior and state in orchestrator.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/persistence_service.py",
+      "type": "file",
+      "name": "persistence_service.py",
+      "filePath": "backend/modules/vehicle_runtime/persistence_service.py",
+      "summary": "persistence_service.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/persistence_service.py:RuntimePersistenceMixin",
+      "type": "class",
+      "name": "RuntimePersistenceMixin",
+      "filePath": "backend/modules/vehicle_runtime/persistence_service.py",
+      "summary": "RuntimePersistenceMixin groups related behavior and state in persistence_service.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/ports.py",
+      "type": "file",
+      "name": "ports.py",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "ports.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 7 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:MapPort",
+      "type": "class",
+      "name": "MapPort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "MapPort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:MessagePublisherPort",
+      "type": "class",
+      "name": "MessagePublisherPort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "MessagePublisherPort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:RuntimeFanoutPort",
+      "type": "class",
+      "name": "RuntimeFanoutPort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "RuntimeFanoutPort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:TelemetryConnectionFactoryPort",
+      "type": "class",
+      "name": "TelemetryConnectionFactoryPort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "TelemetryConnectionFactoryPort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:VideoStreamPort",
+      "type": "class",
+      "name": "VideoStreamPort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "VideoStreamPort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:VideoStreamFactoryPort",
+      "type": "class",
+      "name": "VideoStreamFactoryPort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "VideoStreamFactoryPort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/ports.py:SharedVideoRuntimePort",
+      "type": "class",
+      "name": "SharedVideoRuntimePort",
+      "filePath": "backend/modules/vehicle_runtime/ports.py",
+      "summary": "SharedVideoRuntimePort groups related behavior and state in ports.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "type": "file",
+      "name": "recovery_service.py",
+      "filePath": "backend/modules/vehicle_runtime/recovery_service.py",
+      "summary": "recovery_service.py is a backend python module in backend/modules/vehicle_runtime with 0 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/vehicle_runtime/recovery_service.py:RuntimeRecoveryServiceMixin",
+      "type": "class",
+      "name": "RuntimeRecoveryServiceMixin",
+      "filePath": "backend/modules/vehicle_runtime/recovery_service.py",
+      "summary": "RuntimeRecoveryServiceMixin groups related behavior and state in recovery_service.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/missions/application.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/missions/launch_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/missions/schemas/mission_create.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/missions/schemas/mission_types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/missions/service/mission_builder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/missions/service/mission_start.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/patrol/ai_tasks.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/patrol/event_trigger_config_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/patrol/geo.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/patrol/planning.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/patrol/sensor_config_schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/patrol/sensor_config_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/vehicle_runtime/factory.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_failed_preflight_checks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_failed_preflight_checks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_preflight_block_http_detail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_preflight_block_http_detail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:register_sensor_location",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:register_sensor_location",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_registry_from_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_registry_from_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:resolve_trigger_location",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:resolve_trigger_location",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:choose_response_mode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:choose_response_mode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:validate_location_in_geofence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:validate_location_in_geofence",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_ensure_drone_available",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_ensure_drone_available",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:build_event_triggered_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:build_event_triggered_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_mission_create_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_mission_create_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_resolve_effective_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:_resolve_effective_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:dispatch_sensor_trigger",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/trigger_dispatch.py",
+      "target": "function:backend/modules/patrol/trigger_dispatch.py:dispatch_sensor_trigger",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/async_invocation.py",
+      "target": "function:backend/modules/preflight/checks/async_invocation.py:call_maybe_async",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/async_invocation.py",
+      "target": "function:backend/modules/preflight/checks/async_invocation.py:call_maybe_async",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "file:backend/core/types/geo.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "file:backend/modules/preflight/checks/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "class:backend/modules/preflight/checks/base.py:Priority",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "class:backend/modules/preflight/checks/base.py:Priority",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "class:backend/modules/preflight/checks/base.py:CheckSpec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "class:backend/modules/preflight/checks/base.py:CheckSpec",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "class:backend/modules/preflight/checks/base.py:BasePreflightChecks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/base.py",
+      "target": "class:backend/modules/preflight/checks/base.py:BasePreflightChecks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "file:backend/core/types/geo.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "function:backend/modules/preflight/checks/cache.py:fast_local_distance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "function:backend/modules/preflight/checks/cache.py:fast_local_distance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "function:backend/modules/preflight/checks/cache.py:optimized_distance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "function:backend/modules/preflight/checks/cache.py:optimized_distance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "class:backend/modules/preflight/checks/cache.py:TerrainCache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "class:backend/modules/preflight/checks/cache.py:TerrainCache",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "class:backend/modules/preflight/checks/cache.py:DistanceCache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/cache.py",
+      "target": "class:backend/modules/preflight/checks/cache.py:DistanceCache",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "file:backend/modules/preflight/checks/async_invocation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "file:backend/modules/preflight/checks/cache.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "function:backend/modules/preflight/checks/check_models.py:_lat_lon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "function:backend/modules/preflight/checks/check_models.py:_lat_lon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "function:backend/modules/preflight/checks/check_models.py:_xy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "function:backend/modules/preflight/checks/check_models.py:_xy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "function:backend/modules/preflight/checks/check_models.py:_segment_distance_m",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "function:backend/modules/preflight/checks/check_models.py:_segment_distance_m",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "class:backend/modules/preflight/checks/check_models.py:PrecomputedMissionData",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "class:backend/modules/preflight/checks/check_models.py:PrecomputedMissionData",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "class:backend/modules/preflight/checks/check_models.py:MissionDataPreprocessor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/check_models.py",
+      "target": "class:backend/modules/preflight/checks/check_models.py:MissionDataPreprocessor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/context.py",
+      "target": "file:backend/modules/missions/schemas/mission_types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/context.py",
+      "target": "file:backend/modules/preflight/checks/async_invocation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/context.py",
+      "target": "file:backend/modules/preflight/checks/cache.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/context.py",
+      "target": "file:backend/modules/preflight/checks/check_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/context.py",
+      "target": "class:backend/modules/preflight/checks/context.py:PreflightContext",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/context.py",
+      "target": "class:backend/modules/preflight/checks/context.py:PreflightContext",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/indoor_warehouse.py",
+      "target": "file:backend/modules/preflight/checks/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/indoor_warehouse.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/indoor_warehouse.py",
+      "target": "class:backend/modules/preflight/checks/indoor_warehouse.py:IndoorWarehouseBasePreflightChecks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/indoor_warehouse.py",
+      "target": "class:backend/modules/preflight/checks/indoor_warehouse.py:IndoorWarehouseBasePreflightChecks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "file:backend/modules/missions/schemas/mission_types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "file:backend/modules/preflight/checks/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "file:backend/modules/preflight/range_estimator.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "function:backend/modules/preflight/checks/mission_specific.py:_warehouse_sim_mode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "function:backend/modules/preflight/checks/mission_specific.py:_warehouse_sim_mode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "function:backend/modules/preflight/checks/mission_specific.py:create_mission_preflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "function:backend/modules/preflight/checks/mission_specific.py:create_mission_preflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:MissionPreflightBase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:MissionPreflightBase",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:WaypointMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:WaypointMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:GridMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:GridMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:TerrainFollowMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:TerrainFollowMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:OrbitMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:OrbitMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:PerimeterPatrolMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:PerimeterPatrolMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:AdaptiveAltitudeMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:AdaptiveAltitudeMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:WarehouseScanMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:WarehouseScanMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:IndoorExplorationMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/mission_specific.py",
+      "target": "class:backend/modules/preflight/checks/mission_specific.py:IndoorExplorationMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/profiles/__init__.py",
+      "target": "file:backend/modules/preflight/checks/profiles/indoor_warehouse.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/profiles/__init__.py",
+      "target": "file:backend/modules/preflight/checks/profiles/warehouse_scan.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/profiles/indoor_warehouse.py",
+      "target": "function:backend/modules/preflight/checks/profiles/indoor_warehouse.py:indoor_warehouse_overrides",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/profiles/indoor_warehouse.py",
+      "target": "function:backend/modules/preflight/checks/profiles/indoor_warehouse.py:indoor_warehouse_overrides",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/profiles/warehouse_scan.py",
+      "target": "function:backend/modules/preflight/checks/profiles/warehouse_scan.py:warehouse_scan_preflight_overrides",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/profiles/warehouse_scan.py",
+      "target": "function:backend/modules/preflight/checks/profiles/warehouse_scan.py:warehouse_scan_preflight_overrides",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/schemas.py",
+      "target": "class:backend/modules/preflight/checks/schemas.py:CheckStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/schemas.py",
+      "target": "class:backend/modules/preflight/checks/schemas.py:CheckStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/schemas.py",
+      "target": "class:backend/modules/preflight/checks/schemas.py:CheckResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/schemas.py",
+      "target": "class:backend/modules/preflight/checks/schemas.py:CheckResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/schemas.py",
+      "target": "class:backend/modules/preflight/checks/schemas.py:PreflightReport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/schemas.py",
+      "target": "class:backend/modules/preflight/checks/schemas.py:PreflightReport",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/missions/schemas/mission_types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/cache.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/check_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/indoor_warehouse.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/mission_specific.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/profiles/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "file:backend/modules/preflight/checks/warehouse_scan_base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "function:backend/modules/preflight/checks/service.py:_unique",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "function:backend/modules/preflight/checks/service.py:_unique",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "class:backend/modules/preflight/checks/service.py:PreflightOrchestrator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/service.py",
+      "target": "class:backend/modules/preflight/checks/service.py:PreflightOrchestrator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/warehouse_scan_base.py",
+      "target": "file:backend/modules/preflight/checks/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/warehouse_scan_base.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/warehouse_scan_base.py",
+      "target": "class:backend/modules/preflight/checks/warehouse_scan_base.py:WarehouseRosBasePreflightChecks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/checks/warehouse_scan_base.py",
+      "target": "class:backend/modules/preflight/checks/warehouse_scan_base.py:WarehouseRosBasePreflightChecks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/range_estimator.py",
+      "target": "class:backend/modules/preflight/range_estimator.py:RangeEstimateResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/range_estimator.py",
+      "target": "class:backend/modules/preflight/range_estimator.py:RangeEstimateResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/range_estimator.py",
+      "target": "class:backend/modules/preflight/range_estimator.py:BatteryRangeModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/range_estimator.py",
+      "target": "class:backend/modules/preflight/range_estimator.py:BatteryRangeModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/range_estimator.py",
+      "target": "class:backend/modules/preflight/range_estimator.py:SimpleWhPerKmModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/range_estimator.py",
+      "target": "class:backend/modules/preflight/range_estimator.py:SimpleWhPerKmModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/infrastructure/messaging/websocket_publisher.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/modules/identity/dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/modules/missions/flight_profile.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/modules/missions/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/modules/missions/schemas/mission_types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "file:backend/modules/vehicle_runtime/factory.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:_track_background_task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:_track_background_task",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:_expected_drone_connect_failure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:_expected_drone_connect_failure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:connect_drone_and_telemetry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:connect_drone_and_telemetry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:start_telemetry_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:start_telemetry_stream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:stop_telemetry_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:stop_telemetry_stream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_telemetry_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_telemetry_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_runtime_metrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_runtime_metrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_runtime_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_runtime_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_shadow_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_shadow_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_ops_health",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:get_ops_health",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:send_manual_control",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "function:backend/modules/telemetry/api.py:send_manual_control",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "class:backend/modules/telemetry/api.py:TelemetryConnectIn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "class:backend/modules/telemetry/api.py:TelemetryConnectIn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "class:backend/modules/telemetry/api.py:ManualControlIn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/api.py",
+      "target": "class:backend/modules/telemetry/api.py:ManualControlIn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "class:backend/modules/telemetry/models.py:TelemetryRecord",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "class:backend/modules/telemetry/models.py:TelemetryRecord",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "class:backend/modules/telemetry/models.py:MavlinkEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "class:backend/modules/telemetry/models.py:MavlinkEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "class:backend/modules/telemetry/models.py:TelemetrySummary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/models.py",
+      "target": "class:backend/modules/telemetry/models.py:TelemetrySummary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "file:backend/modules/telemetry/repository/batcher.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "file:backend/modules/telemetry/repository/ingest.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "file:backend/modules/telemetry/repository/summaries.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "class:backend/modules/telemetry/repository/__init__.py:TelemetryRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/__init__.py",
+      "target": "class:backend/modules/telemetry/repository/__init__.py:TelemetryRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "function:backend/modules/telemetry/repository/batcher.py:_normalized_status_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "function:backend/modules/telemetry/repository/batcher.py:_normalized_status_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "function:backend/modules/telemetry/repository/batcher.py:_status_is_terminal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "function:backend/modules/telemetry/repository/batcher.py:_status_is_terminal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "class:backend/modules/telemetry/repository/batcher.py:TelemetryBatcher",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/batcher.py",
+      "target": "class:backend/modules/telemetry/repository/batcher.py:TelemetryBatcher",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "file:backend/modules/telemetry/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "function:backend/modules/telemetry/repository/ingest.py:_normalized_status_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "function:backend/modules/telemetry/repository/ingest.py:_normalized_status_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "function:backend/modules/telemetry/repository/ingest.py:_status_is_terminal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "function:backend/modules/telemetry/repository/ingest.py:_status_is_terminal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "function:backend/modules/telemetry/repository/ingest.py:_log_mavlink_insert_summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "function:backend/modules/telemetry/repository/ingest.py:_log_mavlink_insert_summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "class:backend/modules/telemetry/repository/ingest.py:TelemetryIngestMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/ingest.py",
+      "target": "class:backend/modules/telemetry/repository/ingest.py:TelemetryIngestMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "file:backend/modules/telemetry/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "function:backend/modules/telemetry/repository/lifecycle.py:_normalized_status_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "function:backend/modules/telemetry/repository/lifecycle.py:_normalized_status_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "function:backend/modules/telemetry/repository/lifecycle.py:_status_is_terminal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "function:backend/modules/telemetry/repository/lifecycle.py:_status_is_terminal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "class:backend/modules/telemetry/repository/lifecycle.py:TelemetryLifecycleMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/lifecycle.py",
+      "target": "class:backend/modules/telemetry/repository/lifecycle.py:TelemetryLifecycleMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "file:backend/modules/telemetry/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "function:backend/modules/telemetry/repository/summaries.py:_normalized_status_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "function:backend/modules/telemetry/repository/summaries.py:_normalized_status_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "function:backend/modules/telemetry/repository/summaries.py:_status_is_terminal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "function:backend/modules/telemetry/repository/summaries.py:_status_is_terminal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "class:backend/modules/telemetry/repository/summaries.py:TelemetrySummaryMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/telemetry/repository/summaries.py",
+      "target": "class:backend/modules/telemetry/repository/summaries.py:TelemetrySummaryMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/__init__.py",
+      "target": "function:backend/modules/vehicle_runtime/__init__.py:__getattr__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/__init__.py",
+      "target": "function:backend/modules/vehicle_runtime/__init__.py:__getattr__",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/completion_service.py",
+      "target": "file:backend/core/events/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/completion_service.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/completion_service.py",
+      "target": "class:backend/modules/vehicle_runtime/completion_service.py:RuntimeCompletionServiceMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/completion_service.py",
+      "target": "class:backend/modules/vehicle_runtime/completion_service.py:RuntimeCompletionServiceMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/core/events/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/modules/preflight/range_estimator.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/modules/telemetry/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/modules/vehicle_runtime/ports.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "file:backend/modules/vehicle_runtime/vehicle_port.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "class:backend/modules/vehicle_runtime/coordination.py:_OrchestratorRepositoryAdapter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "class:backend/modules/vehicle_runtime/coordination.py:_OrchestratorRepositoryAdapter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "class:backend/modules/vehicle_runtime/coordination.py:RuntimeCoordinationMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/coordination.py",
+      "target": "class:backend/modules/vehicle_runtime/coordination.py:RuntimeCoordinationMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/event_service.py",
+      "target": "file:backend/core/events/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/event_service.py",
+      "target": "file:backend/modules/telemetry/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/event_service.py",
+      "target": "class:backend/modules/vehicle_runtime/event_service.py:RuntimeEventServiceMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/event_service.py",
+      "target": "class:backend/modules/vehicle_runtime/event_service.py:RuntimeEventServiceMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/core/events/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/modules/telemetry/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "file:backend/modules/vehicle_runtime/vehicle_port.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "function:backend/modules/vehicle_runtime/execution_service.py:_wait_for_telemetry_startup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "function:backend/modules/vehicle_runtime/execution_service.py:_wait_for_telemetry_startup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "class:backend/modules/vehicle_runtime/execution_service.py:RuntimeExecutionServiceMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "target": "class:backend/modules/vehicle_runtime/execution_service.py:RuntimeExecutionServiceMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "file:backend/infrastructure/runtime/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "file:backend/modules/telemetry/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:_mqtt_broker_reachable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:_mqtt_broker_reachable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:_create_mqtt_publisher",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:_create_mqtt_publisher",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:_build_orchestrator_unlocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:_build_orchestrator_unlocked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:reset_orchestrator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:reset_orchestrator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:build_orchestrator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:build_orchestrator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:get_orchestrator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/factory.py",
+      "target": "function:backend/modules/vehicle_runtime/factory.py:get_orchestrator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "target": "file:backend/infrastructure/vehicle/frame_conversion.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "target": "class:backend/modules/vehicle_runtime/local_position_adapter.py:LocalPositionSample",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "target": "class:backend/modules/vehicle_runtime/local_position_adapter.py:LocalPositionSample",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "target": "class:backend/modules/vehicle_runtime/local_position_adapter.py:MavlinkLocalPositionAdapter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/local_position_adapter.py",
+      "target": "class:backend/modules/vehicle_runtime/local_position_adapter.py:MavlinkLocalPositionAdapter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/completion_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/coordination.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/event_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/execution_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/persistence_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/telemetry_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "file:backend/modules/vehicle_runtime/video_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "class:backend/modules/vehicle_runtime/orchestrator.py:Orchestrator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/orchestrator.py",
+      "target": "class:backend/modules/vehicle_runtime/orchestrator.py:Orchestrator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/persistence_service.py",
+      "target": "class:backend/modules/vehicle_runtime/persistence_service.py:RuntimePersistenceMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/persistence_service.py",
+      "target": "class:backend/modules/vehicle_runtime/persistence_service.py:RuntimePersistenceMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "file:backend/core/events/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:MapPort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:MapPort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:MessagePublisherPort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:MessagePublisherPort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:RuntimeFanoutPort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:RuntimeFanoutPort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:TelemetryConnectionFactoryPort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:TelemetryConnectionFactoryPort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:VideoStreamPort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:VideoStreamPort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:VideoStreamFactoryPort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:VideoStreamFactoryPort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:SharedVideoRuntimePort",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/ports.py",
+      "target": "class:backend/modules/vehicle_runtime/ports.py:SharedVideoRuntimePort",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "target": "file:backend/modules/preflight/checks/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "target": "file:backend/modules/preflight/checks/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "target": "file:backend/modules/vehicle_runtime/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "target": "class:backend/modules/vehicle_runtime/recovery_service.py:RuntimeRecoveryServiceMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/recovery_service.py",
+      "target": "class:backend/modules/vehicle_runtime/recovery_service.py:RuntimeRecoveryServiceMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

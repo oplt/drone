@@ -17,15 +17,16 @@ import { GoogleMapsContext } from "../../../modules/maps/providers/googleMaps";
 import { OverlayView, Polyline } from "@react-google-maps/api";
 import { getToken } from "../../../modules/session";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
-import { MissionCommandPanel } from "../../../modules/mission-runtime";
+import { MissionCommandPanel } from "../../mission-runtime/components/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../modules/mission-runtime";
 import {
   TaskPreflightCommandsDrawer,
   useTaskPreflightCommandsDrawer,
 } from "../../../modules/mission-workflow";
+import { useMissionAltitudeInput } from "../../mission-workflow/hooks/useMissionAltitudeInput";
 import { MissionVideoPanel } from "../../../modules/mission-runtime";
 import { MissionStatusChips } from "../../../modules/mission-runtime";
-import { MissionMapViewport } from "../../../modules/maps";
+import { MissionMapViewport, useUserLocation } from "../../../modules/maps";
 import {
   RouteDrawControls,
   type RouteDrawMode,
@@ -79,20 +80,31 @@ export function ControlledFlightView() {
   const containerStyle = { width: "100%", height: "400px" };
   const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
-  const [alt, setAlt] = useState(30);
-  const [altInput, setAltInput] = useState("30");
   const [name, setName] = useState("Controlled Flight");
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const missionLaunchInFlightRef = useRef(false);
-  const [userCenter, setUserCenter] = useState<LatLng | null>(null);
   const [sending, setSending] = useState(false);
   const [preflightRun, setPreflightRun] =
       useState<PreflightRunResponse | null>(null);
 
   const [center, setCenter] = useState(defaultCenter);
-  const [loadingLocation, setLoadingLocation] = useState(true);
   const { errors, addError, clearErrors, dismissError } = useErrors();
+  const handleLocationError = useCallback((error: GeolocationPositionError) => {
+    const message = `Failed to get location: ${error.message}`;
+    addError(message);
+    return message;
+  }, [addError]);
+  const { userCenter, loadingLocation } = useUserLocation({
+    onLocationError: handleLocationError,
+  });
+  const {
+    setAlt,
+    altInput,
+    setAltInput,
+    handleAltitudeInputChange,
+    normalizeAltitude,
+  } = useMissionAltitudeInput({ initialAltitude: 30, addError });
   const [mapZoom, setMapZoom] = useState(12);
   const [drawMode, setDrawMode] = useState<RouteDrawMode>("point");
   const terraDrawRef = useRef<TerraDraw | null>(null);
@@ -336,29 +348,6 @@ export function ControlledFlightView() {
     setTerraDrawMode(googleModeMap[toolMode]);
   }, []);
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setLoadingLocation(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const userLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setUserCenter(userLocation);
-          setCenter(userLocation);
-          setLoadingLocation(false);
-        },
-        (error) => {
-          addError(`Failed to get location: ${error.message}`);
-          setLoadingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
-  }, [addError]);
-
   useDroneMapFollow({
     mapRef,
     droneCenter,
@@ -426,32 +415,6 @@ export function ControlledFlightView() {
       setSending(false);
       missionLaunchInFlightRef.current = false;
     }
-  };
-
-  const handleAltitudeInputChange = (value: string) => {
-    if (value === "") {
-      setAltInput("");
-      return;
-    }
-    if (!/^\d+$/.test(value)) return;
-    setAltInput(value);
-  };
-
-  const normalizeAltitude = () => {
-    if (altInput === "") {
-      setAltInput(String(alt));
-      return;
-    }
-    const num = Number(altInput);
-    if (!Number.isFinite(num)) {
-      setAltInput(String(alt));
-      return;
-    }
-    if (num < 1 || num > 500) {
-      addError("Altitude must be between 1 and 500 meters");
-      return;
-    }
-    setAlt(num);
   };
 
   const mapCenter = useMemo(

@@ -1,0 +1,778 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "type": "file",
+      "name": "check_eslint_baseline.mjs",
+      "filePath": "frontend/scripts/check_eslint_baseline.mjs",
+      "summary": "check_eslint_baseline.mjs is a frontend javascript module in frontend/scripts/check_eslint_baseline.mjs with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_eslint_baseline.mjs:parseFindings",
+      "type": "function",
+      "name": "parseFindings",
+      "filePath": "frontend/scripts/check_eslint_baseline.mjs",
+      "summary": "parseFindings implements logic in check_eslint_baseline.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_eslint_baseline.mjs:collectFindings",
+      "type": "function",
+      "name": "collectFindings",
+      "filePath": "frontend/scripts/check_eslint_baseline.mjs",
+      "summary": "collectFindings implements logic in check_eslint_baseline.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_eslint_baseline.mjs:summarizeByModule",
+      "type": "function",
+      "name": "summarizeByModule",
+      "filePath": "frontend/scripts/check_eslint_baseline.mjs",
+      "summary": "summarizeByModule implements logic in check_eslint_baseline.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_eslint_baseline.mjs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "frontend/scripts/check_eslint_baseline.mjs",
+      "summary": "main implements logic in check_eslint_baseline.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/scripts/check_eslint_baseline.test.mjs",
+      "type": "file",
+      "name": "check_eslint_baseline.test.mjs",
+      "filePath": "frontend/scripts/check_eslint_baseline.test.mjs",
+      "summary": "check_eslint_baseline.test.mjs is a frontend javascript module in frontend/scripts/check_eslint_baseline.test.mjs with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/scripts/check_file_sizes.mjs",
+      "type": "file",
+      "name": "check_file_sizes.mjs",
+      "filePath": "frontend/scripts/check_file_sizes.mjs",
+      "summary": "check_file_sizes.mjs is a frontend javascript module in frontend/scripts/check_file_sizes.mjs with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_file_sizes.mjs:effectiveLines",
+      "type": "function",
+      "name": "effectiveLines",
+      "filePath": "frontend/scripts/check_file_sizes.mjs",
+      "summary": "effectiveLines implements logic in check_file_sizes.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_file_sizes.mjs:limitFor",
+      "type": "function",
+      "name": "limitFor",
+      "filePath": "frontend/scripts/check_file_sizes.mjs",
+      "summary": "limitFor implements logic in check_file_sizes.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_file_sizes.mjs:walkSourceFiles",
+      "type": "function",
+      "name": "walkSourceFiles",
+      "filePath": "frontend/scripts/check_file_sizes.mjs",
+      "summary": "walkSourceFiles implements logic in check_file_sizes.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_file_sizes.mjs:collectViolations",
+      "type": "function",
+      "name": "collectViolations",
+      "filePath": "frontend/scripts/check_file_sizes.mjs",
+      "summary": "collectViolations implements logic in check_file_sizes.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/check_file_sizes.mjs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "frontend/scripts/check_file_sizes.mjs",
+      "summary": "main implements logic in check_file_sizes.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/scripts/check_file_sizes.test.mjs",
+      "type": "file",
+      "name": "check_file_sizes.test.mjs",
+      "filePath": "frontend/scripts/check_file_sizes.test.mjs",
+      "summary": "check_file_sizes.test.mjs is a frontend javascript module in frontend/scripts/check_file_sizes.test.mjs with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "javascript"
+      ]
+    },
+    {
+      "id": "config:frontend/scripts/eslint_baseline.json",
+      "type": "config",
+      "name": "eslint_baseline.json",
+      "filePath": "frontend/scripts/eslint_baseline.json",
+      "summary": "eslint_baseline.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "moderate",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "config:frontend/scripts/file_size_baseline.json",
+      "type": "config",
+      "name": "file_size_baseline.json",
+      "filePath": "frontend/scripts/file_size_baseline.json",
+      "summary": "file_size_baseline.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "complex",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "file:frontend/scripts/fix-import-depth.mjs",
+      "type": "file",
+      "name": "fix-import-depth.mjs",
+      "filePath": "frontend/scripts/fix-import-depth.mjs",
+      "summary": "fix-import-depth.mjs is a frontend javascript module in frontend/scripts/fix-import-depth.mjs with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/fix-import-depth.mjs:walk",
+      "type": "function",
+      "name": "walk",
+      "filePath": "frontend/scripts/fix-import-depth.mjs",
+      "summary": "walk implements logic in fix-import-depth.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/scripts/migrate-imports.mjs",
+      "type": "file",
+      "name": "migrate-imports.mjs",
+      "filePath": "frontend/scripts/migrate-imports.mjs",
+      "summary": "migrate-imports.mjs is a frontend javascript module in frontend/scripts/migrate-imports.mjs with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "javascript"
+      ]
+    },
+    {
+      "id": "function:frontend/scripts/migrate-imports.mjs:walk",
+      "type": "function",
+      "name": "walk",
+      "filePath": "frontend/scripts/migrate-imports.mjs",
+      "summary": "walk implements logic in migrate-imports.mjs.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/input.css",
+      "type": "file",
+      "name": "input.css",
+      "filePath": "frontend/src/input.css",
+      "summary": "input.css is a frontend css module in frontend/src/input.css with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "css"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/admin/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/admin/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/admin with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/animal-farm/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/animal-farm/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/animal-farm with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/controlled-flight/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/controlled-flight with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "type": "file",
+      "name": "ChartUserByCountry.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "summary": "ChartUserByCountry.tsx is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx:PieCenterLabel",
+      "type": "function",
+      "name": "PieCenterLabel",
+      "filePath": "frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "summary": "PieCenterLabel implements logic in ChartUserByCountry.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx:ChartUserByCountry",
+      "type": "function",
+      "name": "ChartUserByCountry",
+      "filePath": "frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "summary": "ChartUserByCountry implements logic in ChartUserByCountry.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "type": "file",
+      "name": "CustomizedDataGrid.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "summary": "CustomizedDataGrid.tsx is a frontend typescript module in frontend/src/modules/dashboard with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx:EmptyRowsOverlay",
+      "type": "function",
+      "name": "EmptyRowsOverlay",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "summary": "EmptyRowsOverlay implements logic in CustomizedDataGrid.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx:CustomizedDataGrid",
+      "type": "function",
+      "name": "CustomizedDataGrid",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "summary": "CustomizedDataGrid implements logic in CustomizedDataGrid.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "type": "file",
+      "name": "CustomizedTreeView.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "summary": "CustomizedTreeView.tsx is a frontend typescript module in frontend/src/modules/dashboard with 6 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:TransitionComponent",
+      "type": "function",
+      "name": "TransitionComponent",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "summary": "TransitionComponent implements logic in CustomizedTreeView.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:CustomLabel",
+      "type": "function",
+      "name": "CustomLabel",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "summary": "CustomLabel implements logic in CustomizedTreeView.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:CustomizedTreeView",
+      "type": "function",
+      "name": "CustomizedTreeView",
+      "filePath": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "summary": "CustomizedTreeView implements logic in CustomizedTreeView.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/gridData.tsx",
+      "type": "file",
+      "name": "gridData.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/gridData.tsx",
+      "summary": "gridData.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/components/FieldDeleteDialog.tsx",
+      "type": "file",
+      "name": "FieldDeleteDialog.tsx",
+      "filePath": "frontend/src/modules/field-survey/components/FieldDeleteDialog.tsx",
+      "summary": "FieldDeleteDialog.tsx is a frontend typescript module in frontend/src/modules/field-survey with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/field-survey/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/field-survey with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fleet/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/fleet/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/fleet with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "document:frontend/src/modules/maps/adapters/CESIUM_ADAPTER.md",
+      "type": "document",
+      "name": "CESIUM_ADAPTER.md",
+      "filePath": "frontend/src/modules/maps/adapters/CESIUM_ADAPTER.md",
+      "summary": "CESIUM_ADAPTER.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/components/RouteDrawControls.tsx",
+      "type": "file",
+      "name": "RouteDrawControls.tsx",
+      "filePath": "frontend/src/modules/maps/components/RouteDrawControls.tsx",
+      "summary": "RouteDrawControls.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/components/RouteDrawControls.tsx:RouteDrawControls",
+      "type": "function",
+      "name": "RouteDrawControls",
+      "filePath": "frontend/src/modules/maps/components/RouteDrawControls.tsx",
+      "summary": "RouteDrawControls implements logic in RouteDrawControls.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "document:frontend/src/modules/maps/hooks/useUserLocation.md",
+      "type": "document",
+      "name": "useUserLocation.md",
+      "filePath": "frontend/src/modules/maps/hooks/useUserLocation.md",
+      "summary": "useUserLocation.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/maps/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/maps with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-history/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/mission-history/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/mission-history with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx",
+      "type": "file",
+      "name": "MissionStatusChips.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx",
+      "summary": "MissionStatusChips.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx:MissionStatusChips",
+      "type": "function",
+      "name": "MissionStatusChips",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx",
+      "summary": "MissionStatusChips implements logic in MissionStatusChips.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "target": "function:frontend/scripts/check_eslint_baseline.mjs:parseFindings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "target": "function:frontend/scripts/check_eslint_baseline.mjs:parseFindings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "target": "function:frontend/scripts/check_eslint_baseline.mjs:collectFindings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "target": "function:frontend/scripts/check_eslint_baseline.mjs:collectFindings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "target": "function:frontend/scripts/check_eslint_baseline.mjs:summarizeByModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "target": "function:frontend/scripts/check_eslint_baseline.mjs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_eslint_baseline.test.mjs",
+      "target": "file:frontend/scripts/check_eslint_baseline.mjs",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:effectiveLines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:effectiveLines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:limitFor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:limitFor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:walkSourceFiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:collectViolations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:collectViolations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.mjs",
+      "target": "function:frontend/scripts/check_file_sizes.mjs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/check_file_sizes.test.mjs",
+      "target": "file:frontend/scripts/check_file_sizes.mjs",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/scripts/fix-import-depth.mjs",
+      "target": "function:frontend/scripts/fix-import-depth.mjs:walk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/scripts/migrate-imports.mjs",
+      "target": "function:frontend/scripts/migrate-imports.mjs:walk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "target": "file:frontend/src/shared/ui/GlobeFlag.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx:PieCenterLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx:ChartUserByCountry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/ChartUserByCountry.tsx:ChartUserByCountry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/gridData.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx:EmptyRowsOverlay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx:CustomizedDataGrid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx:CustomizedDataGrid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:TransitionComponent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:CustomLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:CustomizedTreeView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/CustomizedTreeView.tsx:CustomizedTreeView",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/RouteDrawControls.tsx",
+      "target": "function:frontend/src/modules/maps/components/RouteDrawControls.tsx:RouteDrawControls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/components/RouteDrawControls.tsx",
+      "target": "function:frontend/src/modules/maps/components/RouteDrawControls.tsx:RouteDrawControls",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx:MissionStatusChips",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx:MissionStatusChips",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

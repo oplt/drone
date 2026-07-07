@@ -1,0 +1,105 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/e2e/fixtures/auth.ts",
+      "type": "file",
+      "name": "auth.ts",
+      "filePath": "frontend/e2e/fixtures/auth.ts",
+      "summary": "auth.ts is a frontend typescript module in frontend/e2e/fixtures/auth.ts with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/e2e/fixtures/auth.ts:mockAuthenticatedSession",
+      "type": "function",
+      "name": "mockAuthenticatedSession",
+      "filePath": "frontend/e2e/fixtures/auth.ts",
+      "summary": "mockAuthenticatedSession implements logic in auth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/e2e/fixtures/auth.ts:mockGuestSession",
+      "type": "function",
+      "name": "mockGuestSession",
+      "filePath": "frontend/e2e/fixtures/auth.ts",
+      "summary": "mockGuestSession implements logic in auth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/e2e/smoke/auth-guard.spec.ts",
+      "type": "file",
+      "name": "auth-guard.spec.ts",
+      "filePath": "frontend/e2e/smoke/auth-guard.spec.ts",
+      "summary": "auth-guard.spec.ts is a frontend typescript module in frontend/e2e/smoke/auth-guard.spec.ts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/e2e/smoke/controlled-flight.spec.ts",
+      "type": "file",
+      "name": "controlled-flight.spec.ts",
+      "filePath": "frontend/e2e/smoke/controlled-flight.spec.ts",
+      "summary": "controlled-flight.spec.ts is a frontend typescript module in frontend/e2e/smoke/controlled-flight.spec.ts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/e2e/fixtures/auth.ts",
+      "target": "function:frontend/e2e/fixtures/auth.ts:mockAuthenticatedSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/e2e/fixtures/auth.ts",
+      "target": "function:frontend/e2e/fixtures/auth.ts:mockAuthenticatedSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/e2e/fixtures/auth.ts",
+      "target": "function:frontend/e2e/fixtures/auth.ts:mockGuestSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/e2e/fixtures/auth.ts",
+      "target": "function:frontend/e2e/fixtures/auth.ts:mockGuestSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/e2e/smoke/auth-guard.spec.ts",
+      "target": "file:frontend/e2e/fixtures/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/e2e/smoke/controlled-flight.spec.ts",
+      "target": "file:frontend/e2e/fixtures/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

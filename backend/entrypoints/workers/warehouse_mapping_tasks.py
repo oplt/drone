@@ -12,13 +12,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import threading
 from collections.abc import Coroutine
 from typing import Any
 
 from celery.signals import worker_ready
 
 from backend.core.config.runtime import settings, setup_logging
+from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.modules.warehouse.service.structure_extraction import (
     StructureExtractionParams,
@@ -33,8 +33,7 @@ logger = logging.getLogger(__name__)
 setup_logging()
 
 WAREHOUSE_MAPPING_QUEUE = settings.celery_warehouse_mapping_queue
-_loop_lock = threading.Lock()
-_thread_local_state = threading.local()
+_worker_loop = WorkerLoopState()
 _TASK_NAME = EXTRACTION_TASK_NAME
 
 
@@ -60,16 +59,7 @@ def _verify_warehouse_mapping_tasks_registered(**_kwargs: Any) -> None:
 
 
 def _get_worker_loop() -> asyncio.AbstractEventLoop:
-    loop = getattr(_thread_local_state, "loop", None)
-    if loop is not None and not loop.is_closed():
-        return loop
-    with _loop_lock:
-        loop = getattr(_thread_local_state, "loop", None)
-        if loop is not None and not loop.is_closed():
-            return loop
-        loop = asyncio.new_event_loop()
-        _thread_local_state.loop = loop
-        return loop
+    return _worker_loop.get_loop()
 
 
 def _run_on_worker_loop(coro: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, Any]:

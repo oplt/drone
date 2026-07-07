@@ -30,6 +30,13 @@ from backend.modules.warehouse.service.live_map_stream import (
     normalize_live_map_payload,
     warehouse_live_map_stream,
 )
+from backend.modules.warehouse.service.runtime_settings import (
+    ros2_workspace,
+    setting_bool,
+    setting_float,
+    setting_int,
+    setting_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,33 +56,23 @@ _bridge_lock = asyncio.Lock()
 
 
 def _setting_str(name: str, default: str = "") -> str:
-    return str(getattr(settings, name, default) or "").strip()
+    return setting_text(name, default)
 
 
 def _setting_float(name: str, default: float, *, minimum: float) -> float:
-    try:
-        return max(minimum, float(getattr(settings, name, default)))
-    except (TypeError, ValueError):
-        return max(minimum, default)
+    return setting_float(getattr(settings, name, default), minimum=minimum, default=default)
 
 
 def _setting_int(name: str, default: int, *, minimum: int) -> int:
-    try:
-        return max(minimum, int(getattr(settings, name, default)))
-    except (TypeError, ValueError):
-        return max(minimum, default)
+    return setting_int(getattr(settings, name, default), minimum=minimum, default=default)
 
 
 def _setting_bool(name: str, default: bool = False) -> bool:
-    raw = getattr(settings, name, default)
-    if isinstance(raw, str):
-        return env_truthy(raw)
-    return bool(raw)
+    return setting_bool(name, default)
 
 
 def _ros2_workspace() -> Path:
-    raw = _setting_str("warehouse_ros2_ws", "ros2_ws") or "ros2_ws"
-    return Path(raw).expanduser().resolve()
+    return ros2_workspace()
 
 
 def _odometry_topic() -> str:

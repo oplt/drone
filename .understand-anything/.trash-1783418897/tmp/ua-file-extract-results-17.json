@@ -1,0 +1,3329 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 30,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 92,
+      "nonEmptyLines": 90,
+      "functions": [
+        {
+          "name": "WorkflowFieldsBlock",
+          "startLine": 6,
+          "endLine": 92,
+          "params": [
+            "{\n  fields,\n  selectedFieldId,\n  selectedField,\n  loadingFields,\n  deletingField,\n  onSelectField,\n  onRefreshFields,\n  onFocusSelected,\n  onDeleteSelected,\n  fieldName,\n  fieldBorder,\n  metrics,\n  savingField,\n  onFieldNameChange,\n  onSaveOrUpdate,\n  onClearBorder,\n  onNewField,\n  compact = false,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WorkflowFieldsBlock",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 13,
+      "nonEmptyLines": 13,
+      "exports": [
+        {
+          "name": "useFields",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "useGeofenceLayers",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "useFieldTileset",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "FieldBorderPanel",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "SavedFieldsPanel",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "FieldDeleteDialog",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "WorkflowFieldsBlock",
+          "line": 13,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 7,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fleet/api/fleetApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 50,
+      "nonEmptyLines": 46,
+      "functions": [
+        {
+          "name": "fetchCertifications",
+          "startLine": 4,
+          "endLine": 10,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "createCertification",
+          "startLine": 12,
+          "endLine": 26,
+          "params": [
+            "payload",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchDevices",
+          "startLine": 28,
+          "endLine": 34,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "createDevice",
+          "startLine": 36,
+          "endLine": 50,
+          "params": [
+            "payload",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchCertifications",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "createCertification",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "fetchDevices",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "createDevice",
+          "line": 36,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchCertifications",
+          "callee": "await httpRequest",
+          "lineNumber": 5
+        },
+        {
+          "caller": "fetchCertifications",
+          "callee": "Array.isArray",
+          "lineNumber": 9
+        },
+        {
+          "caller": "createCertification",
+          "callee": "httpRequest",
+          "lineNumber": 21
+        },
+        {
+          "caller": "fetchDevices",
+          "callee": "await httpRequest",
+          "lineNumber": 29
+        },
+        {
+          "caller": "fetchDevices",
+          "callee": "Array.isArray",
+          "lineNumber": 33
+        },
+        {
+          "caller": "createDevice",
+          "callee": "httpRequest",
+          "lineNumber": 45
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fleet/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 19,
+      "nonEmptyLines": 18,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 642,
+      "nonEmptyLines": 605,
+      "functions": [
+        {
+          "name": "formatDuration",
+          "startLine": 45,
+          "endLine": 51,
+          "params": [
+            "minutes"
+          ]
+        },
+        {
+          "name": "formatTime",
+          "startLine": 53,
+          "endLine": 58,
+          "params": [
+            "iso"
+          ]
+        },
+        {
+          "name": "PanelSkeleton",
+          "startLine": 60,
+          "endLine": 69,
+          "params": [
+            "{ height = 320 }"
+          ]
+        },
+        {
+          "name": "AddCertDialog",
+          "startLine": 77,
+          "endLine": 182,
+          "params": [
+            "{\n  open,\n  onClose,\n  onCreated,\n}"
+          ]
+        },
+        {
+          "name": "CertRow",
+          "startLine": 184,
+          "endLine": 218,
+          "params": [
+            "{ cert }"
+          ]
+        },
+        {
+          "name": "CertificationsTab",
+          "startLine": 220,
+          "endLine": 265,
+          "params": []
+        },
+        {
+          "name": "AddDeviceDialog",
+          "startLine": 273,
+          "endLine": 376,
+          "params": [
+            "{\n  open,\n  onClose,\n  onCreated,\n}"
+          ]
+        },
+        {
+          "name": "deviceStatusColor",
+          "startLine": 378,
+          "endLine": 385,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "DeviceRow",
+          "startLine": 387,
+          "endLine": 427,
+          "params": [
+            "{ device }"
+          ]
+        },
+        {
+          "name": "DeviceReadinessTab",
+          "startLine": 429,
+          "endLine": 474,
+          "params": []
+        },
+        {
+          "name": "FleetPage",
+          "startLine": 480,
+          "endLine": 642,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "FleetPage",
+          "line": 480,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatDuration",
+          "callee": "Number.isNaN",
+          "lineNumber": 46
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.round",
+          "lineNumber": 47
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.floor",
+          "lineNumber": 48
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.round",
+          "lineNumber": 49
+        },
+        {
+          "caller": "formatTime",
+          "callee": "Number.isNaN",
+          "lineNumber": 56
+        },
+        {
+          "caller": "formatTime",
+          "callee": "dt.getTime",
+          "lineNumber": 56
+        },
+        {
+          "caller": "formatTime",
+          "callee": "dt.toLocaleTimeString",
+          "lineNumber": 57
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 86
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 87
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 88
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 89
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 90
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 91
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setCertType",
+          "lineNumber": 94
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setCertNumber",
+          "lineNumber": 95
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setIssuedAt",
+          "lineNumber": 96
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setExpiresAt",
+          "lineNumber": 97
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setError",
+          "lineNumber": 98
+        },
+        {
+          "caller": "handleClose",
+          "callee": "onClose",
+          "lineNumber": 99
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "certNumber.trim",
+          "lineNumber": 103
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 104
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 105
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "createCertification",
+          "lineNumber": 107
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "certNumber.trim",
+          "lineNumber": 109
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "onCreated",
+          "lineNumber": 113
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "handleClose",
+          "lineNumber": 114
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 116
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 118
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setCertType",
+          "lineNumber": 129
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "CERT_TYPES.map",
+          "lineNumber": 133
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "t.replace",
+          "lineNumber": 135
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setCertNumber",
+          "lineNumber": 142
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setIssuedAt",
+          "lineNumber": 150
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setExpiresAt",
+          "lineNumber": 158
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "certNumber.trim",
+          "lineNumber": 176
+        },
+        {
+          "caller": "CertRow",
+          "callee": "new Date(cert.expires_at).toLocaleDateString",
+          "lineNumber": 185
+        },
+        {
+          "caller": "CertRow",
+          "callee": "cert.cert_type.replace",
+          "lineNumber": 193
+        },
+        {
+          "caller": "CertRow",
+          "callee": "new Date(cert.issued_at).toLocaleDateString",
+          "lineNumber": 199
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "useQueryClient",
+          "lineNumber": 221
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "useState",
+          "lineNumber": 222
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "useQuery",
+          "lineNumber": 224
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "fetchCertifications",
+          "lineNumber": 226
+        },
+        {
+          "caller": "refresh",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 229
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "setAddOpen",
+          "lineNumber": 240
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "certs.map",
+          "lineNumber": 253
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "setAddOpen",
+          "lineNumber": 260
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 282
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 283
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 284
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 285
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 286
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 287
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setDeviceId",
+          "lineNumber": 290
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setDeviceName",
+          "lineNumber": 291
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setStatus",
+          "lineNumber": 292
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setNotes",
+          "lineNumber": 293
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setError",
+          "lineNumber": 294
+        },
+        {
+          "caller": "handleClose",
+          "callee": "onClose",
+          "lineNumber": 295
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceId.trim",
+          "lineNumber": 299
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceName.trim",
+          "lineNumber": 299
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 300
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 301
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "createDevice",
+          "lineNumber": 303
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceId.trim",
+          "lineNumber": 304
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceName.trim",
+          "lineNumber": 305
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "notes.trim",
+          "lineNumber": 307
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "onCreated",
+          "lineNumber": 309
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "handleClose",
+          "lineNumber": 310
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 312
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 314
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setDeviceId",
+          "lineNumber": 326
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setDeviceName",
+          "lineNumber": 333
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setStatus",
+          "lineNumber": 338
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "DEVICE_STATUSES.map",
+          "lineNumber": 342
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "s.charAt(0).toUpperCase",
+          "lineNumber": 344
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "s.charAt",
+          "lineNumber": 344
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "s.slice",
+          "lineNumber": 344
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setNotes",
+          "lineNumber": 351
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "deviceId.trim",
+          "lineNumber": 370
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "deviceName.trim",
+          "lineNumber": 370
+        },
+        {
+          "caller": "DeviceRow",
+          "callee": "deviceStatusColor",
+          "lineNumber": 401
+        },
+        {
+          "caller": "DeviceRow",
+          "callee": "new Date(device.last_inspection_at).toLocaleDateString",
+          "lineNumber": 410
+        },
+        {
+          "caller": "DeviceRow",
+          "callee": "new Date(device.next_inspection_due).toLocaleDateString",
+          "lineNumber": 414
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "useQueryClient",
+          "lineNumber": 430
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "useState",
+          "lineNumber": 431
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "useQuery",
+          "lineNumber": 433
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "fetchDevices",
+          "lineNumber": 435
+        },
+        {
+          "caller": "refresh",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 438
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "setAddOpen",
+          "lineNumber": 449
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "devices.map",
+          "lineNumber": 462
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "setAddOpen",
+          "lineNumber": 469
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useAnalyticsOverview",
+          "lineNumber": 481
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Boolean",
+          "lineNumber": 482
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useTelemetryWebSocket",
+          "lineNumber": 483
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useState",
+          "lineNumber": 485
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useMemo",
+          "lineNumber": 487
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "data.recent_flights.map",
+          "lineNumber": 489
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "String(flight.status ?? '').toLowerCase",
+          "lineNumber": 490
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "String",
+          "lineNumber": 490
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "['active', 'in_progress', 'running'].includes",
+          "lineNumber": 495
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "['interrupted', 'aborted'].includes",
+          "lineNumber": 499
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "formatDuration",
+          "lineNumber": 504
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "flight.distance_km.toFixed",
+          "lineNumber": 505
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "formatTime",
+          "lineNumber": 507
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number",
+          "lineNumber": 516
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number",
+          "lineNumber": 517
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number",
+          "lineNumber": 519
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 521
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "setTab",
+          "lineNumber": 551
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 580
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Math.round",
+          "lineNumber": 580
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 585
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 595
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "windSpeed.toFixed",
+          "lineNumber": 595
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 600
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Math.min",
+          "lineNumber": 600
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Math.round",
+          "lineNumber": 610
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 1,
+        "functionCount": 11,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 80,
+      "nonEmptyLines": 64,
+      "functions": [
+        {
+          "name": "useDroneCenter",
+          "startLine": 6,
+          "endLine": 80,
+          "params": [
+            "telemetry"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useDroneCenter",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useDroneCenter",
+          "callee": "useState",
+          "lineNumber": 7
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 10
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 11
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 12
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 13
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useEffect",
+          "lineNumber": 15
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "setDroneCenter",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "performance.now",
+          "lineNumber": 45
+        },
+        {
+          "caller": "animate",
+          "callee": "Math.min",
+          "lineNumber": 49
+        },
+        {
+          "caller": "animate",
+          "callee": "Math.pow",
+          "lineNumber": 52
+        },
+        {
+          "caller": "animate",
+          "callee": "setDroneCenter",
+          "lineNumber": 56
+        },
+        {
+          "caller": "animate",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 69
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 73
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 39,
+      "functions": [
+        {
+          "name": "useDroneMapFollow",
+          "startLine": 4,
+          "endLine": 46,
+          "params": [
+            "{\n  mapRef,\n  droneCenter,\n  wsConnected,\n  onInitialSnap,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useDroneMapFollow",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useRef",
+          "lineNumber": 15
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useRef",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useEffect",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.panTo",
+          "lineNumber": 22
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.setZoom",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "onInitialSnap",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useEffect",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useEffect",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "Date.now",
+          "lineNumber": 37
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.getZoom",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.panTo",
+          "lineNumber": 44
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 64,
+      "functions": [
+        {
+          "name": "useUserLocation",
+          "startLine": 26,
+          "endLine": 76,
+          "params": [
+            "{\n  onLocationError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useUserLocation",
+          "line": 26,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useUserLocation",
+          "callee": "Boolean",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useState",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useState",
+          "lineNumber": 31
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useState",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useRef",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useRef",
+          "lineNumber": 36
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useCallback",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "console.warn",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "navigator.geolocation.getCurrentPosition",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setUserCenter",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLocationError",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLoadingLocation",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "onLocationError",
+          "lineNumber": 59
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLocationError",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLoadingLocation",
+          "lineNumber": 61
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useEffect",
+          "lineNumber": 67
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "requestLocation",
+          "lineNumber": 69
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 30,
+      "exports": [
+        {
+          "name": "DEFAULT_MISSION_MAP_ENGINE",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapViewport",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawController",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "RouteDrawControls",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumViewControls",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "useDroneMapFollow",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "useDroneCenter",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "useUserLocation",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "UserLocationErrorPolicy",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "UserLocationResult",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "UseUserLocationOptions",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "useMapEngine",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "dispatchMapEngineChange",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "terraDrawToolToShapeMode",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "isFlatDrawToolSelected",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapsContext",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapsProvider",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumMapLazy",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumMap",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumDrawResult",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 20,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 96,
+      "nonEmptyLines": 80,
+      "functions": [
+        {
+          "name": "installGeolocation",
+          "startLine": 9,
+          "endLine": 29,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "installGeolocation",
+          "callee": "vi.fn",
+          "lineNumber": 12
+        },
+        {
+          "caller": "installGeolocation",
+          "callee": "Object.defineProperty",
+          "lineNumber": 18
+        },
+        {
+          "caller": "installGeolocation",
+          "callee": "success",
+          "lineNumber": 25
+        },
+        {
+          "caller": "installGeolocation",
+          "callee": "failure",
+          "lineNumber": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 34,
+      "functions": [
+        {
+          "name": "createFlatBoundaryDrawBridge",
+          "startLine": 3,
+          "endLine": 20,
+          "params": [
+            "{\n  setFieldBorder,\n  setSelectedFieldId,\n  onBoundaryDrawStarted,\n}"
+          ]
+        },
+        {
+          "name": "createFarmBorderDrawBridge",
+          "startLine": 22,
+          "endLine": 36,
+          "params": [
+            "{\n  setFarmBorder,\n  onBoundaryDrawStarted,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "createFlatBoundaryDrawBridge",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "createFarmBorderDrawBridge",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "createFlatBoundaryDrawBridge",
+          "callee": "setFieldBorder",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createFlatBoundaryDrawBridge",
+          "callee": "stripClosedRing",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createFlatBoundaryDrawBridge",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 17
+        },
+        {
+          "caller": "createFarmBorderDrawBridge",
+          "callee": "setFarmBorder",
+          "lineNumber": 33
+        },
+        {
+          "caller": "createFarmBorderDrawBridge",
+          "callee": "stripClosedRing",
+          "lineNumber": 33
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 409,
+      "nonEmptyLines": 405,
+      "functions": [
+        {
+          "name": "GridMissionParamsSection",
+          "startLine": 46,
+          "endLine": 409,
+          "params": [
+            "{\n  copy,\n  gridParams,\n  setGridParams,\n  fieldBorder,\n  gridPreview,\n  gridPreviewStats,\n  previewLegStats,\n  gridPreviewTooDense,\n  gridPreviewError,\n  previewLoading,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FIELD_SURVEY_GRID_COPY",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "PHOTOGRAMMETRY_GRID_COPY",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "GridMissionParamsSection",
+          "line": 46,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 101
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 124
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 147
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 167
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 168
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 169
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 171
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 190
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 191
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 192
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 194
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 194
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.round",
+          "lineNumber": 194
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 213
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 214
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 215
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 217
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 236
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 239
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 259
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 260
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 261
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 263
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 263
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 277
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 279
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 279
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 290
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 305
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 325
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 327
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 327
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "gridPreviewStats.route_m.toFixed",
+          "lineNumber": 354
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "copy.tooDenseAlert",
+          "lineNumber": 383
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 3,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-planning/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "exports": [
+        {
+          "name": "createDefaultGridParams",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "useGridPreview",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "usePatrolPreview",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 28,
+      "exports": [
+        {
+          "name": "resolveTelemetryWebSocketUrl",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "buildMissionTimeline",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "stateChipColor",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "formatTs",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "opsChipColor",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "TimelineEntry",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionRuntime",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionRuntimeDefault",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionWebsocketRuntime",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionStatusPolling",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "useTelemetryStream",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "useTelemetryWebSocket",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "default",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionCommands",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionCommandMetrics",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionVideo",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "useAutoStartVideo",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "useLiveObjectDetection",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionPreflightRows",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "MissionCommandPanel",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "MissionPreflightPanel",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "MissionVideoPanel",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "MissionStatusChips",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetryHud",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 24,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 15,
+      "functions": [
+        {
+          "name": "resolveTelemetryWebSocketUrl",
+          "startLine": 3,
+          "endLine": 18,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "resolveTelemetryWebSocketUrl",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "getApiBaseUrl",
+          "lineNumber": 4
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.startsWith",
+          "lineNumber": 9
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.startsWith",
+          "lineNumber": 9
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.replace",
+          "lineNumber": 10
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.startsWith",
+          "lineNumber": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/types/missionDtos.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 99,
+      "nonEmptyLines": 92,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/types/runtime.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 135,
+      "nonEmptyLines": 123,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 124,
+      "nonEmptyLines": 120,
+      "functions": [
+        {
+          "name": "MapDrawToolsOverlay",
+          "startLine": 39,
+          "endLine": 124,
+          "params": [
+            "{\n  mapEngine,\n  terraDrawMode,\n  terraDrawReady,\n  drawMode,\n  deleteDisabled,\n  onToolSelect,\n  onDelete,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapDrawToolsOverlay",
+          "line": 39,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MapDrawToolsOverlay",
+          "callee": "DRAW_TOOLS.map",
+          "lineNumber": 74
+        },
+        {
+          "caller": "MapDrawToolsOverlay",
+          "callee": "isFlatDrawToolSelected",
+          "lineNumber": 77
+        },
+        {
+          "caller": "MapDrawToolsOverlay",
+          "callee": "onToolSelect",
+          "lineNumber": 85
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 144,
+      "nonEmptyLines": 136,
+      "functions": [
+        {
+          "name": "VariantIcon",
+          "startLine": 46,
+          "endLine": 51,
+          "params": [
+            "{ variant }"
+          ]
+        },
+        {
+          "name": "MapShapeActionPopover",
+          "startLine": 53,
+          "endLine": 144,
+          "params": [
+            "{\n  open,\n  variant,\n  name,\n  saving,\n  isUpdate,\n  placement = \"right\",\n  onNameChange,\n  onSave,\n  onDismiss,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapShapeActionPopover",
+          "line": 53,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MapShapeActionPopover",
+          "callee": "onNameChange",
+          "lineNumber": 126
+        },
+        {
+          "caller": "MapShapeActionPopover",
+          "callee": "name.trim",
+          "lineNumber": 135
+        },
+        {
+          "caller": "MapShapeActionPopover",
+          "callee": "onSave",
+          "lineNumber": 136
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 49,
+      "nonEmptyLines": 48,
+      "functions": [
+        {
+          "name": "MissionFlightStatusPanel",
+          "startLine": 4,
+          "endLine": 49,
+          "params": [
+            "{\n  missionStatus,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionFlightStatusPanel",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 33,
+      "functions": [
+        {
+          "name": "MissionMapBoundaryPrompt",
+          "startLine": 7,
+          "endLine": 34,
+          "params": [
+            "{\n  variant,\n  boundary,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionMapBoundaryPrompt",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MissionMapBoundaryPrompt",
+          "callee": "boundary.saveFromShapePrompt",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 28,
+      "nonEmptyLines": 26,
+      "functions": [
+        {
+          "name": "MissionWaypointList",
+          "startLine": 4,
+          "endLine": 28,
+          "params": [
+            "{\n  waypoints,\n  fallbackAltitude,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionWaypointList",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MissionWaypointList",
+          "callee": "waypoints.map",
+          "lineNumber": 19
+        },
+        {
+          "caller": "MissionWaypointList",
+          "callee": "wp.lat.toFixed",
+          "lineNumber": 21
+        },
+        {
+          "caller": "MissionWaypointList",
+          "callee": "wp.lon.toFixed",
+          "lineNumber": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 68,
+      "nonEmptyLines": 65,
+      "functions": [
+        {
+          "name": "MissionWorkflowShell",
+          "startLine": 7,
+          "endLine": 68,
+          "params": [
+            "{\n  title,\n  subtitle,\n  droneConnected,\n  wsConnected,\n  errors,\n  onDismissError,\n  onClearErrors,\n  children,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionWorkflowShell",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/constants.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "exports": [
+        {
+          "name": "MAX_GRID_PREVIEW_WAYPOINTS",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "CESIUM_MAX_SAFE_ZOOM",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "INFO_INPUT_LABEL_PROPS",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 360,
+      "nonEmptyLines": 327,
+      "functions": [
+        {
+          "name": "isDrawingTerraMode",
+          "startLine": 7,
+          "endLine": 9,
+          "params": [
+            "mode"
+          ]
+        },
+        {
+          "name": "useFieldBorderEditor",
+          "startLine": 11,
+          "endLine": 360,
+          "params": [
+            "{\n  setFieldBorder,\n  setSelectedFieldId,\n  fieldPolygonRef,\n  mapRef,\n  terraDrawRef,\n  terraDrawMode = \"static\",\n  onBoundaryClick,\n  fieldName,\n  selectedFieldId,\n  fieldBorder,\n  createFieldRecord,\n  updateFieldRecord,\n  refreshFields,\n  addError,\n  onSaveSuccess,\n  onUpdateSuccess,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useFieldBorderEditor",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useRef",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useRef",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 57
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "boundaryClickListenerRef.current?.remove",
+          "lineNumber": 58
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "Boolean",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 74
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isTerraGuidanceFeature",
+          "lineNumber": 81
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 86
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot.filter",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isRemovableUserDrawingFeature",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "Array.isArray",
+          "lineNumber": 92
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "coords.map",
+          "lineNumber": 101
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 102
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot.filter",
+          "lineNumber": 106
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isRemovableUserDrawingFeature",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "Array.isArray",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "coords.map",
+          "lineNumber": 116
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 117
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 122
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "poly.getPath",
+          "lineNumber": 128
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "path.getLength",
+          "lineNumber": 130
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "path.getAt",
+          "lineNumber": 131
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "pts.push",
+          "lineNumber": 132
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "p.lng",
+          "lineNumber": 132
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "p.lat",
+          "lineNumber": 132
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 137
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "poly.getPath",
+          "lineNumber": 139
+        },
+        {
+          "caller": "update",
+          "callee": "setFieldBorder",
+          "lineNumber": 141
+        },
+        {
+          "caller": "update",
+          "callee": "polygonPathToLonLat",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "update",
+          "lineNumber": 143
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "path.addListener",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "path.addListener",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "path.addListener",
+          "lineNumber": 147
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 152
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 153
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 156
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "terraDrawRef.current.getSnapshot",
+          "lineNumber": 161
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot\n          .filter((f) => isRemovableUserDrawingFeature(f))\n          .map",
+          "lineNumber": 162
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot\n          .filter",
+          "lineNumber": 162
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isRemovableUserDrawingFeature",
+          "lineNumber": 163
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "String",
+          "lineNumber": 164
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "terraDrawRef.current.removeFeatures",
+          "lineNumber": 166
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 172
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 173
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 183
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 185
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 188
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 189
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "createFieldRecord",
+          "lineNumber": 193
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 194
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "onSaveSuccess",
+          "lineNumber": 199
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "alert",
+          "lineNumber": 201
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "refreshFields",
+          "lineNumber": 203
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 204
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 207
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 220
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 222
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 226
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 229
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 230
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "updateFieldRecord",
+          "lineNumber": 234
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 236
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "onUpdateSuccess",
+          "lineNumber": 240
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "alert",
+          "lineNumber": 242
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "refreshFields",
+          "lineNumber": 244
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 246
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 258
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 265
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 266
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "stripClosedRing",
+          "lineNumber": 270
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "pts.map",
+          "lineNumber": 273
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "poly.setMap",
+          "lineNumber": 284
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "wirePolygonEditListeners",
+          "lineNumber": 286
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 291
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isDrawingTerraMode",
+          "lineNumber": 294
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "mountEditablePolygon",
+          "lineNumber": 295
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useEffect",
+          "lineNumber": 300
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isDrawingTerraMode",
+          "lineNumber": 303
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 305
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 306
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "mountEditablePolygon",
+          "lineNumber": 312
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 317
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useEffect",
+          "lineNumber": 327
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 327
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useEffect",
+          "lineNumber": 329
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 332
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "poly.addListener",
+          "lineNumber": 333
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 336
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "stripClosedRing",
+          "lineNumber": 340
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "pts.forEach",
+          "lineNumber": 342
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "bounds.extend",
+          "lineNumber": 342
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "bounds.isEmpty",
+          "lineNumber": 344
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "mapRef.current.fitBounds",
+          "lineNumber": 345
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 36,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 56,
+      "nonEmptyLines": 52,
+      "functions": [
+        {
+          "name": "useMissionAltitudeInput",
+          "startLine": 3,
+          "endLine": 56,
+          "params": [
+            "{\n  initialAltitude = 30,\n  minAltitude = 1,\n  maxAltitude = 500,\n  validationMessage,\n  addError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMissionAltitudeInput",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useState",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useState",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "String",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useCallback",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 21
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "/^\\d+$/.test",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 25
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useCallback",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "String",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "Number",
+          "lineNumber": 33
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "Number.isFinite",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "String",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "addError",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAlt",
+          "lineNumber": 45
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 247,
+      "nonEmptyLines": 227,
+      "functions": [
+        {
+          "name": "useWorkflowFieldBoundary",
+          "startLine": 21,
+          "endLine": 245,
+          "params": [
+            "{\n  workflowScope,\n  defaultFieldName,\n  terraDrawMode,\n  addError,\n  onSaveSuccess,\n  onUpdateSuccess,\n  onDeleteSuccess,\n  persistFieldId,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWorkflowFieldBoundary",
+          "line": 21,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 42
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 46
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useFields",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 66
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "onSaveSuccess",
+          "lineNumber": 68
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 73
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 76
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "onUpdateSuccess",
+          "lineNumber": 78
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useFieldBorderEditor",
+          "lineNumber": 83
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "notifyShapeSelectedRef.current",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useMapShapeActionPrompt",
+          "lineNumber": 102
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useMemo",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "fields.find",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useMemo",
+          "lineNumber": 116
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "computeAreaHa",
+          "lineNumber": 119
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "computeCentroid",
+          "lineNumber": 120
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 124
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 126
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 127
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldName",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldBorder",
+          "lineNumber": 129
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.loadRingIntoEditor",
+          "lineNumber": 130
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.focusRingOnMap",
+          "lineNumber": 131
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 136
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.focusRingOnMap",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 144
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.resetBoundaryDrawSession",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "fields.find",
+          "lineNumber": 149
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "selectField",
+          "lineNumber": 150
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 155
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 156
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 157
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldName",
+          "lineNumber": 158
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 159
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.resetBoundaryDrawSession",
+          "lineNumber": 160
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 163
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "addError",
+          "lineNumber": 165
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "fields.find",
+          "lineNumber": 168
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "addError",
+          "lineNumber": 170
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setPendingDeleteField",
+          "lineNumber": 173
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 176
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setPendingDeleteField",
+          "lineNumber": 178
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 181
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "deleteFieldRecord",
+          "lineNumber": 184
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 185
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldName",
+          "lineNumber": 186
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setPendingDeleteField",
+          "lineNumber": 187
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.resetBoundaryDrawSession",
+          "lineNumber": 188
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "onDeleteSuccess",
+          "lineNumber": 189
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "addError",
+          "lineNumber": 191
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 203
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.updateFieldBorder",
+          "lineNumber": 205
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.saveFieldBorder",
+          "lineNumber": 207
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.closePrompt",
+          "lineNumber": 209
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 25,
+      "exports": [
+        {
+          "name": "useFieldBorderEditor",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "useWorkflowFieldBoundary",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "FieldIdPersistence",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "WorkflowFieldBoundaryVm",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "MissionWorkflowShell",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapEngineAlerts",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "TaskControlFrame",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapFrameFooter",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "MissionSurveyCameraSection",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "MapEngineSelectionOverlay",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "MapDrawToolsOverlay",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "MapShapeActionPopover",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "MapShapeActionVariant",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapBoundaryPrompt",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "MissionFlightStatusPanel",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "MissionWaypointList",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "WorkflowTerraDrawBridge",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "useMapShapeActionPrompt",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionAltitudeInput",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "TaskPreflightCommandsDrawer",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "useTaskPreflightCommandsDrawer",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 21,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 29,
+      "exports": [
+        {
+          "name": "CesiumViewMode",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "DrawMode",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawEditorMode",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawToolMode",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "nodes": [
+    {
+      "id": "config:frontend/.env.example",
+      "type": "config",
+      "name": ".env.example",
+      "filePath": "frontend/.env.example",
+      "summary": ".env.example configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "config"
+      ]
+    },
+    {
+      "id": "schema:frontend/.env.example:VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY",
+      "type": "schema",
+      "name": "VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY",
+      "filePath": "frontend/.env.example",
+      "summary": "VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY variable is declared in .env.example.",
+      "complexity": "simple",
+      "tags": [
+        "schema-definition",
+        "config"
+      ]
+    },
+    {
+      "id": "schema:frontend/.env.example:VITE_GOOGLE_MAPS_MAP_ID",
+      "type": "schema",
+      "name": "VITE_GOOGLE_MAPS_MAP_ID",
+      "filePath": "frontend/.env.example",
+      "summary": "VITE_GOOGLE_MAPS_MAP_ID variable is declared in .env.example.",
+      "complexity": "simple",
+      "tags": [
+        "schema-definition",
+        "config"
+      ]
+    },
+    {
+      "id": "schema:frontend/.env.example:VITE_CESIUM_ION_TOKEN",
+      "type": "schema",
+      "name": "VITE_CESIUM_ION_TOKEN",
+      "filePath": "frontend/.env.example",
+      "summary": "VITE_CESIUM_ION_TOKEN variable is declared in .env.example.",
+      "complexity": "simple",
+      "tags": [
+        "schema-definition",
+        "config"
+      ]
+    },
+    {
+      "id": "document:frontend/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "frontend/README.md",
+      "summary": "README.md documents frontend workflows, architecture, or setup details.",
+      "complexity": "moderate",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "config:frontend/biome.json",
+      "type": "config",
+      "name": "biome.json",
+      "filePath": "frontend/biome.json",
+      "summary": "biome.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "file:frontend/index.html",
+      "type": "file",
+      "name": "index.html",
+      "filePath": "frontend/index.html",
+      "summary": "index.html is a frontend html module in frontend/index.html with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "html"
+      ]
+    },
+    {
+      "id": "config:frontend/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "frontend/package.json",
+      "summary": "package.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "moderate",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "config:frontend/tsconfig.app.json",
+      "type": "config",
+      "name": "tsconfig.app.json",
+      "filePath": "frontend/tsconfig.app.json",
+      "summary": "tsconfig.app.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "config:frontend/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "frontend/tsconfig.json",
+      "summary": "tsconfig.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "config:frontend/tsconfig.node.json",
+      "type": "config",
+      "name": "tsconfig.node.json",
+      "filePath": "frontend/tsconfig.node.json",
+      "summary": "tsconfig.node.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    },
+    {
+      "id": "config:frontend/tsconfig.vitest.json",
+      "type": "config",
+      "name": "tsconfig.vitest.json",
+      "filePath": "frontend/tsconfig.vitest.json",
+      "summary": "tsconfig.vitest.json configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "json"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "config:frontend/.env.example",
+      "target": "schema:frontend/.env.example:VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:frontend/.env.example",
+      "target": "schema:frontend/.env.example:VITE_GOOGLE_MAPS_MAP_ID",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:frontend/.env.example",
+      "target": "schema:frontend/.env.example:VITE_CESIUM_ION_TOKEN",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

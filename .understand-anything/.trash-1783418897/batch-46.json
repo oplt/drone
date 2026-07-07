@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "id": "config:ros2_ws/src/drone_gz_bridge/config/gazebo_frame_aliases.yaml",
+      "type": "config",
+      "name": "gazebo_frame_aliases.yaml",
+      "filePath": "ros2_ws/src/drone_gz_bridge/config/gazebo_frame_aliases.yaml",
+      "summary": "gazebo_frame_aliases.yaml configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "yaml"
+      ]
+    },
+    {
+      "id": "config:ros2_ws/src/drone_gz_bridge/config/sensor_extrinsics.yaml",
+      "type": "config",
+      "name": "sensor_extrinsics.yaml",
+      "filePath": "ros2_ws/src/drone_gz_bridge/config/sensor_extrinsics.yaml",
+      "summary": "sensor_extrinsics.yaml configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "simple",
+      "tags": [
+        "configuration",
+        "yaml"
+      ]
+    },
+    {
+      "id": "config:ros2_ws/src/drone_gz_bridge/config/warehouse_bridge.yaml",
+      "type": "config",
+      "name": "warehouse_bridge.yaml",
+      "filePath": "ros2_ws/src/drone_gz_bridge/config/warehouse_bridge.yaml",
+      "summary": "warehouse_bridge.yaml configures project tooling, runtime settings, dependencies, or environment behavior.",
+      "complexity": "moderate",
+      "tags": [
+        "configuration",
+        "yaml"
+      ]
+    }
+  ],
+  "edges": []
+}

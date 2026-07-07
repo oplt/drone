@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import logging
-import threading
 from collections.abc import Coroutine
 from typing import Any
 
 from backend.core.config.runtime import env_truthy, settings, setup_logging
+from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.infrastructure.mapping import build_mapping_job
 
@@ -22,21 +22,11 @@ if ENABLE_NATIVE_ASYNC_TASK and importlib.util.find_spec("celery_aio_pool") is N
     )
     ENABLE_NATIVE_ASYNC_TASK = False
 
-_loop_lock = threading.Lock()
-_thread_local_state = threading.local()
+_worker_loop = WorkerLoopState()
 
 
 def _get_worker_loop() -> asyncio.AbstractEventLoop:
-    loop = getattr(_thread_local_state, "loop", None)
-    if loop is not None and not loop.is_closed():
-        return loop
-    with _loop_lock:
-        loop = getattr(_thread_local_state, "loop", None)
-        if loop is not None and not loop.is_closed():
-            return loop
-        loop = asyncio.new_event_loop()
-        _thread_local_state.loop = loop
-        return loop
+    return _worker_loop.get_loop()
 
 
 def _run_on_worker_loop(coro: Coroutine[Any, Any, dict]) -> dict:

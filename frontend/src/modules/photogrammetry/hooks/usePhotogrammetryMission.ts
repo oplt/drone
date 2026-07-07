@@ -10,6 +10,7 @@ import {
   type Waypoint,
   type DrawMode,
 } from "../../mission-workflow";
+import { useMissionAltitudeInput } from "../../mission-workflow/hooks/useMissionAltitudeInput";
 import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
 import type { LonLat } from "../../fields";
 import type { TerraDrawEditorMode, MissionMapEngine } from "../../maps";
@@ -58,8 +59,20 @@ export function usePhotogrammetryMission({
 }) {
   const missionLaunchInFlightRef = useRef(false);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [alt, setAlt] = useState(25);
-  const [altInput, setAltInput] = useState("25");
+  const {
+    alt,
+    setAlt,
+    altInput,
+    setAltInput,
+    handleAltitudeInputChange,
+    normalizeAltitude,
+  } = useMissionAltitudeInput({
+    initialAltitude: 25,
+    minAltitude: PHOTOGRAMMETRY_ALT_MIN_M,
+    maxAltitude: PHOTOGRAMMETRY_ALT_MAX_M,
+    validationMessage: `Photogrammetry altitude must be between ${PHOTOGRAMMETRY_ALT_MIN_M} and ${PHOTOGRAMMETRY_ALT_MAX_M} meters`,
+    addError,
+  });
   const [name, setName] = useState("photogrammetry-plan-1");
   const [sending, setSending] = useState(false);
   const [preflightRun, setPreflightRun] =
@@ -108,34 +121,6 @@ export function usePhotogrammetryMission({
     }
     return null;
   }, [gridPreview, waypoints]);
-
-  const handleAltitudeInputChange = (value: string) => {
-    if (value === "") {
-      setAltInput("");
-      return;
-    }
-    if (!/^\d+$/.test(value)) return;
-    setAltInput(value);
-  };
-
-  const normalizeAltitude = () => {
-    if (altInput === "") {
-      setAltInput(String(alt));
-      return;
-    }
-    const num = Number(altInput);
-    if (!Number.isFinite(num)) {
-      setAltInput(String(alt));
-      return;
-    }
-    if (num < PHOTOGRAMMETRY_ALT_MIN_M || num > PHOTOGRAMMETRY_ALT_MAX_M) {
-      addError(
-        `Photogrammetry altitude must be between ${PHOTOGRAMMETRY_ALT_MIN_M} and ${PHOTOGRAMMETRY_ALT_MAX_M} meters`
-      );
-      return;
-    }
-    setAlt(num);
-  };
 
   const sendMission = async () => {
     if (missionLaunchInFlightRef.current) return;

@@ -1,0 +1,1363 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "type": "file",
+      "name": "WorkflowFieldsBlock.tsx",
+      "filePath": "frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "summary": "WorkflowFieldsBlock.tsx is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx:WorkflowFieldsBlock",
+      "type": "function",
+      "name": "WorkflowFieldsBlock",
+      "filePath": "frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "summary": "WorkflowFieldsBlock implements logic in WorkflowFieldsBlock.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/fields/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/fields with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "type": "file",
+      "name": "fleetApi.ts",
+      "filePath": "frontend/src/modules/fleet/api/fleetApi.ts",
+      "summary": "fleetApi.ts is a frontend typescript module in frontend/src/modules/fleet with 4 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/api/fleetApi.ts:fetchCertifications",
+      "type": "function",
+      "name": "fetchCertifications",
+      "filePath": "frontend/src/modules/fleet/api/fleetApi.ts",
+      "summary": "fetchCertifications implements logic in fleetApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/api/fleetApi.ts:createCertification",
+      "type": "function",
+      "name": "createCertification",
+      "filePath": "frontend/src/modules/fleet/api/fleetApi.ts",
+      "summary": "createCertification implements logic in fleetApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/api/fleetApi.ts:fetchDevices",
+      "type": "function",
+      "name": "fetchDevices",
+      "filePath": "frontend/src/modules/fleet/api/fleetApi.ts",
+      "summary": "fetchDevices implements logic in fleetApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/api/fleetApi.ts:createDevice",
+      "type": "function",
+      "name": "createDevice",
+      "filePath": "frontend/src/modules/fleet/api/fleetApi.ts",
+      "summary": "createDevice implements logic in fleetApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fleet/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/fleet/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/fleet with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "type": "file",
+      "name": "FleetPage.tsx",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "FleetPage.tsx is a frontend typescript module in frontend/src/modules/fleet with 11 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:PanelSkeleton",
+      "type": "function",
+      "name": "PanelSkeleton",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "PanelSkeleton implements logic in FleetPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:AddCertDialog",
+      "type": "function",
+      "name": "AddCertDialog",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "AddCertDialog implements logic in FleetPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:CertRow",
+      "type": "function",
+      "name": "CertRow",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "CertRow implements logic in FleetPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:CertificationsTab",
+      "type": "function",
+      "name": "CertificationsTab",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "CertificationsTab implements logic in FleetPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:AddDeviceDialog",
+      "type": "function",
+      "name": "AddDeviceDialog",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "AddDeviceDialog implements logic in FleetPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:DeviceRow",
+      "type": "function",
+      "name": "DeviceRow",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "DeviceRow implements logic in FleetPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:DeviceReadinessTab",
+      "type": "function",
+      "name": "DeviceReadinessTab",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "DeviceReadinessTab implements logic in FleetPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fleet/views/FleetPage.tsx:FleetPage",
+      "type": "function",
+      "name": "FleetPage",
+      "filePath": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "summary": "FleetPage implements logic in FleetPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "type": "file",
+      "name": "useDroneCenter.tsx",
+      "filePath": "frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "summary": "useDroneCenter.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/hooks/useDroneCenter.tsx:useDroneCenter",
+      "type": "function",
+      "name": "useDroneCenter",
+      "filePath": "frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "summary": "useDroneCenter implements logic in useDroneCenter.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "type": "file",
+      "name": "useDroneMapFollow.tsx",
+      "filePath": "frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "summary": "useDroneMapFollow.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx:useDroneMapFollow",
+      "type": "function",
+      "name": "useDroneMapFollow",
+      "filePath": "frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "summary": "useDroneMapFollow implements logic in useDroneMapFollow.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "type": "file",
+      "name": "useUserLocation.ts",
+      "filePath": "frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "summary": "useUserLocation.ts is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/hooks/useUserLocation.ts:useUserLocation",
+      "type": "function",
+      "name": "useUserLocation",
+      "filePath": "frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "summary": "useUserLocation implements logic in useUserLocation.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/maps/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/maps with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "type": "file",
+      "name": "useUserLocation.test.ts",
+      "filePath": "frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "summary": "useUserLocation.test.ts is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/tests/useUserLocation.test.ts:installGeolocation",
+      "type": "function",
+      "name": "installGeolocation",
+      "filePath": "frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "summary": "installGeolocation implements logic in useUserLocation.test.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "type": "file",
+      "name": "flatBoundaryDrawBridge.ts",
+      "filePath": "frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "summary": "flatBoundaryDrawBridge.ts is a frontend typescript module in frontend/src/modules/maps with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts:createFlatBoundaryDrawBridge",
+      "type": "function",
+      "name": "createFlatBoundaryDrawBridge",
+      "filePath": "frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "summary": "createFlatBoundaryDrawBridge implements logic in flatBoundaryDrawBridge.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts:createFarmBorderDrawBridge",
+      "type": "function",
+      "name": "createFarmBorderDrawBridge",
+      "filePath": "frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "summary": "createFarmBorderDrawBridge implements logic in flatBoundaryDrawBridge.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "type": "file",
+      "name": "GridMissionParamsSection.tsx",
+      "filePath": "frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "summary": "GridMissionParamsSection.tsx is a frontend typescript module in frontend/src/modules/mission-planning with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx:GridMissionParamsSection",
+      "type": "function",
+      "name": "GridMissionParamsSection",
+      "filePath": "frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "summary": "GridMissionParamsSection implements logic in GridMissionParamsSection.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-planning/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/mission-planning/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/mission-planning with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/mission-runtime/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "type": "file",
+      "name": "resolveWsUrl.ts",
+      "filePath": "frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "summary": "resolveWsUrl.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts:resolveTelemetryWebSocketUrl",
+      "type": "function",
+      "name": "resolveTelemetryWebSocketUrl",
+      "filePath": "frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "summary": "resolveTelemetryWebSocketUrl implements logic in resolveWsUrl.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/types/missionDtos.ts",
+      "type": "file",
+      "name": "missionDtos.ts",
+      "filePath": "frontend/src/modules/mission-runtime/types/missionDtos.ts",
+      "summary": "missionDtos.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/types/runtime.ts",
+      "type": "file",
+      "name": "runtime.ts",
+      "filePath": "frontend/src/modules/mission-runtime/types/runtime.ts",
+      "summary": "runtime.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "type": "file",
+      "name": "MapDrawToolsOverlay.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "summary": "MapDrawToolsOverlay.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx:MapDrawToolsOverlay",
+      "type": "function",
+      "name": "MapDrawToolsOverlay",
+      "filePath": "frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "summary": "MapDrawToolsOverlay implements logic in MapDrawToolsOverlay.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "type": "file",
+      "name": "MapShapeActionPopover.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "summary": "MapShapeActionPopover.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx:MapShapeActionPopover",
+      "type": "function",
+      "name": "MapShapeActionPopover",
+      "filePath": "frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "summary": "MapShapeActionPopover implements logic in MapShapeActionPopover.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "type": "file",
+      "name": "MissionFlightStatusPanel.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "summary": "MissionFlightStatusPanel.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx:MissionFlightStatusPanel",
+      "type": "function",
+      "name": "MissionFlightStatusPanel",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "summary": "MissionFlightStatusPanel implements logic in MissionFlightStatusPanel.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "type": "file",
+      "name": "MissionMapBoundaryPrompt.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "summary": "MissionMapBoundaryPrompt.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx:MissionMapBoundaryPrompt",
+      "type": "function",
+      "name": "MissionMapBoundaryPrompt",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "summary": "MissionMapBoundaryPrompt implements logic in MissionMapBoundaryPrompt.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "type": "file",
+      "name": "MissionWaypointList.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "summary": "MissionWaypointList.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx:MissionWaypointList",
+      "type": "function",
+      "name": "MissionWaypointList",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "summary": "MissionWaypointList implements logic in MissionWaypointList.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "type": "file",
+      "name": "MissionWorkflowShell.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "summary": "MissionWorkflowShell.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx:MissionWorkflowShell",
+      "type": "function",
+      "name": "MissionWorkflowShell",
+      "filePath": "frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "summary": "MissionWorkflowShell implements logic in MissionWorkflowShell.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/constants.ts",
+      "type": "file",
+      "name": "constants.ts",
+      "filePath": "frontend/src/modules/mission-workflow/constants.ts",
+      "summary": "constants.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "type": "file",
+      "name": "useFieldBorderEditor.ts",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "summary": "useFieldBorderEditor.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 2 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts:useFieldBorderEditor",
+      "type": "function",
+      "name": "useFieldBorderEditor",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "summary": "useFieldBorderEditor implements logic in useFieldBorderEditor.ts.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.test.tsx",
+      "type": "file",
+      "name": "useMissionAltitudeInput.test.tsx",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.test.tsx",
+      "summary": "useMissionAltitudeInput.test.tsx is a frontend typescript module in frontend/src/modules/mission-workflow with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "type": "file",
+      "name": "useMissionAltitudeInput.ts",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "summary": "useMissionAltitudeInput.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts:useMissionAltitudeInput",
+      "type": "function",
+      "name": "useMissionAltitudeInput",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "summary": "useMissionAltitudeInput implements logic in useMissionAltitudeInput.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "type": "file",
+      "name": "useWorkflowFieldBoundary.ts",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "summary": "useWorkflowFieldBoundary.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts:useWorkflowFieldBoundary",
+      "type": "function",
+      "name": "useWorkflowFieldBoundary",
+      "filePath": "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "summary": "useWorkflowFieldBoundary implements logic in useWorkflowFieldBoundary.ts.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/mission-workflow/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-workflow/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/mission-workflow/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/mission-workflow with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "target": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "target": "file:frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "target": "function:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx:WorkflowFieldsBlock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "target": "function:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx:WorkflowFieldsBlock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "file:frontend/src/modules/fleet/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:fetchCertifications",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:fetchCertifications",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:createCertification",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:createCertification",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:fetchDevices",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:fetchDevices",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:createDevice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "target": "function:frontend/src/modules/fleet/api/fleetApi.ts:createDevice",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/modules/dashboard/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/modules/fleet/api/fleetApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/modules/fleet/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:PanelSkeleton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:AddCertDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:CertRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:CertificationsTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:AddDeviceDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:DeviceRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:DeviceReadinessTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:FleetPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fleet/views/FleetPage.tsx",
+      "target": "function:frontend/src/modules/fleet/views/FleetPage.tsx:FleetPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "target": "function:frontend/src/modules/maps/hooks/useDroneCenter.tsx:useDroneCenter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "target": "function:frontend/src/modules/maps/hooks/useDroneCenter.tsx:useDroneCenter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "target": "function:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx:useDroneMapFollow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "target": "function:frontend/src/modules/maps/hooks/useDroneMapFollow.tsx:useDroneMapFollow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useUserLocation.ts:useUserLocation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "target": "function:frontend/src/modules/maps/hooks/useUserLocation.ts:useUserLocation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "target": "file:frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "target": "function:frontend/src/modules/maps/tests/useUserLocation.test.ts:installGeolocation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts:createFlatBoundaryDrawBridge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts:createFlatBoundaryDrawBridge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts:createFarmBorderDrawBridge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "target": "function:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts:createFarmBorderDrawBridge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "target": "file:frontend/src/modules/mission-planning/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "target": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "target": "function:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx:GridMissionParamsSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "target": "function:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx:GridMissionParamsSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "target": "file:frontend/src/app/config/env.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "target": "function:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts:resolveTelemetryWebSocketUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "target": "function:frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts:resolveTelemetryWebSocketUrl",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/types/runtime.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types/missionDtos.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx:MapDrawToolsOverlay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx:MapDrawToolsOverlay",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx:MapShapeActionPopover",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx:MapShapeActionPopover",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx:MissionFlightStatusPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx:MissionFlightStatusPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx:MissionMapBoundaryPrompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx:MissionMapBoundaryPrompt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx:MissionWaypointList",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx:MissionWaypointList",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "target": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx:MissionWorkflowShell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "target": "function:frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx:MissionWorkflowShell",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "target": "file:frontend/src/modules/mission-workflow/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts:useFieldBorderEditor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts:useFieldBorderEditor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.test.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts:useMissionAltitudeInput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts:useMissionAltitudeInput",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts:useWorkflowFieldBoundary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "target": "function:frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts:useWorkflowFieldBoundary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-workflow/types.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

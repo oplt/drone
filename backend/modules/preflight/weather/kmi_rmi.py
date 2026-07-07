@@ -9,6 +9,7 @@ import httpx
 
 from backend.modules.preflight.weather.location import haversine_m
 from backend.modules.preflight.weather.models import WeatherSnapshot
+from backend.modules.preflight.weather.coercion import to_float_or_none
 
 logger = logging.getLogger(__name__)
 
@@ -150,15 +151,6 @@ async def _fetch_latest_station_observation(
 
     return {
         "timestamp": latest_ts.isoformat(),
-        "wind_speed_mps": _to_float(props.get("wind_speed_10m")),
-        "wind_gust_mps": _to_float(props.get("wind_gusts_speed")),
+        "wind_speed_mps": to_float_or_none(props.get("wind_speed_10m")),
+        "wind_gust_mps": to_float_or_none(props.get("wind_gusts_speed")),
     }
-
-
-def _to_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None

@@ -8,9 +8,9 @@ import { WorkflowFieldsBlock } from "../../fields/components/WorkflowFieldsBlock
 import type { BorderMetrics, FieldFeature, LonLat } from "../../fields";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import {
-  MissionCommandPanel,
   MissionPreflightPanel,
 } from "../../mission-runtime";
+import { MissionCommandPanel } from "../../mission-runtime/components/MissionCommandPanel";
 import type { MissionStatus } from "../../mission-workflow";
 import type { PreflightRunResponse } from "../../mission-runtime";
 import { FieldSurveyFlightSection } from "./FieldSurveyFlightSection";

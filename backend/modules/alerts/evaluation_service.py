@@ -24,6 +24,7 @@ from backend.core.events import (
     utc_now,
 )
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
+from backend.modules.alerts.recipient_parsing import parse_delimited_tokens
 from backend.modules.alerts.repository import AlertRepository
 from backend.modules.automation.outbox_repository import OutboxRepository
 from backend.modules.geofences.models import Geofence
@@ -482,20 +483,9 @@ class AlertEngine:
         return v
 
     @staticmethod
-    def _parse_csv(value: str) -> list[str]:
-        if not value:
-            return []
-        parts: list[str] = []
-        for chunk in value.replace(";", ",").replace(" ", ",").split(","):
-            token = chunk.strip()
-            if token:
-                parts.append(token)
-        return list(dict.fromkeys(parts))
-
-    @staticmethod
     def _parse_int_csv(value: str) -> list[int]:
         out: list[int] = []
-        for token in AlertEngine._parse_csv(value):
+        for token in parse_delimited_tokens(value):
             try:
                 out.append(int(token))
             except ValueError:

@@ -33,6 +33,7 @@ from backend.modules.warehouse.service.ros_message_tf import (
 from backend.observability.instruments import observed_span, structured_error
 from backend.observability.metrics import add as metric_add
 from backend.observability.metrics import record as metric_record
+from backend.modules.warehouse.service.startup_timing_hooks import note_mapping_startup_safe
 
 logger = logging.getLogger(__name__)
 
@@ -45,17 +46,7 @@ _MAX_CHUNK_BYTES = 48 * 1024 * 1024
 
 
 def _note_mapping_startup(mark: str) -> None:
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            note_mapping_startup,
-        )
-
-        note_mapping_startup(mark)
-    except ModuleNotFoundError as exc:
-        logger.warning("Optional mapping startup timing unavailable: %s", exc)
-    except Exception:
-        # Observability hooks should not crash the mapping bridge.
-        logger.exception("Optional mapping startup timing hook failed: %s", mark)
+    note_mapping_startup_safe(mark)
 
 
 class _MemoryUpload:

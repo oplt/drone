@@ -1,0 +1,1908 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "type": "file",
+      "name": "dashboardApi.ts",
+      "filePath": "frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "summary": "dashboardApi.ts is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/api/dashboardApi.ts:fetchAnalyticsOverview",
+      "type": "function",
+      "name": "fetchAnalyticsOverview",
+      "filePath": "frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "summary": "fetchAnalyticsOverview implements logic in dashboardApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "type": "file",
+      "name": "DashboardAlertsPanel.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "summary": "DashboardAlertsPanel.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx:DashboardAlertsPanel",
+      "type": "function",
+      "name": "DashboardAlertsPanel",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "summary": "DashboardAlertsPanel implements logic in DashboardAlertsPanel.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "type": "file",
+      "name": "DashboardPanelSkeleton.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "summary": "DashboardPanelSkeleton.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx:DashboardPanelSkeleton",
+      "type": "function",
+      "name": "DashboardPanelSkeleton",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "summary": "DashboardPanelSkeleton implements logic in DashboardPanelSkeleton.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "type": "file",
+      "name": "DashboardSystemStatus.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "summary": "DashboardSystemStatus.tsx is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx:StatusRow",
+      "type": "function",
+      "name": "StatusRow",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "summary": "StatusRow implements logic in DashboardSystemStatus.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx:DashboardSystemStatus",
+      "type": "function",
+      "name": "DashboardSystemStatus",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "summary": "DashboardSystemStatus implements logic in DashboardSystemStatus.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "type": "file",
+      "name": "DashboardTelemetryPanel.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "summary": "DashboardTelemetryPanel.tsx is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx:MiniMetric",
+      "type": "function",
+      "name": "MiniMetric",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "summary": "MiniMetric implements logic in DashboardTelemetryPanel.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx:DashboardTelemetryPanel",
+      "type": "function",
+      "name": "DashboardTelemetryPanel",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "summary": "DashboardTelemetryPanel implements logic in DashboardTelemetryPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "type": "file",
+      "name": "DashboardTrendCharts.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "summary": "DashboardTrendCharts.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx:DashboardTrendCharts",
+      "type": "function",
+      "name": "DashboardTrendCharts",
+      "filePath": "frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "summary": "DashboardTrendCharts implements logic in DashboardTrendCharts.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "type": "file",
+      "name": "HighlightedCard.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "summary": "HighlightedCard.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/HighlightedCard.tsx:HighlightedCard",
+      "type": "function",
+      "name": "HighlightedCard",
+      "filePath": "frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "summary": "HighlightedCard implements logic in HighlightedCard.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "type": "file",
+      "name": "MainGrid.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "summary": "MainGrid.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/MainGrid.tsx:MainGrid",
+      "type": "function",
+      "name": "MainGrid",
+      "filePath": "frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "summary": "MainGrid implements logic in MainGrid.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "type": "file",
+      "name": "PageViewsBarChart.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "summary": "PageViewsBarChart.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx:PageViewsBarChart",
+      "type": "function",
+      "name": "PageViewsBarChart",
+      "filePath": "frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "summary": "PageViewsBarChart implements logic in PageViewsBarChart.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "type": "file",
+      "name": "SessionsChart.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "summary": "SessionsChart.tsx is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/SessionsChart.tsx:AreaGradient",
+      "type": "function",
+      "name": "AreaGradient",
+      "filePath": "frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "summary": "AreaGradient implements logic in SessionsChart.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/SessionsChart.tsx:SessionsChart",
+      "type": "function",
+      "name": "SessionsChart",
+      "filePath": "frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "summary": "SessionsChart implements logic in SessionsChart.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/StatCard.tsx",
+      "type": "file",
+      "name": "StatCard.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/StatCard.tsx",
+      "summary": "StatCard.tsx is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/StatCard.tsx:AreaGradient",
+      "type": "function",
+      "name": "AreaGradient",
+      "filePath": "frontend/src/modules/dashboard/components/StatCard.tsx",
+      "summary": "AreaGradient implements logic in StatCard.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/StatCard.tsx:StatCard",
+      "type": "function",
+      "name": "StatCard",
+      "filePath": "frontend/src/modules/dashboard/components/StatCard.tsx",
+      "summary": "StatCard implements logic in StatCard.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "type": "file",
+      "name": "useAnalyticsOverview.ts",
+      "filePath": "frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "summary": "useAnalyticsOverview.ts is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts:useAnalyticsOverview",
+      "type": "function",
+      "name": "useAnalyticsOverview",
+      "filePath": "frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "summary": "useAnalyticsOverview implements logic in useAnalyticsOverview.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "type": "file",
+      "name": "useDashboardOverviewModel.ts",
+      "filePath": "frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "summary": "useDashboardOverviewModel.ts is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts:useDashboardOverviewModel",
+      "type": "function",
+      "name": "useDashboardOverviewModel",
+      "filePath": "frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "summary": "useDashboardOverviewModel implements logic in useDashboardOverviewModel.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/dashboard/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/dashboard with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "type": "file",
+      "name": "dashboardFormatters.ts",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "dashboardFormatters.ts is a frontend typescript module in frontend/src/modules/dashboard with 6 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatNumber",
+      "type": "function",
+      "name": "formatNumber",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "formatNumber implements logic in dashboardFormatters.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatDuration",
+      "type": "function",
+      "name": "formatDuration",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "formatDuration implements logic in dashboardFormatters.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatTime",
+      "type": "function",
+      "name": "formatTime",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "formatTime implements logic in dashboardFormatters.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatDateLabel",
+      "type": "function",
+      "name": "formatDateLabel",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "formatDateLabel implements logic in dashboardFormatters.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:trendFromSeries",
+      "type": "function",
+      "name": "trendFromSeries",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "trendFromSeries implements logic in dashboardFormatters.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:deltaLabelFromSeries",
+      "type": "function",
+      "name": "deltaLabelFromSeries",
+      "filePath": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "summary": "deltaLabelFromSeries implements logic in dashboardFormatters.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/ObservabilityPage.test.tsx",
+      "type": "file",
+      "name": "ObservabilityPage.test.tsx",
+      "filePath": "frontend/src/modules/observability/ObservabilityPage.test.tsx",
+      "summary": "ObservabilityPage.test.tsx is a frontend typescript module in frontend/src/modules/observability with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "type": "file",
+      "name": "ObservabilityPage.tsx",
+      "filePath": "frontend/src/modules/observability/ObservabilityPage.tsx",
+      "summary": "ObservabilityPage.tsx is a frontend typescript module in frontend/src/modules/observability with 4 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/ObservabilityPage.tsx:contextUrl",
+      "type": "function",
+      "name": "contextUrl",
+      "filePath": "frontend/src/modules/observability/ObservabilityPage.tsx",
+      "summary": "contextUrl implements logic in ObservabilityPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/ObservabilityPage.tsx:ObservabilityPage",
+      "type": "function",
+      "name": "ObservabilityPage",
+      "filePath": "frontend/src/modules/observability/ObservabilityPage.tsx",
+      "summary": "ObservabilityPage implements logic in ObservabilityPage.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/api.ts",
+      "type": "file",
+      "name": "api.ts",
+      "filePath": "frontend/src/modules/observability/api.ts",
+      "summary": "api.ts is a frontend typescript module in frontend/src/modules/observability with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/api.ts:fetchObservabilityLinks",
+      "type": "function",
+      "name": "fetchObservabilityLinks",
+      "filePath": "frontend/src/modules/observability/api.ts",
+      "summary": "fetchObservabilityLinks implements logic in api.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/api.ts:fetchObservabilityStatus",
+      "type": "function",
+      "name": "fetchObservabilityStatus",
+      "filePath": "frontend/src/modules/observability/api.ts",
+      "summary": "fetchObservabilityStatus implements logic in api.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/api.ts:fetchObservabilityContextOptions",
+      "type": "function",
+      "name": "fetchObservabilityContextOptions",
+      "filePath": "frontend/src/modules/observability/api.ts",
+      "summary": "fetchObservabilityContextOptions implements logic in api.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "type": "file",
+      "name": "HealthStatusCard.tsx",
+      "filePath": "frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "summary": "HealthStatusCard.tsx is a frontend typescript module in frontend/src/modules/observability with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/components/HealthStatusCard.tsx:titleCaseStatus",
+      "type": "function",
+      "name": "titleCaseStatus",
+      "filePath": "frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "summary": "titleCaseStatus implements logic in HealthStatusCard.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/components/HealthStatusCard.tsx:HealthStatusCard",
+      "type": "function",
+      "name": "HealthStatusCard",
+      "filePath": "frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "summary": "HealthStatusCard implements logic in HealthStatusCard.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "type": "file",
+      "name": "HealthStatusGrid.tsx",
+      "filePath": "frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "summary": "HealthStatusGrid.tsx is a frontend typescript module in frontend/src/modules/observability with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/components/HealthStatusGrid.tsx:HealthStatusGrid",
+      "type": "function",
+      "name": "HealthStatusGrid",
+      "filePath": "frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "summary": "HealthStatusGrid implements logic in HealthStatusGrid.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "type": "file",
+      "name": "ObservabilityShortcutCard.tsx",
+      "filePath": "frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "summary": "ObservabilityShortcutCard.tsx is a frontend typescript module in frontend/src/modules/observability with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx:ObservabilityShortcutCard",
+      "type": "function",
+      "name": "ObservabilityShortcutCard",
+      "filePath": "frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "summary": "ObservabilityShortcutCard implements logic in ObservabilityShortcutCard.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "type": "file",
+      "name": "ObservabilityShortcutGrid.tsx",
+      "filePath": "frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "summary": "ObservabilityShortcutGrid.tsx is a frontend typescript module in frontend/src/modules/observability with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx:ObservabilityShortcutGrid",
+      "type": "function",
+      "name": "ObservabilityShortcutGrid",
+      "filePath": "frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "summary": "ObservabilityShortcutGrid implements logic in ObservabilityShortcutGrid.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/healthStatusPresentation.test.ts",
+      "type": "file",
+      "name": "healthStatusPresentation.test.ts",
+      "filePath": "frontend/src/modules/observability/healthStatusPresentation.test.ts",
+      "summary": "healthStatusPresentation.test.ts is a frontend typescript module in frontend/src/modules/observability with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/healthStatusPresentation.ts",
+      "type": "file",
+      "name": "healthStatusPresentation.ts",
+      "filePath": "frontend/src/modules/observability/healthStatusPresentation.ts",
+      "summary": "healthStatusPresentation.ts is a frontend typescript module in frontend/src/modules/observability with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/healthStatusPresentation.ts:healthStatusTextColor",
+      "type": "function",
+      "name": "healthStatusTextColor",
+      "filePath": "frontend/src/modules/observability/healthStatusPresentation.ts",
+      "summary": "healthStatusTextColor implements logic in healthStatusPresentation.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/observability/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/observability with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/urlBuilders.test.ts",
+      "type": "file",
+      "name": "urlBuilders.test.ts",
+      "filePath": "frontend/src/modules/observability/urlBuilders.test.ts",
+      "summary": "urlBuilders.test.ts is a frontend typescript module in frontend/src/modules/observability with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/observability/urlBuilders.ts",
+      "type": "file",
+      "name": "urlBuilders.ts",
+      "filePath": "frontend/src/modules/observability/urlBuilders.ts",
+      "summary": "urlBuilders.ts is a frontend typescript module in frontend/src/modules/observability with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/observability/urlBuilders.ts:buildGrafanaUrl",
+      "type": "function",
+      "name": "buildGrafanaUrl",
+      "filePath": "frontend/src/modules/observability/urlBuilders.ts",
+      "summary": "buildGrafanaUrl implements logic in urlBuilders.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/Copyright.tsx",
+      "type": "file",
+      "name": "Copyright.tsx",
+      "filePath": "frontend/src/modules/session/components/Copyright.tsx",
+      "summary": "Copyright.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/Copyright.tsx:Copyright",
+      "type": "function",
+      "name": "Copyright",
+      "filePath": "frontend/src/modules/session/components/Copyright.tsx",
+      "summary": "Copyright implements logic in Copyright.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "type": "file",
+      "name": "templatesApi.ts",
+      "filePath": "frontend/src/modules/templates/api/templatesApi.ts",
+      "summary": "templatesApi.ts is a frontend typescript module in frontend/src/modules/templates with 4 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/api/templatesApi.ts:fetchTemplates",
+      "type": "function",
+      "name": "fetchTemplates",
+      "filePath": "frontend/src/modules/templates/api/templatesApi.ts",
+      "summary": "fetchTemplates implements logic in templatesApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/api/templatesApi.ts:createTemplate",
+      "type": "function",
+      "name": "createTemplate",
+      "filePath": "frontend/src/modules/templates/api/templatesApi.ts",
+      "summary": "createTemplate implements logic in templatesApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/api/templatesApi.ts:triggerTemplate",
+      "type": "function",
+      "name": "triggerTemplate",
+      "filePath": "frontend/src/modules/templates/api/templatesApi.ts",
+      "summary": "triggerTemplate implements logic in templatesApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/api/templatesApi.ts:toggleTemplate",
+      "type": "function",
+      "name": "toggleTemplate",
+      "filePath": "frontend/src/modules/templates/api/templatesApi.ts",
+      "summary": "toggleTemplate implements logic in templatesApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/templates/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/templates/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/templates with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "type": "file",
+      "name": "TemplatesPage.tsx",
+      "filePath": "frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "summary": "TemplatesPage.tsx is a frontend typescript module in frontend/src/modules/templates with 3 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:CreateTemplateDialog",
+      "type": "function",
+      "name": "CreateTemplateDialog",
+      "filePath": "frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "summary": "CreateTemplateDialog implements logic in TemplatesPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:TemplateRow",
+      "type": "function",
+      "name": "TemplateRow",
+      "filePath": "frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "summary": "TemplateRow implements logic in TemplatesPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:TemplatesPage",
+      "type": "function",
+      "name": "TemplatesPage",
+      "filePath": "frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "summary": "TemplatesPage implements logic in TemplatesPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "file",
+      "name": "PageLayout.tsx",
+      "filePath": "frontend/src/shared/layout/PageLayout.tsx",
+      "summary": "PageLayout.tsx is a frontend typescript module in frontend/src/shared/layout with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/PageLayout.tsx:PageLayout",
+      "type": "function",
+      "name": "PageLayout",
+      "filePath": "frontend/src/shared/layout/PageLayout.tsx",
+      "summary": "PageLayout implements logic in PageLayout.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/PageLayout.tsx:PageSection",
+      "type": "function",
+      "name": "PageSection",
+      "filePath": "frontend/src/shared/layout/PageLayout.tsx",
+      "summary": "PageSection implements logic in PageLayout.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "target": "file:frontend/src/modules/dashboard/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "target": "function:frontend/src/modules/dashboard/api/dashboardApi.ts:fetchAnalyticsOverview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "target": "function:frontend/src/modules/dashboard/api/dashboardApi.ts:fetchAnalyticsOverview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx:DashboardAlertsPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx:DashboardAlertsPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx:DashboardPanelSkeleton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx:DashboardPanelSkeleton",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx:StatusRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx:DashboardSystemStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx:DashboardSystemStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx:MiniMetric",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx:DashboardTelemetryPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx:DashboardTelemetryPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "target": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx:DashboardTrendCharts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx:DashboardTrendCharts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/HighlightedCard.tsx:HighlightedCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/HighlightedCard.tsx:HighlightedCard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/StatCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/modules/session/components/Copyright.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/MainGrid.tsx:MainGrid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/MainGrid.tsx:MainGrid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx:PageViewsBarChart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/PageViewsBarChart.tsx:PageViewsBarChart",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/SessionsChart.tsx:AreaGradient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/SessionsChart.tsx:SessionsChart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/SessionsChart.tsx:SessionsChart",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/StatCard.tsx",
+      "target": "file:frontend/src/modules/dashboard/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/StatCard.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/StatCard.tsx:AreaGradient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/StatCard.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/StatCard.tsx:StatCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/StatCard.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/StatCard.tsx:StatCard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "target": "file:frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "target": "file:frontend/src/modules/dashboard/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "target": "function:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts:useAnalyticsOverview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "target": "function:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts:useAnalyticsOverview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "file:frontend/src/modules/alerts/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "file:frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "file:frontend/src/modules/dashboard/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "function:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts:useDashboardOverviewModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "target": "function:frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts:useDashboardOverviewModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatNumber",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatDuration",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatDuration",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatTime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatTime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatDateLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:formatDateLabel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:trendFromSeries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:trendFromSeries",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:deltaLabelFromSeries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "target": "function:frontend/src/modules/dashboard/utils/dashboardFormatters.ts:deltaLabelFromSeries",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.test.tsx",
+      "target": "file:frontend/src/modules/observability/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.test.tsx",
+      "target": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.test.tsx",
+      "target": "file:frontend/src/modules/observability/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/observability/urlBuilders.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "function:frontend/src/modules/observability/ObservabilityPage.tsx:contextUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "function:frontend/src/modules/observability/ObservabilityPage.tsx:ObservabilityPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/ObservabilityPage.tsx",
+      "target": "function:frontend/src/modules/observability/ObservabilityPage.tsx:ObservabilityPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "file:frontend/src/modules/observability/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "function:frontend/src/modules/observability/api.ts:fetchObservabilityLinks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "function:frontend/src/modules/observability/api.ts:fetchObservabilityLinks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "function:frontend/src/modules/observability/api.ts:fetchObservabilityStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "function:frontend/src/modules/observability/api.ts:fetchObservabilityStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "function:frontend/src/modules/observability/api.ts:fetchObservabilityContextOptions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/api.ts",
+      "target": "function:frontend/src/modules/observability/api.ts:fetchObservabilityContextOptions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "target": "file:frontend/src/modules/observability/healthStatusPresentation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "target": "file:frontend/src/modules/observability/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "target": "function:frontend/src/modules/observability/components/HealthStatusCard.tsx:titleCaseStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "target": "function:frontend/src/modules/observability/components/HealthStatusCard.tsx:titleCaseStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "target": "function:frontend/src/modules/observability/components/HealthStatusCard.tsx:HealthStatusCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "target": "function:frontend/src/modules/observability/components/HealthStatusCard.tsx:HealthStatusCard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "target": "function:frontend/src/modules/observability/components/HealthStatusGrid.tsx:HealthStatusGrid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "target": "function:frontend/src/modules/observability/components/HealthStatusGrid.tsx:HealthStatusGrid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "target": "function:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx:ObservabilityShortcutCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "target": "function:frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx:ObservabilityShortcutCard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "target": "function:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx:ObservabilityShortcutGrid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "target": "function:frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx:ObservabilityShortcutGrid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/healthStatusPresentation.test.ts",
+      "target": "file:frontend/src/modules/observability/healthStatusPresentation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/healthStatusPresentation.ts",
+      "target": "file:frontend/src/modules/observability/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/healthStatusPresentation.ts",
+      "target": "function:frontend/src/modules/observability/healthStatusPresentation.ts:healthStatusTextColor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/healthStatusPresentation.ts",
+      "target": "function:frontend/src/modules/observability/healthStatusPresentation.ts:healthStatusTextColor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/observability/urlBuilders.test.ts",
+      "target": "file:frontend/src/modules/observability/urlBuilders.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/observability/urlBuilders.ts",
+      "target": "function:frontend/src/modules/observability/urlBuilders.ts:buildGrafanaUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/observability/urlBuilders.ts",
+      "target": "function:frontend/src/modules/observability/urlBuilders.ts:buildGrafanaUrl",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Copyright.tsx",
+      "target": "function:frontend/src/modules/session/components/Copyright.tsx:Copyright",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Copyright.tsx",
+      "target": "function:frontend/src/modules/session/components/Copyright.tsx:Copyright",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "file:frontend/src/modules/templates/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:fetchTemplates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:fetchTemplates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:createTemplate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:createTemplate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:triggerTemplate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:triggerTemplate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:toggleTemplate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "target": "function:frontend/src/modules/templates/api/templatesApi.ts:toggleTemplate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "file:frontend/src/modules/templates/api/templatesApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "file:frontend/src/modules/templates/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:CreateTemplateDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:TemplateRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:TemplatesPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "target": "function:frontend/src/modules/templates/views/TemplatesPage.tsx:TemplatesPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "target": "function:frontend/src/shared/layout/PageLayout.tsx:PageLayout",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "target": "function:frontend/src/shared/layout/PageLayout.tsx:PageLayout",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "target": "function:frontend/src/shared/layout/PageLayout.tsx:PageSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "target": "function:frontend/src/shared/layout/PageLayout.tsx:PageSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

@@ -1,0 +1,5857 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 21,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/modules/preflight/weather/__init__.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 13,
+      "nonEmptyLines": 12,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/cache.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 32,
+      "classes": [
+        {
+          "name": "WeatherResponseCache",
+          "startLine": 10,
+          "endLine": 40,
+          "methods": [
+            "__init__",
+            "_key",
+            "get",
+            "set",
+            "clear"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "WeatherResponseCache",
+          "line": 10,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Lock",
+          "lineNumber": 15
+        },
+        {
+          "caller": "_key",
+          "callee": "round",
+          "lineNumber": 19
+        },
+        {
+          "caller": "_key",
+          "callee": "round",
+          "lineNumber": 19
+        },
+        {
+          "caller": "get",
+          "callee": "self._key",
+          "lineNumber": 22
+        },
+        {
+          "caller": "get",
+          "callee": "self._entries.get",
+          "lineNumber": 24
+        },
+        {
+          "caller": "get",
+          "callee": "time.time",
+          "lineNumber": 28
+        },
+        {
+          "caller": "get",
+          "callee": "self._entries.pop",
+          "lineNumber": 29
+        },
+        {
+          "caller": "set",
+          "callee": "self._key",
+          "lineNumber": 34
+        },
+        {
+          "caller": "set",
+          "callee": "time.time",
+          "lineNumber": 36
+        },
+        {
+          "caller": "clear",
+          "callee": "self._entries.clear",
+          "lineNumber": 40
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/coercion.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 16,
+      "functions": [
+        {
+          "name": "to_float_or_none",
+          "startLine": 6,
+          "endLine": 12,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "to_int_or_none",
+          "startLine": 15,
+          "endLine": 21,
+          "params": [
+            "value"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "to_float_or_none",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "to_int_or_none",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "to_float_or_none",
+          "callee": "float",
+          "lineNumber": 10
+        },
+        {
+          "caller": "to_int_or_none",
+          "callee": "int",
+          "lineNumber": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/evaluation.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 354,
+      "nonEmptyLines": 328,
+      "functions": [
+        {
+          "name": "evaluate_weather_preflight",
+          "startLine": 10,
+          "endLine": 62,
+          "params": [
+            "snapshot",
+            "thresholds",
+            "api_error"
+          ]
+        },
+        {
+          "name": "_summarize_weather",
+          "startLine": 65,
+          "endLine": 72,
+          "params": [
+            "results"
+          ]
+        },
+        {
+          "name": "_overall_message",
+          "startLine": 75,
+          "endLine": 86,
+          "params": [
+            "overall",
+            "results"
+          ]
+        },
+        {
+          "name": "_check_wind",
+          "startLine": 89,
+          "endLine": 138,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        },
+        {
+          "name": "_check_precipitation",
+          "startLine": 141,
+          "endLine": 167,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        },
+        {
+          "name": "_check_visibility",
+          "startLine": 170,
+          "endLine": 196,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        },
+        {
+          "name": "_check_weather_code",
+          "startLine": 199,
+          "endLine": 232,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        },
+        {
+          "name": "_check_temperature",
+          "startLine": 235,
+          "endLine": 267,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        },
+        {
+          "name": "_check_cloud_cover",
+          "startLine": 270,
+          "endLine": 296,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        },
+        {
+          "name": "_check_kmi_validation",
+          "startLine": 299,
+          "endLine": 354,
+          "params": [
+            "snapshot",
+            "thresholds"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "evaluate_weather_preflight",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "_summarize_weather",
+          "line": 65,
+          "isDefault": false
+        },
+        {
+          "name": "_overall_message",
+          "line": 75,
+          "isDefault": false
+        },
+        {
+          "name": "_check_wind",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "_check_precipitation",
+          "line": 141,
+          "isDefault": false
+        },
+        {
+          "name": "_check_visibility",
+          "line": 170,
+          "isDefault": false
+        },
+        {
+          "name": "_check_weather_code",
+          "line": 199,
+          "isDefault": false
+        },
+        {
+          "name": "_check_temperature",
+          "line": 235,
+          "isDefault": false
+        },
+        {
+          "name": "_check_cloud_cover",
+          "line": 270,
+          "isDefault": false
+        },
+        {
+          "name": "_check_kmi_validation",
+          "line": 299,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "CheckResult",
+          "lineNumber": 22
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "CheckResult",
+          "lineNumber": 30
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "CheckResult",
+          "lineNumber": 37
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 45
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_wind",
+          "lineNumber": 45
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 46
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_precipitation",
+          "lineNumber": 46
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 47
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_visibility",
+          "lineNumber": 47
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 48
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_weather_code",
+          "lineNumber": 48
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 49
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_temperature",
+          "lineNumber": 49
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 50
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_cloud_cover",
+          "lineNumber": 50
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.extend",
+          "lineNumber": 51
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_check_kmi_validation",
+          "lineNumber": 51
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_summarize_weather",
+          "lineNumber": 53
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "results.insert",
+          "lineNumber": 54
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "CheckResult",
+          "lineNumber": 56
+        },
+        {
+          "caller": "evaluate_weather_preflight",
+          "callee": "_overall_message",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_summarize_weather",
+          "callee": "any",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_summarize_weather",
+          "callee": "any",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_summarize_weather",
+          "callee": "all",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "results.append",
+          "lineNumber": 92
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "CheckResult",
+          "lineNumber": 93
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "results.append",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "CheckResult",
+          "lineNumber": 97
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "results.append",
+          "lineNumber": 104
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "CheckResult",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "results.append",
+          "lineNumber": 116
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "CheckResult",
+          "lineNumber": 117
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "results.append",
+          "lineNumber": 120
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "CheckResult",
+          "lineNumber": 121
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "results.append",
+          "lineNumber": 128
+        },
+        {
+          "caller": "_check_wind",
+          "callee": "CheckResult",
+          "lineNumber": 129
+        },
+        {
+          "caller": "_check_precipitation",
+          "callee": "CheckResult",
+          "lineNumber": 144
+        },
+        {
+          "caller": "_check_precipitation",
+          "callee": "CheckResult",
+          "lineNumber": 152
+        },
+        {
+          "caller": "_check_precipitation",
+          "callee": "CheckResult",
+          "lineNumber": 159
+        },
+        {
+          "caller": "_check_visibility",
+          "callee": "CheckResult",
+          "lineNumber": 173
+        },
+        {
+          "caller": "_check_visibility",
+          "callee": "CheckResult",
+          "lineNumber": 181
+        },
+        {
+          "caller": "_check_visibility",
+          "callee": "CheckResult",
+          "lineNumber": 188
+        },
+        {
+          "caller": "_check_weather_code",
+          "callee": "CheckResult",
+          "lineNumber": 203
+        },
+        {
+          "caller": "_check_weather_code",
+          "callee": "CheckResult",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_check_weather_code",
+          "callee": "CheckResult",
+          "lineNumber": 220
+        },
+        {
+          "caller": "_check_weather_code",
+          "callee": "CheckResult",
+          "lineNumber": 227
+        },
+        {
+          "caller": "_check_temperature",
+          "callee": "CheckResult",
+          "lineNumber": 238
+        },
+        {
+          "caller": "_check_temperature",
+          "callee": "CheckResult",
+          "lineNumber": 247
+        },
+        {
+          "caller": "_check_temperature",
+          "callee": "CheckResult",
+          "lineNumber": 255
+        },
+        {
+          "caller": "_check_temperature",
+          "callee": "CheckResult",
+          "lineNumber": 262
+        },
+        {
+          "caller": "_check_cloud_cover",
+          "callee": "CheckResult",
+          "lineNumber": 273
+        },
+        {
+          "caller": "_check_cloud_cover",
+          "callee": "CheckResult",
+          "lineNumber": 281
+        },
+        {
+          "caller": "_check_cloud_cover",
+          "callee": "CheckResult",
+          "lineNumber": 288
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "CheckResult",
+          "lineNumber": 302
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "CheckResult",
+          "lineNumber": 310
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "CheckResult",
+          "lineNumber": 318
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "abs",
+          "lineNumber": 325
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "CheckResult",
+          "lineNumber": 334
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "CheckResult",
+          "lineNumber": 342
+        },
+        {
+          "caller": "_check_kmi_validation",
+          "callee": "CheckResult",
+          "lineNumber": 349
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 10,
+        "functionCount": 10,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/kmi_rmi.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 156,
+      "nonEmptyLines": 139,
+      "functions": [
+        {
+          "name": "enrich_with_kmi_rmi_observation",
+          "startLine": 17,
+          "endLine": 55,
+          "params": [
+            "snapshot",
+            "wfs_base_url",
+            "max_obs_age_hours",
+            "timeout_s"
+          ]
+        },
+        {
+          "name": "_find_nearest_station",
+          "startLine": 58,
+          "endLine": 98,
+          "params": [
+            "lat",
+            "lon",
+            "wfs_base_url",
+            "timeout_s"
+          ]
+        },
+        {
+          "name": "_fetch_latest_station_observation",
+          "startLine": 101,
+          "endLine": 156,
+          "params": [
+            "station_code",
+            "wfs_base_url",
+            "timeout_s",
+            "max_obs_age_hours"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "enrich_with_kmi_rmi_observation",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "_find_nearest_station",
+          "line": 58,
+          "isDefault": false
+        },
+        {
+          "name": "_fetch_latest_station_observation",
+          "line": 101,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "_find_nearest_station",
+          "lineNumber": 25
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "_fetch_latest_station_observation",
+          "lineNumber": 34
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "int",
+          "lineNumber": 35
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "replace",
+          "lineNumber": 41
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "int",
+          "lineNumber": 43
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "str",
+          "lineNumber": 44
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "station.get",
+          "lineNumber": 44
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "replace",
+          "lineNumber": 48
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "int",
+          "lineNumber": 50
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "str",
+          "lineNumber": 51
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "station.get",
+          "lineNumber": 51
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "observation.get",
+          "lineNumber": 52
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "observation.get",
+          "lineNumber": 53
+        },
+        {
+          "caller": "enrich_with_kmi_rmi_observation",
+          "callee": "observation.get",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "httpx.AsyncClient",
+          "lineNumber": 74
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "client.get",
+          "lineNumber": 75
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "response.raise_for_status",
+          "lineNumber": 76
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "response.json",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "logger.info",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "float",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "payload.get",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "feature.get",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "geometry.get",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "len",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "float",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "float",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "haversine_m",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "dict",
+          "lineNumber": 93
+        },
+        {
+          "caller": "_find_nearest_station",
+          "callee": "feature.get",
+          "lineNumber": 93
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "httpx.AsyncClient",
+          "lineNumber": 119
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "client.get",
+          "lineNumber": 120
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "response.raise_for_status",
+          "lineNumber": 121
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "response.json",
+          "lineNumber": 122
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "logger.info",
+          "lineNumber": 124
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "payload.get",
+          "lineNumber": 127
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "features[0].get",
+          "lineNumber": 131
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "props.get",
+          "lineNumber": 132
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "datetime.fromisoformat",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "str(ts_raw).replace",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "str",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "latest_ts.replace",
+          "lineNumber": 138
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "(datetime.now(UTC) - latest_ts).total_seconds",
+          "lineNumber": 142
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "datetime.now",
+          "lineNumber": 142
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "logger.info",
+          "lineNumber": 144
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "latest_ts.isoformat",
+          "lineNumber": 153
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "to_float_or_none",
+          "lineNumber": 154
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "props.get",
+          "lineNumber": 154
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "to_float_or_none",
+          "lineNumber": 155
+        },
+        {
+          "caller": "_fetch_latest_station_observation",
+          "callee": "props.get",
+          "lineNumber": 155
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/location.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 114,
+      "nonEmptyLines": 96,
+      "functions": [
+        {
+          "name": "is_outdoor_preflight_mission",
+          "startLine": 11,
+          "endLine": 22,
+          "params": [
+            "mission_type"
+          ]
+        },
+        {
+          "name": "is_belgium_coordinates",
+          "startLine": 25,
+          "endLine": 27,
+          "params": [
+            "lat",
+            "lon"
+          ]
+        },
+        {
+          "name": "_telemetry_lat_lon",
+          "startLine": 30,
+          "endLine": 47,
+          "params": [
+            "vehicle_state"
+          ]
+        },
+        {
+          "name": "_waypoint_lat_lon",
+          "startLine": 50,
+          "endLine": 61,
+          "params": [
+            "point"
+          ]
+        },
+        {
+          "name": "_geofence_centroid",
+          "startLine": 64,
+          "endLine": 73,
+          "params": [
+            "geofence_polygon"
+          ]
+        },
+        {
+          "name": "_mission_centroid",
+          "startLine": 76,
+          "endLine": 88,
+          "params": [
+            "mission"
+          ]
+        },
+        {
+          "name": "resolve_preflight_coordinates",
+          "startLine": 91,
+          "endLine": 105,
+          "params": [
+            "vehicle_state",
+            "mission",
+            "geofence_polygon"
+          ]
+        },
+        {
+          "name": "haversine_m",
+          "startLine": 108,
+          "endLine": 114,
+          "params": [
+            "lat1",
+            "lon1",
+            "lat2",
+            "lon2"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "is_outdoor_preflight_mission",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "is_belgium_coordinates",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "_telemetry_lat_lon",
+          "line": 30,
+          "isDefault": false
+        },
+        {
+          "name": "_waypoint_lat_lon",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "_geofence_centroid",
+          "line": 64,
+          "isDefault": false
+        },
+        {
+          "name": "_mission_centroid",
+          "line": 76,
+          "isDefault": false
+        },
+        {
+          "name": "resolve_preflight_coordinates",
+          "line": 91,
+          "isDefault": false
+        },
+        {
+          "name": "haversine_m",
+          "line": 108,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "is_outdoor_preflight_mission",
+          "callee": "str(mission_type).strip().lower",
+          "lineNumber": 15
+        },
+        {
+          "caller": "is_outdoor_preflight_mission",
+          "callee": "str(mission_type).strip",
+          "lineNumber": 15
+        },
+        {
+          "caller": "is_outdoor_preflight_mission",
+          "callee": "str",
+          "lineNumber": 15
+        },
+        {
+          "caller": "is_outdoor_preflight_mission",
+          "callee": "uses_warehouse_ros_preflight",
+          "lineNumber": 16
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "isinstance",
+          "lineNumber": 31
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "vehicle_state.get",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "vehicle_state.get",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "vehicle_state.get",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "vehicle_state.get",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "getattr",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "getattr",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "getattr",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "getattr",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "float",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "float",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "abs",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_telemetry_lat_lon",
+          "callee": "abs",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "isinstance",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "float",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "float",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "hasattr",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "hasattr",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "float",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_waypoint_lat_lon",
+          "callee": "float",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_geofence_centroid",
+          "callee": "_waypoint_lat_lon",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_geofence_centroid",
+          "callee": "sum",
+          "lineNumber": 71
+        },
+        {
+          "caller": "_geofence_centroid",
+          "callee": "len",
+          "lineNumber": 71
+        },
+        {
+          "caller": "_geofence_centroid",
+          "callee": "sum",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_geofence_centroid",
+          "callee": "len",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "list",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "getattr",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "_waypoint_lat_lon",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "getattr",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "_geofence_centroid",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "list",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "getattr",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "_geofence_centroid",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_mission_centroid",
+          "callee": "list",
+          "lineNumber": 87
+        },
+        {
+          "caller": "resolve_preflight_coordinates",
+          "callee": "_telemetry_lat_lon",
+          "lineNumber": 99
+        },
+        {
+          "caller": "resolve_preflight_coordinates",
+          "callee": "_mission_centroid",
+          "lineNumber": 100
+        },
+        {
+          "caller": "resolve_preflight_coordinates",
+          "callee": "_geofence_centroid",
+          "lineNumber": 101
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.radians",
+          "lineNumber": 110
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.radians",
+          "lineNumber": 110
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.radians",
+          "lineNumber": 111
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.radians",
+          "lineNumber": 112
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.sin",
+          "lineNumber": 113
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.cos",
+          "lineNumber": 113
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.cos",
+          "lineNumber": 113
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.sin",
+          "lineNumber": 113
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.asin",
+          "lineNumber": 114
+        },
+        {
+          "caller": "haversine_m",
+          "callee": "math.sqrt",
+          "lineNumber": 114
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/models.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 96,
+      "nonEmptyLines": 85,
+      "functions": [
+        {
+          "name": "_optional_float",
+          "startLine": 81,
+          "endLine": 87,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "_optional_int",
+          "startLine": 90,
+          "endLine": 96,
+          "params": [
+            "value"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "WeatherSnapshot",
+          "startLine": 8,
+          "endLine": 78,
+          "methods": [
+            "wind_data_dict",
+            "to_dict",
+            "from_dict"
+          ],
+          "properties": [
+            "latitude",
+            "longitude",
+            "source",
+            "wind_speed_mps",
+            "wind_gust_mps",
+            "precipitation_mm",
+            "visibility_m",
+            "weather_code",
+            "temperature_c",
+            "cloud_cover_pct",
+            "fetched_at",
+            "kmi_station_code",
+            "kmi_station_name",
+            "kmi_wind_speed_mps",
+            "kmi_wind_gust_mps",
+            "kmi_observation_time",
+            "errors"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WeatherSnapshot",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "_optional_float",
+          "line": 81,
+          "isDefault": false
+        },
+        {
+          "name": "_optional_int",
+          "line": 90,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "wind_data_dict",
+          "callee": "float",
+          "lineNumber": 32
+        },
+        {
+          "caller": "wind_data_dict",
+          "callee": "float",
+          "lineNumber": 34
+        },
+        {
+          "caller": "to_dict",
+          "callee": "list",
+          "lineNumber": 55
+        },
+        {
+          "caller": "from_dict",
+          "callee": "cls",
+          "lineNumber": 60
+        },
+        {
+          "caller": "from_dict",
+          "callee": "float",
+          "lineNumber": 61
+        },
+        {
+          "caller": "from_dict",
+          "callee": "float",
+          "lineNumber": 62
+        },
+        {
+          "caller": "from_dict",
+          "callee": "str",
+          "lineNumber": 63
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 63
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 64
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 64
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 65
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 65
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 66
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 66
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 67
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 67
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_int",
+          "lineNumber": 68
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 68
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 69
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 69
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 70
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 70
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 71
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 71
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_int",
+          "lineNumber": 72
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 72
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 73
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 74
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 74
+        },
+        {
+          "caller": "from_dict",
+          "callee": "_optional_float",
+          "lineNumber": 75
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 75
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 76
+        },
+        {
+          "caller": "from_dict",
+          "callee": "tuple",
+          "lineNumber": 77
+        },
+        {
+          "caller": "from_dict",
+          "callee": "data.get",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_optional_float",
+          "callee": "float",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_optional_int",
+          "callee": "int",
+          "lineNumber": 94
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/open_meteo.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 58,
+      "nonEmptyLines": 50,
+      "functions": [
+        {
+          "name": "fetch_open_meteo_current",
+          "startLine": 25,
+          "endLine": 58,
+          "params": [
+            "lat",
+            "lon",
+            "base_url",
+            "timeout_s"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetch_open_meteo_current",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "\",\".join",
+          "lineNumber": 35
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "base_url.rstrip",
+          "lineNumber": 39
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "httpx.AsyncClient",
+          "lineNumber": 40
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "client.get",
+          "lineNumber": 41
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "response.raise_for_status",
+          "lineNumber": 42
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "response.json",
+          "lineNumber": 43
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "payload.get",
+          "lineNumber": 45
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "WeatherSnapshot",
+          "lineNumber": 46
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "float",
+          "lineNumber": 47
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "payload.get",
+          "lineNumber": 47
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "float",
+          "lineNumber": 48
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "payload.get",
+          "lineNumber": 48
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_float_or_none",
+          "lineNumber": 50
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 50
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_float_or_none",
+          "lineNumber": 51
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 51
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_float_or_none",
+          "lineNumber": 52
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 52
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_float_or_none",
+          "lineNumber": 53
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 53
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_int_or_none",
+          "lineNumber": 54
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 54
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_float_or_none",
+          "lineNumber": 55
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 55
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "to_float_or_none",
+          "lineNumber": 56
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "current.get",
+          "lineNumber": 56
+        },
+        {
+          "caller": "fetch_open_meteo_current",
+          "callee": "time.time",
+          "lineNumber": 57
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 47,
+      "nonEmptyLines": 40,
+      "functions": [
+        {
+          "name": "fetch_weather_for_preflight",
+          "startLine": 16,
+          "endLine": 47,
+          "params": [
+            "lat",
+            "lon",
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetch_weather_for_preflight",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "weather_thresholds_from_config",
+          "lineNumber": 23
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "_weather_cache.get",
+          "lineNumber": 27
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "isinstance",
+          "lineNumber": 28
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "fetch_open_meteo_current",
+          "lineNumber": 32
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "is_belgium_coordinates",
+          "lineNumber": 37
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "enrich_with_kmi_rmi_observation",
+          "lineNumber": 38
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "_weather_cache.set",
+          "lineNumber": 43
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "logger.warning",
+          "lineNumber": 46
+        },
+        {
+          "caller": "fetch_weather_for_preflight",
+          "callee": "str",
+          "lineNumber": 47
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/preflight/weather/thresholds.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 85,
+      "nonEmptyLines": 75,
+      "functions": [
+        {
+          "name": "_parse_int_set",
+          "startLine": 31,
+          "endLine": 40,
+          "params": [
+            "raw"
+          ]
+        },
+        {
+          "name": "weather_thresholds_from_config",
+          "startLine": 43,
+          "endLine": 85,
+          "params": [
+            "config"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "WeatherThresholds",
+          "startLine": 10,
+          "endLine": 28,
+          "methods": [],
+          "properties": [
+            "enabled",
+            "fail_policy",
+            "wind_max_mps",
+            "gust_max_mps",
+            "max_precip_mm",
+            "min_visibility_m",
+            "max_cloud_cover_pct",
+            "min_temp_c",
+            "max_temp_c",
+            "blocked_weather_codes",
+            "warn_weather_codes",
+            "kmi_validation_enabled",
+            "kmi_max_obs_age_hours",
+            "kmi_wind_delta_warn_mps",
+            "kmi_wind_delta_block_mps",
+            "open_meteo_base_url",
+            "kmi_wfs_base_url",
+            "cache_ttl_s"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WeatherThresholds",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "_parse_int_set",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "weather_thresholds_from_config",
+          "line": 43,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_parse_int_set",
+          "callee": "set",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_parse_int_set",
+          "callee": "str(raw or \"\").replace(\" \", \"\").split",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_parse_int_set",
+          "callee": "str(raw or \"\").replace",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_parse_int_set",
+          "callee": "str",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_parse_int_set",
+          "callee": "values.add",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_parse_int_set",
+          "callee": "int",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_parse_int_set",
+          "callee": "frozenset",
+          "lineNumber": 40
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "dict",
+          "lineNumber": 44
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "WeatherThresholds",
+          "lineNumber": 50
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "bool",
+          "lineNumber": 51
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 51
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "str(get(\"WEATHER_API_FAIL_POLICY\", settings.weather_api_fail_policy)).lower",
+          "lineNumber": 52
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "str",
+          "lineNumber": 52
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 52
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 53
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 53
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 54
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 55
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 55
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 56
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 56
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 57
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 58
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 60
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 60
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 61
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 61
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "_parse_int_set",
+          "lineNumber": 62
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "str",
+          "lineNumber": 63
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 63
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "_parse_int_set",
+          "lineNumber": 65
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "str",
+          "lineNumber": 66
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 66
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "bool",
+          "lineNumber": 68
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 69
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 71
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 72
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 74
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 75
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 77
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 78
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "str",
+          "lineNumber": 80
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 81
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "str",
+          "lineNumber": 83
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 83
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "float",
+          "lineNumber": 84
+        },
+        {
+          "caller": "weather_thresholds_from_config",
+          "callee": "get",
+          "lineNumber": 84
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/__init__.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 17,
+      "nonEmptyLines": 13,
+      "classes": [
+        {
+          "name": "WarehouseMappingRepository",
+          "startLine": 11,
+          "endLine": 14,
+          "methods": [],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "WarehouseMappingRepository",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/contracts.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 16,
+      "nonEmptyLines": 11,
+      "classes": [
+        {
+          "name": "WarehouseRepositoryError",
+          "startLine": 7,
+          "endLine": 8,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "WarehouseModelVersionEntry",
+          "startLine": 12,
+          "endLine": 16,
+          "methods": [],
+          "properties": [
+            "id",
+            "version",
+            "status",
+            "created_at"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WarehouseRepositoryError",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "WarehouseModelVersionEntry",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/docks.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 173,
+      "nonEmptyLines": 155,
+      "functions": [
+        {
+          "name": "_clean_name",
+          "startLine": 35,
+          "endLine": 39,
+          "params": [
+            "value",
+            "field_name"
+          ]
+        },
+        {
+          "name": "_clean_optional_str",
+          "startLine": 42,
+          "endLine": 43,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "_normalize_dock_update_values",
+          "startLine": 46,
+          "endLine": 68,
+          "params": [
+            "values"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "WarehouseDockMixin",
+          "startLine": 71,
+          "endLine": 173,
+          "methods": [
+            "list_dock_stations",
+            "create_dock_station",
+            "deactivate_dock_station",
+            "update_dock_station"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_clean_name",
+          "line": 35,
+          "isDefault": false
+        },
+        {
+          "name": "_clean_optional_str",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "_normalize_dock_update_values",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "WarehouseDockMixin",
+          "line": 71,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_clean_name",
+          "callee": "str(value or \"\").strip",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_clean_name",
+          "callee": "str",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_clean_name",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_clean_optional_str",
+          "callee": "str(value).strip",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_clean_optional_str",
+          "callee": "str",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_clean_optional_str",
+          "callee": "str(value).strip",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_clean_optional_str",
+          "callee": "str",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "isinstance",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "sorted",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "set",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "\", \".join",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "values.items",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "_clean_name",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "str",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "_clean_optional_str",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "require_json_object",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_normalize_dock_update_values",
+          "callee": "bool",
+          "lineNumber": 65
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "db.execute",
+          "lineNumber": 78
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "select(WarehouseDockStation)\n            .where(\n                WarehouseDockStation.warehouse_map_id == int(warehouse_map_id),\n                WarehouseDockStation.active.is_(True),\n            )\n            .order_by",
+          "lineNumber": 79
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "select(WarehouseDockStation)\n            .where",
+          "lineNumber": 79
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "select",
+          "lineNumber": 79
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "int",
+          "lineNumber": 81
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "WarehouseDockStation.active.is_",
+          "lineNumber": 82
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "WarehouseDockStation.id.asc",
+          "lineNumber": 84
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "list",
+          "lineNumber": 86
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "rows.scalars().all",
+          "lineNumber": 86
+        },
+        {
+          "caller": "list_dock_stations",
+          "callee": "rows.scalars",
+          "lineNumber": 86
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "WarehouseDockStation",
+          "lineNumber": 101
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "int",
+          "lineNumber": 102
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "_clean_name",
+          "lineNumber": 103
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "_clean_optional_str",
+          "lineNumber": 104
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "_clean_optional_str",
+          "lineNumber": 105
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "require_json_object",
+          "lineNumber": 106
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "require_json_object",
+          "lineNumber": 107
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "require_json_object",
+          "lineNumber": 110
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "require_json_object",
+          "lineNumber": 113
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "db.add",
+          "lineNumber": 116
+        },
+        {
+          "caller": "create_dock_station",
+          "callee": "db.flush",
+          "lineNumber": 117
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "db.execute",
+          "lineNumber": 127
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "select(WarehouseDockStation).where",
+          "lineNumber": 128
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "select",
+          "lineNumber": 128
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "int",
+          "lineNumber": 129
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "int",
+          "lineNumber": 130
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "WarehouseDockStation.active.is_",
+          "lineNumber": 131
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "row.scalar_one_or_none",
+          "lineNumber": 134
+        },
+        {
+          "caller": "deactivate_dock_station",
+          "callee": "db.flush",
+          "lineNumber": 138
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "_normalize_dock_update_values",
+          "lineNumber": 149
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "db.execute",
+          "lineNumber": 151
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "select(WarehouseDockStation).where",
+          "lineNumber": 152
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "select",
+          "lineNumber": 152
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "int",
+          "lineNumber": 153
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "int",
+          "lineNumber": 154
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "WarehouseDockStation.active.is_",
+          "lineNumber": 155
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "row.scalar_one_or_none",
+          "lineNumber": 158
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "db.execute",
+          "lineNumber": 160
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "select(WarehouseDockStation).where",
+          "lineNumber": 161
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "select",
+          "lineNumber": 161
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "int",
+          "lineNumber": 162
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "int",
+          "lineNumber": 163
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "WarehouseDockStation.active.is_",
+          "lineNumber": 164
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "row.scalar_one_or_none",
+          "lineNumber": 167
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "normalized.items",
+          "lineNumber": 170
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "setattr",
+          "lineNumber": 171
+        },
+        {
+          "caller": "update_dock_station",
+          "callee": "db.flush",
+          "lineNumber": 172
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 4,
+        "functionCount": 3,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/jobs.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 348,
+      "nonEmptyLines": 322,
+      "functions": [
+        {
+          "name": "_clean_processor",
+          "startLine": 42,
+          "endLine": 46,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "_chunks",
+          "startLine": 49,
+          "endLine": 51,
+          "params": [
+            "values",
+            "size"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "WarehouseJobMixin",
+          "startLine": 54,
+          "endLine": 348,
+          "methods": [
+            "next_model_version",
+            "create_mapping_job",
+            "set_job_task_id",
+            "get_job_with_model",
+            "update_job_progress",
+            "add_assets",
+            "mark_job_ready",
+            "mark_job_failed",
+            "list_scanned_maps",
+            "delete_scanned_map_by_job_id",
+            "list_assets_for_models",
+            "list_versions"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_clean_processor",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "_chunks",
+          "line": 49,
+          "isDefault": false
+        },
+        {
+          "name": "WarehouseJobMixin",
+          "line": 54,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_clean_processor",
+          "callee": "(value or \"warehouse_scan\").strip",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_clean_processor",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_chunks",
+          "callee": "range",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_chunks",
+          "callee": "len",
+          "lineNumber": 50
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "(\n            await db.execute(\n                select(func.max(WarehouseModel.version)).where(\n                    WarehouseModel.warehouse_map_id == int(warehouse_map_id)\n                )\n            )\n        ).scalar_one",
+          "lineNumber": 56
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "db.execute",
+          "lineNumber": 57
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "select(func.max(WarehouseModel.version)).where",
+          "lineNumber": 58
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "select",
+          "lineNumber": 58
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "func.max",
+          "lineNumber": 58
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "int",
+          "lineNumber": 59
+        },
+        {
+          "caller": "next_model_version",
+          "callee": "int",
+          "lineNumber": 63
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "_clean_processor",
+          "lineNumber": 75
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "require_json_object",
+          "lineNumber": 76
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "db.scalar",
+          "lineNumber": 81
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "select(WarehouseMap.id)\n            .where(WarehouseMap.id == int(warehouse_map_id))\n            .with_for_update",
+          "lineNumber": 82
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "select(WarehouseMap.id)\n            .where",
+          "lineNumber": 82
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "select",
+          "lineNumber": 82
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "int",
+          "lineNumber": 83
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 87
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "self.next_model_version",
+          "lineNumber": 89
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "int",
+          "lineNumber": 89
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "WarehouseModel",
+          "lineNumber": 90
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "int",
+          "lineNumber": 91
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "db.add",
+          "lineNumber": 95
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "db.flush",
+          "lineNumber": 96
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "int",
+          "lineNumber": 99
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "WarehouseMappingJob",
+          "lineNumber": 106
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "int",
+          "lineNumber": 107
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "datetime.now",
+          "lineNumber": 113
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "db.add",
+          "lineNumber": 115
+        },
+        {
+          "caller": "create_mapping_job",
+          "callee": "db.flush",
+          "lineNumber": 116
+        },
+        {
+          "caller": "set_job_task_id",
+          "callee": "str(task_id or \"\").strip",
+          "lineNumber": 126
+        },
+        {
+          "caller": "set_job_task_id",
+          "callee": "str",
+          "lineNumber": 126
+        },
+        {
+          "caller": "set_job_task_id",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 128
+        },
+        {
+          "caller": "set_job_task_id",
+          "callee": "max",
+          "lineNumber": 131
+        },
+        {
+          "caller": "set_job_task_id",
+          "callee": "int",
+          "lineNumber": 131
+        },
+        {
+          "caller": "set_job_task_id",
+          "callee": "db.flush",
+          "lineNumber": 132
+        },
+        {
+          "caller": "get_job_with_model",
+          "callee": "(\n            await db.execute(\n                select(WarehouseMappingJob, WarehouseModel)\n                .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n                .where(WarehouseMappingJob.id == int(job_id))\n            )\n        ).first",
+          "lineNumber": 140
+        },
+        {
+          "caller": "get_job_with_model",
+          "callee": "db.execute",
+          "lineNumber": 141
+        },
+        {
+          "caller": "get_job_with_model",
+          "callee": "select(WarehouseMappingJob, WarehouseModel)\n                .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n                .where",
+          "lineNumber": 142
+        },
+        {
+          "caller": "get_job_with_model",
+          "callee": "select(WarehouseMappingJob, WarehouseModel)\n                .join",
+          "lineNumber": 142
+        },
+        {
+          "caller": "get_job_with_model",
+          "callee": "select",
+          "lineNumber": 142
+        },
+        {
+          "caller": "get_job_with_model",
+          "callee": "int",
+          "lineNumber": 144
+        },
+        {
+          "caller": "update_job_progress",
+          "callee": "str(status or \"processing\").strip",
+          "lineNumber": 157
+        },
+        {
+          "caller": "update_job_progress",
+          "callee": "str",
+          "lineNumber": 157
+        },
+        {
+          "caller": "update_job_progress",
+          "callee": "max",
+          "lineNumber": 158
+        },
+        {
+          "caller": "update_job_progress",
+          "callee": "min",
+          "lineNumber": 158
+        },
+        {
+          "caller": "update_job_progress",
+          "callee": "int",
+          "lineNumber": 158
+        },
+        {
+          "caller": "update_job_progress",
+          "callee": "db.flush",
+          "lineNumber": 159
+        },
+        {
+          "caller": "add_assets",
+          "callee": "require_json_object",
+          "lineNumber": 175
+        },
+        {
+          "caller": "add_assets",
+          "callee": "uploaded.items",
+          "lineNumber": 177
+        },
+        {
+          "caller": "add_assets",
+          "callee": "str",
+          "lineNumber": 178
+        },
+        {
+          "caller": "add_assets",
+          "callee": "str(url or \"\").strip",
+          "lineNumber": 179
+        },
+        {
+          "caller": "add_assets",
+          "callee": "str",
+          "lineNumber": 179
+        },
+        {
+          "caller": "add_assets",
+          "callee": "require_json_object",
+          "lineNumber": 182
+        },
+        {
+          "caller": "add_assets",
+          "callee": "artifact_meta.get",
+          "lineNumber": 183
+        },
+        {
+          "caller": "add_assets",
+          "callee": "assets.append",
+          "lineNumber": 186
+        },
+        {
+          "caller": "add_assets",
+          "callee": "WarehouseAsset",
+          "lineNumber": 187
+        },
+        {
+          "caller": "add_assets",
+          "callee": "int",
+          "lineNumber": 188
+        },
+        {
+          "caller": "add_assets",
+          "callee": "str",
+          "lineNumber": 189
+        },
+        {
+          "caller": "add_assets",
+          "callee": "metadata.get",
+          "lineNumber": 189
+        },
+        {
+          "caller": "add_assets",
+          "callee": "_ASSET_TYPE_MAP.get",
+          "lineNumber": 190
+        },
+        {
+          "caller": "add_assets",
+          "callee": "artifact_key.upper",
+          "lineNumber": 190
+        },
+        {
+          "caller": "add_assets",
+          "callee": "metadata.get",
+          "lineNumber": 192
+        },
+        {
+          "caller": "add_assets",
+          "callee": "metadata.get",
+          "lineNumber": 194
+        },
+        {
+          "caller": "add_assets",
+          "callee": "metadata.get",
+          "lineNumber": 194
+        },
+        {
+          "caller": "add_assets",
+          "callee": "int",
+          "lineNumber": 197
+        },
+        {
+          "caller": "add_assets",
+          "callee": "db.add_all",
+          "lineNumber": 207
+        },
+        {
+          "caller": "add_assets",
+          "callee": "db.flush",
+          "lineNumber": 208
+        },
+        {
+          "caller": "mark_job_ready",
+          "callee": "datetime.now",
+          "lineNumber": 213
+        },
+        {
+          "caller": "mark_job_ready",
+          "callee": "db.flush",
+          "lineNumber": 219
+        },
+        {
+          "caller": "mark_job_failed",
+          "callee": "datetime.now",
+          "lineNumber": 229
+        },
+        {
+          "caller": "mark_job_failed",
+          "callee": "str",
+          "lineNumber": 232
+        },
+        {
+          "caller": "mark_job_failed",
+          "callee": "db.flush",
+          "lineNumber": 235
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "or_",
+          "lineNumber": 248
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "int",
+          "lineNumber": 248
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "int",
+          "lineNumber": 248
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "int",
+          "lineNumber": 250
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n            .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n            .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n            .where(\n                scope,\n                WarehouseMappingJob.processor.in_(WAREHOUSE_SCANNED_MAP_PROCESSORS),\n                WarehouseMappingJob.status.in_([\"queued\", \"processing\", \"ready\", \"failed\"]),\n                WarehouseModel.status.in_([\"processing\", \"ready\", \"failed\"]),\n            )\n            .order_by(WarehouseMappingJob.id.desc())\n            .limit",
+          "lineNumber": 253
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n            .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n            .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n            .where(\n                scope,\n                WarehouseMappingJob.processor.in_(WAREHOUSE_SCANNED_MAP_PROCESSORS),\n                WarehouseMappingJob.status.in_([\"queued\", \"processing\", \"ready\", \"failed\"]),\n                WarehouseModel.status.in_([\"processing\", \"ready\", \"failed\"]),\n            )\n            .order_by",
+          "lineNumber": 253
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n            .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n            .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n            .where",
+          "lineNumber": 253
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n            .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n            .join",
+          "lineNumber": 253
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n            .join",
+          "lineNumber": 253
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "select",
+          "lineNumber": 253
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "WarehouseMappingJob.processor.in_",
+          "lineNumber": 258
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "WarehouseMappingJob.status.in_",
+          "lineNumber": 259
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "WarehouseModel.status.in_",
+          "lineNumber": 260
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "WarehouseMappingJob.id.desc",
+          "lineNumber": 262
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "clamp_list_limit",
+          "lineNumber": 263
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "stmt.where",
+          "lineNumber": 266
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "int",
+          "lineNumber": 266
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "list",
+          "lineNumber": 267
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "(await db.execute(stmt)).all",
+          "lineNumber": 267
+        },
+        {
+          "caller": "list_scanned_maps",
+          "callee": "db.execute",
+          "lineNumber": 267
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "or_",
+          "lineNumber": 279
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "int",
+          "lineNumber": 279
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "int",
+          "lineNumber": 279
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "int",
+          "lineNumber": 281
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "(\n            await db.execute(\n                select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n                .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n                .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n                .where(\n                    WarehouseMappingJob.id == int(job_id),\n                    scope,\n                    WarehouseMappingJob.processor.in_(WAREHOUSE_SCANNED_MAP_PROCESSORS),\n                )\n            )\n        ).first",
+          "lineNumber": 283
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "db.execute",
+          "lineNumber": 284
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n                .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n                .join(WarehouseModel, WarehouseMappingJob.model_id == WarehouseModel.id)\n                .where",
+          "lineNumber": 285
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n                .join(WarehouseMap, WarehouseMappingJob.warehouse_map_id == WarehouseMap.id)\n                .join",
+          "lineNumber": 285
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "select(WarehouseMappingJob, WarehouseMap, WarehouseModel)\n                .join",
+          "lineNumber": 285
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "select",
+          "lineNumber": 285
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "int",
+          "lineNumber": 289
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "WarehouseMappingJob.processor.in_",
+          "lineNumber": 291
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "db.delete",
+          "lineNumber": 298
+        },
+        {
+          "caller": "delete_scanned_map_by_job_id",
+          "callee": "db.flush",
+          "lineNumber": 299
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "sorted",
+          "lineNumber": 308
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "int",
+          "lineNumber": 308
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "_chunks",
+          "lineNumber": 313
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "db.execute",
+          "lineNumber": 314
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "select(WarehouseAsset)\n                .where(WarehouseAsset.model_id.in_(batch))\n                .order_by",
+          "lineNumber": 315
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "select(WarehouseAsset)\n                .where",
+          "lineNumber": 315
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "select",
+          "lineNumber": 315
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "WarehouseAsset.model_id.in_",
+          "lineNumber": 316
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "WarehouseAsset.model_id.asc",
+          "lineNumber": 317
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "WarehouseAsset.id.asc",
+          "lineNumber": 317
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "assets.extend",
+          "lineNumber": 319
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "rows.scalars().all",
+          "lineNumber": 319
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "rows.scalars",
+          "lineNumber": 319
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "assets.sort",
+          "lineNumber": 320
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "int",
+          "lineNumber": 320
+        },
+        {
+          "caller": "list_assets_for_models",
+          "callee": "int",
+          "lineNumber": 320
+        },
+        {
+          "caller": "list_versions",
+          "callee": "(\n                await db.execute(\n                    select(WarehouseModel)\n                    .where(WarehouseModel.warehouse_map_id == int(warehouse_map_id))\n                    .order_by(WarehouseModel.version.desc())\n                )\n            )\n            .scalars()\n            .all",
+          "lineNumber": 330
+        },
+        {
+          "caller": "list_versions",
+          "callee": "(\n                await db.execute(\n                    select(WarehouseModel)\n                    .where(WarehouseModel.warehouse_map_id == int(warehouse_map_id))\n                    .order_by(WarehouseModel.version.desc())\n                )\n            )\n            .scalars",
+          "lineNumber": 330
+        },
+        {
+          "caller": "list_versions",
+          "callee": "db.execute",
+          "lineNumber": 331
+        },
+        {
+          "caller": "list_versions",
+          "callee": "select(WarehouseModel)\n                    .where(WarehouseModel.warehouse_map_id == int(warehouse_map_id))\n                    .order_by",
+          "lineNumber": 332
+        },
+        {
+          "caller": "list_versions",
+          "callee": "select(WarehouseModel)\n                    .where",
+          "lineNumber": 332
+        },
+        {
+          "caller": "list_versions",
+          "callee": "select",
+          "lineNumber": 332
+        },
+        {
+          "caller": "list_versions",
+          "callee": "int",
+          "lineNumber": 333
+        },
+        {
+          "caller": "list_versions",
+          "callee": "WarehouseModel.version.desc",
+          "lineNumber": 334
+        },
+        {
+          "caller": "list_versions",
+          "callee": "WarehouseModelVersionEntry",
+          "lineNumber": 341
+        },
+        {
+          "caller": "list_versions",
+          "callee": "int",
+          "lineNumber": 342
+        },
+        {
+          "caller": "list_versions",
+          "callee": "int",
+          "lineNumber": 343
+        },
+        {
+          "caller": "list_versions",
+          "callee": "str",
+          "lineNumber": 344
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/maps.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 230,
+      "nonEmptyLines": 208,
+      "functions": [
+        {
+          "name": "_normalize_polygon_local",
+          "startLine": 15,
+          "endLine": 41,
+          "params": [
+            "polygon_local_m"
+          ]
+        },
+        {
+          "name": "_polygon_area_m2",
+          "startLine": 44,
+          "endLine": 50,
+          "params": [
+            "polygon_local_m"
+          ]
+        },
+        {
+          "name": "_scope_for_owner",
+          "startLine": 53,
+          "endLine": 63,
+          "params": [
+            "owner_id",
+            "org_id",
+            "allow_org_access"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "WarehouseMapMixin",
+          "startLine": 66,
+          "endLine": 230,
+          "methods": [
+            "get_owned_warehouse_map",
+            "list_warehouse_maps",
+            "delete_warehouse_map",
+            "create_warehouse_map",
+            "get_or_create_warehouse_map",
+            "auto_warehouse_name",
+            "polygon_from_local"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_normalize_polygon_local",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "_polygon_area_m2",
+          "line": 44,
+          "isDefault": false
+        },
+        {
+          "name": "_scope_for_owner",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "WarehouseMapMixin",
+          "line": 66,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "isinstance",
+          "lineNumber": 18
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "len",
+          "lineNumber": 18
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 19
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "enumerate",
+          "lineNumber": 22
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "len",
+          "lineNumber": 24
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "float",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "float",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "math.isfinite",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "math.isfinite",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "normalized.append",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "set",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "len",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_normalize_polygon_local",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_polygon_area_m2",
+          "callee": "_Polygon",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_polygon_area_m2",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_polygon_area_m2",
+          "callee": "float",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_scope_for_owner",
+          "callee": "or_",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_scope_for_owner",
+          "callee": "int",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_scope_for_owner",
+          "callee": "int",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_scope_for_owner",
+          "callee": "int",
+          "lineNumber": 62
+        },
+        {
+          "caller": "get_owned_warehouse_map",
+          "callee": "_scope_for_owner",
+          "lineNumber": 76
+        },
+        {
+          "caller": "get_owned_warehouse_map",
+          "callee": "(\n            await db.execute(\n                select(WarehouseMap).where(WarehouseMap.id == int(warehouse_map_id), scope)\n            )\n        ).scalar_one_or_none",
+          "lineNumber": 81
+        },
+        {
+          "caller": "get_owned_warehouse_map",
+          "callee": "db.execute",
+          "lineNumber": 82
+        },
+        {
+          "caller": "get_owned_warehouse_map",
+          "callee": "select(WarehouseMap).where",
+          "lineNumber": 83
+        },
+        {
+          "caller": "get_owned_warehouse_map",
+          "callee": "select",
+          "lineNumber": 83
+        },
+        {
+          "caller": "get_owned_warehouse_map",
+          "callee": "int",
+          "lineNumber": 83
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "_scope_for_owner",
+          "lineNumber": 96
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "list",
+          "lineNumber": 101
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "(\n                await db.execute(\n                    select(WarehouseMap)\n                    .where(scope)\n                    .order_by(WarehouseMap.id.desc())\n                    .limit(clamp_list_limit(limit, default=100))\n                )\n            )\n            .scalars()\n            .all",
+          "lineNumber": 102
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "(\n                await db.execute(\n                    select(WarehouseMap)\n                    .where(scope)\n                    .order_by(WarehouseMap.id.desc())\n                    .limit(clamp_list_limit(limit, default=100))\n                )\n            )\n            .scalars",
+          "lineNumber": 102
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "db.execute",
+          "lineNumber": 103
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "select(WarehouseMap)\n                    .where(scope)\n                    .order_by(WarehouseMap.id.desc())\n                    .limit",
+          "lineNumber": 104
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "select(WarehouseMap)\n                    .where(scope)\n                    .order_by",
+          "lineNumber": 104
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "select(WarehouseMap)\n                    .where",
+          "lineNumber": 104
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "select",
+          "lineNumber": 104
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "WarehouseMap.id.desc",
+          "lineNumber": 106
+        },
+        {
+          "caller": "list_warehouse_maps",
+          "callee": "clamp_list_limit",
+          "lineNumber": 107
+        },
+        {
+          "caller": "delete_warehouse_map",
+          "callee": "self.get_owned_warehouse_map",
+          "lineNumber": 124
+        },
+        {
+          "caller": "delete_warehouse_map",
+          "callee": "int",
+          "lineNumber": 126
+        },
+        {
+          "caller": "delete_warehouse_map",
+          "callee": "int",
+          "lineNumber": 127
+        },
+        {
+          "caller": "delete_warehouse_map",
+          "callee": "db.delete",
+          "lineNumber": 133
+        },
+        {
+          "caller": "delete_warehouse_map",
+          "callee": "db.flush",
+          "lineNumber": 134
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "_normalize_polygon_local",
+          "lineNumber": 149
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "_polygon_area_m2",
+          "lineNumber": 150
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "str(warehouse_name or \"\").strip",
+          "lineNumber": 151
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "str",
+          "lineNumber": 151
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 153
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "dict",
+          "lineNumber": 155
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "float",
+          "lineNumber": 156
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "float",
+          "lineNumber": 156
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "WarehouseMap",
+          "lineNumber": 158
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "int",
+          "lineNumber": 159
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "db.add",
+          "lineNumber": 168
+        },
+        {
+          "caller": "create_warehouse_map",
+          "callee": "db.flush",
+          "lineNumber": 169
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "self.get_owned_warehouse_map",
+          "lineNumber": 186
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "int",
+          "lineNumber": 188
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "int",
+          "lineNumber": 189
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 194
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "(warehouse_name or \"\").strip",
+          "lineNumber": 196
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "self.auto_warehouse_name",
+          "lineNumber": 196
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "self.create_warehouse_map",
+          "lineNumber": 197
+        },
+        {
+          "caller": "get_or_create_warehouse_map",
+          "callee": "int",
+          "lineNumber": 199
+        },
+        {
+          "caller": "auto_warehouse_name",
+          "callee": "datetime.now(UTC).strftime",
+          "lineNumber": 209
+        },
+        {
+          "caller": "auto_warehouse_name",
+          "callee": "datetime.now",
+          "lineNumber": 209
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "isinstance",
+          "lineNumber": 215
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "meta.get",
+          "lineNumber": 216
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "isinstance",
+          "lineNumber": 217
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "len",
+          "lineNumber": 222
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "float",
+          "lineNumber": 224
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "float",
+          "lineNumber": 225
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "math.isfinite",
+          "lineNumber": 228
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "math.isfinite",
+          "lineNumber": 228
+        },
+        {
+          "caller": "polygon_from_local",
+          "callee": "points.append",
+          "lineNumber": 229
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 4,
+        "functionCount": 3,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/query_values.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 28,
+      "nonEmptyLines": 21,
+      "functions": [
+        {
+          "name": "clamp_list_limit",
+          "startLine": 10,
+          "endLine": 20,
+          "params": [
+            "limit",
+            "default",
+            "max_limit"
+          ]
+        },
+        {
+          "name": "require_json_object",
+          "startLine": 23,
+          "endLine": 28,
+          "params": [
+            "value",
+            "field_name"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "clamp_list_limit",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "require_json_object",
+          "line": 23,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "clamp_list_limit",
+          "callee": "int",
+          "lineNumber": 17
+        },
+        {
+          "caller": "clamp_list_limit",
+          "callee": "max",
+          "lineNumber": 20
+        },
+        {
+          "caller": "clamp_list_limit",
+          "callee": "min",
+          "lineNumber": 20
+        },
+        {
+          "caller": "require_json_object",
+          "callee": "isinstance",
+          "lineNumber": 26
+        },
+        {
+          "caller": "require_json_object",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 27
+        },
+        {
+          "caller": "require_json_object",
+          "callee": "dict",
+          "lineNumber": 28
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/repository/sensor_rigs.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 306,
+      "nonEmptyLines": 286,
+      "functions": [
+        {
+          "name": "_required_str",
+          "startLine": 17,
+          "endLine": 21,
+          "params": [
+            "value",
+            "field_name"
+          ]
+        },
+        {
+          "name": "_optional_str",
+          "startLine": 24,
+          "endLine": 25,
+          "params": [
+            "value"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "WarehouseSensorRigMixin",
+          "startLine": 28,
+          "endLine": 306,
+          "methods": [
+            "_resolve_calibration_urls",
+            "_apply_sensor_rig_fields",
+            "_find_inactive_sensor_rig_by_name",
+            "_sensor_scope",
+            "list_sensor_rigs",
+            "get_owned_sensor_rig",
+            "create_sensor_rig",
+            "update_sensor_rig_calibration",
+            "delete_sensor_rig"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_required_str",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "_optional_str",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "WarehouseSensorRigMixin",
+          "line": 28,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_required_str",
+          "callee": "str(value or \"\").strip",
+          "lineNumber": 18
+        },
+        {
+          "caller": "_required_str",
+          "callee": "str",
+          "lineNumber": 18
+        },
+        {
+          "caller": "_required_str",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 20
+        },
+        {
+          "caller": "_optional_str",
+          "callee": "str(value).strip",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_optional_str",
+          "callee": "str",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_optional_str",
+          "callee": "str(value).strip",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_optional_str",
+          "callee": "str",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_resolve_calibration_urls",
+          "callee": "_optional_str",
+          "lineNumber": 34
+        },
+        {
+          "caller": "_resolve_calibration_urls",
+          "callee": "_optional_str",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_resolve_calibration_urls",
+          "callee": "bool",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "WarehouseSensorRigMixin._resolve_calibration_urls",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "float",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "isinstance",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "normalize_sensor_extrinsics",
+          "lineNumber": 64
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "str",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "bool",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "int",
+          "lineNumber": 71
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "_required_str",
+          "lineNumber": 73
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "_required_str",
+          "lineNumber": 74
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "float",
+          "lineNumber": 75
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "dict",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "_optional_str",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "_optional_str",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "sensor_calibration_checksum",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_apply_sensor_rig_fields",
+          "callee": "bool",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "_required_str",
+          "lineNumber": 100
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "int",
+          "lineNumber": 102
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "int",
+          "lineNumber": 104
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "(\n            await db.execute(\n                select(WarehouseSensorRig)\n                .where(\n                    scope,\n                    WarehouseSensorRig.name == stripped_name,\n                    WarehouseSensorRig.active.is_(False),\n                )\n                .order_by(WarehouseSensorRig.id.desc())\n                .limit(1)\n            )\n        ).scalar_one_or_none",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "db.execute",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "select(WarehouseSensorRig)\n                .where(\n                    scope,\n                    WarehouseSensorRig.name == stripped_name,\n                    WarehouseSensorRig.active.is_(False),\n                )\n                .order_by(WarehouseSensorRig.id.desc())\n                .limit",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "select(WarehouseSensorRig)\n                .where(\n                    scope,\n                    WarehouseSensorRig.name == stripped_name,\n                    WarehouseSensorRig.active.is_(False),\n                )\n                .order_by",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "select(WarehouseSensorRig)\n                .where",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "select",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "WarehouseSensorRig.active.is_",
+          "lineNumber": 111
+        },
+        {
+          "caller": "_find_inactive_sensor_rig_by_name",
+          "callee": "WarehouseSensorRig.id.desc",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_sensor_scope",
+          "callee": "or_",
+          "lineNumber": 126
+        },
+        {
+          "caller": "_sensor_scope",
+          "callee": "int",
+          "lineNumber": 127
+        },
+        {
+          "caller": "_sensor_scope",
+          "callee": "int",
+          "lineNumber": 128
+        },
+        {
+          "caller": "_sensor_scope",
+          "callee": "int",
+          "lineNumber": 131
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "self._sensor_scope",
+          "lineNumber": 143
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "(\n                await db.execute(\n                    select(WarehouseSensorRig)\n                    .where(scope, WarehouseSensorRig.active.is_(True))\n                    .order_by(WarehouseSensorRig.id.desc())\n                    .limit(clamp_list_limit(limit, default=100))\n                )\n            )\n            .scalars()\n            .all",
+          "lineNumber": 149
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "(\n                await db.execute(\n                    select(WarehouseSensorRig)\n                    .where(scope, WarehouseSensorRig.active.is_(True))\n                    .order_by(WarehouseSensorRig.id.desc())\n                    .limit(clamp_list_limit(limit, default=100))\n                )\n            )\n            .scalars",
+          "lineNumber": 149
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "db.execute",
+          "lineNumber": 150
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "select(WarehouseSensorRig)\n                    .where(scope, WarehouseSensorRig.active.is_(True))\n                    .order_by(WarehouseSensorRig.id.desc())\n                    .limit",
+          "lineNumber": 151
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "select(WarehouseSensorRig)\n                    .where(scope, WarehouseSensorRig.active.is_(True))\n                    .order_by",
+          "lineNumber": 151
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "select(WarehouseSensorRig)\n                    .where",
+          "lineNumber": 151
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "select",
+          "lineNumber": 151
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "WarehouseSensorRig.active.is_",
+          "lineNumber": 152
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "WarehouseSensorRig.id.desc",
+          "lineNumber": 153
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "clamp_list_limit",
+          "lineNumber": 154
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "cast",
+          "lineNumber": 160
+        },
+        {
+          "caller": "list_sensor_rigs",
+          "callee": "list",
+          "lineNumber": 160
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "self._sensor_scope",
+          "lineNumber": 171
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "(\n            await db.execute(\n                select(WarehouseSensorRig).where(\n                    WarehouseSensorRig.id == int(sensor_rig_id),\n                    WarehouseSensorRig.active.is_(True),\n                    scope,\n                )\n            )\n        ).scalar_one_or_none",
+          "lineNumber": 176
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "db.execute",
+          "lineNumber": 177
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "select(WarehouseSensorRig).where",
+          "lineNumber": 178
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "select",
+          "lineNumber": 178
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "int",
+          "lineNumber": 179
+        },
+        {
+          "caller": "get_owned_sensor_rig",
+          "callee": "WarehouseSensorRig.active.is_",
+          "lineNumber": 180
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "_required_str",
+          "lineNumber": 202
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "self._find_inactive_sensor_rig_by_name",
+          "lineNumber": 203
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "int",
+          "lineNumber": 206
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "self._apply_sensor_rig_fields",
+          "lineNumber": 210
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "int",
+          "lineNumber": 212
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "db.flush",
+          "lineNumber": 225
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "db.refresh",
+          "lineNumber": 226
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "WarehouseSensorRig",
+          "lineNumber": 229
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "self._apply_sensor_rig_fields",
+          "lineNumber": 230
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "int",
+          "lineNumber": 232
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "db.add",
+          "lineNumber": 245
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "db.flush",
+          "lineNumber": 246
+        },
+        {
+          "caller": "create_sensor_rig",
+          "callee": "db.refresh",
+          "lineNumber": 247
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "_required_str",
+          "lineNumber": 263
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "_optional_str",
+          "lineNumber": 266
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "_optional_str",
+          "lineNumber": 268
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "normalize_sensor_extrinsics",
+          "lineNumber": 271
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 273
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "str",
+          "lineNumber": 273
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "isinstance",
+          "lineNumber": 275
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 276
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "dict",
+          "lineNumber": 277
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "isinstance",
+          "lineNumber": 278
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 279
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "dict",
+          "lineNumber": 280
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "sensor_calibration_checksum",
+          "lineNumber": 283
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "_optional_str",
+          "lineNumber": 285
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "WarehouseRepositoryError",
+          "lineNumber": 287
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "db.flush",
+          "lineNumber": 293
+        },
+        {
+          "caller": "update_sensor_rig_calibration",
+          "callee": "db.refresh",
+          "lineNumber": 294
+        },
+        {
+          "caller": "delete_sensor_rig",
+          "callee": "db.flush",
+          "lineNumber": 306
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/warehouse/service/sensor_calibration.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 60,
+      "nonEmptyLines": 53,
+      "functions": [
+        {
+          "name": "normalize_sensor_extrinsics",
+          "startLine": 13,
+          "endLine": 54,
+          "params": [
+            "payload"
+          ]
+        },
+        {
+          "name": "sensor_calibration_checksum",
+          "startLine": 57,
+          "endLine": 60,
+          "params": [
+            "payload"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "normalize_sensor_extrinsics",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "sensor_calibration_checksum",
+          "line": 57,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "payload.get",
+          "lineNumber": 14
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "isinstance",
+          "lineNumber": 14
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "isinstance",
+          "lineNumber": 15
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "len",
+          "lineNumber": 15
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "len",
+          "lineNumber": 15
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 16
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "set",
+          "lineNumber": 18
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "set",
+          "lineNumber": 19
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "isinstance",
+          "lineNumber": 21
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 22
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "str(item.get(\"parent_frame\") or \"\").strip",
+          "lineNumber": 23
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "str",
+          "lineNumber": 23
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "item.get",
+          "lineNumber": 23
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "str(item.get(\"child_frame\") or \"\").strip",
+          "lineNumber": 24
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "str",
+          "lineNumber": 24
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "item.get",
+          "lineNumber": 24
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 27
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "float",
+          "lineNumber": 29
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "float",
+          "lineNumber": 30
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 32
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "translation.values",
+          "lineNumber": 35
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "rotation.values",
+          "lineNumber": 35
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "all",
+          "lineNumber": 36
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "math.isfinite",
+          "lineNumber": 36
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 37
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "math.sqrt",
+          "lineNumber": 38
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "sum",
+          "lineNumber": 38
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "rotation.values",
+          "lineNumber": 38
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "abs",
+          "lineNumber": 39
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 40
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "edges.add",
+          "lineNumber": 41
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "children.add",
+          "lineNumber": 42
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "normalized.append",
+          "lineNumber": 43
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "ValueError",
+          "lineNumber": 52
+        },
+        {
+          "caller": "normalize_sensor_extrinsics",
+          "callee": "normalized.sort",
+          "lineNumber": 53
+        },
+        {
+          "caller": "sensor_calibration_checksum",
+          "callee": "normalize_sensor_extrinsics",
+          "lineNumber": 58
+        },
+        {
+          "caller": "sensor_calibration_checksum",
+          "callee": "json.dumps(normalized, sort_keys=True, separators=(\",\", \":\")).encode",
+          "lineNumber": 59
+        },
+        {
+          "caller": "sensor_calibration_checksum",
+          "callee": "json.dumps",
+          "lineNumber": 59
+        },
+        {
+          "caller": "sensor_calibration_checksum",
+          "callee": "hashlib.sha256(encoded).hexdigest",
+          "lineNumber": 60
+        },
+        {
+          "caller": "sensor_calibration_checksum",
+          "callee": "hashlib.sha256",
+          "lineNumber": 60
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_backend_duplicate_refactors.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 165,
+      "nonEmptyLines": 135,
+      "functions": [
+        {
+          "name": "test_extract_lonlat_pairs_flattens_nested_numeric_coordinates",
+          "startLine": 42,
+          "endLine": 48,
+          "params": []
+        },
+        {
+          "name": "test_parse_delimited_tokens_preserves_order_and_removes_duplicates",
+          "startLine": 51,
+          "endLine": 56,
+          "params": []
+        },
+        {
+          "name": "test_call_maybe_async_supports_async_sync_and_awaitable_results",
+          "startLine": 60,
+          "endLine": 75,
+          "params": []
+        },
+        {
+          "name": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "startLine": 78,
+          "endLine": 87,
+          "params": []
+        },
+        {
+          "name": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "startLine": 90,
+          "endLine": 99,
+          "params": []
+        },
+        {
+          "name": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "startLine": 102,
+          "endLine": 108,
+          "params": []
+        },
+        {
+          "name": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "startLine": 111,
+          "endLine": 126,
+          "params": []
+        },
+        {
+          "name": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "startLine": 129,
+          "endLine": 138,
+          "params": []
+        },
+        {
+          "name": "test_safe_token_shared_across_capture_paths",
+          "startLine": 141,
+          "endLine": 143,
+          "params": []
+        },
+        {
+          "name": "test_private_patrol_validation_contract_is_shared",
+          "startLine": 146,
+          "endLine": 165,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_extract_lonlat_pairs_flattens_nested_numeric_coordinates",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "test_parse_delimited_tokens_preserves_order_and_removes_duplicates",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "test_call_maybe_async_supports_async_sync_and_awaitable_results",
+          "line": 59,
+          "isDefault": false
+        },
+        {
+          "name": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "line": 78,
+          "isDefault": false
+        },
+        {
+          "name": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "line": 90,
+          "isDefault": false
+        },
+        {
+          "name": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "line": 102,
+          "isDefault": false
+        },
+        {
+          "name": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "line": 111,
+          "isDefault": false
+        },
+        {
+          "name": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "line": 129,
+          "isDefault": false
+        },
+        {
+          "name": "test_safe_token_shared_across_capture_paths",
+          "line": 141,
+          "isDefault": false
+        },
+        {
+          "name": "test_private_patrol_validation_contract_is_shared",
+          "line": 146,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_extract_lonlat_pairs_flattens_nested_numeric_coordinates",
+          "callee": "extract_lonlat_pairs",
+          "lineNumber": 43
+        },
+        {
+          "caller": "test_extract_lonlat_pairs_flattens_nested_numeric_coordinates",
+          "callee": "extract_lonlat_pairs",
+          "lineNumber": 48
+        },
+        {
+          "caller": "test_parse_delimited_tokens_preserves_order_and_removes_duplicates",
+          "callee": "parse_delimited_tokens",
+          "lineNumber": 52
+        },
+        {
+          "caller": "test_parse_delimited_tokens_preserves_order_and_removes_duplicates",
+          "callee": "parse_delimited_tokens",
+          "lineNumber": 56
+        },
+        {
+          "caller": "awaitable_provider",
+          "callee": "result",
+          "lineNumber": 71
+        },
+        {
+          "caller": "test_call_maybe_async_supports_async_sync_and_awaitable_results",
+          "callee": "call_maybe_async",
+          "lineNumber": 73
+        },
+        {
+          "caller": "test_call_maybe_async_supports_async_sync_and_awaitable_results",
+          "callee": "call_maybe_async",
+          "lineNumber": 74
+        },
+        {
+          "caller": "test_call_maybe_async_supports_async_sync_and_awaitable_results",
+          "callee": "call_maybe_async",
+          "lineNumber": 75
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "WorkerLoopState",
+          "lineNumber": 79
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "WorkerLoopState",
+          "lineNumber": 80
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "first_state.get_loop",
+          "lineNumber": 81
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "first_state.get_loop",
+          "lineNumber": 83
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "second_state.get_loop",
+          "lineNumber": 84
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "first_loop.close",
+          "lineNumber": 86
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "second_state.get_loop().close",
+          "lineNumber": 87
+        },
+        {
+          "caller": "test_worker_loop_state_reuses_only_its_own_open_loop",
+          "callee": "second_state.get_loop",
+          "lineNumber": 87
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "clamp_list_limit",
+          "lineNumber": 91
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "clamp_list_limit",
+          "lineNumber": 92
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "clamp_list_limit",
+          "lineNumber": 93
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "require_json_object",
+          "lineNumber": 94
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "require_json_object",
+          "lineNumber": 96
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "require_json_object",
+          "lineNumber": 97
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "pytest.raises",
+          "lineNumber": 98
+        },
+        {
+          "caller": "test_warehouse_query_values_preserve_defaults_bounds_and_errors",
+          "callee": "require_json_object",
+          "lineNumber": 99
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "preflight_allows_start",
+          "lineNumber": 103
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "preflight_allows_start",
+          "lineNumber": 104
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "preflight_allows_start",
+          "lineNumber": 105
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "MissionCreateIn",
+          "lineNumber": 107
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "mission_fingerprint",
+          "lineNumber": 108
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "mission_fingerprint",
+          "lineNumber": 108
+        },
+        {
+          "caller": "test_mission_preflight_decision_and_fingerprint_are_stable",
+          "callee": "payload.model_copy",
+          "lineNumber": 108
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "close_lonlat_ring",
+          "lineNumber": 113
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "strip_closed_ring",
+          "lineNumber": 114
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "ensure_closed_ring",
+          "lineNumber": 115
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "polygon_centroid_lonlat",
+          "lineNumber": 121
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "pytest.approx",
+          "lineNumber": 121
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "lonlat_to_xy_m",
+          "lineNumber": 123
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "xy_m_to_lonlat",
+          "lineNumber": 124
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "pytest.approx",
+          "lineNumber": 125
+        },
+        {
+          "caller": "test_shared_geometry_helpers_preserve_ring_and_projection_behavior",
+          "callee": "pytest.approx",
+          "lineNumber": 126
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "to_float_or_none",
+          "lineNumber": 130
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "to_float_or_none",
+          "lineNumber": 131
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "to_float_or_none",
+          "lineNumber": 132
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "to_int_or_none",
+          "lineNumber": 133
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "to_int_or_none",
+          "lineNumber": 134
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "setting_float",
+          "lineNumber": 135
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "setting_float",
+          "lineNumber": 136
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "setting_int",
+          "lineNumber": 137
+        },
+        {
+          "caller": "test_weather_and_runtime_value_coercion_helpers_match_local_contracts",
+          "callee": "setting_int",
+          "lineNumber": 138
+        },
+        {
+          "caller": "test_safe_token_shared_across_capture_paths",
+          "callee": "safe_token",
+          "lineNumber": 142
+        },
+        {
+          "caller": "test_safe_token_shared_across_capture_paths",
+          "callee": "safe_token",
+          "lineNumber": 143
+        },
+        {
+          "caller": "test_private_patrol_validation_contract_is_shared",
+          "callee": "PrivatePatrolMissionParams",
+          "lineNumber": 148
+        },
+        {
+          "caller": "test_private_patrol_validation_contract_is_shared",
+          "callee": "MissionCreateIn",
+          "lineNumber": 152
+        },
+        {
+          "caller": "test_private_patrol_validation_contract_is_shared",
+          "callee": "pytest.raises",
+          "lineNumber": 158
+        },
+        {
+          "caller": "test_private_patrol_validation_contract_is_shared",
+          "callee": "validate_private_patrol_task_inputs",
+          "lineNumber": 159
+        },
+        {
+          "caller": "test_private_patrol_validation_contract_is_shared",
+          "callee": "pytest.raises",
+          "lineNumber": 164
+        },
+        {
+          "caller": "test_private_patrol_validation_contract_is_shared",
+          "callee": "PrivatePatrolMissionParams",
+          "lineNumber": 165
+        }
+      ],
+      "metrics": {
+        "importCount": 14,
+        "exportCount": 10,
+        "functionCount": 10,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_preflight_weather.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 254,
+      "nonEmptyLines": 203,
+      "functions": [
+        {
+          "name": "_thresholds",
+          "startLine": 13,
+          "endLine": 34,
+          "params": []
+        },
+        {
+          "name": "_snapshot",
+          "startLine": 37,
+          "endLine": 51,
+          "params": []
+        },
+        {
+          "name": "_check_statuses",
+          "startLine": 54,
+          "endLine": 58,
+          "params": [
+            "results",
+            "name"
+          ]
+        },
+        {
+          "name": "test_safe_weather_passes",
+          "startLine": 61,
+          "endLine": 64,
+          "params": []
+        },
+        {
+          "name": "test_unsafe_wind_blocks",
+          "startLine": 67,
+          "endLine": 74,
+          "params": []
+        },
+        {
+          "name": "test_rain_blocks",
+          "startLine": 77,
+          "endLine": 82,
+          "params": []
+        },
+        {
+          "name": "test_low_visibility_blocks",
+          "startLine": 85,
+          "endLine": 91,
+          "params": []
+        },
+        {
+          "name": "test_api_failure_warn_by_default",
+          "startLine": 94,
+          "endLine": 102,
+          "params": []
+        },
+        {
+          "name": "test_api_failure_block_policy",
+          "startLine": 105,
+          "endLine": 112,
+          "params": []
+        },
+        {
+          "name": "test_thunderstorm_code_blocks",
+          "startLine": 115,
+          "endLine": 120,
+          "params": []
+        },
+        {
+          "name": "test_kmi_validation_warn_on_delta",
+          "startLine": 123,
+          "endLine": 134,
+          "params": []
+        },
+        {
+          "name": "test_kmi_validation_skips_without_observation",
+          "startLine": 137,
+          "endLine": 139,
+          "params": []
+        },
+        {
+          "name": "test_indoor_mission_types_skip_outdoor_weather",
+          "startLine": 142,
+          "endLine": 147,
+          "params": []
+        },
+        {
+          "name": "test_belgium_coordinate_detection",
+          "startLine": 150,
+          "endLine": 152,
+          "params": []
+        },
+        {
+          "name": "test_fetch_weather_uses_cache",
+          "startLine": 155,
+          "endLine": 180,
+          "params": []
+        },
+        {
+          "name": "test_fetch_skips_kmi_outside_belgium",
+          "startLine": 183,
+          "endLine": 206,
+          "params": []
+        },
+        {
+          "name": "test_kmi_fetch_requests_latest_sorted_observation",
+          "startLine": 209,
+          "endLine": 254,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_thresholds",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "_snapshot",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "_check_statuses",
+          "line": 54,
+          "isDefault": false
+        },
+        {
+          "name": "test_safe_weather_passes",
+          "line": 61,
+          "isDefault": false
+        },
+        {
+          "name": "test_unsafe_wind_blocks",
+          "line": 67,
+          "isDefault": false
+        },
+        {
+          "name": "test_rain_blocks",
+          "line": 77,
+          "isDefault": false
+        },
+        {
+          "name": "test_low_visibility_blocks",
+          "line": 85,
+          "isDefault": false
+        },
+        {
+          "name": "test_api_failure_warn_by_default",
+          "line": 94,
+          "isDefault": false
+        },
+        {
+          "name": "test_api_failure_block_policy",
+          "line": 105,
+          "isDefault": false
+        },
+        {
+          "name": "test_thunderstorm_code_blocks",
+          "line": 115,
+          "isDefault": false
+        },
+        {
+          "name": "test_kmi_validation_warn_on_delta",
+          "line": 123,
+          "isDefault": false
+        },
+        {
+          "name": "test_kmi_validation_skips_without_observation",
+          "line": 137,
+          "isDefault": false
+        },
+        {
+          "name": "test_indoor_mission_types_skip_outdoor_weather",
+          "line": 142,
+          "isDefault": false
+        },
+        {
+          "name": "test_belgium_coordinate_detection",
+          "line": 150,
+          "isDefault": false
+        },
+        {
+          "name": "test_fetch_weather_uses_cache",
+          "line": 155,
+          "isDefault": false
+        },
+        {
+          "name": "test_fetch_skips_kmi_outside_belgium",
+          "line": 183,
+          "isDefault": false
+        },
+        {
+          "name": "test_kmi_fetch_requests_latest_sorted_observation",
+          "line": 209,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_thresholds",
+          "callee": "WeatherThresholds",
+          "lineNumber": 14
+        },
+        {
+          "caller": "_thresholds",
+          "callee": "frozenset",
+          "lineNumber": 24
+        },
+        {
+          "caller": "_thresholds",
+          "callee": "frozenset",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_thresholds",
+          "callee": "WeatherThresholds",
+          "lineNumber": 34
+        },
+        {
+          "caller": "_snapshot",
+          "callee": "WeatherSnapshot",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_snapshot",
+          "callee": "time.time",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_snapshot",
+          "callee": "WeatherSnapshot",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_check_statuses",
+          "callee": "str",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_check_statuses",
+          "callee": "AssertionError",
+          "lineNumber": 58
+        },
+        {
+          "caller": "test_safe_weather_passes",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 62
+        },
+        {
+          "caller": "test_safe_weather_passes",
+          "callee": "_snapshot",
+          "lineNumber": 62
+        },
+        {
+          "caller": "test_safe_weather_passes",
+          "callee": "_thresholds",
+          "lineNumber": 62
+        },
+        {
+          "caller": "test_safe_weather_passes",
+          "callee": "_check_statuses",
+          "lineNumber": 63
+        },
+        {
+          "caller": "test_safe_weather_passes",
+          "callee": "_check_statuses",
+          "lineNumber": 64
+        },
+        {
+          "caller": "test_unsafe_wind_blocks",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 68
+        },
+        {
+          "caller": "test_unsafe_wind_blocks",
+          "callee": "_snapshot",
+          "lineNumber": 69
+        },
+        {
+          "caller": "test_unsafe_wind_blocks",
+          "callee": "_thresholds",
+          "lineNumber": 70
+        },
+        {
+          "caller": "test_unsafe_wind_blocks",
+          "callee": "_check_statuses",
+          "lineNumber": 72
+        },
+        {
+          "caller": "test_unsafe_wind_blocks",
+          "callee": "_check_statuses",
+          "lineNumber": 73
+        },
+        {
+          "caller": "test_rain_blocks",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 78
+        },
+        {
+          "caller": "test_rain_blocks",
+          "callee": "_snapshot",
+          "lineNumber": 79
+        },
+        {
+          "caller": "test_rain_blocks",
+          "callee": "_thresholds",
+          "lineNumber": 80
+        },
+        {
+          "caller": "test_rain_blocks",
+          "callee": "_check_statuses",
+          "lineNumber": 82
+        },
+        {
+          "caller": "test_low_visibility_blocks",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 86
+        },
+        {
+          "caller": "test_low_visibility_blocks",
+          "callee": "_snapshot",
+          "lineNumber": 87
+        },
+        {
+          "caller": "test_low_visibility_blocks",
+          "callee": "_thresholds",
+          "lineNumber": 88
+        },
+        {
+          "caller": "test_low_visibility_blocks",
+          "callee": "_check_statuses",
+          "lineNumber": 90
+        },
+        {
+          "caller": "test_low_visibility_blocks",
+          "callee": "_check_statuses",
+          "lineNumber": 91
+        },
+        {
+          "caller": "test_api_failure_warn_by_default",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 95
+        },
+        {
+          "caller": "test_api_failure_warn_by_default",
+          "callee": "_thresholds",
+          "lineNumber": 97
+        },
+        {
+          "caller": "test_api_failure_warn_by_default",
+          "callee": "len",
+          "lineNumber": 100
+        },
+        {
+          "caller": "test_api_failure_block_policy",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 106
+        },
+        {
+          "caller": "test_api_failure_block_policy",
+          "callee": "_thresholds",
+          "lineNumber": 108
+        },
+        {
+          "caller": "test_thunderstorm_code_blocks",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 116
+        },
+        {
+          "caller": "test_thunderstorm_code_blocks",
+          "callee": "_snapshot",
+          "lineNumber": 117
+        },
+        {
+          "caller": "test_thunderstorm_code_blocks",
+          "callee": "_thresholds",
+          "lineNumber": 118
+        },
+        {
+          "caller": "test_thunderstorm_code_blocks",
+          "callee": "_check_statuses",
+          "lineNumber": 120
+        },
+        {
+          "caller": "test_kmi_validation_warn_on_delta",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 124
+        },
+        {
+          "caller": "test_kmi_validation_warn_on_delta",
+          "callee": "_snapshot",
+          "lineNumber": 125
+        },
+        {
+          "caller": "test_kmi_validation_warn_on_delta",
+          "callee": "_thresholds",
+          "lineNumber": 132
+        },
+        {
+          "caller": "test_kmi_validation_warn_on_delta",
+          "callee": "_check_statuses",
+          "lineNumber": 134
+        },
+        {
+          "caller": "test_kmi_validation_skips_without_observation",
+          "callee": "evaluate_weather_preflight",
+          "lineNumber": 138
+        },
+        {
+          "caller": "test_kmi_validation_skips_without_observation",
+          "callee": "_snapshot",
+          "lineNumber": 138
+        },
+        {
+          "caller": "test_kmi_validation_skips_without_observation",
+          "callee": "_thresholds",
+          "lineNumber": 138
+        },
+        {
+          "caller": "test_kmi_validation_skips_without_observation",
+          "callee": "_check_statuses",
+          "lineNumber": 139
+        },
+        {
+          "caller": "test_indoor_mission_types_skip_outdoor_weather",
+          "callee": "is_outdoor_preflight_mission",
+          "lineNumber": 143
+        },
+        {
+          "caller": "test_indoor_mission_types_skip_outdoor_weather",
+          "callee": "is_outdoor_preflight_mission",
+          "lineNumber": 144
+        },
+        {
+          "caller": "test_indoor_mission_types_skip_outdoor_weather",
+          "callee": "is_outdoor_preflight_mission",
+          "lineNumber": 145
+        },
+        {
+          "caller": "test_indoor_mission_types_skip_outdoor_weather",
+          "callee": "is_outdoor_preflight_mission",
+          "lineNumber": 146
+        },
+        {
+          "caller": "test_indoor_mission_types_skip_outdoor_weather",
+          "callee": "is_outdoor_preflight_mission",
+          "lineNumber": 147
+        },
+        {
+          "caller": "test_belgium_coordinate_detection",
+          "callee": "is_belgium_coordinates",
+          "lineNumber": 151
+        },
+        {
+          "caller": "test_belgium_coordinate_detection",
+          "callee": "is_belgium_coordinates",
+          "lineNumber": 152
+        },
+        {
+          "caller": "_run",
+          "callee": "weather_cache_mod._weather_cache.clear",
+          "lineNumber": 162
+        },
+        {
+          "caller": "_run",
+          "callee": "_snapshot",
+          "lineNumber": 163
+        },
+        {
+          "caller": "_run",
+          "callee": "patch",
+          "lineNumber": 165
+        },
+        {
+          "caller": "_run",
+          "callee": "AsyncMock",
+          "lineNumber": 167
+        },
+        {
+          "caller": "_run",
+          "callee": "fetch_weather_for_preflight",
+          "lineNumber": 169
+        },
+        {
+          "caller": "_run",
+          "callee": "fetch_weather_for_preflight",
+          "lineNumber": 172
+        },
+        {
+          "caller": "test_fetch_weather_uses_cache",
+          "callee": "asyncio.run",
+          "lineNumber": 180
+        },
+        {
+          "caller": "test_fetch_weather_uses_cache",
+          "callee": "_run",
+          "lineNumber": 180
+        },
+        {
+          "caller": "_run",
+          "callee": "_snapshot",
+          "lineNumber": 189
+        },
+        {
+          "caller": "_run",
+          "callee": "patch",
+          "lineNumber": 191
+        },
+        {
+          "caller": "_run",
+          "callee": "AsyncMock",
+          "lineNumber": 193
+        },
+        {
+          "caller": "_run",
+          "callee": "patch",
+          "lineNumber": 195
+        },
+        {
+          "caller": "_run",
+          "callee": "AsyncMock",
+          "lineNumber": 197
+        },
+        {
+          "caller": "_run",
+          "callee": "fetch_weather_for_preflight",
+          "lineNumber": 200
+        },
+        {
+          "caller": "_run",
+          "callee": "mock_kmi.assert_not_called",
+          "lineNumber": 204
+        },
+        {
+          "caller": "test_fetch_skips_kmi_outside_belgium",
+          "callee": "asyncio.run",
+          "lineNumber": 206
+        },
+        {
+          "caller": "test_fetch_skips_kmi_outside_belgium",
+          "callee": "_run",
+          "lineNumber": 206
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "(datetime.now(UTC) - timedelta(minutes=20)).strftime",
+          "lineNumber": 216
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "datetime.now",
+          "lineNumber": 216
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "timedelta",
+          "lineNumber": 216
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "MagicMock",
+          "lineNumber": 229
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "MagicMock",
+          "lineNumber": 230
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "AsyncMock",
+          "lineNumber": 232
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "AsyncMock",
+          "lineNumber": 234
+        },
+        {
+          "caller": "_run",
+          "callee": "patch",
+          "lineNumber": 237
+        },
+        {
+          "caller": "_run",
+          "callee": "_fetch_latest_station_observation",
+          "lineNumber": 241
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "asyncio.run",
+          "lineNumber": 254
+        },
+        {
+          "caller": "test_kmi_fetch_requests_latest_sorted_observation",
+          "callee": "_run",
+          "lineNumber": 254
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 17,
+        "functionCount": 17,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_warehouse_sensor_calibration.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 28,
+      "functions": [
+        {
+          "name": "_calibration",
+          "startLine": 17,
+          "endLine": 18,
+          "params": []
+        },
+        {
+          "name": "test_ros_calibration_uses_exact_stable_frame_tree",
+          "startLine": 21,
+          "endLine": 26,
+          "params": []
+        },
+        {
+          "name": "test_duplicate_child_frame_is_rejected",
+          "startLine": 29,
+          "endLine": 34,
+          "params": []
+        },
+        {
+          "name": "test_non_unit_extrinsic_rotation_is_rejected",
+          "startLine": 37,
+          "endLine": 42,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_calibration",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "test_ros_calibration_uses_exact_stable_frame_tree",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "test_duplicate_child_frame_is_rejected",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "test_non_unit_extrinsic_rotation_is_rejected",
+          "line": 37,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_calibration",
+          "callee": "yaml.safe_load",
+          "lineNumber": 18
+        },
+        {
+          "caller": "_calibration",
+          "callee": "CALIBRATION_FILE.read_text",
+          "lineNumber": 18
+        },
+        {
+          "caller": "test_ros_calibration_uses_exact_stable_frame_tree",
+          "callee": "normalize_sensor_extrinsics",
+          "lineNumber": 22
+        },
+        {
+          "caller": "test_ros_calibration_uses_exact_stable_frame_tree",
+          "callee": "_calibration",
+          "lineNumber": 22
+        },
+        {
+          "caller": "test_ros_calibration_uses_exact_stable_frame_tree",
+          "callee": "len",
+          "lineNumber": 26
+        },
+        {
+          "caller": "test_ros_calibration_uses_exact_stable_frame_tree",
+          "callee": "sensor_calibration_checksum",
+          "lineNumber": 26
+        },
+        {
+          "caller": "test_duplicate_child_frame_is_rejected",
+          "callee": "_calibration",
+          "lineNumber": 30
+        },
+        {
+          "caller": "test_duplicate_child_frame_is_rejected",
+          "callee": "pytest.raises",
+          "lineNumber": 33
+        },
+        {
+          "caller": "test_duplicate_child_frame_is_rejected",
+          "callee": "normalize_sensor_extrinsics",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_non_unit_extrinsic_rotation_is_rejected",
+          "callee": "_calibration",
+          "lineNumber": 38
+        },
+        {
+          "caller": "test_non_unit_extrinsic_rotation_is_rejected",
+          "callee": "pytest.raises",
+          "lineNumber": 41
+        },
+        {
+          "caller": "test_non_unit_extrinsic_rotation_is_rejected",
+          "callee": "normalize_sensor_extrinsics",
+          "lineNumber": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    }
+  ]
+}

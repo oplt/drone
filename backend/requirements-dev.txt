@@ -1,0 +1,13 @@
+-r requirements.txt
+
+# Test runner and async fixtures
+pytest==9.0.3
+pytest-asyncio==1.3.0
+
+# ROS launch_testing plugin imports launch.frontend.parse_substitution, which
+# imports lark during pytest plugin discovery on ROS-enabled machines.
+lark==1.3.1
+
+# Backend quality commands used by Makefile targets.
+ruff==0.15.0
+mypy==1.19.1

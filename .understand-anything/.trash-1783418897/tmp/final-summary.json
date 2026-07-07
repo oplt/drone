@@ -1,0 +1,45 @@
+{
+  "project": "Drone Operations Platform",
+  "files": 1145,
+  "byCategory": {
+    "infra": 7,
+    "code": 1073,
+    "config": 28,
+    "docs": 32,
+    "script": 2,
+    "markup": 3
+  },
+  "nodes": {
+    "file": 1078,
+    "function": 2849,
+    "class": 824,
+    "service": 10,
+    "document": 32,
+    "config": 28,
+    "schema": 107
+  },
+  "edges": {
+    "imports": 2618,
+    "contains": 3676,
+    "exports": 3536,
+    "defines_schema": 107,
+    "tested_by": 19
+  },
+  "layers": [
+    "Backend Entrypoints",
+    "Backend Core",
+    "Backend Domain Modules",
+    "Backend Infrastructure",
+    "Backend Tests",
+    "Frontend App Shell",
+    "Frontend Feature Modules",
+    "Frontend Shared And API",
+    "Frontend Tests",
+    "ROS Simulation Bridge",
+    "Documentation And Design",
+    "Operations Infrastructure",
+    "Project Tooling And Configuration"
+  ],
+  "tourSteps": 8,
+  "warnings": 134
+}

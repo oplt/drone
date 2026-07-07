@@ -1,23 +1,21 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { TerraDraw } from "terra-draw";
-import { getToken } from "../../../modules/session";
-import { useAutoStartVideo } from "../../../modules/mission-runtime";
-import { type LatLng } from "../../../shared/utils/extractLatLng";
 import {
-  GoogleMapsContext,
-  useDroneCenter,
-  useDroneMapFollow,
   terraDrawToolToShapeMode,
   type CesiumDrawResult,
-  type CesiumViewMode,
   type DrawMode,
   type MissionMapEngine,
   type TerraDrawEditorMode,
   type TerraDrawToolMode,
 } from "../../maps";
-import { useMissionCommandMetrics } from "../../mission-runtime";
 import { stripClosedRing, type LonLat } from "../../fields";
 import { createFlatBoundaryDrawBridge } from "../../maps/utils/flatBoundaryDrawBridge";
+import {
+  useGooglePointMarkers,
+  type GooglePointMarker,
+} from "../../maps/hooks/useGooglePointMarkers";
+import { useMissionMapRuntime } from "../../maps/hooks/useMissionMapRuntime";
+import { useSyncTerraDrawMode } from "../../maps/hooks/useSyncTerraDrawMode";
 import type { Waypoint } from "../../mission-workflow";
 
 export function usePhotogrammetryMap({
@@ -84,138 +82,28 @@ export function usePhotogrammetryMap({
       }),
     [onBoundaryDrawStarted, setFieldBorder, setSelectedFieldId],
   );
-  const containerStyle = { width: "100%", height: "400px" };
-  const defaultCenter = { lat: 50.8503, lng: 4.3517 };
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const [terraDrawReady, setTerraDrawReady] = useState(false);
-  const [userCenter, setUserCenter] = useState<LatLng | null>(null);
-  const [center, setCenter] = useState(defaultCenter);
-  const [loadingLocation, setLoadingLocation] = useState(true);
-  const [mapZoom, setMapZoom] = useState(12);
-  const [manualStreamKey, setManualStreamKey] = useState(0);
-  const [mapReady, setMapReady] = useState(false);
-  const mapEngine = controlledMapEngine;
-  const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [videoRetryCount, setVideoRetryCount] = useState(0);
-  const waypointMarkersRef = useRef<unknown[]>([]);
-  const lastSyncedCenterRef = useRef<LatLng | null>(null);
-  const videoToken = getToken();
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
-  const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string) || "";
-
-  const { isLoaded, loadError } = useContext(GoogleMapsContext);
-  const droneCenter = useDroneCenter(telemetry);
-  const { heading, armed } = useMissionCommandMetrics(telemetry);
-  const droneReady = Boolean(droneConnected);
-
-  const { startingVideo, streamKey: autoStreamKey } = useAutoStartVideo({
-    apiBase,
-    getToken,
-    enabled: Boolean(activeFlightId && droneReady),
-    onError: addError,
-    resetKey: activeFlightId ?? "none",
-  });
-
-  useEffect(() => {
-    if (!droneConnected) {
-      setManualStreamKey(0);
-    }
-  }, [droneConnected]);
-
-  const streamKey = manualStreamKey || autoStreamKey;
-
-  const handleMapEngineChange = useCallback(
-    (next: MissionMapEngine) => {
-      onMapEngineChange(next);
-    },
-    [onMapEngineChange]
-  );
-
-  useEffect(() => {
-    if (!fieldTilesetUrl) return;
-    handleMapEngineChange("cesium");
-    setCesiumViewMode("top");
-  }, [fieldTilesetUrl, handleMapEngineChange]);
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported by this browser.");
-      setLoadingLocation(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserCenter(userLocation);
-        setCenter(userLocation);
-        setLoadingLocation(false);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        addError(`Failed to get location: ${error.message}`);
-        setLoadingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
-    );
+  const handleLocationError = useCallback((error: GeolocationPositionError) => {
+    console.error("Error getting location:", error);
+    const message = `Failed to get location: ${error.message}`;
+    addError(message);
+    return message;
   }, [addError]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    setMapReady(true);
-  }, []);
-
-  const onMapUnmount = useCallback(() => {
-    if (fieldPolygonRef.current) {
-      fieldPolygonRef.current.setMap(null);
-      fieldPolygonRef.current = null;
-    }
-    mapRef.current = null;
-    setMapReady(false);
-  }, [fieldPolygonRef]);
-
-  const onMapZoomChanged = useCallback(() => {
-    if (!mapRef.current) return;
-    const zoom = mapRef.current.getZoom();
-    if (typeof zoom === "number" && Number.isFinite(zoom)) {
-      setMapZoom(zoom);
-    }
-  }, []);
-
-  const onMapCenterChanged = useCallback(() => {
-    if (!mapRef.current) return;
-
-    const mapCenter = mapRef.current.getCenter();
-    if (!mapCenter) return;
-
-    const newCenter = { lat: mapCenter.lat(), lng: mapCenter.lng() };
-    const last = lastSyncedCenterRef.current;
-
-    const hasChanged =
-      !last ||
-      Math.abs(last.lat - newCenter.lat) > 0.00001 ||
-      Math.abs(last.lng - newCenter.lng) > 0.00001;
-
-    if (hasChanged) {
-      lastSyncedCenterRef.current = newCenter;
-      setCenter(newCenter);
-    }
-  }, []);
-
-  useDroneMapFollow({
-    mapRef,
-    droneCenter,
+  const mapRuntime = useMissionMapRuntime({
+    apiBase,
     wsConnected,
-    onInitialSnap: () => setMapZoom(18),
+    droneConnected,
+    telemetry,
+    activeFlightId,
+    fieldTilesetUrl,
+    controlledMapEngine,
+    onMapEngineChange,
+    fieldPolygonRef,
+    onAutoStartVideoError: addError,
+    onLocationError: handleLocationError,
   });
+  const { mapRef, mapZoom, mapReady, mapEngine } = mapRuntime;
 
   const onMapClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
@@ -269,108 +157,26 @@ export function usePhotogrammetryMap({
     [alt, setDrawMode, setFieldBorder, setSelectedFieldId, setWaypoints]
   );
 
-  const handleVideoError = useCallback(() => {
-    setVideoError("Failed to load video stream");
-    setVideoRetryCount((prev) => prev + 1);
-  }, []);
+  useSyncTerraDrawMode({ drawMode, mapEngine, setTerraDrawMode });
 
-  const handleVideoLoad = useCallback(() => {
-    setVideoError(null);
-    setVideoRetryCount(0);
-  }, []);
-
-  const handleVideoRetry = useCallback(() => {
-    setManualStreamKey(Date.now());
-    setVideoError(null);
-  }, []);
-
-  useEffect(() => {
-    if (mapEngine !== "google") return;
-
-    const modeMap: Partial<Record<DrawMode, TerraDrawEditorMode>> = {
-      polygon: "polygon",
-      polyline: "linestring",
-      point: "point",
-      rectangle: "rectangle",
-      circle: "circle",
-      freehand: "freehand",
-      triangle: "polygon",
-      none: "static",
-    };
-
-    const tdMode = modeMap[drawMode];
-    if (tdMode) setTerraDrawMode(tdMode);
-  }, [drawMode, mapEngine, setTerraDrawMode]);
-
-  useEffect(() => {
-    if (!isLoaded || !mapReady) return;
-    if (!mapRef.current) return;
-    const markerLib = (google.maps as unknown as {
-      marker?: { AdvancedMarkerElement?: new (opts: unknown) => unknown };
-    })?.marker;
-    const AdvancedMarkerElement = markerLib?.AdvancedMarkerElement;
-    if (!AdvancedMarkerElement) {
-      return;
-    }
-
-    waypointMarkersRef.current.forEach((marker) => {
-      try {
-        if (marker && typeof marker === "object") {
-          if ("map" in marker) (marker as { map: null }).map = null;
-          else if (
-            "setMap" in marker &&
-            typeof (marker as { setMap: (v: null) => void }).setMap === "function"
-          ) {
-            (marker as { setMap: (v: null) => void }).setMap(null);
-          }
-        }
-      } catch {
-        // ignore cleanup errors
-      }
-    });
-    waypointMarkersRef.current = [];
-
-    if (terraDrawMode !== "static") return;
-    if (waypoints.length === 0) return;
-
-    waypoints.forEach((p) => {
-      const content = document.createElement("div");
-      content.style.width = "12px";
-      content.style.height = "12px";
-      content.style.borderRadius = "50%";
-      content.style.background = "#1976d2";
-      content.style.border = "2px solid #ffffff";
-      content.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
-
-      const marker = new AdvancedMarkerElement({
-        map: mapRef.current,
-        position: { lat: p.lat, lng: p.lon },
-        content,
+  const waypointMarkers = useMemo<GooglePointMarker[]>(
+    () =>
+      waypoints.map((point) => ({
+        point,
         title: "Waypoint",
-      });
+        color: "#1976d2",
+      })),
+    [waypoints],
+  );
 
-      waypointMarkersRef.current.push(marker);
-    });
-
-    return () => {
-      waypointMarkersRef.current.forEach((marker) => {
-        try {
-          if (marker && typeof marker === "object") {
-            if ("map" in marker) (marker as { map: null }).map = null;
-            else if (
-              "setMap" in marker &&
-              typeof (marker as { setMap: (v: null) => void }).setMap === "function"
-            ) {
-              (marker as { setMap: (v: null) => void }).setMap(null);
-            }
-          }
-        } catch {
-          // ignore cleanup errors
-        }
-      });
-      waypointMarkersRef.current = [];
-    };
-  }, [isLoaded, mapReady, terraDrawMode, waypoints]);
+  useGooglePointMarkers({
+    enabled: terraDrawMode === "static",
+    isLoaded: mapRuntime.isLoaded,
+    mapReady,
+    mapRef,
+    markersRef: mapRuntime.waypointMarkersRef,
+    markers: waypointMarkers,
+  });
 
   useEffect(() => {
     if (mapEngine !== "google") return;
@@ -380,23 +186,8 @@ export function usePhotogrammetryMap({
   }, [focusRingOnMap, loadRingIntoEditor, mapEngine, mapReady, selectedField]);
 
   const mapCenter = useMemo(
-    () => droneCenter || userCenter || center,
-    [droneCenter, userCenter, center]
-  );
-
-  const mapOptions = useMemo(
-    () => ({
-      streetViewControl: false,
-      mapTypeControl: false,
-      fullscreenControl: true,
-      clickableIcons: false,
-      keyboardShortcuts: false,
-      gestureHandling: "greedy" as const,
-      maxZoom: 20,
-      minZoom: 3,
-      ...(mapId ? { mapId } : {}),
-    }),
-    [mapId]
+    () => mapRuntime.droneCenter || mapRuntime.userCenter || mapRuntime.center,
+    [mapRuntime.droneCenter, mapRuntime.userCenter, mapRuntime.center],
   );
 
   const cesiumFieldBoundary = useMemo(
@@ -405,48 +196,48 @@ export function usePhotogrammetryMap({
   );
 
   return {
-    containerStyle,
+    containerStyle: mapRuntime.containerStyle,
     mapRef,
     terraDrawRef,
-    terraDrawReady,
-    setTerraDrawReady,
+    terraDrawReady: mapRuntime.terraDrawReady,
+    setTerraDrawReady: mapRuntime.setTerraDrawReady,
     mapReady,
     mapEngine,
     useCesium: mapEngine === "cesium",
-    handleMapEngineChange,
-    cesiumViewMode,
-    setCesiumViewMode,
+    handleMapEngineChange: mapRuntime.handleMapEngineChange,
+    cesiumViewMode: mapRuntime.cesiumViewMode,
+    setCesiumViewMode: mapRuntime.setCesiumViewMode,
     mapZoom,
     mapCenter,
-    mapOptions,
-    loadingLocation,
-    isLoaded,
-    loadError,
-    apiKey,
-    mapId,
-    streamKey,
-    setStreamKey: setManualStreamKey,
-    videoToken,
-    startingVideo,
-    videoError,
-    videoRetryCount,
-    droneCenter,
-    heading,
-    armed,
-    onMapLoad,
-    onMapUnmount,
-    onMapZoomChanged,
-    onMapCenterChanged,
+    mapOptions: mapRuntime.mapOptions,
+    loadingLocation: mapRuntime.loadingLocation,
+    isLoaded: mapRuntime.isLoaded,
+    loadError: mapRuntime.loadError,
+    apiKey: mapRuntime.apiKey,
+    mapId: mapRuntime.mapId,
+    streamKey: mapRuntime.streamKey,
+    setStreamKey: mapRuntime.setStreamKey,
+    videoToken: mapRuntime.videoToken,
+    startingVideo: mapRuntime.startingVideo,
+    videoError: mapRuntime.videoError,
+    videoRetryCount: mapRuntime.videoRetryCount,
+    droneCenter: mapRuntime.droneCenter,
+    heading: mapRuntime.heading,
+    armed: mapRuntime.armed,
+    onMapLoad: mapRuntime.onMapLoad,
+    onMapUnmount: mapRuntime.onMapUnmount,
+    onMapZoomChanged: mapRuntime.onMapZoomChanged,
+    onMapCenterChanged: mapRuntime.onMapCenterChanged,
     onMapClick,
     handleDrawingToolSelection,
     handleCesiumDrawComplete,
     onBoundaryDrawStarted: flatBoundaryDraw.onBoundaryDrawStarted,
     onBoundaryDrawProgress: flatBoundaryDraw.onBoundaryDrawProgress,
-    handleVideoError,
-    handleVideoLoad,
-    handleVideoRetry,
+    handleVideoError: mapRuntime.handleVideoError,
+    handleVideoLoad: mapRuntime.handleVideoLoad,
+    handleVideoRetry: mapRuntime.handleVideoRetry,
     cesiumFieldBoundary,
-    userCenter,
+    userCenter: mapRuntime.userCenter,
     terraDrawMode,
     setTerraDrawMode,
   };

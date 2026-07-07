@@ -7,7 +7,6 @@ import Avatar from "@mui/material/Avatar";
 import Skeleton from "@mui/material/Skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getToken } from "../../../modules/session";
-import { fetchCurrentUser, updateCurrentUser } from "../../session/api/sessionApi";
 import {
   fetchAppSettings,
   type LlmProfile,
@@ -24,13 +23,12 @@ import {
 } from "../aiSettingsDefaults";
 import { AiSettingsPanel } from "../components/AiSettingsPanel";
 import { OrgApiKeysPanel } from "../components/OrgApiKeysPanel";
+import { useCurrentUserProfile } from "../hooks/useCurrentUserProfile";
 import { useSettingsDirtyFlag } from "../hooks/useSettingsDirtyFlag";
 import type {
   AISettings,
   SettingsDoc,
   SettingsSection,
-  UserResponse,
-  UserUpdate,
 } from "../settingsTypes";
 
 import { ActionIconButton, ActionIconLabel } from "../../../shared/ui/ActionIconButton";
@@ -293,25 +291,19 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
   const [err, setErr] = useState<string | null>(null);
   const [doc, setDoc] = useState<SettingsDoc>(cachedSettings ?? DEFAULTS);
   const { dirty, markDirty, markClean } = useSettingsDirtyFlag();
-  const [fullName, setFullName] = useState("");
-  const [saveProfileSuccess, setSaveProfileSuccess] = useState(false);
-  const [saveProfileError, setSaveProfileError] = useState<string | null>(null);
-
-  const { data: user, isLoading: userLoading, error: userError } = useQuery<UserResponse>({
-    queryKey: ["me"],
-    enabled: Boolean(token),
-    queryFn: async (): Promise<UserResponse> => {
-      const user = await fetchCurrentUser();
-      const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
-      return {
-        id: String(user.id),
-        email: user.email,
-        full_name: fullName || user.email,
-        created_at: undefined,
-        org_id: user.org_id ?? null,
-      };
-    },
-  });
+  const {
+    user,
+    userLoading,
+    userError,
+    fullName,
+    setFullName,
+    saveProfileSuccess,
+    setSaveProfileSuccess,
+    saveProfileError,
+    setSaveProfileError,
+    savingProfile,
+    saveCurrentUserProfile,
+  } = useCurrentUserProfile();
 
   const settingsQuery = useQuery<SettingsDoc>({
     queryKey: SETTINGS_QUERY_KEY,
@@ -345,26 +337,6 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
     },
   });
   const saving = settingsMutation.isPending;
-
-  useEffect(() => {
-    if (user) {
-      setFullName(user.full_name ?? "");
-    }
-  }, [user]);
-
-  const profileMutation = useMutation({
-    mutationFn: (payload: UserUpdate) =>
-      updateCurrentUser(payload, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["me"] });
-      setSaveProfileSuccess(true);
-      setSaveProfileError(null);
-    },
-    onError: (error: unknown) => {
-      setSaveProfileError(error instanceof Error ? error.message : "Failed to save profile.");
-      setSaveProfileSuccess(false);
-    },
-  });
 
   const validateSettings = (): string | null => {
     if (doc.preflight.BATTERY_MIN_PERCENT < 10 || doc.preflight.BATTERY_MIN_PERCENT > 50) return "Battery Min (%) must be 10-50%.";
@@ -413,12 +385,6 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
       setErr(e instanceof Error ? e.message : "Failed to save settings");
     }
   }
-
-  const handleSaveProfile = () => {
-    setSaveProfileSuccess(false);
-    setSaveProfileError(null);
-    profileMutation.mutate({ full_name: fullName.trim() });
-  };
 
   const update = (section: SettingsSection, field: string, value: unknown) => {
     const currentValue = (doc[section] as Record<string, unknown>)[field];
@@ -569,11 +535,11 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
                     <Box>
                       <ActionIconButton
                         variant="upgrade"
-                        title={profileMutation.isPending ? "Saving…" : "Save profile"}
+                        title={savingProfile ? "Saving…" : "Save profile"}
                         color="primary"
-                        loading={profileMutation.isPending}
-                        disabled={profileMutation.isPending || !fullName.trim() || !user}
-                        onClick={handleSaveProfile}
+                        loading={savingProfile}
+                        disabled={savingProfile || !fullName.trim() || !user}
+                        onClick={saveCurrentUserProfile}
                       />
                     </Box>
                   </Stack>

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import logging
 import math
 import time
@@ -44,6 +42,7 @@ from backend.modules.missions.schemas.mission_create import (
     MissionCreateIn,
     MissionCreateOut,
     PatrolTaskType,
+    validate_private_patrol_task_inputs,
 )
 from backend.modules.missions.service.mission_builder import (
     _resolve_trigger_event_location,
@@ -52,6 +51,8 @@ from backend.modules.missions.service.mission_builder import (
 )
 from backend.modules.missions.service.mission_start import (
     _ensure_drone_ready_for_preflight,
+    mission_fingerprint,
+    preflight_allows_start,
     start_mission_for_user,
 )
 from backend.modules.patrol.planning import (
@@ -80,7 +81,6 @@ router.include_router(runtime_router)
 
 PREFLIGHT_RUN_TTL_SECONDS = max(60, settings.preflight_run_ttl_seconds)
 REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION = env_truthy(settings.require_preflight_run_before_mission)
-ALLOW_WARN_PREFLIGHT_START = env_truthy(settings.allow_warn_preflight_start)
 
 
 async def _run_preflight_report(
@@ -463,12 +463,6 @@ async def _set_runtime_state(
 # ---------------------------------------------------------------------------
 
 
-def mission_fingerprint(payload: MissionCreateIn) -> str:
-    canonical = payload.model_dump(mode="json", exclude={"preflight_run_id"})
-    blob = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
-
 async def _store_preflight_run(
     *,
     user_id: int,
@@ -506,21 +500,12 @@ async def _get_preflight_run(run_id: str) -> _PreflightRunRecord | None:
     return _PreflightRunRecord.from_db(db_row)
 
 
-def _preflight_allows_start(overall_status: str) -> bool:
-    normalized = str(overall_status).upper()
-    if normalized == "PASS":
-        return True
-    if normalized == "WARN":
-        return ALLOW_WARN_PREFLIGHT_START
-    return False
-
-
 def _preflight_record_out(rec: _PreflightRunRecord) -> PreflightRunOut:
     return PreflightRunOut(
         preflight_run_id=rec.run_id,
         mission_fingerprint=rec.mission_fingerprint,
         overall_status=rec.overall_status,
-        can_start_mission=_preflight_allows_start(rec.overall_status),
+        can_start_mission=preflight_allows_start(rec.overall_status),
         created_at=rec.created_at,
         expires_at=rec.expires_at,
         report=PreflightReport.model_validate(rec.report),
@@ -1301,21 +1286,11 @@ class PrivatePatrolPreviewIn(BaseModel):
 
     @model_validator(mode="after")
     def _validate_by_task(self) -> PrivatePatrolPreviewIn:
-        if self.task_type in {"perimeter_patrol", "grid_surveillance"}:
-            if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
-                raise ValueError(
-                    f"task_type='{self.task_type}' requires property_polygon_lonlat with at least 3 coordinate pairs."
-                )
-        elif self.task_type == "waypoint_patrol":
-            if not self.key_points_lonlat or len(self.key_points_lonlat) < 2:
-                raise ValueError(
-                    "task_type='waypoint_patrol' requires key_points_lonlat with at least 2 coordinate pairs."
-                )
-        elif self.task_type == "event_triggered_patrol":
-            if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
-                raise ValueError(
-                    "task_type='event_triggered_patrol' requires property_polygon_lonlat geofence."
-                )
+        validate_private_patrol_task_inputs(
+            task_type=self.task_type,
+            property_polygon_lonlat=self.property_polygon_lonlat,
+            key_points_lonlat=self.key_points_lonlat,
+        )
         return self
 
 

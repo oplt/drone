@@ -11,6 +11,10 @@ import {
   type WarehouseLiveMapUpdate,
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
+import {
+  applyWarehouseLiveMapMessage,
+  mergeUpdate,
+} from "../utils/liveMapUpdateMerge";
 
 type ConnectionState =
   | "empty"
@@ -24,7 +28,6 @@ type ConnectionState =
 const STALE_AFTER_MS = 10_000;
 const RECONNECT_BASE_MS = 1_500;
 const RECONNECT_MAX_MS = 30_000;
-const MAX_PATH_POINTS = 600;
 
 export function warehouseLiveMapReconnectDelayMs(
   attempt: number,
@@ -77,57 +80,6 @@ export type WarehouseLiveVoxelMapControls = {
   toggleStreamPaused: () => void;
 };
 
-export function mergeUpdate(
-  current: {
-    chunksById: Map<string, WarehouseLiveVoxelChunk>;
-    scanPath: WarehouseLiveMapUpdate["scan_path_sample"];
-  },
-  update: WarehouseLiveMapUpdate,
-) {
-  const chunksById = new Map(current.chunksById);
-  for (const id of update.removed_chunk_ids) {
-    chunksById.delete(id);
-    for (const key of [...chunksById.keys()]) {
-      if (key === id || key.endsWith(`:${id}`)) {
-        chunksById.delete(key);
-      }
-    }
-  }
-  for (const chunk of update.changed_chunks) {
-    const key = chunk.id;
-    const existing = chunksById.get(key);
-    if (
-      existing &&
-      existing.url === chunk.url &&
-      existing.byte_size === chunk.byte_size &&
-      existing.checksum_sha256 === chunk.checksum_sha256
-    ) {
-      continue;
-    }
-    chunksById.set(key, chunk);
-  }
-  const scanPath = [...current.scanPath, ...update.scan_path_sample].slice(
-    -MAX_PATH_POINTS,
-  );
-  return { chunksById, scanPath };
-}
-
-export function applyWarehouseLiveMapMessage(
-  current: {
-    chunksById: Map<string, WarehouseLiveVoxelChunk>;
-    scanPath: WarehouseLiveMapUpdate["scan_path_sample"];
-  },
-  message: WarehouseLiveMapMessage,
-) {
-  if (isWarehouseLiveMapSnapshot(message)) {
-    return message.updates.reduce(mergeUpdate, current);
-  }
-  if (isWarehouseLiveMapUpdate(message)) {
-    return mergeUpdate(current, message);
-  }
-  return current;
-}
-
 export function useWarehouseLiveVoxelMap(
   flightId: string | null | undefined,
   options: {
@@ -162,6 +114,7 @@ export function useWarehouseLiveVoxelMap(
   const stateRef = useRef({
     chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
     scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
+    flightId: flightId ?? null,
   });
   const reconnectTimerRef = useRef<number | null>(null);
   const snapshotPollTimerRef = useRef<number | null>(null);
@@ -174,8 +127,8 @@ export function useWarehouseLiveVoxelMap(
   }, [streamPaused]);
 
   useEffect(() => {
-    stateRef.current = { chunksById, scanPath };
-  }, [chunksById, scanPath]);
+    stateRef.current = { chunksById, scanPath, flightId: flightId ?? null };
+  }, [chunksById, flightId, scanPath]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -411,6 +364,7 @@ export function useWarehouseLiveVoxelMap(
     const empty = {
       chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
       scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
+      flightId: null,
     };
     stateRef.current = empty;
     setChunksById(empty.chunksById);

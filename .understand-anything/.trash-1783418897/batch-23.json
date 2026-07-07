@@ -1,0 +1,1599 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "type": "file",
+      "name": "usePrivatePatrolMission.ts",
+      "filePath": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "summary": "usePrivatePatrolMission.ts is a frontend typescript module in frontend/src/modules/private-patrol with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts:usePrivatePatrolMission",
+      "type": "function",
+      "name": "usePrivatePatrolMission",
+      "filePath": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "summary": "usePrivatePatrolMission implements logic in usePrivatePatrolMission.ts.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "type": "file",
+      "name": "usePrivatePatrolPage.ts",
+      "filePath": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "summary": "usePrivatePatrolPage.ts is a frontend typescript module in frontend/src/modules/private-patrol with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts:usePrivatePatrolPage",
+      "type": "function",
+      "name": "usePrivatePatrolPage",
+      "filePath": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "summary": "usePrivatePatrolPage implements logic in usePrivatePatrolPage.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "type": "file",
+      "name": "propertyGeofencePreference.ts",
+      "filePath": "frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "summary": "propertyGeofencePreference.ts is a frontend typescript module in frontend/src/modules/private-patrol with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/private-patrol/propertyGeofencePreference.ts:readPropertyPatrolFieldId",
+      "type": "function",
+      "name": "readPropertyPatrolFieldId",
+      "filePath": "frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "summary": "readPropertyPatrolFieldId implements logic in propertyGeofencePreference.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/private-patrol/propertyGeofencePreference.ts:writePropertyPatrolFieldId",
+      "type": "function",
+      "name": "writePropertyPatrolFieldId",
+      "filePath": "frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "summary": "writePropertyPatrolFieldId implements logic in propertyGeofencePreference.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/private-patrol/tests/effectivePatrolRepeatInterval.test.ts",
+      "type": "file",
+      "name": "effectivePatrolRepeatInterval.test.ts",
+      "filePath": "frontend/src/modules/private-patrol/tests/effectivePatrolRepeatInterval.test.ts",
+      "summary": "effectivePatrolRepeatInterval.test.ts is a frontend typescript module in frontend/src/modules/private-patrol with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/private-patrol/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/private-patrol/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/private-patrol with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/private-patrol/types.ts:effectivePatrolRepeatIntervalMinutes",
+      "type": "function",
+      "name": "effectivePatrolRepeatIntervalMinutes",
+      "filePath": "frontend/src/modules/private-patrol/types.ts",
+      "summary": "effectivePatrolRepeatIntervalMinutes implements logic in types.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "type": "file",
+      "name": "PrivatePatrolPage.tsx",
+      "filePath": "frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "summary": "PrivatePatrolPage.tsx is a frontend typescript module in frontend/src/modules/private-patrol with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx:PrivatePatrolPage",
+      "type": "function",
+      "name": "PrivatePatrolPage",
+      "filePath": "frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "summary": "PrivatePatrolPage implements logic in PrivatePatrolPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/session/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/session with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/settings/views/ProfilePage.tsx",
+      "type": "file",
+      "name": "ProfilePage.tsx",
+      "filePath": "frontend/src/modules/settings/views/ProfilePage.tsx",
+      "summary": "ProfilePage.tsx is a frontend typescript module in frontend/src/modules/settings with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/views/ProfilePage.tsx:ProfilePage",
+      "type": "function",
+      "name": "ProfilePage",
+      "filePath": "frontend/src/modules/settings/views/ProfilePage.tsx",
+      "summary": "ProfilePage implements logic in ProfilePage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/video-analysis/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/video-analysis/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/video-analysis with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "type": "file",
+      "name": "WarehouseManualMappingPanel.tsx",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "summary": "WarehouseManualMappingPanel.tsx is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx:WarehouseManualMappingPanel",
+      "type": "function",
+      "name": "WarehouseManualMappingPanel",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "summary": "WarehouseManualMappingPanel implements logic in WarehouseManualMappingPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "type": "file",
+      "name": "useWarehouseManualMapping.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "summary": "useWarehouseManualMapping.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts:useWarehouseManualMapping",
+      "type": "function",
+      "name": "useWarehouseManualMapping",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "summary": "useWarehouseManualMapping implements logic in useWarehouseManualMapping.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "type": "file",
+      "name": "useErrors.tsx",
+      "filePath": "frontend/src/shared/hooks/useErrors.tsx",
+      "summary": "useErrors.tsx is a frontend typescript module in frontend/src/shared/hooks with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/hooks/useErrors.tsx:useErrors",
+      "type": "function",
+      "name": "useErrors",
+      "filePath": "frontend/src/shared/hooks/useErrors.tsx",
+      "summary": "useErrors implements logic in useErrors.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/ConsoleToolbar.test.tsx",
+      "type": "file",
+      "name": "ConsoleToolbar.test.tsx",
+      "filePath": "frontend/src/shared/layout/ConsoleToolbar.test.tsx",
+      "summary": "ConsoleToolbar.test.tsx is a frontend typescript module in frontend/src/shared/layout with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "type": "file",
+      "name": "ConsoleToolbar.tsx",
+      "filePath": "frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "summary": "ConsoleToolbar.tsx is a frontend typescript module in frontend/src/shared/layout with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/ConsoleToolbar.tsx:ConsoleToolbar",
+      "type": "function",
+      "name": "ConsoleToolbar",
+      "filePath": "frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "summary": "ConsoleToolbar implements logic in ConsoleToolbar.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/CustomDatePicker.tsx",
+      "type": "file",
+      "name": "CustomDatePicker.tsx",
+      "filePath": "frontend/src/shared/layout/CustomDatePicker.tsx",
+      "summary": "CustomDatePicker.tsx is a frontend typescript module in frontend/src/shared/layout with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/CustomDatePicker.tsx:ButtonField",
+      "type": "function",
+      "name": "ButtonField",
+      "filePath": "frontend/src/shared/layout/CustomDatePicker.tsx",
+      "summary": "ButtonField implements logic in CustomDatePicker.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/CustomDatePicker.tsx:CustomDatePicker",
+      "type": "function",
+      "name": "CustomDatePicker",
+      "filePath": "frontend/src/shared/layout/CustomDatePicker.tsx",
+      "summary": "CustomDatePicker implements logic in CustomDatePicker.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "type": "file",
+      "name": "NavbarBreadcrumbs.tsx",
+      "filePath": "frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "summary": "NavbarBreadcrumbs.tsx is a frontend typescript module in frontend/src/shared/layout with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/NavbarBreadcrumbs.tsx:toTitle",
+      "type": "function",
+      "name": "toTitle",
+      "filePath": "frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "summary": "toTitle implements logic in NavbarBreadcrumbs.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/NavbarBreadcrumbs.tsx:NavbarBreadcrumbs",
+      "type": "function",
+      "name": "NavbarBreadcrumbs",
+      "filePath": "frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "summary": "NavbarBreadcrumbs implements logic in NavbarBreadcrumbs.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/Search.tsx",
+      "type": "file",
+      "name": "Search.tsx",
+      "filePath": "frontend/src/shared/layout/Search.tsx",
+      "summary": "Search.tsx is a frontend typescript module in frontend/src/shared/layout with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/Search.tsx:Search",
+      "type": "function",
+      "name": "Search",
+      "filePath": "frontend/src/shared/layout/Search.tsx",
+      "summary": "Search implements logic in Search.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "file",
+      "name": "WorkflowHeader.tsx",
+      "filePath": "frontend/src/shared/layout/WorkflowHeader.tsx",
+      "summary": "WorkflowHeader.tsx is a frontend typescript module in frontend/src/shared/layout with 6 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/WorkflowHeader.tsx:formatTimestamp",
+      "type": "function",
+      "name": "formatTimestamp",
+      "filePath": "frontend/src/shared/layout/WorkflowHeader.tsx",
+      "summary": "formatTimestamp implements logic in WorkflowHeader.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/WorkflowHeader.tsx:AlertCard",
+      "type": "function",
+      "name": "AlertCard",
+      "filePath": "frontend/src/shared/layout/WorkflowHeader.tsx",
+      "summary": "AlertCard implements logic in WorkflowHeader.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/WorkflowHeader.tsx:SystemLogCard",
+      "type": "function",
+      "name": "SystemLogCard",
+      "filePath": "frontend/src/shared/layout/WorkflowHeader.tsx",
+      "summary": "SystemLogCard implements logic in WorkflowHeader.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/WorkflowHeader.tsx:Header",
+      "type": "function",
+      "name": "Header",
+      "filePath": "frontend/src/shared/layout/WorkflowHeader.tsx",
+      "summary": "Header implements logic in WorkflowHeader.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "file",
+      "name": "ActionIconButton.tsx",
+      "filePath": "frontend/src/shared/ui/ActionIconButton.tsx",
+      "summary": "ActionIconButton.tsx is a frontend typescript module in frontend/src/shared/ui with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/ActionIconButton.tsx:ActionIconButton",
+      "type": "function",
+      "name": "ActionIconButton",
+      "filePath": "frontend/src/shared/ui/ActionIconButton.tsx",
+      "summary": "ActionIconButton implements logic in ActionIconButton.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/ActionIconButton.tsx:ActionIconLabel",
+      "type": "function",
+      "name": "ActionIconLabel",
+      "filePath": "frontend/src/shared/ui/ActionIconButton.tsx",
+      "summary": "ActionIconLabel implements logic in ActionIconButton.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/ConfirmDialog.tsx",
+      "type": "file",
+      "name": "ConfirmDialog.tsx",
+      "filePath": "frontend/src/shared/ui/ConfirmDialog.tsx",
+      "summary": "ConfirmDialog.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/ConfirmDialog.tsx:ConfirmDialog",
+      "type": "function",
+      "name": "ConfirmDialog",
+      "filePath": "frontend/src/shared/ui/ConfirmDialog.tsx",
+      "summary": "ConfirmDialog implements logic in ConfirmDialog.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/EmptyState.tsx",
+      "type": "file",
+      "name": "EmptyState.tsx",
+      "filePath": "frontend/src/shared/ui/EmptyState.tsx",
+      "summary": "EmptyState.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/EmptyState.tsx:EmptyState",
+      "type": "function",
+      "name": "EmptyState",
+      "filePath": "frontend/src/shared/ui/EmptyState.tsx",
+      "summary": "EmptyState implements logic in EmptyState.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "type": "file",
+      "name": "ErrorAlerts.tsx",
+      "filePath": "frontend/src/shared/ui/ErrorAlerts.tsx",
+      "summary": "ErrorAlerts.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/ErrorAlerts.tsx:ErrorAlerts",
+      "type": "function",
+      "name": "ErrorAlerts",
+      "filePath": "frontend/src/shared/ui/ErrorAlerts.tsx",
+      "summary": "ErrorAlerts implements logic in ErrorAlerts.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/ErrorState.tsx",
+      "type": "file",
+      "name": "ErrorState.tsx",
+      "filePath": "frontend/src/shared/ui/ErrorState.tsx",
+      "summary": "ErrorState.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/ErrorState.tsx:ErrorState",
+      "type": "function",
+      "name": "ErrorState",
+      "filePath": "frontend/src/shared/ui/ErrorState.tsx",
+      "summary": "ErrorState implements logic in ErrorState.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "type": "file",
+      "name": "InfoLabel.tsx",
+      "filePath": "frontend/src/shared/ui/InfoLabel.tsx",
+      "summary": "InfoLabel.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/InfoLabel.tsx:InfoLabel",
+      "type": "function",
+      "name": "InfoLabel",
+      "filePath": "frontend/src/shared/ui/InfoLabel.tsx",
+      "summary": "InfoLabel implements logic in InfoLabel.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/PageLoader.tsx",
+      "type": "file",
+      "name": "PageLoader.tsx",
+      "filePath": "frontend/src/shared/ui/PageLoader.tsx",
+      "summary": "PageLoader.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/PageLoader.tsx:PageLoader",
+      "type": "function",
+      "name": "PageLoader",
+      "filePath": "frontend/src/shared/ui/PageLoader.tsx",
+      "summary": "PageLoader implements logic in PageLoader.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/PermissionDenied.tsx",
+      "type": "file",
+      "name": "PermissionDenied.tsx",
+      "filePath": "frontend/src/shared/ui/PermissionDenied.tsx",
+      "summary": "PermissionDenied.tsx is a frontend typescript module in frontend/src/shared/ui with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/ui/PermissionDenied.tsx:PermissionDenied",
+      "type": "function",
+      "name": "PermissionDenied",
+      "filePath": "frontend/src/shared/ui/PermissionDenied.tsx",
+      "summary": "PermissionDenied implements logic in PermissionDenied.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/ui/shared-ui.test.tsx",
+      "type": "file",
+      "name": "shared-ui.test.tsx",
+      "filePath": "frontend/src/shared/ui/shared-ui.test.tsx",
+      "summary": "shared-ui.test.tsx is a frontend typescript module in frontend/src/shared/ui with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/utils/extractLatLng.test.ts",
+      "type": "file",
+      "name": "extractLatLng.test.ts",
+      "filePath": "frontend/src/shared/utils/extractLatLng.test.ts",
+      "summary": "extractLatLng.test.ts is a frontend typescript module in frontend/src/shared/utils with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "file",
+      "name": "extractLatLng.ts",
+      "filePath": "frontend/src/shared/utils/extractLatLng.ts",
+      "summary": "extractLatLng.ts is a frontend typescript module in frontend/src/shared/utils with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/utils/extractLatLng.ts:readLatLng",
+      "type": "function",
+      "name": "readLatLng",
+      "filePath": "frontend/src/shared/utils/extractLatLng.ts",
+      "summary": "readLatLng implements logic in extractLatLng.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/utils/extractLatLng.ts:readCoordinateArray",
+      "type": "function",
+      "name": "readCoordinateArray",
+      "filePath": "frontend/src/shared/utils/extractLatLng.ts",
+      "summary": "readCoordinateArray implements logic in extractLatLng.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/utils/extractLatLng.ts:extractLatLng",
+      "type": "function",
+      "name": "extractLatLng",
+      "filePath": "frontend/src/shared/utils/extractLatLng.ts",
+      "summary": "extractLatLng implements logic in extractLatLng.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/mission-planning/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/mission-workflow/utils/cesiumZoom.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/private-patrol/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "function:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts:usePrivatePatrolMission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "target": "function:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts:usePrivatePatrolMission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/app/config/env.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/private-patrol/hooks/useEventTriggerConfigPersistence.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMap.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/private-patrol/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "function:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts:usePrivatePatrolPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "target": "function:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts:usePrivatePatrolPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "target": "function:frontend/src/modules/private-patrol/propertyGeofencePreference.ts:readPropertyPatrolFieldId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "target": "function:frontend/src/modules/private-patrol/propertyGeofencePreference.ts:readPropertyPatrolFieldId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "target": "function:frontend/src/modules/private-patrol/propertyGeofencePreference.ts:writePropertyPatrolFieldId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/propertyGeofencePreference.ts",
+      "target": "function:frontend/src/modules/private-patrol/propertyGeofencePreference.ts:writePropertyPatrolFieldId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/tests/effectivePatrolRepeatInterval.test.ts",
+      "target": "file:frontend/src/modules/private-patrol/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/types.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/types.ts",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/types.ts",
+      "target": "function:frontend/src/modules/private-patrol/types.ts:effectivePatrolRepeatIntervalMinutes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/types.ts",
+      "target": "function:frontend/src/modules/private-patrol/types.ts:effectivePatrolRepeatIntervalMinutes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types/runtime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/private-patrol/components/PrivatePatrolMapColumn.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/private-patrol/components/PrivatePatrolPlanningSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/private-patrol/components/PrivatePatrolStatusSections.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/private-patrol/components/PrivatePatrolUiNotice.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "file:frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "function:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx:PrivatePatrolPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx",
+      "target": "function:frontend/src/modules/private-patrol/views/PrivatePatrolPage.tsx:PrivatePatrolPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/views/ProfilePage.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/views/ProfilePage.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/views/ProfilePage.tsx",
+      "target": "function:frontend/src/modules/settings/views/ProfilePage.tsx:ProfilePage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/views/ProfilePage.tsx",
+      "target": "function:frontend/src/modules/settings/views/ProfilePage.tsx:ProfilePage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx:WarehouseManualMappingPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseManualMappingPanel.tsx:WarehouseManualMappingPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseMissionsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts:useWarehouseManualMapping",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts:useWarehouseManualMapping",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "target": "function:frontend/src/shared/hooks/useErrors.tsx:useErrors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "target": "function:frontend/src/shared/hooks/useErrors.tsx:useErrors",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/ConsoleToolbar.test.tsx",
+      "target": "file:frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "target": "file:frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "target": "function:frontend/src/shared/layout/ConsoleToolbar.tsx:ConsoleToolbar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "target": "function:frontend/src/shared/layout/ConsoleToolbar.tsx:ConsoleToolbar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/CustomDatePicker.tsx",
+      "target": "function:frontend/src/shared/layout/CustomDatePicker.tsx:ButtonField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/CustomDatePicker.tsx",
+      "target": "function:frontend/src/shared/layout/CustomDatePicker.tsx:CustomDatePicker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/CustomDatePicker.tsx",
+      "target": "function:frontend/src/shared/layout/CustomDatePicker.tsx:CustomDatePicker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "target": "function:frontend/src/shared/layout/NavbarBreadcrumbs.tsx:toTitle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "target": "function:frontend/src/shared/layout/NavbarBreadcrumbs.tsx:NavbarBreadcrumbs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/NavbarBreadcrumbs.tsx",
+      "target": "function:frontend/src/shared/layout/NavbarBreadcrumbs.tsx:NavbarBreadcrumbs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/Search.tsx",
+      "target": "function:frontend/src/shared/layout/Search.tsx:Search",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/Search.tsx",
+      "target": "function:frontend/src/shared/layout/Search.tsx:Search",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/modules/alerts/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/layout/ConsoleToolbar.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/layout/CustomDatePicker.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/layout/MenuButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/layout/Search.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/logging/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "function:frontend/src/shared/layout/WorkflowHeader.tsx:formatTimestamp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "function:frontend/src/shared/layout/WorkflowHeader.tsx:AlertCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "function:frontend/src/shared/layout/WorkflowHeader.tsx:SystemLogCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "function:frontend/src/shared/layout/WorkflowHeader.tsx:Header",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "target": "function:frontend/src/shared/layout/WorkflowHeader.tsx:Header",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "target": "function:frontend/src/shared/ui/ActionIconButton.tsx:ActionIconButton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "target": "function:frontend/src/shared/ui/ActionIconButton.tsx:ActionIconButton",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "target": "function:frontend/src/shared/ui/ActionIconButton.tsx:ActionIconLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "target": "function:frontend/src/shared/ui/ActionIconButton.tsx:ActionIconLabel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ConfirmDialog.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ConfirmDialog.tsx",
+      "target": "function:frontend/src/shared/ui/ConfirmDialog.tsx:ConfirmDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ConfirmDialog.tsx",
+      "target": "function:frontend/src/shared/ui/ConfirmDialog.tsx:ConfirmDialog",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/EmptyState.tsx",
+      "target": "function:frontend/src/shared/ui/EmptyState.tsx:EmptyState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/EmptyState.tsx",
+      "target": "function:frontend/src/shared/ui/EmptyState.tsx:EmptyState",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "target": "function:frontend/src/shared/ui/ErrorAlerts.tsx:ErrorAlerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "target": "function:frontend/src/shared/ui/ErrorAlerts.tsx:ErrorAlerts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ErrorState.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ErrorState.tsx",
+      "target": "function:frontend/src/shared/ui/ErrorState.tsx:ErrorState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/ErrorState.tsx",
+      "target": "function:frontend/src/shared/ui/ErrorState.tsx:ErrorState",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "target": "function:frontend/src/shared/ui/InfoLabel.tsx:InfoLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "target": "function:frontend/src/shared/ui/InfoLabel.tsx:InfoLabel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/PageLoader.tsx",
+      "target": "function:frontend/src/shared/ui/PageLoader.tsx:PageLoader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/PageLoader.tsx",
+      "target": "function:frontend/src/shared/ui/PageLoader.tsx:PageLoader",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/PermissionDenied.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/PermissionDenied.tsx",
+      "target": "function:frontend/src/shared/ui/PermissionDenied.tsx:PermissionDenied",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/ui/PermissionDenied.tsx",
+      "target": "function:frontend/src/shared/ui/PermissionDenied.tsx:PermissionDenied",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/ui/shared-ui.test.tsx",
+      "target": "file:frontend/src/shared/ui/ConfirmDialog.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/shared-ui.test.tsx",
+      "target": "file:frontend/src/shared/ui/EmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/shared-ui.test.tsx",
+      "target": "file:frontend/src/shared/ui/ErrorState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/shared-ui.test.tsx",
+      "target": "file:frontend/src/shared/ui/PageLoader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/ui/shared-ui.test.tsx",
+      "target": "file:frontend/src/shared/ui/PermissionDenied.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/utils/extractLatLng.test.ts",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "target": "function:frontend/src/shared/utils/extractLatLng.ts:readLatLng",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "target": "function:frontend/src/shared/utils/extractLatLng.ts:readCoordinateArray",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "target": "function:frontend/src/shared/utils/extractLatLng.ts:extractLatLng",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "target": "function:frontend/src/shared/utils/extractLatLng.ts:extractLatLng",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

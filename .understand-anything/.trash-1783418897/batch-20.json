@@ -1,0 +1,2433 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "file",
+      "name": "queryKeys.ts",
+      "filePath": "frontend/src/app/config/queryKeys.ts",
+      "summary": "queryKeys.ts is a frontend typescript module in frontend/src/app/config with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "type": "file",
+      "name": "adminApi.ts",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "adminApi.ts is a frontend typescript module in frontend/src/modules/admin with 10 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminUsers",
+      "type": "function",
+      "name": "fetchAdminUsers",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "fetchAdminUsers implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:updateUserRole",
+      "type": "function",
+      "name": "updateUserRole",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "updateUserRole implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminOrganizations",
+      "type": "function",
+      "name": "fetchAdminOrganizations",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "fetchAdminOrganizations implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminMappingJobs",
+      "type": "function",
+      "name": "fetchAdminMappingJobs",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "fetchAdminMappingJobs implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:requeueMappingJob",
+      "type": "function",
+      "name": "requeueMappingJob",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "requeueMappingJob implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminExportJobs",
+      "type": "function",
+      "name": "fetchAdminExportJobs",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "fetchAdminExportJobs implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminWorkerHealth",
+      "type": "function",
+      "name": "fetchAdminWorkerHealth",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "fetchAdminWorkerHealth implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminRuntimeLogs",
+      "type": "function",
+      "name": "fetchAdminRuntimeLogs",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "fetchAdminRuntimeLogs implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/api/adminApi.ts:downloadAdminDiagnosticsBundle",
+      "type": "function",
+      "name": "downloadAdminDiagnosticsBundle",
+      "filePath": "frontend/src/modules/admin/api/adminApi.ts",
+      "summary": "downloadAdminDiagnosticsBundle implements logic in adminApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "type": "file",
+      "name": "AdminPage.tsx",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "AdminPage.tsx is a frontend typescript module in frontend/src/modules/admin with 8 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:UsersTab",
+      "type": "function",
+      "name": "UsersTab",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "UsersTab implements logic in AdminPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:OrgsTab",
+      "type": "function",
+      "name": "OrgsTab",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "OrgsTab implements logic in AdminPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:MappingJobsTab",
+      "type": "function",
+      "name": "MappingJobsTab",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "MappingJobsTab implements logic in AdminPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:ExportJobsTab",
+      "type": "function",
+      "name": "ExportJobsTab",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "ExportJobsTab implements logic in AdminPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:WorkerHealthTab",
+      "type": "function",
+      "name": "WorkerHealthTab",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "WorkerHealthTab implements logic in AdminPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:DiagnosticsTab",
+      "type": "function",
+      "name": "DiagnosticsTab",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "DiagnosticsTab implements logic in AdminPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/admin/views/AdminPage.tsx:AdminPage",
+      "type": "function",
+      "name": "AdminPage",
+      "filePath": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "summary": "AdminPage implements logic in AdminPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "type": "file",
+      "name": "agentsApi.ts",
+      "filePath": "frontend/src/modules/agents/api/agentsApi.ts",
+      "summary": "agentsApi.ts is a frontend typescript module in frontend/src/modules/agents with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/agents/api/agentsApi.ts:runMissionAgent",
+      "type": "function",
+      "name": "runMissionAgent",
+      "filePath": "frontend/src/modules/agents/api/agentsApi.ts",
+      "summary": "runMissionAgent implements logic in agentsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/agents/api/agentsApi.ts:listAgentRuns",
+      "type": "function",
+      "name": "listAgentRuns",
+      "filePath": "frontend/src/modules/agents/api/agentsApi.ts",
+      "summary": "listAgentRuns implements logic in agentsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "type": "file",
+      "name": "AgentSummaryCard.tsx",
+      "filePath": "frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "summary": "AgentSummaryCard.tsx is a frontend typescript module in frontend/src/modules/agents with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/agents/components/AgentSummaryCard.tsx:AgentSummaryCard",
+      "type": "function",
+      "name": "AgentSummaryCard",
+      "filePath": "frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "summary": "AgentSummaryCard implements logic in AgentSummaryCard.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "type": "file",
+      "name": "AskAgentPanel.tsx",
+      "filePath": "frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "summary": "AskAgentPanel.tsx is a frontend typescript module in frontend/src/modules/agents with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/agents/components/AskAgentPanel.tsx:AskAgentPanel",
+      "type": "function",
+      "name": "AskAgentPanel",
+      "filePath": "frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "summary": "AskAgentPanel implements logic in AskAgentPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "type": "file",
+      "name": "useMissionAgent.ts",
+      "filePath": "frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "summary": "useMissionAgent.ts is a frontend typescript module in frontend/src/modules/agents with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/agents/hooks/useMissionAgent.ts:useMissionAgent",
+      "type": "function",
+      "name": "useMissionAgent",
+      "filePath": "frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "summary": "useMissionAgent implements logic in useMissionAgent.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "type": "file",
+      "name": "alertsApi.ts",
+      "filePath": "frontend/src/modules/alerts/api/alertsApi.ts",
+      "summary": "alertsApi.ts is a frontend typescript module in frontend/src/modules/alerts with 4 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/api/alertsApi.ts:fetchOpenAlertCount",
+      "type": "function",
+      "name": "fetchOpenAlertCount",
+      "filePath": "frontend/src/modules/alerts/api/alertsApi.ts",
+      "summary": "fetchOpenAlertCount implements logic in alertsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/api/alertsApi.ts:fetchActiveAlerts",
+      "type": "function",
+      "name": "fetchActiveAlerts",
+      "filePath": "frontend/src/modules/alerts/api/alertsApi.ts",
+      "summary": "fetchActiveAlerts implements logic in alertsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/api/alertsApi.ts:acknowledgeAlert",
+      "type": "function",
+      "name": "acknowledgeAlert",
+      "filePath": "frontend/src/modules/alerts/api/alertsApi.ts",
+      "summary": "acknowledgeAlert implements logic in alertsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/api/alertsApi.ts:resolveAlert",
+      "type": "function",
+      "name": "resolveAlert",
+      "filePath": "frontend/src/modules/alerts/api/alertsApi.ts",
+      "summary": "resolveAlert implements logic in alertsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "type": "file",
+      "name": "AlertCenterProvider.tsx",
+      "filePath": "frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "summary": "AlertCenterProvider.tsx is a frontend typescript module in frontend/src/modules/alerts with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:isAlertSocketMessage",
+      "type": "function",
+      "name": "isAlertSocketMessage",
+      "filePath": "frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "summary": "isAlertSocketMessage implements logic in AlertCenterProvider.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:AlertCenterProvider",
+      "type": "function",
+      "name": "AlertCenterProvider",
+      "filePath": "frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "summary": "AlertCenterProvider implements logic in AlertCenterProvider.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:useAlertCenter",
+      "type": "function",
+      "name": "useAlertCenter",
+      "filePath": "frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "summary": "useAlertCenter implements logic in AlertCenterProvider.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/alerts/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/alerts/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/alerts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "type": "file",
+      "name": "FlightReplayChart.tsx",
+      "filePath": "frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "summary": "FlightReplayChart.tsx is a frontend typescript module in frontend/src/modules/dashboard with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/components/FlightReplayChart.tsx:FlightReplayChart",
+      "type": "function",
+      "name": "FlightReplayChart",
+      "filePath": "frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "summary": "FlightReplayChart implements logic in FlightReplayChart.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "type": "file",
+      "name": "useFlightTelemetrySummary.ts",
+      "filePath": "frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "summary": "useFlightTelemetrySummary.ts is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts:useFlightTelemetrySummary",
+      "type": "function",
+      "name": "useFlightTelemetrySummary",
+      "filePath": "frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "summary": "useFlightTelemetrySummary implements logic in useFlightTelemetrySummary.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "type": "file",
+      "name": "fieldsApi.ts",
+      "filePath": "frontend/src/modules/fields/api/fieldsApi.ts",
+      "summary": "fieldsApi.ts is a frontend typescript module in frontend/src/modules/fields with 4 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/fieldsApi.ts:fetchFieldFeatures",
+      "type": "function",
+      "name": "fetchFieldFeatures",
+      "filePath": "frontend/src/modules/fields/api/fieldsApi.ts",
+      "summary": "fetchFieldFeatures implements logic in fieldsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/fieldsApi.ts:createField",
+      "type": "function",
+      "name": "createField",
+      "filePath": "frontend/src/modules/fields/api/fieldsApi.ts",
+      "summary": "createField implements logic in fieldsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/fieldsApi.ts:updateField",
+      "type": "function",
+      "name": "updateField",
+      "filePath": "frontend/src/modules/fields/api/fieldsApi.ts",
+      "summary": "updateField implements logic in fieldsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/fieldsApi.ts:deleteField",
+      "type": "function",
+      "name": "deleteField",
+      "filePath": "frontend/src/modules/fields/api/fieldsApi.ts",
+      "summary": "deleteField implements logic in fieldsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "type": "file",
+      "name": "geofencesApi.ts",
+      "filePath": "frontend/src/modules/fields/api/geofencesApi.ts",
+      "summary": "geofencesApi.ts is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/geofencesApi.ts:fetchActiveGeofenceRings",
+      "type": "function",
+      "name": "fetchActiveGeofenceRings",
+      "filePath": "frontend/src/modules/fields/api/geofencesApi.ts",
+      "summary": "fetchActiveGeofenceRings implements logic in geofencesApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "type": "file",
+      "name": "mappingApi.ts",
+      "filePath": "frontend/src/modules/fields/api/mappingApi.ts",
+      "summary": "mappingApi.ts is a frontend typescript module in frontend/src/modules/fields with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/mappingApi.ts:toAbsoluteAssetUrl",
+      "type": "function",
+      "name": "toAbsoluteAssetUrl",
+      "filePath": "frontend/src/modules/fields/api/mappingApi.ts",
+      "summary": "toAbsoluteAssetUrl implements logic in mappingApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/api/mappingApi.ts:fetchFieldLatestTileset",
+      "type": "function",
+      "name": "fetchFieldLatestTileset",
+      "filePath": "frontend/src/modules/fields/api/mappingApi.ts",
+      "summary": "fetchFieldLatestTileset implements logic in mappingApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/constants.ts",
+      "type": "file",
+      "name": "constants.ts",
+      "filePath": "frontend/src/modules/fields/constants.ts",
+      "summary": "constants.ts is a frontend typescript module in frontend/src/modules/fields with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "type": "file",
+      "name": "useFieldTileset.ts",
+      "filePath": "frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "summary": "useFieldTileset.ts is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/hooks/useFieldTileset.ts:useFieldTileset",
+      "type": "function",
+      "name": "useFieldTileset",
+      "filePath": "frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "summary": "useFieldTileset implements logic in useFieldTileset.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "type": "file",
+      "name": "useFields.ts",
+      "filePath": "frontend/src/modules/fields/hooks/useFields.ts",
+      "summary": "useFields.ts is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/hooks/useFields.ts:useFields",
+      "type": "function",
+      "name": "useFields",
+      "filePath": "frontend/src/modules/fields/hooks/useFields.ts",
+      "summary": "useFields implements logic in useFields.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "type": "file",
+      "name": "useGeofenceLayers.ts",
+      "filePath": "frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "summary": "useGeofenceLayers.ts is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/hooks/useGeofenceLayers.ts:useGeofenceLayers",
+      "type": "function",
+      "name": "useGeofenceLayers",
+      "filePath": "frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "summary": "useGeofenceLayers implements logic in useGeofenceLayers.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/tests/fieldGeometry.test.ts",
+      "type": "file",
+      "name": "fieldGeometry.test.ts",
+      "filePath": "frontend/src/modules/fields/tests/fieldGeometry.test.ts",
+      "summary": "fieldGeometry.test.ts is a frontend typescript module in frontend/src/modules/fields with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/fields/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/fields with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/types.ts:gmapsPathToLonLat",
+      "type": "function",
+      "name": "gmapsPathToLonLat",
+      "filePath": "frontend/src/modules/fields/types.ts",
+      "summary": "gmapsPathToLonLat implements logic in types.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/types.ts:lonLatToGmapsPath",
+      "type": "function",
+      "name": "lonLatToGmapsPath",
+      "filePath": "frontend/src/modules/fields/types.ts",
+      "summary": "lonLatToGmapsPath implements logic in types.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "type": "file",
+      "name": "fieldGeometry.ts",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "fieldGeometry.ts is a frontend typescript module in frontend/src/modules/fields with 7 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:lonLatRingToPath",
+      "type": "function",
+      "name": "lonLatRingToPath",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "lonLatRingToPath implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:stripClosedRing",
+      "type": "function",
+      "name": "stripClosedRing",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "stripClosedRing implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeCentroid",
+      "type": "function",
+      "name": "computeCentroid",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "computeCentroid implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeRingMapViewport",
+      "type": "function",
+      "name": "computeRingMapViewport",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "computeRingMapViewport implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:ringLatLngBounds",
+      "type": "function",
+      "name": "ringLatLngBounds",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "ringLatLngBounds implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeAreaHa",
+      "type": "function",
+      "name": "computeAreaHa",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "computeAreaHa implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:parseFieldFeatures",
+      "type": "function",
+      "name": "parseFieldFeatures",
+      "filePath": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "summary": "parseFieldFeatures implements logic in fieldGeometry.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "type": "file",
+      "name": "missionHistoryApi.ts",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "missionHistoryApi.ts is a frontend typescript module in frontend/src/modules/mission-history with 8 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionDetail",
+      "type": "function",
+      "name": "fetchMissionDetail",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionDetail implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionPreflight",
+      "type": "function",
+      "name": "fetchMissionPreflight",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionPreflight implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionTransitions",
+      "type": "function",
+      "name": "fetchMissionTransitions",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionTransitions implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionCommands",
+      "type": "function",
+      "name": "fetchMissionCommands",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionCommands implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionEvents",
+      "type": "function",
+      "name": "fetchMissionEvents",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionEvents implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionCompliance",
+      "type": "function",
+      "name": "fetchMissionCompliance",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionCompliance implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionExportJob",
+      "type": "function",
+      "name": "fetchMissionExportJob",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "fetchMissionExportJob implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:startMissionExport",
+      "type": "function",
+      "name": "startMissionExport",
+      "filePath": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "summary": "startMissionExport implements logic in missionHistoryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-history/components/MissionSectionError.test.tsx",
+      "type": "file",
+      "name": "MissionSectionError.test.tsx",
+      "filePath": "frontend/src/modules/mission-history/components/MissionSectionError.test.tsx",
+      "summary": "MissionSectionError.test.tsx is a frontend typescript module in frontend/src/modules/mission-history with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "type": "file",
+      "name": "MissionSectionError.tsx",
+      "filePath": "frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "summary": "MissionSectionError.tsx is a frontend typescript module in frontend/src/modules/mission-history with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/components/MissionSectionError.tsx:MissionSectionError",
+      "type": "function",
+      "name": "MissionSectionError",
+      "filePath": "frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "summary": "MissionSectionError implements logic in MissionSectionError.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-history/views/MissionTimeline.test.tsx",
+      "type": "file",
+      "name": "MissionTimeline.test.tsx",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.test.tsx",
+      "summary": "MissionTimeline.test.tsx is a frontend typescript module in frontend/src/modules/mission-history with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "type": "file",
+      "name": "MissionTimeline.tsx",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "MissionTimeline.tsx is a frontend typescript module in frontend/src/modules/mission-history with 10 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:StatusBadge",
+      "type": "function",
+      "name": "StatusBadge",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "StatusBadge implements logic in MissionTimeline.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:PreflightSection",
+      "type": "function",
+      "name": "PreflightSection",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "PreflightSection implements logic in MissionTimeline.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:stateIcon",
+      "type": "function",
+      "name": "stateIcon",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "stateIcon implements logic in MissionTimeline.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:TransitionItem",
+      "type": "function",
+      "name": "TransitionItem",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "TransitionItem implements logic in MissionTimeline.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:CommandItem",
+      "type": "function",
+      "name": "CommandItem",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "CommandItem implements logic in MissionTimeline.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:EventItem",
+      "type": "function",
+      "name": "EventItem",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "EventItem implements logic in MissionTimeline.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:ExportButton",
+      "type": "function",
+      "name": "ExportButton",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "ExportButton implements logic in MissionTimeline.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:ComplianceSection",
+      "type": "function",
+      "name": "ComplianceSection",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "ComplianceSection implements logic in MissionTimeline.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:MissionTimeline",
+      "type": "function",
+      "name": "MissionTimeline",
+      "filePath": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "summary": "MissionTimeline implements logic in MissionTimeline.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "type": "file",
+      "name": "planningApi.ts",
+      "filePath": "frontend/src/modules/mission-planning/api/planningApi.ts",
+      "summary": "planningApi.ts is a frontend typescript module in frontend/src/modules/mission-planning with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-planning/api/planningApi.ts:fetchGridPreview",
+      "type": "function",
+      "name": "fetchGridPreview",
+      "filePath": "frontend/src/modules/mission-planning/api/planningApi.ts",
+      "summary": "fetchGridPreview implements logic in planningApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-planning/api/planningApi.ts:fetchPatrolPreview",
+      "type": "function",
+      "name": "fetchPatrolPreview",
+      "filePath": "frontend/src/modules/mission-planning/api/planningApi.ts",
+      "summary": "fetchPatrolPreview implements logic in planningApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-planning/constants.ts",
+      "type": "file",
+      "name": "constants.ts",
+      "filePath": "frontend/src/modules/mission-planning/constants.ts",
+      "summary": "constants.ts is a frontend typescript module in frontend/src/modules/mission-planning with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-planning/constants.ts:createDefaultGridParams",
+      "type": "function",
+      "name": "createDefaultGridParams",
+      "filePath": "frontend/src/modules/mission-planning/constants.ts",
+      "summary": "createDefaultGridParams implements logic in constants.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminUsers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminUsers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:updateUserRole",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:updateUserRole",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminOrganizations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminOrganizations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminMappingJobs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminMappingJobs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:requeueMappingJob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:requeueMappingJob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminExportJobs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminExportJobs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminWorkerHealth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminWorkerHealth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminRuntimeLogs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:fetchAdminRuntimeLogs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:downloadAdminDiagnosticsBundle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "target": "function:frontend/src/modules/admin/api/adminApi.ts:downloadAdminDiagnosticsBundle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "file:frontend/src/modules/admin/api/adminApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:UsersTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:OrgsTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:MappingJobsTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:ExportJobsTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:WorkerHealthTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:DiagnosticsTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:AdminPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/admin/views/AdminPage.tsx",
+      "target": "function:frontend/src/modules/admin/views/AdminPage.tsx:AdminPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "target": "function:frontend/src/modules/agents/api/agentsApi.ts:runMissionAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "target": "function:frontend/src/modules/agents/api/agentsApi.ts:runMissionAgent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "target": "function:frontend/src/modules/agents/api/agentsApi.ts:listAgentRuns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "target": "function:frontend/src/modules/agents/api/agentsApi.ts:listAgentRuns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "target": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "target": "function:frontend/src/modules/agents/components/AgentSummaryCard.tsx:AgentSummaryCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "target": "function:frontend/src/modules/agents/components/AgentSummaryCard.tsx:AgentSummaryCard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "target": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "target": "file:frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "target": "file:frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "target": "function:frontend/src/modules/agents/components/AskAgentPanel.tsx:AskAgentPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "target": "function:frontend/src/modules/agents/components/AskAgentPanel.tsx:AskAgentPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "target": "file:frontend/src/modules/agents/api/agentsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "target": "function:frontend/src/modules/agents/hooks/useMissionAgent.ts:useMissionAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "target": "function:frontend/src/modules/agents/hooks/useMissionAgent.ts:useMissionAgent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "file:frontend/src/modules/alerts/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:fetchOpenAlertCount",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:fetchOpenAlertCount",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:fetchActiveAlerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:fetchActiveAlerts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:acknowledgeAlert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:acknowledgeAlert",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:resolveAlert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "target": "function:frontend/src/modules/alerts/api/alertsApi.ts:resolveAlert",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "file:frontend/src/modules/alerts/api/alertsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "file:frontend/src/modules/alerts/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "file:frontend/src/shared/logging/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:isAlertSocketMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:AlertCenterProvider",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:AlertCenterProvider",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:useAlertCenter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "target": "function:frontend/src/modules/alerts/components/AlertCenterProvider.tsx:useAlertCenter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "target": "file:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/FlightReplayChart.tsx:FlightReplayChart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "target": "function:frontend/src/modules/dashboard/components/FlightReplayChart.tsx:FlightReplayChart",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "target": "function:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts:useFlightTelemetrySummary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "target": "function:frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts:useFlightTelemetrySummary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "file:frontend/src/modules/fields/constants.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:fetchFieldFeatures",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:fetchFieldFeatures",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:createField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:createField",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:updateField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:updateField",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:deleteField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "target": "function:frontend/src/modules/fields/api/fieldsApi.ts:deleteField",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "target": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "target": "function:frontend/src/modules/fields/api/geofencesApi.ts:fetchActiveGeofenceRings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "target": "function:frontend/src/modules/fields/api/geofencesApi.ts:fetchActiveGeofenceRings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "file:frontend/src/app/config/env.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "function:frontend/src/modules/fields/api/mappingApi.ts:toAbsoluteAssetUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "function:frontend/src/modules/fields/api/mappingApi.ts:toAbsoluteAssetUrl",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "function:frontend/src/modules/fields/api/mappingApi.ts:fetchFieldLatestTileset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "target": "function:frontend/src/modules/fields/api/mappingApi.ts:fetchFieldLatestTileset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "target": "file:frontend/src/modules/fields/api/mappingApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "target": "function:frontend/src/modules/fields/hooks/useFieldTileset.ts:useFieldTileset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "target": "function:frontend/src/modules/fields/hooks/useFieldTileset.ts:useFieldTileset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "target": "file:frontend/src/modules/fields/api/fieldsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "target": "file:frontend/src/modules/fields/constants.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "target": "function:frontend/src/modules/fields/hooks/useFields.ts:useFields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useFields.ts",
+      "target": "function:frontend/src/modules/fields/hooks/useFields.ts:useFields",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "target": "file:frontend/src/modules/fields/api/geofencesApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "target": "function:frontend/src/modules/fields/hooks/useGeofenceLayers.ts:useGeofenceLayers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "target": "function:frontend/src/modules/fields/hooks/useGeofenceLayers.ts:useGeofenceLayers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/tests/fieldGeometry.test.ts",
+      "target": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/types.ts",
+      "target": "file:frontend/src/modules/fields/constants.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/types.ts",
+      "target": "function:frontend/src/modules/fields/types.ts:gmapsPathToLonLat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/types.ts",
+      "target": "function:frontend/src/modules/fields/types.ts:gmapsPathToLonLat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/types.ts",
+      "target": "function:frontend/src/modules/fields/types.ts:lonLatToGmapsPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/types.ts",
+      "target": "function:frontend/src/modules/fields/types.ts:lonLatToGmapsPath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:lonLatRingToPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:lonLatRingToPath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:stripClosedRing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:stripClosedRing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeCentroid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeCentroid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeRingMapViewport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeRingMapViewport",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:ringLatLngBounds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:ringLatLngBounds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeAreaHa",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:computeAreaHa",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:parseFieldFeatures",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "target": "function:frontend/src/modules/fields/utils/fieldGeometry.ts:parseFieldFeatures",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionDetail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionDetail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionTransitions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionTransitions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionCommands",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionCommands",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionEvents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionEvents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionCompliance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionCompliance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionExportJob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:fetchMissionExportJob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:startMissionExport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "target": "function:frontend/src/modules/mission-history/api/missionHistoryApi.ts:startMissionExport",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/components/MissionSectionError.test.tsx",
+      "target": "file:frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "target": "function:frontend/src/modules/mission-history/components/MissionSectionError.tsx:MissionSectionError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "target": "function:frontend/src/modules/mission-history/components/MissionSectionError.tsx:MissionSectionError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.test.tsx",
+      "target": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "file:frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "file:frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:StatusBadge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:PreflightSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:stateIcon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:TransitionItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:CommandItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:EventItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:ExportButton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:ComplianceSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:MissionTimeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "target": "function:frontend/src/modules/mission-history/views/MissionTimeline.tsx:MissionTimeline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "file:frontend/src/modules/mission-planning/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "function:frontend/src/modules/mission-planning/api/planningApi.ts:fetchGridPreview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "function:frontend/src/modules/mission-planning/api/planningApi.ts:fetchGridPreview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "function:frontend/src/modules/mission-planning/api/planningApi.ts:fetchPatrolPreview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "target": "function:frontend/src/modules/mission-planning/api/planningApi.ts:fetchPatrolPreview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/constants.ts",
+      "target": "file:frontend/src/modules/mission-planning/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/constants.ts",
+      "target": "function:frontend/src/modules/mission-planning/constants.ts:createDefaultGridParams",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/constants.ts",
+      "target": "function:frontend/src/modules/mission-planning/constants.ts:createDefaultGridParams",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

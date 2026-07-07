@@ -77,10 +77,9 @@ class WarehouseLiveMapDiagnostics:
 
 
 def _ros2_workspace() -> Path:
-    from backend.core.config.runtime import settings
+    from backend.modules.warehouse.service.runtime_settings import ros2_workspace
 
-    raw = str(getattr(settings, "warehouse_ros2_ws", "") or "").strip() or "ros2_ws"
-    return Path(raw).expanduser().resolve()
+    return ros2_workspace()
 
 
 def _source_setup(ws: Path) -> str:

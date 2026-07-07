@@ -1,20 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "../../../test/msw/server";
+import { createTestQueryWrapper } from "../../../test/renderWithProviders";
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-}
 import {
   useRunWarehousePreflight,
   warehousePreflightPassed,
@@ -149,7 +138,7 @@ describe("useRunWarehousePreflight", () => {
     );
 
     const { result } = renderHook(() => useRunWarehousePreflight("token"), {
-      wrapper: createWrapper(),
+      wrapper: createTestQueryWrapper(),
     });
     await act(async () => {
       await result.current.runChecks({ timeoutMs: 15_000 });
@@ -227,7 +216,7 @@ describe("useRunWarehousePreflight", () => {
     );
 
     const { result } = renderHook(() => useRunWarehousePreflight("token"), {
-      wrapper: createWrapper(),
+      wrapper: createTestQueryWrapper(),
     });
 
     await act(async () => {
@@ -296,7 +285,7 @@ describe("useRunWarehousePreflight", () => {
     );
 
     const { result } = renderHook(() => useRunWarehousePreflight("token"), {
-      wrapper: createWrapper(),
+      wrapper: createTestQueryWrapper(),
     });
     await act(async () => {
       const first = result.current.runChecks({ timeoutMs: 15_000 });

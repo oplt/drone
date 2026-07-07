@@ -32,6 +32,11 @@ from typing import TYPE_CHECKING, Literal, Protocol
 
 from shapely.geometry import LineString, Point, Polygon
 
+from backend.core.geometry.projection import (
+    lonlat_to_xy_m as _lonlat_to_xy_m,
+    polygon_centroid_lonlat as _shared_polygon_centroid_lonlat,
+    xy_m_to_lonlat as _xy_m_to_lonlat,
+)
 from backend.core.types.geo import coord_from_home
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.missions.planning.terrain_follow import (
@@ -56,28 +61,6 @@ MAX_GRID_PATH_POINTS = 4_000
 # ---------------------------------------------------------------------------
 
 
-def _meters_per_deg_lat() -> float:
-    """Mean metres per degree of latitude (WGS-84 approximation)."""
-    return 111_132.0
-
-
-def _meters_per_deg_lon(lat_deg: float) -> float:
-    return 111_320.0 * math.cos(math.radians(lat_deg))
-
-
-def _lonlat_to_xy_m(lon: float, lat: float, lon0: float, lat0: float) -> tuple[float, float]:
-    """Equirectangular projection centred at (lon0, lat0) → metres."""
-    x = (lon - lon0) * _meters_per_deg_lon(lat0)
-    y = (lat - lat0) * _meters_per_deg_lat()
-    return x, y
-
-
-def _xy_m_to_lonlat(x: float, y: float, lon0: float, lat0: float) -> tuple[float, float]:
-    lon = lon0 + x / _meters_per_deg_lon(lat0)
-    lat = lat0 + y / _meters_per_deg_lat()
-    return lon, lat
-
-
 def _rot(x: float, y: float, ang_rad: float) -> tuple[float, float]:
     c, s = math.cos(ang_rad), math.sin(ang_rad)
     return (c * x - s * y, s * x + c * y)
@@ -87,16 +70,10 @@ def _poly_centroid_lonlat(
     poly_lonlat: list[tuple[float, float]],
 ) -> tuple[float, float]:
     """Simple mean centroid of an open or closed (lon, lat) ring."""
-    if len(poly_lonlat) < 3:
-        raise ValueError("Polygon must have ≥ 3 points")
-    pts = poly_lonlat[:]
-    if pts[0] != pts[-1]:
-        pts.append(pts[0])
-    # Use pts[:-1] so the closing duplicate is excluded from the mean.
-    n = len(pts) - 1
-    lon0 = sum(p[0] for p in pts[:n]) / n
-    lat0 = sum(p[1] for p in pts[:n]) / n
-    return lon0, lat0
+    return _shared_polygon_centroid_lonlat(
+        poly_lonlat,
+        error_message="Polygon must have ≥ 3 points",
+    )
 
 
 def _maybe_get_elevation_provider(

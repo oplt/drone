@@ -1,0 +1,1961 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "type": "file",
+      "name": "WarehouseSensorRigSetupPanel.tsx",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "summary": "WarehouseSensorRigSetupPanel.tsx is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx:WarehouseSensorRigSetupPanel",
+      "type": "function",
+      "name": "WarehouseSensorRigSetupPanel",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "summary": "WarehouseSensorRigSetupPanel implements logic in WarehouseSensorRigSetupPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "type": "file",
+      "name": "WarehouseStatusBadge.tsx",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "summary": "WarehouseStatusBadge.tsx is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx:WarehouseStatusBadge",
+      "type": "function",
+      "name": "WarehouseStatusBadge",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "summary": "WarehouseStatusBadge implements logic in WarehouseStatusBadge.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "type": "file",
+      "name": "WarehouseViewerSection.tsx",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "summary": "WarehouseViewerSection.tsx is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx:WarehouseViewerSection",
+      "type": "function",
+      "name": "WarehouseViewerSection",
+      "filePath": "frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "summary": "WarehouseViewerSection implements logic in WarehouseViewerSection.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "type": "file",
+      "name": "warehousePreflightViewModel.ts",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "warehousePreflightViewModel.ts is a frontend typescript module in frontend/src/modules/warehouse with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:normalizeWarehouseStatus",
+      "type": "function",
+      "name": "normalizeWarehouseStatus",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "normalizeWarehouseStatus implements logic in warehousePreflightViewModel.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:detailFor",
+      "type": "function",
+      "name": "detailFor",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "detailFor implements logic in warehousePreflightViewModel.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:buildPreflightGroups",
+      "type": "function",
+      "name": "buildPreflightGroups",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "buildPreflightGroups implements logic in warehousePreflightViewModel.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:preflightProgress",
+      "type": "function",
+      "name": "preflightProgress",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "preflightProgress implements logic in warehousePreflightViewModel.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:strongestPreflightBlocker",
+      "type": "function",
+      "name": "strongestPreflightBlocker",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "strongestPreflightBlocker implements logic in warehousePreflightViewModel.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:readinessStatus",
+      "type": "function",
+      "name": "readinessStatus",
+      "filePath": "frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "summary": "readinessStatus implements logic in warehousePreflightViewModel.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "type": "file",
+      "name": "liveMapConfig.ts",
+      "filePath": "frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "summary": "liveMapConfig.ts is a frontend typescript module in frontend/src/modules/warehouse with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:layerKeyToSource",
+      "type": "function",
+      "name": "layerKeyToSource",
+      "filePath": "frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "summary": "layerKeyToSource implements logic in liveMapConfig.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:isChunkLayerVisible",
+      "type": "function",
+      "name": "isChunkLayerVisible",
+      "filePath": "frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "summary": "isChunkLayerVisible implements logic in liveMapConfig.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:filterChunksForDownload",
+      "type": "function",
+      "name": "filterChunksForDownload",
+      "filePath": "frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "summary": "filterChunksForDownload implements logic in liveMapConfig.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:mergeLiveMapConfig",
+      "type": "function",
+      "name": "mergeLiveMapConfig",
+      "filePath": "frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "summary": "mergeLiveMapConfig implements logic in liveMapConfig.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "type": "file",
+      "name": "preflightPolling.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "summary": "preflightPolling.ts is a frontend typescript module in frontend/src/modules/warehouse with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/preflightPolling.ts:preflightRunPollIntervalMs",
+      "type": "function",
+      "name": "preflightRunPollIntervalMs",
+      "filePath": "frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "summary": "preflightRunPollIntervalMs implements logic in preflightPolling.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/preflightPolling.ts:preflightRunElapsedMs",
+      "type": "function",
+      "name": "preflightRunElapsedMs",
+      "filePath": "frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "summary": "preflightRunElapsedMs implements logic in preflightPolling.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "type": "file",
+      "name": "useLiveMapChunkCache.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "useLiveMapChunkCache.ts is a frontend typescript module in frontend/src/modules/warehouse with 11 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:normalizeKind",
+      "type": "function",
+      "name": "normalizeKind",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "normalizeKind implements logic in useLiveMapChunkCache.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:fetchChunkOnce",
+      "type": "function",
+      "name": "fetchChunkOnce",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "fetchChunkOnce implements logic in useLiveMapChunkCache.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:selectDownloadableChunks",
+      "type": "function",
+      "name": "selectDownloadableChunks",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "selectDownloadableChunks implements logic in useLiveMapChunkCache.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:runWithConcurrency",
+      "type": "function",
+      "name": "runWithConcurrency",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "runWithConcurrency implements logic in useLiveMapChunkCache.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:resetCacheState",
+      "type": "function",
+      "name": "resetCacheState",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "resetCacheState implements logic in useLiveMapChunkCache.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:useLiveMapChunkCache",
+      "type": "function",
+      "name": "useLiveMapChunkCache",
+      "filePath": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "summary": "useLiveMapChunkCache implements logic in useLiveMapChunkCache.ts.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "type": "file",
+      "name": "useRunWarehousePreflight.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "useRunWarehousePreflight.ts is a frontend typescript module in frontend/src/modules/warehouse with 9 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:warehousePreflightPassed",
+      "type": "function",
+      "name": "warehousePreflightPassed",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "warehousePreflightPassed implements logic in useRunWarehousePreflight.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:isTerminalPreflightFailure",
+      "type": "function",
+      "name": "isTerminalPreflightFailure",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "isTerminalPreflightFailure implements logic in useRunWarehousePreflight.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:warehousePreflightPollIntervalMs",
+      "type": "function",
+      "name": "warehousePreflightPollIntervalMs",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "warehousePreflightPollIntervalMs implements logic in useRunWarehousePreflight.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:blockedMessage",
+      "type": "function",
+      "name": "blockedMessage",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "blockedMessage implements logic in useRunWarehousePreflight.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:timeoutMessage",
+      "type": "function",
+      "name": "timeoutMessage",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "timeoutMessage implements logic in useRunWarehousePreflight.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:useRunWarehousePreflight",
+      "type": "function",
+      "name": "useRunWarehousePreflight",
+      "filePath": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "summary": "useRunWarehousePreflight implements logic in useRunWarehousePreflight.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "type": "file",
+      "name": "useStartWarehousePreflightRefresh.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "summary": "useStartWarehousePreflightRefresh.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts:useStartWarehousePreflightRefresh",
+      "type": "function",
+      "name": "useStartWarehousePreflightRefresh",
+      "filePath": "frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "summary": "useStartWarehousePreflightRefresh implements logic in useStartWarehousePreflightRefresh.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "type": "file",
+      "name": "useWarehouseFlightReadiness.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "summary": "useWarehouseFlightReadiness.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts:useWarehouseFlightReadiness",
+      "type": "function",
+      "name": "useWarehouseFlightReadiness",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "summary": "useWarehouseFlightReadiness implements logic in useWarehouseFlightReadiness.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "type": "file",
+      "name": "useWarehouseLiveVoxelMap.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "summary": "useWarehouseLiveVoxelMap.ts is a frontend typescript module in frontend/src/modules/warehouse with 3 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:warehouseLiveMapReconnectDelayMs",
+      "type": "function",
+      "name": "warehouseLiveMapReconnectDelayMs",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "summary": "warehouseLiveMapReconnectDelayMs implements logic in useWarehouseLiveVoxelMap.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:warehouseLiveMapSnapshotPollDelayMs",
+      "type": "function",
+      "name": "warehouseLiveMapSnapshotPollDelayMs",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "summary": "warehouseLiveMapSnapshotPollDelayMs implements logic in useWarehouseLiveVoxelMap.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:useWarehouseLiveVoxelMap",
+      "type": "function",
+      "name": "useWarehouseLiveVoxelMap",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "summary": "useWarehouseLiveVoxelMap implements logic in useWarehouseLiveVoxelMap.ts.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "type": "file",
+      "name": "useWarehouseMapPlacement.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "summary": "useWarehouseMapPlacement.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts:useWarehouseMapPlacement",
+      "type": "function",
+      "name": "useWarehouseMapPlacement",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "summary": "useWarehouseMapPlacement implements logic in useWarehouseMapPlacement.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "type": "file",
+      "name": "useWarehouseMappingStack.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "summary": "useWarehouseMappingStack.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts:useWarehouseMappingStack",
+      "type": "function",
+      "name": "useWarehouseMappingStack",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "summary": "useWarehouseMappingStack implements logic in useWarehouseMappingStack.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "type": "file",
+      "name": "useWarehouseMissionRuntimeController.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "summary": "useWarehouseMissionRuntimeController.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts:useWarehouseMissionRuntimeController",
+      "type": "function",
+      "name": "useWarehouseMissionRuntimeController",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "summary": "useWarehouseMissionRuntimeController implements logic in useWarehouseMissionRuntimeController.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "type": "file",
+      "name": "useWarehousePreflightRun.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "summary": "useWarehousePreflightRun.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts:useWarehousePreflightRun",
+      "type": "function",
+      "name": "useWarehousePreflightRun",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "summary": "useWarehousePreflightRun implements logic in useWarehousePreflightRun.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "type": "file",
+      "name": "useWarehousePreflightSnapshot.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "summary": "useWarehousePreflightSnapshot.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts:useWarehousePreflightSnapshot",
+      "type": "function",
+      "name": "useWarehousePreflightSnapshot",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "summary": "useWarehousePreflightSnapshot implements logic in useWarehousePreflightSnapshot.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "type": "file",
+      "name": "useWarehouseScanPoseDraft.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "summary": "useWarehouseScanPoseDraft.ts is a frontend typescript module in frontend/src/modules/warehouse with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts:useWarehouseScanPoseDraft",
+      "type": "function",
+      "name": "useWarehouseScanPoseDraft",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "summary": "useWarehouseScanPoseDraft implements logic in useWarehouseScanPoseDraft.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "type": "file",
+      "name": "useWarehouseScannedMapReplay.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "summary": "useWarehouseScannedMapReplay.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts:useWarehouseScannedMapReplay",
+      "type": "function",
+      "name": "useWarehouseScannedMapReplay",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "summary": "useWarehouseScannedMapReplay implements logic in useWarehouseScannedMapReplay.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "type": "file",
+      "name": "useWarehouseStructure.ts",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "summary": "useWarehouseStructure.ts is a frontend typescript module in frontend/src/modules/warehouse with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts:useWarehouseStructure",
+      "type": "function",
+      "name": "useWarehouseStructure",
+      "filePath": "frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "summary": "useWarehouseStructure implements logic in useWarehouseStructure.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "type": "file",
+      "name": "scannedMapSelectors.ts",
+      "filePath": "frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "summary": "scannedMapSelectors.ts is a frontend typescript module in frontend/src/modules/warehouse with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:getWarehouseMapId",
+      "type": "function",
+      "name": "getWarehouseMapId",
+      "filePath": "frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "summary": "getWarehouseMapId implements logic in scannedMapSelectors.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:getWarehouseName",
+      "type": "function",
+      "name": "getWarehouseName",
+      "filePath": "frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "summary": "getWarehouseName implements logic in scannedMapSelectors.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:selectScannedMap",
+      "type": "function",
+      "name": "selectScannedMap",
+      "filePath": "frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "summary": "selectScannedMap implements logic in scannedMapSelectors.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/WarehouseLayerBudgetSlider.test.tsx",
+      "type": "file",
+      "name": "WarehouseLayerBudgetSlider.test.tsx",
+      "filePath": "frontend/src/modules/warehouse/tests/WarehouseLayerBudgetSlider.test.tsx",
+      "summary": "WarehouseLayerBudgetSlider.test.tsx is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/WarehousePreflightChecksPanel.test.tsx",
+      "type": "file",
+      "name": "WarehousePreflightChecksPanel.test.tsx",
+      "filePath": "frontend/src/modules/warehouse/tests/WarehousePreflightChecksPanel.test.tsx",
+      "summary": "WarehousePreflightChecksPanel.test.tsx is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/WarehouseScanResultsSelector.test.tsx",
+      "type": "file",
+      "name": "WarehouseScanResultsSelector.test.tsx",
+      "filePath": "frontend/src/modules/warehouse/tests/WarehouseScanResultsSelector.test.tsx",
+      "summary": "WarehouseScanResultsSelector.test.tsx is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/liveMapChunkDecoders.test.ts",
+      "type": "file",
+      "name": "liveMapChunkDecoders.test.ts",
+      "filePath": "frontend/src/modules/warehouse/tests/liveMapChunkDecoders.test.ts",
+      "summary": "liveMapChunkDecoders.test.ts is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "type": "file",
+      "name": "liveMapChunkRetention.test.ts",
+      "filePath": "frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "summary": "liveMapChunkRetention.test.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts:chunk",
+      "type": "function",
+      "name": "chunk",
+      "filePath": "frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "summary": "chunk implements logic in liveMapChunkRetention.test.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "type": "file",
+      "name": "liveMapPipeline.test.ts",
+      "filePath": "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "summary": "liveMapPipeline.test.ts is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/liveMapRenderModel.test.ts",
+      "type": "file",
+      "name": "liveMapRenderModel.test.ts",
+      "filePath": "frontend/src/modules/warehouse/tests/liveMapRenderModel.test.ts",
+      "summary": "liveMapRenderModel.test.ts is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/mergeReplaySnapshot.test.ts",
+      "type": "file",
+      "name": "mergeReplaySnapshot.test.ts",
+      "filePath": "frontend/src/modules/warehouse/tests/mergeReplaySnapshot.test.ts",
+      "summary": "mergeReplaySnapshot.test.ts is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "type": "file",
+      "name": "scannedMapSelectors.test.ts",
+      "filePath": "frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "summary": "scannedMapSelectors.test.ts is a frontend typescript module in frontend/src/modules/warehouse with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts:makeScannedMap",
+      "type": "function",
+      "name": "makeScannedMap",
+      "filePath": "frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "summary": "makeScannedMap implements logic in scannedMapSelectors.test.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/warehouse/tests/useRunWarehousePreflight.test.tsx",
+      "type": "file",
+      "name": "useRunWarehousePreflight.test.tsx",
+      "filePath": "frontend/src/modules/warehouse/tests/useRunWarehousePreflight.test.tsx",
+      "summary": "useRunWarehousePreflight.test.tsx is a frontend typescript module in frontend/src/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "target": "file:frontend/src/modules/warehouse/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "target": "file:frontend/src/modules/warehouse/warehousePageSupport.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx:WarehouseSensorRigSetupPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseSensorRigSetupPanel.tsx:WarehouseSensorRigSetupPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx:WarehouseStatusBadge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx:WarehouseStatusBadge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseDashboardUi.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseScanResultsSelector.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx:WarehouseViewerSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx",
+      "target": "function:frontend/src/modules/warehouse/components/WarehouseViewerSection.tsx:WarehouseViewerSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehousePreflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseStatusBadge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:normalizeWarehouseStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:normalizeWarehouseStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:detailFor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:buildPreflightGroups",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:buildPreflightGroups",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:preflightProgress",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:preflightProgress",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:strongestPreflightBlocker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:strongestPreflightBlocker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:readinessStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts",
+      "target": "function:frontend/src/modules/warehouse/components/warehousePreflightViewModel.ts:readinessStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapLayerUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:layerKeyToSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:layerKeyToSource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:isChunkLayerVisible",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:isChunkLayerVisible",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:filterChunksForDownload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:filterChunksForDownload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:mergeLiveMapConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "target": "function:frontend/src/modules/warehouse/config/liveMapConfig.ts:mergeLiveMapConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/preflightPolling.ts:preflightRunPollIntervalMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/preflightPolling.ts:preflightRunPollIntervalMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/preflightPolling.ts:preflightRunElapsedMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/preflightPolling.ts:preflightRunElapsedMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapChunkRetention.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapDebug.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:normalizeKind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:fetchChunkOnce",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:selectDownloadableChunks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:runWithConcurrency",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:resetCacheState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:useLiveMapChunkCache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts:useLiveMapChunkCache",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehousePreflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:warehousePreflightPassed",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:warehousePreflightPassed",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:isTerminalPreflightFailure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:warehousePreflightPollIntervalMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:warehousePreflightPollIntervalMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:blockedMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:timeoutMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:useRunWarehousePreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts:useRunWarehousePreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehousePreflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts:useStartWarehousePreflightRefresh",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useStartWarehousePreflightRefresh.ts:useStartWarehousePreflightRefresh",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseFlightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts:useWarehouseFlightReadiness",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseFlightReadiness.ts:useWarehouseFlightReadiness",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapUpdateMerge.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:warehouseLiveMapReconnectDelayMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:warehouseLiveMapReconnectDelayMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:warehouseLiveMapSnapshotPollDelayMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:warehouseLiveMapSnapshotPollDelayMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:useWarehouseLiveVoxelMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts:useWarehouseLiveVoxelMap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseInspectionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/warehouseMapPlacement.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts:useWarehouseMapPlacement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts:useWarehouseMapPlacement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseMissionsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts:useWarehouseMappingStack",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseMappingStack.ts:useWarehouseMappingStack",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "target": "file:frontend/src/modules/warehouse/warehousePageSupport.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts:useWarehouseMissionRuntimeController",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseMissionRuntimeController.ts:useWarehouseMissionRuntimeController",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehousePreflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts:useWarehousePreflightRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehousePreflightRun.ts:useWarehousePreflightRun",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehousePreflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/preflightPolling.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts:useWarehousePreflightSnapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehousePreflightSnapshot.ts:useWarehousePreflightSnapshot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseInspectionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/warehouseMapPlacement.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts:useWarehouseScanPoseDraft",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseScanPoseDraft.ts:useWarehouseScanPoseDraft",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseMissionsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "file:frontend/src/modules/warehouse/types/missions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapDebug.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/mergeReplaySnapshot.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts:useWarehouseScannedMapReplay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts:useWarehouseScannedMapReplay",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseInspectionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/structureQualityCopy.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "target": "file:frontend/src/modules/warehouse/warehousePageSupport.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts:useWarehouseStructure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+      "target": "function:frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts:useWarehouseStructure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "file:frontend/src/modules/warehouse/types/missions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:getWarehouseMapId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:getWarehouseMapId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:getWarehouseName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:getWarehouseName",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:selectScannedMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "target": "function:frontend/src/modules/warehouse/scannedMapSelectors.ts:selectScannedMap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/WarehouseLayerBudgetSlider.test.tsx",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseLayerBudgetSlider.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/WarehousePreflightChecksPanel.test.tsx",
+      "target": "file:frontend/src/modules/warehouse/api/warehousePreflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/WarehousePreflightChecksPanel.test.tsx",
+      "target": "file:frontend/src/modules/warehouse/components/WarehousePreflightChecksPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/WarehouseScanResultsSelector.test.tsx",
+      "target": "file:frontend/src/modules/warehouse/components/WarehouseScanResultsSelector.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/WarehouseScanResultsSelector.test.tsx",
+      "target": "file:frontend/src/modules/warehouse/types/missions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapChunkDecoders.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapChunkDecoders.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapChunkDecoders.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapLayerUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapChunkRetention.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts",
+      "target": "function:frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts:chunk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/config/liveMapConfig.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapChunkRetention.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapLayerUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapUpdateMerge.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/liveMapRenderModel.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/liveMapRenderModel.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/mergeReplaySnapshot.test.ts",
+      "target": "file:frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/mergeReplaySnapshot.test.ts",
+      "target": "file:frontend/src/modules/warehouse/utils/mergeReplaySnapshot.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "target": "file:frontend/src/modules/warehouse/scannedMapSelectors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "target": "file:frontend/src/modules/warehouse/types/missions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts",
+      "target": "function:frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts:makeScannedMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/useRunWarehousePreflight.test.tsx",
+      "target": "file:frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/useRunWarehousePreflight.test.tsx",
+      "target": "file:frontend/src/test/msw/server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/warehouse/tests/useRunWarehousePreflight.test.tsx",
+      "target": "file:frontend/src/test/renderWithProviders.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

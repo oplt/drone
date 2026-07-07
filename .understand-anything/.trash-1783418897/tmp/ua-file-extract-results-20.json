@@ -1,0 +1,3309 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 29,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/app/config/queryKeys.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 70,
+      "nonEmptyLines": 61,
+      "exports": [
+        {
+          "name": "sessionKeys",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "dashboardKeys",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "missionKeys",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "fieldsKeys",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "planningKeys",
+          "line": 34,
+          "isDefault": false
+        },
+        {
+          "name": "mappingKeys",
+          "line": 40,
+          "isDefault": false
+        },
+        {
+          "name": "warehouseKeys",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "videoAnalysisKeys",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "liveObjectDetectionKeys",
+          "line": 60,
+          "isDefault": false
+        },
+        {
+          "name": "livestockKeys",
+          "line": 65,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 10,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/admin/api/adminApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 111,
+      "nonEmptyLines": 99,
+      "functions": [
+        {
+          "name": "fetchAdminUsers",
+          "startLine": 20,
+          "endLine": 24,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "updateUserRole",
+          "startLine": 26,
+          "endLine": 36,
+          "params": [
+            "userId",
+            "role",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchAdminOrganizations",
+          "startLine": 38,
+          "endLine": 42,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "fetchAdminMappingJobs",
+          "startLine": 44,
+          "endLine": 48,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "requeueMappingJob",
+          "startLine": 50,
+          "endLine": 58,
+          "params": [
+            "jobId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchAdminExportJobs",
+          "startLine": 60,
+          "endLine": 64,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "fetchAdminWorkerHealth",
+          "startLine": 66,
+          "endLine": 70,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "fetchAdminRuntimeLogs",
+          "startLine": 72,
+          "endLine": 78,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "filenameFromDisposition",
+          "startLine": 80,
+          "endLine": 83,
+          "params": [
+            "disposition"
+          ]
+        },
+        {
+          "name": "downloadAdminDiagnosticsBundle",
+          "startLine": 85,
+          "endLine": 111,
+          "params": [
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchAdminUsers",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "updateUserRole",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "fetchAdminOrganizations",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "fetchAdminMappingJobs",
+          "line": 44,
+          "isDefault": false
+        },
+        {
+          "name": "requeueMappingJob",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "fetchAdminExportJobs",
+          "line": 60,
+          "isDefault": false
+        },
+        {
+          "name": "fetchAdminWorkerHealth",
+          "line": 66,
+          "isDefault": false
+        },
+        {
+          "name": "fetchAdminRuntimeLogs",
+          "line": 72,
+          "isDefault": false
+        },
+        {
+          "name": "downloadAdminDiagnosticsBundle",
+          "line": 85,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchAdminUsers",
+          "callee": "httpRequest",
+          "lineNumber": 23
+        },
+        {
+          "caller": "updateUserRole",
+          "callee": "httpRequest",
+          "lineNumber": 31
+        },
+        {
+          "caller": "fetchAdminOrganizations",
+          "callee": "httpRequest",
+          "lineNumber": 41
+        },
+        {
+          "caller": "fetchAdminMappingJobs",
+          "callee": "httpRequest",
+          "lineNumber": 47
+        },
+        {
+          "caller": "requeueMappingJob",
+          "callee": "httpRequest",
+          "lineNumber": 54
+        },
+        {
+          "caller": "fetchAdminExportJobs",
+          "callee": "httpRequest",
+          "lineNumber": 63
+        },
+        {
+          "caller": "fetchAdminWorkerHealth",
+          "callee": "httpRequest",
+          "lineNumber": 69
+        },
+        {
+          "caller": "fetchAdminRuntimeLogs",
+          "callee": "httpRequest",
+          "lineNumber": 75
+        },
+        {
+          "caller": "filenameFromDisposition",
+          "callee": "disposition?.match",
+          "lineNumber": 81
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "shouldAttachBearerToken",
+          "lineNumber": 89
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "headers.set",
+          "lineNumber": 90
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "token?.trim",
+          "lineNumber": 90
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "fetch",
+          "lineNumber": 92
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "resolveApiUrl",
+          "lineNumber": 92
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "response.blob",
+          "lineNumber": 100
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "URL.createObjectURL",
+          "lineNumber": 101
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "document.createElement",
+          "lineNumber": 102
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "filenameFromDisposition",
+          "lineNumber": 104
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "response.headers.get",
+          "lineNumber": 105
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "document.body.append",
+          "lineNumber": 107
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "anchor.click",
+          "lineNumber": 108
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "anchor.remove",
+          "lineNumber": 109
+        },
+        {
+          "caller": "downloadAdminDiagnosticsBundle",
+          "callee": "URL.revokeObjectURL",
+          "lineNumber": 110
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 9,
+        "functionCount": 10,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/admin/views/AdminPage.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 535,
+      "nonEmptyLines": 501,
+      "functions": [
+        {
+          "name": "UsersTab",
+          "startLine": 104,
+          "endLine": 165,
+          "params": []
+        },
+        {
+          "name": "OrgsTab",
+          "startLine": 167,
+          "endLine": 205,
+          "params": []
+        },
+        {
+          "name": "MappingJobsTab",
+          "startLine": 207,
+          "endLine": 277,
+          "params": []
+        },
+        {
+          "name": "ExportJobsTab",
+          "startLine": 279,
+          "endLine": 338,
+          "params": []
+        },
+        {
+          "name": "WorkerHealthTab",
+          "startLine": 340,
+          "endLine": 400,
+          "params": []
+        },
+        {
+          "name": "formatBytes",
+          "startLine": 402,
+          "endLine": 406,
+          "params": [
+            "sizeBytes"
+          ]
+        },
+        {
+          "name": "DiagnosticsTab",
+          "startLine": 408,
+          "endLine": 494,
+          "params": []
+        },
+        {
+          "name": "AdminPage",
+          "startLine": 505,
+          "endLine": 535,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "AdminPage",
+          "line": 505,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "UsersTab",
+          "callee": "useQueryClient",
+          "lineNumber": 105
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "useQuery",
+          "lineNumber": 106
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "fetchAdminUsers",
+          "lineNumber": 108
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "useMutation",
+          "lineNumber": 111
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "updateUserRole",
+          "lineNumber": 113
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "qc.invalidateQueries",
+          "lineNumber": 114
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "(data?.users ?? []).map",
+          "lineNumber": 133
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "updateRole.mutate",
+          "lineNumber": 144
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "ROLES.map",
+          "lineNumber": 149
+        },
+        {
+          "caller": "UsersTab",
+          "callee": "new Date(u.created_at).toLocaleDateString",
+          "lineNumber": 158
+        },
+        {
+          "caller": "OrgsTab",
+          "callee": "useQuery",
+          "lineNumber": 168
+        },
+        {
+          "caller": "OrgsTab",
+          "callee": "fetchAdminOrganizations",
+          "lineNumber": 170
+        },
+        {
+          "caller": "OrgsTab",
+          "callee": "(data?.organizations ?? []).map",
+          "lineNumber": 189
+        },
+        {
+          "caller": "OrgsTab",
+          "callee": "new Date(o.created_at).toLocaleDateString",
+          "lineNumber": 198
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "useQueryClient",
+          "lineNumber": 208
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "useQuery",
+          "lineNumber": 209
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "fetchAdminMappingJobs",
+          "lineNumber": 211
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "useMutation",
+          "lineNumber": 214
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "requeueMappingJob",
+          "lineNumber": 215
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "qc.invalidateQueries",
+          "lineNumber": 216
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "(data?.jobs ?? []).map",
+          "lineNumber": 236
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "new Date(j.created_at).toLocaleDateString",
+          "lineNumber": 255
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "new Date(j.finished_at).toLocaleDateString",
+          "lineNumber": 259
+        },
+        {
+          "caller": "MappingJobsTab",
+          "callee": "requeue.mutate",
+          "lineNumber": 268
+        },
+        {
+          "caller": "ExportJobsTab",
+          "callee": "useQuery",
+          "lineNumber": 280
+        },
+        {
+          "caller": "ExportJobsTab",
+          "callee": "fetchAdminExportJobs",
+          "lineNumber": 282
+        },
+        {
+          "caller": "ExportJobsTab",
+          "callee": "(data?.jobs ?? []).map",
+          "lineNumber": 301
+        },
+        {
+          "caller": "ExportJobsTab",
+          "callee": "new Date(j.created_at).toLocaleDateString",
+          "lineNumber": 320
+        },
+        {
+          "caller": "ExportJobsTab",
+          "callee": "window.open",
+          "lineNumber": 328
+        },
+        {
+          "caller": "WorkerHealthTab",
+          "callee": "useQuery",
+          "lineNumber": 341
+        },
+        {
+          "caller": "WorkerHealthTab",
+          "callee": "fetchAdminWorkerHealth",
+          "lineNumber": 343
+        },
+        {
+          "caller": "WorkerHealthTab",
+          "callee": "refetch",
+          "lineNumber": 354
+        },
+        {
+          "caller": "WorkerHealthTab",
+          "callee": "(data.workers ?? []).map",
+          "lineNumber": 386
+        },
+        {
+          "caller": "formatBytes",
+          "callee": "(sizeBytes / 1024).toFixed",
+          "lineNumber": 404
+        },
+        {
+          "caller": "formatBytes",
+          "callee": "(sizeBytes / (1024 * 1024)).toFixed",
+          "lineNumber": 405
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "useQuery",
+          "lineNumber": 409
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "fetchAdminRuntimeLogs",
+          "lineNumber": 411
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "useMutation",
+          "lineNumber": 414
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "downloadAdminDiagnosticsBundle",
+          "lineNumber": 415
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "refetch",
+          "lineNumber": 438
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "downloadBundle.mutate",
+          "lineNumber": 444
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "data.logs.map",
+          "lineNumber": 469
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "formatBytes",
+          "lineNumber": 483
+        },
+        {
+          "caller": "DiagnosticsTab",
+          "callee": "new Date(log.modified_at).toLocaleString",
+          "lineNumber": 485
+        },
+        {
+          "caller": "AdminPage",
+          "callee": "useState",
+          "lineNumber": 506
+        },
+        {
+          "caller": "AdminPage",
+          "callee": "setTab",
+          "lineNumber": 515
+        },
+        {
+          "caller": "AdminPage",
+          "callee": "TABS.map",
+          "lineNumber": 520
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/agents/api/agentsApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 82,
+      "nonEmptyLines": 75,
+      "functions": [
+        {
+          "name": "runMissionAgent",
+          "startLine": 68,
+          "endLine": 76,
+          "params": [
+            "agentId",
+            "payload"
+          ]
+        },
+        {
+          "name": "listAgentRuns",
+          "startLine": 78,
+          "endLine": 82,
+          "params": [
+            "missionRuntimeId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "runMissionAgent",
+          "line": 68,
+          "isDefault": false
+        },
+        {
+          "name": "listAgentRuns",
+          "line": 78,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "runMissionAgent",
+          "callee": "httpRequest",
+          "lineNumber": 72
+        },
+        {
+          "caller": "listAgentRuns",
+          "callee": "httpRequest",
+          "lineNumber": 79
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/agents/components/AgentSummaryCard.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 59,
+      "nonEmptyLines": 53,
+      "functions": [
+        {
+          "name": "AgentSummaryCard",
+          "startLine": 11,
+          "endLine": 59,
+          "params": [
+            "{\n  title = \"AI summary\",\n  result,\n  error,\n  loading = false,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AgentSummaryCard",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "AgentSummaryCard",
+          "callee": "title.toLowerCase",
+          "lineNumber": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/agents/components/AskAgentPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 77,
+      "nonEmptyLines": 73,
+      "functions": [
+        {
+          "name": "AskAgentPanel",
+          "startLine": 22,
+          "endLine": 77,
+          "params": [
+            "{\n  agentId,\n  title = \"Ask AI\",\n  placeholder = \"Ask about this map, scan quality, or next steps…\",\n  basePayload,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AskAgentPanel",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "AskAgentPanel",
+          "callee": "useState",
+          "lineNumber": 28
+        },
+        {
+          "caller": "AskAgentPanel",
+          "callee": "useState",
+          "lineNumber": 29
+        },
+        {
+          "caller": "AskAgentPanel",
+          "callee": "useMissionAgent",
+          "lineNumber": 30
+        },
+        {
+          "caller": "handleAsk",
+          "callee": "run",
+          "lineNumber": 33
+        },
+        {
+          "caller": "handleAsk",
+          "callee": "question.trim",
+          "lineNumber": 35
+        },
+        {
+          "caller": "AskAgentPanel",
+          "callee": "setOpen",
+          "lineNumber": 46
+        },
+        {
+          "caller": "AskAgentPanel",
+          "callee": "setQuestion",
+          "lineNumber": 61
+        },
+        {
+          "caller": "AskAgentPanel",
+          "callee": "handleAsk",
+          "lineNumber": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/agents/hooks/useMissionAgent.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 35,
+      "functions": [
+        {
+          "name": "useMissionAgent",
+          "startLine": 9,
+          "endLine": 39,
+          "params": [
+            "agentId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMissionAgent",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMissionAgent",
+          "callee": "useState",
+          "lineNumber": 10
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "useState",
+          "lineNumber": 11
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "useState",
+          "lineNumber": 12
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "useCallback",
+          "lineNumber": 14
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setLoading",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setError",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "runMissionAgent",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setResult",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setError",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setLoading",
+          "lineNumber": 27
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "useCallback",
+          "lineNumber": 33
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setResult",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useMissionAgent",
+          "callee": "setError",
+          "lineNumber": 35
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/alerts/api/alertsApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 28,
+      "functions": [
+        {
+          "name": "fetchOpenAlertCount",
+          "startLine": 4,
+          "endLine": 7,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "fetchActiveAlerts",
+          "startLine": 9,
+          "endLine": 15,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "acknowledgeAlert",
+          "startLine": 17,
+          "endLine": 25,
+          "params": [
+            "alertId",
+            "token"
+          ]
+        },
+        {
+          "name": "resolveAlert",
+          "startLine": 27,
+          "endLine": 32,
+          "params": [
+            "alertId",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchOpenAlertCount",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "fetchActiveAlerts",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "acknowledgeAlert",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "resolveAlert",
+          "line": 27,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchOpenAlertCount",
+          "callee": "await httpRequest",
+          "lineNumber": 5
+        },
+        {
+          "caller": "fetchOpenAlertCount",
+          "callee": "Number.isFinite",
+          "lineNumber": 6
+        },
+        {
+          "caller": "fetchOpenAlertCount",
+          "callee": "Number",
+          "lineNumber": 6
+        },
+        {
+          "caller": "fetchActiveAlerts",
+          "callee": "await httpRequest",
+          "lineNumber": 10
+        },
+        {
+          "caller": "fetchActiveAlerts",
+          "callee": "Array.isArray",
+          "lineNumber": 14
+        },
+        {
+          "caller": "acknowledgeAlert",
+          "callee": "httpRequest",
+          "lineNumber": 21
+        },
+        {
+          "caller": "resolveAlert",
+          "callee": "httpRequest",
+          "lineNumber": 28
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/alerts/components/AlertCenterProvider.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 183,
+      "nonEmptyLines": 162,
+      "functions": [
+        {
+          "name": "sortAlerts",
+          "startLine": 29,
+          "endLine": 32,
+          "params": [
+            "items"
+          ]
+        },
+        {
+          "name": "upsertAlert",
+          "startLine": 34,
+          "endLine": 40,
+          "params": [
+            "items",
+            "incoming"
+          ]
+        },
+        {
+          "name": "isAlertSocketMessage",
+          "startLine": 42,
+          "endLine": 51,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "AlertCenterProvider",
+          "startLine": 53,
+          "endLine": 175,
+          "params": [
+            "{ children }"
+          ]
+        },
+        {
+          "name": "useAlertCenter",
+          "startLine": 177,
+          "endLine": 183,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "AlertItem",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "AlertCenterProvider",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "useAlertCenter",
+          "line": 177,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "sortAlerts",
+          "callee": "[...items].sort",
+          "lineNumber": 30
+        },
+        {
+          "caller": "sortAlerts",
+          "callee": "new Date(b.last_triggered_at).getTime",
+          "lineNumber": 31
+        },
+        {
+          "caller": "sortAlerts",
+          "callee": "new Date(a.last_triggered_at).getTime",
+          "lineNumber": 31
+        },
+        {
+          "caller": "upsertAlert",
+          "callee": "items.filter",
+          "lineNumber": 35
+        },
+        {
+          "caller": "upsertAlert",
+          "callee": "next.push",
+          "lineNumber": 37
+        },
+        {
+          "caller": "upsertAlert",
+          "callee": "sortAlerts",
+          "lineNumber": 39
+        },
+        {
+          "caller": "isAlertSocketMessage",
+          "callee": "Boolean",
+          "lineNumber": 43
+        },
+        {
+          "caller": "isAlertSocketMessage",
+          "callee": "Array.isArray",
+          "lineNumber": 46
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useState",
+          "lineNumber": 54
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useState",
+          "lineNumber": 55
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useState",
+          "lineNumber": 56
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useState",
+          "lineNumber": 57
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "getToken",
+          "lineNumber": 59
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useCallback",
+          "lineNumber": 61
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setOpenCount",
+          "lineNumber": 63
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setOpenCount",
+          "lineNumber": 66
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenAlertCount",
+          "lineNumber": 66
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useCallback",
+          "lineNumber": 69
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setAlerts",
+          "lineNumber": 71
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setAlerts",
+          "lineNumber": 74
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "sortAlerts",
+          "lineNumber": 74
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchActiveAlerts",
+          "lineNumber": 74
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useCallback",
+          "lineNumber": 77
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setLoading",
+          "lineNumber": 78
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Promise.all",
+          "lineNumber": 80
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchAlerts",
+          "lineNumber": 80
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount",
+          "lineNumber": 80
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setLoading",
+          "lineNumber": 82
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useCallback",
+          "lineNumber": 86
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "acknowledgeAlertApi",
+          "lineNumber": 89
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setAlerts",
+          "lineNumber": 90
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "upsertAlert",
+          "lineNumber": 90
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount",
+          "lineNumber": 91
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useCallback",
+          "lineNumber": 96
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "resolveAlertApi",
+          "lineNumber": 99
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setAlerts",
+          "lineNumber": 100
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "upsertAlert",
+          "lineNumber": 100
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount",
+          "lineNumber": 101
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useEffect",
+          "lineNumber": 106
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setAlerts",
+          "lineNumber": 109
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setOpenCount",
+          "lineNumber": 110
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setLoading",
+          "lineNumber": 114
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Promise.all([fetchAlerts(), fetchOpenCount()])\n      .catch((error) => {\n        if (!cancelled) {\n          frontendLogger.warn(\"frontend\", \"Failed to initialize alert center\", {\n            error: error instanceof Error ? error.message : String(error),\n          });\n        }\n      })\n      .finally",
+          "lineNumber": 115
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Promise.all([fetchAlerts(), fetchOpenCount()])\n      .catch",
+          "lineNumber": 115
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Promise.all",
+          "lineNumber": 115
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchAlerts",
+          "lineNumber": 115
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount",
+          "lineNumber": 115
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "frontendLogger.warn",
+          "lineNumber": 118
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "String",
+          "lineNumber": 119
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setLoading",
+          "lineNumber": 125
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "window.setInterval",
+          "lineNumber": 129
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Promise.all([fetchAlerts(), fetchOpenCount()]).catch",
+          "lineNumber": 130
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Promise.all",
+          "lineNumber": 130
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchAlerts",
+          "lineNumber": 130
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount",
+          "lineNumber": 130
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "frontendLogger.warn",
+          "lineNumber": 132
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "String",
+          "lineNumber": 133
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "window.clearInterval",
+          "lineNumber": 141
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useTelemetryStream",
+          "lineNumber": 145
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "Boolean",
+          "lineNumber": 146
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "isAlertSocketMessage",
+          "lineNumber": 148
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "setAlerts",
+          "lineNumber": 151
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "upsertAlert",
+          "lineNumber": 151
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount().catch",
+          "lineNumber": 152
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "fetchOpenCount",
+          "lineNumber": 152
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "frontendLogger.warn",
+          "lineNumber": 153
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "String",
+          "lineNumber": 154
+        },
+        {
+          "caller": "AlertCenterProvider",
+          "callee": "useMemo",
+          "lineNumber": 160
+        },
+        {
+          "caller": "useAlertCenter",
+          "callee": "useContext",
+          "lineNumber": 178
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 3,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/alerts/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 20,
+      "nonEmptyLines": 20,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/FlightReplayChart.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 198,
+      "nonEmptyLines": 187,
+      "functions": [
+        {
+          "name": "formatTs",
+          "startLine": 28,
+          "endLine": 35,
+          "params": [
+            "iso"
+          ]
+        },
+        {
+          "name": "FlightReplayChart",
+          "startLine": 37,
+          "endLine": 198,
+          "params": [
+            "{\n  flightId,\n  title = `Flight #${flightId} telemetry`,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FlightReplayChart",
+          "line": 37,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatTs",
+          "callee": "d.toLocaleTimeString",
+          "lineNumber": 30
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useTheme",
+          "lineNumber": 41
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useState",
+          "lineNumber": 42
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useFlightTelemetrySummary",
+          "lineNumber": 43
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useMemo",
+          "lineNumber": 51
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "buckets.map",
+          "lineNumber": 51
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "formatTs",
+          "lineNumber": 51
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useMemo",
+          "lineNumber": 52
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "Math.max",
+          "lineNumber": 53
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "Math.ceil",
+          "lineNumber": 53
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useMemo",
+          "lineNumber": 57
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "buckets.map",
+          "lineNumber": 58
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "b.avg_alt.toFixed",
+          "lineNumber": 58
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useMemo",
+          "lineNumber": 61
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "buckets.map",
+          "lineNumber": 63
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "b.avg_groundspeed.toFixed",
+          "lineNumber": 64
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "useMemo",
+          "lineNumber": 68
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "buckets.map",
+          "lineNumber": 70
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "b.avg_battery_remaining.toFixed",
+          "lineNumber": 72
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "setResolution",
+          "lineNumber": 105
+        },
+        {
+          "caller": "FlightReplayChart",
+          "callee": "RESOLUTIONS.map",
+          "lineNumber": 108
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/hooks/useFlightTelemetrySummary.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 61,
+      "nonEmptyLines": 53,
+      "functions": [
+        {
+          "name": "useFlightTelemetrySummary",
+          "startLine": 24,
+          "endLine": 61,
+          "params": [
+            "flightId",
+            "resolution"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useFlightTelemetrySummary",
+          "line": 24,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "useState",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "useState",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "useState",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "useCallback",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setData",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "getToken",
+          "lineNumber": 37
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setLoading",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setError",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "await httpRequest",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setData",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setError",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setData",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "setLoading",
+          "lineNumber": 52
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "useEffect",
+          "lineNumber": 56
+        },
+        {
+          "caller": "useFlightTelemetrySummary",
+          "callee": "load",
+          "lineNumber": 57
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/api/fieldsApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 45,
+      "nonEmptyLines": 41,
+      "functions": [
+        {
+          "name": "fetchFieldFeatures",
+          "startLine": 7,
+          "endLine": 18,
+          "params": [
+            "options"
+          ]
+        },
+        {
+          "name": "createField",
+          "startLine": 20,
+          "endLine": 29,
+          "params": [
+            "payload",
+            "token"
+          ]
+        },
+        {
+          "name": "updateField",
+          "startLine": 31,
+          "endLine": 41,
+          "params": [
+            "fieldId",
+            "payload",
+            "token"
+          ]
+        },
+        {
+          "name": "deleteField",
+          "startLine": 43,
+          "endLine": 45,
+          "params": [
+            "fieldId",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchFieldFeatures",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "createField",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "updateField",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "deleteField",
+          "line": 43,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchFieldFeatures",
+          "callee": "encodeURIComponent",
+          "lineNumber": 14
+        },
+        {
+          "caller": "fetchFieldFeatures",
+          "callee": "await httpRequest",
+          "lineNumber": 16
+        },
+        {
+          "caller": "fetchFieldFeatures",
+          "callee": "parseFieldFeatures",
+          "lineNumber": 17
+        },
+        {
+          "caller": "createField",
+          "callee": "httpRequest",
+          "lineNumber": 24
+        },
+        {
+          "caller": "updateField",
+          "callee": "httpRequest",
+          "lineNumber": 36
+        },
+        {
+          "caller": "deleteField",
+          "callee": "httpRequest",
+          "lineNumber": 44
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/api/geofencesApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 23,
+      "functions": [
+        {
+          "name": "fetchActiveGeofenceRings",
+          "startLine": 5,
+          "endLine": 25,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchActiveGeofenceRings",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "await httpRequest",
+          "lineNumber": 6
+        },
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "Promise.all",
+          "lineNumber": 11
+        },
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "(geofences ?? []).map",
+          "lineNumber": 12
+        },
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "await httpRequest",
+          "lineNumber": 15
+        },
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "Array.isArray",
+          "lineNumber": 19
+        },
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "zones.push",
+          "lineNumber": 20
+        },
+        {
+          "caller": "fetchActiveGeofenceRings",
+          "callee": "stripClosedRing",
+          "lineNumber": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/api/mappingApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 32,
+      "functions": [
+        {
+          "name": "toAbsoluteAssetUrl",
+          "startLine": 6,
+          "endLine": 12,
+          "params": [
+            "url"
+          ]
+        },
+        {
+          "name": "fetchFieldLatestTileset",
+          "startLine": 14,
+          "endLine": 34,
+          "params": [
+            "fieldId",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "toAbsoluteAssetUrl",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "fetchFieldLatestTileset",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "toAbsoluteAssetUrl",
+          "callee": "/^https?:\\/\\//i.test",
+          "lineNumber": 8
+        },
+        {
+          "caller": "toAbsoluteAssetUrl",
+          "callee": "getApiBaseUrl",
+          "lineNumber": 9
+        },
+        {
+          "caller": "toAbsoluteAssetUrl",
+          "callee": "url.startsWith",
+          "lineNumber": 10
+        },
+        {
+          "caller": "toAbsoluteAssetUrl",
+          "callee": "resolveApiUrl",
+          "lineNumber": 11
+        },
+        {
+          "caller": "fetchFieldLatestTileset",
+          "callee": "await httpRequest",
+          "lineNumber": 20
+        },
+        {
+          "caller": "fetchFieldLatestTileset",
+          "callee": "Array.isArray",
+          "lineNumber": 30
+        },
+        {
+          "caller": "fetchFieldLatestTileset",
+          "callee": "assets.find",
+          "lineNumber": 31
+        },
+        {
+          "caller": "fetchFieldLatestTileset",
+          "callee": "toAbsoluteAssetUrl",
+          "lineNumber": 33
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/constants.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 12,
+      "nonEmptyLines": 11,
+      "exports": [
+        {
+          "name": "FIELD_WORKFLOW_SCOPES",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/hooks/useFieldTileset.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 20,
+      "nonEmptyLines": 17,
+      "functions": [
+        {
+          "name": "useFieldTileset",
+          "startLine": 6,
+          "endLine": 20,
+          "params": [
+            "fieldId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useFieldTileset",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useFieldTileset",
+          "callee": "getSessionMarker",
+          "lineNumber": 7
+        },
+        {
+          "caller": "useFieldTileset",
+          "callee": "useQuery",
+          "lineNumber": 9
+        },
+        {
+          "caller": "useFieldTileset",
+          "callee": "fieldsKeys.tileset",
+          "lineNumber": 10
+        },
+        {
+          "caller": "useFieldTileset",
+          "callee": "fetchFieldLatestTileset",
+          "lineNumber": 11
+        },
+        {
+          "caller": "useFieldTileset",
+          "callee": "Boolean",
+          "lineNumber": 12
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/hooks/useFields.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 59,
+      "nonEmptyLines": 52,
+      "functions": [
+        {
+          "name": "useFields",
+          "startLine": 8,
+          "endLine": 59,
+          "params": [
+            "workflowScope"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useFields",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useFields",
+          "callee": "useQueryClient",
+          "lineNumber": 9
+        },
+        {
+          "caller": "useFields",
+          "callee": "useQuery",
+          "lineNumber": 11
+        },
+        {
+          "caller": "useFields",
+          "callee": "fieldsKeys.features",
+          "lineNumber": 12
+        },
+        {
+          "caller": "useFields",
+          "callee": "fetchFieldFeatures",
+          "lineNumber": 13
+        },
+        {
+          "caller": "useFields",
+          "callee": "useCallback",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useFields",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useFields",
+          "callee": "fieldsKeys.features",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useFields",
+          "callee": "useMutation",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useFields",
+          "callee": "createField",
+          "lineNumber": 22
+        },
+        {
+          "caller": "useFields",
+          "callee": "useMutation",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useFields",
+          "callee": "updateField",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useFields",
+          "callee": "useMutation",
+          "lineNumber": 42
+        },
+        {
+          "caller": "useFields",
+          "callee": "deleteField",
+          "lineNumber": 43
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/hooks/useGeofenceLayers.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 17,
+      "nonEmptyLines": 15,
+      "functions": [
+        {
+          "name": "useGeofenceLayers",
+          "startLine": 5,
+          "endLine": 17,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "useGeofenceLayers",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useGeofenceLayers",
+          "callee": "useQuery",
+          "lineNumber": 6
+        },
+        {
+          "caller": "useGeofenceLayers",
+          "callee": "fieldsKeys.geofences",
+          "lineNumber": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/tests/fieldGeometry.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 52,
+      "nonEmptyLines": 48,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 58,
+      "nonEmptyLines": 47,
+      "functions": [
+        {
+          "name": "gmapsPathToLonLat",
+          "startLine": 25,
+          "endLine": 27,
+          "params": [
+            "path"
+          ]
+        },
+        {
+          "name": "lonLatToGmapsPath",
+          "startLine": 29,
+          "endLine": 31,
+          "params": [
+            "ring"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "gmapsPathToLonLat",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "lonLatToGmapsPath",
+          "line": 29,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "gmapsPathToLonLat",
+          "callee": "path.map",
+          "lineNumber": 26
+        },
+        {
+          "caller": "lonLatToGmapsPath",
+          "callee": "ring.map",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fields/utils/fieldGeometry.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 135,
+      "nonEmptyLines": 114,
+      "functions": [
+        {
+          "name": "lonLatRingToPath",
+          "startLine": 3,
+          "endLine": 5,
+          "params": [
+            "ring"
+          ]
+        },
+        {
+          "name": "stripClosedRing",
+          "startLine": 7,
+          "endLine": 14,
+          "params": [
+            "ring"
+          ]
+        },
+        {
+          "name": "computeCentroid",
+          "startLine": 16,
+          "endLine": 40,
+          "params": [
+            "ring"
+          ]
+        },
+        {
+          "name": "computeRingMapViewport",
+          "startLine": 42,
+          "endLine": 73,
+          "params": [
+            "ring"
+          ]
+        },
+        {
+          "name": "ringLatLngBounds",
+          "startLine": 75,
+          "endLine": 95,
+          "params": [
+            "ring"
+          ]
+        },
+        {
+          "name": "computeAreaHa",
+          "startLine": 97,
+          "endLine": 105,
+          "params": [
+            "ring"
+          ]
+        },
+        {
+          "name": "parseFieldFeatures",
+          "startLine": 107,
+          "endLine": 135,
+          "params": [
+            "fc"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "lonLatRingToPath",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "stripClosedRing",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "computeCentroid",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "computeRingMapViewport",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "ringLatLngBounds",
+          "line": 75,
+          "isDefault": false
+        },
+        {
+          "name": "computeAreaHa",
+          "line": 97,
+          "isDefault": false
+        },
+        {
+          "name": "parseFieldFeatures",
+          "line": 107,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "lonLatRingToPath",
+          "callee": "ring.map",
+          "lineNumber": 4
+        },
+        {
+          "caller": "stripClosedRing",
+          "callee": "ring.slice",
+          "lineNumber": 11
+        },
+        {
+          "caller": "computeCentroid",
+          "callee": "stripClosedRing",
+          "lineNumber": 17
+        },
+        {
+          "caller": "computeCentroid",
+          "callee": "Math.abs",
+          "lineNumber": 33
+        },
+        {
+          "caller": "computeCentroid",
+          "callee": "pts.reduce",
+          "lineNumber": 34
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "stripClosedRing",
+          "lineNumber": 45
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "computeCentroid",
+          "lineNumber": 48
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.min",
+          "lineNumber": 57
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 58
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.min",
+          "lineNumber": 59
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 60
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 63
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 64
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.cos",
+          "lineNumber": 64
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 65
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 66
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.max",
+          "lineNumber": 67
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.min",
+          "lineNumber": 69
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.floor",
+          "lineNumber": 69
+        },
+        {
+          "caller": "computeRingMapViewport",
+          "callee": "Math.log2",
+          "lineNumber": 69
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "stripClosedRing",
+          "lineNumber": 78
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "Math.min",
+          "lineNumber": 87
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "Math.max",
+          "lineNumber": 88
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "Math.min",
+          "lineNumber": 89
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "Math.max",
+          "lineNumber": 90
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "Number.isFinite",
+          "lineNumber": 93
+        },
+        {
+          "caller": "ringLatLngBounds",
+          "callee": "Number.isFinite",
+          "lineNumber": 93
+        },
+        {
+          "caller": "computeAreaHa",
+          "callee": "stripClosedRing",
+          "lineNumber": 98
+        },
+        {
+          "caller": "computeAreaHa",
+          "callee": "pts.map",
+          "lineNumber": 102
+        },
+        {
+          "caller": "computeAreaHa",
+          "callee": "gmaps.maps.geometry.spherical.computeArea",
+          "lineNumber": 103
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "stripClosedRing",
+          "lineNumber": 119
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "features.push",
+          "lineNumber": 120
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "Number",
+          "lineNumber": 121
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "Number",
+          "lineNumber": 122
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "String",
+          "lineNumber": 123
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "Number",
+          "lineNumber": 124
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "lonLatRingToPath",
+          "lineNumber": 130
+        },
+        {
+          "caller": "parseFieldFeatures",
+          "callee": "features.sort",
+          "lineNumber": 134
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 7,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 55,
+      "nonEmptyLines": 47,
+      "functions": [
+        {
+          "name": "fetchMissionDetail",
+          "startLine": 3,
+          "endLine": 5,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionPreflight",
+          "startLine": 7,
+          "endLine": 12,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionTransitions",
+          "startLine": 14,
+          "endLine": 19,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionCommands",
+          "startLine": 21,
+          "endLine": 26,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionEvents",
+          "startLine": 28,
+          "endLine": 30,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionCompliance",
+          "startLine": 32,
+          "endLine": 37,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionExportJob",
+          "startLine": 39,
+          "endLine": 45,
+          "params": [
+            "flightId",
+            "jobId",
+            "token"
+          ]
+        },
+        {
+          "name": "startMissionExport",
+          "startLine": 47,
+          "endLine": 55,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchMissionDetail",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionPreflight",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionTransitions",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionCommands",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionEvents",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionCompliance",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionExportJob",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "startMissionExport",
+          "line": 47,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchMissionDetail",
+          "callee": "httpRequest",
+          "lineNumber": 4
+        },
+        {
+          "caller": "fetchMissionPreflight",
+          "callee": "httpRequest",
+          "lineNumber": 11
+        },
+        {
+          "caller": "fetchMissionTransitions",
+          "callee": "httpRequest",
+          "lineNumber": 18
+        },
+        {
+          "caller": "fetchMissionCommands",
+          "callee": "httpRequest",
+          "lineNumber": 25
+        },
+        {
+          "caller": "fetchMissionEvents",
+          "callee": "httpRequest",
+          "lineNumber": 29
+        },
+        {
+          "caller": "fetchMissionCompliance",
+          "callee": "httpRequest",
+          "lineNumber": 36
+        },
+        {
+          "caller": "fetchMissionExportJob",
+          "callee": "httpRequest",
+          "lineNumber": 44
+        },
+        {
+          "caller": "startMissionExport",
+          "callee": "httpRequest",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/components/MissionSectionError.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 18,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 41,
+      "nonEmptyLines": 38,
+      "functions": [
+        {
+          "name": "MissionSectionError",
+          "startLine": 5,
+          "endLine": 41,
+          "params": [
+            "{\n  section,\n  error,\n  retrying = false,\n  onRetry,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionSectionError",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/views/MissionTimeline.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 91,
+      "nonEmptyLines": 82,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 651,
+      "nonEmptyLines": 616,
+      "functions": [
+        {
+          "name": "formatTs",
+          "startLine": 42,
+          "endLine": 45,
+          "params": [
+            "ts"
+          ]
+        },
+        {
+          "name": "StatusBadge",
+          "startLine": 47,
+          "endLine": 56,
+          "params": [
+            "{ status }"
+          ]
+        },
+        {
+          "name": "PreflightSection",
+          "startLine": 58,
+          "endLine": 133,
+          "params": [
+            "{ data }"
+          ]
+        },
+        {
+          "name": "stateIcon",
+          "startLine": 135,
+          "endLine": 150,
+          "params": [
+            "state"
+          ]
+        },
+        {
+          "name": "TransitionItem",
+          "startLine": 152,
+          "endLine": 176,
+          "params": [
+            "{ item }"
+          ]
+        },
+        {
+          "name": "CommandItem",
+          "startLine": 178,
+          "endLine": 206,
+          "params": [
+            "{ item }"
+          ]
+        },
+        {
+          "name": "EventItem",
+          "startLine": 208,
+          "endLine": 262,
+          "params": [
+            "{ item }"
+          ]
+        },
+        {
+          "name": "ExportButton",
+          "startLine": 269,
+          "endLine": 361,
+          "params": [
+            "{ flightId }"
+          ]
+        },
+        {
+          "name": "ComplianceSection",
+          "startLine": 363,
+          "endLine": 414,
+          "params": [
+            "{ data }"
+          ]
+        },
+        {
+          "name": "MissionTimeline",
+          "startLine": 416,
+          "endLine": 651,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionTimeline",
+          "line": 416,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatTs",
+          "callee": "new Date(ts * 1000).toLocaleString",
+          "lineNumber": 44
+        },
+        {
+          "caller": "StatusBadge",
+          "callee": "status.toUpperCase",
+          "lineNumber": 48
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "useState",
+          "lineNumber": 59
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "useId",
+          "lineNumber": 60
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "useTheme",
+          "lineNumber": 61
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "setOpen",
+          "lineNumber": 93
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "formatTs",
+          "lineNumber": 100
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "formatTs",
+          "lineNumber": 100
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "allChecks.map",
+          "lineNumber": 105
+        },
+        {
+          "caller": "TransitionItem",
+          "callee": "stateIcon",
+          "lineNumber": 155
+        },
+        {
+          "caller": "TransitionItem",
+          "callee": "formatTs",
+          "lineNumber": 166
+        },
+        {
+          "caller": "CommandItem",
+          "callee": "formatTs",
+          "lineNumber": 196
+        },
+        {
+          "caller": "EventItem",
+          "callee": "useState",
+          "lineNumber": 209
+        },
+        {
+          "caller": "EventItem",
+          "callee": "useId",
+          "lineNumber": 210
+        },
+        {
+          "caller": "EventItem",
+          "callee": "Object.keys",
+          "lineNumber": 211
+        },
+        {
+          "caller": "EventItem",
+          "callee": "setOpen",
+          "lineNumber": 229
+        },
+        {
+          "caller": "EventItem",
+          "callee": "formatTs",
+          "lineNumber": 241
+        },
+        {
+          "caller": "EventItem",
+          "callee": "JSON.stringify",
+          "lineNumber": 256
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useState",
+          "lineNumber": 270
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useState",
+          "lineNumber": 271
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useState",
+          "lineNumber": 272
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useQuery",
+          "lineNumber": 274
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "fetchMissionExportJob",
+          "lineNumber": 276
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "String",
+          "lineNumber": 276
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStarting",
+          "lineNumber": 286
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStartError",
+          "lineNumber": 287
+        },
+        {
+          "caller": "handleExport",
+          "callee": "await startMissionExport",
+          "lineNumber": 289
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setJobId",
+          "lineNumber": 290
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStartError",
+          "lineNumber": 292
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStarting",
+          "lineNumber": 294
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "setStartError",
+          "lineNumber": 312
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "setJobId",
+          "lineNumber": 313
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "window.open",
+          "lineNumber": 325
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "setJobId",
+          "lineNumber": 336
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "useState",
+          "lineNumber": 364
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "useId",
+          "lineNumber": 365
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "setOpen",
+          "lineNumber": 385
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "new Date(data.preflight_ack_at).toLocaleString",
+          "lineNumber": 395
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "new Date(data.laanc_auth_expires).toLocaleString",
+          "lineNumber": 401
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "useParams",
+          "lineNumber": 417
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "useNavigate",
+          "lineNumber": 418
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "useQueries",
+          "lineNumber": 420
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionDetail",
+          "lineNumber": 424
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 425
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionPreflight",
+          "lineNumber": 429
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 430
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionTransitions",
+          "lineNumber": 435
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 436
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionCommands",
+          "lineNumber": 440
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 441
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionEvents",
+          "lineNumber": 445
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 446
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionCompliance",
+          "lineNumber": 450
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 451
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "(transitionsQ.data ?? []).forEach",
+          "lineNumber": 466
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.push",
+          "lineNumber": 467
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "(commandsQ.data ?? []).forEach",
+          "lineNumber": 469
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.push",
+          "lineNumber": 470
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "(eventsQ.data ?? []).forEach",
+          "lineNumber": 472
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.push",
+          "lineNumber": 473
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.sort",
+          "lineNumber": 476
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "timelineQueries.some",
+          "lineNumber": 484
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "navigate",
+          "lineNumber": 490
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "missionQ.refetch",
+          "lineNumber": 521
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "formatTs",
+          "lineNumber": 545
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "formatTs",
+          "lineNumber": 552
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "preflightQ.refetch",
+          "lineNumber": 587
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "complianceQ.refetch",
+          "lineNumber": 599
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "timelineQueries.map",
+          "lineNumber": 605
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "query.refetch",
+          "lineNumber": 612
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.map",
+          "lineNumber": 635
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 10,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-planning/api/planningApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 42,
+      "functions": [
+        {
+          "name": "fetchGridPreview",
+          "startLine": 5,
+          "endLine": 31,
+          "params": [
+            "payload",
+            "token",
+            "signal"
+          ]
+        },
+        {
+          "name": "fetchPatrolPreview",
+          "startLine": 33,
+          "endLine": 44,
+          "params": [
+            "body",
+            "token",
+            "signal"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchGridPreview",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "fetchPatrolPreview",
+          "line": 33,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchGridPreview",
+          "callee": "httpRequest",
+          "lineNumber": 14
+        },
+        {
+          "caller": "fetchPatrolPreview",
+          "callee": "httpRequest",
+          "lineNumber": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-planning/constants.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 22,
+      "nonEmptyLines": 20,
+      "functions": [
+        {
+          "name": "createDefaultGridParams",
+          "startLine": 18,
+          "endLine": 22,
+          "params": [
+            "overrides"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "createDefaultGridParams",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

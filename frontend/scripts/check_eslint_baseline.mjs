@@ -4,26 +4,26 @@
  * Run with --update-baseline to record current migration debt.
  */
 
-import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_ROOT = resolve(__dirname, "..");
 const BASELINE_PATH = join(__dirname, "eslint_baseline.json");
 
-export function collectFindings() {
-  const output = execSync("npx eslint . -f json", {
-    cwd: FRONTEND_ROOT,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const start = output.indexOf("[");
-  if (start < 0) {
-    return {};
+export function parseFindings(output) {
+  let files;
+  try {
+    files = JSON.parse(output);
+  } catch (error) {
+    throw new Error(`Could not parse ESLint JSON: ${error.message}`);
   }
-  const files = JSON.parse(output.slice(start));
+  if (!Array.isArray(files)) {
+    throw new Error("Could not parse ESLint JSON: expected an array");
+  }
   const counts = {};
   for (const file of files) {
     const relativePath = file.filePath.replace(`${FRONTEND_ROOT}/`, "frontend/");
@@ -33,6 +33,33 @@ export function collectFindings() {
     }
   }
   return counts;
+}
+
+export function collectFindings() {
+  const outputDirectory = mkdtempSync(join(tmpdir(), "drone-eslint-"));
+  const outputPath = join(outputDirectory, "findings.json");
+  const result = spawnSync(
+    "npx",
+    ["eslint", ".", "-f", "json", "--output-file", outputPath],
+    {
+    cwd: FRONTEND_ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  try {
+    if (result.error) throw result.error;
+    if (result.status !== 0 && result.status !== 1) {
+      throw new Error(
+        `ESLint command failed with status ${result.status}: ${result.stderr || result.stdout}`,
+      );
+    }
+    return parseFindings(readFileSync(outputPath, "utf8"));
+  } catch (error) {
+    throw new Error(`Unable to collect ESLint findings: ${error.message}`);
+  } finally {
+    rmSync(outputDirectory, { recursive: true, force: true });
+  }
 }
 
 function summarizeByModule(counts) {
@@ -61,23 +88,8 @@ function main() {
   try {
     current = collectFindings();
   } catch (error) {
-    const stderr = error?.stderr?.toString?.() ?? "";
-    const stdout = error?.stdout?.toString?.() ?? "";
-    const combined = `${stdout}${stderr}`;
-    const start = combined.indexOf("[");
-    if (start < 0) {
-      console.error(combined || error);
-      return 1;
-    }
-    current = {};
-    const files = JSON.parse(combined.slice(start));
-    for (const file of files) {
-      const relativePath = file.filePath.replace(`${FRONTEND_ROOT}/`, "frontend/");
-      for (const message of file.messages) {
-        const key = `${relativePath}|${message.ruleId ?? "unknown"}`;
-        current[key] = (current[key] ?? 0) + 1;
-      }
-    }
+    console.error(error);
+    return 1;
   }
 
   if (updateBaseline) {

@@ -7,6 +7,8 @@ from typing import Any
 
 from PIL import Image
 
+from backend.core.geometry.coordinates import extract_lonlat_pairs
+
 
 def _ratio_to_float(value: Any) -> float | None:
     if isinstance(value, (int, float)):
@@ -141,21 +143,6 @@ def derive_field_ring_from_points(
     ]
 
 
-def _extract_lonlat_pairs(node: Any) -> list[tuple[float, float]]:
-    if isinstance(node, (list, tuple)):
-        if (
-            len(node) >= 2
-            and isinstance(node[0], (int, float))
-            and isinstance(node[1], (int, float))
-        ):
-            return [(float(node[0]), float(node[1]))]
-        out: list[tuple[float, float]] = []
-        for child in node:
-            out.extend(_extract_lonlat_pairs(child))
-        return out
-    return []
-
-
 def derive_field_ring_from_bbox_wgs84(
     bbox_wgs84: Mapping[str, Any] | None,
     *,
@@ -178,7 +165,7 @@ def derive_field_ring_from_bbox_wgs84(
             min_span_m=0.0,
         )
 
-    points = _extract_lonlat_pairs(bbox_wgs84.get("coordinates"))
+    points = extract_lonlat_pairs(bbox_wgs84.get("coordinates"))
     if not points:
         return None
     return derive_field_ring_from_points(points, padding_m=padding_m, min_span_m=0.0)

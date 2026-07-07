@@ -1,0 +1,74 @@
+[
+  {
+    "order": 1,
+    "title": "Project Overview",
+    "description": "Start with the repository README to understand the platform goals, runtime architecture, and major subsystems.",
+    "nodeIds": [
+      "document:README.md"
+    ]
+  },
+  {
+    "order": 2,
+    "title": "Backend Runtime Startup",
+    "description": "Follow the FastAPI entrypoint and worker startup files to see how API and async processing processes are assembled.",
+    "nodeIds": [
+      "file:backend/entrypoints/api/app.py",
+      "file:backend/entrypoints/workers/celery_app.py"
+    ]
+  },
+  {
+    "order": 3,
+    "title": "Core Backend Foundations",
+    "description": "Inspect configuration, database sessions, security, logging, events, and observability foundations used across modules.",
+    "nodeIds": [
+      "file:backend/core/config/runtime.py",
+      "file:backend/core/database/session.py"
+    ]
+  },
+  {
+    "order": 4,
+    "title": "Backend Domain Modules",
+    "description": "Explore feature modules where missions, telemetry, warehouse mapping, integrations, video analysis, and geospatial workflows are implemented.",
+    "nodeIds": [
+      "file:backend/modules/warehouse/api.py",
+      "file:backend/modules/telemetry/api.py"
+    ]
+  },
+  {
+    "order": 5,
+    "title": "Infrastructure Adapters",
+    "description": "Review adapters that connect domain workflows to camera runtime, MAVLink, messaging, mapping, photogrammetry, and storage systems.",
+    "nodeIds": [
+      "file:backend/infrastructure/runtime/adapters.py",
+      "file:backend/infrastructure/camera/runtime.py",
+      "file:backend/infrastructure/photogrammetry/webodm_client.py"
+    ]
+  },
+  {
+    "order": 6,
+    "title": "Frontend Application Shell",
+    "description": "Move to the React bootstrap, providers, routing, and app shell that frame the operator dashboard.",
+    "nodeIds": [
+      "file:frontend/src/main.tsx"
+    ]
+  },
+  {
+    "order": 7,
+    "title": "Frontend Feature Workflows",
+    "description": "Inspect dashboard feature modules that present missions, telemetry, mapping, warehouse, alerts, fleet, and observability workflows.",
+    "nodeIds": [
+      "file:frontend/src/modules/dashboard/index.ts",
+      "file:frontend/src/modules/warehouse/index.ts"
+    ]
+  },
+  {
+    "order": 8,
+    "title": "Operations, Tests, And Simulation",
+    "description": "Finish with Docker Compose, test suites, docs, and the optional ROS 2 bridge to understand how the system runs outside application code.",
+    "nodeIds": [
+      "service:docker-compose.yml",
+      "document:docs/observability.md",
+      "config:ros2_ws/src/drone_gz_bridge/package.xml"
+    ]
+  }
+]

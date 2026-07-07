@@ -1,0 +1,513 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/modules/analytics/cache.py",
+      "type": "file",
+      "name": "cache.py",
+      "filePath": "backend/modules/analytics/cache.py",
+      "summary": "cache.py is a backend python module in backend/modules/analytics with 4 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/analytics/cache.py:_key",
+      "type": "function",
+      "name": "_key",
+      "filePath": "backend/modules/analytics/cache.py",
+      "summary": "_key implements logic in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/analytics/cache.py:get_cached_overview",
+      "type": "function",
+      "name": "get_cached_overview",
+      "filePath": "backend/modules/analytics/cache.py",
+      "summary": "get_cached_overview implements logic in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/analytics/cache.py:set_cached_overview",
+      "type": "function",
+      "name": "set_cached_overview",
+      "filePath": "backend/modules/analytics/cache.py",
+      "summary": "set_cached_overview implements logic in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/analytics/cache.py:invalidate_overview",
+      "type": "function",
+      "name": "invalidate_overview",
+      "filePath": "backend/modules/analytics/cache.py",
+      "summary": "invalidate_overview implements logic in cache.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/automation/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/automation/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/automation with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/compliance/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/compliance/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/compliance with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/deliverables/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/deliverables/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/deliverables with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/fields/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/fields/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/fields with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/fleet/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/fleet/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/fleet with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/geofences/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/geofences/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/geofences with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/identity/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/identity/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/identity with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/identity/oidc.py",
+      "type": "file",
+      "name": "oidc.py",
+      "filePath": "backend/modules/identity/oidc.py",
+      "summary": "oidc.py is a backend python module in backend/modules/identity with 1 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/identity/oidc.py:get_or_create_sso_user",
+      "type": "function",
+      "name": "get_or_create_sso_user",
+      "filePath": "backend/modules/identity/oidc.py",
+      "summary": "get_or_create_sso_user implements logic in oidc.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/identity/oidc.py:OIDCUserInfo",
+      "type": "class",
+      "name": "OIDCUserInfo",
+      "filePath": "backend/modules/identity/oidc.py",
+      "summary": "OIDCUserInfo groups related behavior and state in oidc.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/identity/oidc.py:GoogleOIDCProvider",
+      "type": "class",
+      "name": "GoogleOIDCProvider",
+      "filePath": "backend/modules/identity/oidc.py",
+      "summary": "GoogleOIDCProvider groups related behavior and state in oidc.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/integrations/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/integrations/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/integrations with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/irrigation/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/irrigation/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/irrigation with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/livestock/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/livestock/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/livestock with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/mapping/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/mapping/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/mapping with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/missions/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/missions/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/missions with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/observability/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/observability/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/observability with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/organizations/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/organizations/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/organizations with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/patrol/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/patrol with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/vision/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/patrol/vision/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/patrol with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/patrol/vision/__init__.py:__getattr__",
+      "type": "function",
+      "name": "__getattr__",
+      "filePath": "backend/modules/patrol/vision/__init__.py",
+      "summary": "__getattr__ implements logic in __init__.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/preflight/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/preflight with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/property_patrol/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/property_patrol/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/property_patrol with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/settings/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/settings/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/settings with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/telemetry/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/telemetry/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/telemetry with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/video_analysis/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/video_analysis with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "document:backend/modules/video_analysis/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "backend/modules/video_analysis/README.md",
+      "summary": "README.md documents backend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "markdown"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/service/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/video_analysis/service/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/video_analysis with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "service",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:_key",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:_key",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:get_cached_overview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:get_cached_overview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:set_cached_overview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:set_cached_overview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:invalidate_overview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/analytics/cache.py",
+      "target": "function:backend/modules/analytics/cache.py:invalidate_overview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/identity/oidc.py",
+      "target": "function:backend/modules/identity/oidc.py:get_or_create_sso_user",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/identity/oidc.py",
+      "target": "function:backend/modules/identity/oidc.py:get_or_create_sso_user",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/identity/oidc.py",
+      "target": "class:backend/modules/identity/oidc.py:OIDCUserInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/identity/oidc.py",
+      "target": "class:backend/modules/identity/oidc.py:OIDCUserInfo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/identity/oidc.py",
+      "target": "class:backend/modules/identity/oidc.py:GoogleOIDCProvider",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/identity/oidc.py",
+      "target": "class:backend/modules/identity/oidc.py:GoogleOIDCProvider",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/__init__.py",
+      "target": "function:backend/modules/patrol/vision/__init__.py:__getattr__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/__init__.py",
+      "target": "function:backend/modules/patrol/vision/__init__.py:__getattr__",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

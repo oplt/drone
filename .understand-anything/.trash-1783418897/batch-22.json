@@ -1,0 +1,2892 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "type": "file",
+      "name": "useMissionPreflightRows.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "summary": "useMissionPreflightRows.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts:useMissionPreflightRows",
+      "type": "function",
+      "name": "useMissionPreflightRows",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "summary": "useMissionPreflightRows implements logic in useMissionPreflightRows.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "type": "file",
+      "name": "useMissionRuntime.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "summary": "useMissionRuntime.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts:useMissionRuntime",
+      "type": "function",
+      "name": "useMissionRuntime",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "summary": "useMissionRuntime implements logic in useMissionRuntime.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "type": "file",
+      "name": "useMissionStatusPolling.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "summary": "useMissionStatusPolling.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts:useMissionStatusPolling",
+      "type": "function",
+      "name": "useMissionStatusPolling",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "summary": "useMissionStatusPolling implements logic in useMissionStatusPolling.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "type": "file",
+      "name": "useMissionVideo.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "summary": "useMissionVideo.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts:useMissionVideo",
+      "type": "function",
+      "name": "useMissionVideo",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "summary": "useMissionVideo implements logic in useMissionVideo.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts",
+      "type": "file",
+      "name": "useMissionWebsocketRuntime.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts",
+      "summary": "useMissionWebsocketRuntime.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts:useMissionWebsocketRuntime",
+      "type": "function",
+      "name": "useMissionWebsocketRuntime",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts",
+      "summary": "useMissionWebsocketRuntime implements logic in useMissionWebsocketRuntime.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "type": "file",
+      "name": "useTelemetryStream.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "useTelemetryStream.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 11 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:setTelemetryWebSocketFactoryForTests",
+      "type": "function",
+      "name": "setTelemetryWebSocketFactoryForTests",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "setTelemetryWebSocketFactoryForTests implements logic in useTelemetryStream.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:wsUrl",
+      "type": "function",
+      "name": "wsUrl",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "wsUrl implements logic in useTelemetryStream.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:parseMessage",
+      "type": "function",
+      "name": "parseMessage",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "parseMessage implements logic in useTelemetryStream.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:telemetryFromMessage",
+      "type": "function",
+      "name": "telemetryFromMessage",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "telemetryFromMessage implements logic in useTelemetryStream.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:connectShared",
+      "type": "function",
+      "name": "connectShared",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "connectShared implements logic in useTelemetryStream.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:disconnectShared",
+      "type": "function",
+      "name": "disconnectShared",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "disconnectShared implements logic in useTelemetryStream.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:useTelemetryStream",
+      "type": "function",
+      "name": "useTelemetryStream",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "summary": "useTelemetryStream implements logic in useTelemetryStream.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.test.ts",
+      "type": "file",
+      "name": "buildPreflightRows.test.ts",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/buildPreflightRows.test.ts",
+      "summary": "buildPreflightRows.test.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "type": "file",
+      "name": "buildPreflightRows.ts",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "summary": "buildPreflightRows.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts:buildCheckLookup",
+      "type": "function",
+      "name": "buildCheckLookup",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "summary": "buildCheckLookup implements logic in buildPreflightRows.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts:buildPreflightRows",
+      "type": "function",
+      "name": "buildPreflightRows",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "summary": "buildPreflightRows implements logic in buildPreflightRows.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/preflight/parameterDefinitions.ts",
+      "type": "file",
+      "name": "parameterDefinitions.ts",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/parameterDefinitions.ts",
+      "summary": "parameterDefinitions.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "type": "file",
+      "name": "preflightTypes.ts",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "summary": "preflightTypes.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.test.ts",
+      "type": "file",
+      "name": "preflightUtils.test.ts",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.test.ts",
+      "summary": "preflightUtils.test.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "file",
+      "name": "preflightUtils.ts",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "preflightUtils.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 16 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:getByPath",
+      "type": "function",
+      "name": "getByPath",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "getByPath implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:pickFirst",
+      "type": "function",
+      "name": "pickFirst",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "pickFirst implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:asNumber",
+      "type": "function",
+      "name": "asNumber",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "asNumber implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:asBoolean",
+      "type": "function",
+      "name": "asBoolean",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "asBoolean implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:extractFirstNumber",
+      "type": "function",
+      "name": "extractFirstNumber",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "extractFirstNumber implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:toPrettyNumber",
+      "type": "function",
+      "name": "toPrettyNumber",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "toPrettyNumber implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusToChipColor",
+      "type": "function",
+      "name": "statusToChipColor",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "statusToChipColor implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:normalizeStatus",
+      "type": "function",
+      "name": "normalizeStatus",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "normalizeStatus implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusPriority",
+      "type": "function",
+      "name": "statusPriority",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "statusPriority implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusDotColor",
+      "type": "function",
+      "name": "statusDotColor",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "statusDotColor implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:haversineMeters",
+      "type": "function",
+      "name": "haversineMeters",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "haversineMeters implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:missionRangeFromTelemetry",
+      "type": "function",
+      "name": "missionRangeFromTelemetry",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "missionRangeFromTelemetry implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:collectFailedPreflightChecks",
+      "type": "function",
+      "name": "collectFailedPreflightChecks",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "collectFailedPreflightChecks implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:preflightAllowsMissionStart",
+      "type": "function",
+      "name": "preflightAllowsMissionStart",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "preflightAllowsMissionStart implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:formatPreflightFailureMessage",
+      "type": "function",
+      "name": "formatPreflightFailureMessage",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "formatPreflightFailureMessage implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:describePreflightStartBlock",
+      "type": "function",
+      "name": "describePreflightStartBlock",
+      "filePath": "frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "summary": "describePreflightStartBlock implements logic in preflightUtils.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/tests/useMissionCommands.test.tsx",
+      "type": "file",
+      "name": "useMissionCommands.test.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/tests/useMissionCommands.test.tsx",
+      "summary": "useMissionCommands.test.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "type": "file",
+      "name": "useMissionRuntime.test.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "summary": "useMissionRuntime.test.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "class:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx:MockWebSocket",
+      "type": "class",
+      "name": "MockWebSocket",
+      "filePath": "frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "summary": "MockWebSocket groups related behavior and state in useMissionRuntime.test.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/mission-runtime/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "type": "file",
+      "name": "deriveTelemetry.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "summary": "deriveTelemetry.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx:deriveTelemetry",
+      "type": "function",
+      "name": "deriveTelemetry",
+      "filePath": "frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "summary": "deriveTelemetry implements logic in deriveTelemetry.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "type": "file",
+      "name": "propertyPatrolApi.ts",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "propertyPatrolApi.ts is a frontend typescript module in frontend/src/modules/property-patrol with 7 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolSites",
+      "type": "function",
+      "name": "listPropertyPatrolSites",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "listPropertyPatrolSites implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:createPropertyPatrolSite",
+      "type": "function",
+      "name": "createPropertyPatrolSite",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "createPropertyPatrolSite implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolTemplates",
+      "type": "function",
+      "name": "listPropertyPatrolTemplates",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "listPropertyPatrolTemplates implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:createPropertyPatrolTemplate",
+      "type": "function",
+      "name": "createPropertyPatrolTemplate",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "createPropertyPatrolTemplate implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:previewPropertyPatrolRoute",
+      "type": "function",
+      "name": "previewPropertyPatrolRoute",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "previewPropertyPatrolRoute implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:startPropertyPatrolMission",
+      "type": "function",
+      "name": "startPropertyPatrolMission",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "startPropertyPatrolMission implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolIncidents",
+      "type": "function",
+      "name": "listPropertyPatrolIncidents",
+      "filePath": "frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "summary": "listPropertyPatrolIncidents implements logic in propertyPatrolApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "type": "file",
+      "name": "PropertyPatrolPage.tsx",
+      "filePath": "frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "summary": "PropertyPatrolPage.tsx is a frontend typescript module in frontend/src/modules/property-patrol with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx:PropertyPatrolPage",
+      "type": "function",
+      "name": "PropertyPatrolPage",
+      "filePath": "frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "summary": "PropertyPatrolPage implements logic in PropertyPatrolPage.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/api/accountApi.ts",
+      "type": "file",
+      "name": "accountApi.ts",
+      "filePath": "frontend/src/modules/session/api/accountApi.ts",
+      "summary": "accountApi.ts is a frontend typescript module in frontend/src/modules/session with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/accountApi.ts:fetchAccountProfile",
+      "type": "function",
+      "name": "fetchAccountProfile",
+      "filePath": "frontend/src/modules/session/api/accountApi.ts",
+      "summary": "fetchAccountProfile implements logic in accountApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/accountApi.ts:updatePassword",
+      "type": "function",
+      "name": "updatePassword",
+      "filePath": "frontend/src/modules/session/api/accountApi.ts",
+      "summary": "updatePassword implements logic in accountApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/accountApi.ts:setupTwoFactor",
+      "type": "function",
+      "name": "setupTwoFactor",
+      "filePath": "frontend/src/modules/session/api/accountApi.ts",
+      "summary": "setupTwoFactor implements logic in accountApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/accountApi.ts:verifyTwoFactor",
+      "type": "function",
+      "name": "verifyTwoFactor",
+      "filePath": "frontend/src/modules/session/api/accountApi.ts",
+      "summary": "verifyTwoFactor implements logic in accountApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/accountApi.ts:disableTwoFactor",
+      "type": "function",
+      "name": "disableTwoFactor",
+      "filePath": "frontend/src/modules/session/api/accountApi.ts",
+      "summary": "disableTwoFactor implements logic in accountApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "type": "file",
+      "name": "sessionApi.ts",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "sessionApi.ts is a frontend typescript module in frontend/src/modules/session with 8 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:refreshSession",
+      "type": "function",
+      "name": "refreshSession",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "refreshSession implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:updateCurrentUser",
+      "type": "function",
+      "name": "updateCurrentUser",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "updateCurrentUser implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:fetchCurrentUser",
+      "type": "function",
+      "name": "fetchCurrentUser",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "fetchCurrentUser implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:verifySession",
+      "type": "function",
+      "name": "verifySession",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "verifySession implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:logout",
+      "type": "function",
+      "name": "logout",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "logout implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:login",
+      "type": "function",
+      "name": "login",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "login implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/api/sessionApi.ts:signUp",
+      "type": "function",
+      "name": "signUp",
+      "filePath": "frontend/src/modules/session/api/sessionApi.ts",
+      "summary": "signUp implements logic in sessionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "type": "file",
+      "name": "useCurrentUser.ts",
+      "filePath": "frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "summary": "useCurrentUser.ts is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/hooks/useCurrentUser.ts:useCurrentUser",
+      "type": "function",
+      "name": "useCurrentUser",
+      "filePath": "frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "summary": "useCurrentUser implements logic in useCurrentUser.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/hooks/useSession.ts",
+      "type": "file",
+      "name": "useSession.ts",
+      "filePath": "frontend/src/modules/session/hooks/useSession.ts",
+      "summary": "useSession.ts is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/hooks/useSession.ts:useSession",
+      "type": "function",
+      "name": "useSession",
+      "filePath": "frontend/src/modules/session/hooks/useSession.ts",
+      "summary": "useSession implements logic in useSession.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/sessionCookies.ts",
+      "type": "file",
+      "name": "sessionCookies.ts",
+      "filePath": "frontend/src/modules/session/sessionCookies.ts",
+      "summary": "sessionCookies.ts is a frontend typescript module in frontend/src/modules/session with 5 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/sessionCookies.ts:readSessionMarker",
+      "type": "function",
+      "name": "readSessionMarker",
+      "filePath": "frontend/src/modules/session/sessionCookies.ts",
+      "summary": "readSessionMarker implements logic in sessionCookies.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/sessionCookies.ts:clearLegacyTokenStorage",
+      "type": "function",
+      "name": "clearLegacyTokenStorage",
+      "filePath": "frontend/src/modules/session/sessionCookies.ts",
+      "summary": "clearLegacyTokenStorage implements logic in sessionCookies.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/sessionCookies.ts:clearSessionMarker",
+      "type": "function",
+      "name": "clearSessionMarker",
+      "filePath": "frontend/src/modules/session/sessionCookies.ts",
+      "summary": "clearSessionMarker implements logic in sessionCookies.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/sessionCookies.ts:getSessionMarker",
+      "type": "function",
+      "name": "getSessionMarker",
+      "filePath": "frontend/src/modules/session/sessionCookies.ts",
+      "summary": "getSessionMarker implements logic in sessionCookies.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/sessionCookies.ts:setSessionMarker",
+      "type": "function",
+      "name": "setSessionMarker",
+      "filePath": "frontend/src/modules/session/sessionCookies.ts",
+      "summary": "setSessionMarker implements logic in sessionCookies.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/tests/auth.test.ts",
+      "type": "file",
+      "name": "auth.test.ts",
+      "filePath": "frontend/src/modules/session/tests/auth.test.ts",
+      "summary": "auth.test.ts is a frontend typescript module in frontend/src/modules/session with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/session/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/session with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/settings/aiSettingsDefaults.ts",
+      "type": "file",
+      "name": "aiSettingsDefaults.ts",
+      "filePath": "frontend/src/modules/settings/aiSettingsDefaults.ts",
+      "summary": "aiSettingsDefaults.ts is a frontend typescript module in frontend/src/modules/settings with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/aiSettingsDefaults.ts:defaultProviderSettings",
+      "type": "function",
+      "name": "defaultProviderSettings",
+      "filePath": "frontend/src/modules/settings/aiSettingsDefaults.ts",
+      "summary": "defaultProviderSettings implements logic in aiSettingsDefaults.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "type": "file",
+      "name": "orgApiKeysApi.ts",
+      "filePath": "frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "summary": "orgApiKeysApi.ts is a frontend typescript module in frontend/src/modules/settings with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:listOrgApiKeys",
+      "type": "function",
+      "name": "listOrgApiKeys",
+      "filePath": "frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "summary": "listOrgApiKeys implements logic in orgApiKeysApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:createOrgApiKey",
+      "type": "function",
+      "name": "createOrgApiKey",
+      "filePath": "frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "summary": "createOrgApiKey implements logic in orgApiKeysApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:revokeOrgApiKey",
+      "type": "function",
+      "name": "revokeOrgApiKey",
+      "filePath": "frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "summary": "revokeOrgApiKey implements logic in orgApiKeysApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "type": "file",
+      "name": "settingsApi.ts",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "settingsApi.ts is a frontend typescript module in frontend/src/modules/settings with 20 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchAppSettings",
+      "type": "function",
+      "name": "fetchAppSettings",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchAppSettings implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:updateAppSettings",
+      "type": "function",
+      "name": "updateAppSettings",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "updateAppSettings implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:uploadAppSettingsFile",
+      "type": "function",
+      "name": "uploadAppSettingsFile",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "uploadAppSettingsFile implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProviders",
+      "type": "function",
+      "name": "fetchLlmProviders",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchLlmProviders implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmModels",
+      "type": "function",
+      "name": "fetchLlmModels",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchLlmModels implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:testLlmConnection",
+      "type": "function",
+      "name": "testLlmConnection",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "testLlmConnection implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProfiles",
+      "type": "function",
+      "name": "fetchLlmProfiles",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchLlmProfiles implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:createLlmProfile",
+      "type": "function",
+      "name": "createLlmProfile",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "createLlmProfile implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:updateLlmProfile",
+      "type": "function",
+      "name": "updateLlmProfile",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "updateLlmProfile implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:deleteLlmProfile",
+      "type": "function",
+      "name": "deleteLlmProfile",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "deleteLlmProfile implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:testLlmProfile",
+      "type": "function",
+      "name": "testLlmProfile",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "testLlmProfile implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProfileModels",
+      "type": "function",
+      "name": "fetchLlmProfileModels",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchLlmProfileModels implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmRouting",
+      "type": "function",
+      "name": "fetchLlmRouting",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchLlmRouting implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:updateLlmRouting",
+      "type": "function",
+      "name": "updateLlmRouting",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "updateLlmRouting implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:startLlamaCppServer",
+      "type": "function",
+      "name": "startLlamaCppServer",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "startLlamaCppServer implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:restartLlamaCppServer",
+      "type": "function",
+      "name": "restartLlamaCppServer",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "restartLlamaCppServer implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:startAndTestLlamaCppServer",
+      "type": "function",
+      "name": "startAndTestLlamaCppServer",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "startAndTestLlamaCppServer implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:stopLlamaCppServer",
+      "type": "function",
+      "name": "stopLlamaCppServer",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "stopLlamaCppServer implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlamaCppServerStatus",
+      "type": "function",
+      "name": "fetchLlamaCppServerStatus",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "fetchLlamaCppServerStatus implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/api/settingsApi.ts:parseLlamaCppCommand",
+      "type": "function",
+      "name": "parseLlamaCppCommand",
+      "filePath": "frontend/src/modules/settings/api/settingsApi.ts",
+      "summary": "parseLlamaCppCommand implements logic in settingsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "type": "file",
+      "name": "AdvancedTaskRouting.tsx",
+      "filePath": "frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "summary": "AdvancedTaskRouting.tsx is a frontend typescript module in frontend/src/modules/settings with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx:AdvancedTaskRouting",
+      "type": "function",
+      "name": "AdvancedTaskRouting",
+      "filePath": "frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "summary": "AdvancedTaskRouting implements logic in AdvancedTaskRouting.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts:useMissionPreflightRows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts:useMissionPreflightRows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts:useMissionRuntime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts:useMissionRuntime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts:useMissionStatusPolling",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts:useMissionStatusPolling",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts:useMissionVideo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts:useMissionVideo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts:useMissionWebsocketRuntime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionWebsocketRuntime.ts:useMissionWebsocketRuntime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "file:frontend/src/shared/logging/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:setTelemetryWebSocketFactoryForTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:setTelemetryWebSocketFactoryForTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:wsUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:parseMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:telemetryFromMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:connectShared",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:disconnectShared",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:useTelemetryStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts:useTelemetryStream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.test.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.test.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/parameterDefinitions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts:buildCheckLookup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts:buildPreflightRows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts:buildPreflightRows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/parameterDefinitions.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/parameterDefinitions.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.test.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.test.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:getByPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:getByPath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:pickFirst",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:pickFirst",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:asNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:asNumber",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:asBoolean",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:asBoolean",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:extractFirstNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:extractFirstNumber",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:toPrettyNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:toPrettyNumber",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusToChipColor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusToChipColor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:normalizeStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:normalizeStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusPriority",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusPriority",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusDotColor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:statusDotColor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:haversineMeters",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:haversineMeters",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:missionRangeFromTelemetry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:missionRangeFromTelemetry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:collectFailedPreflightChecks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:collectFailedPreflightChecks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:preflightAllowsMissionStart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:preflightAllowsMissionStart",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:formatPreflightFailureMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:formatPreflightFailureMessage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:describePreflightStartBlock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "target": "function:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts:describePreflightStartBlock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/tests/useMissionCommands.test.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/tests/useMissionCommands.test.tsx",
+      "target": "file:frontend/src/test/msw/server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionRuntime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "target": "file:frontend/src/test/msw/server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+      "target": "class:frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx:MockWebSocket",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx:deriveTelemetry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx:deriveTelemetry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolSites",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolSites",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:createPropertyPatrolSite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:createPropertyPatrolSite",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolTemplates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolTemplates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:createPropertyPatrolTemplate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:createPropertyPatrolTemplate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:previewPropertyPatrolRoute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:previewPropertyPatrolRoute",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:startPropertyPatrolMission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:startPropertyPatrolMission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolIncidents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "target": "function:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts:listPropertyPatrolIncidents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "target": "file:frontend/src/modules/property-patrol/api/propertyPatrolApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "target": "file:frontend/src/modules/session/sessionCookies.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "target": "function:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx:PropertyPatrolPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+      "target": "function:frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx:PropertyPatrolPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:fetchAccountProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:fetchAccountProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:updatePassword",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:updatePassword",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:setupTwoFactor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:setupTwoFactor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:verifyTwoFactor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:verifyTwoFactor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:disableTwoFactor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/accountApi.ts",
+      "target": "function:frontend/src/modules/session/api/accountApi.ts:disableTwoFactor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "file:frontend/src/modules/session/sessionCookies.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "file:frontend/src/modules/session/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:refreshSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:refreshSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:updateCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:updateCurrentUser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:fetchCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:fetchCurrentUser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:verifySession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:verifySession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:logout",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:logout",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:login",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:login",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:signUp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "target": "function:frontend/src/modules/session/api/sessionApi.ts:signUp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "target": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "target": "file:frontend/src/modules/session/sessionCookies.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "target": "function:frontend/src/modules/session/hooks/useCurrentUser.ts:useCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useCurrentUser.ts",
+      "target": "function:frontend/src/modules/session/hooks/useCurrentUser.ts:useCurrentUser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useSession.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useSession.ts",
+      "target": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useSession.ts",
+      "target": "function:frontend/src/modules/session/hooks/useSession.ts:useSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/hooks/useSession.ts",
+      "target": "function:frontend/src/modules/session/hooks/useSession.ts:useSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "file:frontend/src/app/config/env.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:readSessionMarker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:readSessionMarker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:clearLegacyTokenStorage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:clearLegacyTokenStorage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:clearSessionMarker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:clearSessionMarker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:getSessionMarker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:getSessionMarker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:setSessionMarker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/sessionCookies.ts",
+      "target": "function:frontend/src/modules/session/sessionCookies.ts:setSessionMarker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/tests/auth.test.ts",
+      "target": "file:frontend/src/modules/session/api/sessionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/tests/auth.test.ts",
+      "target": "file:frontend/src/test/msw/server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/aiSettingsDefaults.ts",
+      "target": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/aiSettingsDefaults.ts",
+      "target": "function:frontend/src/modules/settings/aiSettingsDefaults.ts:defaultProviderSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:listOrgApiKeys",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:listOrgApiKeys",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:createOrgApiKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:createOrgApiKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:revokeOrgApiKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/orgApiKeysApi.ts",
+      "target": "function:frontend/src/modules/settings/api/orgApiKeysApi.ts:revokeOrgApiKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchAppSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchAppSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:updateAppSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:updateAppSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:uploadAppSettingsFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:uploadAppSettingsFile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProviders",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProviders",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmModels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmModels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:testLlmConnection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:testLlmConnection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProfiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProfiles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:createLlmProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:createLlmProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:updateLlmProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:updateLlmProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:deleteLlmProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:deleteLlmProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:testLlmProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:testLlmProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProfileModels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmProfileModels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmRouting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlmRouting",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:updateLlmRouting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:updateLlmRouting",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:startLlamaCppServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:startLlamaCppServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:restartLlamaCppServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:restartLlamaCppServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:startAndTestLlamaCppServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:startAndTestLlamaCppServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:stopLlamaCppServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:stopLlamaCppServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlamaCppServerStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:fetchLlamaCppServerStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:parseLlamaCppCommand",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "target": "function:frontend/src/modules/settings/api/settingsApi.ts:parseLlamaCppCommand",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "target": "file:frontend/src/modules/settings/aiSettingsDefaults.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "target": "file:frontend/src/modules/settings/api/settingsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "target": "function:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx:AdvancedTaskRouting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx",
+      "target": "function:frontend/src/modules/settings/components/AdvancedTaskRouting.tsx:AdvancedTaskRouting",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

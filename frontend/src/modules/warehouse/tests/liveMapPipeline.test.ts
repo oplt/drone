@@ -6,11 +6,10 @@ import {
   useLiveMapChunkCache,
 } from "../hooks/useLiveMapChunkCache";
 import {
-  applyWarehouseLiveMapMessage,
-  mergeUpdate,
   warehouseLiveMapReconnectDelayMs,
   warehouseLiveMapSnapshotPollDelayMs,
 } from "../hooks/useWarehouseLiveVoxelMap";
+import { applyWarehouseLiveMapMessage, mergeUpdate } from "../utils/liveMapUpdateMerge";
 import { selectDownloadableChunksPerLayer } from "../utils/liveMapChunkRetention";
 import {
   clearLiveMapChunkFetchCache,
@@ -26,6 +25,15 @@ import {
   chunksAvailableByLayer,
   layerHasStoredChunks,
 } from "../utils/liveMapLayerUtils";
+
+const healthyLiveMap = {
+  stale_costmap: false,
+  missing_mesh: false,
+  missing_point_cloud: false,
+  nvblox_ready: true,
+  mapping_recording: true,
+  stack_running: true,
+};
 
 describe("warehouseLiveMapReconnectDelayMs", () => {
   it("backs off exponentially and caps at 30 seconds", () => {
@@ -408,6 +416,7 @@ describe("mergeUpdate", () => {
 
   it("merges websocket snapshots into existing live state", () => {
     const existing = {
+      flightId: "flight_a",
       chunksById: new Map([
         [
           "rgbd_colored:rgbd_000001",
@@ -417,6 +426,7 @@ describe("mergeUpdate", () => {
             sequence: 1,
             source: "rgbd_colored" as const,
             layer: "rgbd_colored" as const,
+            frame_id: "map",
           },
         ],
       ]),
@@ -440,6 +450,7 @@ describe("mergeUpdate", () => {
               sequence: 2,
               source: "rgbd_colored",
               layer: "rgbd_colored",
+              frame_id: "map",
             },
           ],
           removed_chunk_ids: [],
@@ -457,6 +468,62 @@ describe("mergeUpdate", () => {
     });
 
     expect(merged.chunksById.size).toBe(2);
+  });
+
+  it("replaces a changed chunk with the same id", () => {
+    const existingChunk: WarehouseLiveVoxelChunk = {
+      id: "rgbd_000001",
+      kind: "point_cloud",
+      sequence: 1,
+      frame_id: "map",
+      checksum_sha256: "old",
+    };
+    const merged = mergeUpdate(
+      {
+        flightId: "flight_a",
+        chunksById: new Map([[existingChunk.id, existingChunk]]),
+        scanPath: [],
+      },
+      {
+        type: "live_map_update",
+        flight_id: "flight_a",
+        timestamp: "2026-01-01T00:00:01Z",
+        frame_id: "map",
+        changed_chunks: [{ ...existingChunk, sequence: 2, checksum_sha256: "new" }],
+        removed_chunk_ids: [],
+        scan_path_sample: [],
+        health: healthyLiveMap,
+      },
+    );
+
+    expect(merged.chunksById.size).toBe(1);
+    expect(merged.chunksById.get(existingChunk.id)?.checksum_sha256).toBe("new");
+  });
+
+  it("discards prior-flight chunks when flight changes", () => {
+    const merged = mergeUpdate(
+      {
+        flightId: "flight_a",
+        chunksById: new Map([
+          ["old", { id: "old", kind: "point_cloud", sequence: 1 }],
+        ]),
+        scanPath: [{ x_m: 1, y_m: 1, z_m: 1, frame_id: "map" }],
+      },
+      {
+        type: "live_map_update",
+        flight_id: "flight_b",
+        timestamp: "2026-01-01T00:00:01Z",
+        frame_id: "map",
+        changed_chunks: [{ id: "new", kind: "point_cloud", sequence: 1, frame_id: "map" }],
+        removed_chunk_ids: [],
+        scan_path_sample: [],
+        health: healthyLiveMap,
+      },
+    );
+
+    expect([...merged.chunksById.keys()]).toEqual(["new"]);
+    expect(merged.scanPath).toEqual([]);
+    expect(merged.flightId).toBe("flight_b");
   });
 });
 

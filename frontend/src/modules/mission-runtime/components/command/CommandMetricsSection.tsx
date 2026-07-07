@@ -1,5 +1,5 @@
 import { Divider, Stack } from "@mui/material";
-import { useMissionCommandMetrics } from "../../../../modules/mission-runtime";
+import { useMissionCommandMetrics } from "../../hooks/useMissionCommandMetrics";
 import { StatRow } from "./StatRow";
 
 export function CommandMetricsSection({

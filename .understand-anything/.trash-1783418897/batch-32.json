@@ -1,0 +1,1901 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/observability/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/observability/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/observability/__init__.py with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/audit.py",
+      "type": "file",
+      "name": "audit.py",
+      "filePath": "backend/observability/audit.py",
+      "summary": "audit.py is a backend python module in backend/observability/audit.py with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/audit.py:_safe_audit_value",
+      "type": "function",
+      "name": "_safe_audit_value",
+      "filePath": "backend/observability/audit.py",
+      "summary": "_safe_audit_value implements logic in audit.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/audit.py:emit_audit_event",
+      "type": "function",
+      "name": "emit_audit_event",
+      "filePath": "backend/observability/audit.py",
+      "summary": "emit_audit_event implements logic in audit.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/celery_instrumentation.py",
+      "type": "file",
+      "name": "celery_instrumentation.py",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "celery_instrumentation.py is a backend python module in backend/observability/celery_instrumentation.py with 8 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_task_name",
+      "type": "function",
+      "name": "_task_name",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_task_name implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_task_queue",
+      "type": "function",
+      "name": "_task_queue",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_task_queue implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_headers",
+      "type": "function",
+      "name": "_headers",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_headers implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_inject_publish_context",
+      "type": "function",
+      "name": "_inject_publish_context",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_inject_publish_context implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_extract_worker_context",
+      "type": "function",
+      "name": "_extract_worker_context",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_extract_worker_context implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_start_job_span",
+      "type": "function",
+      "name": "_start_job_span",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_start_job_span implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:_log_job_event",
+      "type": "function",
+      "name": "_log_job_event",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "_log_job_event implements logic in celery_instrumentation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/celery_instrumentation.py:instrument_celery",
+      "type": "function",
+      "name": "instrument_celery",
+      "filePath": "backend/observability/celery_instrumentation.py",
+      "summary": "instrument_celery implements logic in celery_instrumentation.py.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/config.py",
+      "type": "file",
+      "name": "config.py",
+      "filePath": "backend/observability/config.py",
+      "summary": "config.py is a backend python module in backend/observability/config.py with 3 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/config.py:env_bool",
+      "type": "function",
+      "name": "env_bool",
+      "filePath": "backend/observability/config.py",
+      "summary": "env_bool implements logic in config.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/config.py:env_str",
+      "type": "function",
+      "name": "env_str",
+      "filePath": "backend/observability/config.py",
+      "summary": "env_str implements logic in config.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/config.py:load_config",
+      "type": "function",
+      "name": "load_config",
+      "filePath": "backend/observability/config.py",
+      "summary": "load_config implements logic in config.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/observability/config.py:ObservabilityConfig",
+      "type": "class",
+      "name": "ObservabilityConfig",
+      "filePath": "backend/observability/config.py",
+      "summary": "ObservabilityConfig groups related behavior and state in config.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/context.py",
+      "type": "file",
+      "name": "context.py",
+      "filePath": "backend/observability/context.py",
+      "summary": "context.py is a backend python module in backend/observability/context.py with 12 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:new_correlation_id",
+      "type": "function",
+      "name": "new_correlation_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "new_correlation_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:set_request_id",
+      "type": "function",
+      "name": "set_request_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "set_request_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:get_request_id",
+      "type": "function",
+      "name": "get_request_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "get_request_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:set_correlation_id",
+      "type": "function",
+      "name": "set_correlation_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "set_correlation_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:get_correlation_id",
+      "type": "function",
+      "name": "get_correlation_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "get_correlation_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:set_job_id",
+      "type": "function",
+      "name": "set_job_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "set_job_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:get_job_id",
+      "type": "function",
+      "name": "get_job_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "get_job_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:log_context_fields",
+      "type": "function",
+      "name": "log_context_fields",
+      "filePath": "backend/observability/context.py",
+      "summary": "log_context_fields implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:reset_request_id",
+      "type": "function",
+      "name": "reset_request_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "reset_request_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:reset_correlation_id",
+      "type": "function",
+      "name": "reset_correlation_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "reset_correlation_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:reset_job_id",
+      "type": "function",
+      "name": "reset_job_id",
+      "filePath": "backend/observability/context.py",
+      "summary": "reset_job_id implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/context.py:bind_log_context",
+      "type": "function",
+      "name": "bind_log_context",
+      "filePath": "backend/observability/context.py",
+      "summary": "bind_log_context implements logic in context.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/correlation.py",
+      "type": "file",
+      "name": "correlation.py",
+      "filePath": "backend/observability/correlation.py",
+      "summary": "correlation.py is a backend python module in backend/observability/correlation.py with 2 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/correlation.py:_valid_id",
+      "type": "function",
+      "name": "_valid_id",
+      "filePath": "backend/observability/correlation.py",
+      "summary": "_valid_id implements logic in correlation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/correlation.py:current_correlation_id",
+      "type": "function",
+      "name": "current_correlation_id",
+      "filePath": "backend/observability/correlation.py",
+      "summary": "current_correlation_id implements logic in correlation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/observability/correlation.py:CorrelationMiddleware",
+      "type": "class",
+      "name": "CorrelationMiddleware",
+      "filePath": "backend/observability/correlation.py",
+      "summary": "CorrelationMiddleware groups related behavior and state in correlation.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/database.py",
+      "type": "file",
+      "name": "database.py",
+      "filePath": "backend/observability/database.py",
+      "summary": "database.py is a backend python module in backend/observability/database.py with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/database.py:instrument_database",
+      "type": "function",
+      "name": "instrument_database",
+      "filePath": "backend/observability/database.py",
+      "summary": "instrument_database implements logic in database.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/database.py:_register_query_listeners",
+      "type": "function",
+      "name": "_register_query_listeners",
+      "filePath": "backend/observability/database.py",
+      "summary": "_register_query_listeners implements logic in database.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/database.py:_statement_operation",
+      "type": "function",
+      "name": "_statement_operation",
+      "filePath": "backend/observability/database.py",
+      "summary": "_statement_operation implements logic in database.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/database.py:refresh_pool_metrics",
+      "type": "function",
+      "name": "refresh_pool_metrics",
+      "filePath": "backend/observability/database.py",
+      "summary": "refresh_pool_metrics implements logic in database.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/database.py:record_db_error",
+      "type": "function",
+      "name": "record_db_error",
+      "filePath": "backend/observability/database.py",
+      "summary": "record_db_error implements logic in database.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/database.py:observed_db_operation",
+      "type": "function",
+      "name": "observed_db_operation",
+      "filePath": "backend/observability/database.py",
+      "summary": "observed_db_operation implements logic in database.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/errors.py",
+      "type": "file",
+      "name": "errors.py",
+      "filePath": "backend/observability/errors.py",
+      "summary": "errors.py is a backend python module in backend/observability/errors.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/errors.py:normalize_error_type",
+      "type": "function",
+      "name": "normalize_error_type",
+      "filePath": "backend/observability/errors.py",
+      "summary": "normalize_error_type implements logic in errors.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/external_http.py",
+      "type": "file",
+      "name": "external_http.py",
+      "filePath": "backend/observability/external_http.py",
+      "summary": "external_http.py is a backend python module in backend/observability/external_http.py with 1 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/external_http.py:_endpoint_group",
+      "type": "function",
+      "name": "_endpoint_group",
+      "filePath": "backend/observability/external_http.py",
+      "summary": "_endpoint_group implements logic in external_http.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/observability/external_http.py:InstrumentedAsyncClient",
+      "type": "class",
+      "name": "InstrumentedAsyncClient",
+      "filePath": "backend/observability/external_http.py",
+      "summary": "InstrumentedAsyncClient groups related behavior and state in external_http.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/logging.py",
+      "type": "file",
+      "name": "logging.py",
+      "filePath": "backend/observability/logging.py",
+      "summary": "logging.py is a backend python module in backend/observability/logging.py with 1 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/logging.py:install_trace_context_filter",
+      "type": "function",
+      "name": "install_trace_context_filter",
+      "filePath": "backend/observability/logging.py",
+      "summary": "install_trace_context_filter implements logic in logging.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/observability/logging.py:TraceContextFilter",
+      "type": "class",
+      "name": "TraceContextFilter",
+      "filePath": "backend/observability/logging.py",
+      "summary": "TraceContextFilter groups related behavior and state in logging.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/otel.py",
+      "type": "file",
+      "name": "otel.py",
+      "filePath": "backend/observability/otel.py",
+      "summary": "otel.py is a backend python module in backend/observability/otel.py with 15 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_env",
+      "type": "function",
+      "name": "_env",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_env implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_env_optional",
+      "type": "function",
+      "name": "_env_optional",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_env_optional implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_env_bool",
+      "type": "function",
+      "name": "_env_bool",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_env_bool implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_otlp_headers",
+      "type": "function",
+      "name": "_otlp_headers",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_otlp_headers implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_resource_attributes",
+      "type": "function",
+      "name": "_resource_attributes",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_resource_attributes implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_base_endpoint",
+      "type": "function",
+      "name": "_base_endpoint",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_base_endpoint implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_signal_endpoint",
+      "type": "function",
+      "name": "_signal_endpoint",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_signal_endpoint implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_resource",
+      "type": "function",
+      "name": "_resource",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_resource implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:setup_observability",
+      "type": "function",
+      "name": "setup_observability",
+      "filePath": "backend/observability/otel.py",
+      "summary": "setup_observability implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_setup_traces",
+      "type": "function",
+      "name": "_setup_traces",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_setup_traces implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_setup_metrics",
+      "type": "function",
+      "name": "_setup_metrics",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_setup_metrics implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_setup_logs",
+      "type": "function",
+      "name": "_setup_logs",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_setup_logs implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_setup_library_instrumentation",
+      "type": "function",
+      "name": "_setup_library_instrumentation",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_setup_library_instrumentation implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_instrument_app",
+      "type": "function",
+      "name": "_instrument_app",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_instrument_app implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/otel.py:_log_hook",
+      "type": "function",
+      "name": "_log_hook",
+      "filePath": "backend/observability/otel.py",
+      "summary": "_log_hook implements logic in otel.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/queue_metrics.py",
+      "type": "file",
+      "name": "queue_metrics.py",
+      "filePath": "backend/observability/queue_metrics.py",
+      "summary": "queue_metrics.py is a backend python module in backend/observability/queue_metrics.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/queue_metrics.py:refresh_queue_depth_metrics",
+      "type": "function",
+      "name": "refresh_queue_depth_metrics",
+      "filePath": "backend/observability/queue_metrics.py",
+      "summary": "refresh_queue_depth_metrics implements logic in queue_metrics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/readiness.py",
+      "type": "file",
+      "name": "readiness.py",
+      "filePath": "backend/observability/readiness.py",
+      "summary": "readiness.py is a backend python module in backend/observability/readiness.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/readiness.py:dependency_readiness",
+      "type": "function",
+      "name": "dependency_readiness",
+      "filePath": "backend/observability/readiness.py",
+      "summary": "dependency_readiness implements logic in readiness.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_readiness.py",
+      "type": "file",
+      "name": "test_readiness.py",
+      "filePath": "backend/tests/test_readiness.py",
+      "summary": "test_readiness.py is a backend python module in backend/tests/test_readiness.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_readiness.py:test_readiness_rejects_non_redis_broker",
+      "type": "function",
+      "name": "test_readiness_rejects_non_redis_broker",
+      "filePath": "backend/tests/test_readiness.py",
+      "summary": "test_readiness_rejects_non_redis_broker implements logic in test_readiness.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/observability/__init__.py",
+      "target": "file:backend/observability/instruments.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/__init__.py",
+      "target": "file:backend/observability/otel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/audit.py",
+      "target": "file:backend/observability/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/audit.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/audit.py",
+      "target": "function:backend/observability/audit.py:_safe_audit_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/audit.py",
+      "target": "function:backend/observability/audit.py:_safe_audit_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/audit.py",
+      "target": "function:backend/observability/audit.py:emit_audit_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/audit.py",
+      "target": "function:backend/observability/audit.py:emit_audit_event",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "file:backend/observability/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "file:backend/observability/audit.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "file:backend/observability/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "file:backend/observability/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "file:backend/observability/prometheus_metrics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_task_name",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_task_name",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_task_queue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_task_queue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_headers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_headers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_inject_publish_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_inject_publish_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_extract_worker_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_extract_worker_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_start_job_span",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_start_job_span",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_log_job_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:_log_job_event",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:instrument_celery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/celery_instrumentation.py",
+      "target": "function:backend/observability/celery_instrumentation.py:instrument_celery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "function:backend/observability/config.py:env_bool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "function:backend/observability/config.py:env_bool",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "function:backend/observability/config.py:env_str",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "function:backend/observability/config.py:env_str",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "function:backend/observability/config.py:load_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "function:backend/observability/config.py:load_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "class:backend/observability/config.py:ObservabilityConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/config.py",
+      "target": "class:backend/observability/config.py:ObservabilityConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:new_correlation_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:new_correlation_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:set_request_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:set_request_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:get_request_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:get_request_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:set_correlation_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:set_correlation_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:get_correlation_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:get_correlation_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:set_job_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:set_job_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:get_job_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:get_job_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:log_context_fields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:log_context_fields",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:reset_request_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:reset_request_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:reset_correlation_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:reset_correlation_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:reset_job_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:reset_job_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:bind_log_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/context.py",
+      "target": "function:backend/observability/context.py:bind_log_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "file:backend/observability/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "function:backend/observability/correlation.py:_valid_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "function:backend/observability/correlation.py:_valid_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "function:backend/observability/correlation.py:current_correlation_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "function:backend/observability/correlation.py:current_correlation_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "class:backend/observability/correlation.py:CorrelationMiddleware",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/correlation.py",
+      "target": "class:backend/observability/correlation.py:CorrelationMiddleware",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "file:backend/observability/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "file:backend/observability/audit.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "file:backend/observability/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "file:backend/observability/prometheus_metrics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:instrument_database",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:instrument_database",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:_register_query_listeners",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:_register_query_listeners",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:_statement_operation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:_statement_operation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:refresh_pool_metrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:refresh_pool_metrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:record_db_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:record_db_error",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:observed_db_operation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/database.py",
+      "target": "function:backend/observability/database.py:observed_db_operation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/errors.py",
+      "target": "function:backend/observability/errors.py:normalize_error_type",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/errors.py",
+      "target": "function:backend/observability/errors.py:normalize_error_type",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "file:backend/observability/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "file:backend/observability/audit.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "file:backend/observability/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "file:backend/observability/prometheus_metrics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "function:backend/observability/external_http.py:_endpoint_group",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "function:backend/observability/external_http.py:_endpoint_group",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "class:backend/observability/external_http.py:InstrumentedAsyncClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/external_http.py",
+      "target": "class:backend/observability/external_http.py:InstrumentedAsyncClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/logging.py",
+      "target": "file:backend/observability/context.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/logging.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/logging.py",
+      "target": "function:backend/observability/logging.py:install_trace_context_filter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/logging.py",
+      "target": "function:backend/observability/logging.py:install_trace_context_filter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/logging.py",
+      "target": "class:backend/observability/logging.py:TraceContextFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/logging.py",
+      "target": "class:backend/observability/logging.py:TraceContextFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "file:backend/observability/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_env",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_env_optional",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_env_optional",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_env_bool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_env_bool",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_otlp_headers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_otlp_headers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_resource_attributes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_resource_attributes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_base_endpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_base_endpoint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_signal_endpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_signal_endpoint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_resource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_resource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:setup_observability",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:setup_observability",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_traces",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_traces",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_metrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_metrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_logs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_logs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_library_instrumentation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_setup_library_instrumentation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_instrument_app",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_instrument_app",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_log_hook",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/otel.py",
+      "target": "function:backend/observability/otel.py:_log_hook",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/queue_metrics.py",
+      "target": "file:backend/observability/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/queue_metrics.py",
+      "target": "file:backend/observability/logging.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/queue_metrics.py",
+      "target": "file:backend/observability/prometheus_metrics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/queue_metrics.py",
+      "target": "function:backend/observability/queue_metrics.py:refresh_queue_depth_metrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/queue_metrics.py",
+      "target": "function:backend/observability/queue_metrics.py:refresh_queue_depth_metrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/readiness.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/observability/readiness.py",
+      "target": "function:backend/observability/readiness.py:dependency_readiness",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/readiness.py",
+      "target": "function:backend/observability/readiness.py:dependency_readiness",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_readiness.py",
+      "target": "file:backend/observability/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_readiness.py",
+      "target": "file:backend/observability/readiness.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_readiness.py",
+      "target": "function:backend/tests/test_readiness.py:test_readiness_rejects_non_redis_broker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_readiness.py",
+      "target": "function:backend/tests/test_readiness.py:test_readiness_rejects_non_redis_broker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

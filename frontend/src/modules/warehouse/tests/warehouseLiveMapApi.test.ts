@@ -8,10 +8,7 @@ import {
   isWarehouseLiveMapUpdate,
   type WarehouseLiveMapSnapshot,
 } from "../api/warehouseLiveMapApi";
-import {
-  applyWarehouseLiveMapMessage,
-  mergeUpdate,
-} from "../hooks/useWarehouseLiveVoxelMap";
+import { applyWarehouseLiveMapMessage, mergeUpdate } from "../utils/liveMapUpdateMerge";
 
 describe("warehouse live map API", () => {
   it("parses live update DTOs", () => {

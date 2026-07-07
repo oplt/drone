@@ -1,0 +1,2261 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/scripts/check_eslint_baseline.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 133,
+      "nonEmptyLines": 122,
+      "functions": [
+        {
+          "name": "parseFindings",
+          "startLine": 17,
+          "endLine": 36,
+          "params": [
+            "output"
+          ]
+        },
+        {
+          "name": "collectFindings",
+          "startLine": 38,
+          "endLine": 63,
+          "params": []
+        },
+        {
+          "name": "summarizeByModule",
+          "startLine": 65,
+          "endLine": 83,
+          "params": [
+            "counts"
+          ]
+        },
+        {
+          "name": "main",
+          "startLine": 85,
+          "endLine": 129,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "parseFindings",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "collectFindings",
+          "line": 38,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "parseFindings",
+          "callee": "JSON.parse",
+          "lineNumber": 20
+        },
+        {
+          "caller": "parseFindings",
+          "callee": "Array.isArray",
+          "lineNumber": 24
+        },
+        {
+          "caller": "parseFindings",
+          "callee": "file.filePath.replace",
+          "lineNumber": 29
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "mkdtempSync",
+          "lineNumber": 39
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "join",
+          "lineNumber": 39
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "tmpdir",
+          "lineNumber": 39
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "join",
+          "lineNumber": 40
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "spawnSync",
+          "lineNumber": 41
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "parseFindings",
+          "lineNumber": 57
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "readFileSync",
+          "lineNumber": 57
+        },
+        {
+          "caller": "collectFindings",
+          "callee": "rmSync",
+          "lineNumber": 61
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "Object.entries",
+          "lineNumber": 67
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "key.split(\"|\")[0].replace",
+          "lineNumber": 68
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "key.split",
+          "lineNumber": 68
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 70
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 71
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 73
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 74
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 75
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 76
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 77
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.startsWith",
+          "lineNumber": 78
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.includes",
+          "lineNumber": 79
+        },
+        {
+          "caller": "summarizeByModule",
+          "callee": "path.split",
+          "lineNumber": 79
+        },
+        {
+          "caller": "main",
+          "callee": "process.argv.includes",
+          "lineNumber": 86
+        },
+        {
+          "caller": "main",
+          "callee": "collectFindings",
+          "lineNumber": 89
+        },
+        {
+          "caller": "main",
+          "callee": "console.error",
+          "lineNumber": 91
+        },
+        {
+          "caller": "main",
+          "callee": "Object.fromEntries",
+          "lineNumber": 96
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries(current).sort",
+          "lineNumber": 97
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries",
+          "lineNumber": 97
+        },
+        {
+          "caller": "main",
+          "callee": "a.localeCompare",
+          "lineNumber": 97
+        },
+        {
+          "caller": "main",
+          "callee": "writeFileSync",
+          "lineNumber": 99
+        },
+        {
+          "caller": "main",
+          "callee": "JSON.stringify",
+          "lineNumber": 99
+        },
+        {
+          "caller": "main",
+          "callee": "Object.values(current).reduce",
+          "lineNumber": 100
+        },
+        {
+          "caller": "main",
+          "callee": "Object.values",
+          "lineNumber": 100
+        },
+        {
+          "caller": "main",
+          "callee": "console.log",
+          "lineNumber": 101
+        },
+        {
+          "caller": "main",
+          "callee": "summarizeByModule",
+          "lineNumber": 102
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries(byModule).sort",
+          "lineNumber": 103
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries",
+          "lineNumber": 103
+        },
+        {
+          "caller": "main",
+          "callee": "console.log",
+          "lineNumber": 106
+        },
+        {
+          "caller": "main",
+          "callee": "JSON.parse",
+          "lineNumber": 111
+        },
+        {
+          "caller": "main",
+          "callee": "readFileSync",
+          "lineNumber": 111
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries(current)\n    .filter(([key, count]) => count > (baseline[key] ?? 0))\n    .map",
+          "lineNumber": 112
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries(current)\n    .filter",
+          "lineNumber": 112
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries",
+          "lineNumber": 112
+        },
+        {
+          "caller": "main",
+          "callee": "console.error",
+          "lineNumber": 119
+        },
+        {
+          "caller": "main",
+          "callee": "console.error",
+          "lineNumber": 121
+        },
+        {
+          "caller": "main",
+          "callee": "Object.values(baseline).reduce",
+          "lineNumber": 126
+        },
+        {
+          "caller": "main",
+          "callee": "Object.values",
+          "lineNumber": 126
+        },
+        {
+          "caller": "main",
+          "callee": "console.log",
+          "lineNumber": 127
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/scripts/check_eslint_baseline.test.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 27,
+      "nonEmptyLines": 23,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/scripts/check_file_sizes.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 130,
+      "nonEmptyLines": 116,
+      "functions": [
+        {
+          "name": "effectiveLines",
+          "startLine": 19,
+          "endLine": 23,
+          "params": [
+            "text"
+          ]
+        },
+        {
+          "name": "limitFor",
+          "startLine": 25,
+          "endLine": 49,
+          "params": [
+            "relativePath"
+          ]
+        },
+        {
+          "name": "walkSourceFiles",
+          "startLine": 51,
+          "endLine": 63,
+          "params": [
+            "directory"
+          ]
+        },
+        {
+          "name": "collectViolations",
+          "startLine": 65,
+          "endLine": 76,
+          "params": []
+        },
+        {
+          "name": "main",
+          "startLine": 78,
+          "endLine": 121,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "effectiveLines",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "limitFor",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "collectViolations",
+          "line": 65,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "effectiveLines",
+          "callee": "text\n    .split(\"\\n\")\n    .filter",
+          "lineNumber": 20
+        },
+        {
+          "caller": "effectiveLines",
+          "callee": "text\n    .split",
+          "lineNumber": 20
+        },
+        {
+          "caller": "effectiveLines",
+          "callee": "line.trim",
+          "lineNumber": 22
+        },
+        {
+          "caller": "effectiveLines",
+          "callee": "line.trim().startsWith",
+          "lineNumber": 22
+        },
+        {
+          "caller": "effectiveLines",
+          "callee": "line.trim",
+          "lineNumber": 22
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 26
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 26
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 29
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 32
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 36
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.endsWith",
+          "lineNumber": 37
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.endsWith",
+          "lineNumber": 38
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 42
+        },
+        {
+          "caller": "limitFor",
+          "callee": "relativePath.includes",
+          "lineNumber": 45
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "readdirSync",
+          "lineNumber": 52
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "join",
+          "lineNumber": 53
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "statSync(absolutePath).isDirectory",
+          "lineNumber": 54
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "statSync",
+          "lineNumber": 54
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "walkSourceFiles",
+          "lineNumber": 55
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "SOURCE_EXTENSIONS.has",
+          "lineNumber": 58
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "entry.slice",
+          "lineNumber": 58
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "entry.lastIndexOf",
+          "lineNumber": 58
+        },
+        {
+          "caller": "walkSourceFiles",
+          "callee": "files.push",
+          "lineNumber": 59
+        },
+        {
+          "caller": "collectViolations",
+          "callee": "walkSourceFiles",
+          "lineNumber": 67
+        },
+        {
+          "caller": "collectViolations",
+          "callee": "relative(REPO_ROOT, absolutePath).replaceAll",
+          "lineNumber": 68
+        },
+        {
+          "caller": "collectViolations",
+          "callee": "relative",
+          "lineNumber": 68
+        },
+        {
+          "caller": "collectViolations",
+          "callee": "effectiveLines",
+          "lineNumber": 69
+        },
+        {
+          "caller": "collectViolations",
+          "callee": "readFileSync",
+          "lineNumber": 69
+        },
+        {
+          "caller": "collectViolations",
+          "callee": "limitFor",
+          "lineNumber": 70
+        },
+        {
+          "caller": "main",
+          "callee": "process.argv.includes",
+          "lineNumber": 79
+        },
+        {
+          "caller": "main",
+          "callee": "collectViolations",
+          "lineNumber": 80
+        },
+        {
+          "caller": "main",
+          "callee": "writeFileSync",
+          "lineNumber": 83
+        },
+        {
+          "caller": "main",
+          "callee": "JSON.stringify",
+          "lineNumber": 83
+        },
+        {
+          "caller": "main",
+          "callee": "console.log",
+          "lineNumber": 84
+        },
+        {
+          "caller": "main",
+          "callee": "Object.keys",
+          "lineNumber": 85
+        },
+        {
+          "caller": "main",
+          "callee": "JSON.parse",
+          "lineNumber": 90
+        },
+        {
+          "caller": "main",
+          "callee": "readFileSync",
+          "lineNumber": 90
+        },
+        {
+          "caller": "main",
+          "callee": "Object.entries",
+          "lineNumber": 94
+        },
+        {
+          "caller": "main",
+          "callee": "regressions.push",
+          "lineNumber": 104
+        },
+        {
+          "caller": "main",
+          "callee": "console.error",
+          "lineNumber": 110
+        },
+        {
+          "caller": "main",
+          "callee": "console.error",
+          "lineNumber": 112
+        },
+        {
+          "caller": "main",
+          "callee": "console.log",
+          "lineNumber": 117
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/scripts/check_file_sizes.test.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 27,
+      "nonEmptyLines": 24,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/scripts/eslint_baseline.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 69,
+      "nonEmptyLines": 69,
+      "sections": [
+        {
+          "heading": "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx|@typescript-eslint/no-unused-vars",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "frontend/src/modules/dashboard/components/FlightReplayChart.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "frontend/src/modules/dashboard/components/SessionsChart.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "frontend/src/modules/fleet/views/FleetPage.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "frontend/src/modules/fleet/views/FleetPage.tsx|react-hooks/preserve-manual-memoization",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/CesiumMap.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/CesiumMap.tsx|no-empty",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/CesiumMap.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/LeafletMap.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/LeafletMap.tsx|react-hooks/refs",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/MapLibreMap.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 15
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/MapLibreMap.tsx|react-hooks/refs",
+          "level": 1,
+          "line": 16
+        },
+        {
+          "heading": "frontend/src/modules/maps/components/CesiumViewControls.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "frontend/src/modules/maps/components/CesiumViewControls.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 18
+        },
+        {
+          "heading": "frontend/src/modules/maps/components/MissionMapViewport.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "frontend/src/modules/maps/components/MissionMapViewport.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 20
+        },
+        {
+          "heading": "frontend/src/modules/maps/hooks/useDroneCenter.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 21
+        },
+        {
+          "heading": "frontend/src/modules/maps/hooks/useDroneCenter.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 22
+        },
+        {
+          "heading": "frontend/src/modules/maps/hooks/useFlatMapDrawing.ts|react-hooks/refs",
+          "level": 1,
+          "line": 23
+        },
+        {
+          "heading": "frontend/src/modules/maps/providers/googleMaps.tsx|react-refresh/only-export-components",
+          "level": 1,
+          "line": 24
+        },
+        {
+          "heading": "frontend/src/modules/mission-history/views/MissionTimeline.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 25
+        },
+        {
+          "heading": "frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx|react-refresh/only-export-components",
+          "level": 1,
+          "line": 26
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 27
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts|@typescript-eslint/no-unused-vars",
+          "level": 1,
+          "line": 28
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 29
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts|react-hooks/refs",
+          "level": 1,
+          "line": 30
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 31
+        },
+        {
+          "heading": "frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx|react-hooks/refs",
+          "level": 1,
+          "line": 32
+        },
+        {
+          "heading": "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts|react-hooks/refs",
+          "level": 1,
+          "line": 33
+        },
+        {
+          "heading": "frontend/src/modules/observability/components/HealthStatusCard.tsx|react-refresh/only-export-components",
+          "level": 1,
+          "line": 34
+        },
+        {
+          "heading": "frontend/src/modules/observability/ObservabilityPage.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 35
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMap.ts|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 36
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMapping.ts|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 37
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/components/PropertyGeofencesPanel.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 38
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/useEventTriggerConfigPersistence.ts|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 39
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/useEventTriggerConfigPersistence.ts|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 40
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMap.ts|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 41
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 42
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts|react-hooks/preserve-manual-memoization",
+          "level": 1,
+          "line": 43
+        },
+        {
+          "heading": "frontend/src/modules/session/components/Copyright.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 44
+        },
+        {
+          "heading": "frontend/src/modules/settings/views/ProfilePage.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 45
+        },
+        {
+          "heading": "frontend/src/modules/templates/views/TemplatesPage.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 46
+        },
+        {
+          "heading": "frontend/src/modules/video-analysis/VideoAnalysisPanel.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 47
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseCoordinateSetupPanel.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 48
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 49
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 50
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx|react-hooks/exhaustive-deps",
+          "level": 1,
+          "line": 51
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx|react-hooks/preserve-manual-memoization",
+          "level": 1,
+          "line": 52
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 53
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts|react-hooks/set-state-in-effect",
+          "level": 1,
+          "line": 54
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useWarehouseScannedMapReplay.ts|react-hooks/refs",
+          "level": 1,
+          "line": 55
+        },
+        {
+          "heading": "frontend/src/shared/hooks/useInterval.tsx|react-hooks/refs",
+          "level": 1,
+          "line": 56
+        },
+        {
+          "heading": "frontend/src/shared/layout/CustomDatePicker.tsx|@typescript-eslint/no-empty-object-type",
+          "level": 1,
+          "line": 57
+        },
+        {
+          "heading": "frontend/src/shared/layout/CustomDatePicker.tsx|@typescript-eslint/no-unused-vars",
+          "level": 1,
+          "line": 58
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/charts.ts|import/prefer-default-export",
+          "level": 1,
+          "line": 59
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/dataDisplay.tsx|import/prefer-default-export",
+          "level": 1,
+          "line": 60
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/dataGrid.js|import/prefer-default-export",
+          "level": 1,
+          "line": 61
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/datePickers.ts|import/prefer-default-export",
+          "level": 1,
+          "line": 62
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/feedback.tsx|import/prefer-default-export",
+          "level": 1,
+          "line": 63
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/inputs.tsx|import/prefer-default-export",
+          "level": 1,
+          "line": 64
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/navigation.tsx|import/prefer-default-export",
+          "level": 1,
+          "line": 65
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/surfaces.ts|import/prefer-default-export",
+          "level": 1,
+          "line": 66
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/treeView.ts|import/prefer-default-export",
+          "level": 1,
+          "line": 67
+        },
+        {
+          "heading": "frontend/src/shared/ui/ErrorAlerts.tsx|@typescript-eslint/no-explicit-any",
+          "level": 1,
+          "line": 68
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 67
+      }
+    },
+    {
+      "path": "frontend/scripts/file_size_baseline.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 278,
+      "nonEmptyLines": 278,
+      "sections": [
+        {
+          "heading": "frontend/src/modules/admin/views/AdminPage.tsx",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+          "level": 1,
+          "line": 18
+        },
+        {
+          "heading": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+          "level": 1,
+          "line": 22
+        },
+        {
+          "heading": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+          "level": 1,
+          "line": 26
+        },
+        {
+          "heading": "frontend/src/modules/dashboard/views/InsightsPage.tsx",
+          "level": 1,
+          "line": 30
+        },
+        {
+          "heading": "frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+          "level": 1,
+          "line": 34
+        },
+        {
+          "heading": "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+          "level": 1,
+          "line": 38
+        },
+        {
+          "heading": "frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+          "level": 1,
+          "line": 42
+        },
+        {
+          "heading": "frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+          "level": 1,
+          "line": 46
+        },
+        {
+          "heading": "frontend/src/modules/fleet/views/FleetPage.tsx",
+          "level": 1,
+          "line": 50
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/CesiumMap.tsx",
+          "level": 1,
+          "line": 54
+        },
+        {
+          "heading": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+          "level": 1,
+          "line": 58
+        },
+        {
+          "heading": "frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+          "level": 1,
+          "line": 62
+        },
+        {
+          "heading": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+          "level": 1,
+          "line": 66
+        },
+        {
+          "heading": "frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+          "level": 1,
+          "line": 70
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+          "level": 1,
+          "line": 74
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+          "level": 1,
+          "line": 78
+        },
+        {
+          "heading": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+          "level": 1,
+          "line": 82
+        },
+        {
+          "heading": "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+          "level": 1,
+          "line": 86
+        },
+        {
+          "heading": "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+          "level": 1,
+          "line": 90
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/components/PhotogrammetryMapColumn.tsx",
+          "level": 1,
+          "line": 94
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/hooks/useMappingJobs.ts",
+          "level": 1,
+          "line": 98
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMap.ts",
+          "level": 1,
+          "line": 102
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMapping.ts",
+          "level": 1,
+          "line": 106
+        },
+        {
+          "heading": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMission.ts",
+          "level": 1,
+          "line": 110
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/components/PrivatePatrolMapColumn.tsx",
+          "level": 1,
+          "line": 114
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/components/PrivatePatrolParamsSection.tsx",
+          "level": 1,
+          "line": 118
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/components/PrivatePatrolPlanningSection.tsx",
+          "level": 1,
+          "line": 122
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/components/PropertyGeofencesPanel.tsx",
+          "level": 1,
+          "line": 126
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/useEventTriggerConfigPersistence.ts",
+          "level": 1,
+          "line": 130
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMap.ts",
+          "level": 1,
+          "line": 134
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+          "level": 1,
+          "line": 138
+        },
+        {
+          "heading": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolPage.ts",
+          "level": 1,
+          "line": 142
+        },
+        {
+          "heading": "frontend/src/modules/property-patrol/views/PropertyPatrolPage.tsx",
+          "level": 1,
+          "line": 146
+        },
+        {
+          "heading": "frontend/src/modules/session/components/MainContent.tsx",
+          "level": 1,
+          "line": 150
+        },
+        {
+          "heading": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+          "level": 1,
+          "line": 154
+        },
+        {
+          "heading": "frontend/src/modules/settings/api/settingsApi.ts",
+          "level": 1,
+          "line": 158
+        },
+        {
+          "heading": "frontend/src/modules/settings/components/LlmProfileDialog.tsx",
+          "level": 1,
+          "line": 162
+        },
+        {
+          "heading": "frontend/src/modules/settings/views/SettingsPage.tsx",
+          "level": 1,
+          "line": 166
+        },
+        {
+          "heading": "frontend/src/modules/templates/views/TemplatesPage.tsx",
+          "level": 1,
+          "line": 170
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/api/warehouseInspectionApi.ts",
+          "level": 1,
+          "line": 174
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts",
+          "level": 1,
+          "line": 178
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/api/warehouseMissionsApi.ts",
+          "level": 1,
+          "line": 182
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseCoordinateSetupPanel.tsx",
+          "level": 1,
+          "line": 186
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseDockPanel.tsx",
+          "level": 1,
+          "line": 190
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseExplorationPanel.tsx",
+          "level": 1,
+          "line": 194
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseFlightReadinessPanel.tsx",
+          "level": 1,
+          "line": 198
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLayoutEditor.tsx",
+          "level": 1,
+          "line": 202
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx",
+          "level": 1,
+          "line": 206
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx",
+          "level": 1,
+          "line": 210
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelStatus.tsx",
+          "level": 1,
+          "line": 214
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseMapSetupPanel.tsx",
+          "level": 1,
+          "line": 218
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/components/WarehouseProductScanFlyPanel.tsx",
+          "level": 1,
+          "line": 222
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts",
+          "level": 1,
+          "line": 226
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts",
+          "level": 1,
+          "line": 230
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+          "level": 1,
+          "line": 234
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts",
+          "level": 1,
+          "line": 238
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useWarehouseMapPlacement.ts",
+          "level": 1,
+          "line": 242
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts",
+          "level": 1,
+          "line": 246
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+          "level": 1,
+          "line": 250
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/types.ts",
+          "level": 1,
+          "line": 254
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/utils/liveMapChunkDecoders.ts",
+          "level": 1,
+          "line": 258
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/utils/liveMapLayerUtils.ts",
+          "level": 1,
+          "line": 262
+        },
+        {
+          "heading": "frontend/src/modules/warehouse/views/Warehouse.tsx",
+          "level": 1,
+          "line": 266
+        },
+        {
+          "heading": "frontend/src/shared/api/httpClient.ts",
+          "level": 1,
+          "line": 270
+        },
+        {
+          "heading": "frontend/src/shared/theme/customizations/inputs.tsx",
+          "level": 1,
+          "line": 274
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 69
+      }
+    },
+    {
+      "path": "frontend/scripts/fix-import-depth.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 62,
+      "nonEmptyLines": 54,
+      "functions": [
+        {
+          "name": "walk",
+          "startLine": 7,
+          "endLine": 18,
+          "params": [
+            "dir"
+          ]
+        },
+        {
+          "name": "relImport",
+          "startLine": 20,
+          "endLine": 26,
+          "params": [
+            "fromFile",
+            "targetUnderSrc"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "walk",
+          "callee": "readdirSync",
+          "lineNumber": 8
+        },
+        {
+          "caller": "walk",
+          "callee": "join",
+          "lineNumber": 9
+        },
+        {
+          "caller": "walk",
+          "callee": "statSync(path).isDirectory",
+          "lineNumber": 10
+        },
+        {
+          "caller": "walk",
+          "callee": "statSync",
+          "lineNumber": 10
+        },
+        {
+          "caller": "walk",
+          "callee": "walk",
+          "lineNumber": 12
+        },
+        {
+          "caller": "walk",
+          "callee": "/\\.(tsx?)$/.test",
+          "lineNumber": 13
+        },
+        {
+          "caller": "walk",
+          "callee": "files.push",
+          "lineNumber": 14
+        },
+        {
+          "caller": "relImport",
+          "callee": "dirname",
+          "lineNumber": 21
+        },
+        {
+          "caller": "relImport",
+          "callee": "join",
+          "lineNumber": 22
+        },
+        {
+          "caller": "relImport",
+          "callee": "relative(fromDir, target).replaceAll",
+          "lineNumber": 23
+        },
+        {
+          "caller": "relImport",
+          "callee": "relative",
+          "lineNumber": 23
+        },
+        {
+          "caller": "relImport",
+          "callee": "rel.startsWith",
+          "lineNumber": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/scripts/migrate-imports.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 73,
+      "nonEmptyLines": 69,
+      "functions": [
+        {
+          "name": "walk",
+          "startLine": 47,
+          "endLine": 58,
+          "params": [
+            "dir"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "walk",
+          "callee": "readdirSync",
+          "lineNumber": 48
+        },
+        {
+          "caller": "walk",
+          "callee": "join",
+          "lineNumber": 49
+        },
+        {
+          "caller": "walk",
+          "callee": "statSync(path).isDirectory",
+          "lineNumber": 50
+        },
+        {
+          "caller": "walk",
+          "callee": "statSync",
+          "lineNumber": 50
+        },
+        {
+          "caller": "walk",
+          "callee": "walk",
+          "lineNumber": 52
+        },
+        {
+          "caller": "walk",
+          "callee": "/\\.(tsx?|jsx?)$/.test",
+          "lineNumber": 53
+        },
+        {
+          "caller": "walk",
+          "callee": "files.push",
+          "lineNumber": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/input.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "metrics": {}
+    },
+    {
+      "path": "frontend/src/modules/admin/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 2,
+      "nonEmptyLines": 2,
+      "exports": [
+        {
+          "name": "default",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "AdminView",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/animal-farm/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "exports": [
+        {
+          "name": "default",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "AnimalFarmView",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/controlled-flight/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 5,
+      "nonEmptyLines": 5,
+      "exports": [
+        {
+          "name": "useManualFlightControls",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "useControlledPreflight",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "ControlledFlightView",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "default",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/ChartUserByCountry.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 189,
+      "nonEmptyLines": 178,
+      "functions": [
+        {
+          "name": "PieCenterLabel",
+          "startLine": 63,
+          "endLine": 78,
+          "params": [
+            "{ primaryText, secondaryText }"
+          ]
+        },
+        {
+          "name": "ChartUserByCountry",
+          "startLine": 92,
+          "endLine": 189,
+          "params": [
+            "{\n  segments,\n  totalLabel = 'Active fields',\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ChartUserByCountry",
+          "line": 92,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PieCenterLabel",
+          "callee": "useDrawingArea",
+          "lineNumber": 64
+        },
+        {
+          "caller": "ChartUserByCountry",
+          "callee": "effectiveSegments.map",
+          "lineNumber": 98
+        },
+        {
+          "caller": "ChartUserByCountry",
+          "callee": "effectiveSegments.map",
+          "lineNumber": 99
+        },
+        {
+          "caller": "ChartUserByCountry",
+          "callee": "effectiveSegments.reduce",
+          "lineNumber": 100
+        },
+        {
+          "caller": "ChartUserByCountry",
+          "callee": "Math.round",
+          "lineNumber": 136
+        },
+        {
+          "caller": "ChartUserByCountry",
+          "callee": "effectiveSegments.map",
+          "lineNumber": 141
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/CustomizedDataGrid.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 104,
+      "nonEmptyLines": 100,
+      "functions": [
+        {
+          "name": "EmptyRowsOverlay",
+          "startLine": 13,
+          "endLine": 26,
+          "params": []
+        },
+        {
+          "name": "GridLoadingOverlay",
+          "startLine": 28,
+          "endLine": 36,
+          "params": []
+        },
+        {
+          "name": "CustomizedDataGrid",
+          "startLine": 38,
+          "endLine": 104,
+          "params": [
+            "{ rows, loading }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CustomizedDataGrid",
+          "line": 38,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "GridLoadingOverlay",
+          "callee": "[0, 1, 2, 3, 4].map",
+          "lineNumber": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 311,
+      "nonEmptyLines": 285,
+      "functions": [
+        {
+          "name": "formatNumber",
+          "startLine": 57,
+          "endLine": 60,
+          "params": [
+            "value",
+            "suffix"
+          ]
+        },
+        {
+          "name": "formatHours",
+          "startLine": 62,
+          "endLine": 65,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "DotIcon",
+          "startLine": 67,
+          "endLine": 75,
+          "params": [
+            "{ color }"
+          ]
+        },
+        {
+          "name": "TransitionComponent",
+          "startLine": 79,
+          "endLine": 88,
+          "params": [
+            "props"
+          ]
+        },
+        {
+          "name": "CustomLabel",
+          "startLine": 96,
+          "endLine": 116,
+          "params": [
+            "{ color, expandable, children, ...other }"
+          ]
+        },
+        {
+          "name": "CustomizedTreeView",
+          "startLine": 172,
+          "endLine": 311,
+          "params": [
+            "{\n  summary,\n  system,\n  coverage,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CustomizedTreeView",
+          "line": 172,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatNumber",
+          "callee": "Number.isNaN",
+          "lineNumber": 58
+        },
+        {
+          "caller": "formatNumber",
+          "callee": "value.toLocaleString",
+          "lineNumber": 59
+        },
+        {
+          "caller": "formatHours",
+          "callee": "Number.isNaN",
+          "lineNumber": 63
+        },
+        {
+          "caller": "formatHours",
+          "callee": "value.toFixed",
+          "lineNumber": 64
+        },
+        {
+          "caller": "TransitionComponent",
+          "callee": "useSpring",
+          "lineNumber": 80
+        },
+        {
+          "caller": "CustomLabel",
+          "callee": "useTheme",
+          "lineNumber": 97
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "React.useMemo",
+          "lineNumber": 177
+        },
+        {
+          "caller": "statusColor",
+          "callee": "Number.isNaN",
+          "lineNumber": 179
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "coverage.map",
+          "lineNumber": 195
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "Number.isFinite",
+          "lineNumber": 198
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "segment.value.toFixed",
+          "lineNumber": 198
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatNumber",
+          "lineNumber": 211
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "statusColor",
+          "lineNumber": 212
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatNumber",
+          "lineNumber": 216
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "statusColor",
+          "lineNumber": 217
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatHours",
+          "lineNumber": 221
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "statusColor",
+          "lineNumber": 222
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatNumber",
+          "lineNumber": 232
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "statusColor",
+          "lineNumber": 233
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatNumber",
+          "lineNumber": 237
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatBool",
+          "lineNumber": 257
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "boolColor",
+          "lineNumber": 262
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatBool",
+          "lineNumber": 266
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "boolColor",
+          "lineNumber": 267
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "formatNumber",
+          "lineNumber": 271
+        },
+        {
+          "caller": "CustomizedTreeView",
+          "callee": "statusColor",
+          "lineNumber": 272
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/gridData.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 93,
+      "nonEmptyLines": 91,
+      "functions": [
+        {
+          "name": "renderHeaderTooltip",
+          "startLine": 6,
+          "endLine": 12,
+          "params": [
+            "label",
+            "title"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "columns",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/field-survey/components/FieldDeleteDialog.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "exports": [
+        {
+          "name": "FieldDeleteDialog",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/field-survey/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "exports": [
+        {
+          "name": "default",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "FieldSurveyView",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "fetchIrrigationMissionSummary",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "triggerIrrigationMissionProcessing",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "IrrigationMissionSummary",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "IrrigationProcessedFieldLayer",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 6,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fleet/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "exports": [
+        {
+          "name": "default",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "FleetView",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/adapters/CESIUM_ADAPTER.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 41,
+      "nonEmptyLines": 28,
+      "sections": [
+        {
+          "heading": "Cesium map adapter boundary",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Public entry points",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "Bundle strategy",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "Future decomposition",
+          "level": 2,
+          "line": 23
+        },
+        {
+          "heading": "Regression checks",
+          "level": 2,
+          "line": 35
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/components/RouteDrawControls.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 171,
+      "nonEmptyLines": 166,
+      "functions": [
+        {
+          "name": "RouteDrawControls",
+          "startLine": 29,
+          "endLine": 171,
+          "params": [
+            "{\n  mode,\n  activeToolMode,\n  onModeChange,\n  onToolModeChange,\n  onUndo,\n  deleteLabel = \"Delete selected drawing or latest waypoint\",\n  hasWaypoints,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "RouteDrawControls",
+          "line": 29,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "RouteDrawControls",
+          "callee": "useState",
+          "lineNumber": 46
+        },
+        {
+          "caller": "RouteDrawControls",
+          "callee": "[\"rectangle\", \"circle\"].includes",
+          "lineNumber": 49
+        },
+        {
+          "caller": "RouteDrawControls",
+          "callee": "tools.map",
+          "lineNumber": 121
+        },
+        {
+          "caller": "RouteDrawControls",
+          "callee": "setActiveTool",
+          "lineNumber": 129
+        },
+        {
+          "caller": "RouteDrawControls",
+          "callee": "onModeChange",
+          "lineNumber": 130
+        },
+        {
+          "caller": "RouteDrawControls",
+          "callee": "onToolModeChange",
+          "lineNumber": 131
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useUserLocation.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 13,
+      "nonEmptyLines": 10,
+      "sections": [
+        {
+          "heading": "User location normalization",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 8,
+      "nonEmptyLines": 8,
+      "exports": [
+        {
+          "name": "MissionMapEngine",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumViewMode",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "DrawMode",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "DrawResult",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawEditorMode",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawFeature",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawToolMode",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "RouteDrawMode",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "RouteDrawToolMode",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 9,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 2,
+      "nonEmptyLines": 2,
+      "exports": [
+        {
+          "name": "default",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "MissionTimelineView",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/components/MissionStatusChips.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 29,
+      "nonEmptyLines": 28,
+      "functions": [
+        {
+          "name": "MissionStatusChips",
+          "startLine": 4,
+          "endLine": 29,
+          "params": [
+            "{\n  droneConnected,\n  wsConnected,\n  sx,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionStatusChips",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

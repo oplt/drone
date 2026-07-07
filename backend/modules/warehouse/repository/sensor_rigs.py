@@ -6,25 +6,12 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.warehouse.models import WarehouseSensorRig
+from backend.modules.warehouse.repository.contracts import WarehouseRepositoryError
+from backend.modules.warehouse.repository.query_values import clamp_list_limit
 from backend.modules.warehouse.service.sensor_calibration import (
     normalize_sensor_extrinsics,
     sensor_calibration_checksum,
 )
-
-
-class WarehouseRepositoryError(RuntimeError):
-    pass
-
-
-_MAX_LIST_LIMIT = 500
-
-
-def _clamp_limit(limit: int, *, default: int = 100, max_limit: int = _MAX_LIST_LIMIT) -> int:
-    try:
-        value = int(limit)
-    except (TypeError, ValueError):
-        value = default
-    return max(1, min(max_limit, value))
 
 
 def _required_str(value: object, *, field_name: str) -> str:
@@ -164,7 +151,7 @@ class WarehouseSensorRigMixin:
                     select(WarehouseSensorRig)
                     .where(scope, WarehouseSensorRig.active.is_(True))
                     .order_by(WarehouseSensorRig.id.desc())
-                    .limit(_clamp_limit(limit))
+                    .limit(clamp_list_limit(limit, default=100))
                 )
             )
             .scalars()

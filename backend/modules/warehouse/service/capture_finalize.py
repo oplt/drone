@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 from pathlib import Path
 from typing import Any, Iterable
 
+from backend.core.tokens import safe_token
 from backend.modules.warehouse.ports import (
     WarehouseMappingStartRequest,
     WarehousePerceptionCommandResult,
@@ -13,7 +13,6 @@ from backend.modules.warehouse.ports import (
 
 logger = logging.getLogger(__name__)
 
-_UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 _ARTIFACT_SUFFIXES: frozenset[str] = frozenset(
     {".db3", ".mcap", ".bag", ".ply", ".pcd", ".glb", ".json", ".bt"}
 )
@@ -21,8 +20,7 @@ _DEFAULT_CAPTURE_ROOT = Path("backend/storage/warehouse_ros/captures")
 
 
 def safe_flight_token(raw: object) -> str:
-    token = _UNSAFE_TOKEN_CHARS.sub("_", str(raw or "")).strip("._-")
-    return token or "unknown"
+    return safe_token(raw)
 
 
 def resolve_capture_session_dir(

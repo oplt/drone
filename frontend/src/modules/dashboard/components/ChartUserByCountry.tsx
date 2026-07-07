@@ -9,7 +9,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
 
-import { GlobeFlag } from "./CustomIcons";
+import { GlobeFlag } from "../../../shared/ui/GlobeFlag";
 
 type CoverageSegment = { label: string; value: number; color?: string };
 

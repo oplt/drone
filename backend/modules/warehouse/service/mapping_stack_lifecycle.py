@@ -46,7 +46,6 @@ _mapping_stack_last_error: str | None = None
 _mapping_stack_lock = asyncio.Lock()
 _last_nvblox_restart_at: float = 0.0
 _restart_in_progress = False
-_warned_missing_startup_timing = False
 _background_tasks: set[asyncio.Task[Any]] = set()
 
 
@@ -153,17 +152,9 @@ def _get_nvblox_log_parser():
 
 
 def _note_mapping_startup(mark: str) -> None:
-    global _warned_missing_startup_timing
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            note_mapping_startup,
-        )
+    from backend.modules.warehouse.service.startup_timing_hooks import note_mapping_startup_safe
 
-        note_mapping_startup(mark)
-    except ModuleNotFoundError as exc:
-        if not _warned_missing_startup_timing:
-            logger.warning("Optional mapping startup timing unavailable: %s", exc)
-            _warned_missing_startup_timing = True
+    note_mapping_startup_safe(mark)
 
 
 async def _kill_stale_nvblox_processes(keep_pgids: set[int] | None = None) -> None:

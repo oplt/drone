@@ -1,0 +1,2842 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/shared/ui/missionFormConstants.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 4,
+      "nonEmptyLines": 4,
+      "exports": [
+        {
+          "name": "INFO_INPUT_LABEL_PROPS",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/utils/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "exports": [
+        {
+          "name": "extractLatLng",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "LatLng",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/vite-env.d.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 2,
+      "nonEmptyLines": 2,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 90,
+      "nonEmptyLines": 89,
+      "callGraph": [
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 12
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 13
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 13
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 14
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 14
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 15
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 15
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 16
+        },
+        {
+          "caller": "manualChunks",
+          "callee": "id.includes",
+          "lineNumber": 16
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/vitest.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 26,
+      "nonEmptyLines": 25,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "infra/observability/grafana/provisioning/dashboards/dashboards.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 11,
+      "nonEmptyLines": 10,
+      "sections": [
+        {
+          "heading": "apiVersion",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "providers",
+          "level": 1,
+          "line": 3
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "infra/observability/grafana/provisioning/dashboards/json/drone-reliability.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 265,
+      "nonEmptyLines": 265,
+      "sections": [
+        {
+          "heading": "annotations",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "editable",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "fiscalYearStartMonth",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "graphTooltip",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "id",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "links",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "panels",
+          "level": 1,
+          "line": 16
+        },
+        {
+          "heading": "refresh",
+          "level": 1,
+          "line": 256
+        },
+        {
+          "heading": "schemaVersion",
+          "level": 1,
+          "line": 257
+        },
+        {
+          "heading": "tags",
+          "level": 1,
+          "line": 258
+        },
+        {
+          "heading": "templating",
+          "level": 1,
+          "line": 259
+        },
+        {
+          "heading": "time",
+          "level": 1,
+          "line": 260
+        },
+        {
+          "heading": "timezone",
+          "level": 1,
+          "line": 261
+        },
+        {
+          "heading": "title",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "uid",
+          "level": 1,
+          "line": 18
+        },
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 264
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 16
+      }
+    },
+    {
+      "path": "infra/observability/grafana/provisioning/datasources/datasources.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 25,
+      "nonEmptyLines": 23,
+      "sections": [
+        {
+          "heading": "apiVersion",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "datasources",
+          "level": 1,
+          "line": 3
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "infra/observability/prometheus/prometheus.yml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 18,
+      "nonEmptyLines": 15,
+      "sections": [
+        {
+          "heading": "global",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "scrape_configs",
+          "level": 1,
+          "line": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "infra/observability/tempo/tempo.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 30,
+      "nonEmptyLines": 24,
+      "sections": [
+        {
+          "heading": "server",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "distributor",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "ingester",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "compactor",
+          "level": 1,
+          "line": 16
+        },
+        {
+          "heading": "storage",
+          "level": 1,
+          "line": 20
+        },
+        {
+          "heading": "querier",
+          "level": 1,
+          "line": 28
+        },
+        {
+          "heading": "query_frontend",
+          "level": 1,
+          "line": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "Makefile.local",
+      "language": "local",
+      "fileCategory": "code",
+      "totalLines": 261,
+      "nonEmptyLines": 239,
+      "metrics": {}
+    },
+    {
+      "path": "Procfile.dev",
+      "language": "dev",
+      "fileCategory": "code",
+      "totalLines": 11,
+      "nonEmptyLines": 10,
+      "metrics": {}
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/drone_gz_bridge/__init__.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 1,
+      "nonEmptyLines": 0,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/drone_gz_bridge/calibration_guard.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 81,
+      "nonEmptyLines": 75,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 73,
+          "endLine": 81,
+          "params": [
+            "args"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "CalibrationGuard",
+          "startLine": 13,
+          "endLine": 70,
+          "methods": [
+            "__init__",
+            "_check"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "CalibrationGuard",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 73,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "super().__init__",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "super",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 16
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "__init__",
+          "callee": "Path",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "yaml.safe_load",
+          "lineNumber": 19
+        },
+        {
+          "caller": "__init__",
+          "callee": "path.read_text",
+          "lineNumber": 19
+        },
+        {
+          "caller": "__init__",
+          "callee": "transforms.sort",
+          "lineNumber": 21
+        },
+        {
+          "caller": "__init__",
+          "callee": "json.dumps(\n            {\"schema_version\": 1, \"transforms\": transforms},\n            sort_keys=True,\n            separators=(\",\", \":\"),\n        ).encode",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "json.dumps",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "hashlib.sha256(canonical).hexdigest",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "hashlib.sha256",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "RuntimeError",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "Buffer",
+          "lineNumber": 36
+        },
+        {
+          "caller": "__init__",
+          "callee": "TransformListener",
+          "lineNumber": 37
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_clock().now",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_clock",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_timer",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_check",
+          "callee": "self.buffer.lookup_transform",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_check",
+          "callee": "rclpy.time.Time",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_check",
+          "callee": "pending.append",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_check",
+          "callee": "max",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 55
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 55
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_check",
+          "callee": "abs",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_check",
+          "callee": "math.isfinite",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_check",
+          "callee": "RuntimeError",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_check",
+          "callee": "self.buffer.lookup_transform",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_check",
+          "callee": "rclpy.time.Time",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_check",
+          "callee": "pending.append",
+          "lineNumber": 65
+        },
+        {
+          "caller": "_check",
+          "callee": "self.get_logger().info",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_check",
+          "callee": "self.get_logger",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_check",
+          "callee": "self.timer.cancel",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_check",
+          "callee": "self.get_clock().now",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_check",
+          "callee": "self.get_clock",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_check",
+          "callee": "RuntimeError",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_check",
+          "callee": "', '.join",
+          "lineNumber": 70
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.init",
+          "lineNumber": 74
+        },
+        {
+          "caller": "main",
+          "callee": "CalibrationGuard",
+          "lineNumber": 75
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.spin",
+          "lineNumber": 77
+        },
+        {
+          "caller": "main",
+          "callee": "node.destroy_node",
+          "lineNumber": 79
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.ok",
+          "lineNumber": 80
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.shutdown",
+          "lineNumber": 81
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/drone_gz_bridge/gimbal_to_tf.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 67,
+      "nonEmptyLines": 59,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 59,
+          "endLine": 67,
+          "params": [
+            "args"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "GimbalToTf",
+          "startLine": 10,
+          "endLine": 56,
+          "methods": [
+            "__init__",
+            "_joint_state",
+            "_publish"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "GimbalToTf",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 59,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "super().__init__",
+          "lineNumber": 14
+        },
+        {
+          "caller": "__init__",
+          "callee": "super",
+          "lineNumber": 14
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 16
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 19
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 24
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 24
+        },
+        {
+          "caller": "__init__",
+          "callee": "TransformBroadcaster",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_subscription",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_timer",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_joint_state",
+          "callee": "dict",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_joint_state",
+          "callee": "zip",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_joint_state",
+          "callee": "self._joint_names.items",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_joint_state",
+          "callee": "math.isfinite",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_joint_state",
+          "callee": "float",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_publish",
+          "callee": "math.cos",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_publish",
+          "callee": "math.sin",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_publish",
+          "callee": "math.cos",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_publish",
+          "callee": "math.sin",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_publish",
+          "callee": "math.cos",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_publish",
+          "callee": "math.sin",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_publish",
+          "callee": "TransformStamped",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_publish",
+          "callee": "self.get_clock().now().to_msg",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_publish",
+          "callee": "self.get_clock().now",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_publish",
+          "callee": "self.get_clock",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_publish",
+          "callee": "self._broadcaster.sendTransform",
+          "lineNumber": 56
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.init",
+          "lineNumber": 60
+        },
+        {
+          "caller": "main",
+          "callee": "GimbalToTf",
+          "lineNumber": 61
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.spin",
+          "lineNumber": 63
+        },
+        {
+          "caller": "main",
+          "callee": "node.destroy_node",
+          "lineNumber": 65
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.ok",
+          "lineNumber": 66
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.shutdown",
+          "lineNumber": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/drone_gz_bridge/map_to_odom_tf.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 91,
+      "nonEmptyLines": 76,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 79,
+          "endLine": 87,
+          "params": [
+            "args"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "MapToOdomTf",
+          "startLine": 7,
+          "endLine": 76,
+          "methods": [
+            "__init__",
+            "_load_transform_from_parameters",
+            "_on_transform_update",
+            "_publish"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapToOdomTf",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 79,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "super().__init__",
+          "lineNumber": 11
+        },
+        {
+          "caller": "__init__",
+          "callee": "super",
+          "lineNumber": 11
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 13
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 14
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 16
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 19
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 20
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 21
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 23
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"parent_frame\").value).strip",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"child_frame\").value).strip",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "self._load_transform_from_parameters",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "TransformBroadcaster",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"update_topic\").value).strip",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_subscription",
+          "lineNumber": 31
+        },
+        {
+          "caller": "__init__",
+          "callee": "max",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_timer",
+          "lineNumber": 39
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_logger().info",
+          "lineNumber": 41
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_logger",
+          "lineNumber": 41
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "Transform",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_load_transform_from_parameters",
+          "callee": "self.get_parameter",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "str(message.header.frame_id or \"\").strip().lstrip",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "str(message.header.frame_id or \"\").strip",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "str",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "str(message.child_frame_id or \"\").strip().lstrip",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "str(message.child_frame_id or \"\").strip",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "str",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "self.get_logger().warning",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "self.get_logger",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "self.get_logger().info",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_on_transform_update",
+          "callee": "self.get_logger",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_publish",
+          "callee": "TransformStamped",
+          "lineNumber": 71
+        },
+        {
+          "caller": "_publish",
+          "callee": "self.get_clock().now().to_msg",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_publish",
+          "callee": "self.get_clock().now",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_publish",
+          "callee": "self.get_clock",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_publish",
+          "callee": "self._broadcaster.sendTransform",
+          "lineNumber": 76
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.init",
+          "lineNumber": 80
+        },
+        {
+          "caller": "main",
+          "callee": "MapToOdomTf",
+          "lineNumber": 81
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.spin",
+          "lineNumber": 83
+        },
+        {
+          "caller": "main",
+          "callee": "node.destroy_node",
+          "lineNumber": 86
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.shutdown",
+          "lineNumber": 87
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/drone_gz_bridge/odom_to_tf.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 84,
+      "nonEmptyLines": 66,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 70,
+          "endLine": 80,
+          "params": [
+            "args"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "OdomToTf",
+          "startLine": 10,
+          "endLine": 67,
+          "methods": [
+            "__init__",
+            "odom_callback"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "OdomToTf",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 70,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "super().__init__",
+          "lineNumber": 12
+        },
+        {
+          "caller": "__init__",
+          "callee": "super",
+          "lineNumber": 12
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 14
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 16
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 19
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"parent_frame_override\").value).strip",
+          "lineNumber": 20
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 20
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 20
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"child_frame_override\").value).strip",
+          "lineNumber": 21
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 21
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 21
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(\n            self.get_parameter(\"sensor_calibration_checksum\").value\n        ).strip",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 23
+        },
+        {
+          "caller": "__init__",
+          "callee": "ValueError",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "len",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "ValueError",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "bool",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.has_parameter",
+          "lineNumber": 31
+        },
+        {
+          "caller": "__init__",
+          "callee": "TransformBroadcaster",
+          "lineNumber": 34
+        },
+        {
+          "caller": "__init__",
+          "callee": "QoSProfile",
+          "lineNumber": 36
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_subscription",
+          "lineNumber": 42
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_logger().info",
+          "lineNumber": 49
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_logger",
+          "lineNumber": 49
+        },
+        {
+          "caller": "odom_callback",
+          "callee": "TransformStamped",
+          "lineNumber": 56
+        },
+        {
+          "caller": "odom_callback",
+          "callee": "self.tf_broadcaster.sendTransform",
+          "lineNumber": 67
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.init",
+          "lineNumber": 71
+        },
+        {
+          "caller": "main",
+          "callee": "OdomToTf",
+          "lineNumber": 72
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.spin",
+          "lineNumber": 75
+        },
+        {
+          "caller": "main",
+          "callee": "node.destroy_node",
+          "lineNumber": 79
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.shutdown",
+          "lineNumber": 80
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/drone_gz_bridge/slam_localization_bridge.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 107,
+      "nonEmptyLines": 93,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 95,
+          "endLine": 103,
+          "params": [
+            "args"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "SlamLocalizationBridge",
+          "startLine": 11,
+          "endLine": 92,
+          "methods": [
+            "__init__",
+            "_confidence_from_covariance",
+            "_on_odometry"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "SlamLocalizationBridge",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 95,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "super().__init__",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "super",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 16
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 19
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 20
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 21
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.declare_parameter",
+          "lineNumber": 22
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"input_topic\").value).strip",
+          "lineNumber": 24
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 24
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 24
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"output_topic\").value).strip",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 25
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"status_topic\").value).strip",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 26
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"parent_frame\").value).strip",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(self.get_parameter(\"child_frame\").value).strip",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 28
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 29
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 29
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_parameter",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_publisher",
+          "lineNumber": 32
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_publisher",
+          "lineNumber": 33
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.create_subscription",
+          "lineNumber": 34
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_logger().info",
+          "lineNumber": 35
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.get_logger",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "len",
+          "lineNumber": 41
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "float",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "any",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "math.sqrt",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "max",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "max",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_confidence_from_covariance",
+          "callee": "min",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "self._confidence_from_covariance",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "list",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "Transform",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "float",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "float",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "float",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "TransformStamped",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "self._status_publisher.publish",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "String",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "json.dumps",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "self.get_logger().warning",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "self.get_logger",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_on_odometry",
+          "callee": "self._publisher.publish",
+          "lineNumber": 92
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.init",
+          "lineNumber": 96
+        },
+        {
+          "caller": "main",
+          "callee": "SlamLocalizationBridge",
+          "lineNumber": 97
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.spin",
+          "lineNumber": 99
+        },
+        {
+          "caller": "main",
+          "callee": "node.destroy_node",
+          "lineNumber": 102
+        },
+        {
+          "caller": "main",
+          "callee": "rclpy.shutdown",
+          "lineNumber": 103
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/launch/warehouse_bridge.launch.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 158,
+      "nonEmptyLines": 147,
+      "functions": [
+        {
+          "name": "_load_calibration",
+          "startLine": 24,
+          "endLine": 44,
+          "params": [
+            "path"
+          ]
+        },
+        {
+          "name": "_static_tf_node",
+          "startLine": 47,
+          "endLine": 64,
+          "params": [
+            "item"
+          ]
+        },
+        {
+          "name": "_gazebo_sensor_alias_node",
+          "startLine": 67,
+          "endLine": 79,
+          "params": [
+            "name",
+            "parent",
+            "child"
+          ]
+        },
+        {
+          "name": "generate_launch_description",
+          "startLine": 82,
+          "endLine": 158,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_load_calibration",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "_static_tf_node",
+          "line": 47,
+          "isDefault": false
+        },
+        {
+          "name": "_gazebo_sensor_alias_node",
+          "line": 67,
+          "isDefault": false
+        },
+        {
+          "name": "generate_launch_description",
+          "line": 82,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_load_calibration",
+          "callee": "yaml.safe_load",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "path.read_text",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "payload.get",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "isinstance",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "isinstance",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "RuntimeError",
+          "lineNumber": 28
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "item.get",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "item.get",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "item.get",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "len",
+          "lineNumber": 31
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "len",
+          "lineNumber": 31
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "set",
+          "lineNumber": 31
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "RuntimeError",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "item.get",
+          "lineNumber": 34
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "math.sqrt",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "sum",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "float",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "rotation.get",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "abs",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "RuntimeError",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "item.get",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "transforms.sort",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "json.dumps(\n        {\"schema_version\": 1, \"transforms\": transforms},\n        sort_keys=True,\n        separators=(\",\", \":\"),\n    ).encode",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "json.dumps",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "hashlib.sha256(canonical).hexdigest",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_load_calibration",
+          "callee": "hashlib.sha256",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "Node",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_static_tf_node",
+          "callee": "str",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_gazebo_sensor_alias_node",
+          "callee": "Node",
+          "lineNumber": 68
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Path",
+          "lineNumber": 83
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "get_package_share_directory",
+          "lineNumber": 83
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "_load_calibration",
+          "lineNumber": 86
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchDescription",
+          "lineNumber": 87
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 88
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 89
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 90
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 91
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 92
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 93
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 94
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 95
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 96
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 103
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 104
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 105
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 106
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 107
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 108
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 109
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 112
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "str",
+          "lineNumber": 115
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 117
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "_static_tf_node",
+          "lineNumber": 126
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "_gazebo_sensor_alias_node",
+          "lineNumber": 127
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "_gazebo_sensor_alias_node",
+          "lineNumber": 132
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 137
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 142
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "str",
+          "lineNumber": 146
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 150
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "IfCondition",
+          "lineNumber": 155
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 155
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/launch/warehouse_nvblox.launch.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 379,
+      "nonEmptyLines": 332,
+      "functions": [
+        {
+          "name": "static_tf_node",
+          "startLine": 137,
+          "endLine": 157,
+          "params": [
+            "name",
+            "x",
+            "y",
+            "z",
+            "roll",
+            "pitch",
+            "yaw",
+            "parent",
+            "child",
+            "use_sim_time",
+            "condition"
+          ]
+        },
+        {
+          "name": "generate_launch_description",
+          "startLine": 160,
+          "endLine": 379,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "static_tf_node",
+          "line": 137,
+          "isDefault": false
+        },
+        {
+          "name": "generate_launch_description",
+          "line": 160,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "static_tf_node",
+          "callee": "Node",
+          "lineNumber": 138
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "str",
+          "lineNumber": 144
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "str",
+          "lineNumber": 145
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "str",
+          "lineNumber": 146
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "str",
+          "lineNumber": 147
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "str",
+          "lineNumber": 148
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "str",
+          "lineNumber": 149
+        },
+        {
+          "caller": "static_tf_node",
+          "callee": "ParameterValue",
+          "lineNumber": 154
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "get_package_share_directory",
+          "lineNumber": 163
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Path",
+          "lineNumber": 166
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "get_package_share_directory",
+          "lineNumber": 166
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "yaml.safe_load",
+          "lineNumber": 167
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "(bridge_share / 'config' / 'sensor_extrinsics.yaml').read_text",
+          "lineNumber": 168
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 171
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 172
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 174
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 176
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 177
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 178
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 179
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 180
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 181
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 182
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 184
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 185
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 186
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 187
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 188
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "math.atan2",
+          "lineNumber": 195
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "math.asin",
+          "lineNumber": 196
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "max",
+          "lineNumber": 196
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "min",
+          "lineNumber": 196
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "math.atan2",
+          "lineNumber": 197
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "sensor_tf_nodes.append",
+          "lineNumber": 202
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "static_tf_node",
+          "lineNumber": 202
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "IfCondition",
+          "lineNumber": 206
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 206
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ComposableNode",
+          "lineNumber": 209
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 229
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 234
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 241
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 242
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 245
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 246
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 252
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 253
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 258
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 259
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 262
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 263
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchDescription",
+          "lineNumber": 270
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 272
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 273
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 275
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 276
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 279
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 280
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 281
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 282
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 283
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 285
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 286
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 289
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 290
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 291
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 292
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 294
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 298
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 302
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 306
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 310
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 317
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 321
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "DeclareLaunchArgument",
+          "lineNumber": 325
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 327
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 333
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "IfCondition",
+          "lineNumber": 336
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 336
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ExecuteProcess",
+          "lineNumber": 341
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "IfCondition",
+          "lineNumber": 352
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "LaunchConfiguration",
+          "lineNumber": 352
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ComposableNodeContainer",
+          "lineNumber": 355
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 364
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "Node",
+          "lineNumber": 368
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "IfCondition",
+          "lineNumber": 373
+        },
+        {
+          "caller": "generate_launch_description",
+          "callee": "ParameterValue",
+          "lineNumber": 375
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/package.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 39,
+      "nonEmptyLines": 33,
+      "metrics": {}
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/resource/drone_gz_bridge",
+      "language": "unknown",
+      "fileCategory": "code",
+      "totalLines": 1,
+      "nonEmptyLines": 0,
+      "metrics": {}
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/setup.cfg",
+      "language": "config",
+      "fileCategory": "config",
+      "totalLines": 4,
+      "nonEmptyLines": 4,
+      "metrics": {}
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/setup.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 31,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/test/test_copyright.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 22,
+      "functions": [
+        {
+          "name": "test_copyright",
+          "startLine": 23,
+          "endLine": 25,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_copyright",
+          "line": 20,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_copyright",
+          "callee": "main",
+          "lineNumber": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

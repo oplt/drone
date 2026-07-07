@@ -11,9 +11,9 @@ import {
 } from "../../../modules/mission-workflow";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import {
-  MissionCommandPanel,
   MissionPreflightPanel,
 } from "../../mission-runtime";
+import { MissionCommandPanel } from "../../mission-runtime/components/MissionCommandPanel";
 import type { MissionStatus } from "../../mission-workflow";
 import type { PreflightRunResponse } from "../../mission-runtime";
 import {

@@ -10,6 +10,15 @@ from typing import Any, Literal
 
 from shapely.geometry import MultiPolygon, Polygon
 
+from backend.core.geometry.projection import (
+    close_lonlat_ring,
+    lonlat_to_xy_m as _lonlat_to_xy_m,
+    meters_per_deg_lat as _meters_per_deg_lat,
+    meters_per_deg_lon as _meters_per_deg_lon,
+    polygon_centroid_lonlat as _shared_polygon_centroid_lonlat,
+    strip_closed_ring as _strip_closed_ring,
+    xy_m_to_lonlat as _xy_m_to_lonlat,
+)
 from backend.core.config.runtime import settings
 from backend.core.types.geo import coord_from_home
 from backend.infrastructure.camera.runtime import shared_video_runtime
@@ -1850,55 +1859,16 @@ class GridSurveillanceMission:
 # ---------------------------------------------------------------------------
 
 
-def _meters_per_deg_lat() -> float:
-    return 111_132.0
-
-
-def _meters_per_deg_lon(lat_deg: float) -> float:
-    return 111_320.0 * math.cos(math.radians(lat_deg))
-
-
-def _lonlat_to_xy_m(lon: float, lat: float, lon0: float, lat0: float) -> tuple[float, float]:
-    x = (lon - lon0) * _meters_per_deg_lon(lat0)
-    y = (lat - lat0) * _meters_per_deg_lat()
-    return x, y
-
-
-def _xy_m_to_lonlat(x: float, y: float, lon0: float, lat0: float) -> tuple[float, float]:
-    lon = lon0 + x / _meters_per_deg_lon(lat0)
-    lat = lat0 + y / _meters_per_deg_lat()
-    return lon, lat
-
-
 def _ensure_closed_ring(
     points: Sequence[tuple[float, float]],
 ) -> list[tuple[float, float]]:
-    if len(points) < 3:
-        raise ValueError("polygon must have at least 3 points")
-    out = list(points)
-    if out[0] != out[-1]:
-        out.append(out[0])
-    return out
-
-
-def _strip_closed_ring(
-    points: Sequence[tuple[float, float]],
-) -> list[tuple[float, float]]:
-    out = list(points)
-    if len(out) >= 2 and out[0] == out[-1]:
-        return out[:-1]
-    return out
+    return close_lonlat_ring(points)
 
 
 def _poly_centroid_lonlat(
     poly_lonlat: Sequence[tuple[float, float]],
 ) -> tuple[float, float]:
-    pts = _strip_closed_ring(poly_lonlat)
-    if len(pts) < 3:
-        raise ValueError("polygon must have at least 3 points")
-    lon0 = sum(p[0] for p in pts) / len(pts)
-    lat0 = sum(p[1] for p in pts) / len(pts)
-    return lon0, lat0
+    return _shared_polygon_centroid_lonlat(poly_lonlat)
 
 
 def _largest_polygon(geometry: Polygon | MultiPolygon) -> Polygon | None:

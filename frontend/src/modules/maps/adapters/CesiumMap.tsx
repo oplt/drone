@@ -9,6 +9,13 @@ import {
   type ShapeDrawResult,
 } from "../../../modules/maps/utils/drawingShapes";
 import { isNearLonLat } from "../utils/flatMapShapeGeometry";
+import {
+  clamp,
+  computeFieldCameraView,
+  normalizeLonLatLine,
+  normalizeLonLatRing,
+  zoomToHeightMeters,
+} from "../utils/cesiumCameraGeometry";
 import droneIconUrl from "../../../assets/Drone.svg?url";
 
 type LatLng = { lat: number; lng: number };
@@ -43,103 +50,6 @@ type Props = {
   focusRequestToken?: number;
 };
 const EMPTY_ZONES: LonLat[][] = [];
-
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-function zoomToHeightMeters(zoom: number) {
-  const z = clamp(zoom, 1, 20);
-  return Math.round(20000000 / Math.pow(2, z));
-}
-
-function normalizeLonLatLine(coords: LonLat[] | null | undefined): LonLat[] {
-  if (!coords || coords.length === 0) return [];
-  return coords.filter(
-    (p) =>
-      Array.isArray(p) &&
-      p.length >= 2 &&
-      Number.isFinite(p[0]) &&
-      Number.isFinite(p[1]),
-  );
-}
-
-function normalizeLonLatRing(coords: LonLat[] | null | undefined): LonLat[] {
-  const line = normalizeLonLatLine(coords);
-  if (line.length < 3) return [];
-  const first = line[0];
-  const last = line[line.length - 1];
-  if (first[0] === last[0] && first[1] === last[1]) return line.slice(0, -1);
-  return line;
-}
-
-function computeRingCentroid(
-  coords: LonLat[] | null | undefined,
-): LatLng | null {
-  const ring = normalizeLonLatRing(coords);
-  if (ring.length < 3) return null;
-
-  let twiceArea = 0;
-  let cx = 0;
-  let cy = 0;
-
-  for (let i = 0; i < ring.length; i += 1) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[(i + 1) % ring.length];
-    const cross = x1 * y2 - x2 * y1;
-    twiceArea += cross;
-    cx += (x1 + x2) * cross;
-    cy += (y1 + y2) * cross;
-  }
-
-  if (Math.abs(twiceArea) < 1e-12) {
-    const average = ring.reduce(
-      (acc, [lng, lat]) => ({ lng: acc.lng + lng, lat: acc.lat + lat }),
-      { lng: 0, lat: 0 },
-    );
-    return {
-      lng: average.lng / ring.length,
-      lat: average.lat / ring.length,
-    };
-  }
-
-  return {
-    lng: cx / (3 * twiceArea),
-    lat: cy / (3 * twiceArea),
-  };
-}
-
-function computeFieldCameraView(
-  coords: LonLat[] | null | undefined,
-): { center: LatLng; topHeight: number } | null {
-  const ring = normalizeLonLatRing(coords);
-  if (ring.length < 3) return null;
-
-  const center = computeRingCentroid(ring);
-  if (!center) return null;
-
-  let west = Infinity;
-  let east = -Infinity;
-  let south = Infinity;
-  let north = -Infinity;
-
-  ring.forEach(([lng, lat]) => {
-    west = Math.min(west, lng);
-    east = Math.max(east, lng);
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-  });
-
-  const latSpanMeters = Math.max(0, north - south) * 111_320;
-  const lngScale = Math.max(0.2, Math.cos((center.lat * Math.PI) / 180));
-  const lngSpanMeters = Math.max(0, east - west) * 111_320 * lngScale;
-  const spanMeters = Math.max(latSpanMeters, lngSpanMeters);
-
-  return {
-    center,
-    topHeight: clamp(Math.round(spanMeters * 2.4), 120, 20_000),
-  };
-}
 
 export default function CesiumMap({
   center,

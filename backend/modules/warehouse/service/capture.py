@@ -14,27 +14,13 @@ from backend.modules.mapping.service.flight_capture import (
     FlightCaptureSession,
     FlightCaptureSessionService,
 )
+from backend.modules.warehouse.service.runtime_settings import (
+    setting_float,
+    setting_int,
+    setting_text,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def _setting_text(name: str, default: str = "") -> str:
-    value = getattr(settings, name, default)
-    return str(value or "").strip()
-
-
-def _safe_float(value: Any, *, minimum: float, default: float) -> float:
-    try:
-        return max(minimum, float(value))
-    except (TypeError, ValueError):
-        return default
-
-
-def _safe_int(value: Any, *, minimum: int = 0, default: int = 0) -> int:
-    try:
-        return max(minimum, int(value))
-    except (TypeError, ValueError):
-        return default
 
 
 def _is_relative_to(child: Path, parent: Path) -> bool:
@@ -54,30 +40,30 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
 
     def __init__(self) -> None:
         super().__init__()
-        self.sync_root = Path(_setting_text("warehouse_drone_sync_dir")).expanduser().resolve()
+        self.sync_root = Path(setting_text("warehouse_drone_sync_dir")).expanduser().resolve()
 
-        staging_raw = _setting_text("warehouse_drone_capture_staging_dir")
+        staging_raw = setting_text("warehouse_drone_capture_staging_dir")
         self.capture_staging_dir = (
             Path(staging_raw).expanduser().resolve() if staging_raw else None
         )
 
-        self.default_wait_timeout_s = _safe_float(
+        self.default_wait_timeout_s = setting_float(
             getattr(settings, "warehouse_capture_sync_timeout_s", 0.0),
             minimum=0.0,
             default=0.0,
         )
-        self.default_poll_interval_s = _safe_float(
+        self.default_poll_interval_s = setting_float(
             getattr(settings, "warehouse_capture_sync_poll_s", 1.0),
             minimum=0.2,
             default=1.0,
         )
-        self.default_min_images = _safe_int(
+        self.default_min_images = setting_int(
             getattr(settings, "warehouse_capture_sync_min_files", 0),
             minimum=0,
             default=0,
         )
-        self.capture_sync_cmd_template = _setting_text("warehouse_capture_sync_cmd")
-        self.capture_sync_timeout_s = _safe_float(
+        self.capture_sync_cmd_template = setting_text("warehouse_capture_sync_cmd")
+        self.capture_sync_timeout_s = setting_float(
             getattr(settings, "warehouse_capture_sync_cmd_timeout_s", 0.0),
             minimum=0.0,
             default=0.0,
@@ -96,7 +82,7 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         return dt.isoformat()
 
     def _expected_min_files(self, min_files: int | None) -> int:
-        return self.default_min_images if min_files is None else _safe_int(min_files)
+        return self.default_min_images if min_files is None else setting_int(min_files)
 
     def start_session(self, *, flight_id: Any) -> FlightCaptureSession:
         safe_flight_id = self._sanitize_flight_id(flight_id)

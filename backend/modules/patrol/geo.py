@@ -7,6 +7,13 @@ from typing import Literal
 from shapely.geometry import Point, Polygon
 from shapely.ops import nearest_points
 
+from backend.core.geometry.projection import (
+    lonlat_to_xy_m as _lonlat_to_xy_m,
+    meters_per_deg_lat as _meters_per_deg_lat,
+    meters_per_deg_lon as _meters_per_deg_lon,
+    strip_closed_ring as _strip_closed_ring,
+)
+
 
 def point_in_polygon(
     lat: float,
@@ -107,20 +114,6 @@ def normalize_polygon_lonlat(
     return tuple(out)
 
 
-def _meters_per_deg_lat() -> float:
-    return 111_132.0
-
-
-def _meters_per_deg_lon(lat_deg: float) -> float:
-    return 111_320.0 * math.cos(math.radians(lat_deg))
-
-
-def _lonlat_to_xy_m(lon: float, lat: float, lon0: float, lat0: float) -> tuple[float, float]:
-    x = (lon - lon0) * _meters_per_deg_lon(lat0)
-    y = (lat - lat0) * _meters_per_deg_lat()
-    return x, y
-
-
 def _point_to_segment_distance_m(
     px: float,
     py: float,
@@ -141,15 +134,6 @@ def _point_to_segment_distance_m(
     closest_x = ax + t * abx
     closest_y = ay + t * aby
     return math.hypot(px - closest_x, py - closest_y)
-
-
-def _strip_closed_ring(
-    points: Sequence[tuple[float, float]],
-) -> list[tuple[float, float]]:
-    out = [(float(lon), float(lat)) for lon, lat in points]
-    if len(out) >= 2 and out[0] == out[-1]:
-        return out[:-1]
-    return out
 
 
 def max_orbit_radius_inside_polygon(

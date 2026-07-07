@@ -1,0 +1,3652 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/core/database/base.py",
+      "type": "file",
+      "name": "base.py",
+      "filePath": "backend/core/database/base.py",
+      "summary": "base.py is a backend python module in backend/core/database with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/database/base.py:Base",
+      "type": "class",
+      "name": "Base",
+      "filePath": "backend/core/database/base.py",
+      "summary": "Base groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/database/model_registry.py",
+      "type": "file",
+      "name": "model_registry.py",
+      "filePath": "backend/core/database/model_registry.py",
+      "summary": "model_registry.py is a backend python module in backend/core/database with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/database/model_registry.py:register_models",
+      "type": "function",
+      "name": "register_models",
+      "filePath": "backend/core/database/model_registry.py",
+      "summary": "register_models implements logic in model_registry.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/errors/handlers.py",
+      "type": "file",
+      "name": "handlers.py",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "handlers.py is a backend python module in backend/core/errors with 9 functions and 2 classes.",
+      "complexity": "complex",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:_request_id",
+      "type": "function",
+      "name": "_request_id",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "_request_id implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:_safe_emit_app_log",
+      "type": "function",
+      "name": "_safe_emit_app_log",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "_safe_emit_app_log implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:_response",
+      "type": "function",
+      "name": "_response",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "_response implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:_safe_http_message",
+      "type": "function",
+      "name": "_safe_http_message",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "_safe_http_message implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:api_error_handler",
+      "type": "function",
+      "name": "api_error_handler",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "api_error_handler implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:http_exception_handler",
+      "type": "function",
+      "name": "http_exception_handler",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "http_exception_handler implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:validation_error_handler",
+      "type": "function",
+      "name": "validation_error_handler",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "validation_error_handler implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:unhandled_exception_handler",
+      "type": "function",
+      "name": "unhandled_exception_handler",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "unhandled_exception_handler implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/errors/handlers.py:register_error_handlers",
+      "type": "function",
+      "name": "register_error_handlers",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "register_error_handlers implements logic in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/errors/handlers.py:ApiError",
+      "type": "class",
+      "name": "ApiError",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "ApiError groups related behavior and state in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/errors/handlers.py:RequestIDMiddleware",
+      "type": "class",
+      "name": "RequestIDMiddleware",
+      "filePath": "backend/core/errors/handlers.py",
+      "summary": "RequestIDMiddleware groups related behavior and state in handlers.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/geometry/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/core/geometry/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/core/geometry with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/geometry/coordinates.py",
+      "type": "file",
+      "name": "coordinates.py",
+      "filePath": "backend/core/geometry/coordinates.py",
+      "summary": "coordinates.py is a backend python module in backend/core/geometry with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/coordinates.py:extract_lonlat_pairs",
+      "type": "function",
+      "name": "extract_lonlat_pairs",
+      "filePath": "backend/core/geometry/coordinates.py",
+      "summary": "extract_lonlat_pairs implements logic in coordinates.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/geometry/rings.py",
+      "type": "file",
+      "name": "rings.py",
+      "filePath": "backend/core/geometry/rings.py",
+      "summary": "rings.py is a backend python module in backend/core/geometry with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/geometry/rings.py:ensure_closed_ring",
+      "type": "function",
+      "name": "ensure_closed_ring",
+      "filePath": "backend/core/geometry/rings.py",
+      "summary": "ensure_closed_ring implements logic in rings.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/logging/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/core/logging/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/core/logging with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/logging/app_log.py",
+      "type": "file",
+      "name": "app_log.py",
+      "filePath": "backend/core/logging/app_log.py",
+      "summary": "app_log.py is a backend python module in backend/core/logging with 3 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/app_log.py:_is_sensitive_key",
+      "type": "function",
+      "name": "_is_sensitive_key",
+      "filePath": "backend/core/logging/app_log.py",
+      "summary": "_is_sensitive_key implements logic in app_log.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/app_log.py:sanitize_log_details",
+      "type": "function",
+      "name": "sanitize_log_details",
+      "filePath": "backend/core/logging/app_log.py",
+      "summary": "sanitize_log_details implements logic in app_log.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/app_log.py:emit_app_log",
+      "type": "function",
+      "name": "emit_app_log",
+      "filePath": "backend/core/logging/app_log.py",
+      "summary": "emit_app_log implements logic in app_log.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/logging/app_log.py:AppLogEvent",
+      "type": "class",
+      "name": "AppLogEvent",
+      "filePath": "backend/core/logging/app_log.py",
+      "summary": "AppLogEvent groups related behavior and state in app_log.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/logging/diagnostics.py",
+      "type": "file",
+      "name": "diagnostics.py",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "diagnostics.py is a backend python module in backend/core/logging with 8 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:_utc_iso",
+      "type": "function",
+      "name": "_utc_iso",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "_utc_iso implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:_sanitize_zip_part",
+      "type": "function",
+      "name": "_sanitize_zip_part",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "_sanitize_zip_part implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:_safe_source_name",
+      "type": "function",
+      "name": "_safe_source_name",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "_safe_source_name implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:_safe_relative_path",
+      "type": "function",
+      "name": "_safe_relative_path",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "_safe_relative_path implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:_iter_log_files",
+      "type": "function",
+      "name": "_iter_log_files",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "_iter_log_files implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:list_latest_runtime_logs",
+      "type": "function",
+      "name": "list_latest_runtime_logs",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "list_latest_runtime_logs implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:_archive_name_for",
+      "type": "function",
+      "name": "_archive_name_for",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "_archive_name_for implements logic in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/diagnostics.py:build_diagnostics_bundle",
+      "type": "function",
+      "name": "build_diagnostics_bundle",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "build_diagnostics_bundle implements logic in diagnostics.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/logging/diagnostics.py:RuntimeLogFile",
+      "type": "class",
+      "name": "RuntimeLogFile",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "RuntimeLogFile groups related behavior and state in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/logging/diagnostics.py:DiagnosticsBundle",
+      "type": "class",
+      "name": "DiagnosticsBundle",
+      "filePath": "backend/core/logging/diagnostics.py",
+      "summary": "DiagnosticsBundle groups related behavior and state in diagnostics.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/logging/paths.py",
+      "type": "file",
+      "name": "paths.py",
+      "filePath": "backend/core/logging/paths.py",
+      "summary": "paths.py is a backend python module in backend/core/logging with 4 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/paths.py:_settings_string",
+      "type": "function",
+      "name": "_settings_string",
+      "filePath": "backend/core/logging/paths.py",
+      "summary": "_settings_string implements logic in paths.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/paths.py:runtime_log_root",
+      "type": "function",
+      "name": "runtime_log_root",
+      "filePath": "backend/core/logging/paths.py",
+      "summary": "runtime_log_root implements logic in paths.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/paths.py:runtime_log_dir",
+      "type": "function",
+      "name": "runtime_log_dir",
+      "filePath": "backend/core/logging/paths.py",
+      "summary": "runtime_log_dir implements logic in paths.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/paths.py:legacy_runtime_log_roots",
+      "type": "function",
+      "name": "legacy_runtime_log_roots",
+      "filePath": "backend/core/logging/paths.py",
+      "summary": "legacy_runtime_log_roots implements logic in paths.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/core/logging/retention.py",
+      "type": "file",
+      "name": "retention.py",
+      "filePath": "backend/core/logging/retention.py",
+      "summary": "retention.py is a backend python module in backend/core/logging with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/retention.py:runtime_log_retention_days",
+      "type": "function",
+      "name": "runtime_log_retention_days",
+      "filePath": "backend/core/logging/retention.py",
+      "summary": "runtime_log_retention_days implements logic in retention.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/core/logging/retention.py:cleanup_runtime_logs",
+      "type": "function",
+      "name": "cleanup_runtime_logs",
+      "filePath": "backend/core/logging/retention.py",
+      "summary": "cleanup_runtime_logs implements logic in retention.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/api/app.py",
+      "type": "file",
+      "name": "app.py",
+      "filePath": "backend/entrypoints/api/app.py",
+      "summary": "app.py is a backend python module in backend/entrypoints/api with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/api/app.py:lifespan",
+      "type": "function",
+      "name": "lifespan",
+      "filePath": "backend/entrypoints/api/app.py",
+      "summary": "lifespan implements logic in app.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/api/app.py:healthz",
+      "type": "function",
+      "name": "healthz",
+      "filePath": "backend/entrypoints/api/app.py",
+      "summary": "healthz implements logic in app.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/api/app.py:health_check",
+      "type": "function",
+      "name": "health_check",
+      "filePath": "backend/entrypoints/api/app.py",
+      "summary": "health_check implements logic in app.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/api/app.py:readiness_check",
+      "type": "function",
+      "name": "readiness_check",
+      "filePath": "backend/entrypoints/api/app.py",
+      "summary": "readiness_check implements logic in app.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/deliverables/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/infrastructure/deliverables/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/infrastructure/deliverables with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/deliverables/storage.py",
+      "type": "file",
+      "name": "storage.py",
+      "filePath": "backend/infrastructure/deliverables/storage.py",
+      "summary": "storage.py is a backend python module in backend/infrastructure/deliverables with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/deliverables/storage.py:DeliverableStorage",
+      "type": "class",
+      "name": "DeliverableStorage",
+      "filePath": "backend/infrastructure/deliverables/storage.py",
+      "summary": "DeliverableStorage groups related behavior and state in storage.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/persistence/alembic/env.py",
+      "type": "file",
+      "name": "env.py",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "env.py is a backend python module in backend/infrastructure/persistence with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/env.py:get_url",
+      "type": "function",
+      "name": "get_url",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "get_url implements logic in env.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/env.py:include_object",
+      "type": "function",
+      "name": "include_object",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "include_object implements logic in env.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_offline",
+      "type": "function",
+      "name": "run_migrations_offline",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "run_migrations_offline implements logic in env.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/env.py:do_run_migrations",
+      "type": "function",
+      "name": "do_run_migrations",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "do_run_migrations implements logic in env.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_online",
+      "type": "function",
+      "name": "run_migrations_online",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "run_migrations_online implements logic in env.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_online_entrypoint",
+      "type": "function",
+      "name": "run_migrations_online_entrypoint",
+      "filePath": "backend/infrastructure/persistence/alembic/env.py",
+      "summary": "run_migrations_online_entrypoint implements logic in env.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/photogrammetry/mesh_conversion.py",
+      "type": "file",
+      "name": "mesh_conversion.py",
+      "filePath": "backend/infrastructure/photogrammetry/mesh_conversion.py",
+      "summary": "mesh_conversion.py is a backend python module in backend/infrastructure/photogrammetry with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/mesh_conversion.py:convert_outputs",
+      "type": "function",
+      "name": "convert_outputs",
+      "filePath": "backend/infrastructure/photogrammetry/mesh_conversion.py",
+      "summary": "convert_outputs implements logic in mesh_conversion.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "type": "file",
+      "name": "raster_tiling.py",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "raster_tiling.py is a backend python module in backend/infrastructure/photogrammetry with 11 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_which",
+      "type": "function",
+      "name": "_which",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "_which implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_run",
+      "type": "function",
+      "name": "_run",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "_run implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_bbox_from_wgs84_extent",
+      "type": "function",
+      "name": "_bbox_from_wgs84_extent",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "_bbox_from_wgs84_extent implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_region_from_bbox",
+      "type": "function",
+      "name": "_region_from_bbox",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "_region_from_bbox implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_bbox_from_georef",
+      "type": "function",
+      "name": "_bbox_from_georef",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "_bbox_from_georef implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_to_cog",
+      "type": "function",
+      "name": "convert_to_cog",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "convert_to_cog implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:generate_xyz_tiles",
+      "type": "function",
+      "name": "generate_xyz_tiles",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "generate_xyz_tiles implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_mesh_to_gltf",
+      "type": "function",
+      "name": "convert_mesh_to_gltf",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "convert_mesh_to_gltf implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_write_single_tile_tileset",
+      "type": "function",
+      "name": "_write_single_tile_tileset",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "_write_single_tile_tileset implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_mesh_to_3dtiles",
+      "type": "function",
+      "name": "convert_mesh_to_3dtiles",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "convert_mesh_to_3dtiles implements logic in raster_tiling.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/photogrammetry/raster_tiling.py:inspect_raster_georeferencing",
+      "type": "function",
+      "name": "inspect_raster_georeferencing",
+      "filePath": "backend/infrastructure/photogrammetry/raster_tiling.py",
+      "summary": "inspect_raster_georeferencing implements logic in raster_tiling.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/storage/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/infrastructure/storage/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/infrastructure/storage with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/storage/s3.py",
+      "type": "file",
+      "name": "s3.py",
+      "filePath": "backend/infrastructure/storage/s3.py",
+      "summary": "s3.py is a backend python module in backend/infrastructure/storage with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/storage/s3.py:ObjectStorageClient",
+      "type": "class",
+      "name": "ObjectStorageClient",
+      "filePath": "backend/infrastructure/storage/s3.py",
+      "summary": "ObjectStorageClient groups related behavior and state in s3.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/webhooks/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/infrastructure/webhooks/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/infrastructure/webhooks with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/webhooks/http_client.py",
+      "type": "file",
+      "name": "http_client.py",
+      "filePath": "backend/infrastructure/webhooks/http_client.py",
+      "summary": "http_client.py is a backend python module in backend/infrastructure/webhooks with 0 functions and 2 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/webhooks/http_client.py:WebhookResponse",
+      "type": "class",
+      "name": "WebhookResponse",
+      "filePath": "backend/infrastructure/webhooks/http_client.py",
+      "summary": "WebhookResponse groups related behavior and state in http_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/webhooks/http_client.py:HttpWebhookSender",
+      "type": "class",
+      "name": "HttpWebhookSender",
+      "filePath": "backend/infrastructure/webhooks/http_client.py",
+      "summary": "HttpWebhookSender groups related behavior and state in http_client.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/__init__.py with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/admin/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "api.py is a backend python module in backend/modules/admin with 10 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:_get_db",
+      "type": "function",
+      "name": "_get_db",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "_get_db implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:list_users",
+      "type": "function",
+      "name": "list_users",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "list_users implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:update_user_role",
+      "type": "function",
+      "name": "update_user_role",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "update_user_role implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:list_organizations",
+      "type": "function",
+      "name": "list_organizations",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "list_organizations implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:list_mapping_jobs",
+      "type": "function",
+      "name": "list_mapping_jobs",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "list_mapping_jobs implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:requeue_mapping_job",
+      "type": "function",
+      "name": "requeue_mapping_job",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "requeue_mapping_job implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:list_export_jobs",
+      "type": "function",
+      "name": "list_export_jobs",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "list_export_jobs implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:worker_health",
+      "type": "function",
+      "name": "worker_health",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "worker_health implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:latest_runtime_logs",
+      "type": "function",
+      "name": "latest_runtime_logs",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "latest_runtime_logs implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/admin/api.py:download_diagnostics_bundle",
+      "type": "function",
+      "name": "download_diagnostics_bundle",
+      "filePath": "backend/modules/admin/api.py",
+      "summary": "download_diagnostics_bundle implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/agents/models.py",
+      "summary": "models.py is a backend python module in backend/modules/agents with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/models.py:AgentRun",
+      "type": "class",
+      "name": "AgentRun",
+      "filePath": "backend/modules/agents/models.py",
+      "summary": "AgentRun groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/alerts/evaluation_service.py",
+      "type": "file",
+      "name": "evaluation_service.py",
+      "filePath": "backend/modules/alerts/evaluation_service.py",
+      "summary": "evaluation_service.py is a backend python module in backend/modules/alerts with 0 functions and 2 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/alerts/evaluation_service.py:AlertSignal",
+      "type": "class",
+      "name": "AlertSignal",
+      "filePath": "backend/modules/alerts/evaluation_service.py",
+      "summary": "AlertSignal groups related behavior and state in evaluation_service.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/alerts/evaluation_service.py:AlertEngine",
+      "type": "class",
+      "name": "AlertEngine",
+      "filePath": "backend/modules/alerts/evaluation_service.py",
+      "summary": "AlertEngine groups related behavior and state in evaluation_service.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/alerts/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/alerts/models.py",
+      "summary": "models.py is a backend python module in backend/modules/alerts with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/alerts/models.py:OperationalAlert",
+      "type": "class",
+      "name": "OperationalAlert",
+      "filePath": "backend/modules/alerts/models.py",
+      "summary": "OperationalAlert groups related behavior and state in models.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/alerts/models.py:AlertDelivery",
+      "type": "class",
+      "name": "AlertDelivery",
+      "filePath": "backend/modules/alerts/models.py",
+      "summary": "AlertDelivery groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/alerts/notification_job.py",
+      "type": "file",
+      "name": "notification_job.py",
+      "filePath": "backend/modules/alerts/notification_job.py",
+      "summary": "notification_job.py is a backend python module in backend/modules/alerts with 3 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/alerts/notification_job.py:_skipped",
+      "type": "function",
+      "name": "_skipped",
+      "filePath": "backend/modules/alerts/notification_job.py",
+      "summary": "_skipped implements logic in notification_job.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/alerts/notification_job.py:_sent",
+      "type": "function",
+      "name": "_sent",
+      "filePath": "backend/modules/alerts/notification_job.py",
+      "summary": "_sent implements logic in notification_job.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/alerts/notification_job.py:_failed",
+      "type": "function",
+      "name": "_failed",
+      "filePath": "backend/modules/alerts/notification_job.py",
+      "summary": "_failed implements logic in notification_job.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/alerts/notification_job.py:AlertNotificationJob",
+      "type": "class",
+      "name": "AlertNotificationJob",
+      "filePath": "backend/modules/alerts/notification_job.py",
+      "summary": "AlertNotificationJob groups related behavior and state in notification_job.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/alerts/recipient_parsing.py",
+      "type": "file",
+      "name": "recipient_parsing.py",
+      "filePath": "backend/modules/alerts/recipient_parsing.py",
+      "summary": "recipient_parsing.py is a backend python module in backend/modules/alerts with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/alerts/recipient_parsing.py:parse_delimited_tokens",
+      "type": "function",
+      "name": "parse_delimited_tokens",
+      "filePath": "backend/modules/alerts/recipient_parsing.py",
+      "summary": "parse_delimited_tokens implements logic in recipient_parsing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/alerts/repository.py",
+      "type": "file",
+      "name": "repository.py",
+      "filePath": "backend/modules/alerts/repository.py",
+      "summary": "repository.py is a backend python module in backend/modules/alerts with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/alerts/repository.py:AlertRepository",
+      "type": "class",
+      "name": "AlertRepository",
+      "filePath": "backend/modules/alerts/repository.py",
+      "summary": "AlertRepository groups related behavior and state in repository.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/automation/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/automation/models.py",
+      "summary": "models.py is a backend python module in backend/modules/automation with 0 functions and 3 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/automation/models.py:MissionTemplate",
+      "type": "class",
+      "name": "MissionTemplate",
+      "filePath": "backend/modules/automation/models.py",
+      "summary": "MissionTemplate groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/automation/models.py:ScheduledRun",
+      "type": "class",
+      "name": "ScheduledRun",
+      "filePath": "backend/modules/automation/models.py",
+      "summary": "ScheduledRun groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/automation/models.py:OutboxEvent",
+      "type": "class",
+      "name": "OutboxEvent",
+      "filePath": "backend/modules/automation/models.py",
+      "summary": "OutboxEvent groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/automation/outbox_job.py",
+      "type": "file",
+      "name": "outbox_job.py",
+      "filePath": "backend/modules/automation/outbox_job.py",
+      "summary": "outbox_job.py is a backend python module in backend/modules/automation with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/automation/outbox_job.py:OutboxRelayJob",
+      "type": "class",
+      "name": "OutboxRelayJob",
+      "filePath": "backend/modules/automation/outbox_job.py",
+      "summary": "OutboxRelayJob groups related behavior and state in outbox_job.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/automation/outbox_repository.py",
+      "type": "file",
+      "name": "outbox_repository.py",
+      "filePath": "backend/modules/automation/outbox_repository.py",
+      "summary": "outbox_repository.py is a backend python module in backend/modules/automation with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/automation/outbox_repository.py:OutboxRepository",
+      "type": "class",
+      "name": "OutboxRepository",
+      "filePath": "backend/modules/automation/outbox_repository.py",
+      "summary": "OutboxRepository groups related behavior and state in outbox_repository.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/compliance/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "api.py is a backend python module in backend/modules/compliance with 7 functions and 3 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:_get_runtime",
+      "type": "function",
+      "name": "_get_runtime",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "_get_runtime implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:_compliance_out",
+      "type": "function",
+      "name": "_compliance_out",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "_compliance_out implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:_resolve_preflight_ack",
+      "type": "function",
+      "name": "_resolve_preflight_ack",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "_resolve_preflight_ack implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:upsert_compliance",
+      "type": "function",
+      "name": "upsert_compliance",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "upsert_compliance implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:get_compliance",
+      "type": "function",
+      "name": "get_compliance",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "get_compliance implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:patch_compliance",
+      "type": "function",
+      "name": "patch_compliance",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "patch_compliance implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/compliance/api.py:compliance_summary",
+      "type": "function",
+      "name": "compliance_summary",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "compliance_summary implements logic in api.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/compliance/api.py:ComplianceUpsert",
+      "type": "class",
+      "name": "ComplianceUpsert",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "ComplianceUpsert groups related behavior and state in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/compliance/api.py:CompliancePatch",
+      "type": "class",
+      "name": "CompliancePatch",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "CompliancePatch groups related behavior and state in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/compliance/api.py:ComplianceOut",
+      "type": "class",
+      "name": "ComplianceOut",
+      "filePath": "backend/modules/compliance/api.py",
+      "summary": "ComplianceOut groups related behavior and state in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/core/database/base.py",
+      "target": "class:backend/core/database/base.py:Base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/database/base.py",
+      "target": "class:backend/core/database/base.py:Base",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/database/model_registry.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/database/model_registry.py",
+      "target": "function:backend/core/database/model_registry.py:register_models",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/database/model_registry.py",
+      "target": "function:backend/core/database/model_registry.py:register_models",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_request_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_request_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_safe_emit_app_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_safe_emit_app_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_response",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_response",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_safe_http_message",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:_safe_http_message",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:api_error_handler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:api_error_handler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:http_exception_handler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:http_exception_handler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:validation_error_handler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:validation_error_handler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:unhandled_exception_handler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:unhandled_exception_handler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:register_error_handlers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "function:backend/core/errors/handlers.py:register_error_handlers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "class:backend/core/errors/handlers.py:ApiError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "class:backend/core/errors/handlers.py:ApiError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "class:backend/core/errors/handlers.py:RequestIDMiddleware",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/errors/handlers.py",
+      "target": "class:backend/core/errors/handlers.py:RequestIDMiddleware",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/__init__.py",
+      "target": "file:backend/core/geometry/coordinates.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/geometry/__init__.py",
+      "target": "file:backend/core/geometry/projection.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/geometry/__init__.py",
+      "target": "file:backend/core/geometry/rings.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/geometry/coordinates.py",
+      "target": "function:backend/core/geometry/coordinates.py:extract_lonlat_pairs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/coordinates.py",
+      "target": "function:backend/core/geometry/coordinates.py:extract_lonlat_pairs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/geometry/rings.py",
+      "target": "function:backend/core/geometry/rings.py:ensure_closed_ring",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/geometry/rings.py",
+      "target": "function:backend/core/geometry/rings.py:ensure_closed_ring",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/__init__.py",
+      "target": "file:backend/core/logging/app_log.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/logging/__init__.py",
+      "target": "file:backend/core/logging/paths.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "function:backend/core/logging/app_log.py:_is_sensitive_key",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "function:backend/core/logging/app_log.py:_is_sensitive_key",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "function:backend/core/logging/app_log.py:sanitize_log_details",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "function:backend/core/logging/app_log.py:sanitize_log_details",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "function:backend/core/logging/app_log.py:emit_app_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "function:backend/core/logging/app_log.py:emit_app_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "class:backend/core/logging/app_log.py:AppLogEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/app_log.py",
+      "target": "class:backend/core/logging/app_log.py:AppLogEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "file:backend/core/logging/paths.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_utc_iso",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_utc_iso",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_sanitize_zip_part",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_sanitize_zip_part",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_safe_source_name",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_safe_source_name",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_safe_relative_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_safe_relative_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_iter_log_files",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_iter_log_files",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:list_latest_runtime_logs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:list_latest_runtime_logs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_archive_name_for",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:_archive_name_for",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:build_diagnostics_bundle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "function:backend/core/logging/diagnostics.py:build_diagnostics_bundle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "class:backend/core/logging/diagnostics.py:RuntimeLogFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "class:backend/core/logging/diagnostics.py:RuntimeLogFile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "class:backend/core/logging/diagnostics.py:DiagnosticsBundle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/diagnostics.py",
+      "target": "class:backend/core/logging/diagnostics.py:DiagnosticsBundle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:_settings_string",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:_settings_string",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:runtime_log_root",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:runtime_log_root",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:runtime_log_dir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:runtime_log_dir",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:legacy_runtime_log_roots",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/paths.py",
+      "target": "function:backend/core/logging/paths.py:legacy_runtime_log_roots",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/retention.py",
+      "target": "file:backend/core/logging/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/logging/retention.py",
+      "target": "file:backend/core/logging/paths.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/core/logging/retention.py",
+      "target": "function:backend/core/logging/retention.py:runtime_log_retention_days",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/retention.py",
+      "target": "function:backend/core/logging/retention.py:runtime_log_retention_days",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/core/logging/retention.py",
+      "target": "function:backend/core/logging/retention.py:cleanup_runtime_logs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/logging/retention.py",
+      "target": "function:backend/core/logging/retention.py:cleanup_runtime_logs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/core/errors/handlers.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/infrastructure/camera/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/admin/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/agents/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/ai/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/alerts/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/alerts/evaluation_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/analytics/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/automation/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/compliance/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/deliverables/share_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/fields/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/fleet/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/geofences/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/identity/api_keys.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/identity/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/integrations/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/integrations/webhooks/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/irrigation/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/irrigation/monitor.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/livestock/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/mapping/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/media/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/missions/api/routes.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/observability/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/patrol/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/patrol/event_trigger_mqtt_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/patrol/live_detection_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/patrol/sensor_config_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/patrol/vision_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/patrol/vision_events_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/property_patrol/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/settings/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/settings/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/telemetry/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/telemetry/websocket_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/video_analysis/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/modules/warehouse/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/observability/correlation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/observability/metrics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "file:backend/observability/tracing.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:lifespan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:lifespan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:healthz",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:healthz",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:health_check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:health_check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:readiness_check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/api/app.py",
+      "target": "function:backend/entrypoints/api/app.py:readiness_check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/deliverables/__init__.py",
+      "target": "file:backend/infrastructure/deliverables/storage.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/deliverables/storage.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/deliverables/storage.py",
+      "target": "file:backend/infrastructure/storage/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/deliverables/storage.py",
+      "target": "class:backend/infrastructure/deliverables/storage.py:DeliverableStorage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/deliverables/storage.py",
+      "target": "class:backend/infrastructure/deliverables/storage.py:DeliverableStorage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "file:backend/core/database/model_registry.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:get_url",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:get_url",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:include_object",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:include_object",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_offline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_offline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:do_run_migrations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:do_run_migrations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_online",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_online",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_online_entrypoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/persistence/alembic/env.py",
+      "target": "function:backend/infrastructure/persistence/alembic/env.py:run_migrations_online_entrypoint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/mesh_conversion.py",
+      "target": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/mesh_conversion.py",
+      "target": "function:backend/infrastructure/photogrammetry/mesh_conversion.py:convert_outputs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/mesh_conversion.py",
+      "target": "function:backend/infrastructure/photogrammetry/mesh_conversion.py:convert_outputs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "file:backend/core/geometry/coordinates.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_which",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_which",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_bbox_from_wgs84_extent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_bbox_from_wgs84_extent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_region_from_bbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_region_from_bbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_bbox_from_georef",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_bbox_from_georef",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_to_cog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_to_cog",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:generate_xyz_tiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:generate_xyz_tiles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_mesh_to_gltf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_mesh_to_gltf",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_write_single_tile_tileset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:_write_single_tile_tileset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_mesh_to_3dtiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:convert_mesh_to_3dtiles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:inspect_raster_georeferencing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/photogrammetry/raster_tiling.py",
+      "target": "function:backend/infrastructure/photogrammetry/raster_tiling.py:inspect_raster_georeferencing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/storage/__init__.py",
+      "target": "file:backend/infrastructure/storage/s3.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/storage/s3.py",
+      "target": "class:backend/infrastructure/storage/s3.py:ObjectStorageClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/storage/s3.py",
+      "target": "class:backend/infrastructure/storage/s3.py:ObjectStorageClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/webhooks/__init__.py",
+      "target": "file:backend/infrastructure/webhooks/http_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/webhooks/http_client.py",
+      "target": "class:backend/infrastructure/webhooks/http_client.py:WebhookResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/webhooks/http_client.py",
+      "target": "class:backend/infrastructure/webhooks/http_client.py:WebhookResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/webhooks/http_client.py",
+      "target": "class:backend/infrastructure/webhooks/http_client.py:HttpWebhookSender",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/webhooks/http_client.py",
+      "target": "class:backend/infrastructure/webhooks/http_client.py:HttpWebhookSender",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/__init__.py",
+      "target": "file:backend/core/database/model_registry.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/core/logging/diagnostics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/core/logging/paths.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/modules/deliverables/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/modules/identity/dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/modules/identity/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/modules/mapping/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "file:backend/modules/organizations/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:_get_db",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:_get_db",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_users",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_users",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:update_user_role",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:update_user_role",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_organizations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_organizations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_mapping_jobs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_mapping_jobs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:requeue_mapping_job",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:requeue_mapping_job",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_export_jobs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:list_export_jobs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:worker_health",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:worker_health",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:latest_runtime_logs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:latest_runtime_logs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:download_diagnostics_bundle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/admin/api.py",
+      "target": "function:backend/modules/admin/api.py:download_diagnostics_bundle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/models.py",
+      "target": "class:backend/modules/agents/models.py:AgentRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/models.py",
+      "target": "class:backend/modules/agents/models.py:AgentRun",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/core/events/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/infrastructure/messaging/websocket_publisher.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/alerts/recipient_parsing.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/alerts/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/automation/outbox_repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/geofences/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/livestock/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/livestock/risk_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "file:backend/modules/patrol/service/mission_runtime_store.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "class:backend/modules/alerts/evaluation_service.py:AlertSignal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "class:backend/modules/alerts/evaluation_service.py:AlertSignal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "class:backend/modules/alerts/evaluation_service.py:AlertEngine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/evaluation_service.py",
+      "target": "class:backend/modules/alerts/evaluation_service.py:AlertEngine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/models.py",
+      "target": "class:backend/modules/alerts/models.py:OperationalAlert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/models.py",
+      "target": "class:backend/modules/alerts/models.py:OperationalAlert",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/models.py",
+      "target": "class:backend/modules/alerts/models.py:AlertDelivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/models.py",
+      "target": "class:backend/modules/alerts/models.py:AlertDelivery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "file:backend/modules/alerts/recipient_parsing.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "file:backend/modules/alerts/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "function:backend/modules/alerts/notification_job.py:_skipped",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "function:backend/modules/alerts/notification_job.py:_skipped",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "function:backend/modules/alerts/notification_job.py:_sent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "function:backend/modules/alerts/notification_job.py:_sent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "function:backend/modules/alerts/notification_job.py:_failed",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "function:backend/modules/alerts/notification_job.py:_failed",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "class:backend/modules/alerts/notification_job.py:AlertNotificationJob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/notification_job.py",
+      "target": "class:backend/modules/alerts/notification_job.py:AlertNotificationJob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/recipient_parsing.py",
+      "target": "function:backend/modules/alerts/recipient_parsing.py:parse_delimited_tokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/recipient_parsing.py",
+      "target": "function:backend/modules/alerts/recipient_parsing.py:parse_delimited_tokens",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/alerts/repository.py",
+      "target": "file:backend/modules/alerts/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/alerts/repository.py",
+      "target": "class:backend/modules/alerts/repository.py:AlertRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/alerts/repository.py",
+      "target": "class:backend/modules/alerts/repository.py:AlertRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "class:backend/modules/automation/models.py:MissionTemplate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "class:backend/modules/automation/models.py:MissionTemplate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "class:backend/modules/automation/models.py:ScheduledRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "class:backend/modules/automation/models.py:ScheduledRun",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "class:backend/modules/automation/models.py:OutboxEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/automation/models.py",
+      "target": "class:backend/modules/automation/models.py:OutboxEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_job.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_job.py",
+      "target": "file:backend/modules/alerts/notification_job.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_job.py",
+      "target": "file:backend/modules/automation/outbox_repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_job.py",
+      "target": "file:backend/modules/integrations/webhooks/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_job.py",
+      "target": "class:backend/modules/automation/outbox_job.py:OutboxRelayJob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_job.py",
+      "target": "class:backend/modules/automation/outbox_job.py:OutboxRelayJob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_repository.py",
+      "target": "file:backend/modules/automation/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_repository.py",
+      "target": "class:backend/modules/automation/outbox_repository.py:OutboxRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/automation/outbox_repository.py",
+      "target": "class:backend/modules/automation/outbox_repository.py:OutboxRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "file:backend/modules/compliance/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "file:backend/modules/identity/dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "file:backend/modules/missions/runtime_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "file:backend/modules/preflight/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:_get_runtime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:_get_runtime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:_compliance_out",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:_compliance_out",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:_resolve_preflight_ack",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:_resolve_preflight_ack",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:upsert_compliance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:upsert_compliance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:get_compliance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:get_compliance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:patch_compliance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:patch_compliance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:compliance_summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "function:backend/modules/compliance/api.py:compliance_summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "class:backend/modules/compliance/api.py:ComplianceUpsert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "class:backend/modules/compliance/api.py:ComplianceUpsert",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "class:backend/modules/compliance/api.py:CompliancePatch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "class:backend/modules/compliance/api.py:CompliancePatch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "class:backend/modules/compliance/api.py:ComplianceOut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/compliance/api.py",
+      "target": "class:backend/modules/compliance/api.py:ComplianceOut",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

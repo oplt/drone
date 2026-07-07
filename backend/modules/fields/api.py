@@ -27,6 +27,7 @@ from shapely.validation import explain_validity
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.geometry.rings import ensure_closed_ring
 from backend.modules.fields.models import Field
 from backend.modules.fields.schemas import FieldCreateGeoJSON, FieldOut, FieldUpdate
 from backend.modules.fields.service import field_service
@@ -44,16 +45,8 @@ router = APIRouter(prefix="/fields", tags=["fields"])
 # ---------------------------------------------------------------------------
 
 
-def _ensure_closed_ring(coords: list[list[float]]) -> list[list[float]]:
-    if len(coords) < 3:
-        raise ValueError("Polygon needs at least 3 points")
-    if coords[0] != coords[-1]:
-        coords = [*coords, coords[0]]
-    return coords
-
-
 def _coords_to_polygon(coords_lonlat: list[list[float]]) -> Polygon:
-    coords_lonlat = _ensure_closed_ring(coords_lonlat)
+    coords_lonlat = ensure_closed_ring(coords_lonlat)
     poly = Polygon(coords_lonlat)  # Shapely: (x, y) = (lon, lat)
     if not poly.is_valid:
         raise ValueError(f"Invalid polygon: {explain_validity(poly)}")

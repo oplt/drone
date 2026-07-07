@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field, model_validator
 from backend.modules.missions.flight_profile import FlightEnvironment
 from backend.modules.missions.schemas.mission_types import MissionType, Waypoint
 from backend.modules.patrol.ai_tasks import PATROL_AI_TASKS
-from backend.modules.patrol.planning import normalize_ai_tasks
 
 
 class GridMissionParams(BaseModel):
@@ -37,6 +36,29 @@ PatrolTaskType = Literal[
     "fence_breach_detection",
     "motion_detection",
 ]
+
+
+def validate_private_patrol_task_inputs(
+    *,
+    task_type: str,
+    property_polygon_lonlat: list[list[float]] | None,
+    key_points_lonlat: list[list[float]] | None,
+) -> None:
+    if task_type in {"perimeter_patrol", "grid_surveillance"}:
+        if not property_polygon_lonlat or len(property_polygon_lonlat) < 3:
+            raise ValueError(
+                f"task_type='{task_type}' requires property_polygon_lonlat with at least 3 coordinate pairs."
+            )
+    elif task_type == "waypoint_patrol":
+        if not key_points_lonlat or len(key_points_lonlat) < 2:
+            raise ValueError(
+                "task_type='waypoint_patrol' requires key_points_lonlat with at least 2 coordinate pairs."
+            )
+    elif task_type == "event_triggered_patrol":
+        if not property_polygon_lonlat or len(property_polygon_lonlat) < 3:
+            raise ValueError(
+                "task_type='event_triggered_patrol' requires property_polygon_lonlat geofence."
+            )
 
 
 class PrivatePatrolMissionParams(BaseModel):
@@ -96,21 +118,11 @@ class PrivatePatrolMissionParams(BaseModel):
 
     @model_validator(mode="after")
     def _validate_by_task(self) -> PrivatePatrolMissionParams:
-        if self.task_type in {"perimeter_patrol", "grid_surveillance"}:
-            if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
-                raise ValueError(
-                    f"task_type='{self.task_type}' requires property_polygon_lonlat with at least 3 coordinate pairs."
-                )
-        elif self.task_type == "waypoint_patrol":
-            if not self.key_points_lonlat or len(self.key_points_lonlat) < 2:
-                raise ValueError(
-                    "task_type='waypoint_patrol' requires key_points_lonlat with at least 2 coordinate pairs."
-                )
-        elif self.task_type == "event_triggered_patrol":
-            if not self.property_polygon_lonlat or len(self.property_polygon_lonlat) < 3:
-                raise ValueError(
-                    "task_type='event_triggered_patrol' requires property_polygon_lonlat geofence."
-                )
+        validate_private_patrol_task_inputs(
+            task_type=self.task_type,
+            property_polygon_lonlat=self.property_polygon_lonlat,
+            key_points_lonlat=self.key_points_lonlat,
+        )
         return self
 
 

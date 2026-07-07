@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -9,29 +8,8 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.warehouse.models import WarehouseMap
-
-
-class WarehouseRepositoryError(RuntimeError):
-    pass
-
-
-_MAX_LIST_LIMIT = 500
-
-
-@dataclass(slots=True)
-class WarehouseModelVersionEntry:
-    id: int
-    version: int
-    status: str
-    created_at: datetime
-
-
-def _clamp_limit(limit: int, *, default: int = 100, max_limit: int = _MAX_LIST_LIMIT) -> int:
-    try:
-        value = int(limit)
-    except (TypeError, ValueError):
-        value = default
-    return max(1, min(max_limit, value))
+from backend.modules.warehouse.repository.contracts import WarehouseRepositoryError
+from backend.modules.warehouse.repository.query_values import clamp_list_limit
 
 
 def _normalize_polygon_local(
@@ -126,7 +104,7 @@ class WarehouseMapMixin:
                     select(WarehouseMap)
                     .where(scope)
                     .order_by(WarehouseMap.id.desc())
-                    .limit(_clamp_limit(limit))
+                    .limit(clamp_list_limit(limit, default=100))
                 )
             )
             .scalars()

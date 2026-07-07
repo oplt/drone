@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
 from collections.abc import Coroutine
 from typing import Any
 
+from sqlalchemy import select
+
 from backend.core.database.session import Session
+from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.modules.agents.context_builders import (
     build_field_survey_context,
@@ -23,25 +25,14 @@ from backend.modules.property_patrol.models import (
     PropertyPatrolIncident,
     PropertyPatrolTemplate,
 )
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
-_loop_lock = threading.Lock()
-_thread_local_state = threading.local()
+_worker_loop = WorkerLoopState()
 
 
 def _get_worker_loop() -> asyncio.AbstractEventLoop:
-    loop = getattr(_thread_local_state, "loop", None)
-    if loop is not None and not loop.is_closed():
-        return loop
-    with _loop_lock:
-        loop = getattr(_thread_local_state, "loop", None)
-        if loop is not None and not loop.is_closed():
-            return loop
-        loop = asyncio.new_event_loop()
-        _thread_local_state.loop = loop
-        return loop
+    return _worker_loop.get_loop()
 
 
 def _run_on_worker_loop(coro: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, Any]:

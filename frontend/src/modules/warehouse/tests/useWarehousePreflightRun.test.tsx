@@ -1,21 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { server } from "../../../test/msw/server";
+import { createTestQueryWrapper } from "../../../test/renderWithProviders";
 import { useWarehousePreflightRun } from "../hooks/useWarehousePreflightRun";
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-}
 
 describe("useWarehousePreflightRun", () => {
   it("stops polling when run status is complete", async () => {
@@ -58,7 +46,7 @@ describe("useWarehousePreflightRun", () => {
 
     const { result } = renderHook(
       () => useWarehousePreflightRun("token", "run-done"),
-      { wrapper: createWrapper() },
+      { wrapper: createTestQueryWrapper() },
     );
 
     await waitFor(() => expect(result.current.data?.status).toBe("complete"));
@@ -68,7 +56,7 @@ describe("useWarehousePreflightRun", () => {
 
   it("is disabled without token or run id", () => {
     const { result } = renderHook(() => useWarehousePreflightRun(null, null), {
-      wrapper: createWrapper(),
+      wrapper: createTestQueryWrapper(),
     });
     expect(result.current.fetchStatus).toBe("idle");
   });

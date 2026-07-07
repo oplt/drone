@@ -4,7 +4,6 @@ import asyncio
 import logging
 import math
 import os
-import re
 import time
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -12,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from backend.core.config.runtime import settings
+from backend.core.tokens import safe_token
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.infrastructure.vehicle.frame_conversion import local_ned_position_to_enu
 from backend.modules.missions.flight_models import FlightStatus
@@ -37,6 +37,11 @@ from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_brid
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
 from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
+from backend.modules.warehouse.service.startup_timing_hooks import (
+    active_mapping_startup_timing_safe,
+    begin_mapping_startup_safe,
+    note_mapping_startup_safe,
+)
 from backend.modules.warehouse.service.video import (
     warehouse_video_recording_enabled,
     warehouse_video_skip_reason,
@@ -47,13 +52,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_UNSAFE_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
-_warned_missing_startup_timing = False
-
-
 def _safe_token(raw: object) -> str:
-    token = _UNSAFE_TOKEN_CHARS.sub("_", str(raw or "")).strip("._-")
-    return token or "unknown"
+    return safe_token(raw)
 
 
 def _normalize_angle_deg(value: float) -> float:
@@ -95,42 +95,15 @@ def build_warehouse_perception_port() -> WarehousePerceptionPort:
 
 
 def _begin_mapping_startup_timing(*, mission_start_monotonic: float) -> None:
-    global _warned_missing_startup_timing
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            begin_mapping_startup_timing,
-        )
-
-        begin_mapping_startup_timing(mission_start_monotonic=mission_start_monotonic)
-    except ModuleNotFoundError as exc:
-        if not _warned_missing_startup_timing:
-            logger.warning("Optional mapping startup timing unavailable: %s", exc)
-            _warned_missing_startup_timing = True
+    begin_mapping_startup_safe(mission_start_monotonic=mission_start_monotonic)
 
 
 def _note_mapping_startup(mark: str) -> None:
-    global _warned_missing_startup_timing
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            note_mapping_startup,
-        )
-
-        note_mapping_startup(mark)
-    except ModuleNotFoundError as exc:
-        if not _warned_missing_startup_timing:
-            logger.warning("Optional mapping startup timing unavailable: %s", exc)
-            _warned_missing_startup_timing = True
+    note_mapping_startup_safe(mark)
 
 
 def _active_mapping_startup_timing():
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            active_mapping_startup_timing,
-        )
-
-        return active_mapping_startup_timing()
-    except ModuleNotFoundError:
-        return None
+    return active_mapping_startup_timing_safe()
 
 
 @dataclass(frozen=True)

@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from backend.core.config.runtime import env_truthy, settings
+from backend.core.geometry.coordinates import extract_lonlat_pairs
 
 
 def _which(cmd: str) -> str | None:
@@ -16,21 +17,6 @@ def _which(cmd: str) -> str | None:
 
 def _run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
-
-
-def _extract_lonlat_pairs(node: object) -> list[tuple[float, float]]:
-    if isinstance(node, (list, tuple)):
-        if (
-            len(node) >= 2
-            and isinstance(node[0], (int, float))
-            and isinstance(node[1], (int, float))
-        ):
-            return [(float(node[0]), float(node[1]))]
-        out: list[tuple[float, float]] = []
-        for child in node:
-            out.extend(_extract_lonlat_pairs(child))
-        return out
-    return []
 
 
 def _bbox_from_wgs84_extent(wgs84_extent: dict | None) -> dict[str, float] | None:
@@ -50,7 +36,7 @@ def _bbox_from_wgs84_extent(wgs84_extent: dict | None) -> dict[str, float] | Non
             "east": east,
             "north": north,
         }
-    pts = _extract_lonlat_pairs(wgs84_extent.get("coordinates"))
+    pts = extract_lonlat_pairs(wgs84_extent.get("coordinates"))
     if not pts:
         return None
 

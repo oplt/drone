@@ -1,0 +1,2019 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/modules/warehouse/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/warehouse/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/warehouse with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "type": "file",
+      "name": "coordinate_transform.py",
+      "filePath": "backend/modules/warehouse/service/coordinate_transform.py",
+      "summary": "coordinate_transform.py is a backend python module in backend/modules/warehouse with 2 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/coordinate_transform.py:homogeneous_matrix",
+      "type": "function",
+      "name": "homogeneous_matrix",
+      "filePath": "backend/modules/warehouse/service/coordinate_transform.py",
+      "summary": "homogeneous_matrix implements logic in coordinate_transform.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/coordinate_transform.py:transform_vectors",
+      "type": "function",
+      "name": "transform_vectors",
+      "filePath": "backend/modules/warehouse/service/coordinate_transform.py",
+      "summary": "transform_vectors implements logic in coordinate_transform.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/warehouse/service/coordinate_transform.py:Vector3",
+      "type": "class",
+      "name": "Vector3",
+      "filePath": "backend/modules/warehouse/service/coordinate_transform.py",
+      "summary": "Vector3 groups related behavior and state in coordinate_transform.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/warehouse/service/inspection_execution_policy.py",
+      "type": "file",
+      "name": "inspection_execution_policy.py",
+      "filePath": "backend/modules/warehouse/service/inspection_execution_policy.py",
+      "summary": "inspection_execution_policy.py is a backend python module in backend/modules/warehouse with 1 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/inspection_execution_policy.py:execution_action",
+      "type": "function",
+      "name": "execution_action",
+      "filePath": "backend/modules/warehouse/service/inspection_execution_policy.py",
+      "summary": "execution_action implements logic in inspection_execution_policy.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/warehouse/service/inspection_execution_policy.py:InspectionExecutionPolicy",
+      "type": "class",
+      "name": "InspectionExecutionPolicy",
+      "filePath": "backend/modules/warehouse/service/inspection_execution_policy.py",
+      "summary": "InspectionExecutionPolicy groups related behavior and state in inspection_execution_policy.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "type": "file",
+      "name": "mapping_startup_timing.py",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "mapping_startup_timing.py is a backend python module in backend/modules/warehouse with 5 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/mapping_startup_timing.py:_safe_mark",
+      "type": "function",
+      "name": "_safe_mark",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "_safe_mark implements logic in mapping_startup_timing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/mapping_startup_timing.py:begin_mapping_startup_timing",
+      "type": "function",
+      "name": "begin_mapping_startup_timing",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "begin_mapping_startup_timing implements logic in mapping_startup_timing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/mapping_startup_timing.py:end_mapping_startup_timing",
+      "type": "function",
+      "name": "end_mapping_startup_timing",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "end_mapping_startup_timing implements logic in mapping_startup_timing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/mapping_startup_timing.py:note_mapping_startup",
+      "type": "function",
+      "name": "note_mapping_startup",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "note_mapping_startup implements logic in mapping_startup_timing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/warehouse/service/mapping_startup_timing.py:active_mapping_startup_timing",
+      "type": "function",
+      "name": "active_mapping_startup_timing",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "active_mapping_startup_timing implements logic in mapping_startup_timing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/warehouse/service/mapping_startup_timing.py:MappingStartupTiming",
+      "type": "class",
+      "name": "MappingStartupTiming",
+      "filePath": "backend/modules/warehouse/service/mapping_startup_timing.py",
+      "summary": "MappingStartupTiming groups related behavior and state in mapping_startup_timing.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/warehouse/service/nvblox_log_parser.py",
+      "type": "file",
+      "name": "nvblox_log_parser.py",
+      "filePath": "backend/modules/warehouse/service/nvblox_log_parser.py",
+      "summary": "nvblox_log_parser.py is a backend python module in backend/modules/warehouse with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/warehouse/service/nvblox_log_parser.py:NvbloxLogParser",
+      "type": "class",
+      "name": "NvbloxLogParser",
+      "filePath": "backend/modules/warehouse/service/nvblox_log_parser.py",
+      "summary": "NvbloxLogParser groups related behavior and state in nvblox_log_parser.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/raspberry/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/raspberry/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/raspberry/__init__.py with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/raspberry/pi_camera_server.py",
+      "type": "file",
+      "name": "pi_camera_server.py",
+      "filePath": "backend/raspberry/pi_camera_server.py",
+      "summary": "pi_camera_server.py is a backend python module in backend/raspberry/pi_camera_server.py with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/raspberry/pi_camera_server.py:generate_frames",
+      "type": "function",
+      "name": "generate_frames",
+      "filePath": "backend/raspberry/pi_camera_server.py",
+      "summary": "generate_frames implements logic in pi_camera_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/raspberry/pi_camera_server.py:video_feed",
+      "type": "function",
+      "name": "video_feed",
+      "filePath": "backend/raspberry/pi_camera_server.py",
+      "summary": "video_feed implements logic in pi_camera_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/raspberry/pi_camera_server.py:index",
+      "type": "function",
+      "name": "index",
+      "filePath": "backend/raspberry/pi_camera_server.py",
+      "summary": "index implements logic in pi_camera_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/raspberry/read.me",
+      "type": "file",
+      "name": "read.me",
+      "filePath": "backend/raspberry/read.me",
+      "summary": "read.me is a backend me module in backend/raspberry/read.me with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "me"
+      ]
+    },
+    {
+      "id": "document:backend/raspberry/requirements.txt",
+      "type": "document",
+      "name": "requirements.txt",
+      "filePath": "backend/raspberry/requirements.txt",
+      "summary": "requirements.txt documents backend workflows, architecture, or setup details.",
+      "complexity": "simple",
+      "tags": [
+        "documentation",
+        "txt"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/check_backend_boundaries.py",
+      "type": "file",
+      "name": "check_backend_boundaries.py",
+      "filePath": "backend/scripts/check_backend_boundaries.py",
+      "summary": "check_backend_boundaries.py is a backend python module in backend/scripts/check_backend_boundaries.py with 4 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_backend_boundaries.py:imported_modules",
+      "type": "function",
+      "name": "imported_modules",
+      "filePath": "backend/scripts/check_backend_boundaries.py",
+      "summary": "imported_modules implements logic in check_backend_boundaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_backend_boundaries.py:collect_violations",
+      "type": "function",
+      "name": "collect_violations",
+      "filePath": "backend/scripts/check_backend_boundaries.py",
+      "summary": "collect_violations implements logic in check_backend_boundaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_backend_boundaries.py:load_baseline",
+      "type": "function",
+      "name": "load_baseline",
+      "filePath": "backend/scripts/check_backend_boundaries.py",
+      "summary": "load_baseline implements logic in check_backend_boundaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_backend_boundaries.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/check_backend_boundaries.py",
+      "summary": "main implements logic in check_backend_boundaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/scripts/check_backend_boundaries.py:Rule",
+      "type": "class",
+      "name": "Rule",
+      "filePath": "backend/scripts/check_backend_boundaries.py",
+      "summary": "Rule groups related behavior and state in check_backend_boundaries.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/check_file_sizes.py",
+      "type": "file",
+      "name": "check_file_sizes.py",
+      "filePath": "backend/scripts/check_file_sizes.py",
+      "summary": "check_file_sizes.py is a backend python module in backend/scripts/check_file_sizes.py with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_file_sizes.py:effective_lines",
+      "type": "function",
+      "name": "effective_lines",
+      "filePath": "backend/scripts/check_file_sizes.py",
+      "summary": "effective_lines implements logic in check_file_sizes.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_file_sizes.py:limit_for",
+      "type": "function",
+      "name": "limit_for",
+      "filePath": "backend/scripts/check_file_sizes.py",
+      "summary": "limit_for implements logic in check_file_sizes.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_file_sizes.py:collect_violations",
+      "type": "function",
+      "name": "collect_violations",
+      "filePath": "backend/scripts/check_file_sizes.py",
+      "summary": "collect_violations implements logic in check_file_sizes.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_file_sizes.py:load_baseline",
+      "type": "function",
+      "name": "load_baseline",
+      "filePath": "backend/scripts/check_file_sizes.py",
+      "summary": "load_baseline implements logic in check_file_sizes.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_file_sizes.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/check_file_sizes.py",
+      "summary": "main implements logic in check_file_sizes.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/check_mypy_baseline.py",
+      "type": "file",
+      "name": "check_mypy_baseline.py",
+      "filePath": "backend/scripts/check_mypy_baseline.py",
+      "summary": "check_mypy_baseline.py is a backend python module in backend/scripts/check_mypy_baseline.py with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_mypy_baseline.py:collect_errors",
+      "type": "function",
+      "name": "collect_errors",
+      "filePath": "backend/scripts/check_mypy_baseline.py",
+      "summary": "collect_errors implements logic in check_mypy_baseline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_mypy_baseline.py:load_baseline",
+      "type": "function",
+      "name": "load_baseline",
+      "filePath": "backend/scripts/check_mypy_baseline.py",
+      "summary": "load_baseline implements logic in check_mypy_baseline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_mypy_baseline.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/check_mypy_baseline.py",
+      "summary": "main implements logic in check_mypy_baseline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/check_ruff_baseline.py",
+      "type": "file",
+      "name": "check_ruff_baseline.py",
+      "filePath": "backend/scripts/check_ruff_baseline.py",
+      "summary": "check_ruff_baseline.py is a backend python module in backend/scripts/check_ruff_baseline.py with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_ruff_baseline.py:collect_findings",
+      "type": "function",
+      "name": "collect_findings",
+      "filePath": "backend/scripts/check_ruff_baseline.py",
+      "summary": "collect_findings implements logic in check_ruff_baseline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_ruff_baseline.py:load_baseline",
+      "type": "function",
+      "name": "load_baseline",
+      "filePath": "backend/scripts/check_ruff_baseline.py",
+      "summary": "load_baseline implements logic in check_ruff_baseline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/check_ruff_baseline.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/check_ruff_baseline.py",
+      "summary": "main implements logic in check_ruff_baseline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/run_backend_tests.py",
+      "type": "file",
+      "name": "run_backend_tests.py",
+      "filePath": "backend/scripts/run_backend_tests.py",
+      "summary": "run_backend_tests.py is a backend python module in backend/scripts/run_backend_tests.py with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/run_backend_tests.py:_load_env",
+      "type": "function",
+      "name": "_load_env",
+      "filePath": "backend/scripts/run_backend_tests.py",
+      "summary": "_load_env implements logic in run_backend_tests.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/run_backend_tests.py:_run",
+      "type": "function",
+      "name": "_run",
+      "filePath": "backend/scripts/run_backend_tests.py",
+      "summary": "_run implements logic in run_backend_tests.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/run_backend_tests.py:_wait_for_db",
+      "type": "function",
+      "name": "_wait_for_db",
+      "filePath": "backend/scripts/run_backend_tests.py",
+      "summary": "_wait_for_db implements logic in run_backend_tests.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/run_backend_tests.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/run_backend_tests.py",
+      "summary": "main implements logic in run_backend_tests.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/test.env.example",
+      "type": "file",
+      "name": "test.env.example",
+      "filePath": "backend/test.env.example",
+      "summary": "test.env.example is a backend example module in backend/test.env.example with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "example"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_api_integration_smoke.py",
+      "type": "file",
+      "name": "test_api_integration_smoke.py",
+      "filePath": "backend/tests/test_api_integration_smoke.py",
+      "summary": "test_api_integration_smoke.py is a backend python module in backend/tests/test_api_integration_smoke.py with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_api_integration_smoke.py:test_health_or_openapi_available",
+      "type": "function",
+      "name": "test_health_or_openapi_available",
+      "filePath": "backend/tests/test_api_integration_smoke.py",
+      "summary": "test_health_or_openapi_available implements logic in test_api_integration_smoke.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_api_integration_smoke.py:test_warehouse_preflight_requires_auth",
+      "type": "function",
+      "name": "test_warehouse_preflight_requires_auth",
+      "filePath": "backend/tests/test_api_integration_smoke.py",
+      "summary": "test_warehouse_preflight_requires_auth implements logic in test_api_integration_smoke.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_observability_hub.py",
+      "type": "file",
+      "name": "test_observability_hub.py",
+      "filePath": "backend/tests/test_observability_hub.py",
+      "summary": "test_observability_hub.py is a backend python module in backend/tests/test_observability_hub.py with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability_hub.py:test_observability_links_return_configured_urls",
+      "type": "function",
+      "name": "test_observability_links_return_configured_urls",
+      "filePath": "backend/tests/test_observability_hub.py",
+      "summary": "test_observability_links_return_configured_urls implements logic in test_observability_hub.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability_hub.py:test_prometheus_graph_url_is_not_duplicated",
+      "type": "function",
+      "name": "test_prometheus_graph_url_is_not_duplicated",
+      "filePath": "backend/tests/test_observability_hub.py",
+      "summary": "test_prometheus_graph_url_is_not_duplicated implements logic in test_observability_hub.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability_hub.py:test_observability_status_degrades_without_crashing",
+      "type": "function",
+      "name": "test_observability_status_degrades_without_crashing",
+      "filePath": "backend/tests/test_observability_hub.py",
+      "summary": "test_observability_status_degrades_without_crashing implements logic in test_observability_hub.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_observability.py",
+      "type": "file",
+      "name": "test_observability.py",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_observability.py is a backend python module in backend/tests/test_observability.py with 17 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_setup_observability_does_not_crash_without_maple",
+      "type": "function",
+      "name": "test_setup_observability_does_not_crash_without_maple",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_setup_observability_does_not_crash_without_maple implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_setup_observability_disabled_does_not_crash",
+      "type": "function",
+      "name": "test_setup_observability_disabled_does_not_crash",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_setup_observability_disabled_does_not_crash implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_setup_observability_idempotent_fastapi",
+      "type": "function",
+      "name": "test_setup_observability_idempotent_fastapi",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_setup_observability_idempotent_fastapi implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_metrics_endpoint_exposes_prometheus_text",
+      "type": "function",
+      "name": "test_metrics_endpoint_exposes_prometheus_text",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_metrics_endpoint_exposes_prometheus_text implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_signal_endpoint_accepts_maple_base_or_full_endpoint",
+      "type": "function",
+      "name": "test_signal_endpoint_accepts_maple_base_or_full_endpoint",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_signal_endpoint_accepts_maple_base_or_full_endpoint implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_otlp_headers_decode_grafana_cloud_basic_auth",
+      "type": "function",
+      "name": "test_otlp_headers_decode_grafana_cloud_basic_auth",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_otlp_headers_decode_grafana_cloud_basic_auth implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_resource_attributes_include_grafana_grouping",
+      "type": "function",
+      "name": "test_resource_attributes_include_grafana_grouping",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_resource_attributes_include_grafana_grouping implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_observed_span_records_exception_and_reraises",
+      "type": "function",
+      "name": "test_observed_span_records_exception_and_reraises",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_observed_span_records_exception_and_reraises implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_mavlink_command_long_records_success_and_failure",
+      "type": "function",
+      "name": "test_mavlink_command_long_records_success_and_failure",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_mavlink_command_long_records_success_and_failure implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_mapping_save_wrapper_records_failure",
+      "type": "function",
+      "name": "test_mapping_save_wrapper_records_failure",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_mapping_save_wrapper_records_failure implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_video_pipeline_records_latency_and_detection_count",
+      "type": "function",
+      "name": "test_video_pipeline_records_latency_and_detection_count",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_video_pipeline_records_latency_and_detection_count implements logic in test_observability.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_correlation_middleware_sets_headers",
+      "type": "function",
+      "name": "test_correlation_middleware_sets_headers",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_correlation_middleware_sets_headers implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_http_metrics_increment_on_request",
+      "type": "function",
+      "name": "test_http_metrics_increment_on_request",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_http_metrics_increment_on_request implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_audit_event_emits_structured_fields",
+      "type": "function",
+      "name": "test_audit_event_emits_structured_fields",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_audit_event_emits_structured_fields implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_normalize_error_type_maps_db_errors",
+      "type": "function",
+      "name": "test_normalize_error_type_maps_db_errors",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_normalize_error_type_maps_db_errors implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_db_error_increments_metric",
+      "type": "function",
+      "name": "test_db_error_increments_metric",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_db_error_increments_metric implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_observability.py:test_trace_context_filter_adds_ids",
+      "type": "function",
+      "name": "test_trace_context_filter_adds_ids",
+      "filePath": "backend/tests/test_observability.py",
+      "summary": "test_trace_context_filter_adds_ids implements logic in test_observability.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_ros_logging_contract.py",
+      "type": "file",
+      "name": "test_ros_logging_contract.py",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "test_ros_logging_contract.py is a backend python module in backend/tests/test_ros_logging_contract.py with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ros_logging_contract.py:_ros_logger_call",
+      "type": "function",
+      "name": "_ros_logger_call",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "_ros_logger_call implements logic in test_ros_logging_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ros_logging_contract.py:test_ros_logger_calls_use_the_rcutils_contract",
+      "type": "function",
+      "name": "test_ros_logger_calls_use_the_rcutils_contract",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "test_ros_logger_calls_use_the_rcutils_contract implements logic in test_ros_logging_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ros_logging_contract.py:test_colored_bridge_subscribes_before_publishers_are_ready",
+      "type": "function",
+      "name": "test_colored_bridge_subscribes_before_publishers_are_ready",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "test_colored_bridge_subscribes_before_publishers_are_ready implements logic in test_ros_logging_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ros_logging_contract.py:test_embedded_ros_uses_the_same_transport_as_cli_probes",
+      "type": "function",
+      "name": "test_embedded_ros_uses_the_same_transport_as_cli_probes",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "test_embedded_ros_uses_the_same_transport_as_cli_probes implements logic in test_ros_logging_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ros_logging_contract.py:test_live_map_storage_calls_include_coordinate_frame",
+      "type": "function",
+      "name": "test_live_map_storage_calls_include_coordinate_frame",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "test_live_map_storage_calls_include_coordinate_frame implements logic in test_ros_logging_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ros_logging_contract.py:test_embedded_live_map_nodes_use_simulation_time",
+      "type": "function",
+      "name": "test_embedded_live_map_nodes_use_simulation_time",
+      "filePath": "backend/tests/test_ros_logging_contract.py",
+      "summary": "test_embedded_live_map_nodes_use_simulation_time implements logic in test_ros_logging_contract.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_warehouse_inspection_execution_policy.py",
+      "type": "file",
+      "name": "test_warehouse_inspection_execution_policy.py",
+      "filePath": "backend/tests/test_warehouse_inspection_execution_policy.py",
+      "summary": "test_warehouse_inspection_execution_policy.py is a backend python module in backend/tests/test_warehouse_inspection_execution_policy.py with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_warehouse_inspection_execution_policy.py:test_transient_blockage_replans_then_returns",
+      "type": "function",
+      "name": "test_transient_blockage_replans_then_returns",
+      "filePath": "backend/tests/test_warehouse_inspection_execution_policy.py",
+      "summary": "test_transient_blockage_replans_then_returns implements logic in test_warehouse_inspection_execution_policy.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_warehouse_inspection_execution_policy.py:test_tf_or_version_loss_aborts",
+      "type": "function",
+      "name": "test_tf_or_version_loss_aborts",
+      "filePath": "backend/tests/test_warehouse_inspection_execution_policy.py",
+      "summary": "test_tf_or_version_loss_aborts implements logic in test_warehouse_inspection_execution_policy.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_warehouse_worker_tasks.py",
+      "type": "file",
+      "name": "test_warehouse_worker_tasks.py",
+      "filePath": "backend/tests/test_warehouse_worker_tasks.py",
+      "summary": "test_warehouse_worker_tasks.py is a backend python module in backend/tests/test_warehouse_worker_tasks.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_warehouse_worker_tasks.py:test_warehouse_structure_task_registered_on_worker_entrypoint_import",
+      "type": "function",
+      "name": "test_warehouse_structure_task_registered_on_worker_entrypoint_import",
+      "filePath": "backend/tests/test_warehouse_worker_tasks.py",
+      "summary": "test_warehouse_structure_task_registered_on_worker_entrypoint_import implements logic in test_warehouse_worker_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:frontend/eslint.config.js",
+      "type": "file",
+      "name": "eslint.config.js",
+      "filePath": "frontend/eslint.config.js",
+      "summary": "eslint.config.js is a frontend javascript module in frontend/eslint.config.js with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "javascript"
+      ]
+    },
+    {
+      "id": "file:frontend/eslint.config.ts",
+      "type": "file",
+      "name": "eslint.config.ts",
+      "filePath": "frontend/eslint.config.ts",
+      "summary": "eslint.config.ts is a frontend typescript module in frontend/eslint.config.ts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/nginx.conf",
+      "type": "file",
+      "name": "nginx.conf",
+      "filePath": "frontend/nginx.conf",
+      "summary": "nginx.conf is a frontend conf module in frontend/nginx.conf with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "conf"
+      ]
+    },
+    {
+      "id": "file:frontend/playwright.config.ts",
+      "type": "file",
+      "name": "playwright.config.ts",
+      "filePath": "frontend/playwright.config.ts",
+      "summary": "playwright.config.ts is a frontend typescript module in frontend/playwright.config.ts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "target": "function:backend/modules/warehouse/service/coordinate_transform.py:homogeneous_matrix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "target": "function:backend/modules/warehouse/service/coordinate_transform.py:homogeneous_matrix",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "target": "function:backend/modules/warehouse/service/coordinate_transform.py:transform_vectors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "target": "function:backend/modules/warehouse/service/coordinate_transform.py:transform_vectors",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "target": "class:backend/modules/warehouse/service/coordinate_transform.py:Vector3",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/coordinate_transform.py",
+      "target": "class:backend/modules/warehouse/service/coordinate_transform.py:Vector3",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/inspection_execution_policy.py",
+      "target": "function:backend/modules/warehouse/service/inspection_execution_policy.py:execution_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/inspection_execution_policy.py",
+      "target": "function:backend/modules/warehouse/service/inspection_execution_policy.py:execution_action",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/inspection_execution_policy.py",
+      "target": "class:backend/modules/warehouse/service/inspection_execution_policy.py:InspectionExecutionPolicy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/inspection_execution_policy.py",
+      "target": "class:backend/modules/warehouse/service/inspection_execution_policy.py:InspectionExecutionPolicy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:_safe_mark",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:_safe_mark",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:begin_mapping_startup_timing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:begin_mapping_startup_timing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:end_mapping_startup_timing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:end_mapping_startup_timing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:note_mapping_startup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:note_mapping_startup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:active_mapping_startup_timing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "function:backend/modules/warehouse/service/mapping_startup_timing.py:active_mapping_startup_timing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "class:backend/modules/warehouse/service/mapping_startup_timing.py:MappingStartupTiming",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/mapping_startup_timing.py",
+      "target": "class:backend/modules/warehouse/service/mapping_startup_timing.py:MappingStartupTiming",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/nvblox_log_parser.py",
+      "target": "class:backend/modules/warehouse/service/nvblox_log_parser.py:NvbloxLogParser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/warehouse/service/nvblox_log_parser.py",
+      "target": "class:backend/modules/warehouse/service/nvblox_log_parser.py:NvbloxLogParser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/raspberry/pi_camera_server.py",
+      "target": "function:backend/raspberry/pi_camera_server.py:generate_frames",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/raspberry/pi_camera_server.py",
+      "target": "function:backend/raspberry/pi_camera_server.py:generate_frames",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/raspberry/pi_camera_server.py",
+      "target": "function:backend/raspberry/pi_camera_server.py:video_feed",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/raspberry/pi_camera_server.py",
+      "target": "function:backend/raspberry/pi_camera_server.py:video_feed",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/raspberry/pi_camera_server.py",
+      "target": "function:backend/raspberry/pi_camera_server.py:index",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/raspberry/pi_camera_server.py",
+      "target": "function:backend/raspberry/pi_camera_server.py:index",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:imported_modules",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:imported_modules",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:collect_violations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:collect_violations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:load_baseline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:load_baseline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "function:backend/scripts/check_backend_boundaries.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "class:backend/scripts/check_backend_boundaries.py:Rule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_backend_boundaries.py",
+      "target": "class:backend/scripts/check_backend_boundaries.py:Rule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:effective_lines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:effective_lines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:limit_for",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:limit_for",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:collect_violations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:collect_violations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:load_baseline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:load_baseline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_file_sizes.py",
+      "target": "function:backend/scripts/check_file_sizes.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_mypy_baseline.py",
+      "target": "function:backend/scripts/check_mypy_baseline.py:collect_errors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_mypy_baseline.py",
+      "target": "function:backend/scripts/check_mypy_baseline.py:collect_errors",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_mypy_baseline.py",
+      "target": "function:backend/scripts/check_mypy_baseline.py:load_baseline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_mypy_baseline.py",
+      "target": "function:backend/scripts/check_mypy_baseline.py:load_baseline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_mypy_baseline.py",
+      "target": "function:backend/scripts/check_mypy_baseline.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_mypy_baseline.py",
+      "target": "function:backend/scripts/check_mypy_baseline.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_ruff_baseline.py",
+      "target": "function:backend/scripts/check_ruff_baseline.py:collect_findings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_ruff_baseline.py",
+      "target": "function:backend/scripts/check_ruff_baseline.py:collect_findings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_ruff_baseline.py",
+      "target": "function:backend/scripts/check_ruff_baseline.py:load_baseline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_ruff_baseline.py",
+      "target": "function:backend/scripts/check_ruff_baseline.py:load_baseline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/check_ruff_baseline.py",
+      "target": "function:backend/scripts/check_ruff_baseline.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/check_ruff_baseline.py",
+      "target": "function:backend/scripts/check_ruff_baseline.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:_load_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:_load_env",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:_wait_for_db",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:_wait_for_db",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/run_backend_tests.py",
+      "target": "function:backend/scripts/run_backend_tests.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_api_integration_smoke.py",
+      "target": "function:backend/tests/test_api_integration_smoke.py:test_health_or_openapi_available",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_api_integration_smoke.py",
+      "target": "function:backend/tests/test_api_integration_smoke.py:test_health_or_openapi_available",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_api_integration_smoke.py",
+      "target": "function:backend/tests/test_api_integration_smoke.py:test_warehouse_preflight_requires_auth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_api_integration_smoke.py",
+      "target": "function:backend/tests/test_api_integration_smoke.py:test_warehouse_preflight_requires_auth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability_hub.py",
+      "target": "function:backend/tests/test_observability_hub.py:test_observability_links_return_configured_urls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability_hub.py",
+      "target": "function:backend/tests/test_observability_hub.py:test_observability_links_return_configured_urls",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability_hub.py",
+      "target": "function:backend/tests/test_observability_hub.py:test_prometheus_graph_url_is_not_duplicated",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability_hub.py",
+      "target": "function:backend/tests/test_observability_hub.py:test_prometheus_graph_url_is_not_duplicated",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability_hub.py",
+      "target": "function:backend/tests/test_observability_hub.py:test_observability_status_degrades_without_crashing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability_hub.py",
+      "target": "function:backend/tests/test_observability_hub.py:test_observability_status_degrades_without_crashing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_setup_observability_does_not_crash_without_maple",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_setup_observability_does_not_crash_without_maple",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_setup_observability_disabled_does_not_crash",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_setup_observability_disabled_does_not_crash",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_setup_observability_idempotent_fastapi",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_setup_observability_idempotent_fastapi",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_metrics_endpoint_exposes_prometheus_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_metrics_endpoint_exposes_prometheus_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_signal_endpoint_accepts_maple_base_or_full_endpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_signal_endpoint_accepts_maple_base_or_full_endpoint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_otlp_headers_decode_grafana_cloud_basic_auth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_otlp_headers_decode_grafana_cloud_basic_auth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_resource_attributes_include_grafana_grouping",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_resource_attributes_include_grafana_grouping",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_observed_span_records_exception_and_reraises",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_observed_span_records_exception_and_reraises",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_mavlink_command_long_records_success_and_failure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_mavlink_command_long_records_success_and_failure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_mapping_save_wrapper_records_failure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_mapping_save_wrapper_records_failure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_video_pipeline_records_latency_and_detection_count",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_video_pipeline_records_latency_and_detection_count",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_correlation_middleware_sets_headers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_correlation_middleware_sets_headers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_http_metrics_increment_on_request",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_http_metrics_increment_on_request",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_audit_event_emits_structured_fields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_audit_event_emits_structured_fields",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_normalize_error_type_maps_db_errors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_normalize_error_type_maps_db_errors",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_db_error_increments_metric",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_db_error_increments_metric",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_trace_context_filter_adds_ids",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_observability.py",
+      "target": "function:backend/tests/test_observability.py:test_trace_context_filter_adds_ids",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:_ros_logger_call",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:_ros_logger_call",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_ros_logger_calls_use_the_rcutils_contract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_ros_logger_calls_use_the_rcutils_contract",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_colored_bridge_subscribes_before_publishers_are_ready",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_colored_bridge_subscribes_before_publishers_are_ready",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_embedded_ros_uses_the_same_transport_as_cli_probes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_embedded_ros_uses_the_same_transport_as_cli_probes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_live_map_storage_calls_include_coordinate_frame",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_live_map_storage_calls_include_coordinate_frame",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_embedded_live_map_nodes_use_simulation_time",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ros_logging_contract.py",
+      "target": "function:backend/tests/test_ros_logging_contract.py:test_embedded_live_map_nodes_use_simulation_time",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_inspection_execution_policy.py",
+      "target": "file:backend/modules/warehouse/service/inspection_execution_policy.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_inspection_execution_policy.py",
+      "target": "function:backend/tests/test_warehouse_inspection_execution_policy.py:test_transient_blockage_replans_then_returns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_inspection_execution_policy.py",
+      "target": "function:backend/tests/test_warehouse_inspection_execution_policy.py:test_transient_blockage_replans_then_returns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_inspection_execution_policy.py",
+      "target": "function:backend/tests/test_warehouse_inspection_execution_policy.py:test_tf_or_version_loss_aborts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_inspection_execution_policy.py",
+      "target": "function:backend/tests/test_warehouse_inspection_execution_policy.py:test_tf_or_version_loss_aborts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_worker_tasks.py",
+      "target": "function:backend/tests/test_warehouse_worker_tasks.py:test_warehouse_structure_task_registered_on_worker_entrypoint_import",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_warehouse_worker_tasks.py",
+      "target": "function:backend/tests/test_warehouse_worker_tasks.py:test_warehouse_structure_task_registered_on_worker_entrypoint_import",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

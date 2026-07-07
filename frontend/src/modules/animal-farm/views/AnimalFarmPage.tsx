@@ -29,6 +29,7 @@ import {
   TerraDrawController,
   useDroneCenter,
   useDroneMapFollow,
+  useUserLocation,
   type CesiumViewMode,
   type MissionMapEngine,
   type RouteDrawMode,
@@ -39,7 +40,6 @@ import {
 import { createFarmBorderDrawBridge } from "../../maps/utils/flatBoundaryDrawBridge";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import {
-  MissionCommandPanel,
   MissionPreflightPanel,
   MissionStatusChips,
   MissionVideoPanel,
@@ -49,6 +49,7 @@ import {
   startMissionWithPreflight,
   type PreflightRunResponse,
 } from "../../mission-runtime";
+import { MissionCommandPanel } from "../../mission-runtime/components/MissionCommandPanel";
 import {
   MapEngineSelectionOverlay,
   MapShapeActionPopover,
@@ -57,6 +58,7 @@ import {
   useMapShapeActionPrompt,
   useTaskPreflightCommandsDrawer,
 } from "../../mission-workflow";
+import { useMissionAltitudeInput } from "../../mission-workflow/hooks/useMissionAltitudeInput";
 import { stripClosedRing, useFields, FIELD_WORKFLOW_SCOPES, type LonLat } from "../../fields";
 import { VideoAnalysisPanel } from "../../video-analysis";
 import { useErrors } from "../../../shared/hooks/useErrors";
@@ -104,21 +106,32 @@ export default function AnimalFarmPage() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const terraDrawRef = useRef<TerraDraw | null>(null);
 
-  const [userCenter, setUserCenter] = useState<LatLng | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [farmBorder, setFarmBorder] = useState<LonLat[] | null>(null);
   const [farmBorderName, setFarmBorderName] = useState("Pasture A");
 
-  // altitude: keep input string to avoid error spam while typing
-  const [alt, setAlt] = useState<number>(30);
-  const [altInput, setAltInput] = useState<string>("30");
-
   const [name, setName] = useState<string>("field-plan-1");
   const [sending, setSending] = useState(false);
   const [center, setCenter] = useState<LatLng>(defaultCenter);
-  const [loadingLocation, setLoadingLocation] = useState(true);
 
   const { errors, addError, clearErrors, dismissError } = useErrors();
+  const handleLocationError = useCallback((error: GeolocationPositionError) => {
+    console.error("Error getting location:", error);
+    const message = `Failed to get location: ${error.message}`;
+    addError(message);
+    return message;
+  }, [addError]);
+  const { userCenter, loadingLocation } = useUserLocation({
+    onLocationError: handleLocationError,
+  });
+  const {
+    alt,
+    setAlt,
+    altInput,
+    setAltInput,
+    handleAltitudeInputChange,
+    normalizeAltitude,
+  } = useMissionAltitudeInput({ initialAltitude: 30, addError });
   const { createField: createFarmBorderRecord, saving: savingFarmBorder } = useFields(
     FIELD_WORKFLOW_SCOPES.animalFarm,
   );
@@ -356,37 +369,6 @@ const [collarIdForSearch, setCollarIdForSearch] = useState<string>("");
   }, []);
 
 
-  // Get user location on mount
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported by this browser.");
-      setLoadingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserCenter(userLocation);
-        setCenter(userLocation);
-        setLoadingLocation(false);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        addError(`Failed to get location: ${error.message}`);
-        setLoadingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      },
-    );
-  }, [addError]);
-
 
     const handleVideoError = useCallback(() => {
       setVideoError("Failed to load video stream");
@@ -560,32 +542,6 @@ useEffect(() => {
   const clear = () => {
     setWaypoints([]);
     setDrawWaypointHistory([]);
-  };
-
-  const handleAltitudeInputChange = (value: string) => {
-    if (value === "") {
-      setAltInput("");
-      return;
-    }
-    if (!/^\d+$/.test(value)) return;
-    setAltInput(value);
-  };
-
-  const normalizeAltitude = () => {
-    if (altInput === "") {
-      setAltInput(String(alt));
-      return;
-    }
-    const num = Number(altInput);
-    if (!Number.isFinite(num)) {
-      setAltInput(String(alt));
-      return;
-    }
-    if (num < 1 || num > 500) {
-      addError("Altitude must be between 1 and 500 meters");
-      return;
-    }
-    setAlt(num);
   };
 
 

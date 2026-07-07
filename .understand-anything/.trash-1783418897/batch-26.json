@@ -1,0 +1,1202 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/app/App.tsx",
+      "type": "file",
+      "name": "App.tsx",
+      "filePath": "frontend/src/app/App.tsx",
+      "summary": "App.tsx is a frontend typescript module in frontend/src/app/App.tsx with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/App.tsx:App",
+      "type": "function",
+      "name": "App",
+      "filePath": "frontend/src/app/App.tsx",
+      "summary": "App implements logic in App.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/providers/AppProviders.tsx",
+      "type": "file",
+      "name": "AppProviders.tsx",
+      "filePath": "frontend/src/app/providers/AppProviders.tsx",
+      "summary": "AppProviders.tsx is a frontend typescript module in frontend/src/app/providers with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/providers/AppProviders.tsx:AppProviders",
+      "type": "function",
+      "name": "AppProviders",
+      "filePath": "frontend/src/app/providers/AppProviders.tsx",
+      "summary": "AppProviders implements logic in AppProviders.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/providers/QueryProvider.tsx",
+      "type": "file",
+      "name": "QueryProvider.tsx",
+      "filePath": "frontend/src/app/providers/QueryProvider.tsx",
+      "summary": "QueryProvider.tsx is a frontend typescript module in frontend/src/app/providers with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/providers/QueryProvider.tsx:QueryProvider",
+      "type": "function",
+      "name": "QueryProvider",
+      "filePath": "frontend/src/app/providers/QueryProvider.tsx",
+      "summary": "QueryProvider implements logic in QueryProvider.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/providers/queryClient.ts",
+      "type": "file",
+      "name": "queryClient.ts",
+      "filePath": "frontend/src/app/providers/queryClient.ts",
+      "summary": "queryClient.ts is a frontend typescript module in frontend/src/app/providers with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/routes/AppRouter.tsx",
+      "type": "file",
+      "name": "AppRouter.tsx",
+      "filePath": "frontend/src/app/routes/AppRouter.tsx",
+      "summary": "AppRouter.tsx is a frontend typescript module in frontend/src/app/routes with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/routes/AppRouter.tsx:AppRouter",
+      "type": "function",
+      "name": "AppRouter",
+      "filePath": "frontend/src/app/routes/AppRouter.tsx",
+      "summary": "AppRouter implements logic in AppRouter.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/routes/GuestRoute.tsx",
+      "type": "file",
+      "name": "GuestRoute.tsx",
+      "filePath": "frontend/src/app/routes/GuestRoute.tsx",
+      "summary": "GuestRoute.tsx is a frontend typescript module in frontend/src/app/routes with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/routes/GuestRoute.tsx:GuestRoute",
+      "type": "function",
+      "name": "GuestRoute",
+      "filePath": "frontend/src/app/routes/GuestRoute.tsx",
+      "summary": "GuestRoute implements logic in GuestRoute.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/routes/ProtectedRoute.test.tsx",
+      "type": "file",
+      "name": "ProtectedRoute.test.tsx",
+      "filePath": "frontend/src/app/routes/ProtectedRoute.test.tsx",
+      "summary": "ProtectedRoute.test.tsx is a frontend typescript module in frontend/src/app/routes with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "type": "file",
+      "name": "ProtectedRoute.tsx",
+      "filePath": "frontend/src/app/routes/ProtectedRoute.tsx",
+      "summary": "ProtectedRoute.tsx is a frontend typescript module in frontend/src/app/routes with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/routes/ProtectedRoute.tsx:ProtectedRoute",
+      "type": "function",
+      "name": "ProtectedRoute",
+      "filePath": "frontend/src/app/routes/ProtectedRoute.tsx",
+      "summary": "ProtectedRoute implements logic in ProtectedRoute.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "type": "file",
+      "name": "routeLoaders.tsx",
+      "filePath": "frontend/src/app/routes/routeLoaders.tsx",
+      "summary": "routeLoaders.tsx is a frontend typescript module in frontend/src/app/routes with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/routes/routeLoaders.tsx:lazyWithStaleChunkReload",
+      "type": "function",
+      "name": "lazyWithStaleChunkReload",
+      "filePath": "frontend/src/app/routes/routeLoaders.tsx",
+      "summary": "lazyWithStaleChunkReload implements logic in routeLoaders.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/routes/routeLoaders.tsx:renderLazyRoute",
+      "type": "function",
+      "name": "renderLazyRoute",
+      "filePath": "frontend/src/app/routes/routeLoaders.tsx",
+      "summary": "renderLazyRoute implements logic in routeLoaders.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/main.tsx",
+      "type": "file",
+      "name": "main.tsx",
+      "filePath": "frontend/src/main.tsx",
+      "summary": "main.tsx is a frontend typescript module in frontend/src/main.tsx with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/alerts/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/alerts/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/alerts with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "type": "file",
+      "name": "DashboardShell.tsx",
+      "filePath": "frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "summary": "DashboardShell.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/DashboardShell.tsx:Dashboard",
+      "type": "function",
+      "name": "Dashboard",
+      "filePath": "frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "summary": "Dashboard implements logic in DashboardShell.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/maps/providers/googleMaps.tsx",
+      "type": "file",
+      "name": "googleMaps.tsx",
+      "filePath": "frontend/src/modules/maps/providers/googleMaps.tsx",
+      "summary": "googleMaps.tsx is a frontend typescript module in frontend/src/modules/maps with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/maps/providers/googleMaps.tsx:GoogleMapsProvider",
+      "type": "function",
+      "name": "GoogleMapsProvider",
+      "filePath": "frontend/src/modules/maps/providers/googleMaps.tsx",
+      "summary": "GoogleMapsProvider implements logic in googleMaps.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "type": "file",
+      "name": "AppAppBar.tsx",
+      "filePath": "frontend/src/modules/session/components/AppAppBar.tsx",
+      "summary": "AppAppBar.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/AppAppBar.tsx:AppAppBar",
+      "type": "function",
+      "name": "AppAppBar",
+      "filePath": "frontend/src/modules/session/components/AppAppBar.tsx",
+      "summary": "AppAppBar implements logic in AppAppBar.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/Footer.tsx",
+      "type": "file",
+      "name": "Footer.tsx",
+      "filePath": "frontend/src/modules/session/components/Footer.tsx",
+      "summary": "Footer.tsx is a frontend typescript module in frontend/src/modules/session with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/Footer.tsx:Footer",
+      "type": "function",
+      "name": "Footer",
+      "filePath": "frontend/src/modules/session/components/Footer.tsx",
+      "summary": "Footer implements logic in Footer.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/ForgotPassword.tsx",
+      "type": "file",
+      "name": "ForgotPassword.tsx",
+      "filePath": "frontend/src/modules/session/components/ForgotPassword.tsx",
+      "summary": "ForgotPassword.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/ForgotPassword.tsx:ForgotPassword",
+      "type": "function",
+      "name": "ForgotPassword",
+      "filePath": "frontend/src/modules/session/components/ForgotPassword.tsx",
+      "summary": "ForgotPassword implements logic in ForgotPassword.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/Latest.tsx",
+      "type": "file",
+      "name": "Latest.tsx",
+      "filePath": "frontend/src/modules/session/components/Latest.tsx",
+      "summary": "Latest.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/Latest.tsx:Latest",
+      "type": "function",
+      "name": "Latest",
+      "filePath": "frontend/src/modules/session/components/Latest.tsx",
+      "summary": "Latest implements logic in Latest.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/MainContent.tsx",
+      "type": "file",
+      "name": "MainContent.tsx",
+      "filePath": "frontend/src/modules/session/components/MainContent.tsx",
+      "summary": "MainContent.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/MainContent.tsx:MainContent",
+      "type": "function",
+      "name": "MainContent",
+      "filePath": "frontend/src/modules/session/components/MainContent.tsx",
+      "summary": "MainContent implements logic in MainContent.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "type": "file",
+      "name": "SitemarkIcon.tsx",
+      "filePath": "frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "summary": "SitemarkIcon.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/SitemarkIcon.tsx:SitemarkIcon",
+      "type": "function",
+      "name": "SitemarkIcon",
+      "filePath": "frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "summary": "SitemarkIcon implements logic in SitemarkIcon.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "type": "file",
+      "name": "AuthShell.tsx",
+      "filePath": "frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "summary": "AuthShell.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/auth/AuthShell.tsx:AuthShell",
+      "type": "function",
+      "name": "AuthShell",
+      "filePath": "frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "summary": "AuthShell implements logic in AuthShell.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "type": "file",
+      "name": "HomeAuthCard.tsx",
+      "filePath": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "summary": "HomeAuthCard.tsx is a frontend typescript module in frontend/src/modules/session with 5 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:ToggleButton",
+      "type": "function",
+      "name": "ToggleButton",
+      "filePath": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "summary": "ToggleButton implements logic in HomeAuthCard.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:SignInForm",
+      "type": "function",
+      "name": "SignInForm",
+      "filePath": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "summary": "SignInForm implements logic in HomeAuthCard.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:SignUpForm",
+      "type": "function",
+      "name": "SignUpForm",
+      "filePath": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "summary": "SignUpForm implements logic in HomeAuthCard.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:AuthFace",
+      "type": "function",
+      "name": "AuthFace",
+      "filePath": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "summary": "AuthFace implements logic in HomeAuthCard.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:HomeAuthCard",
+      "type": "function",
+      "name": "HomeAuthCard",
+      "filePath": "frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "summary": "HomeAuthCard implements logic in HomeAuthCard.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "type": "file",
+      "name": "LandingPage.tsx",
+      "filePath": "frontend/src/modules/session/views/LandingPage.tsx",
+      "summary": "LandingPage.tsx is a frontend typescript module in frontend/src/modules/session with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/session/views/LandingPage.tsx:Home",
+      "type": "function",
+      "name": "Home",
+      "filePath": "frontend/src/modules/session/views/LandingPage.tsx",
+      "summary": "Home implements logic in LandingPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "type": "file",
+      "name": "AppNavbar.tsx",
+      "filePath": "frontend/src/shared/layout/AppNavbar.tsx",
+      "summary": "AppNavbar.tsx is a frontend typescript module in frontend/src/shared/layout with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "shared",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/shared/layout/AppNavbar.tsx:AppNavbar",
+      "type": "function",
+      "name": "AppNavbar",
+      "filePath": "frontend/src/shared/layout/AppNavbar.tsx",
+      "summary": "AppNavbar implements logic in AppNavbar.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/app/App.tsx",
+      "target": "file:frontend/src/app/routes/AppRouter.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/App.tsx",
+      "target": "function:frontend/src/app/App.tsx:App",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/App.tsx",
+      "target": "function:frontend/src/app/App.tsx:App",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/providers/AppProviders.tsx",
+      "target": "file:frontend/src/app/providers/QueryProvider.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/providers/AppProviders.tsx",
+      "target": "file:frontend/src/modules/maps/providers/googleMaps.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/providers/AppProviders.tsx",
+      "target": "function:frontend/src/app/providers/AppProviders.tsx:AppProviders",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/providers/AppProviders.tsx",
+      "target": "function:frontend/src/app/providers/AppProviders.tsx:AppProviders",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/providers/QueryProvider.tsx",
+      "target": "file:frontend/src/app/providers/queryClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/providers/QueryProvider.tsx",
+      "target": "function:frontend/src/app/providers/QueryProvider.tsx:QueryProvider",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/providers/QueryProvider.tsx",
+      "target": "function:frontend/src/app/providers/QueryProvider.tsx:QueryProvider",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/routes/AppRouter.tsx",
+      "target": "file:frontend/src/app/routes/GuestRoute.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/AppRouter.tsx",
+      "target": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/AppRouter.tsx",
+      "target": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/AppRouter.tsx",
+      "target": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/AppRouter.tsx",
+      "target": "function:frontend/src/app/routes/AppRouter.tsx:AppRouter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/routes/AppRouter.tsx",
+      "target": "function:frontend/src/app/routes/AppRouter.tsx:AppRouter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/routes/GuestRoute.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/GuestRoute.tsx",
+      "target": "file:frontend/src/shared/ui/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/GuestRoute.tsx",
+      "target": "function:frontend/src/app/routes/GuestRoute.tsx:GuestRoute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/routes/GuestRoute.tsx",
+      "target": "function:frontend/src/app/routes/GuestRoute.tsx:GuestRoute",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.test.tsx",
+      "target": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.test.tsx",
+      "target": "file:frontend/src/test/msw/server.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.test.tsx",
+      "target": "file:frontend/src/test/renderWithProviders.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "target": "file:frontend/src/shared/ui/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "target": "function:frontend/src/app/routes/ProtectedRoute.tsx:ProtectedRoute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/routes/ProtectedRoute.tsx",
+      "target": "function:frontend/src/app/routes/ProtectedRoute.tsx:ProtectedRoute",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "target": "file:frontend/src/shared/ui/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "target": "function:frontend/src/app/routes/routeLoaders.tsx:lazyWithStaleChunkReload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "target": "function:frontend/src/app/routes/routeLoaders.tsx:lazyWithStaleChunkReload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "target": "function:frontend/src/app/routes/routeLoaders.tsx:renderLazyRoute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/routes/routeLoaders.tsx",
+      "target": "function:frontend/src/app/routes/routeLoaders.tsx:renderLazyRoute",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/main.tsx",
+      "target": "file:frontend/src/app/App.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/main.tsx",
+      "target": "file:frontend/src/app/providers/AppProviders.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/main.tsx",
+      "target": "file:frontend/src/output.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "file:frontend/src/modules/alerts/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "file:frontend/src/shared/layout/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "file:frontend/src/shared/theme/customizations/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "file:frontend/src/shared/ui/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/DashboardShell.tsx:Dashboard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardShell.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/DashboardShell.tsx:Dashboard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/maps/providers/googleMaps.tsx",
+      "target": "function:frontend/src/modules/maps/providers/googleMaps.tsx:GoogleMapsProvider",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/maps/providers/googleMaps.tsx",
+      "target": "function:frontend/src/modules/maps/providers/googleMaps.tsx:GoogleMapsProvider",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "target": "file:frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "target": "file:frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "target": "function:frontend/src/modules/session/components/AppAppBar.tsx:AppAppBar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "target": "function:frontend/src/modules/session/components/AppAppBar.tsx:AppAppBar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Footer.tsx",
+      "target": "file:frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Footer.tsx",
+      "target": "function:frontend/src/modules/session/components/Footer.tsx:Footer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Footer.tsx",
+      "target": "function:frontend/src/modules/session/components/Footer.tsx:Footer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/ForgotPassword.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/ForgotPassword.tsx",
+      "target": "function:frontend/src/modules/session/components/ForgotPassword.tsx:ForgotPassword",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/ForgotPassword.tsx",
+      "target": "function:frontend/src/modules/session/components/ForgotPassword.tsx:ForgotPassword",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Latest.tsx",
+      "target": "function:frontend/src/modules/session/components/Latest.tsx:Latest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/Latest.tsx",
+      "target": "function:frontend/src/modules/session/components/Latest.tsx:Latest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/MainContent.tsx",
+      "target": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/MainContent.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/MainContent.tsx",
+      "target": "function:frontend/src/modules/session/components/MainContent.tsx:MainContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/MainContent.tsx",
+      "target": "function:frontend/src/modules/session/components/MainContent.tsx:MainContent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "target": "function:frontend/src/modules/session/components/SitemarkIcon.tsx:SitemarkIcon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/SitemarkIcon.tsx",
+      "target": "function:frontend/src/modules/session/components/SitemarkIcon.tsx:SitemarkIcon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "target": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "target": "file:frontend/src/shared/theme/ColorModeSelect.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/AuthShell.tsx:AuthShell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/AuthShell.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/AuthShell.tsx:AuthShell",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "file:frontend/src/modules/session/components/ForgotPassword.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:ToggleButton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:SignInForm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:SignUpForm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:AuthFace",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:HomeAuthCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "target": "function:frontend/src/modules/session/components/auth/HomeAuthCard.tsx:HomeAuthCard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "file:frontend/src/modules/session/components/AppAppBar.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "file:frontend/src/modules/session/components/auth/HomeAuthCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "file:frontend/src/modules/session/components/Footer.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "file:frontend/src/modules/session/components/Latest.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "file:frontend/src/modules/session/components/MainContent.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "file:frontend/src/shared/theme/AppTheme.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "function:frontend/src/modules/session/views/LandingPage.tsx:Home",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/session/views/LandingPage.tsx",
+      "target": "function:frontend/src/modules/session/views/LandingPage.tsx:Home",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "target": "file:frontend/src/shared/layout/MenuButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "target": "file:frontend/src/shared/layout/SideMenuMobile.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "target": "file:frontend/src/shared/layout/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "target": "function:frontend/src/shared/layout/AppNavbar.tsx:AppNavbar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/shared/layout/AppNavbar.tsx",
+      "target": "function:frontend/src/shared/layout/AppNavbar.tsx:AppNavbar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

@@ -1,0 +1,2856 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/modules/patrol/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/patrol/models.py",
+      "summary": "models.py is a backend python module in backend/modules/patrol with 0 functions and 3 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/models.py:PatrolDetection",
+      "type": "class",
+      "name": "PatrolDetection",
+      "filePath": "backend/modules/patrol/models.py",
+      "summary": "PatrolDetection groups related behavior and state in models.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/models.py:PatrolIncident",
+      "type": "class",
+      "name": "PatrolIncident",
+      "filePath": "backend/modules/patrol/models.py",
+      "summary": "PatrolIncident groups related behavior and state in models.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/models.py:PatrolIncidentDetection",
+      "type": "class",
+      "name": "PatrolIncidentDetection",
+      "filePath": "backend/modules/patrol/models.py",
+      "summary": "PatrolIncidentDetection groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/repository/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/patrol/repository/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/patrol with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/__init__.py:PatrolDetectionRepository",
+      "type": "class",
+      "name": "PatrolDetectionRepository",
+      "filePath": "backend/modules/patrol/repository/__init__.py",
+      "summary": "PatrolDetectionRepository groups related behavior and state in __init__.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/repository/alerts.py",
+      "type": "file",
+      "name": "alerts.py",
+      "filePath": "backend/modules/patrol/repository/alerts.py",
+      "summary": "alerts.py is a backend python module in backend/modules/patrol with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/alerts.py:PatrolAlertDecision",
+      "type": "class",
+      "name": "PatrolAlertDecision",
+      "filePath": "backend/modules/patrol/repository/alerts.py",
+      "summary": "PatrolAlertDecision groups related behavior and state in alerts.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/alerts.py:PatrolAlertMixin",
+      "type": "class",
+      "name": "PatrolAlertMixin",
+      "filePath": "backend/modules/patrol/repository/alerts.py",
+      "summary": "PatrolAlertMixin groups related behavior and state in alerts.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/repository/detections.py",
+      "type": "file",
+      "name": "detections.py",
+      "filePath": "backend/modules/patrol/repository/detections.py",
+      "summary": "detections.py is a backend python module in backend/modules/patrol with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/detections.py:PatrolAlertDecision",
+      "type": "class",
+      "name": "PatrolAlertDecision",
+      "filePath": "backend/modules/patrol/repository/detections.py",
+      "summary": "PatrolAlertDecision groups related behavior and state in detections.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/detections.py:PatrolDetectionMixin",
+      "type": "class",
+      "name": "PatrolDetectionMixin",
+      "filePath": "backend/modules/patrol/repository/detections.py",
+      "summary": "PatrolDetectionMixin groups related behavior and state in detections.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/repository/incidents.py",
+      "type": "file",
+      "name": "incidents.py",
+      "filePath": "backend/modules/patrol/repository/incidents.py",
+      "summary": "incidents.py is a backend python module in backend/modules/patrol with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/incidents.py:PatrolAlertDecision",
+      "type": "class",
+      "name": "PatrolAlertDecision",
+      "filePath": "backend/modules/patrol/repository/incidents.py",
+      "summary": "PatrolAlertDecision groups related behavior and state in incidents.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/incidents.py:PatrolIncidentMixin",
+      "type": "class",
+      "name": "PatrolIncidentMixin",
+      "filePath": "backend/modules/patrol/repository/incidents.py",
+      "summary": "PatrolIncidentMixin groups related behavior and state in incidents.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/repository/pipeline.py",
+      "type": "file",
+      "name": "pipeline.py",
+      "filePath": "backend/modules/patrol/repository/pipeline.py",
+      "summary": "pipeline.py is a backend python module in backend/modules/patrol with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/pipeline.py:PatrolAlertDecision",
+      "type": "class",
+      "name": "PatrolAlertDecision",
+      "filePath": "backend/modules/patrol/repository/pipeline.py",
+      "summary": "PatrolAlertDecision groups related behavior and state in pipeline.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/repository/pipeline.py:PatrolPipelineMixin",
+      "type": "class",
+      "name": "PatrolPipelineMixin",
+      "filePath": "backend/modules/patrol/repository/pipeline.py",
+      "summary": "PatrolPipelineMixin groups related behavior and state in pipeline.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/patrol/vision/detector.py",
+      "type": "file",
+      "name": "detector.py",
+      "filePath": "backend/modules/patrol/vision/detector.py",
+      "summary": "detector.py is a backend python module in backend/modules/patrol with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/patrol/vision/detector.py:ObjectDetector",
+      "type": "class",
+      "name": "ObjectDetector",
+      "filePath": "backend/modules/patrol/vision/detector.py",
+      "summary": "ObjectDetector groups related behavior and state in detector.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/preflight/models.py",
+      "summary": "models.py is a backend python module in backend/modules/preflight with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/models.py:PreflightRun",
+      "type": "class",
+      "name": "PreflightRun",
+      "filePath": "backend/modules/preflight/models.py",
+      "summary": "PreflightRun groups related behavior and state in models.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/preflight/repository.py",
+      "type": "file",
+      "name": "repository.py",
+      "filePath": "backend/modules/preflight/repository.py",
+      "summary": "repository.py is a backend python module in backend/modules/preflight with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/preflight/repository.py:PreflightRunRepository",
+      "type": "class",
+      "name": "PreflightRunRepository",
+      "filePath": "backend/modules/preflight/repository.py",
+      "summary": "PreflightRunRepository groups related behavior and state in repository.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "type": "file",
+      "name": "cleanup.py",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "cleanup.py is a backend python module in backend/modules/vehicle_runtime with 7 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:_preflight_cleanup_loop",
+      "type": "function",
+      "name": "_preflight_cleanup_loop",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "_preflight_cleanup_loop implements logic in cleanup.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:_mission_cleanup_loop",
+      "type": "function",
+      "name": "_mission_cleanup_loop",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "_mission_cleanup_loop implements logic in cleanup.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:_delete_batch",
+      "type": "function",
+      "name": "_delete_batch",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "_delete_batch implements logic in cleanup.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:_telemetry_cleanup_loop",
+      "type": "function",
+      "name": "_telemetry_cleanup_loop",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "_telemetry_cleanup_loop implements logic in cleanup.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:_runtime_log_cleanup_loop",
+      "type": "function",
+      "name": "_runtime_log_cleanup_loop",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "_runtime_log_cleanup_loop implements logic in cleanup.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:start_cleanup_jobs",
+      "type": "function",
+      "name": "start_cleanup_jobs",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "start_cleanup_jobs implements logic in cleanup.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/vehicle_runtime/cleanup.py:stop_cleanup_jobs",
+      "type": "function",
+      "name": "stop_cleanup_jobs",
+      "filePath": "backend/modules/vehicle_runtime/cleanup.py",
+      "summary": "stop_cleanup_jobs implements logic in cleanup.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "api.py is a backend python module in backend/modules/video_analysis with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/api.py:list_videos",
+      "type": "function",
+      "name": "list_videos",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "list_videos implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/api.py:stream_video",
+      "type": "function",
+      "name": "stream_video",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "stream_video implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/api.py:upload_video",
+      "type": "function",
+      "name": "upload_video",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "upload_video implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/api.py:analyze_video",
+      "type": "function",
+      "name": "analyze_video",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "analyze_video implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/api.py:get_job",
+      "type": "function",
+      "name": "get_job",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "get_job implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/api.py:list_detections",
+      "type": "function",
+      "name": "list_detections",
+      "filePath": "backend/modules/video_analysis/api.py",
+      "summary": "list_detections implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/application.py",
+      "type": "file",
+      "name": "application.py",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "application.py is a backend python module in backend/modules/video_analysis with 0 functions and 6 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/application.py:UploadedVideo",
+      "type": "class",
+      "name": "UploadedVideo",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "UploadedVideo groups related behavior and state in application.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/application.py:VideoAnalysisNotFound",
+      "type": "class",
+      "name": "VideoAnalysisNotFound",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "VideoAnalysisNotFound groups related behavior and state in application.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/application.py:VideoAnalysisConflict",
+      "type": "class",
+      "name": "VideoAnalysisConflict",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "VideoAnalysisConflict groups related behavior and state in application.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/application.py:VideoAnalysisUploadError",
+      "type": "class",
+      "name": "VideoAnalysisUploadError",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "VideoAnalysisUploadError groups related behavior and state in application.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/application.py:VideoAnalysisModelUnavailable",
+      "type": "class",
+      "name": "VideoAnalysisModelUnavailable",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "VideoAnalysisModelUnavailable groups related behavior and state in application.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/application.py:VideoAnalysisApplication",
+      "type": "class",
+      "name": "VideoAnalysisApplication",
+      "filePath": "backend/modules/video_analysis/application.py",
+      "summary": "VideoAnalysisApplication groups related behavior and state in application.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/mission_recordings.py",
+      "type": "file",
+      "name": "mission_recordings.py",
+      "filePath": "backend/modules/video_analysis/mission_recordings.py",
+      "summary": "mission_recordings.py is a backend python module in backend/modules/video_analysis with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/mission_recordings.py:register_mission_flight_recording",
+      "type": "function",
+      "name": "register_mission_flight_recording",
+      "filePath": "backend/modules/video_analysis/mission_recordings.py",
+      "summary": "register_mission_flight_recording implements logic in mission_recordings.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/mission_recordings.py:_resolve_recording_path",
+      "type": "function",
+      "name": "_resolve_recording_path",
+      "filePath": "backend/modules/video_analysis/mission_recordings.py",
+      "summary": "_resolve_recording_path implements logic in mission_recordings.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/mission_recordings.py:_field_id_from_runtime",
+      "type": "function",
+      "name": "_field_id_from_runtime",
+      "filePath": "backend/modules/video_analysis/mission_recordings.py",
+      "summary": "_field_id_from_runtime implements logic in mission_recordings.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/model_storage.py",
+      "type": "file",
+      "name": "model_storage.py",
+      "filePath": "backend/modules/video_analysis/model_storage.py",
+      "summary": "model_storage.py is a backend python module in backend/modules/video_analysis with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/model_storage.py:resolve_model_path",
+      "type": "function",
+      "name": "resolve_model_path",
+      "filePath": "backend/modules/video_analysis/model_storage.py",
+      "summary": "resolve_model_path implements logic in model_storage.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/model_storage.py:_download_builtin_model",
+      "type": "function",
+      "name": "_download_builtin_model",
+      "filePath": "backend/modules/video_analysis/model_storage.py",
+      "summary": "_download_builtin_model implements logic in model_storage.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/model_storage.py:ensure_model_file",
+      "type": "function",
+      "name": "ensure_model_file",
+      "filePath": "backend/modules/video_analysis/model_storage.py",
+      "summary": "ensure_model_file implements logic in model_storage.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/video_analysis/models.py",
+      "summary": "models.py is a backend python module in backend/modules/video_analysis with 1 functions and 3 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/models.py:new_uuid",
+      "type": "function",
+      "name": "new_uuid",
+      "filePath": "backend/modules/video_analysis/models.py",
+      "summary": "new_uuid implements logic in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/models.py:VideoAsset",
+      "type": "class",
+      "name": "VideoAsset",
+      "filePath": "backend/modules/video_analysis/models.py",
+      "summary": "VideoAsset groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/models.py:VideoAnalysisJob",
+      "type": "class",
+      "name": "VideoAnalysisJob",
+      "filePath": "backend/modules/video_analysis/models.py",
+      "summary": "VideoAnalysisJob groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/models.py:VideoDetection",
+      "type": "class",
+      "name": "VideoDetection",
+      "filePath": "backend/modules/video_analysis/models.py",
+      "summary": "VideoDetection groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/repository.py",
+      "type": "file",
+      "name": "repository.py",
+      "filePath": "backend/modules/video_analysis/repository.py",
+      "summary": "repository.py is a backend python module in backend/modules/video_analysis with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/repository.py:VideoAnalysisRepository",
+      "type": "class",
+      "name": "VideoAnalysisRepository",
+      "filePath": "backend/modules/video_analysis/repository.py",
+      "summary": "VideoAnalysisRepository groups related behavior and state in repository.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/schemas.py",
+      "type": "file",
+      "name": "schemas.py",
+      "filePath": "backend/modules/video_analysis/schemas.py",
+      "summary": "schemas.py is a backend python module in backend/modules/video_analysis with 0 functions and 4 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/schemas.py:VideoAssetOut",
+      "type": "class",
+      "name": "VideoAssetOut",
+      "filePath": "backend/modules/video_analysis/schemas.py",
+      "summary": "VideoAssetOut groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/schemas.py:AnalyzeVideoRequest",
+      "type": "class",
+      "name": "AnalyzeVideoRequest",
+      "filePath": "backend/modules/video_analysis/schemas.py",
+      "summary": "AnalyzeVideoRequest groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/schemas.py:VideoAnalysisJobOut",
+      "type": "class",
+      "name": "VideoAnalysisJobOut",
+      "filePath": "backend/modules/video_analysis/schemas.py",
+      "summary": "VideoAnalysisJobOut groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/schemas.py:VideoDetectionOut",
+      "type": "class",
+      "name": "VideoDetectionOut",
+      "filePath": "backend/modules/video_analysis/schemas.py",
+      "summary": "VideoDetectionOut groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/service/detector.py",
+      "type": "file",
+      "name": "detector.py",
+      "filePath": "backend/modules/video_analysis/service/detector.py",
+      "summary": "detector.py is a backend python module in backend/modules/video_analysis with 1 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/service/detector.py:load_yolo_model",
+      "type": "function",
+      "name": "load_yolo_model",
+      "filePath": "backend/modules/video_analysis/service/detector.py",
+      "summary": "load_yolo_model implements logic in detector.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/detector.py:FrameDetection",
+      "type": "class",
+      "name": "FrameDetection",
+      "filePath": "backend/modules/video_analysis/service/detector.py",
+      "summary": "FrameDetection groups related behavior and state in detector.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/detector.py:YoloFrameDetector",
+      "type": "class",
+      "name": "YoloFrameDetector",
+      "filePath": "backend/modules/video_analysis/service/detector.py",
+      "summary": "YoloFrameDetector groups related behavior and state in detector.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "type": "file",
+      "name": "frame_extractor.py",
+      "filePath": "backend/modules/video_analysis/service/frame_extractor.py",
+      "summary": "frame_extractor.py is a backend python module in backend/modules/video_analysis with 2 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/service/frame_extractor.py:read_video_metadata",
+      "type": "function",
+      "name": "read_video_metadata",
+      "filePath": "backend/modules/video_analysis/service/frame_extractor.py",
+      "summary": "read_video_metadata implements logic in frame_extractor.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/service/frame_extractor.py:iter_frames",
+      "type": "function",
+      "name": "iter_frames",
+      "filePath": "backend/modules/video_analysis/service/frame_extractor.py",
+      "summary": "iter_frames implements logic in frame_extractor.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/frame_extractor.py:VideoMetadata",
+      "type": "class",
+      "name": "VideoMetadata",
+      "filePath": "backend/modules/video_analysis/service/frame_extractor.py",
+      "summary": "VideoMetadata groups related behavior and state in frame_extractor.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/frame_extractor.py:ExtractedFrame",
+      "type": "class",
+      "name": "ExtractedFrame",
+      "filePath": "backend/modules/video_analysis/service/frame_extractor.py",
+      "summary": "ExtractedFrame groups related behavior and state in frame_extractor.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/service/geo.py",
+      "type": "file",
+      "name": "geo.py",
+      "filePath": "backend/modules/video_analysis/service/geo.py",
+      "summary": "geo.py is a backend python module in backend/modules/video_analysis with 0 functions and 2 classes.",
+      "complexity": "simple",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/geo.py:TelemetryMatch",
+      "type": "class",
+      "name": "TelemetryMatch",
+      "filePath": "backend/modules/video_analysis/service/geo.py",
+      "summary": "TelemetryMatch groups related behavior and state in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/geo.py:NearestTelemetryMatcher",
+      "type": "class",
+      "name": "NearestTelemetryMatcher",
+      "filePath": "backend/modules/video_analysis/service/geo.py",
+      "summary": "NearestTelemetryMatcher groups related behavior and state in geo.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/service/pipeline.py",
+      "type": "file",
+      "name": "pipeline.py",
+      "filePath": "backend/modules/video_analysis/service/pipeline.py",
+      "summary": "pipeline.py is a backend python module in backend/modules/video_analysis with 1 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/video_analysis/service/pipeline.py:run_video_analysis_job",
+      "type": "function",
+      "name": "run_video_analysis_job",
+      "filePath": "backend/modules/video_analysis/service/pipeline.py",
+      "summary": "run_video_analysis_job implements logic in pipeline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/pipeline.py:OfflineVideoAnalysisPipeline",
+      "type": "class",
+      "name": "OfflineVideoAnalysisPipeline",
+      "filePath": "backend/modules/video_analysis/service/pipeline.py",
+      "summary": "OfflineVideoAnalysisPipeline groups related behavior and state in pipeline.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/video_analysis/service/queue.py",
+      "type": "file",
+      "name": "queue.py",
+      "filePath": "backend/modules/video_analysis/service/queue.py",
+      "summary": "queue.py is a backend python module in backend/modules/video_analysis with 0 functions and 2 classes.",
+      "complexity": "simple",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/queue.py:VideoAnalysisQueueError",
+      "type": "class",
+      "name": "VideoAnalysisQueueError",
+      "filePath": "backend/modules/video_analysis/service/queue.py",
+      "summary": "VideoAnalysisQueueError groups related behavior and state in queue.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/video_analysis/service/queue.py:VideoAnalysisQueue",
+      "type": "class",
+      "name": "VideoAnalysisQueue",
+      "filePath": "backend/modules/video_analysis/service/queue.py",
+      "summary": "VideoAnalysisQueue groups related behavior and state in queue.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/observability/tracing.py",
+      "type": "file",
+      "name": "tracing.py",
+      "filePath": "backend/observability/tracing.py",
+      "summary": "tracing.py is a backend python module in backend/observability/tracing.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/observability/tracing.py:setup_tracing",
+      "type": "function",
+      "name": "setup_tracing",
+      "filePath": "backend/observability/tracing.py",
+      "summary": "setup_tracing implements logic in tracing.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/download_video_analysis_models.py",
+      "type": "file",
+      "name": "download_video_analysis_models.py",
+      "filePath": "backend/scripts/download_video_analysis_models.py",
+      "summary": "download_video_analysis_models.py is a backend python module in backend/scripts/download_video_analysis_models.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/download_video_analysis_models.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/download_video_analysis_models.py",
+      "summary": "main implements logic in download_video_analysis_models.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/run_irrigation_pipeline.py",
+      "type": "file",
+      "name": "run_irrigation_pipeline.py",
+      "filePath": "backend/scripts/run_irrigation_pipeline.py",
+      "summary": "run_irrigation_pipeline.py is a backend python module in backend/scripts/run_irrigation_pipeline.py with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/run_irrigation_pipeline.py:_run",
+      "type": "function",
+      "name": "_run",
+      "filePath": "backend/scripts/run_irrigation_pipeline.py",
+      "summary": "_run implements logic in run_irrigation_pipeline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/run_irrigation_pipeline.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/run_irrigation_pipeline.py",
+      "summary": "main implements logic in run_irrigation_pipeline.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/scripts/smoke_test_video_analysis.py",
+      "type": "file",
+      "name": "smoke_test_video_analysis.py",
+      "filePath": "backend/scripts/smoke_test_video_analysis.py",
+      "summary": "smoke_test_video_analysis.py is a backend python module in backend/scripts/smoke_test_video_analysis.py with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/smoke_test_video_analysis.py:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "backend/scripts/smoke_test_video_analysis.py",
+      "summary": "run implements logic in smoke_test_video_analysis.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/scripts/smoke_test_video_analysis.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backend/scripts/smoke_test_video_analysis.py",
+      "summary": "main implements logic in smoke_test_video_analysis.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/conftest.py",
+      "type": "file",
+      "name": "conftest.py",
+      "filePath": "backend/tests/conftest.py",
+      "summary": "conftest.py is a backend python module in backend/tests/conftest.py with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/conftest.py:anyio_backend",
+      "type": "function",
+      "name": "anyio_backend",
+      "filePath": "backend/tests/conftest.py",
+      "summary": "anyio_backend implements logic in conftest.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/conftest.py:api_client",
+      "type": "function",
+      "name": "api_client",
+      "filePath": "backend/tests/conftest.py",
+      "summary": "api_client implements logic in conftest.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_admin_organizations_pagination.py",
+      "type": "file",
+      "name": "test_admin_organizations_pagination.py",
+      "filePath": "backend/tests/test_admin_organizations_pagination.py",
+      "summary": "test_admin_organizations_pagination.py is a backend python module in backend/tests/test_admin_organizations_pagination.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_admin_organizations_pagination.py:test_admin_organizations_are_paginated_with_total",
+      "type": "function",
+      "name": "test_admin_organizations_are_paginated_with_total",
+      "filePath": "backend/tests/test_admin_organizations_pagination.py",
+      "summary": "test_admin_organizations_are_paginated_with_total implements logic in test_admin_organizations_pagination.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_mission_runtime_finalization.py",
+      "type": "file",
+      "name": "test_mission_runtime_finalization.py",
+      "filePath": "backend/tests/test_mission_runtime_finalization.py",
+      "summary": "test_mission_runtime_finalization.py is a backend python module in backend/tests/test_mission_runtime_finalization.py with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_runtime_finalization.py:_repository_with_row",
+      "type": "function",
+      "name": "_repository_with_row",
+      "filePath": "backend/tests/test_mission_runtime_finalization.py",
+      "summary": "_repository_with_row implements logic in test_mission_runtime_finalization.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_runtime_finalization.py:test_finalize_execution_updates_active_runtime_atomically",
+      "type": "function",
+      "name": "test_finalize_execution_updates_active_runtime_atomically",
+      "filePath": "backend/tests/test_mission_runtime_finalization.py",
+      "summary": "test_finalize_execution_updates_active_runtime_atomically implements logic in test_mission_runtime_finalization.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_runtime_finalization.py:test_finalize_execution_preserves_concurrent_terminal_state",
+      "type": "function",
+      "name": "test_finalize_execution_preserves_concurrent_terminal_state",
+      "filePath": "backend/tests/test_mission_runtime_finalization.py",
+      "summary": "test_finalize_execution_preserves_concurrent_terminal_state implements logic in test_mission_runtime_finalization.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_runtime_finalization.py:test_execute_mission_uses_one_authoritative_finalizer",
+      "type": "function",
+      "name": "test_execute_mission_uses_one_authoritative_finalizer",
+      "filePath": "backend/tests/test_mission_runtime_finalization.py",
+      "summary": "test_execute_mission_uses_one_authoritative_finalizer implements logic in test_mission_runtime_finalization.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_mission_video_recordings.py",
+      "type": "file",
+      "name": "test_mission_video_recordings.py",
+      "filePath": "backend/tests/test_mission_video_recordings.py",
+      "summary": "test_mission_video_recordings.py is a backend python module in backend/tests/test_mission_video_recordings.py with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_video_recordings.py:test_resolve_recording_path_prefers_absolute_path",
+      "type": "function",
+      "name": "test_resolve_recording_path_prefers_absolute_path",
+      "filePath": "backend/tests/test_mission_video_recordings.py",
+      "summary": "test_resolve_recording_path_prefers_absolute_path implements logic in test_mission_video_recordings.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_video_recordings.py:test_resolve_recording_path_falls_back_to_filename",
+      "type": "function",
+      "name": "test_resolve_recording_path_falls_back_to_filename",
+      "filePath": "backend/tests/test_mission_video_recordings.py",
+      "summary": "test_resolve_recording_path_falls_back_to_filename implements logic in test_mission_video_recordings.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_ml_events_api.py",
+      "type": "file",
+      "name": "test_ml_events_api.py",
+      "filePath": "backend/tests/test_ml_events_api.py",
+      "summary": "test_ml_events_api.py is a backend python module in backend/tests/test_ml_events_api.py with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ml_events_api.py:test_ml_events_endpoint_accepts_anomaly_payload",
+      "type": "function",
+      "name": "test_ml_events_endpoint_accepts_anomaly_payload",
+      "filePath": "backend/tests/test_ml_events_api.py",
+      "summary": "test_ml_events_endpoint_accepts_anomaly_payload implements logic in test_ml_events_api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "class:backend/modules/patrol/models.py:PatrolDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "class:backend/modules/patrol/models.py:PatrolDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "class:backend/modules/patrol/models.py:PatrolIncident",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "class:backend/modules/patrol/models.py:PatrolIncident",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "class:backend/modules/patrol/models.py:PatrolIncidentDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/models.py",
+      "target": "class:backend/modules/patrol/models.py:PatrolIncidentDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/__init__.py",
+      "target": "file:backend/modules/patrol/repository/alerts.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/__init__.py",
+      "target": "file:backend/modules/patrol/repository/detections.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/__init__.py",
+      "target": "file:backend/modules/patrol/repository/incidents.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/__init__.py",
+      "target": "file:backend/modules/patrol/repository/pipeline.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/__init__.py",
+      "target": "class:backend/modules/patrol/repository/__init__.py:PatrolDetectionRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/__init__.py",
+      "target": "class:backend/modules/patrol/repository/__init__.py:PatrolDetectionRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/alerts.py",
+      "target": "file:backend/modules/alerts/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/alerts.py",
+      "target": "file:backend/modules/patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/alerts.py",
+      "target": "class:backend/modules/patrol/repository/alerts.py:PatrolAlertDecision",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/alerts.py",
+      "target": "class:backend/modules/patrol/repository/alerts.py:PatrolAlertDecision",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/alerts.py",
+      "target": "class:backend/modules/patrol/repository/alerts.py:PatrolAlertMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/alerts.py",
+      "target": "class:backend/modules/patrol/repository/alerts.py:PatrolAlertMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/detections.py",
+      "target": "file:backend/modules/missions/flight_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/detections.py",
+      "target": "file:backend/modules/patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/detections.py",
+      "target": "class:backend/modules/patrol/repository/detections.py:PatrolAlertDecision",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/detections.py",
+      "target": "class:backend/modules/patrol/repository/detections.py:PatrolAlertDecision",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/detections.py",
+      "target": "class:backend/modules/patrol/repository/detections.py:PatrolDetectionMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/detections.py",
+      "target": "class:backend/modules/patrol/repository/detections.py:PatrolDetectionMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/incidents.py",
+      "target": "file:backend/modules/patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/incidents.py",
+      "target": "class:backend/modules/patrol/repository/incidents.py:PatrolAlertDecision",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/incidents.py",
+      "target": "class:backend/modules/patrol/repository/incidents.py:PatrolAlertDecision",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/incidents.py",
+      "target": "class:backend/modules/patrol/repository/incidents.py:PatrolIncidentMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/incidents.py",
+      "target": "class:backend/modules/patrol/repository/incidents.py:PatrolIncidentMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/pipeline.py",
+      "target": "file:backend/modules/alerts/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/pipeline.py",
+      "target": "file:backend/modules/patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/pipeline.py",
+      "target": "class:backend/modules/patrol/repository/pipeline.py:PatrolAlertDecision",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/pipeline.py",
+      "target": "class:backend/modules/patrol/repository/pipeline.py:PatrolAlertDecision",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/pipeline.py",
+      "target": "class:backend/modules/patrol/repository/pipeline.py:PatrolPipelineMixin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/repository/pipeline.py",
+      "target": "class:backend/modules/patrol/repository/pipeline.py:PatrolPipelineMixin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/detector.py",
+      "target": "file:backend/modules/patrol/vision/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/detector.py",
+      "target": "file:backend/modules/video_analysis/model_storage.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/detector.py",
+      "target": "file:backend/modules/video_analysis/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/detector.py",
+      "target": "class:backend/modules/patrol/vision/detector.py:ObjectDetector",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/patrol/vision/detector.py",
+      "target": "class:backend/modules/patrol/vision/detector.py:ObjectDetector",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/models.py",
+      "target": "class:backend/modules/preflight/models.py:PreflightRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/models.py",
+      "target": "class:backend/modules/preflight/models.py:PreflightRun",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/preflight/repository.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/repository.py",
+      "target": "file:backend/modules/preflight/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/preflight/repository.py",
+      "target": "class:backend/modules/preflight/repository.py:PreflightRunRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/preflight/repository.py",
+      "target": "class:backend/modules/preflight/repository.py:PreflightRunRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/core/logging/retention.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/modules/missions/command_repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/modules/missions/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/modules/preflight/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "file:backend/modules/telemetry/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_preflight_cleanup_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_preflight_cleanup_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_mission_cleanup_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_mission_cleanup_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_delete_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_delete_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_telemetry_cleanup_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_telemetry_cleanup_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_runtime_log_cleanup_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:_runtime_log_cleanup_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:start_cleanup_jobs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:start_cleanup_jobs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:stop_cleanup_jobs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/vehicle_runtime/cleanup.py",
+      "target": "function:backend/modules/vehicle_runtime/cleanup.py:stop_cleanup_jobs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "file:backend/modules/identity/dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "file:backend/modules/video_analysis/application.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "file:backend/modules/video_analysis/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "file:backend/observability/instruments.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:list_videos",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:list_videos",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:stream_video",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:stream_video",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:upload_video",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:upload_video",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:analyze_video",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:analyze_video",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:get_job",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:get_job",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:list_detections",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/api.py",
+      "target": "function:backend/modules/video_analysis/api.py:list_detections",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/fields/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/identity/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/missions/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/video_analysis/model_storage.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/video_analysis/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/video_analysis/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "file:backend/modules/video_analysis/service/queue.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:UploadedVideo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:UploadedVideo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisNotFound",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisNotFound",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisConflict",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisConflict",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisUploadError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisUploadError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisModelUnavailable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisModelUnavailable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisApplication",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/application.py",
+      "target": "class:backend/modules/video_analysis/application.py:VideoAnalysisApplication",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "file:backend/modules/missions/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "file:backend/modules/video_analysis/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "function:backend/modules/video_analysis/mission_recordings.py:register_mission_flight_recording",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "function:backend/modules/video_analysis/mission_recordings.py:register_mission_flight_recording",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "function:backend/modules/video_analysis/mission_recordings.py:_resolve_recording_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "function:backend/modules/video_analysis/mission_recordings.py:_resolve_recording_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "function:backend/modules/video_analysis/mission_recordings.py:_field_id_from_runtime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/mission_recordings.py",
+      "target": "function:backend/modules/video_analysis/mission_recordings.py:_field_id_from_runtime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "file:backend/modules/video_analysis/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "function:backend/modules/video_analysis/model_storage.py:resolve_model_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "function:backend/modules/video_analysis/model_storage.py:resolve_model_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "function:backend/modules/video_analysis/model_storage.py:_download_builtin_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "function:backend/modules/video_analysis/model_storage.py:_download_builtin_model",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "function:backend/modules/video_analysis/model_storage.py:ensure_model_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/model_storage.py",
+      "target": "function:backend/modules/video_analysis/model_storage.py:ensure_model_file",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "function:backend/modules/video_analysis/models.py:new_uuid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "function:backend/modules/video_analysis/models.py:new_uuid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "class:backend/modules/video_analysis/models.py:VideoAsset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "class:backend/modules/video_analysis/models.py:VideoAsset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "class:backend/modules/video_analysis/models.py:VideoAnalysisJob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "class:backend/modules/video_analysis/models.py:VideoAnalysisJob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "class:backend/modules/video_analysis/models.py:VideoDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/models.py",
+      "target": "class:backend/modules/video_analysis/models.py:VideoDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/repository.py",
+      "target": "file:backend/modules/identity/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/repository.py",
+      "target": "file:backend/modules/video_analysis/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/repository.py",
+      "target": "class:backend/modules/video_analysis/repository.py:VideoAnalysisRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/repository.py",
+      "target": "class:backend/modules/video_analysis/repository.py:VideoAnalysisRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:VideoAssetOut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:VideoAssetOut",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:AnalyzeVideoRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:AnalyzeVideoRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:VideoAnalysisJobOut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:VideoAnalysisJobOut",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:VideoDetectionOut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/schemas.py",
+      "target": "class:backend/modules/video_analysis/schemas.py:VideoDetectionOut",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "file:backend/modules/video_analysis/model_storage.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "function:backend/modules/video_analysis/service/detector.py:load_yolo_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "function:backend/modules/video_analysis/service/detector.py:load_yolo_model",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "class:backend/modules/video_analysis/service/detector.py:FrameDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "class:backend/modules/video_analysis/service/detector.py:FrameDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "class:backend/modules/video_analysis/service/detector.py:YoloFrameDetector",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/detector.py",
+      "target": "class:backend/modules/video_analysis/service/detector.py:YoloFrameDetector",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "function:backend/modules/video_analysis/service/frame_extractor.py:read_video_metadata",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "function:backend/modules/video_analysis/service/frame_extractor.py:read_video_metadata",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "function:backend/modules/video_analysis/service/frame_extractor.py:iter_frames",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "function:backend/modules/video_analysis/service/frame_extractor.py:iter_frames",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "class:backend/modules/video_analysis/service/frame_extractor.py:VideoMetadata",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "class:backend/modules/video_analysis/service/frame_extractor.py:VideoMetadata",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "class:backend/modules/video_analysis/service/frame_extractor.py:ExtractedFrame",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "target": "class:backend/modules/video_analysis/service/frame_extractor.py:ExtractedFrame",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/geo.py",
+      "target": "class:backend/modules/video_analysis/service/geo.py:TelemetryMatch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/geo.py",
+      "target": "class:backend/modules/video_analysis/service/geo.py:TelemetryMatch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/geo.py",
+      "target": "class:backend/modules/video_analysis/service/geo.py:NearestTelemetryMatcher",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/geo.py",
+      "target": "class:backend/modules/video_analysis/service/geo.py:NearestTelemetryMatcher",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/modules/video_analysis/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/modules/video_analysis/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/modules/video_analysis/service/detector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/modules/video_analysis/service/frame_extractor.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/modules/video_analysis/service/geo.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/observability/instruments.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "file:backend/observability/metrics.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "function:backend/modules/video_analysis/service/pipeline.py:run_video_analysis_job",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "function:backend/modules/video_analysis/service/pipeline.py:run_video_analysis_job",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "class:backend/modules/video_analysis/service/pipeline.py:OfflineVideoAnalysisPipeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/pipeline.py",
+      "target": "class:backend/modules/video_analysis/service/pipeline.py:OfflineVideoAnalysisPipeline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/queue.py",
+      "target": "class:backend/modules/video_analysis/service/queue.py:VideoAnalysisQueueError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/queue.py",
+      "target": "class:backend/modules/video_analysis/service/queue.py:VideoAnalysisQueueError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/queue.py",
+      "target": "class:backend/modules/video_analysis/service/queue.py:VideoAnalysisQueue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/video_analysis/service/queue.py",
+      "target": "class:backend/modules/video_analysis/service/queue.py:VideoAnalysisQueue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/observability/tracing.py",
+      "target": "function:backend/observability/tracing.py:setup_tracing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/observability/tracing.py",
+      "target": "function:backend/observability/tracing.py:setup_tracing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/download_video_analysis_models.py",
+      "target": "file:backend/modules/video_analysis/model_storage.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/download_video_analysis_models.py",
+      "target": "function:backend/scripts/download_video_analysis_models.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/download_video_analysis_models.py",
+      "target": "function:backend/scripts/download_video_analysis_models.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "file:backend/modules/irrigation/service/processing.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "file:backend/modules/missions/runtime_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "function:backend/scripts/run_irrigation_pipeline.py:_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "function:backend/scripts/run_irrigation_pipeline.py:_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "function:backend/scripts/run_irrigation_pipeline.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/run_irrigation_pipeline.py",
+      "target": "function:backend/scripts/run_irrigation_pipeline.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "file:backend/modules/video_analysis/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "file:backend/modules/video_analysis/service/pipeline.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "function:backend/scripts/smoke_test_video_analysis.py:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "function:backend/scripts/smoke_test_video_analysis.py:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "function:backend/scripts/smoke_test_video_analysis.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/scripts/smoke_test_video_analysis.py",
+      "target": "function:backend/scripts/smoke_test_video_analysis.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/conftest.py",
+      "target": "file:backend/entrypoints/api/app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/conftest.py",
+      "target": "function:backend/tests/conftest.py:anyio_backend",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/conftest.py",
+      "target": "function:backend/tests/conftest.py:anyio_backend",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/conftest.py",
+      "target": "function:backend/tests/conftest.py:api_client",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/conftest.py",
+      "target": "function:backend/tests/conftest.py:api_client",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_admin_organizations_pagination.py",
+      "target": "file:backend/modules/admin/api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_admin_organizations_pagination.py",
+      "target": "function:backend/tests/test_admin_organizations_pagination.py:test_admin_organizations_are_paginated_with_total",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_admin_organizations_pagination.py",
+      "target": "function:backend/tests/test_admin_organizations_pagination.py:test_admin_organizations_are_paginated_with_total",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "file:backend/modules/missions/repository/__init__.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:_repository_with_row",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:_repository_with_row",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:test_finalize_execution_updates_active_runtime_atomically",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:test_finalize_execution_updates_active_runtime_atomically",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:test_finalize_execution_preserves_concurrent_terminal_state",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:test_finalize_execution_preserves_concurrent_terminal_state",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:test_execute_mission_uses_one_authoritative_finalizer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_runtime_finalization.py",
+      "target": "function:backend/tests/test_mission_runtime_finalization.py:test_execute_mission_uses_one_authoritative_finalizer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_video_recordings.py",
+      "target": "file:backend/modules/video_analysis/mission_recordings.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_video_recordings.py",
+      "target": "function:backend/tests/test_mission_video_recordings.py:test_resolve_recording_path_prefers_absolute_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_video_recordings.py",
+      "target": "function:backend/tests/test_mission_video_recordings.py:test_resolve_recording_path_prefers_absolute_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_video_recordings.py",
+      "target": "function:backend/tests/test_mission_video_recordings.py:test_resolve_recording_path_falls_back_to_filename",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_video_recordings.py",
+      "target": "function:backend/tests/test_mission_video_recordings.py:test_resolve_recording_path_falls_back_to_filename",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ml_events_api.py",
+      "target": "file:backend/entrypoints/api/app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_ml_events_api.py",
+      "target": "function:backend/tests/test_ml_events_api.py:test_ml_events_endpoint_accepts_anomaly_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ml_events_api.py",
+      "target": "function:backend/tests/test_ml_events_api.py:test_ml_events_endpoint_accepts_anomaly_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

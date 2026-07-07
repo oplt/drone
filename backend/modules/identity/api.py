@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
-from backend.core.database.session import Session
+from backend.core.database.session import Session, get_db
 from backend.modules.identity.models import AuthAuditLog, User
 from backend.modules.identity.service import (
     create_access_token,
@@ -27,12 +27,6 @@ from backend.modules.organizations.service import ensure_user_workspace, get_def
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-# ---- DB dependency ----
-async def get_db() -> AsyncSession:
-    async with Session() as s:
-        yield s
 
 
 # ---- Schemas ----

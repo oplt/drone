@@ -1,0 +1,2370 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/app/config/env.ts",
+      "type": "file",
+      "name": "env.ts",
+      "filePath": "frontend/src/app/config/env.ts",
+      "summary": "env.ts is a frontend typescript module in frontend/src/app/config with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/app/config/env.ts:getApiBaseUrl",
+      "type": "function",
+      "name": "getApiBaseUrl",
+      "filePath": "frontend/src/app/config/env.ts",
+      "summary": "getApiBaseUrl implements logic in env.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "type": "file",
+      "name": "livestockApi.ts",
+      "filePath": "frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "summary": "livestockApi.ts is a frontend typescript module in frontend/src/modules/animal-farm with 5 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerds",
+      "type": "function",
+      "name": "fetchHerds",
+      "filePath": "frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "summary": "fetchHerds implements logic in livestockApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerdLatestPositions",
+      "type": "function",
+      "name": "fetchHerdLatestPositions",
+      "filePath": "frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "summary": "fetchHerdLatestPositions implements logic in livestockApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerdRiskAlerts",
+      "type": "function",
+      "name": "fetchHerdRiskAlerts",
+      "filePath": "frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "summary": "fetchHerdRiskAlerts implements logic in livestockApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:createLivestockTask",
+      "type": "function",
+      "name": "createLivestockTask",
+      "filePath": "frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "summary": "createLivestockTask implements logic in livestockApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:planLivestockTaskMission",
+      "type": "function",
+      "name": "planLivestockTaskMission",
+      "filePath": "frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "summary": "planLivestockTaskMission implements logic in livestockApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/animal-farm/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/animal-farm/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/animal-farm with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "type": "file",
+      "name": "AnimalFarmPage.tsx",
+      "filePath": "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "summary": "AnimalFarmPage.tsx is a frontend typescript module in frontend/src/modules/animal-farm with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx:AnimalFarmPage",
+      "type": "function",
+      "name": "AnimalFarmPage",
+      "filePath": "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "summary": "AnimalFarmPage implements logic in AnimalFarmPage.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "type": "file",
+      "name": "manualControlApi.ts",
+      "filePath": "frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "summary": "manualControlApi.ts is a frontend typescript module in frontend/src/modules/controlled-flight with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/api/manualControlApi.ts:sendManualControlCommand",
+      "type": "function",
+      "name": "sendManualControlCommand",
+      "filePath": "frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "summary": "sendManualControlCommand implements logic in manualControlApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "type": "file",
+      "name": "ManualFlightControlPanel.tsx",
+      "filePath": "frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "summary": "ManualFlightControlPanel.tsx is a frontend typescript module in frontend/src/modules/controlled-flight with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx:ManualFlightControlPanel",
+      "type": "function",
+      "name": "ManualFlightControlPanel",
+      "filePath": "frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "summary": "ManualFlightControlPanel implements logic in ManualFlightControlPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "type": "file",
+      "name": "useControlledPreflight.ts",
+      "filePath": "frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "summary": "useControlledPreflight.ts is a frontend typescript module in frontend/src/modules/controlled-flight with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts:useControlledPreflight",
+      "type": "function",
+      "name": "useControlledPreflight",
+      "filePath": "frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "summary": "useControlledPreflight implements logic in useControlledPreflight.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "type": "file",
+      "name": "useManualFlightControls.ts",
+      "filePath": "frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "summary": "useManualFlightControls.ts is a frontend typescript module in frontend/src/modules/controlled-flight with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts:useManualFlightControls",
+      "type": "function",
+      "name": "useManualFlightControls",
+      "filePath": "frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "summary": "useManualFlightControls implements logic in useManualFlightControls.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/controlled-flight/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/controlled-flight with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "type": "file",
+      "name": "telemetryHealth.ts",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "telemetryHealth.ts is a frontend typescript module in frontend/src/modules/controlled-flight with 6 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:readNestedValue",
+      "type": "function",
+      "name": "readNestedValue",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "readNestedValue implements logic in telemetryHealth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:firstFiniteNumber",
+      "type": "function",
+      "name": "firstFiniteNumber",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "firstFiniteNumber implements logic in telemetryHealth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryBatteryPercent",
+      "type": "function",
+      "name": "telemetryBatteryPercent",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "telemetryBatteryPercent implements logic in telemetryHealth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryGpsFixType",
+      "type": "function",
+      "name": "telemetryGpsFixType",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "telemetryGpsFixType implements logic in telemetryHealth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryHeartbeatReceived",
+      "type": "function",
+      "name": "telemetryHeartbeatReceived",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "telemetryHeartbeatReceived implements logic in telemetryHealth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryBoolean",
+      "type": "function",
+      "name": "telemetryBoolean",
+      "filePath": "frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "summary": "telemetryBoolean implements logic in telemetryHealth.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "type": "file",
+      "name": "ControlledFlightView.tsx",
+      "filePath": "frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "summary": "ControlledFlightView.tsx is a frontend typescript module in frontend/src/modules/controlled-flight with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx:ControlledFlightView",
+      "type": "function",
+      "name": "ControlledFlightView",
+      "filePath": "frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "summary": "ControlledFlightView implements logic in ControlledFlightView.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/modules/dashboard/index.ts",
+      "summary": "index.ts is a frontend typescript module in frontend/src/modules/dashboard with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "type": "file",
+      "name": "AccountPage.tsx",
+      "filePath": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "summary": "AccountPage.tsx is a frontend typescript module in frontend/src/modules/dashboard with 6 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:PasswordField",
+      "type": "function",
+      "name": "PasswordField",
+      "filePath": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "summary": "PasswordField implements logic in AccountPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:PasswordSection",
+      "type": "function",
+      "name": "PasswordSection",
+      "filePath": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "summary": "PasswordSection implements logic in AccountPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:TwoFASection",
+      "type": "function",
+      "name": "TwoFASection",
+      "filePath": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "summary": "TwoFASection implements logic in AccountPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:AccountInfoSection",
+      "type": "function",
+      "name": "AccountInfoSection",
+      "filePath": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "summary": "AccountInfoSection implements logic in AccountPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:AccountPage",
+      "type": "function",
+      "name": "AccountPage",
+      "filePath": "frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "summary": "AccountPage implements logic in AccountPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "type": "file",
+      "name": "DashboardHomePage.tsx",
+      "filePath": "frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "summary": "DashboardHomePage.tsx is a frontend typescript module in frontend/src/modules/dashboard with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/DashboardHomePage.tsx:HomePage",
+      "type": "function",
+      "name": "HomePage",
+      "filePath": "frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "summary": "HomePage implements logic in DashboardHomePage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "type": "file",
+      "name": "InsightsPage.tsx",
+      "filePath": "frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "summary": "InsightsPage.tsx is a frontend typescript module in frontend/src/modules/dashboard with 7 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/InsightsPage.tsx:PanelSkeleton",
+      "type": "function",
+      "name": "PanelSkeleton",
+      "filePath": "frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "summary": "PanelSkeleton implements logic in InsightsPage.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/dashboard/views/InsightsPage.tsx:InsightsPage",
+      "type": "function",
+      "name": "InsightsPage",
+      "filePath": "frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "summary": "InsightsPage implements logic in InsightsPage.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "type": "file",
+      "name": "irrigationApi.ts",
+      "filePath": "frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "summary": "irrigationApi.ts is a frontend typescript module in frontend/src/modules/field-survey with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/api/irrigationApi.ts:fetchIrrigationMissionSummary",
+      "type": "function",
+      "name": "fetchIrrigationMissionSummary",
+      "filePath": "frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "summary": "fetchIrrigationMissionSummary implements logic in irrigationApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/api/irrigationApi.ts:triggerIrrigationMissionProcessing",
+      "type": "function",
+      "name": "triggerIrrigationMissionProcessing",
+      "filePath": "frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "summary": "triggerIrrigationMissionProcessing implements logic in irrigationApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "type": "file",
+      "name": "FieldSurveyFlightSection.tsx",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "summary": "FieldSurveyFlightSection.tsx is a frontend typescript module in frontend/src/modules/field-survey with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx:isStartDisabled",
+      "type": "function",
+      "name": "isStartDisabled",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "summary": "isStartDisabled implements logic in FieldSurveyFlightSection.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx:FieldSurveyFlightSection",
+      "type": "function",
+      "name": "FieldSurveyFlightSection",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "summary": "FieldSurveyFlightSection implements logic in FieldSurveyFlightSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "type": "file",
+      "name": "FieldSurveyGridParamsSection.tsx",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "summary": "FieldSurveyGridParamsSection.tsx is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx:FieldSurveyGridParamsSection",
+      "type": "function",
+      "name": "FieldSurveyGridParamsSection",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "summary": "FieldSurveyGridParamsSection implements logic in FieldSurveyGridParamsSection.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "type": "file",
+      "name": "FieldSurveyMapColumn.tsx",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "summary": "FieldSurveyMapColumn.tsx is a frontend typescript module in frontend/src/modules/field-survey with 2 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx:FieldSurveyMapColumn",
+      "type": "function",
+      "name": "FieldSurveyMapColumn",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "summary": "FieldSurveyMapColumn implements logic in FieldSurveyMapColumn.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx:GoogleMapOverlays",
+      "type": "function",
+      "name": "GoogleMapOverlays",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "summary": "GoogleMapOverlays implements logic in FieldSurveyMapColumn.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "type": "file",
+      "name": "FieldSurveyPlanningSection.tsx",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "summary": "FieldSurveyPlanningSection.tsx is a frontend typescript module in frontend/src/modules/field-survey with 4 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyFieldsBlock",
+      "type": "function",
+      "name": "FieldSurveyFieldsBlock",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "summary": "FieldSurveyFieldsBlock implements logic in FieldSurveyPlanningSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveySetupPanel",
+      "type": "function",
+      "name": "FieldSurveySetupPanel",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "summary": "FieldSurveySetupPanel implements logic in FieldSurveyPlanningSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyMissionControlsPanel",
+      "type": "function",
+      "name": "FieldSurveyMissionControlsPanel",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "summary": "FieldSurveyMissionControlsPanel implements logic in FieldSurveyPlanningSection.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyFlightDrawer",
+      "type": "function",
+      "name": "FieldSurveyFlightDrawer",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "summary": "FieldSurveyFlightDrawer implements logic in FieldSurveyPlanningSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "type": "file",
+      "name": "FieldSurveyStatusSections.tsx",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "summary": "FieldSurveyStatusSections.tsx is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx:FieldSurveyStatusSections",
+      "type": "function",
+      "name": "FieldSurveyStatusSections",
+      "filePath": "frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "summary": "FieldSurveyStatusSections implements logic in FieldSurveyStatusSections.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "type": "file",
+      "name": "useFieldSurveyIrrigation.ts",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "summary": "useFieldSurveyIrrigation.ts is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts:useFieldSurveyIrrigation",
+      "type": "function",
+      "name": "useFieldSurveyIrrigation",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "summary": "useFieldSurveyIrrigation implements logic in useFieldSurveyIrrigation.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "type": "file",
+      "name": "useFieldSurveyMap.ts",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "summary": "useFieldSurveyMap.ts is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts:useFieldSurveyMap",
+      "type": "function",
+      "name": "useFieldSurveyMap",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "summary": "useFieldSurveyMap implements logic in useFieldSurveyMap.ts.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "type": "file",
+      "name": "useFieldSurveyMission.ts",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "summary": "useFieldSurveyMission.ts is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts:useFieldSurveyMission",
+      "type": "function",
+      "name": "useFieldSurveyMission",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "summary": "useFieldSurveyMission implements logic in useFieldSurveyMission.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "type": "file",
+      "name": "useFieldSurveyPage.ts",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "summary": "useFieldSurveyPage.ts is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts:useFieldSurveyPage",
+      "type": "function",
+      "name": "useFieldSurveyPage",
+      "filePath": "frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "summary": "useFieldSurveyPage implements logic in useFieldSurveyPage.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/types/irrigation.ts",
+      "type": "file",
+      "name": "irrigation.ts",
+      "filePath": "frontend/src/modules/field-survey/types/irrigation.ts",
+      "summary": "irrigation.ts is a frontend typescript module in frontend/src/modules/field-survey with 0 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "type": "file",
+      "name": "FieldPage.tsx",
+      "filePath": "frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "summary": "FieldPage.tsx is a frontend typescript module in frontend/src/modules/field-survey with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/field-survey/views/FieldPage.tsx:FieldPage",
+      "type": "function",
+      "name": "FieldPage",
+      "filePath": "frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "summary": "FieldPage implements logic in FieldPage.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "type": "file",
+      "name": "FieldBorderPanel.tsx",
+      "filePath": "frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "summary": "FieldBorderPanel.tsx is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/components/FieldBorderPanel.tsx:FieldBorderPanel",
+      "type": "function",
+      "name": "FieldBorderPanel",
+      "filePath": "frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "summary": "FieldBorderPanel implements logic in FieldBorderPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "type": "file",
+      "name": "FieldDeleteDialog.tsx",
+      "filePath": "frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "summary": "FieldDeleteDialog.tsx is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/components/FieldDeleteDialog.tsx:FieldDeleteDialog",
+      "type": "function",
+      "name": "FieldDeleteDialog",
+      "filePath": "frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "summary": "FieldDeleteDialog implements logic in FieldDeleteDialog.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "type": "file",
+      "name": "SavedFieldsPanel.tsx",
+      "filePath": "frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "summary": "SavedFieldsPanel.tsx is a frontend typescript module in frontend/src/modules/fields with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/fields/components/SavedFieldsPanel.tsx:SavedFieldsPanel",
+      "type": "function",
+      "name": "SavedFieldsPanel",
+      "filePath": "frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "summary": "SavedFieldsPanel implements logic in SavedFieldsPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/app/config/env.ts",
+      "target": "function:frontend/src/app/config/env.ts:getApiBaseUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/app/config/env.ts",
+      "target": "function:frontend/src/app/config/env.ts:getApiBaseUrl",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "file:frontend/src/modules/animal-farm/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerdLatestPositions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerdLatestPositions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerdRiskAlerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:fetchHerdRiskAlerts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:createLivestockTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:createLivestockTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:planLivestockTaskMission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "target": "function:frontend/src/modules/animal-farm/api/livestockApi.ts:planLivestockTaskMission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/animal-farm/api/livestockApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/animal-farm/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/modules/video-analysis/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "function:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx:AnimalFarmPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "target": "function:frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx:AnimalFarmPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "target": "file:frontend/src/modules/controlled-flight/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "target": "function:frontend/src/modules/controlled-flight/api/manualControlApi.ts:sendManualControlCommand",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "target": "function:frontend/src/modules/controlled-flight/api/manualControlApi.ts:sendManualControlCommand",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "target": "file:frontend/src/modules/controlled-flight/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "target": "function:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx:ManualFlightControlPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "target": "function:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx:ManualFlightControlPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "target": "file:frontend/src/modules/controlled-flight/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "target": "function:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts:useControlledPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "target": "function:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts:useControlledPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "target": "file:frontend/src/modules/controlled-flight/api/manualControlApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "target": "file:frontend/src/modules/controlled-flight/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "target": "function:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts:useManualFlightControls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "target": "function:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts:useManualFlightControls",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:readNestedValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:readNestedValue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:firstFiniteNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:firstFiniteNumber",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryBatteryPercent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryBatteryPercent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryGpsFixType",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryGpsFixType",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryHeartbeatReceived",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryHeartbeatReceived",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryBoolean",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "target": "function:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts:telemetryBoolean",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/controlled-flight/components/ManualFlightControlPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/controlled-flight/utils/telemetryHealth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/maps/providers/googleMaps.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/shared/ui/ErrorAlerts.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "function:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx:ControlledFlightView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "target": "function:frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx:ControlledFlightView",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "file:frontend/src/modules/session/api/accountApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:PasswordField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:PasswordSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:TwoFASection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:AccountInfoSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:AccountPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/AccountPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/AccountPage.tsx:AccountPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "target": "file:frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/DashboardHomePage.tsx:HomePage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/DashboardHomePage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/DashboardHomePage.tsx:HomePage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "file:frontend/src/modules/dashboard/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "file:frontend/src/shared/layout/PageLayout.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "file:frontend/src/shared/layout/WorkflowHeader.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/InsightsPage.tsx:PanelSkeleton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/InsightsPage.tsx:InsightsPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/dashboard/views/InsightsPage.tsx",
+      "target": "function:frontend/src/modules/dashboard/views/InsightsPage.tsx:InsightsPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "target": "file:frontend/src/modules/field-survey/types/irrigation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "target": "function:frontend/src/modules/field-survey/api/irrigationApi.ts:fetchIrrigationMissionSummary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "target": "function:frontend/src/modules/field-survey/api/irrigationApi.ts:fetchIrrigationMissionSummary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "target": "function:frontend/src/modules/field-survey/api/irrigationApi.ts:triggerIrrigationMissionProcessing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "target": "function:frontend/src/modules/field-survey/api/irrigationApi.ts:triggerIrrigationMissionProcessing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx:isStartDisabled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx:FieldSurveyFlightSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx:FieldSurveyFlightSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "target": "file:frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "target": "file:frontend/src/modules/mission-planning/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx:FieldSurveyGridParamsSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx:FieldSurveyGridParamsSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "file:frontend/src/modules/video-analysis/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx:FieldSurveyMapColumn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx:FieldSurveyMapColumn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx:GoogleMapOverlays",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/field-survey/components/FieldSurveyFlightSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/field-survey/components/FieldSurveyGridParamsSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/fields/components/WorkflowFieldsBlock.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/mission-planning/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types/runtime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyFieldsBlock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyFieldsBlock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveySetupPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveySetupPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyMissionControlsPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyMissionControlsPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyFlightDrawer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx:FieldSurveyFlightDrawer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx:FieldSurveyStatusSections",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "target": "function:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx:FieldSurveyStatusSections",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "target": "file:frontend/src/modules/field-survey/api/irrigationApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "target": "file:frontend/src/modules/field-survey/types/irrigation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts:useFieldSurveyIrrigation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts:useFieldSurveyIrrigation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "file:frontend/src/shared/utils/extractLatLng.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts:useFieldSurveyMap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts:useFieldSurveyMap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/mission-planning/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/mission-workflow/utils/cesiumZoom.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts:useFieldSurveyMission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts:useFieldSurveyMission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/app/config/env.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyIrrigation.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/fields/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/maps/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/mission-runtime/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "file:frontend/src/shared/hooks/useErrors.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts:useFieldSurveyPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "target": "function:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts:useFieldSurveyPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/field-survey/components/FieldSurveyMapColumn.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/field-survey/components/FieldSurveyPlanningSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/field-survey/components/FieldSurveyStatusSections.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/field-survey/hooks/useFieldSurveyPage.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types/runtime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "file:frontend/src/modules/mission-workflow/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "function:frontend/src/modules/field-survey/views/FieldPage.tsx:FieldPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/field-survey/views/FieldPage.tsx",
+      "target": "function:frontend/src/modules/field-survey/views/FieldPage.tsx:FieldPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "target": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "target": "function:frontend/src/modules/fields/components/FieldBorderPanel.tsx:FieldBorderPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldBorderPanel.tsx",
+      "target": "function:frontend/src/modules/fields/components/FieldBorderPanel.tsx:FieldBorderPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "target": "function:frontend/src/modules/fields/components/FieldDeleteDialog.tsx:FieldDeleteDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/FieldDeleteDialog.tsx",
+      "target": "function:frontend/src/modules/fields/components/FieldDeleteDialog.tsx:FieldDeleteDialog",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "target": "file:frontend/src/shared/ui/InfoLabel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "target": "function:frontend/src/modules/fields/components/SavedFieldsPanel.tsx:SavedFieldsPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/fields/components/SavedFieldsPanel.tsx",
+      "target": "function:frontend/src/modules/fields/components/SavedFieldsPanel.tsx:SavedFieldsPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

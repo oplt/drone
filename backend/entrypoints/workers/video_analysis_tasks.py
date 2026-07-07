@@ -2,32 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
 from collections.abc import Coroutine
 from typing import Any
 
 from backend.core.config.runtime import settings, setup_logging
+from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.modules.video_analysis.service.pipeline import run_video_analysis_job
 
 logger = logging.getLogger(__name__)
 setup_logging()
 VIDEO_ANALYSIS_QUEUE = settings.celery_video_analysis_queue
-_loop_lock = threading.Lock()
-_thread_local_state = threading.local()
+_worker_loop = WorkerLoopState()
 
 
 def _get_worker_loop() -> asyncio.AbstractEventLoop:
-    loop = getattr(_thread_local_state, "loop", None)
-    if loop is not None and not loop.is_closed():
-        return loop
-    with _loop_lock:
-        loop = getattr(_thread_local_state, "loop", None)
-        if loop is not None and not loop.is_closed():
-            return loop
-        loop = asyncio.new_event_loop()
-        _thread_local_state.loop = loop
-        return loop
+    return _worker_loop.get_loop()
 
 
 def _run_on_worker_loop(coro: Coroutine[Any, Any, dict[str, str]]) -> dict[str, str]:

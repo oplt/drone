@@ -7,22 +7,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.geometry.rings import ensure_closed_ring
 from backend.modules.geofences.models import Geofence
 from backend.modules.geofences.schemas import GeofenceCreateGeoJSON, GeofenceOut, GeofenceUpdate
 
 router = APIRouter(prefix="/geofences", tags=["geofences"])
 
 
-def _ensure_closed_ring(coords: list[list[float]]) -> list[list[float]]:
-    if len(coords) < 3:
-        raise ValueError("Polygon needs at least 3 points")
-    if coords[0] != coords[-1]:
-        coords = coords + [coords[0]]
-    return coords
-
-
 def _coords_to_polygon(coords_lonlat: list[list[float]]) -> Polygon:
-    coords_lonlat = _ensure_closed_ring(coords_lonlat)
+    coords_lonlat = ensure_closed_ring(coords_lonlat)
     # Shapely uses (x,y) = (lon,lat)
     return Polygon(coords_lonlat)
 

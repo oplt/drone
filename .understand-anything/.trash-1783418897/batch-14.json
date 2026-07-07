@@ -1,0 +1,5199 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/core/security/secrets.py",
+      "type": "file",
+      "name": "secrets.py",
+      "filePath": "backend/core/security/secrets.py",
+      "summary": "secrets.py is a backend python module in backend/core/security with 0 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "shared",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/core/security/secrets.py:Vault",
+      "type": "class",
+      "name": "Vault",
+      "filePath": "backend/core/security/secrets.py",
+      "summary": "Vault groups related behavior and state in secrets.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/entrypoints/workers/agents_tasks.py",
+      "type": "file",
+      "name": "agents_tasks.py",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "agents_tasks.py is a backend python module in backend/entrypoints/workers with 7 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:_get_worker_loop",
+      "type": "function",
+      "name": "_get_worker_loop",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "_get_worker_loop implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:_run_on_worker_loop",
+      "type": "function",
+      "name": "_run_on_worker_loop",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "_run_on_worker_loop implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:_hydrate_context",
+      "type": "function",
+      "name": "_hydrate_context",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "_hydrate_context implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:_apply_side_effects",
+      "type": "function",
+      "name": "_apply_side_effects",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "_apply_side_effects implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:_execute_agent",
+      "type": "function",
+      "name": "_execute_agent",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "_execute_agent implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:run_agent_task",
+      "type": "function",
+      "name": "run_agent_task",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "run_agent_task implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/entrypoints/workers/agents_tasks.py:summarize_property_patrol_incident",
+      "type": "function",
+      "name": "summarize_property_patrol_incident",
+      "filePath": "backend/entrypoints/workers/agents_tasks.py",
+      "summary": "summarize_property_patrol_incident implements logic in agents_tasks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/base.py",
+      "type": "file",
+      "name": "base.py",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "base.py is a backend python module in backend/infrastructure/ai with 0 functions and 7 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:LLMProviderConfig",
+      "type": "class",
+      "name": "LLMProviderConfig",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "LLMProviderConfig groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:LLMMessage",
+      "type": "class",
+      "name": "LLMMessage",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "LLMMessage groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:LLMChatRequest",
+      "type": "class",
+      "name": "LLMChatRequest",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "LLMChatRequest groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:LLMChatResponse",
+      "type": "class",
+      "name": "LLMChatResponse",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "LLMChatResponse groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:LLMModel",
+      "type": "class",
+      "name": "LLMModel",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "LLMModel groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:LLMHealth",
+      "type": "class",
+      "name": "LLMHealth",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "LLMHealth groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/base.py:BaseLLMClient",
+      "type": "class",
+      "name": "BaseLLMClient",
+      "filePath": "backend/infrastructure/ai/base.py",
+      "summary": "BaseLLMClient groups related behavior and state in base.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/errors.py",
+      "type": "file",
+      "name": "errors.py",
+      "filePath": "backend/infrastructure/ai/errors.py",
+      "summary": "errors.py is a backend python module in backend/infrastructure/ai with 0 functions and 5 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/errors.py:LLMError",
+      "type": "class",
+      "name": "LLMError",
+      "filePath": "backend/infrastructure/ai/errors.py",
+      "summary": "LLMError groups related behavior and state in errors.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/errors.py:LLMConfigError",
+      "type": "class",
+      "name": "LLMConfigError",
+      "filePath": "backend/infrastructure/ai/errors.py",
+      "summary": "LLMConfigError groups related behavior and state in errors.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/errors.py:LLMNetworkError",
+      "type": "class",
+      "name": "LLMNetworkError",
+      "filePath": "backend/infrastructure/ai/errors.py",
+      "summary": "LLMNetworkError groups related behavior and state in errors.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/errors.py:LLMProviderUnavailableError",
+      "type": "class",
+      "name": "LLMProviderUnavailableError",
+      "filePath": "backend/infrastructure/ai/errors.py",
+      "summary": "LLMProviderUnavailableError groups related behavior and state in errors.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/errors.py:LLMUnsupportedModelError",
+      "type": "class",
+      "name": "LLMUnsupportedModelError",
+      "filePath": "backend/infrastructure/ai/errors.py",
+      "summary": "LLMUnsupportedModelError groups related behavior and state in errors.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/factory.py",
+      "type": "file",
+      "name": "factory.py",
+      "filePath": "backend/infrastructure/ai/factory.py",
+      "summary": "factory.py is a backend python module in backend/infrastructure/ai with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/factory.py:create_llm_client",
+      "type": "function",
+      "name": "create_llm_client",
+      "filePath": "backend/infrastructure/ai/factory.py",
+      "summary": "create_llm_client implements logic in factory.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "type": "file",
+      "name": "llama_cpp_server.py",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "llama_cpp_server.py is a backend python module in backend/infrastructure/ai with 9 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:parse_llama_cpp_command",
+      "type": "function",
+      "name": "parse_llama_cpp_command",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "parse_llama_cpp_command implements logic in llama_cpp_server.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_build_argv",
+      "type": "function",
+      "name": "_build_argv",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_build_argv implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_coerce_value",
+      "type": "function",
+      "name": "_coerce_value",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_coerce_value implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_next_value",
+      "type": "function",
+      "name": "_next_value",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_next_value implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_port_in_use",
+      "type": "function",
+      "name": "_port_in_use",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_port_in_use implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_resolve_from_path",
+      "type": "function",
+      "name": "_resolve_from_path",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_resolve_from_path implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_summary",
+      "type": "function",
+      "name": "_summary",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_summary implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:_validate_host",
+      "type": "function",
+      "name": "_validate_host",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "_validate_host implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/llama_cpp_server.py:validate_start_config",
+      "type": "function",
+      "name": "validate_start_config",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "validate_start_config implements logic in llama_cpp_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/llama_cpp_server.py:LlamaCppServerManager",
+      "type": "class",
+      "name": "LlamaCppServerManager",
+      "filePath": "backend/infrastructure/ai/llama_cpp_server.py",
+      "summary": "LlamaCppServerManager groups related behavior and state in llama_cpp_server.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "type": "file",
+      "name": "local_llm_runtime.py",
+      "filePath": "backend/infrastructure/ai/local_llm_runtime.py",
+      "summary": "local_llm_runtime.py is a backend python module in backend/infrastructure/ai with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/local_llm_runtime.py:_client_config_from_profile",
+      "type": "function",
+      "name": "_client_config_from_profile",
+      "filePath": "backend/infrastructure/ai/local_llm_runtime.py",
+      "summary": "_client_config_from_profile implements logic in local_llm_runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/local_llm_runtime.py:ensure_profile_ready",
+      "type": "function",
+      "name": "ensure_profile_ready",
+      "filePath": "backend/infrastructure/ai/local_llm_runtime.py",
+      "summary": "ensure_profile_ready implements logic in local_llm_runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/local_llm_runtime.py:_wait_for_ollama",
+      "type": "function",
+      "name": "_wait_for_ollama",
+      "filePath": "backend/infrastructure/ai/local_llm_runtime.py",
+      "summary": "_wait_for_ollama implements logic in local_llm_runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/local_llm_runtime.py:_wait_for_llama_cpp",
+      "type": "function",
+      "name": "_wait_for_llama_cpp",
+      "filePath": "backend/infrastructure/ai/local_llm_runtime.py",
+      "summary": "_wait_for_llama_cpp implements logic in local_llm_runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/local_llm_runtime.py:chat_with_profile",
+      "type": "function",
+      "name": "chat_with_profile",
+      "filePath": "backend/infrastructure/ai/local_llm_runtime.py",
+      "summary": "chat_with_profile implements logic in local_llm_runtime.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/ollama_client.py",
+      "type": "file",
+      "name": "ollama_client.py",
+      "filePath": "backend/infrastructure/ai/ollama_client.py",
+      "summary": "ollama_client.py is a backend python module in backend/infrastructure/ai with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/ollama_client.py:OllamaClient",
+      "type": "class",
+      "name": "OllamaClient",
+      "filePath": "backend/infrastructure/ai/ollama_client.py",
+      "summary": "OllamaClient groups related behavior and state in ollama_client.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/ollama_server.py",
+      "type": "file",
+      "name": "ollama_server.py",
+      "filePath": "backend/infrastructure/ai/ollama_server.py",
+      "summary": "ollama_server.py is a backend python module in backend/infrastructure/ai with 1 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/infrastructure/ai/ollama_server.py:default_ollama_api_base",
+      "type": "function",
+      "name": "default_ollama_api_base",
+      "filePath": "backend/infrastructure/ai/ollama_server.py",
+      "summary": "default_ollama_api_base implements logic in ollama_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/ollama_server.py:OllamaServerManager",
+      "type": "class",
+      "name": "OllamaServerManager",
+      "filePath": "backend/infrastructure/ai/ollama_server.py",
+      "summary": "OllamaServerManager groups related behavior and state in ollama_server.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/infrastructure/ai/openai_compatible_client.py",
+      "type": "file",
+      "name": "openai_compatible_client.py",
+      "filePath": "backend/infrastructure/ai/openai_compatible_client.py",
+      "summary": "openai_compatible_client.py is a backend python module in backend/infrastructure/ai with 0 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/infrastructure/ai/openai_compatible_client.py:OpenAICompatibleClient",
+      "type": "class",
+      "name": "OpenAICompatibleClient",
+      "filePath": "backend/infrastructure/ai/openai_compatible_client.py",
+      "summary": "OpenAICompatibleClient groups related behavior and state in openai_compatible_client.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "backend/modules/agents/__init__.py",
+      "summary": "__init__.py is a backend python module in backend/modules/agents with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "entry-point",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/agents/api.py",
+      "summary": "api.py is a backend python module in backend/modules/agents with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/api.py:list_agent_definitions",
+      "type": "function",
+      "name": "list_agent_definitions",
+      "filePath": "backend/modules/agents/api.py",
+      "summary": "list_agent_definitions implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/api.py:list_agent_runs",
+      "type": "function",
+      "name": "list_agent_runs",
+      "filePath": "backend/modules/agents/api.py",
+      "summary": "list_agent_runs implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/api.py:run_agent_on_demand",
+      "type": "function",
+      "name": "run_agent_on_demand",
+      "filePath": "backend/modules/agents/api.py",
+      "summary": "run_agent_on_demand implements logic in api.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/context_builders.py",
+      "type": "file",
+      "name": "context_builders.py",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "context_builders.py is a backend python module in backend/modules/agents with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/context_builders.py:build_patrol_incident_context",
+      "type": "function",
+      "name": "build_patrol_incident_context",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "build_patrol_incident_context implements logic in context_builders.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/context_builders.py:build_property_patrol_incident_context",
+      "type": "function",
+      "name": "build_property_patrol_incident_context",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "build_property_patrol_incident_context implements logic in context_builders.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/context_builders.py:build_warehouse_scan_context",
+      "type": "function",
+      "name": "build_warehouse_scan_context",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "build_warehouse_scan_context implements logic in context_builders.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/context_builders.py:build_warehouse_inspection_context",
+      "type": "function",
+      "name": "build_warehouse_inspection_context",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "build_warehouse_inspection_context implements logic in context_builders.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/context_builders.py:build_field_survey_context",
+      "type": "function",
+      "name": "build_field_survey_context",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "build_field_survey_context implements logic in context_builders.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/context_builders.py:build_livestock_plan_context",
+      "type": "function",
+      "name": "build_livestock_plan_context",
+      "filePath": "backend/modules/agents/context_builders.py",
+      "summary": "build_livestock_plan_context implements logic in context_builders.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/hooks.py",
+      "type": "file",
+      "name": "hooks.py",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "hooks.py is a backend python module in backend/modules/agents with 8 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:enqueue_agent_run",
+      "type": "function",
+      "name": "enqueue_agent_run",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "enqueue_agent_run implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_agent_hook",
+      "type": "function",
+      "name": "schedule_agent_hook",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_agent_hook implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_postflight_for_mission_type",
+      "type": "function",
+      "name": "schedule_postflight_for_mission_type",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_postflight_for_mission_type implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_patrol_incident_summary",
+      "type": "function",
+      "name": "schedule_patrol_incident_summary",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_patrol_incident_summary implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_property_patrol_incident_summary",
+      "type": "function",
+      "name": "schedule_property_patrol_incident_summary",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_property_patrol_incident_summary implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_warehouse_scan_postflight",
+      "type": "function",
+      "name": "schedule_warehouse_scan_postflight",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_warehouse_scan_postflight implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_warehouse_inspection_postflight",
+      "type": "function",
+      "name": "schedule_warehouse_inspection_postflight",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_warehouse_inspection_postflight implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/hooks.py:schedule_livestock_plan_narrative",
+      "type": "function",
+      "name": "schedule_livestock_plan_narrative",
+      "filePath": "backend/modules/agents/hooks.py",
+      "summary": "schedule_livestock_plan_narrative implements logic in hooks.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/llm.py",
+      "type": "file",
+      "name": "llm.py",
+      "filePath": "backend/modules/agents/llm.py",
+      "summary": "llm.py is a backend python module in backend/modules/agents with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/llm.py:chat_with_task",
+      "type": "function",
+      "name": "chat_with_task",
+      "filePath": "backend/modules/agents/llm.py",
+      "summary": "chat_with_task implements logic in llm.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/output_validation.py",
+      "type": "file",
+      "name": "output_validation.py",
+      "filePath": "backend/modules/agents/output_validation.py",
+      "summary": "output_validation.py is a backend python module in backend/modules/agents with 1 functions and 1 classes.",
+      "complexity": "simple",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/output_validation.py:validate_agent_output",
+      "type": "function",
+      "name": "validate_agent_output",
+      "filePath": "backend/modules/agents/output_validation.py",
+      "summary": "validate_agent_output implements logic in output_validation.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/output_validation.py:ValidatedAgentOutput",
+      "type": "class",
+      "name": "ValidatedAgentOutput",
+      "filePath": "backend/modules/agents/output_validation.py",
+      "summary": "ValidatedAgentOutput groups related behavior and state in output_validation.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/registry.py",
+      "type": "file",
+      "name": "registry.py",
+      "filePath": "backend/modules/agents/registry.py",
+      "summary": "registry.py is a backend python module in backend/modules/agents with 5 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/registry.py:register",
+      "type": "function",
+      "name": "register",
+      "filePath": "backend/modules/agents/registry.py",
+      "summary": "register implements logic in registry.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/registry.py:get",
+      "type": "function",
+      "name": "get",
+      "filePath": "backend/modules/agents/registry.py",
+      "summary": "get implements logic in registry.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/registry.py:list_agents",
+      "type": "function",
+      "name": "list_agents",
+      "filePath": "backend/modules/agents/registry.py",
+      "summary": "list_agents implements logic in registry.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/registry.py:agents_for_mission_type",
+      "type": "function",
+      "name": "agents_for_mission_type",
+      "filePath": "backend/modules/agents/registry.py",
+      "summary": "agents_for_mission_type implements logic in registry.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/registry.py:_register_defaults",
+      "type": "function",
+      "name": "_register_defaults",
+      "filePath": "backend/modules/agents/registry.py",
+      "summary": "_register_defaults implements logic in registry.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/repository.py",
+      "type": "file",
+      "name": "repository.py",
+      "filePath": "backend/modules/agents/repository.py",
+      "summary": "repository.py is a backend python module in backend/modules/agents with 4 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/repository.py:load_prompt_template",
+      "type": "function",
+      "name": "load_prompt_template",
+      "filePath": "backend/modules/agents/repository.py",
+      "summary": "load_prompt_template implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/repository.py:render_prompt",
+      "type": "function",
+      "name": "render_prompt",
+      "filePath": "backend/modules/agents/repository.py",
+      "summary": "render_prompt implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/repository.py:prompt_hash",
+      "type": "function",
+      "name": "prompt_hash",
+      "filePath": "backend/modules/agents/repository.py",
+      "summary": "prompt_hash implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/repository.py:parse_structured_response",
+      "type": "function",
+      "name": "parse_structured_response",
+      "filePath": "backend/modules/agents/repository.py",
+      "summary": "parse_structured_response implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/repository.py:AgentRunRepository",
+      "type": "class",
+      "name": "AgentRunRepository",
+      "filePath": "backend/modules/agents/repository.py",
+      "summary": "AgentRunRepository groups related behavior and state in repository.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/schemas.py",
+      "type": "file",
+      "name": "schemas.py",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "schemas.py is a backend python module in backend/modules/agents with 0 functions and 8 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:MissionAgentId",
+      "type": "class",
+      "name": "MissionAgentId",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "MissionAgentId groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentPhase",
+      "type": "class",
+      "name": "AgentPhase",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentPhase groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentOutputType",
+      "type": "class",
+      "name": "AgentOutputType",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentOutputType groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentContext",
+      "type": "class",
+      "name": "AgentContext",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentContext groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentResult",
+      "type": "class",
+      "name": "AgentResult",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentResult groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentDefinition",
+      "type": "class",
+      "name": "AgentDefinition",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentDefinition groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentRunRequest",
+      "type": "class",
+      "name": "AgentRunRequest",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentRunRequest groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/schemas.py:AgentRunOut",
+      "type": "class",
+      "name": "AgentRunOut",
+      "filePath": "backend/modules/agents/schemas.py",
+      "summary": "AgentRunOut groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/agents/service.py",
+      "type": "file",
+      "name": "service.py",
+      "filePath": "backend/modules/agents/service.py",
+      "summary": "service.py is a backend python module in backend/modules/agents with 2 functions and 1 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/service.py:_agents_settings",
+      "type": "function",
+      "name": "_agents_settings",
+      "filePath": "backend/modules/agents/service.py",
+      "summary": "_agents_settings implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/agents/service.py:agent_enabled",
+      "type": "function",
+      "name": "agent_enabled",
+      "filePath": "backend/modules/agents/service.py",
+      "summary": "agent_enabled implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/agents/service.py:MissionAgentService",
+      "type": "class",
+      "name": "MissionAgentService",
+      "filePath": "backend/modules/agents/service.py",
+      "summary": "MissionAgentService groups related behavior and state in service.py.",
+      "complexity": "moderate",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/ai/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "api.py is a backend python module in backend/modules/ai with 21 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llm_settings",
+      "type": "function",
+      "name": "get_llm_settings",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llm_settings implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:put_llm_settings",
+      "type": "function",
+      "name": "put_llm_settings",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "put_llm_settings implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llm_providers",
+      "type": "function",
+      "name": "get_llm_providers",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llm_providers implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llm_profiles",
+      "type": "function",
+      "name": "get_llm_profiles",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llm_profiles implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:create_llm_profile",
+      "type": "function",
+      "name": "create_llm_profile",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "create_llm_profile implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:update_llm_profile",
+      "type": "function",
+      "name": "update_llm_profile",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "update_llm_profile implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:delete_llm_profile",
+      "type": "function",
+      "name": "delete_llm_profile",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "delete_llm_profile implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:test_llm_profile",
+      "type": "function",
+      "name": "test_llm_profile",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "test_llm_profile implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llm_profile_models",
+      "type": "function",
+      "name": "get_llm_profile_models",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llm_profile_models implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:start_llama_cpp_server",
+      "type": "function",
+      "name": "start_llama_cpp_server",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "start_llama_cpp_server implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:restart_llama_cpp_server",
+      "type": "function",
+      "name": "restart_llama_cpp_server",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "restart_llama_cpp_server implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:start_and_test_llama_cpp_server",
+      "type": "function",
+      "name": "start_and_test_llama_cpp_server",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "start_and_test_llama_cpp_server implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:stop_llama_cpp_server",
+      "type": "function",
+      "name": "stop_llama_cpp_server",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "stop_llama_cpp_server implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llama_cpp_server_status",
+      "type": "function",
+      "name": "get_llama_cpp_server_status",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llama_cpp_server_status implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:parse_llama_cpp_command",
+      "type": "function",
+      "name": "parse_llama_cpp_command",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "parse_llama_cpp_command implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llm_routing",
+      "type": "function",
+      "name": "get_llm_routing",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llm_routing implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:put_llm_routing",
+      "type": "function",
+      "name": "put_llm_routing",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "put_llm_routing implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_llm_models",
+      "type": "function",
+      "name": "get_llm_models",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_llm_models implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:test_llm_connection",
+      "type": "function",
+      "name": "test_llm_connection",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "test_llm_connection implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:test_llm_chat",
+      "type": "function",
+      "name": "test_llm_chat",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "test_llm_chat implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/api.py:get_local_llm_status",
+      "type": "function",
+      "name": "get_local_llm_status",
+      "filePath": "backend/modules/ai/api.py",
+      "summary": "get_local_llm_status implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/ai/schemas.py",
+      "type": "file",
+      "name": "schemas.py",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "schemas.py is a backend python module in backend/modules/ai with 0 functions and 21 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProviderDescriptor",
+      "type": "class",
+      "name": "LLMProviderDescriptor",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProviderDescriptor groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProviderSettings",
+      "type": "class",
+      "name": "LLMProviderSettings",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProviderSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LlamaCppParsedConfig",
+      "type": "class",
+      "name": "LlamaCppParsedConfig",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LlamaCppParsedConfig groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProfile",
+      "type": "class",
+      "name": "LLMProfile",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProfile groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProfileCreate",
+      "type": "class",
+      "name": "LLMProfileCreate",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProfileCreate groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProfileUpdate",
+      "type": "class",
+      "name": "LLMProfileUpdate",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProfileUpdate groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProfilesResponse",
+      "type": "class",
+      "name": "LLMProfilesResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProfilesResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMRoutingSettings",
+      "type": "class",
+      "name": "LLMRoutingSettings",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMRoutingSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMRoutingUpdate",
+      "type": "class",
+      "name": "LLMRoutingUpdate",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMRoutingUpdate groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LlamaCppServerStatus",
+      "type": "class",
+      "name": "LlamaCppServerStatus",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LlamaCppServerStatus groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LlamaCppCommandRequest",
+      "type": "class",
+      "name": "LlamaCppCommandRequest",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LlamaCppCommandRequest groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LlamaCppCommandResponse",
+      "type": "class",
+      "name": "LlamaCppCommandResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LlamaCppCommandResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMTaskDefault",
+      "type": "class",
+      "name": "LLMTaskDefault",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMTaskDefault groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMSettingsResponse",
+      "type": "class",
+      "name": "LLMSettingsResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMSettingsResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMSettingsUpdate",
+      "type": "class",
+      "name": "LLMSettingsUpdate",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMSettingsUpdate groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMConnectionTestRequest",
+      "type": "class",
+      "name": "LLMConnectionTestRequest",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMConnectionTestRequest groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMChatTestRequest",
+      "type": "class",
+      "name": "LLMChatTestRequest",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMChatTestRequest groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMModelsResponse",
+      "type": "class",
+      "name": "LLMModelsResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMModelsResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMProvidersResponse",
+      "type": "class",
+      "name": "LLMProvidersResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMProvidersResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMHealthResponse",
+      "type": "class",
+      "name": "LLMHealthResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMHealthResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/schemas.py:LLMChatTestResponse",
+      "type": "class",
+      "name": "LLMChatTestResponse",
+      "filePath": "backend/modules/ai/schemas.py",
+      "summary": "LLMChatTestResponse groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/ai/service.py",
+      "type": "file",
+      "name": "service.py",
+      "filePath": "backend/modules/ai/service.py",
+      "summary": "service.py is a backend python module in backend/modules/ai with 4 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/service.py:default_llm_settings",
+      "type": "function",
+      "name": "default_llm_settings",
+      "filePath": "backend/modules/ai/service.py",
+      "summary": "default_llm_settings implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/service.py:_now_iso",
+      "type": "function",
+      "name": "_now_iso",
+      "filePath": "backend/modules/ai/service.py",
+      "summary": "_now_iso implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/service.py:_slugify",
+      "type": "function",
+      "name": "_slugify",
+      "filePath": "backend/modules/ai/service.py",
+      "summary": "_slugify implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/ai/service.py:llm_error_payload",
+      "type": "function",
+      "name": "llm_error_payload",
+      "filePath": "backend/modules/ai/service.py",
+      "summary": "llm_error_payload implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/ai/service.py:AISettingsService",
+      "type": "class",
+      "name": "AISettingsService",
+      "filePath": "backend/modules/ai/service.py",
+      "summary": "AISettingsService groups related behavior and state in service.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/settings/api.py",
+      "type": "file",
+      "name": "api.py",
+      "filePath": "backend/modules/settings/api.py",
+      "summary": "api.py is a backend python module in backend/modules/settings with 3 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/api.py:get_settings",
+      "type": "function",
+      "name": "get_settings",
+      "filePath": "backend/modules/settings/api.py",
+      "summary": "get_settings implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/api.py:put_settings",
+      "type": "function",
+      "name": "put_settings",
+      "filePath": "backend/modules/settings/api.py",
+      "summary": "put_settings implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/api.py:upload_settings_file",
+      "type": "function",
+      "name": "upload_settings_file",
+      "filePath": "backend/modules/settings/api.py",
+      "summary": "upload_settings_file implements logic in api.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/settings/models.py",
+      "type": "file",
+      "name": "models.py",
+      "filePath": "backend/modules/settings/models.py",
+      "summary": "models.py is a backend python module in backend/modules/settings with 0 functions and 2 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/models.py:SettingsRow",
+      "type": "class",
+      "name": "SettingsRow",
+      "filePath": "backend/modules/settings/models.py",
+      "summary": "SettingsRow groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/models.py:VaultSecret",
+      "type": "class",
+      "name": "VaultSecret",
+      "filePath": "backend/modules/settings/models.py",
+      "summary": "VaultSecret groups related behavior and state in models.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/settings/repository.py",
+      "type": "file",
+      "name": "repository.py",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "repository.py is a backend python module in backend/modules/settings with 7 functions and 1 classes.",
+      "complexity": "complex",
+      "tags": [
+        "repository",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_ensure_dict",
+      "type": "function",
+      "name": "_ensure_dict",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_ensure_dict implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_deep_merge",
+      "type": "function",
+      "name": "_deep_merge",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_deep_merge implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_set_path",
+      "type": "function",
+      "name": "_set_path",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_set_path implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_pop_path",
+      "type": "function",
+      "name": "_pop_path",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_pop_path implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_profile_secret_name",
+      "type": "function",
+      "name": "_profile_secret_name",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_profile_secret_name implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_profile_id_from_secret_name",
+      "type": "function",
+      "name": "_profile_id_from_secret_name",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_profile_id_from_secret_name implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/repository.py:_ai_profiles",
+      "type": "function",
+      "name": "_ai_profiles",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "_ai_profiles implements logic in repository.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/repository.py:SettingsRepository",
+      "type": "class",
+      "name": "SettingsRepository",
+      "filePath": "backend/modules/settings/repository.py",
+      "summary": "SettingsRepository groups related behavior and state in repository.py.",
+      "complexity": "complex",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/settings/schemas.py",
+      "type": "file",
+      "name": "schemas.py",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "schemas.py is a backend python module in backend/modules/settings with 0 functions and 10 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:TelemetrySettings",
+      "type": "class",
+      "name": "TelemetrySettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "TelemetrySettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:AISettings",
+      "type": "class",
+      "name": "AISettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "AISettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:CredentialsSettings",
+      "type": "class",
+      "name": "CredentialsSettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "CredentialsSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:HardwareSettings",
+      "type": "class",
+      "name": "HardwareSettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "HardwareSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:PreflightSettings",
+      "type": "class",
+      "name": "PreflightSettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "PreflightSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:RaspberrySettings",
+      "type": "class",
+      "name": "RaspberrySettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "RaspberrySettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:CameraSettings",
+      "type": "class",
+      "name": "CameraSettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "CameraSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:PhotogrammetrySettings",
+      "type": "class",
+      "name": "PhotogrammetrySettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "PhotogrammetrySettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:AlertSettings",
+      "type": "class",
+      "name": "AlertSettings",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "AlertSettings groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "class:backend/modules/settings/schemas.py:SettingsDoc",
+      "type": "class",
+      "name": "SettingsDoc",
+      "filePath": "backend/modules/settings/schemas.py",
+      "summary": "SettingsDoc groups related behavior and state in schemas.py.",
+      "complexity": "simple",
+      "tags": [
+        "class",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/modules/settings/service.py",
+      "type": "file",
+      "name": "service.py",
+      "filePath": "backend/modules/settings/service.py",
+      "summary": "service.py is a backend python module in backend/modules/settings with 4 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "service",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/service.py:_env_string",
+      "type": "function",
+      "name": "_env_string",
+      "filePath": "backend/modules/settings/service.py",
+      "summary": "_env_string implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/service.py:_apply_runtime_to_process_env",
+      "type": "function",
+      "name": "_apply_runtime_to_process_env",
+      "filePath": "backend/modules/settings/service.py",
+      "summary": "_apply_runtime_to_process_env implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/service.py:_flatten_for_env",
+      "type": "function",
+      "name": "_flatten_for_env",
+      "filePath": "backend/modules/settings/service.py",
+      "summary": "_flatten_for_env implements logic in service.py.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/modules/settings/service.py:get_runtime_settings",
+      "type": "function",
+      "name": "get_runtime_settings",
+      "filePath": "backend/modules/settings/service.py",
+      "summary": "get_runtime_settings implements logic in service.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_ai_resolve_profile.py",
+      "type": "file",
+      "name": "test_ai_resolve_profile.py",
+      "filePath": "backend/tests/test_ai_resolve_profile.py",
+      "summary": "test_ai_resolve_profile.py is a backend python module in backend/tests/test_ai_resolve_profile.py with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ai_resolve_profile.py:test_resolve_profile_for_task_uses_override",
+      "type": "function",
+      "name": "test_resolve_profile_for_task_uses_override",
+      "filePath": "backend/tests/test_ai_resolve_profile.py",
+      "summary": "test_resolve_profile_for_task_uses_override implements logic in test_ai_resolve_profile.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_ai_resolve_profile.py:test_resolve_profile_for_task_returns_none_when_disabled",
+      "type": "function",
+      "name": "test_resolve_profile_for_task_returns_none_when_disabled",
+      "filePath": "backend/tests/test_ai_resolve_profile.py",
+      "summary": "test_resolve_profile_for_task_returns_none_when_disabled implements logic in test_ai_resolve_profile.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "file:backend/tests/test_mission_agents.py",
+      "type": "file",
+      "name": "test_mission_agents.py",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_mission_agents.py is a backend python module in backend/tests/test_mission_agents.py with 6 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "test",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_agents.py:test_agent_registry_contains_phase1_to_phase3_agents",
+      "type": "function",
+      "name": "test_agent_registry_contains_phase1_to_phase3_agents",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_agent_registry_contains_phase1_to_phase3_agents implements logic in test_mission_agents.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_agents.py:test_agent_enabled_respects_settings_flags",
+      "type": "function",
+      "name": "test_agent_enabled_respects_settings_flags",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_agent_enabled_respects_settings_flags implements logic in test_mission_agents.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_parses_json_response",
+      "type": "function",
+      "name": "test_mission_agent_service_parses_json_response",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_mission_agent_service_parses_json_response implements logic in test_mission_agents.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_rejects_invalid_output",
+      "type": "function",
+      "name": "test_mission_agent_service_rejects_invalid_output",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_mission_agent_service_rejects_invalid_output implements logic in test_mission_agents.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_agents.py:test_mission_draft_always_requires_human_approval",
+      "type": "function",
+      "name": "test_mission_draft_always_requires_human_approval",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_mission_draft_always_requires_human_approval implements logic in test_mission_agents.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    },
+    {
+      "id": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_enforces_phase_timeout",
+      "type": "function",
+      "name": "test_mission_agent_service_enforces_phase_timeout",
+      "filePath": "backend/tests/test_mission_agents.py",
+      "summary": "test_mission_agent_service_enforces_phase_timeout implements logic in test_mission_agents.py.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "python"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/core/security/secrets.py",
+      "target": "class:backend/core/security/secrets.py:Vault",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/core/security/secrets.py",
+      "target": "class:backend/core/security/secrets.py:Vault",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/entrypoints/workers/async_loop.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/entrypoints/workers/celery_app.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/modules/agents/context_builders.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/modules/agents/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/modules/patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "file:backend/modules/property_patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_get_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_get_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_run_on_worker_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_run_on_worker_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_hydrate_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_hydrate_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_apply_side_effects",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_apply_side_effects",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_execute_agent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:_execute_agent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:run_agent_task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:run_agent_task",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:summarize_property_patrol_incident",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/entrypoints/workers/agents_tasks.py",
+      "target": "function:backend/entrypoints/workers/agents_tasks.py:summarize_property_patrol_incident",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMProviderConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMProviderConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMMessage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMChatRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMChatRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMChatResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMChatResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMHealth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:LLMHealth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:BaseLLMClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/base.py",
+      "target": "class:backend/infrastructure/ai/base.py:BaseLLMClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMConfigError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMConfigError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMNetworkError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMNetworkError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMProviderUnavailableError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMProviderUnavailableError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMUnsupportedModelError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/errors.py",
+      "target": "class:backend/infrastructure/ai/errors.py:LLMUnsupportedModelError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/factory.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/factory.py",
+      "target": "file:backend/infrastructure/ai/ollama_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/factory.py",
+      "target": "file:backend/infrastructure/ai/openai_compatible_client.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/factory.py",
+      "target": "function:backend/infrastructure/ai/factory.py:create_llm_client",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/factory.py",
+      "target": "function:backend/infrastructure/ai/factory.py:create_llm_client",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:parse_llama_cpp_command",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:parse_llama_cpp_command",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_build_argv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_build_argv",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_coerce_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_coerce_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_next_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_next_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_port_in_use",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_port_in_use",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_resolve_from_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_resolve_from_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_validate_host",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:_validate_host",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:validate_start_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "function:backend/infrastructure/ai/llama_cpp_server.py:validate_start_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "class:backend/infrastructure/ai/llama_cpp_server.py:LlamaCppServerManager",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "target": "class:backend/infrastructure/ai/llama_cpp_server.py:LlamaCppServerManager",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "file:backend/infrastructure/ai/factory.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "file:backend/infrastructure/ai/ollama_server.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:_client_config_from_profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:_client_config_from_profile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:ensure_profile_ready",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:ensure_profile_ready",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:_wait_for_ollama",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:_wait_for_ollama",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:_wait_for_llama_cpp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:_wait_for_llama_cpp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:chat_with_profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "target": "function:backend/infrastructure/ai/local_llm_runtime.py:chat_with_profile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_client.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_client.py",
+      "target": "file:backend/infrastructure/ai/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_client.py",
+      "target": "class:backend/infrastructure/ai/ollama_client.py:OllamaClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_client.py",
+      "target": "class:backend/infrastructure/ai/ollama_client.py:OllamaClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_server.py",
+      "target": "function:backend/infrastructure/ai/ollama_server.py:default_ollama_api_base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_server.py",
+      "target": "function:backend/infrastructure/ai/ollama_server.py:default_ollama_api_base",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_server.py",
+      "target": "class:backend/infrastructure/ai/ollama_server.py:OllamaServerManager",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/ollama_server.py",
+      "target": "class:backend/infrastructure/ai/ollama_server.py:OllamaServerManager",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/infrastructure/ai/openai_compatible_client.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/openai_compatible_client.py",
+      "target": "file:backend/infrastructure/ai/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/infrastructure/ai/openai_compatible_client.py",
+      "target": "class:backend/infrastructure/ai/openai_compatible_client.py:OpenAICompatibleClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/infrastructure/ai/openai_compatible_client.py",
+      "target": "class:backend/infrastructure/ai/openai_compatible_client.py:OpenAICompatibleClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/__init__.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/modules/agents/context_builders.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/modules/agents/registry.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/modules/agents/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/modules/agents/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "file:backend/modules/identity/dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "function:backend/modules/agents/api.py:list_agent_definitions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "function:backend/modules/agents/api.py:list_agent_definitions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "function:backend/modules/agents/api.py:list_agent_runs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "function:backend/modules/agents/api.py:list_agent_runs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "function:backend/modules/agents/api.py:run_agent_on_demand",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/api.py",
+      "target": "function:backend/modules/agents/api.py:run_agent_on_demand",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "file:backend/modules/missions/runtime_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "file:backend/modules/patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "file:backend/modules/property_patrol/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "file:backend/modules/warehouse/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "file:backend/modules/warehouse/service/structure_jobs.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_patrol_incident_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_patrol_incident_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_property_patrol_incident_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_property_patrol_incident_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_warehouse_scan_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_warehouse_scan_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_warehouse_inspection_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_warehouse_inspection_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_field_survey_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_field_survey_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_livestock_plan_context",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/context_builders.py",
+      "target": "function:backend/modules/agents/context_builders.py:build_livestock_plan_context",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "file:backend/modules/agents/registry.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:enqueue_agent_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:enqueue_agent_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_agent_hook",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_agent_hook",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_postflight_for_mission_type",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_postflight_for_mission_type",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_patrol_incident_summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_patrol_incident_summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_property_patrol_incident_summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_property_patrol_incident_summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_warehouse_scan_postflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_warehouse_scan_postflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_warehouse_inspection_postflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_warehouse_inspection_postflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_livestock_plan_narrative",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/hooks.py",
+      "target": "function:backend/modules/agents/hooks.py:schedule_livestock_plan_narrative",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "file:backend/infrastructure/ai/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "file:backend/modules/ai/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "function:backend/modules/agents/llm.py:chat_with_task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/llm.py",
+      "target": "function:backend/modules/agents/llm.py:chat_with_task",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/output_validation.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/output_validation.py",
+      "target": "function:backend/modules/agents/output_validation.py:validate_agent_output",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/output_validation.py",
+      "target": "function:backend/modules/agents/output_validation.py:validate_agent_output",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/output_validation.py",
+      "target": "class:backend/modules/agents/output_validation.py:ValidatedAgentOutput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/output_validation.py",
+      "target": "class:backend/modules/agents/output_validation.py:ValidatedAgentOutput",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "file:backend/modules/missions/schemas/mission_types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:register",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:register",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:get",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:list_agents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:list_agents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:agents_for_mission_type",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:agents_for_mission_type",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:_register_defaults",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/registry.py",
+      "target": "function:backend/modules/agents/registry.py:_register_defaults",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "file:backend/modules/agents/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:load_prompt_template",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:load_prompt_template",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:render_prompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:render_prompt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:prompt_hash",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:prompt_hash",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:parse_structured_response",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "function:backend/modules/agents/repository.py:parse_structured_response",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "class:backend/modules/agents/repository.py:AgentRunRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/repository.py",
+      "target": "class:backend/modules/agents/repository.py:AgentRunRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:MissionAgentId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:MissionAgentId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentPhase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentPhase",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentOutputType",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentOutputType",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentContext",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentContext",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentDefinition",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentDefinition",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentRunRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentRunRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentRunOut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/schemas.py",
+      "target": "class:backend/modules/agents/schemas.py:AgentRunOut",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/agents/llm.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/agents/output_validation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/agents/registry.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/agents/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/ai/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "function:backend/modules/agents/service.py:_agents_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "function:backend/modules/agents/service.py:_agents_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "function:backend/modules/agents/service.py:agent_enabled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "function:backend/modules/agents/service.py:agent_enabled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "class:backend/modules/agents/service.py:MissionAgentService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/agents/service.py",
+      "target": "class:backend/modules/agents/service.py:MissionAgentService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "file:backend/modules/ai/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "file:backend/modules/settings/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:put_llm_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:put_llm_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_providers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_providers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_profiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_profiles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:create_llm_profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:create_llm_profile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:update_llm_profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:update_llm_profile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:delete_llm_profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:delete_llm_profile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:test_llm_profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:test_llm_profile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_profile_models",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_profile_models",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:start_llama_cpp_server",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:start_llama_cpp_server",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:restart_llama_cpp_server",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:restart_llama_cpp_server",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:start_and_test_llama_cpp_server",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:start_and_test_llama_cpp_server",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:stop_llama_cpp_server",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:stop_llama_cpp_server",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llama_cpp_server_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llama_cpp_server_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:parse_llama_cpp_command",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:parse_llama_cpp_command",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_routing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_routing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:put_llm_routing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:put_llm_routing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_models",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_llm_models",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:test_llm_connection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:test_llm_connection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:test_llm_chat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:test_llm_chat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_local_llm_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/api.py",
+      "target": "function:backend/modules/ai/api.py:get_local_llm_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProviderDescriptor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProviderDescriptor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProviderSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProviderSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppParsedConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppParsedConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfileCreate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfileCreate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfileUpdate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfileUpdate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfilesResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProfilesResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMRoutingSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMRoutingSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMRoutingUpdate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMRoutingUpdate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppServerStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppServerStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppCommandRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppCommandRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppCommandResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LlamaCppCommandResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMTaskDefault",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMTaskDefault",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMSettingsResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMSettingsResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMSettingsUpdate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMSettingsUpdate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMConnectionTestRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMConnectionTestRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMChatTestRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMChatTestRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMModelsResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMModelsResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProvidersResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMProvidersResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMHealthResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMHealthResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMChatTestResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/schemas.py",
+      "target": "class:backend/modules/ai/schemas.py:LLMChatTestResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/infrastructure/ai/errors.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/infrastructure/ai/factory.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/infrastructure/ai/llama_cpp_server.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/infrastructure/ai/local_llm_runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:default_llm_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:default_llm_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:_now_iso",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:_now_iso",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:_slugify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:_slugify",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:llm_error_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "function:backend/modules/ai/service.py:llm_error_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "class:backend/modules/ai/service.py:AISettingsService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/ai/service.py",
+      "target": "class:backend/modules/ai/service.py:AISettingsService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "file:backend/modules/ai/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "file:backend/modules/settings/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "file:backend/modules/settings/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "file:backend/modules/vehicle_runtime/factory.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "function:backend/modules/settings/api.py:get_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "function:backend/modules/settings/api.py:get_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "function:backend/modules/settings/api.py:put_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "function:backend/modules/settings/api.py:put_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "function:backend/modules/settings/api.py:upload_settings_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/api.py",
+      "target": "function:backend/modules/settings/api.py:upload_settings_file",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/models.py",
+      "target": "file:backend/core/database/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/models.py",
+      "target": "class:backend/modules/settings/models.py:SettingsRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/models.py",
+      "target": "class:backend/modules/settings/models.py:SettingsRow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/models.py",
+      "target": "class:backend/modules/settings/models.py:VaultSecret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/models.py",
+      "target": "class:backend/modules/settings/models.py:VaultSecret",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "file:backend/core/database/session.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "file:backend/core/security/secrets.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "file:backend/modules/settings/models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_ensure_dict",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_ensure_dict",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_deep_merge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_deep_merge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_set_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_set_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_pop_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_pop_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_profile_secret_name",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_profile_secret_name",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_profile_id_from_secret_name",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_profile_id_from_secret_name",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_ai_profiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "function:backend/modules/settings/repository.py:_ai_profiles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "class:backend/modules/settings/repository.py:SettingsRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/repository.py",
+      "target": "class:backend/modules/settings/repository.py:SettingsRepository",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:TelemetrySettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:TelemetrySettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:AISettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:AISettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:CredentialsSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:CredentialsSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:HardwareSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:HardwareSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:PreflightSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:PreflightSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:RaspberrySettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:RaspberrySettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:CameraSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:CameraSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:PhotogrammetrySettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:PhotogrammetrySettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:AlertSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:AlertSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:SettingsDoc",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/schemas.py",
+      "target": "class:backend/modules/settings/schemas.py:SettingsDoc",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "file:backend/core/config/runtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "file:backend/modules/settings/repository.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:_env_string",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:_env_string",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:_apply_runtime_to_process_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:_apply_runtime_to_process_env",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:_flatten_for_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:_flatten_for_env",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:get_runtime_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/modules/settings/service.py",
+      "target": "function:backend/modules/settings/service.py:get_runtime_settings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ai_resolve_profile.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_ai_resolve_profile.py",
+      "target": "file:backend/modules/ai/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_ai_resolve_profile.py",
+      "target": "function:backend/tests/test_ai_resolve_profile.py:test_resolve_profile_for_task_uses_override",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ai_resolve_profile.py",
+      "target": "function:backend/tests/test_ai_resolve_profile.py:test_resolve_profile_for_task_uses_override",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_ai_resolve_profile.py",
+      "target": "function:backend/tests/test_ai_resolve_profile.py:test_resolve_profile_for_task_returns_none_when_disabled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_ai_resolve_profile.py",
+      "target": "function:backend/tests/test_ai_resolve_profile.py:test_resolve_profile_for_task_returns_none_when_disabled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "file:backend/infrastructure/ai/base.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "file:backend/modules/agents/output_validation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "file:backend/modules/agents/registry.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "file:backend/modules/agents/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "file:backend/modules/agents/service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "file:backend/modules/ai/schemas.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_agent_registry_contains_phase1_to_phase3_agents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_agent_registry_contains_phase1_to_phase3_agents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_agent_enabled_respects_settings_flags",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_agent_enabled_respects_settings_flags",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_parses_json_response",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_parses_json_response",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_rejects_invalid_output",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_rejects_invalid_output",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_draft_always_requires_human_approval",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_draft_always_requires_human_approval",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_enforces_phase_timeout",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:backend/tests/test_mission_agents.py",
+      "target": "function:backend/tests/test_mission_agents.py:test_mission_agent_service_enforces_phase_timeout",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

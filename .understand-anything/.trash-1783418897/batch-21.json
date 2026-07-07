@@ -1,0 +1,1872 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "type": "file",
+      "name": "useGridPreview.ts",
+      "filePath": "frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "summary": "useGridPreview.ts is a frontend typescript module in frontend/src/modules/mission-planning with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-planning/hooks/useGridPreview.ts:useGridPreview",
+      "type": "function",
+      "name": "useGridPreview",
+      "filePath": "frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "summary": "useGridPreview implements logic in useGridPreview.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "type": "file",
+      "name": "usePatrolPreview.ts",
+      "filePath": "frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "summary": "usePatrolPreview.ts is a frontend typescript module in frontend/src/modules/mission-planning with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts:usePatrolPreview",
+      "type": "function",
+      "name": "usePatrolPreview",
+      "filePath": "frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "summary": "usePatrolPreview implements logic in usePatrolPreview.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-planning/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "frontend/src/modules/mission-planning/types.ts",
+      "summary": "types.ts is a frontend typescript module in frontend/src/modules/mission-planning with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "type": "file",
+      "name": "liveObjectDetectionApi.ts",
+      "filePath": "frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "summary": "liveObjectDetectionApi.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 3 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:getLiveObjectDetectionStatus",
+      "type": "function",
+      "name": "getLiveObjectDetectionStatus",
+      "filePath": "frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "summary": "getLiveObjectDetectionStatus implements logic in liveObjectDetectionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:startLiveObjectDetection",
+      "type": "function",
+      "name": "startLiveObjectDetection",
+      "filePath": "frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "summary": "startLiveObjectDetection implements logic in liveObjectDetectionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:stopLiveObjectDetection",
+      "type": "function",
+      "name": "stopLiveObjectDetection",
+      "filePath": "frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "summary": "stopLiveObjectDetection implements logic in liveObjectDetectionApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "type": "file",
+      "name": "missionsApi.ts",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "missionsApi.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 8 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:runPreflight",
+      "type": "function",
+      "name": "runPreflight",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "runPreflight implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:createMission",
+      "type": "function",
+      "name": "createMission",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "createMission implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:startMissionWithPreflight",
+      "type": "function",
+      "name": "startMissionWithPreflight",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "startMissionWithPreflight implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchFlightStatus",
+      "type": "function",
+      "name": "fetchFlightStatus",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "fetchFlightStatus implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionRuntime",
+      "type": "function",
+      "name": "fetchMissionRuntime",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "fetchMissionRuntime implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:sendMissionCommand",
+      "type": "function",
+      "name": "sendMissionCommand",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "sendMissionCommand implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionCommandAudit",
+      "type": "function",
+      "name": "fetchMissionCommandAudit",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "fetchMissionCommandAudit implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionStateTransitions",
+      "type": "function",
+      "name": "fetchMissionStateTransitions",
+      "filePath": "frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "summary": "fetchMissionStateTransitions implements logic in missionsApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "type": "file",
+      "name": "preflightApi.ts",
+      "filePath": "frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "summary": "preflightApi.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/preflightApi.ts:fetchPreflightSettings",
+      "type": "function",
+      "name": "fetchPreflightSettings",
+      "filePath": "frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "summary": "fetchPreflightSettings implements logic in preflightApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "type": "file",
+      "name": "telemetryApi.ts",
+      "filePath": "frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "summary": "telemetryApi.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/telemetryApi.ts:fetchOpsHealth",
+      "type": "function",
+      "name": "fetchOpsHealth",
+      "filePath": "frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "summary": "fetchOpsHealth implements logic in telemetryApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "type": "file",
+      "name": "telemetryConnectApi.ts",
+      "filePath": "frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "summary": "telemetryConnectApi.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts:connectDroneTelemetry",
+      "type": "function",
+      "name": "connectDroneTelemetry",
+      "filePath": "frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "summary": "connectDroneTelemetry implements logic in telemetryConnectApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts:ensureDroneConnectionForMissionStart",
+      "type": "function",
+      "name": "ensureDroneConnectionForMissionStart",
+      "filePath": "frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "summary": "ensureDroneConnectionForMissionStart implements logic in telemetryConnectApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "type": "file",
+      "name": "videoApi.ts",
+      "filePath": "frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "summary": "videoApi.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 2 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "api-handler",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/videoApi.ts:fetchVideoStatus",
+      "type": "function",
+      "name": "fetchVideoStatus",
+      "filePath": "frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "summary": "fetchVideoStatus implements logic in videoApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/api/videoApi.ts:startVideoStream",
+      "type": "function",
+      "name": "startVideoStream",
+      "filePath": "frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "summary": "startVideoStream implements logic in videoApi.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "type": "file",
+      "name": "LiveDetectionOverlay.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "summary": "LiveDetectionOverlay.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx:LiveDetectionOverlay",
+      "type": "function",
+      "name": "LiveDetectionOverlay",
+      "filePath": "frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "summary": "LiveDetectionOverlay implements logic in LiveDetectionOverlay.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "type": "file",
+      "name": "MissionCommandPanel.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "summary": "MissionCommandPanel.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx:MissionCommandPanel",
+      "type": "function",
+      "name": "MissionCommandPanel",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "summary": "MissionCommandPanel implements logic in MissionCommandPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "type": "file",
+      "name": "MissionPreflightPanel.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "summary": "MissionPreflightPanel.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx:MissionPreflightPanel",
+      "type": "function",
+      "name": "MissionPreflightPanel",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "summary": "MissionPreflightPanel implements logic in MissionPreflightPanel.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx",
+      "type": "file",
+      "name": "MissionVideoEmptyState.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx",
+      "summary": "MissionVideoEmptyState.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx:MissionVideoEmptyState",
+      "type": "function",
+      "name": "MissionVideoEmptyState",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx",
+      "summary": "MissionVideoEmptyState implements logic in MissionVideoEmptyState.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "type": "file",
+      "name": "MissionVideoPanel.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "summary": "MissionVideoPanel.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx:MissionVideoPanel",
+      "type": "function",
+      "name": "MissionVideoPanel",
+      "filePath": "frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "summary": "MissionVideoPanel implements logic in MissionVideoPanel.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "type": "file",
+      "name": "TelemetryHud.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "summary": "TelemetryHud.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 7 functions and 0 classes.",
+      "complexity": "complex",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:HudMetric",
+      "type": "function",
+      "name": "HudMetric",
+      "filePath": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "summary": "HudMetric implements logic in TelemetryHud.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:HudDivider",
+      "type": "function",
+      "name": "HudDivider",
+      "filePath": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "summary": "HudDivider implements logic in TelemetryHud.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:GlassPanel",
+      "type": "function",
+      "name": "GlassPanel",
+      "filePath": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "summary": "GlassPanel implements logic in TelemetryHud.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:TelemetryHud",
+      "type": "function",
+      "name": "TelemetryHud",
+      "filePath": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "summary": "TelemetryHud implements logic in TelemetryHud.tsx.",
+      "complexity": "complex",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:DetailRow",
+      "type": "function",
+      "name": "DetailRow",
+      "filePath": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "summary": "DetailRow implements logic in TelemetryHud.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "type": "file",
+      "name": "CommandAuditSection.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "summary": "CommandAuditSection.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx:CommandAuditSection",
+      "type": "function",
+      "name": "CommandAuditSection",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "summary": "CommandAuditSection implements logic in CommandAuditSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "type": "file",
+      "name": "CommandControlsSection.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "summary": "CommandControlsSection.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx:CommandControlsSection",
+      "type": "function",
+      "name": "CommandControlsSection",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "summary": "CommandControlsSection implements logic in CommandControlsSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "type": "file",
+      "name": "CommandMetricsSection.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "summary": "CommandMetricsSection.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx:CommandMetricsSection",
+      "type": "function",
+      "name": "CommandMetricsSection",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "summary": "CommandMetricsSection implements logic in CommandMetricsSection.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "type": "file",
+      "name": "MissionTimelineSection.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "summary": "MissionTimelineSection.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx:MissionTimelineSection",
+      "type": "function",
+      "name": "MissionTimelineSection",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "summary": "MissionTimelineSection implements logic in MissionTimelineSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "type": "file",
+      "name": "OpsHealthSection.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "summary": "OpsHealthSection.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx:OpsHealthSection",
+      "type": "function",
+      "name": "OpsHealthSection",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "summary": "OpsHealthSection implements logic in OpsHealthSection.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "type": "file",
+      "name": "StatRow.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "summary": "StatRow.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/command/StatRow.tsx:StatRow",
+      "type": "function",
+      "name": "StatRow",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "summary": "StatRow implements logic in StatRow.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/command/formatters.ts",
+      "type": "file",
+      "name": "formatters.ts",
+      "filePath": "frontend/src/modules/mission-runtime/components/command/formatters.ts",
+      "summary": "formatters.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 0 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "type": "file",
+      "name": "PreflightCategoryTables.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "summary": "PreflightCategoryTables.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx:PreflightCategoryTables",
+      "type": "function",
+      "name": "PreflightCategoryTables",
+      "filePath": "frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "summary": "PreflightCategoryTables implements logic in PreflightCategoryTables.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "type": "file",
+      "name": "PreflightStatusDot.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "summary": "PreflightStatusDot.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "component",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx:PreflightStatusDot",
+      "type": "function",
+      "name": "PreflightStatusDot",
+      "filePath": "frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "summary": "PreflightStatusDot implements logic in PreflightStatusDot.tsx.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts",
+      "type": "file",
+      "name": "useAutoStartVideo.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts",
+      "summary": "useAutoStartVideo.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts:useAutoStartVideo",
+      "type": "function",
+      "name": "useAutoStartVideo",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts",
+      "summary": "useAutoStartVideo implements logic in useAutoStartVideo.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts",
+      "type": "file",
+      "name": "useDetectionFps.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts",
+      "summary": "useDetectionFps.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts:useDetectionFps",
+      "type": "function",
+      "name": "useDetectionFps",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts",
+      "summary": "useDetectionFps implements logic in useDetectionFps.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "type": "file",
+      "name": "useLiveObjectDetection.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "summary": "useLiveObjectDetection.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 1 functions and 0 classes.",
+      "complexity": "simple",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts:useLiveObjectDetection",
+      "type": "function",
+      "name": "useLiveObjectDetection",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "summary": "useLiveObjectDetection implements logic in useLiveObjectDetection.ts.",
+      "complexity": "simple",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "type": "file",
+      "name": "useMissionCommandMetrics.tsx",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "summary": "useMissionCommandMetrics.tsx is a frontend typescript module in frontend/src/modules/mission-runtime with 4 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx:useMissionCommandMetrics",
+      "type": "function",
+      "name": "useMissionCommandMetrics",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "summary": "useMissionCommandMetrics implements logic in useMissionCommandMetrics.tsx.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    },
+    {
+      "id": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "type": "file",
+      "name": "useMissionCommands.ts",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "summary": "useMissionCommands.ts is a frontend typescript module in frontend/src/modules/mission-runtime with 2 functions and 0 classes.",
+      "complexity": "moderate",
+      "tags": [
+        "hook",
+        "typescript"
+      ]
+    },
+    {
+      "id": "function:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts:useMissionCommands",
+      "type": "function",
+      "name": "useMissionCommands",
+      "filePath": "frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "summary": "useMissionCommands implements logic in useMissionCommands.ts.",
+      "complexity": "moderate",
+      "tags": [
+        "function",
+        "typescript"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "target": "file:frontend/src/modules/fields/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "target": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "target": "file:frontend/src/modules/mission-planning/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "target": "function:frontend/src/modules/mission-planning/hooks/useGridPreview.ts:useGridPreview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/useGridPreview.ts",
+      "target": "function:frontend/src/modules/mission-planning/hooks/useGridPreview.ts:useGridPreview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "target": "file:frontend/src/modules/mission-planning/api/planningApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "target": "file:frontend/src/modules/mission-planning/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "target": "function:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts:usePatrolPreview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts",
+      "target": "function:frontend/src/modules/mission-planning/hooks/usePatrolPreview.ts:usePatrolPreview",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:getLiveObjectDetectionStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:getLiveObjectDetectionStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:startLiveObjectDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:startLiveObjectDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:stopLiveObjectDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts:stopLiveObjectDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:runPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:runPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:createMission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:createMission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:startMissionWithPreflight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:startMissionWithPreflight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchFlightStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchFlightStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionRuntime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionRuntime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:sendMissionCommand",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:sendMissionCommand",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionCommandAudit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionCommandAudit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionStateTransitions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/missionsApi.ts:fetchMissionStateTransitions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/preflightApi.ts:fetchPreflightSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/preflightApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/preflightApi.ts:fetchPreflightSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/telemetryApi.ts:fetchOpsHealth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/telemetryApi.ts:fetchOpsHealth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "target": "file:frontend/src/shared/api/apiError.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts:connectDroneTelemetry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts:connectDroneTelemetry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts:ensureDroneConnectionForMissionStart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/telemetryConnectApi.ts:ensureDroneConnectionForMissionStart",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "target": "file:frontend/src/shared/api/httpClient.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/videoApi.ts:fetchVideoStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/videoApi.ts:fetchVideoStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/videoApi.ts:startVideoStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/api/videoApi.ts",
+      "target": "function:frontend/src/modules/mission-runtime/api/videoApi.ts:startVideoStream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx:LiveDetectionOverlay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx:LiveDetectionOverlay",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/formatters.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx:MissionCommandPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionCommandPanel.tsx:MissionCommandPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionPreflightRows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx:MissionPreflightPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionPreflightPanel.tsx:MissionPreflightPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx:MissionVideoEmptyState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx:MissionVideoEmptyState",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/LiveDetectionOverlay.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/MissionVideoEmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx:MissionVideoPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/MissionVideoPanel.tsx:MissionVideoPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:HudMetric",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:HudDivider",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:GlassPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:TelemetryHud",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:TelemetryHud",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/TelemetryHud.tsx:DetailRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/formatters.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx:CommandAuditSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/CommandAuditSection.tsx:CommandAuditSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "target": "file:frontend/src/shared/ui/ActionIconButton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx:CommandControlsSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/CommandControlsSection.tsx:CommandControlsSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx:CommandMetricsSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/CommandMetricsSection.tsx:CommandMetricsSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/formatters.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx:MissionTimelineSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/MissionTimelineSection.tsx:MissionTimelineSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/formatters.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx:OpsHealthSection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/OpsHealthSection.tsx:OpsHealthSection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/StatRow.tsx:StatRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/command/StatRow.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/command/StatRow.tsx:StatRow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/buildPreflightRows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx:PreflightCategoryTables",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/preflight/PreflightCategoryTables.tsx:PreflightCategoryTables",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightTypes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/preflight/preflightUtils.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx:PreflightStatusDot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/components/preflight/PreflightStatusDot.tsx:PreflightStatusDot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts",
+      "target": "file:frontend/src/modules/mission-runtime/hooks/useMissionVideo.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts:useAutoStartVideo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts:useAutoStartVideo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts:useDetectionFps",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts:useDetectionFps",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/liveObjectDetectionApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts:useLiveObjectDetection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useLiveObjectDetection.ts:useLiveObjectDetection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "target": "file:frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx:useMissionCommandMetrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionCommandMetrics.tsx:useMissionCommandMetrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "file:frontend/src/app/config/queryKeys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/missionsApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "file:frontend/src/modules/mission-runtime/api/telemetryApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "file:frontend/src/modules/mission-runtime/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "file:frontend/src/modules/session/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts:useMissionCommands",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts",
+      "target": "function:frontend/src/modules/mission-runtime/hooks/useMissionCommands.ts:useMissionCommands",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

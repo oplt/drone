@@ -1,0 +1,2428 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 32,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/dashboard/api/dashboardApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 11,
+      "nonEmptyLines": 10,
+      "functions": [
+        {
+          "name": "fetchAnalyticsOverview",
+          "startLine": 4,
+          "endLine": 11,
+          "params": [
+            "signal"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchAnalyticsOverview",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchAnalyticsOverview",
+          "callee": "httpRequest",
+          "lineNumber": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/DashboardAlertsPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 57,
+      "nonEmptyLines": 54,
+      "functions": [
+        {
+          "name": "DashboardAlertsPanel",
+          "startLine": 12,
+          "endLine": 57,
+          "params": [
+            "{\n  items,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DashboardAlertsPanel",
+          "line": 12,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "DashboardAlertsPanel",
+          "callee": "items.slice",
+          "lineNumber": 15
+        },
+        {
+          "caller": "DashboardAlertsPanel",
+          "callee": "Math.max",
+          "lineNumber": 16
+        },
+        {
+          "caller": "DashboardAlertsPanel",
+          "callee": "visibleItems.map",
+          "lineNumber": 30
+        },
+        {
+          "caller": "DashboardAlertsPanel",
+          "callee": "items.slice(3).join",
+          "lineNumber": 49
+        },
+        {
+          "caller": "DashboardAlertsPanel",
+          "callee": "items.slice",
+          "lineNumber": 49
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/DashboardPanelSkeleton.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 17,
+      "functions": [
+        {
+          "name": "DashboardPanelSkeleton",
+          "startLine": 5,
+          "endLine": 18,
+          "params": [
+            "{\n  height = 280,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DashboardPanelSkeleton",
+          "line": 5,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/DashboardSystemStatus.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 68,
+      "nonEmptyLines": 65,
+      "functions": [
+        {
+          "name": "StatusRow",
+          "startLine": 13,
+          "endLine": 34,
+          "params": [
+            "{\n  label,\n  value,\n  tooltip,\n}"
+          ]
+        },
+        {
+          "name": "DashboardSystemStatus",
+          "startLine": 36,
+          "endLine": 68,
+          "params": [
+            "{\n  telemetryRunning,\n  mavlinkConnected,\n  activeConnections = 0,\n  lastUpdateAge,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DashboardSystemStatus",
+          "line": 36,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/DashboardTelemetryPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 158,
+      "nonEmptyLines": 152,
+      "functions": [
+        {
+          "name": "MiniMetric",
+          "startLine": 25,
+          "endLine": 46,
+          "params": [
+            "{\n  label,\n  value,\n  tooltip,\n}"
+          ]
+        },
+        {
+          "name": "DashboardTelemetryPanel",
+          "startLine": 48,
+          "endLine": 158,
+          "params": [
+            "{\n  isConnected,\n  mode,\n  altitudeM,\n  speedMps,\n  batteryPct,\n  satellites,\n  hdop,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DashboardTelemetryPanel",
+          "line": 48,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Number.isFinite",
+          "lineNumber": 57
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Math.min",
+          "lineNumber": 58
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Number.isFinite",
+          "lineNumber": 89
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "altitudeM.toFixed",
+          "lineNumber": 89
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Number.isFinite",
+          "lineNumber": 98
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "speedMps.toFixed",
+          "lineNumber": 98
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Math.round",
+          "lineNumber": 106
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Number.isFinite",
+          "lineNumber": 123
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Number.isFinite",
+          "lineNumber": 124
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "hdop.toFixed",
+          "lineNumber": 124
+        },
+        {
+          "caller": "DashboardTelemetryPanel",
+          "callee": "Math.round",
+          "lineNumber": 141
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/DashboardTrendCharts.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 77,
+      "nonEmptyLines": 74,
+      "functions": [
+        {
+          "name": "DashboardTrendCharts",
+          "startLine": 20,
+          "endLine": 77,
+          "params": [
+            "{\n  labels,\n  flightHours = [],\n  flightCounts = [],\n  telemetryCounts = [],\n  surveyHours7d,\n  flights24h,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DashboardTrendCharts",
+          "line": 20,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "labels.slice",
+          "lineNumber": 28
+        },
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "flightCounts.slice",
+          "lineNumber": 29
+        },
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "telemetryCounts.slice",
+          "lineNumber": 30
+        },
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "formatNumber",
+          "lineNumber": 40
+        },
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "deltaLabelFromSeries",
+          "lineNumber": 41
+        },
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "formatNumber",
+          "lineNumber": 56
+        },
+        {
+          "caller": "DashboardTrendCharts",
+          "callee": "deltaLabelFromSeries",
+          "lineNumber": 57
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/HighlightedCard.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 31,
+      "functions": [
+        {
+          "name": "HighlightedCard",
+          "startLine": 7,
+          "endLine": 32,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "HighlightedCard",
+          "line": 7,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/MainGrid.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 193,
+      "nonEmptyLines": 186,
+      "functions": [
+        {
+          "name": "MainGrid",
+          "startLine": 23,
+          "endLine": 193,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MainGrid",
+          "line": 23,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MainGrid",
+          "callee": "useDashboardOverviewModel",
+          "lineNumber": 24
+        },
+        {
+          "caller": "MainGrid",
+          "callee": "Array.from({ length: 4 }).map",
+          "lineNumber": 104
+        },
+        {
+          "caller": "MainGrid",
+          "callee": "Array.from",
+          "lineNumber": 104
+        },
+        {
+          "caller": "MainGrid",
+          "callee": "statCards.map",
+          "lineNumber": 112
+        }
+      ],
+      "metrics": {
+        "importCount": 11,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/PageViewsBarChart.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 98,
+      "nonEmptyLines": 95,
+      "functions": [
+        {
+          "name": "PageViewsBarChart",
+          "startLine": 20,
+          "endLine": 98,
+          "params": [
+            "{\n  title = 'Flight workload',\n  totalValue = '--',\n  deltaLabel,\n  subtitle = 'Flight executions and imagery exports for the last 6 months',\n  labels,\n  series,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PageViewsBarChart",
+          "line": 20,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PageViewsBarChart",
+          "callee": "useTheme",
+          "lineNumber": 28
+        },
+        {
+          "caller": "PageViewsBarChart",
+          "callee": "finalSeries.some",
+          "lineNumber": 35
+        },
+        {
+          "caller": "PageViewsBarChart",
+          "callee": "Math.max",
+          "lineNumber": 37
+        },
+        {
+          "caller": "PageViewsBarChart",
+          "callee": "finalSeries.map",
+          "lineNumber": 37
+        },
+        {
+          "caller": "PageViewsBarChart",
+          "callee": "Array.from",
+          "lineNumber": 39
+        },
+        {
+          "caller": "PageViewsBarChart",
+          "callee": "finalSeries.map",
+          "lineNumber": 79
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/SessionsChart.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 139,
+      "nonEmptyLines": 133,
+      "functions": [
+        {
+          "name": "AreaGradient",
+          "startLine": 10,
+          "endLine": 19,
+          "params": [
+            "{ color, id }"
+          ]
+        },
+        {
+          "name": "SessionsChart",
+          "startLine": 36,
+          "endLine": 139,
+          "params": [
+            "{\n  title = 'Survey hours',\n  totalValue = '--',\n  deltaLabel,\n  subtitle = 'Survey hours per day for the last 30 days',\n  labels,\n  series,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "SessionsChart",
+          "line": 36,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "SessionsChart",
+          "callee": "useTheme",
+          "lineNumber": 44
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "finalSeries.some",
+          "lineNumber": 46
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "Math.max",
+          "lineNumber": 48
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "finalSeries.map",
+          "lineNumber": 48
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "Array.from",
+          "lineNumber": 50
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "useMemo",
+          "lineNumber": 54
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "finalSeries.map",
+          "lineNumber": 100
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "finalSeries.reduce",
+          "lineNumber": 114
+        },
+        {
+          "caller": "SessionsChart",
+          "callee": "finalSeries.map",
+          "lineNumber": 123
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/components/StatCard.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 124,
+      "nonEmptyLines": 115,
+      "functions": [
+        {
+          "name": "AreaGradient",
+          "startLine": 15,
+          "endLine": 24,
+          "params": [
+            "{ color, id }"
+          ]
+        },
+        {
+          "name": "StatCard",
+          "startLine": 26,
+          "endLine": 124,
+          "params": [
+            "{\n  title,\n  value,\n  interval,\n  trend,\n  data,\n  deltaLabel,\n  labels,\n  tooltip,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "StatCard",
+          "line": 26,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "StatCard",
+          "callee": "useTheme",
+          "lineNumber": 36
+        },
+        {
+          "caller": "StatCard",
+          "callee": "useId().replace",
+          "lineNumber": 37
+        },
+        {
+          "caller": "StatCard",
+          "callee": "useId",
+          "lineNumber": 37
+        },
+        {
+          "caller": "StatCard",
+          "callee": "data.map",
+          "lineNumber": 56
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/hooks/useAnalyticsOverview.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 31,
+      "functions": [
+        {
+          "name": "formatQueryError",
+          "startLine": 8,
+          "endLine": 13,
+          "params": [
+            "error"
+          ]
+        },
+        {
+          "name": "useAnalyticsOverview",
+          "startLine": 15,
+          "endLine": 34,
+          "params": [
+            "pollMs"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useAnalyticsOverview",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "useQuery",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "dashboardKeys.analyticsOverview",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "fetchAnalyticsOverview",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "useMemo",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "Boolean",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "formatQueryError",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useAnalyticsOverview",
+          "callee": "query.refetch",
+          "lineNumber": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/hooks/useDashboardOverviewModel.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 166,
+      "nonEmptyLines": 159,
+      "functions": [
+        {
+          "name": "toNumber",
+          "startLine": 15,
+          "endLine": 16,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "useDashboardOverviewModel",
+          "startLine": 18,
+          "endLine": 166,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "useDashboardOverviewModel",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "toNumber",
+          "callee": "Number",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "useState",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Math.round",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Date.now",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "useAnalyticsOverview",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "useAlertCenter",
+          "lineNumber": 21
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "useTelemetryWebSocket",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Boolean",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "(trends?.days ?? []).map",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Math.max",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Math.round",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "useMemo",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "formatNumber",
+          "lineNumber": 42
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "trendFromSeries",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "deltaLabelFromSeries",
+          "lineNumber": 45
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "formatNumber",
+          "lineNumber": 53
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "trendFromSeries",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "deltaLabelFromSeries",
+          "lineNumber": 56
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "formatNumber",
+          "lineNumber": 63
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "trendFromSeries",
+          "lineNumber": 65
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "deltaLabelFromSeries",
+          "lineNumber": 66
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "useMemo",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "(data?.recent_flights ?? []).map",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "String(flight.status ?? \"\").toLowerCase",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "String",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "[\"active\", \"in_progress\", \"running\"].includes",
+          "lineNumber": 95
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "[\"interrupted\", \"aborted\"].includes",
+          "lineNumber": 99
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "formatDuration",
+          "lineNumber": 104
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "flight.distance_km.toFixed",
+          "lineNumber": 105
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "formatTime",
+          "lineNumber": 107
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "toNumber",
+          "lineNumber": 113
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Number.isFinite",
+          "lineNumber": 117
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "activeAlerts.slice(0, 4).map",
+          "lineNumber": 122
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "activeAlerts.slice",
+          "lineNumber": 122
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "[\n          system && !system.telemetry_running\n            ? \"Telemetry stream is offline.\"\n            : null,\n          batteryPct !== null && batteryPct < 30\n            ? `Battery health low (${Math.round(batteryPct)}%).`\n            : null,\n          system && !isConnected ? \"Live telemetry link disconnected.\" : null,\n        ].filter",
+          "lineNumber": 123
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "Math.round",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "String",
+          "lineNumber": 150
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "toNumber",
+          "lineNumber": 151
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "toNumber",
+          "lineNumber": 155
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "toNumber",
+          "lineNumber": 159
+        },
+        {
+          "caller": "useDashboardOverviewModel",
+          "callee": "toNumber",
+          "lineNumber": 162
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 50,
+      "nonEmptyLines": 49,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/dashboard/utils/dashboardFormatters.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 41,
+      "functions": [
+        {
+          "name": "formatNumber",
+          "startLine": 1,
+          "endLine": 4,
+          "params": [
+            "value",
+            "suffix"
+          ]
+        },
+        {
+          "name": "formatDuration",
+          "startLine": 6,
+          "endLine": 13,
+          "params": [
+            "minutes"
+          ]
+        },
+        {
+          "name": "formatTime",
+          "startLine": 15,
+          "endLine": 20,
+          "params": [
+            "iso"
+          ]
+        },
+        {
+          "name": "formatDateLabel",
+          "startLine": 22,
+          "endLine": 26,
+          "params": [
+            "iso"
+          ]
+        },
+        {
+          "name": "trendFromSeries",
+          "startLine": 28,
+          "endLine": 35,
+          "params": [
+            "series"
+          ]
+        },
+        {
+          "name": "deltaLabelFromSeries",
+          "startLine": 37,
+          "endLine": 46,
+          "params": [
+            "series"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "formatNumber",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "formatDuration",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "formatTime",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "formatDateLabel",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "trendFromSeries",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "deltaLabelFromSeries",
+          "line": 37,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatNumber",
+          "callee": "Number.isNaN",
+          "lineNumber": 2
+        },
+        {
+          "caller": "formatNumber",
+          "callee": "value.toLocaleString",
+          "lineNumber": 3
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Number.isNaN",
+          "lineNumber": 7
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.round",
+          "lineNumber": 9
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.floor",
+          "lineNumber": 10
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.round",
+          "lineNumber": 11
+        },
+        {
+          "caller": "formatTime",
+          "callee": "Number.isNaN",
+          "lineNumber": 18
+        },
+        {
+          "caller": "formatTime",
+          "callee": "dt.getTime",
+          "lineNumber": 18
+        },
+        {
+          "caller": "formatTime",
+          "callee": "dt.toLocaleTimeString",
+          "lineNumber": 19
+        },
+        {
+          "caller": "formatDateLabel",
+          "callee": "Number.isNaN",
+          "lineNumber": 24
+        },
+        {
+          "caller": "formatDateLabel",
+          "callee": "dt.getTime",
+          "lineNumber": 24
+        },
+        {
+          "caller": "formatDateLabel",
+          "callee": "dt.toLocaleDateString",
+          "lineNumber": 25
+        },
+        {
+          "caller": "deltaLabelFromSeries",
+          "callee": "Number.isFinite",
+          "lineNumber": 41
+        },
+        {
+          "caller": "deltaLabelFromSeries",
+          "callee": "Number.isFinite",
+          "lineNumber": 41
+        },
+        {
+          "caller": "deltaLabelFromSeries",
+          "callee": "Math.abs",
+          "lineNumber": 43
+        },
+        {
+          "caller": "deltaLabelFromSeries",
+          "callee": "pct.toFixed",
+          "lineNumber": 45
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 6,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/ObservabilityPage.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 95,
+      "nonEmptyLines": 82,
+      "functions": [
+        {
+          "name": "renderPage",
+          "startLine": 49,
+          "endLine": 56,
+          "params": [
+            "children"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "renderPage",
+          "callee": "render",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/ObservabilityPage.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 385,
+      "nonEmptyLines": 368,
+      "functions": [
+        {
+          "name": "isAdminLike",
+          "startLine": 45,
+          "endLine": 47,
+          "params": [
+            "role"
+          ]
+        },
+        {
+          "name": "canInvestigate",
+          "startLine": 49,
+          "endLine": 53,
+          "params": [
+            "role"
+          ]
+        },
+        {
+          "name": "contextUrl",
+          "startLine": 55,
+          "endLine": 67,
+          "params": [
+            "url",
+            "filters"
+          ]
+        },
+        {
+          "name": "ObservabilityPage",
+          "startLine": 74,
+          "endLine": 385,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "ObservabilityPage",
+          "line": 74,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "canInvestigate",
+          "callee": "[\"admin\", \"developer\", \"org_admin\", \"ops_manager\", \"pilot\", \"operator\"].includes",
+          "lineNumber": 50
+        },
+        {
+          "caller": "contextUrl",
+          "callee": "buildGrafanaUrl",
+          "lineNumber": 60
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useSearchParams",
+          "lineNumber": 75
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useCurrentUser",
+          "lineNumber": 76
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useState",
+          "lineNumber": 77
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "searchParams.get",
+          "lineNumber": 77
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useState",
+          "lineNumber": 78
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "searchParams.get",
+          "lineNumber": 78
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useState",
+          "lineNumber": 79
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useQuery",
+          "lineNumber": 81
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "dashboardKeys.observabilityLinks",
+          "lineNumber": 82
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "fetchObservabilityLinks",
+          "lineNumber": 83
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useQuery",
+          "lineNumber": 85
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "dashboardKeys.observabilityStatus",
+          "lineNumber": 86
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "fetchObservabilityStatus",
+          "lineNumber": 87
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useQuery",
+          "lineNumber": 90
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "dashboardKeys.observabilityContextOptions",
+          "lineNumber": 91
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "fetchObservabilityContextOptions",
+          "lineNumber": 92
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useMemo",
+          "lineNumber": 97
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "droneOptions.map",
+          "lineNumber": 97
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useMemo",
+          "lineNumber": 98
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "missionOptions.map",
+          "lineNumber": 99
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useMemo",
+          "lineNumber": 102
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "droneOptions.map",
+          "lineNumber": 103
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useMemo",
+          "lineNumber": 106
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "missionOptions.map",
+          "lineNumber": 107
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "useMemo",
+          "lineNumber": 111
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 125
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 133
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 141
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 149
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 157
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 165
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 173
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "contextUrl",
+          "lineNumber": 181
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "canInvestigate",
+          "lineNumber": 183
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "isAdminLike",
+          "lineNumber": 192
+        },
+        {
+          "caller": "updateContextParam",
+          "callee": "value.trim",
+          "lineNumber": 198
+        },
+        {
+          "caller": "updateContextParam",
+          "callee": "next.set",
+          "lineNumber": 198
+        },
+        {
+          "caller": "updateContextParam",
+          "callee": "value.trim",
+          "lineNumber": 198
+        },
+        {
+          "caller": "updateContextParam",
+          "callee": "next.delete",
+          "lineNumber": 199
+        },
+        {
+          "caller": "updateContextParam",
+          "callee": "setSearchParams",
+          "lineNumber": 200
+        },
+        {
+          "caller": "openExternal",
+          "callee": "window.open",
+          "lineNumber": 204
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "droneLabels.get",
+          "lineNumber": 231
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "(value ?? \"\").toString",
+          "lineNumber": 233
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "setDroneId",
+          "lineNumber": 234
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "updateContextParam",
+          "lineNumber": 235
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "setDroneId",
+          "lineNumber": 238
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "updateContextParam",
+          "lineNumber": 246
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "missionLabels.get",
+          "lineNumber": 258
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "(value ?? \"\").toString",
+          "lineNumber": 260
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "setMissionId",
+          "lineNumber": 261
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "updateContextParam",
+          "lineNumber": 262
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "setMissionId",
+          "lineNumber": 265
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "updateContextParam",
+          "lineNumber": 273
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "TIME_RANGES.find",
+          "lineNumber": 285
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "setRange",
+          "lineNumber": 286
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "TIME_RANGES.map",
+          "lineNumber": 289
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "titleCaseStatus",
+          "lineNumber": 303
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "health.telemetry.lagSeconds.toFixed",
+          "lineNumber": 312
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "titleCaseStatus",
+          "lineNumber": 319
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "titleCaseStatus",
+          "lineNumber": 327
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "titleCaseStatus",
+          "lineNumber": 335
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "String",
+          "lineNumber": 346
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "Array.from({ length: SHORTCUTS_PER_ROW }).map",
+          "lineNumber": 362
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "Array.from",
+          "lineNumber": 362
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "shortcuts\n                .filter((shortcut) => shortcut.visible)\n                .map",
+          "lineNumber": 373
+        },
+        {
+          "caller": "ObservabilityPage",
+          "callee": "shortcuts\n                .filter",
+          "lineNumber": 373
+        }
+      ],
+      "metrics": {
+        "importCount": 11,
+        "exportCount": 1,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/api.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 20,
+      "nonEmptyLines": 17,
+      "functions": [
+        {
+          "name": "fetchObservabilityLinks",
+          "startLine": 8,
+          "endLine": 10,
+          "params": [
+            "signal"
+          ]
+        },
+        {
+          "name": "fetchObservabilityStatus",
+          "startLine": 12,
+          "endLine": 14,
+          "params": [
+            "signal"
+          ]
+        },
+        {
+          "name": "fetchObservabilityContextOptions",
+          "startLine": 16,
+          "endLine": 20,
+          "params": [
+            "signal"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchObservabilityLinks",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "fetchObservabilityStatus",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "fetchObservabilityContextOptions",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchObservabilityLinks",
+          "callee": "httpRequest",
+          "lineNumber": 9
+        },
+        {
+          "caller": "fetchObservabilityStatus",
+          "callee": "httpRequest",
+          "lineNumber": 13
+        },
+        {
+          "caller": "fetchObservabilityContextOptions",
+          "callee": "httpRequest",
+          "lineNumber": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/components/HealthStatusCard.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 98,
+      "nonEmptyLines": 94,
+      "functions": [
+        {
+          "name": "titleCaseStatus",
+          "startLine": 8,
+          "endLine": 10,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "HealthStatusCard",
+          "startLine": 21,
+          "endLine": 98,
+          "params": [
+            "{\n  title,\n  value,\n  status,\n  caption,\n  href,\n  loading,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "titleCaseStatus",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "HealthStatusCard",
+          "line": 21,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "titleCaseStatus",
+          "callee": "status.charAt(0).toUpperCase",
+          "lineNumber": 9
+        },
+        {
+          "caller": "titleCaseStatus",
+          "callee": "status.charAt",
+          "lineNumber": 9
+        },
+        {
+          "caller": "titleCaseStatus",
+          "callee": "status.slice",
+          "lineNumber": 9
+        },
+        {
+          "caller": "HealthStatusCard",
+          "callee": "healthStatusTextColor",
+          "lineNumber": 29
+        },
+        {
+          "caller": "HealthStatusCard",
+          "callee": "theme.transitions.create",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/components/HealthStatusGrid.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 30,
+      "functions": [
+        {
+          "name": "HealthStatusGrid",
+          "startLine": 10,
+          "endLine": 33,
+          "params": [
+            "{ children }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "HealthStatusGrid",
+          "line": 10,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/components/ObservabilityShortcutCard.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 97,
+      "nonEmptyLines": 94,
+      "functions": [
+        {
+          "name": "ObservabilityShortcutCard",
+          "startLine": 19,
+          "endLine": 97,
+          "params": [
+            "{\n  title,\n  description,\n  buttonLabel,\n  url,\n  icon,\n  onOpen,\n  restricted,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ObservabilityShortcutCard",
+          "line": 19,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ObservabilityShortcutCard",
+          "callee": "Boolean",
+          "lineNumber": 28
+        },
+        {
+          "caller": "ObservabilityShortcutCard",
+          "callee": "onOpen",
+          "lineNumber": 88
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/components/ObservabilityShortcutGrid.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 30,
+      "functions": [
+        {
+          "name": "ObservabilityShortcutGrid",
+          "startLine": 10,
+          "endLine": 33,
+          "params": [
+            "{ children }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "SHORTCUTS_PER_ROW",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "ObservabilityShortcutGrid",
+          "line": 10,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/healthStatusPresentation.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 11,
+      "nonEmptyLines": 10,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/healthStatusPresentation.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 14,
+      "nonEmptyLines": 13,
+      "functions": [
+        {
+          "name": "healthStatusTextColor",
+          "startLine": 3,
+          "endLine": 14,
+          "params": [
+            "status"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "healthStatusTextColor",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 37,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/urlBuilders.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 28,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/observability/urlBuilders.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 35,
+      "nonEmptyLines": 31,
+      "functions": [
+        {
+          "name": "buildGrafanaUrl",
+          "startLine": 9,
+          "endLine": 35,
+          "params": [
+            "baseUrl",
+            "{\n    droneId,\n    missionId,\n    from = \"now-1h\",\n    to = \"now\",\n    orgId = 1,\n  }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "buildGrafanaUrl",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "url.searchParams.set",
+          "lineNumber": 20
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "String",
+          "lineNumber": 20
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "url.searchParams.set",
+          "lineNumber": 21
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "url.searchParams.set",
+          "lineNumber": 22
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "droneId?.trim",
+          "lineNumber": 24
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "url.searchParams.set",
+          "lineNumber": 26
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "missionId?.trim",
+          "lineNumber": 29
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "url.searchParams.set",
+          "lineNumber": 31
+        },
+        {
+          "caller": "buildGrafanaUrl",
+          "callee": "url.toString",
+          "lineNumber": 34
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/session/components/Copyright.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "functions": [
+        {
+          "name": "Copyright",
+          "startLine": 3,
+          "endLine": 21,
+          "params": [
+            "props"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Copyright",
+          "line": 3,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Copyright",
+          "callee": "Array.isArray",
+          "lineNumber": 13
+        },
+        {
+          "caller": "Copyright",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/templates/api/templatesApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 47,
+      "nonEmptyLines": 43,
+      "functions": [
+        {
+          "name": "fetchTemplates",
+          "startLine": 4,
+          "endLine": 10,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "createTemplate",
+          "startLine": 12,
+          "endLine": 25,
+          "params": [
+            "payload",
+            "token"
+          ]
+        },
+        {
+          "name": "triggerTemplate",
+          "startLine": 27,
+          "endLine": 35,
+          "params": [
+            "id",
+            "token"
+          ]
+        },
+        {
+          "name": "toggleTemplate",
+          "startLine": 37,
+          "endLine": 47,
+          "params": [
+            "id",
+            "is_active",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchTemplates",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "createTemplate",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "triggerTemplate",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "toggleTemplate",
+          "line": 37,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchTemplates",
+          "callee": "await httpRequest",
+          "lineNumber": 5
+        },
+        {
+          "caller": "fetchTemplates",
+          "callee": "Array.isArray",
+          "lineNumber": 9
+        },
+        {
+          "caller": "createTemplate",
+          "callee": "httpRequest",
+          "lineNumber": 20
+        },
+        {
+          "caller": "triggerTemplate",
+          "callee": "httpRequest",
+          "lineNumber": 31
+        },
+        {
+          "caller": "toggleTemplate",
+          "callee": "httpRequest",
+          "lineNumber": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/templates/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/templates/views/TemplatesPage.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 255,
+      "nonEmptyLines": 240,
+      "functions": [
+        {
+          "name": "CreateTemplateDialog",
+          "startLine": 39,
+          "endLine": 123,
+          "params": [
+            "{\n  open,\n  onClose,\n  onCreated,\n}"
+          ]
+        },
+        {
+          "name": "TemplateRow",
+          "startLine": 125,
+          "endLine": 200,
+          "params": [
+            "{ template, onRefresh }"
+          ]
+        },
+        {
+          "name": "TemplatesPage",
+          "startLine": 202,
+          "endLine": 255,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "TemplatesPage",
+          "line": 202,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "useState",
+          "lineNumber": 48
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "useState",
+          "lineNumber": 49
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "useState",
+          "lineNumber": 50
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "useState",
+          "lineNumber": 51
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "useState",
+          "lineNumber": 52
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "name.trim",
+          "lineNumber": 55
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 56
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 57
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "createTemplate",
+          "lineNumber": 59
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "name.trim",
+          "lineNumber": 60
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "cron.trim",
+          "lineNumber": 62
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "onCreated",
+          "lineNumber": 64
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "onClose",
+          "lineNumber": 65
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setName",
+          "lineNumber": 66
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setCron",
+          "lineNumber": 67
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 69
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 71
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "setName",
+          "lineNumber": 83
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "setMissionType",
+          "lineNumber": 89
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "MISSION_TYPES.map",
+          "lineNumber": 93
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "t.replace(/_/g, ' ').replace",
+          "lineNumber": 95
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "t.replace",
+          "lineNumber": 95
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "c.toUpperCase",
+          "lineNumber": 95
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "setCron",
+          "lineNumber": 103
+        },
+        {
+          "caller": "CreateTemplateDialog",
+          "callee": "name.trim",
+          "lineNumber": 117
+        },
+        {
+          "caller": "TemplateRow",
+          "callee": "useState",
+          "lineNumber": 126
+        },
+        {
+          "caller": "TemplateRow",
+          "callee": "useState",
+          "lineNumber": 127
+        },
+        {
+          "caller": "handleTrigger",
+          "callee": "setTriggering",
+          "lineNumber": 130
+        },
+        {
+          "caller": "handleTrigger",
+          "callee": "triggerTemplate",
+          "lineNumber": 132
+        },
+        {
+          "caller": "handleTrigger",
+          "callee": "onRefresh",
+          "lineNumber": 133
+        },
+        {
+          "caller": "handleTrigger",
+          "callee": "setTriggering",
+          "lineNumber": 135
+        },
+        {
+          "caller": "handleToggle",
+          "callee": "setToggling",
+          "lineNumber": 140
+        },
+        {
+          "caller": "handleToggle",
+          "callee": "toggleTemplate",
+          "lineNumber": 142
+        },
+        {
+          "caller": "handleToggle",
+          "callee": "onRefresh",
+          "lineNumber": 143
+        },
+        {
+          "caller": "handleToggle",
+          "callee": "setToggling",
+          "lineNumber": 145
+        },
+        {
+          "caller": "TemplateRow",
+          "callee": "template.mission_type.replace",
+          "lineNumber": 160
+        },
+        {
+          "caller": "TemplateRow",
+          "callee": "new Date(template.created_at).toLocaleDateString",
+          "lineNumber": 175
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "useQueryClient",
+          "lineNumber": 203
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "useState",
+          "lineNumber": 204
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "useQuery",
+          "lineNumber": 206
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "fetchTemplates",
+          "lineNumber": 208
+        },
+        {
+          "caller": "refresh",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 212
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "setCreateOpen",
+          "lineNumber": 223
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "templates.map",
+          "lineNumber": 242
+        },
+        {
+          "caller": "TemplatesPage",
+          "callee": "setCreateOpen",
+          "lineNumber": 250
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/PageLayout.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 191,
+      "nonEmptyLines": 184,
+      "functions": [
+        {
+          "name": "PageLayout",
+          "startLine": 36,
+          "endLine": 143,
+          "params": [
+            "{\n  eyebrow,\n  title,\n  description,\n  actions,\n  metrics = [],\n  hero,\n  children,\n  maxWidth = 1700,\n}"
+          ]
+        },
+        {
+          "name": "PageSection",
+          "startLine": 145,
+          "endLine": 191,
+          "params": [
+            "{\n  title,\n  description,\n  action,\n  children,\n  sx,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PageLayout",
+          "line": 36,
+          "isDefault": true
+        },
+        {
+          "name": "PageSection",
+          "line": 145,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PageLayout",
+          "callee": "metrics.map",
+          "lineNumber": 79
+        },
+        {
+          "caller": "PageSection",
+          "callee": "Array.isArray",
+          "lineNumber": 162
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    }
+  ]
+}

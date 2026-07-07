@@ -12,6 +12,12 @@ export { RouteDrawControls } from "./components/RouteDrawControls";
 export { CesiumViewControls } from "./components/CesiumViewControls";
 export { useDroneMapFollow } from "./hooks/useDroneMapFollow";
 export { useDroneCenter } from "./hooks/useDroneCenter";
+export {
+  useUserLocation,
+  type UserLocationErrorPolicy,
+  type UserLocationResult,
+  type UseUserLocationOptions,
+} from "./hooks/useUserLocation";
 export { useMapEngine, dispatchMapEngineChange } from "./hooks/useMapEngine";
 export {
   terraDrawToolToShapeMode,

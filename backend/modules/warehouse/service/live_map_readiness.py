@@ -214,28 +214,17 @@ async def warm_live_map_ros_graph() -> None:
 
 
 def _note_mapping_startup(mark: str) -> None:
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import note_mapping_startup
+    from backend.modules.warehouse.service.startup_timing_hooks import note_mapping_startup_safe
 
-        note_mapping_startup(mark)
-    except ModuleNotFoundError as exc:
-        logger.warning("Optional mapping startup timing unavailable: %s", exc)
-    except Exception:
-        logger.debug("Could not record mapping startup mark=%s", mark, exc_info=True)
+    note_mapping_startup_safe(mark)
 
 
 def _active_mapping_startup_timing():
-    try:
-        from backend.modules.warehouse.service.mapping_startup_timing import (
-            active_mapping_startup_timing,
-        )
+    from backend.modules.warehouse.service.startup_timing_hooks import (
+        active_mapping_startup_timing_safe,
+    )
 
-        return active_mapping_startup_timing()
-    except ModuleNotFoundError:
-        return None
-    except Exception:
-        logger.debug("Could not read active mapping startup timing", exc_info=True)
-        return None
+    return active_mapping_startup_timing_safe()
 
 
 def _is_pointcloud2_type(message_type: str | None) -> bool:
@@ -370,10 +359,9 @@ def _rgbd_visualization_probe_topics(topics: set[str]) -> list[str]:
 
 
 def _ros2_workspace() -> Path:
-    from backend.core.config.runtime import settings
+    from backend.modules.warehouse.service.runtime_settings import ros2_workspace
 
-    raw = str(getattr(settings, "warehouse_ros2_ws", "") or "").strip() or "ros2_ws"
-    return Path(raw).expanduser().resolve()
+    return ros2_workspace()
 
 
 def _source_setup(ws: Path) -> str:
